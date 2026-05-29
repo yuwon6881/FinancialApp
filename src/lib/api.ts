@@ -3,7 +3,7 @@ import type { Transaction, RecurringPayment, DashboardData, TransactionCategory 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 interface CacheEntry {
-  data: any
+  promise: Promise<any>
   timestamp: number
 }
 
@@ -11,18 +11,18 @@ const queryCache = {
   store: new Map<string, CacheEntry>(),
   staleTime: 30000, // 30 seconds
 
-  get<T>(key: string): T | null {
+  get<T>(key: string): Promise<T> | null {
     const entry = this.store.get(key)
     if (!entry) return null
     if (Date.now() - entry.timestamp > this.staleTime) {
       this.store.delete(key)
       return null
     }
-    return entry.data as T
+    return entry.promise as Promise<T>
   },
 
-  set(key: string, data: any) {
-    this.store.set(key, { data, timestamp: Date.now() })
+  set(key: string, promise: Promise<any>) {
+    this.store.set(key, { promise, timestamp: Date.now() })
   },
 
   invalidateAll() {
@@ -151,90 +151,92 @@ export async function logout(): Promise<void> {
 }
 
 // Dashboard
-export async function fetchDashboard(month?: string, year?: number): Promise<DashboardData> {
+export function fetchDashboard(month?: string, year?: number): Promise<DashboardData> {
   const cacheKey = `dashboard:${month || ''}:${year || ''}`
-  const cachedData = queryCache.get<DashboardData>(cacheKey)
-  if (cachedData) return cachedData
+  const cachedPromise = queryCache.get<DashboardData>(cacheKey)
+  if (cachedPromise) return cachedPromise
 
-  let url = `${API_BASE_URL}/financial/dashboard`
-  const params = new URLSearchParams()
-  if (month) params.append('month', month)
-  if (year) params.append('year', year.toString())
-  
-  const queryString = params.toString()
-  if (queryString) {
-    url += `?${queryString}`
-  }
+  const promise = (async () => {
+    let url = `${API_BASE_URL}/financial/dashboard`
+    const params = new URLSearchParams()
+    if (month) params.append('month', month)
+    if (year) params.append('year', year.toString())
+    
+    const queryString = params.toString()
+    if (queryString) {
+      url += `?${queryString}`
+    }
 
-  const response = await fetch(url, {
-    headers: getHeaders(),
-  })
-  if (!response.ok) {
-    throw new Error('Failed to fetch dashboard data')
-  }
-  const data = await response.json()
-  const result: DashboardData = {
-    ...data,
-    setting: {
-      ...data.setting,
-      targetStabilityFund: deobfuscateAmount(data.setting.targetStabilityFund)
-    },
-    categories: (data.categories || []).map((c: any) => ({
-      ...c,
-      target: deobfuscateAmount(c.target),
-      budget: deobfuscateAmount(c.budget),
-      netChange: deobfuscateAmount(c.netChange),
-      remaining: deobfuscateAmount(c.remaining)
-    })),
-    stats: {
-      ...data.stats,
-      totalBalance: deobfuscateAmount(data.stats.totalBalance),
-      monthlyIncome: deobfuscateAmount(data.stats.monthlyIncome),
-      monthlyInflow: deobfuscateAmount(data.stats.monthlyInflow),
-      monthlyExpenses: deobfuscateAmount(data.stats.monthlyExpenses),
-      activeRecurringTotal: deobfuscateAmount(data.stats.activeRecurringTotal)
-    },
-    recentTransactions: (data.recentTransactions || []).map(deobfuscateTransaction),
-    activeRecurringPayments: (data.activeRecurringPayments || []).map((rp: any) => ({
-      ...rp,
-      amount: deobfuscateAmount(rp.amount)
-    })),
-    trendPoints: (data.trendPoints || []).map((tp: any) => ({
-      ...tp,
-      balance: deobfuscateAmount(tp.balance)
-    })),
-    last3TrendPoints: (data.last3TrendPoints || []).map((tp: any) => ({
-      ...tp,
-      balance: deobfuscateAmount(tp.balance)
-    })),
-    last6TrendPoints: (data.last6TrendPoints || []).map((tp: any) => ({
-      ...tp,
-      balance: deobfuscateAmount(tp.balance)
-    })),
-    pendingNotifications: (data.pendingNotifications || []).map((pn: any) => ({
-      ...pn,
-      amount: deobfuscateAmount(pn.amount)
-    })),
-    monthlyCategoryBreakdown: (data.monthlyCategoryBreakdown || []).map((cb: any) => ({
-      ...cb,
-      amount: deobfuscateAmount(cb.amount)
-    })),
-    last3CategoryBreakdown: (data.last3CategoryBreakdown || []).map((cb: any) => ({
-      ...cb,
-      amount: deobfuscateAmount(cb.amount)
-    })),
-    last6CategoryBreakdown: (data.last6CategoryBreakdown || []).map((cb: any) => ({
-      ...cb,
-      amount: deobfuscateAmount(cb.amount)
-    })),
-    yearlyCategoryBreakdown: (data.yearlyCategoryBreakdown || []).map((cb: any) => ({
-      ...cb,
-      amount: deobfuscateAmount(cb.amount)
-    }))
-  }
+    const response = await fetch(url, {
+      headers: getHeaders(),
+    })
+    if (!response.ok) {
+      throw new Error('Failed to fetch dashboard data')
+    }
+    const data = await response.json()
+    return {
+      ...data,
+      setting: {
+        ...data.setting,
+        targetStabilityFund: deobfuscateAmount(data.setting.targetStabilityFund)
+      },
+      categories: (data.categories || []).map((c: any) => ({
+        ...c,
+        target: deobfuscateAmount(c.target),
+        budget: deobfuscateAmount(c.budget),
+        netChange: deobfuscateAmount(c.netChange),
+        remaining: deobfuscateAmount(c.remaining)
+      })),
+      stats: {
+        ...data.stats,
+        totalBalance: deobfuscateAmount(data.stats.totalBalance),
+        monthlyIncome: deobfuscateAmount(data.stats.monthlyIncome),
+        monthlyInflow: deobfuscateAmount(data.stats.monthlyInflow),
+        monthlyExpenses: deobfuscateAmount(data.stats.monthlyExpenses),
+        activeRecurringTotal: deobfuscateAmount(data.stats.activeRecurringTotal)
+      },
+      recentTransactions: (data.recentTransactions || []).map(deobfuscateTransaction),
+      activeRecurringPayments: (data.activeRecurringPayments || []).map((rp: any) => ({
+        ...rp,
+        amount: deobfuscateAmount(rp.amount)
+      })),
+      trendPoints: (data.trendPoints || []).map((tp: any) => ({
+        ...tp,
+        balance: deobfuscateAmount(tp.balance)
+      })),
+      last3TrendPoints: (data.last3TrendPoints || []).map((tp: any) => ({
+        ...tp,
+        balance: deobfuscateAmount(tp.balance)
+      })),
+      last6TrendPoints: (data.last6TrendPoints || []).map((tp: any) => ({
+        ...tp,
+        balance: deobfuscateAmount(tp.balance)
+      })),
+      pendingNotifications: (data.pendingNotifications || []).map((pn: any) => ({
+        ...pn,
+        amount: deobfuscateAmount(pn.amount)
+      })),
+      monthlyCategoryBreakdown: (data.monthlyCategoryBreakdown || []).map((cb: any) => ({
+        ...cb,
+        amount: deobfuscateAmount(cb.amount)
+      })),
+      last3CategoryBreakdown: (data.last3CategoryBreakdown || []).map((cb: any) => ({
+        ...cb,
+        amount: deobfuscateAmount(cb.amount)
+      })),
+      last6CategoryBreakdown: (data.last6CategoryBreakdown || []).map((cb: any) => ({
+        ...cb,
+        amount: deobfuscateAmount(cb.amount)
+      })),
+      yearlyCategoryBreakdown: (data.yearlyCategoryBreakdown || []).map((cb: any) => ({
+        ...cb,
+        amount: deobfuscateAmount(cb.amount)
+      }))
+    }
+  })()
 
-  queryCache.set(cacheKey, result)
-  return result
+  queryCache.set(cacheKey, promise)
+  return promise
 }
 
 export async function updateSettings(settings: {
@@ -295,31 +297,34 @@ export async function selectPeriod(selectedMonth: string, selectedYear: number):
 }
 
 // Transactions
-export async function fetchTransactions(month?: string, year?: number): Promise<Transaction[]> {
+export function fetchTransactions(month?: string, year?: number): Promise<Transaction[]> {
   const cacheKey = `transactions:${month || ''}:${year || ''}`
-  const cachedData = queryCache.get<Transaction[]>(cacheKey)
-  if (cachedData) return cachedData
+  const cachedPromise = queryCache.get<Transaction[]>(cacheKey)
+  if (cachedPromise) return cachedPromise
 
-  let url = `${API_BASE_URL}/transactions`
-  const params = new URLSearchParams()
-  if (month) params.append('month', month)
-  if (year) params.append('year', year.toString())
-  
-  const queryString = params.toString()
-  if (queryString) {
-    url += `?${queryString}`
-  }
+  const promise = (async () => {
+    let url = `${API_BASE_URL}/transactions`
+    const params = new URLSearchParams()
+    if (month) params.append('month', month)
+    if (year) params.append('year', year.toString())
+    
+    const queryString = params.toString()
+    if (queryString) {
+      url += `?${queryString}`
+    }
 
-  const response = await fetch(url, {
-    headers: getHeaders(),
-  })
-  if (!response.ok) {
-    throw new Error('Failed to fetch transactions')
-  }
-  const data = await response.json()
-  const result = (data || []).map(deobfuscateTransaction)
-  queryCache.set(cacheKey, result)
-  return result
+    const response = await fetch(url, {
+      headers: getHeaders(),
+    })
+    if (!response.ok) {
+      throw new Error('Failed to fetch transactions')
+    }
+    const data = await response.json()
+    return (data || []).map(deobfuscateTransaction)
+  })()
+
+  queryCache.set(cacheKey, promise)
+  return promise
 }
 
 export async function addTransaction(transaction: Omit<Transaction, 'id'> & { id?: string }): Promise<Transaction> {
@@ -354,21 +359,24 @@ export async function deleteTransaction(id: string): Promise<void> {
 }
 
 // Recurring Payments
-export async function fetchRecurringPayments(): Promise<RecurringPayment[]> {
+export function fetchRecurringPayments(): Promise<RecurringPayment[]> {
   const cacheKey = 'recurringPayments'
-  const cachedData = queryCache.get<RecurringPayment[]>(cacheKey)
-  if (cachedData) return cachedData
+  const cachedPromise = queryCache.get<RecurringPayment[]>(cacheKey)
+  if (cachedPromise) return cachedPromise
 
-  const response = await fetch(`${API_BASE_URL}/recurring-payments`, {
-    headers: getHeaders(),
-  })
-  if (!response.ok) {
-    throw new Error('Failed to fetch recurring payments')
-  }
-  const data = await response.json()
-  const result = (data || []).map(deobfuscateRecurringPayment)
-  queryCache.set(cacheKey, result)
-  return result
+  const promise = (async () => {
+    const response = await fetch(`${API_BASE_URL}/recurring-payments`, {
+      headers: getHeaders(),
+    })
+    if (!response.ok) {
+      throw new Error('Failed to fetch recurring payments')
+    }
+    const data = await response.json()
+    return (data || []).map(deobfuscateRecurringPayment)
+  })()
+
+  queryCache.set(cacheKey, promise)
+  return promise
 }
 
 export async function addRecurringPayment(payment: Omit<RecurringPayment, 'id'>): Promise<RecurringPayment> {
@@ -436,20 +444,23 @@ export async function deleteRecurringPayment(id: string): Promise<void> {
 }
 
 // Categories Management
-export async function fetchCategories(): Promise<TransactionCategory[]> {
+export function fetchCategories(): Promise<TransactionCategory[]> {
   const cacheKey = 'categories'
-  const cachedData = queryCache.get<TransactionCategory[]>(cacheKey)
-  if (cachedData) return cachedData
+  const cachedPromise = queryCache.get<TransactionCategory[]>(cacheKey)
+  if (cachedPromise) return cachedPromise
 
-  const response = await fetch(`${API_BASE_URL}/categories`, {
-    headers: getHeaders(),
-  })
-  if (!response.ok) {
-    throw new Error('Failed to fetch custom categories')
-  }
-  const result = await response.json()
-  queryCache.set(cacheKey, result)
-  return result
+  const promise = (async () => {
+    const response = await fetch(`${API_BASE_URL}/categories`, {
+      headers: getHeaders(),
+    })
+    if (!response.ok) {
+      throw new Error('Failed to fetch custom categories')
+    }
+    return response.json()
+  })()
+
+  queryCache.set(cacheKey, promise)
+  return promise
 }
 
 export async function addCategory(category: Omit<TransactionCategory, 'id'>): Promise<TransactionCategory> {
