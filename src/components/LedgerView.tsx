@@ -7,7 +7,8 @@ import {
   Download, 
   X,
   PlusCircle,
-  MinusCircle
+  MinusCircle,
+  RefreshCw
 } from 'lucide-react'
 
 interface LedgerViewProps {
@@ -30,9 +31,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [showAddForm, setShowAddForm] = useState(false)
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
-  const [txType, setTxType] = useState<'inflow' | 'outflow'>('outflow')
+  const [txType, setTxType] = useState<'inflow' | 'outflow' | 'transfer'>('outflow')
   const [category, setCategory] = useState('')
   const [ledgerCategory, setLedgerCategory] = useState<'Income' | 'Essentials' | 'Growth' | 'Stability' | 'Rewards'>('Essentials')
+  const [transferSource, setTransferSource] = useState<'Essentials' | 'Growth' | 'Stability' | 'Rewards'>('Essentials')
+  const [transferTarget, setTransferTarget] = useState<'Essentials' | 'Growth' | 'Stability' | 'Rewards'>('Rewards')
   const [date, setDate] = useState(() => {
     const now = new Date()
     const y = now.getFullYear()
@@ -47,6 +50,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       setLedgerCategory('Essentials')
     }
   }, [txType, ledgerCategory])
+
+  // Auto-generate description for transfers
+  useEffect(() => {
+    if (txType === 'transfer') {
+      setDescription(`Transfer from ${transferSource} to ${transferTarget}`)
+    }
+  }, [txType, transferSource, transferTarget])
 
   useEffect(() => {
     if (categories.length > 0 && !category) {
@@ -75,13 +85,23 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     if (!description || !amount || !date) return
 
     const parsedAmount = parseFloat(amount)
-    const finalAmount = txType === 'outflow' ? -Math.abs(parsedAmount) : Math.abs(parsedAmount)
+    let finalAmount = parsedAmount
+    let finalLedgerCategory = ledgerCategory
+
+    if (txType === 'outflow') {
+      finalAmount = -Math.abs(parsedAmount)
+    } else if (txType === 'inflow') {
+      finalAmount = Math.abs(parsedAmount)
+    } else if (txType === 'transfer') {
+      finalAmount = Math.abs(parsedAmount)
+      finalLedgerCategory = `Transfer:${transferSource}->${transferTarget}` as any
+    }
 
     onAddTransaction({
       description,
       amount: finalAmount,
-      category,
-      ledgerCategory,
+      category: txType === 'transfer' ? 'Other' : category,
+      ledgerCategory: finalLedgerCategory,
       date
     })
 
@@ -109,6 +129,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   const displayLedgerCategory = (cat: string) => {
     if (cat.startsWith('IncomeSplit:')) return 'Income'
+    if (cat.startsWith('Transfer:')) {
+      const parts = cat.replace('Transfer:', '').split('->')
+      return `Transfer: ${parts[0]} → ${parts[1]}`
+    }
     return cat
   }
 
@@ -137,13 +161,14 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     const headers = ['Date', 'Description', 'Category', 'Ledger Category', 'Debit (Outflow)', 'Credit (Inflow)']
     const rows = filteredTransactions.map(t => {
       const isOutflow = t.amount < 0
+      const isTransfer = t.ledgerCategory.startsWith('Transfer:')
       return [
         escapeCsvField(t.date),
         escapeCsvField(t.description),
         escapeCsvField(t.category),
         displayLedgerCategory(t.ledgerCategory),
-        isOutflow ? escapeCsvField(Math.abs(t.amount).toFixed(2)) : '',
-        !isOutflow ? escapeCsvField(t.amount.toFixed(2)) : ''
+        isTransfer ? escapeCsvField(t.amount.toFixed(2)) : (isOutflow ? escapeCsvField(Math.abs(t.amount).toFixed(2)) : ''),
+        isTransfer ? escapeCsvField(t.amount.toFixed(2)) : (!isOutflow ? escapeCsvField(t.amount.toFixed(2)) : '')
       ]
     })
     
@@ -207,7 +232,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setTxType('outflow')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-xl border transition cursor-pointer ${
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-semibold rounded-xl border transition cursor-pointer ${
                     txType === 'outflow' 
                       ? 'bg-rose-500/10 border-rose-500/30 text-rose-500' 
                       : 'border-border hover:bg-muted/50 text-muted-foreground'
@@ -218,13 +243,24 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setTxType('inflow')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-xl border transition cursor-pointer ${
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-semibold rounded-xl border transition cursor-pointer ${
                     txType === 'inflow' 
                       ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500' 
                       : 'border-border hover:bg-muted/50 text-muted-foreground'
                   }`}
                 >
                   <PlusCircle className="size-3.5" /> Inflow (Credit)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTxType('transfer')}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-semibold rounded-xl border transition cursor-pointer ${
+                    txType === 'transfer' 
+                      ? 'bg-blue-500/10 border-blue-500/30 text-blue-500' 
+                      : 'border-border hover:bg-muted/50 text-muted-foreground'
+                  }`}
+                >
+                  <RefreshCw className="size-3.5" /> Transfer
                 </button>
               </div>
             </div>
@@ -254,33 +290,67 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               />
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-muted-foreground">Category</label>
-              <select
-                value={category || (categories[0]?.name || '')}
-                onChange={e => setCategory(e.target.value)}
-                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition duration-200"
-              >
-                {categories.map(c => (
-                  <option key={c.id} value={c.name}>{c.name}</option>
-                ))}
-              </select>
-            </div>
+            {txType === 'transfer' ? (
+              <>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Source Category (From)</label>
+                  <select
+                    value={transferSource}
+                    onChange={e => setTransferSource(e.target.value as any)}
+                    className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition duration-200"
+                  >
+                    <option value="Essentials">Essentials</option>
+                    <option value="Growth">Growth</option>
+                    <option value="Stability">Stability</option>
+                    <option value="Rewards">Rewards</option>
+                  </select>
+                </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-muted-foreground">Ledger Category</label>
-              <select
-                value={ledgerCategory}
-                onChange={e => setLedgerCategory(e.target.value as any)}
-                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition duration-200"
-              >
-                {txType === 'inflow' && <option value="Income">Income (Auto-Split)</option>}
-                <option value="Essentials">Essentials</option>
-                <option value="Growth">Growth</option>
-                <option value="Stability">Stability</option>
-                <option value="Rewards">Rewards</option>
-              </select>
-            </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Target Category (To)</label>
+                  <select
+                    value={transferTarget}
+                    onChange={e => setTransferTarget(e.target.value as any)}
+                    className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition duration-200"
+                  >
+                    <option value="Essentials">Essentials</option>
+                    <option value="Growth">Growth</option>
+                    <option value="Stability">Stability</option>
+                    <option value="Rewards">Rewards</option>
+                  </select>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Category</label>
+                  <select
+                    value={category || (categories[0]?.name || '')}
+                    onChange={e => setCategory(e.target.value)}
+                    className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition duration-200"
+                  >
+                    {categories.map(c => (
+                      <option key={c.id} value={c.name}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Ledger Category</label>
+                  <select
+                    value={ledgerCategory}
+                    onChange={e => setLedgerCategory(e.target.value as any)}
+                    className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition duration-200"
+                  >
+                    {txType === 'inflow' && <option value="Income">Income (Auto-Split)</option>}
+                    <option value="Essentials">Essentials</option>
+                    <option value="Growth">Growth</option>
+                    <option value="Stability">Stability</option>
+                    <option value="Rewards">Rewards</option>
+                  </select>
+                </div>
+              </>
+            )}
 
             <div className="space-y-1">
               <label className="text-xs font-semibold text-muted-foreground">Posting Date</label>
@@ -379,10 +449,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     </td>
                     <td className="p-4 font-semibold text-muted-foreground">{displayLedgerCategory(t.ledgerCategory)}</td>
                     <td className="p-4 text-right font-medium text-rose-500">
-                      {isOutflow ? formatSensitive(Math.abs(t.amount)) : '-'}
+                      {t.ledgerCategory.startsWith('Transfer:') ? formatSensitive(t.amount) : (isOutflow ? formatSensitive(Math.abs(t.amount)) : '-')}
                     </td>
                     <td className="p-4 text-right font-medium text-emerald-500">
-                      {!isOutflow ? formatSensitive(t.amount) : '-'}
+                      {t.ledgerCategory.startsWith('Transfer:') ? formatSensitive(t.amount) : (!isOutflow ? formatSensitive(t.amount) : '-')}
                     </td>
                     <td className="p-4 text-center">
                       <button
@@ -428,9 +498,15 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   <p className="text-[10px] text-muted-foreground">Ledger: <span className="font-semibold">{displayLedgerCategory(t.ledgerCategory)}</span></p>
                 </div>
                 <div className="text-right">
-                  <span className={`text-xs font-bold ${isOutflow ? 'text-rose-500' : 'text-emerald-500'}`}>
-                    {isOutflow ? `-${formatSensitive(Math.abs(t.amount))}` : `+${formatSensitive(t.amount)}`}
-                  </span>
+                  {t.ledgerCategory.startsWith('Transfer:') ? (
+                    <span className="text-xs font-bold text-blue-500">
+                      {formatSensitive(t.amount)}
+                    </span>
+                  ) : (
+                    <span className={`text-xs font-bold ${isOutflow ? 'text-rose-500' : 'text-emerald-500'}`}>
+                      {isOutflow ? `-${formatSensitive(Math.abs(t.amount))}` : `+${formatSensitive(t.amount)}`}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex justify-end pt-2 border-t border-border/30">

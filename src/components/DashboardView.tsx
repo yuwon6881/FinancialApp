@@ -120,8 +120,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   }, [breakdownData, totalBreakdownAmount])
 
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  const currentYear = new Date().getFullYear()
-  const years = Array.from({ length: currentYear + 50 - 2025 + 1 }, (_, i) => 2025 + i)
+  const years = useMemo<number[]>(() => {
+    return (dashboardData as any)?.availableYears || [new Date().getFullYear()]
+  }, [dashboardData])
 
   // Extract variables from dashboardData or fall back to defaults
   const activeSettings = dashboardData?.setting || {
@@ -314,16 +315,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-muted-foreground">Monthly Plan Income ($)</label>
-                <input 
-                  type="number"
-                  required
-                  value={incomeInput}
-                  onChange={e => setIncomeInput(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                />
-              </div>
+              {/* Income setting has been hidden as target budgets are now based on actual monthly income */}
               
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-muted-foreground">Target Stability Fund Limit ($)</label>
@@ -692,7 +684,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {formatSensitive(stats.monthlyInflow)}
           </div>
           <p className="text-[10px] mt-1.5 text-muted-foreground">
-            Configured default cycle income: <span className="font-semibold text-emerald-500">{formatSensitive(stats.monthlyIncome)}</span>
+            Total Actual Income: <span className="font-semibold text-emerald-500">{formatSensitive(stats.monthlyIncome)}</span>
           </p>
         </div>
 
@@ -981,13 +973,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <div key={rp.id} className="flex items-center justify-between text-[11px] py-1.5 border-b border-border/30 last:border-b-0">
                   <div className="truncate mr-2">
                     <span className="font-semibold text-foreground truncate block max-w-[100px]">{rp.name}</span>
-                    <span className={`inline-block text-[8px] px-1 py-0.25 font-semibold rounded border mt-0.5 ${categoryColorMap[rp.category] || 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
-                      {rp.category}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-1 mt-0.5 select-none">
+                      <span className={`inline-block text-[8px] px-1.5 py-0.25 font-semibold rounded border ${categoryColorMap[rp.category] || 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
+                        {rp.category}
+                      </span>
+                      {rp.isPaid ? (
+                        <span className="text-[8px] px-1.5 py-0.25 font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 rounded">
+                          Paid
+                        </span>
+                      ) : (
+                        <span className="text-[8px] px-1.5 py-0.25 font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded">
+                          Pending
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-right shrink-0">
+                  <div className="text-right shrink-0 flex flex-col items-end gap-1">
                     <span className="text-rose-500 font-bold block">-{formatSensitive(rp.amount)}</span>
-                    <span className="text-muted-foreground text-[9px]">Due {rp.dueDate}</span>
+                    <div className="flex items-center gap-1.5">
+                      {!rp.isPaid && (
+                        <button
+                          onClick={() => {
+                            const pDate = prompt("Enter paid date (yyyy-MM-dd):", rp.dueDate)
+                            if (pDate) {
+                              onConfirmSubscription(rp, pDate)
+                            }
+                          }}
+                          className="text-[9px] font-bold text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/25 hover:scale-[1.02] active:scale-95 px-1.5 py-0.5 rounded border border-emerald-500/20 cursor-pointer transition"
+                        >
+                          Confirm
+                        </button>
+                      )}
+                      <span className="text-muted-foreground text-[9px]">Due {rp.dueDate}</span>
+                    </div>
                   </div>
                 </div>
               ))}

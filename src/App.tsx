@@ -7,6 +7,7 @@ import { LedgerView } from './components/LedgerView'
 import { LoginView } from './components/LoginView'
 import type { Transaction, RecurringPayment, DashboardData, TransactionCategory } from './types'
 import * as api from './lib/api'
+import { Loader2 } from 'lucide-react'
 
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'))
@@ -17,6 +18,7 @@ function App() {
   const [categoriesList, setCategoriesList] = useState<TransactionCategory[]>([])
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState<boolean>(true)
 
   const [selectedMonth, setSelectedMonth] = useState<string>('')
   const [selectedYear, setSelectedYear] = useState<number>(0)
@@ -32,6 +34,7 @@ function App() {
   // Fetch initial ledger and dashboard statistics
   async function loadAll(month?: string, year?: number) {
     if (!token) return
+    setLoading(true)
     try {
       const [dbData, txs, recs, cats] = await Promise.all([
         api.fetchDashboard(month, year),
@@ -60,6 +63,8 @@ function App() {
       } else {
         setError('Could not connect to the database API server. Running in offline view mode.')
       }
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -222,6 +227,22 @@ function App() {
 
   if (!token) {
     return <LoginView onLoginSuccess={handleLoginSuccess} />
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="flex size-14 items-center justify-center rounded-2xl bg-radial from-emerald-400 to-emerald-600 shadow-xl shadow-emerald-500/20 text-white font-extrabold text-2xl animate-pulse">
+            F
+          </div>
+          <div className="flex items-center gap-2 text-sm font-bold tracking-tight text-muted-foreground mt-2 animate-pulse">
+            <Loader2 className="animate-spin text-emerald-500 size-4" />
+            Syncing financial ledgers...
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
