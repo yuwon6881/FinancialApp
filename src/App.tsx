@@ -26,6 +26,16 @@ function App() {
     return localStorage.getItem('hide_sensitive') === 'true'
   })
 
+  // Dark mode — initialize from localStorage immediately, sync with server after load
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    return localStorage.getItem('dark_mode') === 'true'
+  })
+
+  // Apply/remove the 'dark' class on <html> whenever darkMode changes
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode)
+  }, [darkMode])
+
   // Password Prompt for revealing sensitive information
   const [showPasswordPrompt, setShowPasswordPrompt] = useState<boolean>(false)
   const [confirmPassword, setConfirmPassword] = useState<string>('')
@@ -57,6 +67,11 @@ function App() {
       setRecurringPayments(recs)
       setCategoriesList(cats)
       setError(null)
+
+      // Sync dark mode from server preference (server wins over localStorage)
+      const serverDark = dbData.setting.darkMode ?? false
+      setDarkMode(serverDark)
+      localStorage.setItem('dark_mode', serverDark.toString())
 
       if (dbData.pendingNotifications && dbData.pendingNotifications.length > 0 && !hasShownModalThisSession) {
         if (localStorage.getItem('show_notifications_on_login') !== 'false') {
@@ -251,6 +266,14 @@ function App() {
     }
   }
 
+  const handleToggleDarkMode = async () => {
+    const newDark = !darkMode
+    setDarkMode(newDark)
+    localStorage.setItem('dark_mode', newDark.toString())
+    // Persist to server (non-blocking, non-fatal)
+    api.updateDarkMode(newDark).catch(err => console.warn('Dark mode sync failed:', err))
+  }
+
   if (!token) {
     return <LoginView onLoginSuccess={handleLoginSuccess} />
   }
@@ -287,6 +310,8 @@ function App() {
         pendingNotifications={dashboardData?.pendingNotifications || []}
         onConfirmSubscription={handleConfirmSubscription}
         onDeletePayment={handleDeletePayment}
+        darkMode={darkMode}
+        onToggleDarkMode={handleToggleDarkMode}
       />
 
       {error && (

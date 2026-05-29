@@ -30,6 +30,7 @@ export interface FinancialSetting {
   stabilityAlloc: number
   rewardsAlloc: number
   cycleDay: number
+  darkMode: boolean
 }
 
 export interface CategorySummary {

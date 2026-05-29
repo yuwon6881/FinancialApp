@@ -16,7 +16,9 @@ import {
   CreditCard,
   Eye,
   EyeOff,
-  Bell
+  Bell,
+  Moon,
+  Sun
 } from 'lucide-react'
 
 interface TopNavProps {
@@ -31,6 +33,8 @@ interface TopNavProps {
   pendingNotifications: any[]
   onConfirmSubscription: (noti: any, paidDate: string) => void
   onDeletePayment: (id: string) => void
+  darkMode: boolean
+  onToggleDarkMode: () => void
 }
 
 const TopNav: React.FC<TopNavProps> = ({
@@ -44,7 +48,9 @@ const TopNav: React.FC<TopNavProps> = ({
   username,
   pendingNotifications,
   onConfirmSubscription,
-  onDeletePayment
+  onDeletePayment,
+  darkMode,
+  onToggleDarkMode
 }) => {
   const [isBellOpen, setIsBellOpen] = useState(false)
   const [confirmNotiId, setConfirmNotiId] = useState<string | null>(null)
@@ -148,6 +154,16 @@ const TopNav: React.FC<TopNavProps> = ({
             title={hideSensitive ? "Show sensitive figures" : "Hide sensitive figures"}
           >
             {hideSensitive ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+          </button>
+
+          {/* Dark Mode Toggle */}
+          <button
+            onClick={onToggleDarkMode}
+            id="dark-mode-toggle"
+            className="p-1.5 border border-border/60 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition duration-150 flex items-center justify-center"
+            title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {darkMode ? <Sun className="size-4" /> : <Moon className="size-4" />}
           </button>
 
           {/* Notification Bell Dropdown */}

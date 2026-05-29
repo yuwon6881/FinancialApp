@@ -211,6 +211,7 @@ export async function updateSettings(settings: {
   stabilityAlloc: number
   rewardsAlloc: number
   cycleDay: number
+  darkMode?: boolean
 }): Promise<void> {
   const payload = {
     ...settings,
@@ -225,6 +226,21 @@ export async function updateSettings(settings: {
   })
   if (!response.ok) {
     throw new Error('Failed to update financial settings')
+  }
+}
+
+// Lightweight helper that only updates dark mode preference
+export async function updateDarkMode(darkMode: boolean): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/financial/dark-mode`, {
+    method: 'PUT',
+    headers: getHeaders({
+      'Content-Type': 'application/json',
+    }),
+    body: JSON.stringify({ darkMode }),
+  })
+  if (!response.ok) {
+    // Non-fatal: silently fail (preference also stored in localStorage)
+    console.warn('Failed to persist dark mode preference to server')
   }
 }
 
