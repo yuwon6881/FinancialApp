@@ -282,35 +282,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     'Other': 'bg-slate-500/10 text-slate-500 border-slate-500/20',
   }
 
-  const projectedMetrics = useMemo(() => {
-    // 1. Essentials
-    const targetEssentials = categories.find(c => c.name === "Essentials")?.target || 1
-    const remEssentials = categories.find(c => c.name === "Essentials")?.remaining || 0
-    const pendingEssentials = pendingDeductionsByCategory['Essentials'] || 0
-    const currentEssentialsPct = stats.essentialsPercentRemaining * 100
-    const projectedEssentialsPct = Math.max(0, ((remEssentials - pendingEssentials) / targetEssentials) * 100)
-
-    // 2. Growth
-    const targetGrowth = categories.find(c => c.name === "Growth")?.target || 1
-    const netGrowth = categories.find(c => c.name === "Growth")?.netChange || 0
-    const pendingGrowth = pendingDeductionsByCategory['Growth'] || 0
-    const currentGrowthPct = stats.growthPercentAchieved * 100
-    const projectedGrowthPct = Math.max(0, ((netGrowth - pendingGrowth) / targetGrowth) * 100)
-
-    // 3. Stability
-    const targetStability = activeSettings.targetStabilityFund || 1
-    const remStability = categories.find(c => c.name === "Stability")?.remaining || 0
-    const pendingStability = pendingDeductionsByCategory['Stability'] || 0
-    const currentStabilityPct = stats.stabilityPercentReached * 100
-    const projectedStabilityPct = Math.max(0, ((remStability - pendingStability) / targetStability) * 100)
-
-    return {
-      essentials: { current: currentEssentialsPct, projected: projectedEssentialsPct, pending: pendingEssentials },
-      growth: { current: currentGrowthPct, projected: projectedGrowthPct, pending: pendingGrowth },
-      stability: { current: currentStabilityPct, projected: projectedStabilityPct, pending: pendingStability }
-    }
-  }, [categories, stats, pendingDeductionsByCategory, activeSettings])
-
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
       
@@ -783,93 +754,145 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Dynamic Excel Target Metric Cards */}
       <div className="p-6 bg-card border border-border/60 rounded-2xl shadow-xs">
         <h3 className="text-md font-bold text-foreground mb-1">Financial Plan Metrics</h3>
-        <p className="text-xs text-muted-foreground mb-4">Target ratios evaluated using calculations mapped directly from spreadsheet cells.</p>
+        <p className="text-xs text-muted-foreground mb-1">Target ratios evaluated using calculations mapped directly from spreadsheet cells.</p>
+        {/* Legend */}
+        <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-2 rounded-sm bg-violet-500" />
+            <span className="text-[10px] text-muted-foreground">Current</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-2 rounded-sm bg-amber-400" />
+            <span className="text-[10px] text-muted-foreground">Pending deduction</span>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Growth Achieved */}
-          <div className="space-y-2 p-4 rounded-xl bg-muted/30 border border-border/40">
-            <div className="flex justify-between text-xs font-semibold">
-              <span className="text-muted-foreground">Growth Achieved</span>
-              {projectedMetrics.growth.pending > 0 ? (
-                <span className="text-foreground">
-                  {(projectedMetrics.growth.projected).toFixed(1)}% <span className="text-muted-foreground text-[10px] font-normal">({(projectedMetrics.growth.current).toFixed(1)}% current)</span>
+          {(() => {
+            const growthCat = categories.find(c => c.name === 'Growth')
+            const growthTarget = growthCat?.target || 1
+            // Current achieved % (already a fraction 0-1)
+            const currentPct = Math.max(0, Math.min(1, stats.growthPercentAchieved))
+            // Pending will eat into remaining growth budget → reduce achievement
+            const pendingGrowth = pendingDeductionsByCategory['Growth'] || 0
+            const projectedRemaining = Math.max(0, (growthCat?.remaining ?? 0) - pendingGrowth)
+            // projected achievement = (budget - projectedRemaining) / target  ... but simpler:
+            // the "at risk" portion of the bar = pendingGrowth / growthTarget, capped so bar doesn't overflow
+            const atRiskPct = Math.max(0, Math.min(currentPct, pendingGrowth / growthTarget))
+            const safePct = currentPct - atRiskPct
+            return (
+              <div className="space-y-2 p-4 rounded-xl bg-muted/30 border border-border/40">
+                <div className="flex justify-between text-xs font-semibold">
+                  <span className="text-muted-foreground">Growth Achieved</span>
+                  <span className="text-foreground">
+                    {(currentPct * 100).toFixed(1)}%
+                    {atRiskPct > 0 && (
+                      <span className="text-amber-400 ml-1">→ {((currentPct - atRiskPct) * 100).toFixed(1)}%</span>
+                    )}
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2 overflow-hidden flex">
+                  <div
+                    className="bg-violet-500 h-full transition-all duration-500"
+                    style={{ width: `${safePct * 100}%` }}
+                  />
+                  {atRiskPct > 0 && (
+                    <div
+                      className="bg-amber-400 h-full transition-all duration-500"
+                      style={{ width: `${atRiskPct * 100}%` }}
+                    />
+                  )}
+                </div>
+                <span className="text-[10px] text-muted-foreground block leading-relaxed">
+                  Plan Target: Deposit <strong>{(activeSettings.growthAlloc * 100).toFixed(0)}%</strong> of income ({formatSensitive(growthTarget)}) into savings this cycle.
+                  {atRiskPct > 0 && <span className="text-amber-400"> Projected after pending: {formatSensitive(projectedRemaining)}</span>}
                 </span>
-              ) : (
-                <span className="text-foreground">{(projectedMetrics.growth.current).toFixed(1)}%</span>
-              )}
-            </div>
-            <div className="w-full bg-muted rounded-full h-2 overflow-hidden flex">
-              <div 
-                className="bg-violet-500 h-full transition-all duration-500" 
-                style={{ width: `${Math.max(0, Math.min(100, projectedMetrics.growth.projected))}%` }}
-              />
-              <div 
-                className="bg-violet-500/30 h-full transition-all duration-500" 
-                style={{ width: `${Math.max(0, Math.min(100, projectedMetrics.growth.current - projectedMetrics.growth.projected))}%` }}
-              />
-            </div>
-            <span className="text-[10px] text-muted-foreground block leading-relaxed">
-              Plan Target: Deposit <strong>{(activeSettings.growthAlloc * 100).toFixed(0)}%</strong> of income ({formatSensitive(categories.find(c => c.name === "Growth")?.target || 1000)}) into savings this cycle.
-            </span>
-          </div>
+              </div>
+            )
+          })()}
 
           {/* Essentials Remaining */}
-          <div className="space-y-2 p-4 rounded-xl bg-muted/30 border border-border/40">
-            <div className="flex justify-between text-xs font-semibold">
-              <span className="text-muted-foreground">Essentials Remaining</span>
-              {projectedMetrics.essentials.pending > 0 ? (
-                <span className="text-foreground">
-                  {(projectedMetrics.essentials.projected).toFixed(1)}% <span className="text-muted-foreground text-[10px] font-normal">({(projectedMetrics.essentials.current).toFixed(1)}% current)</span>
+          {(() => {
+            const essentialsCat = categories.find(c => c.name === 'Essentials')
+            const essTarget = essentialsCat?.target || 1
+            const currentPct = Math.max(0, Math.min(1, stats.essentialsPercentRemaining))
+            const pendingEss = pendingDeductionsByCategory['Essentials'] || 0
+            const projectedRemaining = Math.max(0, (essentialsCat?.remaining ?? 0) - pendingEss)
+            const projectedPct = Math.max(0, projectedRemaining / essTarget)
+            const atRiskPct = Math.max(0, currentPct - projectedPct)
+            const barColor = projectedPct > 0.5 ? 'bg-sky-500' : projectedPct > 0.2 ? 'bg-yellow-500' : 'bg-orange-500'
+            return (
+              <div className="space-y-2 p-4 rounded-xl bg-muted/30 border border-border/40">
+                <div className="flex justify-between text-xs font-semibold">
+                  <span className="text-muted-foreground">Essentials Remaining</span>
+                  <span className="text-foreground">
+                    {(currentPct * 100).toFixed(1)}%
+                    {atRiskPct > 0 && (
+                      <span className="text-amber-400 ml-1">→ {(projectedPct * 100).toFixed(1)}%</span>
+                    )}
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2 overflow-hidden flex">
+                  <div
+                    className={`${barColor} h-full transition-all duration-500`}
+                    style={{ width: `${projectedPct * 100}%` }}
+                  />
+                  {atRiskPct > 0 && (
+                    <div
+                      className="bg-amber-400 h-full transition-all duration-500"
+                      style={{ width: `${atRiskPct * 100}%` }}
+                    />
+                  )}
+                </div>
+                <span className="text-[10px] text-muted-foreground block leading-relaxed">
+                  Starts at 100% of cycle target ({formatSensitive(essTarget)}). Decreases with each essentials spend.
+                  {atRiskPct > 0 && <span className="text-amber-400"> Projected after pending: {formatSensitive(projectedRemaining)}</span>}
                 </span>
-              ) : (
-                <span className="text-foreground">{(projectedMetrics.essentials.current).toFixed(1)}%</span>
-              )}
-            </div>
-            <div className="w-full bg-muted rounded-full h-2 overflow-hidden flex">
-              <div 
-                className={`h-full transition-all duration-500 ${
-                  projectedMetrics.essentials.projected > 50 ? 'bg-sky-500' : projectedMetrics.essentials.projected > 20 ? 'bg-yellow-500' : 'bg-orange-500'
-                }`}
-                style={{ width: `${Math.max(0, Math.min(100, projectedMetrics.essentials.projected))}%` }}
-              />
-              <div 
-                className={`h-full transition-all duration-500 ${
-                  projectedMetrics.essentials.current > 50 ? 'bg-sky-500/30' : projectedMetrics.essentials.current > 20 ? 'bg-yellow-500/30' : 'bg-orange-500/30'
-                }`}
-                style={{ width: `${Math.max(0, Math.min(100, projectedMetrics.essentials.current - projectedMetrics.essentials.projected))}%` }}
-              />
-            </div>
-            <span className="text-[10px] text-muted-foreground block leading-relaxed">
-              Starts at 100% of cycle target ({formatSensitive(categories.find(c => c.name === "Essentials")?.target || 0)}). Decreases with each essentials spend.
-            </span>
-          </div>
+              </div>
+            )
+          })()}
 
           {/* Stability Reached */}
-          <div className="space-y-2 p-4 rounded-xl bg-muted/30 border border-border/40">
-            <div className="flex justify-between text-xs font-semibold">
-              <span className="text-muted-foreground">Stability Cap Reached</span>
-              {projectedMetrics.stability.pending > 0 ? (
-                <span className="text-foreground">
-                  {(projectedMetrics.stability.projected).toFixed(1)}% <span className="text-muted-foreground text-[10px] font-normal">({(projectedMetrics.stability.current).toFixed(1)}% current)</span>
+          {(() => {
+            const stabilityCat = categories.find(c => c.name === 'Stability')
+            const stabilityTarget = activeSettings.targetStabilityFund || 1
+            const currentPct = Math.max(0, Math.min(1, stats.stabilityPercentReached))
+            const pendingStab = pendingDeductionsByCategory['Stability'] || 0
+            const currentBalance = stabilityCat?.remaining ?? 0
+            const projectedBalance = Math.max(0, currentBalance - pendingStab)
+            const projectedPct = Math.max(0, Math.min(1, projectedBalance / stabilityTarget))
+            const atRiskPct = Math.max(0, currentPct - projectedPct)
+            return (
+              <div className="space-y-2 p-4 rounded-xl bg-muted/30 border border-border/40">
+                <div className="flex justify-between text-xs font-semibold">
+                  <span className="text-muted-foreground">Stability Cap Reached</span>
+                  <span className="text-foreground">
+                    {(currentPct * 100).toFixed(1)}%
+                    {atRiskPct > 0 && (
+                      <span className="text-amber-400 ml-1">→ {(projectedPct * 100).toFixed(1)}%</span>
+                    )}
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2 overflow-hidden flex">
+                  <div
+                    className="bg-teal-500 h-full transition-all duration-500"
+                    style={{ width: `${projectedPct * 100}%` }}
+                  />
+                  {atRiskPct > 0 && (
+                    <div
+                      className="bg-amber-400 h-full transition-all duration-500"
+                      style={{ width: `${atRiskPct * 100}%` }}
+                    />
+                  )}
+                </div>
+                <span className="text-[10px] text-muted-foreground block leading-relaxed">
+                  Target Stability Fund goal is <strong>{formatSensitive(activeSettings.targetStabilityFund)}</strong>. Currently at {formatSensitive(currentBalance)}.
+                  {atRiskPct > 0 && <span className="text-amber-400"> Projected after pending: {formatSensitive(projectedBalance)}</span>}
                 </span>
-              ) : (
-                <span className="text-foreground">{(projectedMetrics.stability.current).toFixed(1)}%</span>
-              )}
-            </div>
-            <div className="w-full bg-muted rounded-full h-2 overflow-hidden flex">
-              <div 
-                className="bg-teal-500 h-full transition-all duration-500" 
-                style={{ width: `${Math.max(0, Math.min(100, projectedMetrics.stability.projected))}%` }}
-              />
-              <div 
-                className="bg-teal-500/30 h-full transition-all duration-500" 
-                style={{ width: `${Math.max(0, Math.min(100, projectedMetrics.stability.current - projectedMetrics.stability.projected))}%` }}
-              />
-            </div>
-            <span className="text-[10px] text-muted-foreground block leading-relaxed">
-              Target Stability Fund goal is <strong>{formatSensitive(activeSettings.targetStabilityFund)}</strong>. Currently at {formatSensitive(categories.find(c => c.name === "Stability")?.remaining || 0)}.
-            </span>
-          </div>
+              </div>
+            )
+          })()}
         </div>
       </div>
 
