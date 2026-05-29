@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import type { DashboardData } from '../types'
+import type { DashboardData, TransactionCategory } from '../types'
 import { 
   Wallet, 
   ArrowUpRight, 
@@ -10,7 +10,8 @@ import {
   AlertCircle,
   TrendingUp as TrendLineIcon
 } from 'lucide-react'
-import type { TransactionCategory } from '../types'
+import { CustomSelect } from './ui/CustomSelect'
+
 
 interface DashboardViewProps {
   dashboardData: DashboardData | null
@@ -298,26 +299,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         
         <div className="flex items-center gap-3 self-start md:self-center">
           {/* Month Selector */}
-          <select 
+          <CustomSelect 
             value={activeSettings.selectedMonth}
-            onChange={(e) => onSelectPeriod(e.target.value, activeSettings.selectedYear)}
-            className="px-3.5 py-1.5 pr-8 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer appearance-none bg-[image:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org/2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222.5%22%3E%3Cpath%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20d%3D%22M19%209l-7%207-7-7%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1em_1em] bg-[right_0.6rem_center] bg-no-repeat text-foreground font-semibold shadow-xs transition duration-200 hover:bg-muted/30"
-          >
-            {months.map(m => (
-              <option key={m} value={m}>{getCycleLabelForDropdown(m, activeSettings.selectedYear, activeSettings.cycleDay)}</option>
-            ))}
-          </select>
+            onChange={(val) => onSelectPeriod(val, activeSettings.selectedYear)}
+            options={months.map(m => ({
+              value: m,
+              label: getCycleLabelForDropdown(m, activeSettings.selectedYear, activeSettings.cycleDay)
+            }))}
+            className="w-48 md:w-56"
+          />
 
           {/* Year Selector */}
-          <select 
+          <CustomSelect 
             value={activeSettings.selectedYear}
-            onChange={(e) => onSelectPeriod(activeSettings.selectedMonth, parseInt(e.target.value))}
-            className="px-3.5 py-1.5 pr-8 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer appearance-none bg-[image:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org/2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222.5%22%3E%3Cpath%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20d%3D%22M19%209l-7%207-7-7%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1em_1em] bg-[right_0.6rem_center] bg-no-repeat text-foreground font-semibold shadow-xs transition duration-200 hover:bg-muted/30"
-          >
-            {years.map(y => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
+            onChange={(val) => onSelectPeriod(activeSettings.selectedMonth, parseInt(val))}
+            options={years.map(y => ({
+              value: y,
+              label: y.toString()
+            }))}
+            className="w-24"
+          />
 
           {/* Configure button */}
           <button 

@@ -10,6 +10,7 @@ import {
   MinusCircle,
   RefreshCw
 } from 'lucide-react'
+import { CustomSelect } from './ui/CustomSelect'
 
 interface LedgerViewProps {
   transactions: Transaction[]
@@ -262,24 +263,24 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             
             {/* Cycle Selector */}
             <div className="flex items-center gap-1.5 bg-muted/40 p-1 rounded-xl border border-border/40 select-none">
-              <select
+              <CustomSelect
                 value={selectedMonth}
-                onChange={(e) => onSelectPeriod(e.target.value, selectedYear)}
-                className="px-3.5 py-1.5 pr-8 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer appearance-none bg-[image:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org/2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222.5%22%3E%3Cpath%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20d%3D%22M19%209l-7%207-7-7%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1em_1em] bg-[right_0.6rem_center] bg-no-repeat text-foreground font-semibold shadow-xs transition duration-200 hover:bg-muted/30"
-              >
-                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(m => (
-                  <option key={m} value={m}>{getCycleLabelForDropdown(m, selectedYear, cycleDay)}</option>
-                ))}
-              </select>
-              <select
+                onChange={(val) => onSelectPeriod(val, selectedYear)}
+                options={['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(m => ({
+                  value: m,
+                  label: getCycleLabelForDropdown(m, selectedYear, cycleDay)
+                }))}
+                className="w-48 md:w-56"
+              />
+              <CustomSelect
                 value={selectedYear}
-                onChange={(e) => onSelectPeriod(selectedMonth, parseInt(e.target.value))}
-                className="px-3.5 py-1.5 pr-8 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer appearance-none bg-[image:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org/2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222.5%22%3E%3Cpath%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20d%3D%22M19%209l-7%207-7-7%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1em_1em] bg-[right_0.6rem_center] bg-no-repeat text-foreground font-semibold shadow-xs transition duration-200 hover:bg-muted/30"
-              >
-                {availableYears.map(y => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
+                onChange={(val) => onSelectPeriod(selectedMonth, parseInt(val))}
+                options={availableYears.map(y => ({
+                  value: y,
+                  label: y.toString()
+                }))}
+                className="w-24"
+              />
             </div>
           </div>
           <p className="text-xs text-muted-foreground mt-1">Comprehensive posting of all accounts and transactional balances for the currently selected cycle.</p>
