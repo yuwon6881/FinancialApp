@@ -13,19 +13,27 @@ const queryCache = {
 
   get<T>(key: string): Promise<T> | null {
     const entry = this.store.get(key)
-    if (!entry) return null
-    if (Date.now() - entry.timestamp > this.staleTime) {
+    if (!entry) {
+      console.log(`[Cache Miss] ${key} not in cache`)
+      return null
+    }
+    const age = Date.now() - entry.timestamp
+    if (age > this.staleTime) {
+      console.log(`[Cache Stale] ${key} is expired (age: ${age}ms)`)
       this.store.delete(key)
       return null
     }
+    console.log(`[Cache Hit] ${key} (age: ${age}ms)`)
     return entry.promise as Promise<T>
   },
 
   set(key: string, promise: Promise<any>) {
+    console.log(`[Cache Set] ${key}`)
     this.store.set(key, { promise, timestamp: Date.now() })
   },
 
   invalidateAll() {
+    console.log(`[Cache Invalidated] Clearing all entries`)
     this.store.clear()
   }
 }
