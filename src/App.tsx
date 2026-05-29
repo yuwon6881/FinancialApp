@@ -410,6 +410,7 @@ function App() {
         {activeTab === 'dashboard' && (
           <DashboardView 
             dashboardData={dashboardData}
+            transactions={transactions}
             onSelectPeriod={handleSelectPeriod}
             onUpdateSettings={handleUpdateSettings}
             onNavigate={setActiveTab}

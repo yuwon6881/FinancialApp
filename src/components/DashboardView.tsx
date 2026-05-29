@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react'
-import type { DashboardData, TransactionCategory } from '../types'
+import type { DashboardData, TransactionCategory, Transaction } from '../types'
 import { 
   Wallet, 
   ArrowUpRight, 
@@ -15,6 +15,7 @@ import { CustomSelect } from './ui/CustomSelect'
 
 interface DashboardViewProps {
   dashboardData: DashboardData | null
+  transactions: Transaction[]
   onSelectPeriod: (month: string, year: number) => void
   onUpdateSettings: (settings: {
     targetStabilityFund: number
@@ -36,6 +37,7 @@ interface DashboardViewProps {
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ 
   dashboardData,
+  transactions,
   onSelectPeriod,
   onUpdateSettings,
   onNavigate,
@@ -897,8 +899,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* Main Charts & Breakdown Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main Charts & Breakdown Section (2-column layout to prevent horizontally squeezed charts) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Balance Trend Line */}
         <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs flex flex-col justify-between">
@@ -1108,19 +1110,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none text-center p-2">
                     {hoveredSlice !== null ? (
                       <>
-                        <span className="text-[8px] text-muted-foreground font-bold truncate max-w-[70px] uppercase">
+                        <span className="text-[10px] text-muted-foreground font-bold truncate max-w-[80px] uppercase">
                           {slices[hoveredSlice].category}
                         </span>
-                        <span className="text-xs font-black text-foreground">
+                        <span className="text-sm font-black text-foreground">
                           {(slices[hoveredSlice].percentage * 100).toFixed(0)}%
                         </span>
                       </>
                     ) : (
                       <>
-                        <span className="text-[8px] text-muted-foreground font-bold uppercase">
+                        <span className="text-[10px] text-muted-foreground font-bold uppercase">
                           Total
                         </span>
-                        <span className="text-[10px] font-black text-foreground truncate max-w-[75px]">
+                        <span className="text-xs font-black text-foreground truncate max-w-[80px]">
                           {formatSensitive(totalBreakdownAmount)}
                         </span>
                       </>
@@ -1128,12 +1130,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </div>
                 </div>
 
-                {/* Legend List */}
+                {/* Legend List (Refined text styles for HD rendering) */}
                 <div className="w-full space-y-1 max-h-24 overflow-y-auto pr-1">
                   {slices.map((slice, index) => (
                     <div
                       key={slice.category}
-                      className={`flex items-center justify-between text-[10px] py-0.5 px-1.5 rounded-md transition-colors duration-150 cursor-pointer ${
+                      className={`flex items-center justify-between text-xs py-1 px-1.5 rounded-md transition-colors duration-150 cursor-pointer ${
                         hoveredSlice === index ? 'bg-muted/50' : 'hover:bg-muted/30'
                       }`}
                       onMouseEnter={() => setHoveredSlice(index)}
@@ -1147,11 +1149,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           className="size-2 rounded-full shrink-0"
                           style={{ backgroundColor: getCategoryColor(slice.category) }}
                         />
-                        <span className="font-semibold text-foreground truncate max-w-[65px]">
+                        <span className="font-bold text-foreground truncate max-w-[85px]">
                           {slice.category}
                         </span>
                       </div>
-                      <span className="text-muted-foreground font-medium shrink-0">
+                      <span className="text-muted-foreground font-bold shrink-0">
                         {formatSensitive(slice.amount)} ({(slice.percentage * 100).toFixed(0)}%)
                       </span>
                     </div>
@@ -1172,186 +1174,180 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {/* Active Month Recurring Payments Timeline */}
-        <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h3 className="text-md font-semibold text-foreground">Subscriptions</h3>
-                <p className="text-[10px] text-muted-foreground">Bills for this active cycle</p>
-              </div>
-              <Calendar className="size-4 text-blue-500 shrink-0" />
-            </div>
+      </div>
 
-            <div className="space-y-2 mt-4 max-h-40 overflow-y-auto pr-1">
-              {activeRecurring.map((rp: any) => (
-                <div key={rp.id} className="flex items-center justify-between text-[11px] py-1.5 border-b border-border/30 last:border-b-0">
-                  <div className="truncate mr-2">
-                    <span className="font-semibold text-foreground truncate block max-w-[100px]">{rp.name}</span>
-                    <div className="flex flex-wrap items-center gap-1 mt-0.5 select-none">
-                      <span className={`inline-block text-[8px] px-1.5 py-0.25 font-semibold rounded border ${categoryColorMap[rp.category] || 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
-                        {rp.category}
-                      </span>
-                      {rp.isPaid ? (
-                        <span className="text-[8px] px-1.5 py-0.25 font-bold text-blue-500 bg-blue-500/10 border border-blue-500/20 rounded">
-                          Paid
-                        </span>
-                      ) : (
-                        <span className="text-[8px] px-1.5 py-0.25 font-bold text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 rounded">
-                          Pending
-                        </span>
-                      )}
-                    </div>
+      {/* Calendar & Subscriptions Section (Calendar spans 2 columns, Subscriptions timeline spans 1) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Daily Cycle Heatmap Calendar (Spans 2 columns) */}
+        <div className="lg:col-span-2">
+          {(() => {
+            const cycleDay = activeSettings.cycleDay
+            const monthIdxMap: Record<string, number> = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 }
+            const selectedMonthIdx = (monthIdxMap[activeSettings.selectedMonth] ?? 0) + 1
+            const selectedYear = activeSettings.selectedYear
+
+            // Compute cycle start and end dates same as backend logic
+            const startDayActual = Math.min(cycleDay, new Date(selectedYear, selectedMonthIdx, 0).getDate())
+            const cycleStart = new Date(selectedYear, selectedMonthIdx - 1, startDayActual)
+            const cycleEnd = new Date(cycleStart)
+            cycleEnd.setMonth(cycleEnd.getMonth() + 1)
+            cycleEnd.setDate(cycleEnd.getDate() - 1)
+
+            const formatDate = (d: Date) => {
+              const y = d.getFullYear()
+              const m = String(d.getMonth() + 1).padStart(2, '0')
+              const dd = String(d.getDate()).padStart(2, '0')
+              return `${y}-${m}-${dd}`
+            }
+
+            const cycleStartStr = formatDate(cycleStart)
+            const cycleEndStr = formatDate(cycleEnd)
+
+            // Build days array
+            const days: Date[] = []
+            let cursor = new Date(cycleStart)
+            while (cursor <= cycleEnd) {
+              days.push(new Date(cursor))
+              cursor.setDate(cursor.getDate() + 1)
+            }
+
+            // Net per day from transactions (contains ALL transactions in the active cycle)
+            const netByDay: Record<string, number> = {}
+            transactions.forEach((t: any) => {
+              if (t.date >= cycleStartStr && t.date <= cycleEndStr) {
+                netByDay[t.date] = (netByDay[t.date] || 0) + t.amount
+              }
+            })
+
+            // Recurring bills by day
+            const recurringByDay: Record<string, string[]> = {}
+            activeRecurring.forEach((rp: any) => {
+              if (rp.dueDate >= cycleStartStr && rp.dueDate <= cycleEndStr) {
+                if (!recurringByDay[rp.dueDate]) recurringByDay[rp.dueDate] = []
+                recurringByDay[rp.dueDate].push(rp.name)
+              }
+            })
+
+            // Start day of week for the grid (0=Sun)
+            const startDow = cycleStart.getDay()
+
+            const formatDisplayDate = (d: Date) => {
+              const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+              return `${monthNames[d.getMonth()]} ${d.getDate()}`
+            }
+
+            return (
+              <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs h-full">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-md font-semibold text-foreground">Cycle Calendar</h3>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{cycleLabel}</p>
                   </div>
-                  <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                    <span className="text-orange-500 font-bold block">-{formatSensitive(rp.amount)}</span>
-                    <div className="flex items-center gap-1.5">
-                      {!rp.isPaid && rp.dueDate <= todayStr && (
-                        <button
-                          onClick={() => {
-                            const pDate = prompt("Enter paid date (yyyy-MM-dd):", rp.dueDate)
-                            if (pDate) {
-                              onConfirmSubscription(rp, pDate)
-                            }
-                          }}
-                          className="text-[9px] font-bold text-blue-500 bg-blue-500/10 hover:bg-blue-500/25 hover:scale-[1.02] active:scale-95 px-1.5 py-0.5 rounded border border-blue-500/20 cursor-pointer transition"
-                        >
-                          Confirm
-                        </button>
-                      )}
+                  <div className="flex items-center gap-3 text-[9px] text-muted-foreground select-none">
+                    <span className="flex items-center gap-1"><span className="font-bold text-blue-500">+$</span> Inflow</span>
+                    <span className="flex items-center gap-1"><span className="font-bold text-orange-500">-$</span> Outflow</span>
+                    <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-blue-500" />Bill due</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-7 gap-1 text-center">
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                    <div key={d} className="text-[9px] text-muted-foreground font-semibold pb-1">{d}</div>
+                  ))}
+                  {/* Empty cells before start */}
+                  {Array.from({ length: startDow }).map((_, i) => (
+                    <div key={`empty-${i}`} />
+                  ))}
+                  {days.map((day, _i) => {
+                    const ds = formatDate(day)
+                    const net = netByDay[ds]
+                    const recs = recurringByDay[ds] || []
+                    const hasNet = net !== undefined
+                    const isPositive = hasNet && net >= 0
+                    const isToday = ds === todayStr
+                    return (
+                      <div
+                        key={ds}
+                        title={hasNet
+                          ? `${formatDisplayDate(day)}: ${net >= 0 ? '+' : ''}${net.toFixed(2)}${recs.length ? '\nBills: ' + recs.join(', ') : ''}`
+                          : recs.length ? `${formatDisplayDate(day)}\nBills: ${recs.join(', ')}` : formatDisplayDate(day)}
+                        className={`relative h-11 md:h-12 w-full rounded-lg flex flex-col items-center justify-center gap-0.5 transition-all duration-150 bg-muted/5 dark:bg-muted/10 border border-border/20 ${
+                          isToday ? 'ring-2 ring-blue-500 ring-offset-1 ring-offset-card' : ''
+                        }`}
+                      >
+                        <span className={`leading-none text-[9px] font-bold ${isToday ? 'text-blue-500' : 'text-foreground/80'}`}>
+                          {day.getDate()}
+                        </span>
+                        {hasNet && (
+                          <span className={`text-[8px] font-extrabold leading-none ${isPositive ? 'text-blue-500' : 'text-orange-500'}`}>
+                            {isPositive ? '+' : '-'}${Math.abs(Math.round(net))}
+                          </span>
+                        )}
+                        {recs.length > 0 && (
+                          <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
+        </div>
+
+        {/* Active Month Recurring Payments Timeline (Spans 1 column) */}
+        <div className="lg:col-span-1">
+          <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs flex flex-col justify-between h-full">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h3 className="text-md font-semibold text-foreground">Subscriptions</h3>
+                  <p className="text-[10px] text-muted-foreground">Bills for this active cycle</p>
+                </div>
+                <Calendar className="size-4 text-blue-500 shrink-0" />
+              </div>
+
+              <div className="space-y-2 mt-4 max-h-[180px] overflow-y-auto pr-1">
+                {activeRecurring.map((rp: any) => (
+                  <div key={rp.id} className="flex items-center justify-between text-xs py-1.5 border-b border-border/30 last:border-b-0">
+                    <div className="truncate mr-2">
+                      <span className="font-bold text-foreground truncate block max-w-[120px]">{rp.name}</span>
+                      <div className="flex flex-wrap items-center gap-1 mt-0.5 select-none">
+                        <span className={`inline-block text-[10px] px-1.5 py-0.5 font-semibold rounded border ${categoryColorMap[rp.category] || 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
+                          {rp.category}
+                        </span>
+                        {rp.isPaid ? (
+                          <span className="text-[10px] px-1.5 py-0.5 font-bold text-blue-500 bg-blue-500/10 border border-blue-500/20 rounded">
+                            Paid
+                          </span>
+                        ) : (
+                          <span className="text-[10px] px-1.5 py-0.5 font-bold text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 rounded">
+                            Pending
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0 flex flex-col items-end gap-1">
+                      <span className="text-orange-500 font-bold block">-{formatSensitive(rp.amount)}</span>
                       <span className="text-muted-foreground text-[9px]">Due {rp.dueDate}</span>
                     </div>
                   </div>
-                </div>
-              ))}
-              {activeRecurring.length === 0 && (
-                <div className="text-xs text-muted-foreground py-10 text-center">No subscriptions for this cycle.</div>
-              )}
+                ))}
+                {activeRecurring.length === 0 && (
+                  <div className="text-xs text-muted-foreground py-10 text-center">No subscriptions for this cycle.</div>
+                )}
+              </div>
             </div>
-          </div>
 
-          <button 
-            onClick={() => onNavigate('recurring')}
-            className="w-full py-2 mt-4 text-center text-xs font-semibold text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 rounded-xl transition duration-200 cursor-pointer"
-          >
-            Manage Subscriptions
-          </button>
+            <button 
+              onClick={() => onNavigate('recurring')}
+              className="w-full py-2 mt-4 text-center text-xs font-semibold text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 rounded-xl transition duration-200 cursor-pointer"
+            >
+              Manage Subscriptions
+            </button>
+          </div>
         </div>
       </div>
-
-      {/* Daily Cycle Heatmap Calendar */}
-      {(() => {
-        const cycleDay = activeSettings.cycleDay
-        const monthIdxMap: Record<string, number> = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 }
-        const selectedMonthIdx = (monthIdxMap[activeSettings.selectedMonth] ?? 0) + 1
-        const selectedYear = activeSettings.selectedYear
-
-        // Compute cycle start and end dates same as backend logic
-        const startDayActual = Math.min(cycleDay, new Date(selectedYear, selectedMonthIdx, 0).getDate())
-        const cycleStart = new Date(selectedYear, selectedMonthIdx - 1, startDayActual)
-        const cycleEnd = new Date(cycleStart)
-        cycleEnd.setMonth(cycleEnd.getMonth() + 1)
-        cycleEnd.setDate(cycleEnd.getDate() - 1)
-
-        const formatDate = (d: Date) => {
-          const y = d.getFullYear()
-          const m = String(d.getMonth() + 1).padStart(2, '0')
-          const dd = String(d.getDate()).padStart(2, '0')
-          return `${y}-${m}-${dd}`
-        }
-
-        const cycleStartStr = formatDate(cycleStart)
-        const cycleEndStr = formatDate(cycleEnd)
-
-        // Build days array
-        const days: Date[] = []
-        let cursor = new Date(cycleStart)
-        while (cursor <= cycleEnd) {
-          days.push(new Date(cursor))
-          cursor.setDate(cursor.getDate() + 1)
-        }
-
-        // Net per day from recentTransactions
-        const netByDay: Record<string, number> = {}
-        recentTransactions.forEach((t: any) => {
-          if (t.date >= cycleStartStr && t.date <= cycleEndStr) {
-            netByDay[t.date] = (netByDay[t.date] || 0) + t.amount
-          }
-        })
-
-        // Recurring bills by day
-        const recurringByDay: Record<string, string[]> = {}
-        activeRecurring.forEach((rp: any) => {
-          if (rp.dueDate >= cycleStartStr && rp.dueDate <= cycleEndStr) {
-            if (!recurringByDay[rp.dueDate]) recurringByDay[rp.dueDate] = []
-            recurringByDay[rp.dueDate].push(rp.name)
-          }
-        })
-
-        // Start day of week for the grid (0=Sun)
-        const startDow = cycleStart.getDay()
-
-        const formatDisplayDate = (d: Date) => {
-          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-          return `${monthNames[d.getMonth()]} ${d.getDate()}`
-        }
-
-        return (
-          <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs max-w-2xl mx-auto">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-md font-semibold text-foreground">Cycle Calendar</h3>
-                <p className="text-[10px] text-muted-foreground mt-0.5">{cycleLabel}</p>
-              </div>
-              <div className="flex items-center gap-3 text-[9px] text-muted-foreground select-none">
-                <span className="flex items-center gap-1"><span className="font-bold text-blue-500">+$</span> Inflow</span>
-                <span className="flex items-center gap-1"><span className="font-bold text-orange-500">-$</span> Outflow</span>
-                <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-blue-500" />Bill due</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-7 gap-1 text-center">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-                <div key={d} className="text-[9px] text-muted-foreground font-semibold pb-1">{d}</div>
-              ))}
-              {/* Empty cells before start */}
-              {Array.from({ length: startDow }).map((_, i) => (
-                <div key={`empty-${i}`} />
-              ))}
-              {days.map((day, _i) => {
-                const ds = formatDate(day)
-                const net = netByDay[ds]
-                const recs = recurringByDay[ds] || []
-                const hasNet = net !== undefined
-                const isPositive = hasNet && net >= 0
-                const isToday = ds === todayStr
-                return (
-                  <div
-                    key={ds}
-                    title={hasNet
-                      ? `${formatDisplayDate(day)}: ${net >= 0 ? '+' : ''}${net.toFixed(2)}${recs.length ? '\nBills: ' + recs.join(', ') : ''}`
-                      : recs.length ? `${formatDisplayDate(day)}\nBills: ${recs.join(', ')}` : formatDisplayDate(day)}
-                    className={`relative h-11 md:h-12 w-full rounded-lg flex flex-col items-center justify-center gap-0.5 transition-all duration-150 bg-muted/5 dark:bg-muted/10 border border-border/20 ${
-                      isToday ? 'ring-2 ring-blue-500 ring-offset-1 ring-offset-card' : ''
-                    }`}
-                  >
-                    <span className={`leading-none text-[9px] font-bold ${isToday ? 'text-blue-500' : 'text-foreground/80'}`}>
-                      {day.getDate()}
-                    </span>
-                    {hasNet && (
-                      <span className={`text-[8px] font-extrabold leading-none ${isPositive ? 'text-blue-500' : 'text-orange-500'}`}>
-                        {isPositive ? '+' : '-'}${Math.abs(Math.round(net))}
-                      </span>
-                    )}
-                    {recs.length > 0 && (
-                      <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )
-      })()}
 
       {/* Month Transactions List */}
       <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs">
