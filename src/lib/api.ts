@@ -5,35 +5,27 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 interface CacheEntry {
   promise: Promise<any>
   timestamp: number
+  staleTime: number
 }
 
 const queryCache = {
   store: new Map<string, CacheEntry>(),
-  staleTime: 30000, // 30 seconds
 
   get<T>(key: string): Promise<T> | null {
     const entry = this.store.get(key)
-    if (!entry) {
-      console.log(`[Cache Miss] ${key} not in cache`)
-      return null
-    }
-    const age = Date.now() - entry.timestamp
-    if (age > this.staleTime) {
-      console.log(`[Cache Stale] ${key} is expired (age: ${age}ms)`)
+    if (!entry) return null
+    if (Date.now() - entry.timestamp > entry.staleTime) {
       this.store.delete(key)
       return null
     }
-    console.log(`[Cache Hit] ${key} (age: ${age}ms)`)
     return entry.promise as Promise<T>
   },
 
-  set(key: string, promise: Promise<any>) {
-    console.log(`[Cache Set] ${key}`)
-    this.store.set(key, { promise, timestamp: Date.now() })
+  set(key: string, promise: Promise<any>, staleTime = 30000) {
+    this.store.set(key, { promise, timestamp: Date.now(), staleTime })
   },
 
   invalidateAll() {
-    console.log(`[Cache Invalidated] Clearing all entries`)
     this.store.clear()
   }
 }
@@ -383,7 +375,7 @@ export function fetchRecurringPayments(): Promise<RecurringPayment[]> {
     return (data || []).map(deobfuscateRecurringPayment)
   })()
 
-  queryCache.set(cacheKey, promise)
+  queryCache.set(cacheKey, promise, 300000)
   return promise
 }
 
@@ -467,7 +459,7 @@ export function fetchCategories(): Promise<TransactionCategory[]> {
     return response.json()
   })()
 
-  queryCache.set(cacheKey, promise)
+  queryCache.set(cacheKey, promise, 300000)
   return promise
 }
 
