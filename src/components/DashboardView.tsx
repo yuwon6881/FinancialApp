@@ -31,7 +31,7 @@ interface DashboardViewProps {
   onDeleteCategory: (id: string) => void
   onConfirmSubscription: (noti: any, paidDate: string) => void
   onDeletePayment: (id: string) => void
-  onNavigateToLedgerCategory: (category: string, allCycles: boolean) => void
+  onNavigateToLedgerCategory: (category: string, range: 'monthly' | '3month' | '6month' | 'yearly') => void
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ 
@@ -925,94 +925,124 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               ))}
             </div>
 
-            {/* SVG Line Chart */}
-            <div className={`h-40 flex items-end justify-center w-full relative mt-2 transition-all duration-300 ${hideSensitive ? 'blur-xs select-none pointer-events-none' : ''}`}>
+            {/* SVG Line Chart Wrapper with container-level hover snapping */}
+            <div
+              onMouseMove={(e) => {
+                if (!svgRef.current || activeTrendPoints.length < 2) return
+                const rect = svgRef.current.getBoundingClientRect()
+                const mouseX = e.clientX - rect.left
+                const pctX = mouseX / rect.width
+                const index = Math.round(pctX * (activeTrendPoints.length - 1))
+                const safeIndex = Math.max(0, Math.min(activeTrendPoints.length - 1, index))
+                setHoveredTrendPoint(safeIndex)
+              }}
+              onMouseLeave={() => setHoveredTrendPoint(null)}
+              className={`h-40 flex flex-col justify-end w-full relative mt-2 transition-all duration-300 ${hideSensitive ? 'blur-xs select-none pointer-events-none' : ''}`}
+            >
               {trendLinePoints ? (
-                <svg ref={svgRef} className="w-full h-full overflow-visible" viewBox="0 0 500 120" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="var(--color-chart-line, #3b82f6)" stopOpacity="0.25" />
-                      <stop offset="100%" stopColor="var(--color-chart-line, #3b82f6)" stopOpacity="0.0" />
-                    </linearGradient>
-                  </defs>
-                  
-                  {/* Fill Area */}
-                  <path
-                    d={`M 15,105 L ${trendLinePoints} L 485,105 Z`}
-                    fill="url(#chartGradient)"
-                    className="transition-all duration-300"
-                  />
-                  
-                  {/* Stroke Line */}
-                  <polyline
-                    fill="none"
-                    stroke="var(--color-chart-line, #3b82f6)"
-                    strokeWidth="2.5"
-                    points={trendLinePoints}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="transition-all duration-300"
-                  />
+                <>
+                  <svg ref={svgRef} className="w-full h-[120px] overflow-visible" viewBox="0 0 500 120" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--color-chart-line, #3b82f6)" stopOpacity="0.25" />
+                        <stop offset="100%" stopColor="var(--color-chart-line, #3b82f6)" stopOpacity="0.0" />
+                      </linearGradient>
+                    </defs>
+                    
+                    {/* Fill Area */}
+                    <path
+                      d={`M 15,105 L ${trendLinePoints} L 485,105 Z`}
+                      fill="url(#chartGradient)"
+                      className="transition-all duration-300"
+                    />
+                    
+                    {/* Stroke Line */}
+                    <polyline
+                      fill="none"
+                      stroke="var(--color-chart-line, #3b82f6)"
+                      strokeWidth="2.5"
+                      points={trendLinePoints}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="transition-all duration-300"
+                    />
+                  </svg>
 
-                  {/* Interactive hover points + tooltips */}
-                  {activeTrendPoints.length >= 2 && (() => {
-                    const minVal = Math.min(...activeTrendPoints.map(p => p.balance), 0)
-                    const maxVal = Math.max(...activeTrendPoints.map(p => p.balance), 1000)
+                  {/* HTML absolute-positioned data point dots (avoids aspect squashing) */}
+                  {activeTrendPoints.map((p, i) => {
+                    const minVal = Math.min(...activeTrendPoints.map(pt => pt.balance), 0)
+                    const maxVal = Math.max(...activeTrendPoints.map(pt => pt.balance), 1000)
                     const range = maxVal - minVal
-                    return activeTrendPoints.map((p, i) => {
-                      const x = 15 + (i / (activeTrendPoints.length - 1)) * 470
-                      const y = 120 - 15 - ((p.balance - minVal) / (range || 1)) * (120 - 15 * 2)
-                      const isHovered = hoveredTrendPoint === i
-                      return (
-                        <g key={i}>
-                          <circle
-                            cx={x} cy={y} r="12"
-                            fill="transparent"
-                            className="cursor-pointer"
-                            onMouseEnter={() => setHoveredTrendPoint(i)}
-                            onMouseLeave={() => setHoveredTrendPoint(null)}
-                          />
-                          {isHovered && (
-                            <circle cx={x} cy={y} r="4" fill="var(--color-chart-line, #3b82f6)" stroke="white" strokeWidth="1.5" />
-                          )}
-                          {!isHovered && (
-                            <circle cx={x} cy={y} r="2.5" fill="var(--color-chart-line, #3b82f6)" opacity="0.6" />
-                          )}
-                          {isHovered && (
-                            <g>
-                              <rect
-                                x={Math.min(x + 8, 390)} y={Math.max(y - 36, 4)}
-                                width="100" height="30"
-                                rx="5" ry="5"
-                                fill="var(--card)" stroke="var(--border)" strokeWidth="1"
-                                opacity="0.97"
-                              />
-                              <text x={Math.min(x + 58, 440)} y={Math.max(y - 21, 17)} textAnchor="middle" fontSize="8" fontWeight="bold" fill="currentColor">
-                                {p.month}
-                              </text>
-                              <text x={Math.min(x + 58, 440)} y={Math.max(y - 10, 28)} textAnchor="middle" fontSize="8" fill="currentColor" opacity="0.7">
-                                {hideSensitive ? '•••••' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(p.balance)}
-                              </text>
-                            </g>
-                          )}
-                        </g>
-                      )
-                    })
-                  })()}
-
-                  {/* Month labels on X axis */}
-                  {activeTrendPoints.length >= 2 && activeTrendPoints.map((p, i) => {
                     const x = 15 + (i / (activeTrendPoints.length - 1)) * 470
+                    const y = 120 - 15 - ((p.balance - minVal) / (range || 1)) * 90
+                    
+                    // Convert coordinates to percentages of parent height/width
+                    // SVG viewport is 500x120, but the SVG element itself is height 120px inside the 160px parent
+                    const leftPct = (x / 500) * 100
+                    const topPct = (y / 120) * 100 * (120 / 160) + (40 / 160) * 100 // adjust for offset top
+
                     return (
-                      <text key={i} x={x} y={118} textAnchor="middle" fontSize="9" fill="currentColor" className="text-muted-foreground opacity-60">
-                        {p.month}
-                      </text>
+                      <div
+                        key={i}
+                        className="absolute w-1.5 h-1.5 rounded-full bg-blue-500/50 pointer-events-none"
+                        style={{
+                          left: `calc(${leftPct}% - 3px)`,
+                          top: `calc(${topPct}% - 3px)`,
+                        }}
+                      />
                     )
                   })}
-                </svg>
+
+                  {/* Active Highlight Dot and HTML Tooltip */}
+                  {hoveredTrendPoint !== null && activeTrendPoints[hoveredTrendPoint] && (() => {
+                    const p = activeTrendPoints[hoveredTrendPoint]
+                    const minVal = Math.min(...activeTrendPoints.map(pt => pt.balance), 0)
+                    const maxVal = Math.max(...activeTrendPoints.map(pt => pt.balance), 1000)
+                    const range = maxVal - minVal
+                    const x = 15 + (hoveredTrendPoint / (activeTrendPoints.length - 1)) * 470
+                    const y = 120 - 15 - ((p.balance - minVal) / (range || 1)) * 90
+                    
+                    const leftPct = (x / 500) * 100
+                    const topPct = (y / 120) * 100 * (120 / 160) + (40 / 160) * 100 // adjust for offset top
+
+                    return (
+                      <>
+                        <div
+                          className="absolute w-3.5 h-3.5 rounded-full bg-blue-500 border-2 border-card shadow-md pointer-events-none z-10"
+                          style={{
+                            left: `calc(${leftPct}% - 7px)`,
+                            top: `calc(${topPct}% - 7px)`,
+                          }}
+                        />
+                        <div
+                          className="absolute z-20 bg-card border border-border/80 rounded-xl p-1.5 shadow-2xl flex flex-col items-center pointer-events-none select-none text-center animate-in fade-in zoom-in-95 duration-100"
+                          style={{
+                            left: `clamp(4px, calc(${leftPct}% - 50px), calc(100% - 104px))`,
+                            top: `clamp(4px, calc(${topPct}% - 46px), calc(100% - 40px))`,
+                            width: '100px',
+                          }}
+                        >
+                          <span className="text-[9px] font-bold text-foreground leading-none mb-1">{p.month}</span>
+                          <span className="text-[10px] font-black text-blue-500 leading-none">
+                            {hideSensitive ? '•••••' : formatCurrency(p.balance)}
+                          </span>
+                        </div>
+                      </>
+                    )
+                  })()}
+                </>
               ) : (
-                <div className="text-xs text-muted-foreground pb-12">Calculating trend points...</div>
+                <div className="text-xs text-muted-foreground pb-12 w-full text-center">Calculating trend points...</div>
               )}
+            </div>
+
+            {/* Native HTML Month Labels Row (Prevents horizontal squeeze/blurriness) */}
+            <div className="flex justify-between px-[3%] mt-1 select-none">
+              {activeTrendPoints.map((p, i) => (
+                <span key={i} className="text-[9px] text-muted-foreground font-bold opacity-60 text-center w-8">
+                  {p.month}
+                </span>
+              ))}
             </div>
           </div>
           
@@ -1069,8 +1099,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           onMouseEnter={() => setHoveredSlice(index)}
                           onMouseLeave={() => setHoveredSlice(null)}
                           onClick={() => {
-                            const isMultiCycle = chartView !== 'monthly'
-                            onNavigateToLedgerCategory?.(slice.category, isMultiCycle)
+                            onNavigateToLedgerCategory?.(slice.category, chartView)
                           }}
                         />
                       )
@@ -1110,8 +1139,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       onMouseEnter={() => setHoveredSlice(index)}
                       onMouseLeave={() => setHoveredSlice(null)}
                       onClick={() => {
-                        const isMultiCycle = chartView !== 'monthly'
-                        onNavigateToLedgerCategory?.(slice.category, isMultiCycle)
+                        onNavigateToLedgerCategory?.(slice.category, chartView)
                       }}
                     >
                       <div className="flex items-center gap-1.5 truncate mr-2">
@@ -1260,8 +1288,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           }
         })
 
-        const maxAbsNet = Math.max(...Object.values(netByDay).map(Math.abs), 1)
-
         // Start day of week for the grid (0=Sun)
         const startDow = cycleStart.getDay()
 
@@ -1271,15 +1297,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         }
 
         return (
-          <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs">
+          <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs max-w-2xl mx-auto">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-md font-semibold text-foreground">Cycle Calendar</h3>
-                <p className="text-[10px] text-muted-foreground mt-0.5">{cycleLabel} &mdash; daily net activity</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">{cycleLabel}</p>
               </div>
               <div className="flex items-center gap-3 text-[9px] text-muted-foreground select-none">
-                <span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm bg-blue-500/50" />Inflow day</span>
-                <span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm bg-orange-500/50" />Outflow day</span>
+                <span className="flex items-center gap-1"><span className="font-bold text-blue-500">+$</span> Inflow</span>
+                <span className="flex items-center gap-1"><span className="font-bold text-orange-500">-$</span> Outflow</span>
                 <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-blue-500" />Bill due</span>
               </div>
             </div>
@@ -1296,7 +1322,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 const net = netByDay[ds]
                 const recs = recurringByDay[ds] || []
                 const hasNet = net !== undefined
-                const intensity = hasNet ? Math.min(0.8, Math.abs(net) / maxAbsNet * 0.8 + 0.15) : 0
                 const isPositive = hasNet && net >= 0
                 const isToday = ds === todayStr
                 return (
@@ -1305,22 +1330,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     title={hasNet
                       ? `${formatDisplayDate(day)}: ${net >= 0 ? '+' : ''}${net.toFixed(2)}${recs.length ? '\nBills: ' + recs.join(', ') : ''}`
                       : recs.length ? `${formatDisplayDate(day)}\nBills: ${recs.join(', ')}` : formatDisplayDate(day)}
-                    className={`relative aspect-square rounded-lg flex flex-col items-center justify-center gap-0.5 text-[9px] font-semibold transition-all duration-150 ${
+                    className={`relative h-11 md:h-12 w-full rounded-lg flex flex-col items-center justify-center gap-0.5 transition-all duration-150 bg-muted/5 dark:bg-muted/10 border border-border/20 ${
                       isToday ? 'ring-2 ring-blue-500 ring-offset-1 ring-offset-card' : ''
                     }`}
-                    style={{
-                      backgroundColor: hasNet
-                        ? isPositive
-                          ? `rgba(59,130,246,${intensity})`
-                          : `rgba(249,115,22,${intensity})`
-                        : 'transparent'
-                    }}
                   >
-                    <span className={`leading-none ${isToday ? 'text-blue-500' : hasNet ? (isPositive ? 'text-blue-700 dark:text-blue-200' : 'text-orange-700 dark:text-orange-200') : 'text-muted-foreground'}`}>
+                    <span className={`leading-none text-[9px] font-bold ${isToday ? 'text-blue-500' : 'text-foreground/80'}`}>
                       {day.getDate()}
                     </span>
+                    {hasNet && (
+                      <span className={`text-[8px] font-extrabold leading-none ${isPositive ? 'text-blue-500' : 'text-orange-500'}`}>
+                        {isPositive ? '+' : '-'}${Math.abs(Math.round(net))}
+                      </span>
+                    )}
                     {recs.length > 0 && (
-                      <span className="size-1 rounded-full bg-blue-500 shrink-0" />
+                      <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
                     )}
                   </div>
                 )

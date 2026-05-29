@@ -42,8 +42,7 @@ function App() {
   // Inactivity Auto-Lock
   const LOCK_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
   const [isLocked, setIsLocked] = useState<boolean>(() => {
-    const lastActive = Number(localStorage.getItem('last_active_time') || 0)
-    return !!localStorage.getItem('auth_token') && (Date.now() - lastActive > LOCK_TIMEOUT_MS)
+    return sessionStorage.getItem('session_locked') === 'true'
   })
   const [lockPassword, setLockPassword] = useState('')
   const [lockError, setLockError] = useState<string | null>(null)
@@ -51,7 +50,8 @@ function App() {
 
   // Inactivity tracking - update last_active_time in localStorage
   useEffect(() => {
-    if (!token) return
+    if (!token || isLocked) return
+    localStorage.setItem('last_active_time', Date.now().toString())
     const updateActivity = () => {
       localStorage.setItem('last_active_time', Date.now().toString())
     }
@@ -67,19 +67,20 @@ function App() {
     const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart']
     events.forEach(e => window.addEventListener(e, throttled, { passive: true }))
     return () => events.forEach(e => window.removeEventListener(e, throttled))
-  }, [token])
+  }, [token, isLocked])
 
   // Check inactivity every 15 seconds and lock if exceeded
   useEffect(() => {
-    if (!token) return
+    if (!token || isLocked) return
     const interval = setInterval(() => {
       const lastActive = Number(localStorage.getItem('last_active_time') || Date.now())
       if (Date.now() - lastActive > LOCK_TIMEOUT_MS) {
         setIsLocked(true)
+        sessionStorage.setItem('session_locked', 'true')
       }
     }, 15000)
     return () => clearInterval(interval)
-  }, [token])
+  }, [token, isLocked])
 
   // Password Prompt for revealing sensitive information
   const [showPasswordPrompt, setShowPasswordPrompt] = useState<boolean>(false)
@@ -146,6 +147,9 @@ function App() {
     setToken(newToken)
     setUsername(newUsername)
     localStorage.setItem('auth_username', newUsername)
+    sessionStorage.setItem('session_locked', 'false')
+    localStorage.setItem('last_active_time', Date.now().toString())
+    setIsLocked(false)
   }
 
   const handleLogout = async () => {
@@ -159,6 +163,9 @@ function App() {
     setHasShownModalThisSession(false)
     setShowLoginModal(false)
     localStorage.removeItem('auth_username')
+    sessionStorage.removeItem('session_locked')
+    localStorage.removeItem('last_active_time')
+    setIsLocked(false)
   }
 
   // Period / Settings changes
@@ -311,10 +318,24 @@ function App() {
     setActiveTab('ledger')
   }
 
-  const handleNavigateToLedgerCategory = (category: string, allCycles: boolean) => {
+  const [ledgerCyclesRange, setLedgerCyclesRange] = useState<'monthly' | '3month' | '6month' | 'yearly'>('monthly')
+
+  // Automatically clear filters when navigating away from the ledger tab
+  useEffect(() => {
+    if (activeTab !== 'ledger') {
+      setLedgerIncomingCategory(null)
+      setLedgerCyclesRange('monthly')
+      setLedgerShowAllCycles(false)
+      setAllTransactions([])
+    }
+  }, [activeTab])
+
+  const handleNavigateToLedgerCategory = (category: string, range: 'monthly' | '3month' | '6month' | 'yearly') => {
     setLedgerIncomingCategory(category)
-    setLedgerShowAllCycles(allCycles)
-    if (allCycles) {
+    setLedgerCyclesRange(range)
+    const showAll = range !== 'monthly'
+    setLedgerShowAllCycles(showAll)
+    if (showAll) {
       handleLoadAllTransactions()
     }
     setActiveTab('ledger')
@@ -432,6 +453,7 @@ function App() {
             showAllCycles={ledgerShowAllCycles}
             onLoadAllTransactions={handleLoadAllTransactions}
             onClearAllCycles={() => { setLedgerShowAllCycles(false); setAllTransactions([]) }}
+            cyclesRange={ledgerCyclesRange}
           />
         )}
       </main>
@@ -645,6 +667,7 @@ function App() {
                   const res = await api.verifyPassword(lockPassword)
                   if (res.verified) {
                     localStorage.setItem('last_active_time', Date.now().toString())
+                    sessionStorage.setItem('session_locked', 'false')
                     setIsLocked(false)
                     setLockPassword('')
                   } else {

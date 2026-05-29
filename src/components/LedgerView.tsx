@@ -29,6 +29,51 @@ interface LedgerViewProps {
   showAllCycles: boolean
   onLoadAllTransactions: () => void
   onClearAllCycles: () => void
+  cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly'
+}
+
+function formatDateToString(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dd}`
+}
+
+function getCycleRangeDates(year: number, monthIndex: number, cycleDay: number): { start: Date; end: Date } {
+  if (cycleDay === 1) {
+    const start = new Date(year, monthIndex - 1, 1)
+    const end = new Date(year, monthIndex, 0)
+    start.setHours(0, 0, 0, 0)
+    end.setHours(23, 59, 59, 999)
+    return { start, end }
+  } else {
+    const daysInStartMonth = new Date(year, monthIndex, 0).getDate()
+    const startDayActual = Math.min(cycleDay, daysInStartMonth)
+    const start = new Date(year, monthIndex - 1, startDayActual)
+    start.setHours(0, 0, 0, 0)
+    
+    const end = new Date(start)
+    end.setMonth(end.getMonth() + 1)
+    end.setDate(end.getDate() - 1)
+    end.setHours(23, 59, 59, 999)
+    return { start, end }
+  }
+}
+
+function getStartOfNCyclesAgo(activeYear: number, activeMonthIndex: number, cycleDay: number, n: number): Date {
+  let curMonth = activeMonthIndex
+  let curYear = activeYear
+  
+  for (let i = 0; i < n - 1; i++) {
+    curMonth--
+    if (curMonth < 1) {
+      curMonth = 12
+      curYear--
+    }
+  }
+  
+  const { start } = getCycleRangeDates(curYear, curMonth, cycleDay)
+  return start
 }
 
 export const LedgerView: React.FC<LedgerViewProps> = ({
@@ -47,7 +92,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   onClearIncomingCategory,
   showAllCycles,
   onLoadAllTransactions: _onLoadAllTransactions,
-  onClearAllCycles
+  onClearAllCycles,
+  cyclesRange
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [description, setDescription] = useState('')
@@ -175,7 +221,37 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   }
 
   // Source: all transactions across all cycles when showAllCycles, else current cycle only
-  const sourceTransactions = showAllCycles && allTransactions && allTransactions.length > 0 ? allTransactions : transactions
+  const sourceTransactions = useMemo(() => {
+    if (!showAllCycles || !allTransactions || allTransactions.length === 0) {
+      return transactions
+    }
+
+    const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    const activeMonthIdx = MONTH_NAMES.indexOf(selectedMonth) + 1
+    const activeYear = selectedYear
+
+    let startDate: Date | null = null
+    let endDate: Date | null = null
+
+    if (cyclesRange === '3month') {
+      startDate = getStartOfNCyclesAgo(activeYear, activeMonthIdx, cycleDay, 3)
+      endDate = getCycleRangeDates(activeYear, activeMonthIdx, cycleDay).end
+    } else if (cyclesRange === '6month') {
+      startDate = getStartOfNCyclesAgo(activeYear, activeMonthIdx, cycleDay, 6)
+      endDate = getCycleRangeDates(activeYear, activeMonthIdx, cycleDay).end
+    } else if (cyclesRange === 'yearly') {
+      startDate = getCycleRangeDates(activeYear, 1, cycleDay).start
+      endDate = getCycleRangeDates(activeYear, 12, cycleDay).end
+    }
+
+    if (startDate && endDate) {
+      const startStr = formatDateToString(startDate)
+      const endStr = formatDateToString(endDate)
+      return allTransactions.filter(t => t.date >= startStr && t.date <= endStr)
+    }
+
+    return allTransactions
+  }, [showAllCycles, allTransactions, transactions, selectedMonth, selectedYear, cycleDay, cyclesRange])
 
   // Filtered transactions
   const filteredTransactions = useMemo(() => {
@@ -336,9 +412,17 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-blue-500/8 border border-blue-500/20 text-xs animate-in fade-in duration-200">
           <div className="flex items-center gap-2 text-blue-500 font-medium">
             <span className="size-1.5 rounded-full bg-blue-500 shrink-0 animate-pulse" />
-            {showAllCycles
-              ? `Showing all cycles — filtered by "${incomingCategory || 'all'}"`
-              : `Filtered by "${incomingCategory}" (current cycle)`}
+            {showAllCycles ? (
+              cyclesRange === '3month'
+                ? `Showing last 3 cycles — filtered by "${incomingCategory || 'all'}"`
+                : cyclesRange === '6month'
+                  ? `Showing last 6 cycles — filtered by "${incomingCategory || 'all'}"`
+                  : cyclesRange === 'yearly'
+                    ? `Showing full year ${selectedYear} — filtered by "${incomingCategory || 'all'}"`
+                    : `Showing all cycles — filtered by "${incomingCategory || 'all'}"`
+            ) : (
+              `Filtered by "${incomingCategory}" (current cycle)`
+            )}
           </div>
           <button
             onClick={() => {
