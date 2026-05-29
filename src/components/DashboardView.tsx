@@ -755,14 +755,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="p-6 bg-card border border-border/60 rounded-2xl shadow-xs">
         <h3 className="text-md font-bold text-foreground mb-1">Financial Plan Metrics</h3>
         <p className="text-xs text-muted-foreground mb-1">Target ratios evaluated using calculations mapped directly from spreadsheet cells.</p>
-        {/* Legend */}
+        {/* Legend — protan-safe: blue (current) + orange (pending) */}
         <div className="flex items-center gap-4 mb-4">
           <div className="flex items-center gap-1.5">
-            <span className="inline-block w-3 h-2 rounded-sm bg-violet-500" />
+            <span className="inline-block w-3 h-2 rounded-sm bg-blue-500" />
             <span className="text-[10px] text-muted-foreground">Current</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="inline-block w-3 h-2 rounded-sm bg-amber-400" />
+            <span className="inline-block w-3 h-2 rounded-sm bg-orange-500" />
             <span className="text-[10px] text-muted-foreground">Pending deduction</span>
           </div>
         </div>
@@ -772,13 +772,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {(() => {
             const growthCat = categories.find(c => c.name === 'Growth')
             const growthTarget = growthCat?.target || 1
-            // Current achieved % (already a fraction 0-1)
             const currentPct = Math.max(0, Math.min(1, stats.growthPercentAchieved))
-            // Pending will eat into remaining growth budget → reduce achievement
             const pendingGrowth = pendingDeductionsByCategory['Growth'] || 0
             const projectedRemaining = Math.max(0, (growthCat?.remaining ?? 0) - pendingGrowth)
-            // projected achievement = (budget - projectedRemaining) / target  ... but simpler:
-            // the "at risk" portion of the bar = pendingGrowth / growthTarget, capped so bar doesn't overflow
             const atRiskPct = Math.max(0, Math.min(currentPct, pendingGrowth / growthTarget))
             const safePct = currentPct - atRiskPct
             return (
@@ -788,25 +784,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span className="text-foreground">
                     {(currentPct * 100).toFixed(1)}%
                     {atRiskPct > 0 && (
-                      <span className="text-amber-400 ml-1">→ {((currentPct - atRiskPct) * 100).toFixed(1)}%</span>
+                      <span className="text-orange-500 ml-1">→ {((currentPct - atRiskPct) * 100).toFixed(1)}%</span>
                     )}
                   </span>
                 </div>
-                <div className="w-full bg-muted rounded-full h-2 overflow-hidden flex">
+                <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden flex">
                   <div
-                    className="bg-violet-500 h-full transition-all duration-500"
+                    className="bg-blue-500 h-full transition-all duration-500"
                     style={{ width: `${safePct * 100}%` }}
                   />
                   {atRiskPct > 0 && (
                     <div
-                      className="bg-amber-400 h-full transition-all duration-500"
+                      className="bg-orange-500 h-full transition-all duration-500"
                       style={{ width: `${atRiskPct * 100}%` }}
                     />
                   )}
                 </div>
                 <span className="text-[10px] text-muted-foreground block leading-relaxed">
                   Plan Target: Deposit <strong>{(activeSettings.growthAlloc * 100).toFixed(0)}%</strong> of income ({formatSensitive(growthTarget)}) into savings this cycle.
-                  {atRiskPct > 0 && <span className="text-amber-400"> Projected after pending: {formatSensitive(projectedRemaining)}</span>}
+                  {atRiskPct > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(projectedRemaining)}</span>}
                 </span>
               </div>
             )
@@ -821,7 +817,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             const projectedRemaining = Math.max(0, (essentialsCat?.remaining ?? 0) - pendingEss)
             const projectedPct = Math.max(0, projectedRemaining / essTarget)
             const atRiskPct = Math.max(0, currentPct - projectedPct)
-            const barColor = projectedPct > 0.5 ? 'bg-sky-500' : projectedPct > 0.2 ? 'bg-yellow-500' : 'bg-orange-500'
             return (
               <div className="space-y-2 p-4 rounded-xl bg-muted/30 border border-border/40">
                 <div className="flex justify-between text-xs font-semibold">
@@ -829,25 +824,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span className="text-foreground">
                     {(currentPct * 100).toFixed(1)}%
                     {atRiskPct > 0 && (
-                      <span className="text-amber-400 ml-1">→ {(projectedPct * 100).toFixed(1)}%</span>
+                      <span className="text-orange-500 ml-1">→ {(projectedPct * 100).toFixed(1)}%</span>
                     )}
                   </span>
                 </div>
-                <div className="w-full bg-muted rounded-full h-2 overflow-hidden flex">
+                <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden flex">
                   <div
-                    className={`${barColor} h-full transition-all duration-500`}
+                    className="bg-blue-500 h-full transition-all duration-500"
                     style={{ width: `${projectedPct * 100}%` }}
                   />
                   {atRiskPct > 0 && (
                     <div
-                      className="bg-amber-400 h-full transition-all duration-500"
+                      className="bg-orange-500 h-full transition-all duration-500"
                       style={{ width: `${atRiskPct * 100}%` }}
                     />
                   )}
                 </div>
                 <span className="text-[10px] text-muted-foreground block leading-relaxed">
                   Starts at 100% of cycle target ({formatSensitive(essTarget)}). Decreases with each essentials spend.
-                  {atRiskPct > 0 && <span className="text-amber-400"> Projected after pending: {formatSensitive(projectedRemaining)}</span>}
+                  {atRiskPct > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(projectedRemaining)}</span>}
                 </span>
               </div>
             )
@@ -870,25 +865,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span className="text-foreground">
                     {(currentPct * 100).toFixed(1)}%
                     {atRiskPct > 0 && (
-                      <span className="text-amber-400 ml-1">→ {(projectedPct * 100).toFixed(1)}%</span>
+                      <span className="text-orange-500 ml-1">→ {(projectedPct * 100).toFixed(1)}%</span>
                     )}
                   </span>
                 </div>
-                <div className="w-full bg-muted rounded-full h-2 overflow-hidden flex">
+                <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden flex">
                   <div
-                    className="bg-teal-500 h-full transition-all duration-500"
+                    className="bg-blue-500 h-full transition-all duration-500"
                     style={{ width: `${projectedPct * 100}%` }}
                   />
                   {atRiskPct > 0 && (
                     <div
-                      className="bg-amber-400 h-full transition-all duration-500"
+                      className="bg-orange-500 h-full transition-all duration-500"
                       style={{ width: `${atRiskPct * 100}%` }}
                     />
                   )}
                 </div>
                 <span className="text-[10px] text-muted-foreground block leading-relaxed">
                   Target Stability Fund goal is <strong>{formatSensitive(activeSettings.targetStabilityFund)}</strong>. Currently at {formatSensitive(currentBalance)}.
-                  {atRiskPct > 0 && <span className="text-amber-400"> Projected after pending: {formatSensitive(projectedBalance)}</span>}
+                  {atRiskPct > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(projectedBalance)}</span>}
                 </span>
               </div>
             )
