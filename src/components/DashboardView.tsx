@@ -576,7 +576,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <h3 className="text-md font-bold text-foreground mb-1">Carryover Rolling Ledgers</h3>
         <p className="text-xs text-muted-foreground mb-4">Starting budget carries forward from previous month's remaining balance.</p>
         
-        <div className="overflow-x-auto">
+        {/* Desktop View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-border/50 text-muted-foreground font-semibold">
@@ -611,6 +612,52 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile View */}
+        <div className="block md:hidden space-y-4">
+          {categories.map(c => {
+            const isNeg = c.remaining < 0
+            return (
+              <div key={c.name} className="p-4 rounded-xl border border-border bg-background/50 space-y-3 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-bold text-sm">
+                    <span className={`size-2.5 rounded-full ${categoryColorMap[c.name]?.split(' ')[0] || 'bg-slate-500'}`} />
+                    {c.name}
+                  </div>
+                  <span className="text-[10px] font-semibold bg-muted px-2 py-0.5 rounded-md text-muted-foreground">
+                    Target: {(c.allocation * 100).toFixed(0)}%
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 text-xs border-t border-border/30 pt-2.5">
+                  <div>
+                    <span className="text-muted-foreground text-[10px] block mb-0.5">Target Budget</span>
+                    <span className="font-semibold text-foreground">{formatSensitive(c.target)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-[10px] block mb-0.5">Start (Carried Over)</span>
+                    <span className="font-semibold text-foreground">{formatSensitive(c.budget)}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-xs border-t border-border/30 pt-2.5">
+                  <div>
+                    <span className="text-muted-foreground text-[10px] block mb-0.5">Net Change (This Cycle)</span>
+                    <span className={`font-semibold ${c.netChange < 0 ? 'text-rose-500' : c.netChange > 0 ? 'text-emerald-500' : 'text-foreground'}`}>
+                      {c.netChange > 0 ? '+' : ''}{formatSensitive(c.netChange)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-[10px] block mb-0.5">Remaining Balance</span>
+                    <span className={`font-bold ${isNeg ? 'text-rose-500' : 'text-foreground'}`}>
+                      {formatSensitive(c.remaining)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
 

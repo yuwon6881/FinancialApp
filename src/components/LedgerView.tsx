@@ -318,7 +318,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-start md:justify-end">
           <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5 mr-2">
             <Filter className="size-3.5" /> Category Filter:
           </span>
@@ -348,8 +348,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         </div>
       </div>
 
-      {/* Ledger Table */}
-      <div className="overflow-hidden border border-border/60 rounded-2xl bg-card shadow-xs">
+      {/* Ledger Table - Desktop */}
+      <div className="hidden md:block overflow-hidden border border-border/60 rounded-2xl bg-card shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -406,6 +406,50 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Ledger List - Mobile */}
+      <div className="block md:hidden space-y-4">
+        {filteredTransactions.map(t => {
+          const isOutflow = t.amount < 0
+          return (
+            <div key={t.id} className="p-4 rounded-2xl border border-border bg-card space-y-3 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-muted-foreground font-medium">{t.date}</span>
+                <span className={`inline-block text-[10px] px-2 py-0.5 font-semibold rounded-md border ${
+                  categoryColorMap[t.category] || 'bg-slate-500/10 text-slate-500 border-slate-500/20'
+                }`}>
+                  {t.category}
+                </span>
+              </div>
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <h4 className="text-xs font-bold text-foreground leading-tight">{t.description}</h4>
+                  <p className="text-[10px] text-muted-foreground">Ledger: <span className="font-semibold">{displayLedgerCategory(t.ledgerCategory)}</span></p>
+                </div>
+                <div className="text-right">
+                  <span className={`text-xs font-bold ${isOutflow ? 'text-rose-500' : 'text-emerald-500'}`}>
+                    {isOutflow ? `-${formatSensitive(Math.abs(t.amount))}` : `+${formatSensitive(t.amount)}`}
+                  </span>
+                </div>
+              </div>
+              <div className="flex justify-end pt-2 border-t border-border/30">
+                <button
+                  onClick={() => onDeleteTransaction(t.id)}
+                  className="text-[11px] text-rose-500 hover:text-rose-600 bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/10 hover:border-rose-500/20 px-3 py-1.5 rounded-lg transition duration-150 cursor-pointer"
+                >
+                  Delete Entry
+                </button>
+              </div>
+            </div>
+          )
+        })}
+
+        {filteredTransactions.length === 0 && (
+          <div className="p-8 text-center text-muted-foreground border border-border/60 rounded-2xl bg-card text-xs">
+            No transactions match your search or filter criteria.
+          </div>
+        )}
       </div>
     </div>
   )
