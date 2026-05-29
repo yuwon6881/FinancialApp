@@ -203,6 +203,16 @@ function App() {
     }
   }
 
+  const handleUpdatePayment = async (id: string, payment: RecurringPayment) => {
+    try {
+      await api.updateRecurringPayment(id, payment)
+      await loadAll(selectedMonth || undefined, selectedYear || undefined)
+    } catch (err) {
+      console.error(err)
+      alert('Error updating recurring payment on the server.')
+    }
+  }
+
   const handleDeletePayment = async (id: string) => {
     try {
       await api.deleteRecurringPayment(id)
@@ -233,11 +243,11 @@ function App() {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
         <div className="flex flex-col items-center gap-4 text-center">
-          <div className="flex size-14 items-center justify-center rounded-2xl bg-radial from-emerald-400 to-emerald-600 shadow-xl shadow-emerald-500/20 text-white font-extrabold text-2xl animate-pulse">
+          <div className="flex size-14 items-center justify-center rounded-2xl bg-radial from-blue-400 to-blue-600 shadow-xl shadow-blue-500/20 text-white font-extrabold text-2xl animate-pulse">
             F
           </div>
           <div className="flex items-center gap-2 text-sm font-bold tracking-tight text-muted-foreground mt-2 animate-pulse">
-            <Loader2 className="animate-spin text-emerald-500 size-4" />
+            <Loader2 className="animate-spin text-blue-500 size-4" />
             Syncing financial ledgers...
           </div>
         </div>
@@ -246,7 +256,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col selection:bg-emerald-500/20 selection:text-emerald-500">
+    <div className="min-h-screen bg-background text-foreground flex flex-col selection:bg-blue-500/20 selection:text-blue-500">
       
       {/* Top Nav Component */}
       <TopNav 
@@ -293,6 +303,7 @@ function App() {
             onAddPayment={handleAddPayment}
             onToggleActive={handleToggleActive}
             onDeletePayment={handleDeletePayment}
+            onUpdatePayment={handleUpdatePayment}
             hideSensitive={hideSensitive}
             categories={categoriesList}
           />
@@ -345,7 +356,7 @@ function App() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-rose-500 font-extrabold text-xs block">
+                      <span className="text-orange-500 font-extrabold text-xs block">
                         -{hideSensitive ? '$ ••,•••.••' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(noti.amount)}
                       </span>
                       <span className="text-[9px] text-muted-foreground">{noti.cycleLabel}</span>
@@ -359,14 +370,14 @@ function App() {
                         type="date"
                         defaultValue={noti.billingDate}
                         id={`modal-date-${noti.id}`}
-                        className="px-2.5 py-1 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        className="px-2.5 py-1 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                       <button
                         onClick={() => {
                           const dateVal = (document.getElementById(`modal-date-${noti.id}`) as HTMLInputElement)?.value || noti.billingDate
                           handleConfirmSubscription(noti, dateVal)
                         }}
-                        className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold cursor-pointer transition shadow-sm"
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition shadow-sm"
                       >
                         Confirm Paid
                       </button>
@@ -377,7 +388,7 @@ function App() {
                             handleDeletePayment(noti.recurringPaymentId);
                           }
                         }}
-                        className="px-3 py-1.5 bg-rose-500/5 hover:bg-rose-500/10 text-rose-500 font-semibold text-xs rounded-lg transition duration-150 cursor-pointer border border-rose-500/10"
+                        className="px-3 py-1.5 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-xs rounded-lg transition duration-150 cursor-pointer border border-orange-500/10"
                       >
                         Remove Subscription
                       </button>
@@ -396,7 +407,7 @@ function App() {
                     setModalCheckbox(e.target.checked)
                     localStorage.setItem('show_notifications_on_login', e.target.checked ? 'true' : 'false')
                   }}
-                  className="rounded border-border text-emerald-500 focus:ring-emerald-500"
+                  className="rounded border-border text-blue-500 focus:ring-blue-500"
                 />
                 Show this notification automatically every time I log in
               </label>

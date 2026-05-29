@@ -69,13 +69,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [selectedCategory, setSelectedCategory] = useState('All')
 
   const categoryColorMap: Record<string, string> = {
-    'Salary': 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+    'Salary': 'bg-blue-500/10 text-blue-500 border-blue-500/20',
     'Social': 'bg-pink-500/10 text-pink-500 border-pink-500/20',
     'Food': 'bg-amber-500/10 text-amber-500 border-amber-500/20',
     'Hobbies': 'bg-teal-500/10 text-teal-500 border-teal-500/20',
     'Software': 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20',
     'Investment': 'bg-violet-500/10 text-violet-500 border-violet-500/20',
-    'Entertainment': 'bg-rose-500/10 text-rose-500 border-rose-500/20',
+    'Entertainment': 'bg-orange-500/10 text-orange-500 border-orange-500/20',
     'Transport': 'bg-purple-500/10 text-purple-500 border-purple-500/20',
     'Other': 'bg-slate-500/10 text-slate-500 border-slate-500/20',
   }
@@ -197,7 +197,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-xl font-bold text-foreground">Double-Entry Financial Ledger</h2>
             {cycleLabel && (
-              <span className="px-2.5 py-1 text-[11px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-lg">
+              <span className="px-2.5 py-1 text-[11px] font-semibold bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-lg">
                 {cycleLabel}
               </span>
             )}
@@ -214,7 +214,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           </button>
           <button
             onClick={() => setShowAddForm(prev => !prev)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-medium text-xs shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 transition duration-200 cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs shadow-lg shadow-blue-600/10 hover:shadow-blue-600/20 transition duration-200 cursor-pointer"
           >
             {showAddForm ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
             {showAddForm ? 'Cancel' : 'Post Transaction'}
@@ -224,9 +224,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
       {/* Expandable Post Transaction Form */}
       {showAddForm && (
-        <div className="p-6 rounded-2xl bg-card border border-emerald-500/20 shadow-md animate-in slide-in-from-top-4 duration-300">
+        <div className="p-6 rounded-2xl bg-card border border-blue-500/20 shadow-md animate-in slide-in-from-top-4 duration-300">
           <h3 className="text-md font-semibold text-foreground mb-4 flex items-center gap-2">
-            <PlusCircle className="size-4 text-emerald-500" /> Post New Ledger Entry
+            <PlusCircle className="size-4 text-blue-500" /> Post New Ledger Entry
           </h3>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
             
@@ -238,7 +238,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   onClick={() => setTxType('outflow')}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-semibold rounded-xl border transition cursor-pointer ${
                     txType === 'outflow' 
-                      ? 'bg-rose-500/10 border-rose-500/30 text-rose-500' 
+                      ? 'bg-orange-500/10 border-orange-500/30 text-orange-500' 
                       : 'border-border hover:bg-muted/50 text-muted-foreground'
                   }`}
                 >
@@ -249,7 +249,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   onClick={() => setTxType('inflow')}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-semibold rounded-xl border transition cursor-pointer ${
                     txType === 'inflow' 
-                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500' 
+                      ? 'bg-blue-500/10 border-blue-500/30 text-blue-500' 
                       : 'border-border hover:bg-muted/50 text-muted-foreground'
                   }`}
                 >
@@ -277,7 +277,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 placeholder="e.g. Grocery Store, Paycheck"
                 value={description}
                 onChange={e => setDescription(e.target.value)}
-                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition duration-200"
+                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
               />
             </div>
 
@@ -290,7 +290,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 placeholder="0.00"
                 value={amount}
                 onChange={e => setAmount(e.target.value)}
-                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition duration-200"
+                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
               />
             </div>
 
@@ -301,7 +301,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   <select
                     value={transferSource}
                     onChange={e => setTransferSource(e.target.value as any)}
-                    className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition duration-200"
+                    className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
                   >
                     <option value="Essentials">Essentials</option>
                     <option value="Growth">Growth</option>
@@ -315,7 +315,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   <select
                     value={transferTarget}
                     onChange={e => setTransferTarget(e.target.value as any)}
-                    className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition duration-200"
+                    className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
                   >
                     <option value="Essentials">Essentials</option>
                     <option value="Growth">Growth</option>
@@ -331,7 +331,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   <select
                     value={category || (categories[0]?.name || '')}
                     onChange={e => setCategory(e.target.value)}
-                    className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition duration-200"
+                    className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
                   >
                     {categories.map(c => (
                       <option key={c.id} value={c.name}>{c.name}</option>
@@ -344,7 +344,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   <select
                     value={ledgerCategory}
                     onChange={e => setLedgerCategory(e.target.value as any)}
-                    className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition duration-200"
+                    className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
                   >
                     {txType === 'inflow' && <option value="Income">Income (Auto-Split)</option>}
                     <option value="Essentials">Essentials</option>
@@ -363,14 +363,14 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 required
                 value={date}
                 onChange={e => setDate(e.target.value)}
-                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition duration-200"
+                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
               />
             </div>
 
             <div className="md:col-span-3 pt-2">
               <button
                 type="submit"
-                className="w-full md:w-auto px-6 py-2.5 text-xs font-semibold bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-md transition duration-200 cursor-pointer"
+                className="w-full md:w-auto px-6 py-2.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md transition duration-200 cursor-pointer"
               >
                 Post Entry
               </button>
@@ -388,7 +388,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             placeholder="Search descriptions, ledger categories..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition duration-200"
+            className="w-full pl-9 pr-4 py-2 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
           />
         </div>
 
@@ -432,8 +432,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 <th className="p-4">Description</th>
                 <th className="p-4">Category</th>
                 <th className="p-4">Ledger Category</th>
-                <th className="p-4 text-right text-rose-500/90 font-bold">Debit (Outflow)</th>
-                <th className="p-4 text-right text-emerald-500/90 font-bold">Credit (Inflow)</th>
+                <th className="p-4 text-right text-orange-500/90 font-bold">Debit (Outflow)</th>
+                <th className="p-4 text-right text-blue-500/90 font-bold">Credit (Inflow)</th>
                 <th className="p-4 text-center">Actions</th>
               </tr>
             </thead>
@@ -454,11 +454,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     <td className="p-4 font-semibold text-muted-foreground">{displayLedgerCategory(t.ledgerCategory)}</td>
                     <td className="p-4 text-right font-medium">
                       {t.ledgerCategory.startsWith('Transfer:') ? (
-                        <span className="inline-block px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-500 font-bold text-xs">
+                        <span className="inline-block px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-500 font-bold text-xs">
                           {formatSensitive(t.amount)}
                         </span>
                       ) : isOutflow ? (
-                        <span className="inline-block px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-500 font-bold text-xs">
+                        <span className="inline-block px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-500 font-bold text-xs">
                           {formatSensitive(Math.abs(t.amount))}
                         </span>
                       ) : (
@@ -467,11 +467,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     </td>
                     <td className="p-4 text-right font-medium">
                       {t.ledgerCategory.startsWith('Transfer:') ? (
-                        <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-xs">
+                        <span className="inline-block px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-500 font-bold text-xs">
                           {formatSensitive(t.amount)}
                         </span>
                       ) : !isOutflow ? (
-                        <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-xs">
+                        <span className="inline-block px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-500 font-bold text-xs">
                           {formatSensitive(t.amount)}
                         </span>
                       ) : (
@@ -481,7 +481,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     <td className="p-4 text-center">
                       <button
                         onClick={() => onDeleteTransaction(t.id)}
-                        className="text-xs text-rose-500 hover:text-rose-600 bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/10 hover:border-rose-500/20 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer"
+                        className="text-xs text-orange-500 hover:text-orange-600 bg-orange-500/5 hover:bg-orange-500/10 border border-orange-500/10 hover:border-orange-500/20 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer"
                       >
                         Delete
                       </button>
@@ -528,7 +528,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     </span>
                   ) : (
                     <span className={`inline-block px-2.5 py-1 rounded-lg font-bold text-xs ${
-                      isOutflow ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'
+                      isOutflow ? 'bg-orange-500/10 text-orange-500' : 'bg-blue-500/10 text-blue-500'
                     }`}>
                       {isOutflow ? `-${formatSensitive(Math.abs(t.amount))}` : `+${formatSensitive(t.amount)}`}
                     </span>
@@ -538,7 +538,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               <div className="flex justify-end pt-2 border-t border-border/30">
                 <button
                   onClick={() => onDeleteTransaction(t.id)}
-                  className="text-[11px] text-rose-500 hover:text-rose-600 bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/10 hover:border-rose-500/20 px-3 py-1.5 rounded-lg transition duration-150 cursor-pointer"
+                  className="text-[11px] text-orange-500 hover:text-orange-600 bg-orange-500/5 hover:bg-orange-500/10 border border-orange-500/10 hover:border-orange-500/20 px-3 py-1.5 rounded-lg transition duration-150 cursor-pointer"
                 >
                   Delete Entry
                 </button>

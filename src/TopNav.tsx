@@ -88,10 +88,10 @@ const TopNav: React.FC<TopNavProps> = ({
         
         {/* Brand Logo and Title */}
         <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => onTabChange('dashboard')}>
-          <div className="flex size-9 items-center justify-center rounded-xl bg-radial from-emerald-400 to-emerald-600 shadow-md shadow-emerald-500/20 text-white font-extrabold text-lg">
+          <div className="flex size-9 items-center justify-center rounded-xl bg-radial from-blue-400 to-blue-600 shadow-md shadow-blue-500/20 text-white font-extrabold text-lg">
             F
           </div>
-          <span className="text-lg font-extrabold tracking-tight bg-linear-to-r from-foreground via-foreground to-emerald-500 bg-clip-text text-transparent">
+          <span className="text-lg font-extrabold tracking-tight bg-linear-to-r from-foreground via-foreground to-blue-500 bg-clip-text text-transparent">
             FinancialApp
           </span>
         </div>
@@ -134,8 +134,8 @@ const TopNav: React.FC<TopNavProps> = ({
         <div className="flex items-center gap-4">
           
           {/* Quick Metrics (Balance Display) */}
-          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-emerald-500/5 border border-emerald-500/10 rounded-xl select-none">
-            <Wallet className="size-3.5 text-emerald-500" />
+          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 border border-blue-500/10 rounded-xl select-none">
+            <Wallet className="size-3.5 text-blue-500" />
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Net Balance:</span>
             <span className={`text-xs font-bold text-foreground transition-all duration-300 ${hideSensitive ? 'blur-xs select-none' : ''}`}>
               {hideSensitive ? '$ ••,•••.••' : formatCurrency(totalBalance)}
@@ -160,7 +160,7 @@ const TopNav: React.FC<TopNavProps> = ({
             >
               <Bell className="size-4" />
               {hasAlerts && (
-                <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-amber-500 ring-2 ring-background animate-pulse" />
+                <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-yellow-500 ring-2 ring-background animate-pulse" />
               )}
             </button>
 
@@ -184,7 +184,7 @@ const TopNav: React.FC<TopNavProps> = ({
                             <span className="text-[9px] text-muted-foreground block">{noti.billingDate}</span>
                           </div>
                           <div className="text-right shrink-0">
-                            <span className="text-rose-500 font-extrabold block">
+                            <span className="text-orange-500 font-extrabold block">
                               -{hideSensitive ? '$ ••,•••.••' : formatCurrency(noti.amount)}
                             </span>
                           </div>
@@ -205,7 +205,7 @@ const TopNav: React.FC<TopNavProps> = ({
                                   onConfirmSubscription(noti, paidDate)
                                   setConfirmNotiId(null)
                                 }}
-                                className="px-2 py-0.5 bg-emerald-500 text-white rounded text-[10px] font-bold cursor-pointer hover:bg-emerald-600"
+                                className="px-2 py-0.5 bg-blue-600 text-white rounded text-[10px] font-bold cursor-pointer hover:bg-blue-700"
                               >
                                 Pay
                               </button>
@@ -224,7 +224,7 @@ const TopNav: React.FC<TopNavProps> = ({
                                 setConfirmNotiId(noti.id)
                                 setPaidDate(noti.billingDate)
                               }}
-                              className="px-2 py-1 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-500 font-bold text-[9px] rounded transition cursor-pointer"
+                              className="px-2 py-1 bg-blue-500/15 hover:bg-blue-500/25 text-blue-500 font-bold text-[9px] rounded transition cursor-pointer"
                             >
                               Confirm Paid
                             </button>
@@ -235,7 +235,7 @@ const TopNav: React.FC<TopNavProps> = ({
                                   onDeletePayment(noti.recurringPaymentId);
                                 }
                               }}
-                              className="px-2 py-1 bg-rose-500/5 hover:bg-rose-500/10 text-rose-500 font-semibold text-[9px] rounded border border-rose-500/10 transition cursor-pointer"
+                              className="px-2 py-1 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-[9px] rounded border border-orange-500/10 transition cursor-pointer"
                               title="Delete subscription definition entirely"
                             >
                               Remove Subscription
@@ -263,7 +263,7 @@ const TopNav: React.FC<TopNavProps> = ({
               {/* Add menu */}
               <MenubarMenu>
                 <MenubarTrigger className="px-2.5 py-1 text-xs font-semibold hover:bg-muted/50 rounded-lg cursor-pointer flex items-center gap-1">
-                  <Plus className="size-3.5 text-emerald-500" /> Quick Add
+                  <Plus className="size-3.5 text-blue-500" /> Quick Add
                 </MenubarTrigger>
                 <MenubarContent className="z-50 min-w-[160px] bg-card border border-border p-1 rounded-xl shadow-md">
                   <MenubarGroup>
@@ -290,7 +290,7 @@ const TopNav: React.FC<TopNavProps> = ({
               {/* Profile/Account menu */}
               <MenubarMenu>
                 <MenubarTrigger className="p-1 rounded-full cursor-pointer hover:bg-muted/50">
-                  <div className="size-7 rounded-full bg-linear-to-tr from-emerald-500 to-teal-400 text-white font-extrabold flex items-center justify-center text-xs border border-emerald-500/20">
+                  <div className="size-7 rounded-full bg-linear-to-tr from-blue-500 to-sky-400 text-white font-extrabold flex items-center justify-center text-xs border border-blue-500/20">
                     {getInitials(username)}
                   </div>
                 </MenubarTrigger>
@@ -303,7 +303,7 @@ const TopNav: React.FC<TopNavProps> = ({
                   <MenubarSeparator className="my-1 border-t border-border/30" />
                   <MenubarItem 
                     onClick={onLogout}
-                    className="flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg text-rose-500 hover:bg-rose-500/10 outline-hidden cursor-pointer"
+                    className="flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg text-orange-500 hover:bg-orange-500/10 outline-hidden cursor-pointer"
                   >
                     <LogOut className="size-3.5" /> Logout
                   </MenubarItem>
@@ -321,7 +321,7 @@ const TopNav: React.FC<TopNavProps> = ({
         <button
           onClick={() => onTabChange('dashboard')}
           className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer ${
-            activeTab === 'dashboard' ? 'text-emerald-500' : 'text-muted-foreground'
+            activeTab === 'dashboard' ? 'text-blue-500' : 'text-muted-foreground'
           }`}
         >
           <TrendingUp className="size-4" />
@@ -330,7 +330,7 @@ const TopNav: React.FC<TopNavProps> = ({
         <button
           onClick={() => onTabChange('recurring')}
           className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer ${
-            activeTab === 'recurring' ? 'text-emerald-500' : 'text-muted-foreground'
+            activeTab === 'recurring' ? 'text-blue-500' : 'text-muted-foreground'
           }`}
         >
           <CreditCard className="size-4" />
@@ -339,7 +339,7 @@ const TopNav: React.FC<TopNavProps> = ({
         <button
           onClick={() => onTabChange('ledger')}
           className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer ${
-            activeTab === 'ledger' ? 'text-emerald-500' : 'text-muted-foreground'
+            activeTab === 'ledger' ? 'text-blue-500' : 'text-muted-foreground'
           }`}
         >
           <Wallet className="size-4" />

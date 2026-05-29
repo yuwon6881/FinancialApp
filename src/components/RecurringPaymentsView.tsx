@@ -10,7 +10,8 @@ import {
   Bell, 
   DollarSign, 
   Sparkles,
-  X
+  X,
+  Edit
 } from 'lucide-react'
 
 interface RecurringPaymentsViewProps {
@@ -18,6 +19,7 @@ interface RecurringPaymentsViewProps {
   onAddPayment: (payment: Omit<RecurringPayment, 'id'>) => void
   onToggleActive: (id: string) => void
   onDeletePayment: (id: string) => void
+  onUpdatePayment: (id: string, payment: RecurringPayment) => void
   hideSensitive: boolean
   categories: TransactionCategory[]
 }
@@ -27,10 +29,12 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   onAddPayment,
   onToggleActive,
   onDeletePayment,
+  onUpdatePayment,
   hideSensitive,
   categories
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
+  const [editingPayment, setEditingPayment] = useState<RecurringPayment | null>(null)
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('')
@@ -57,18 +61,30 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     const dateParts = startDateInput.split('-')
     const dueDay = dateParts.length === 3 ? parseInt(dateParts[2]) : 15
 
-    onAddPayment({
+    const paymentData = {
       name,
       amount: -Math.abs(parseFloat(amount)), // Excel outlays are stored as negative
-      frequency: 'Monthly',
+      frequency: 'Monthly' as const,
       category,
       ledgerCategory,
       nextDueDate: startDateInput,
       dueDate: dueDay,
       startDate: startDateInput,
-      active: true,
       endDate: endDateInput || undefined
-    })
+    }
+
+    if (editingPayment) {
+      onUpdatePayment(editingPayment.id, {
+        ...editingPayment,
+        ...paymentData,
+        active: editingPayment.active
+      })
+    } else {
+      onAddPayment({
+        ...paymentData,
+        active: true
+      })
+    }
     
     // Reset form
     setName('')
@@ -76,6 +92,17 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     setStartDateInput('')
     setEndDateInput('')
     setLedgerCategory('Essentials')
+    setEditingPayment(null)
+    setShowAddForm(false)
+  }
+
+  const handleCancelForm = () => {
+    setName('')
+    setAmount('')
+    setStartDateInput('')
+    setEndDateInput('')
+    setLedgerCategory('Essentials')
+    setEditingPayment(null)
     setShowAddForm(false)
   }
 
@@ -104,7 +131,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
             <div className="flex gap-4 mt-4">
               <div>
                 <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block">Monthly Total</span>
-                <span className="text-2xl font-extrabold text-emerald-500">{formatSensitive(totalCommittedMonthly)}</span>
+                <span className="text-2xl font-extrabold text-blue-500">{formatSensitive(totalCommittedMonthly)}</span>
               </div>
               <div className="border-l border-border/60 pl-4">
                 <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block">Active Subscriptions</span>
@@ -113,8 +140,14 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
             </div>
           </div>
           <button
-            onClick={() => setShowAddForm(prev => !prev)}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-medium text-sm shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 transition duration-200 cursor-pointer self-start md:self-center"
+            onClick={() => {
+              if (showAddForm) {
+                handleCancelForm()
+              } else {
+                setShowAddForm(true)
+              }
+            }}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm shadow-lg shadow-blue-600/10 hover:shadow-blue-600/20 transition duration-200 cursor-pointer self-start md:self-center"
           >
             {showAddForm ? <X className="size-4" /> : <Plus className="size-4" />}
             {showAddForm ? 'Cancel' : 'New Subscription'}
@@ -122,8 +155,8 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         </div>
 
         {/* Info card */}
-        <div className="p-6 rounded-2xl bg-radial from-emerald-950/20 via-card to-card border border-emerald-500/10 flex items-start gap-4">
-          <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500">
+        <div className="p-6 rounded-2xl bg-radial from-blue-950/20 via-card to-card border border-blue-500/10 flex items-start gap-4">
+          <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500">
             <Sparkles className="size-5" />
           </div>
           <div>
@@ -137,9 +170,10 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
 
       {/* Add Subscription Form Drawer/Panel */}
       {showAddForm && (
-        <div className="p-6 rounded-2xl bg-card border border-emerald-500/20 shadow-md animate-in slide-in-from-top-4 duration-300">
+        <div className="p-6 rounded-2xl bg-card border border-blue-500/20 shadow-md animate-in slide-in-from-top-4 duration-300">
           <h3 className="text-md font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Plus className="size-4 text-emerald-500" /> Add New Recurring Payment
+            {editingPayment ? <Edit className="size-4 text-blue-500" /> : <Plus className="size-4 text-blue-500" />} 
+            {editingPayment ? 'Edit Subscription' : 'Add New Recurring Payment'}
           </h3>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1">
@@ -150,7 +184,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                 placeholder="e.g. Netflix, Spotify"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition duration-200"
+                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
               />
             </div>
 
@@ -165,7 +199,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                   placeholder="0.00"
                   value={amount}
                   onChange={e => setAmount(e.target.value)}
-                  className="w-full pl-9 pr-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition duration-200"
+                  className="w-full pl-9 pr-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
                 />
               </div>
             </div>
@@ -175,7 +209,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
               <select
                 value={category || (categories[0]?.name || '')}
                 onChange={e => setCategory(e.target.value)}
-                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition duration-200"
+                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
               >
                 {categories.map(c => (
                   <option key={c.id} value={c.name}>{c.name}</option>
@@ -190,7 +224,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                 required
                 value={startDateInput}
                 onChange={e => setStartDateInput(e.target.value)}
-                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition duration-200"
+                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
               />
             </div>
 
@@ -199,7 +233,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
               <select
                 value={ledgerCategory}
                 onChange={e => setLedgerCategory(e.target.value as any)}
-                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition duration-200"
+                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
               >
                 <option value="Essentials">Essentials</option>
                 <option value="Growth">Growth</option>
@@ -214,16 +248,16 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                 type="date"
                 value={endDateInput}
                 onChange={e => setEndDateInput(e.target.value)}
-                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition duration-200"
+                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
               />
             </div>
 
             <div className="md:col-span-3 pt-2">
               <button
                 type="submit"
-                className="w-full md:w-auto px-6 py-2.5 text-sm font-semibold bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-md transition duration-200 cursor-pointer"
+                className="w-full md:w-auto px-6 py-2.5 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md transition duration-200 cursor-pointer"
               >
-                Save Subscription
+                {editingPayment ? 'Update Subscription' : 'Save Subscription'}
               </button>
             </div>
           </form>
@@ -238,7 +272,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
               key={rp.id} 
               className={`p-6 rounded-2xl bg-card border transition-all duration-300 flex flex-col justify-between ${
                 rp.active 
-                  ? 'border-border/60 hover:border-emerald-500/30 shadow-xs' 
+                  ? 'border-border/60 hover:border-blue-500/30 shadow-xs' 
                   : 'border-dashed border-border/60 opacity-60'
               }`}
             >
@@ -260,7 +294,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                     className="text-muted-foreground hover:text-foreground cursor-pointer transition duration-150"
                   >
                     {rp.active ? (
-                      <ToggleRight className="size-8 text-emerald-500" />
+                      <ToggleRight className="size-8 text-blue-500" />
                     ) : (
                       <ToggleLeft className="size-8" />
                     )}
@@ -300,15 +334,33 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
 
               <div className="mt-6 flex items-center justify-between border-t border-border/30 pt-4">
                 <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                  <Bell className="size-3 text-emerald-500" /> Auto-notify active
+                  <Bell className="size-3 text-blue-500" /> Auto-notify active
                 </span>
-                <button
-                  onClick={() => onDeletePayment(rp.id)}
-                  className="p-2 rounded-lg text-rose-500 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 cursor-pointer transition duration-150"
-                  title="Delete subscription"
-                >
-                  <Trash2 className="size-3.5" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => {
+                      setName(rp.name)
+                      setAmount(Math.abs(rp.amount).toString())
+                      setCategory(rp.category)
+                      setLedgerCategory(rp.ledgerCategory as any)
+                      setStartDateInput(rp.startDate)
+                      setEndDateInput(rp.endDate || '')
+                      setEditingPayment(rp)
+                      setShowAddForm(true)
+                    }}
+                    className="p-2 rounded-lg text-blue-500 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/20 cursor-pointer transition duration-150"
+                    title="Edit subscription"
+                  >
+                    <Edit className="size-3.5" />
+                  </button>
+                  <button
+                    onClick={() => onDeletePayment(rp.id)}
+                    className="p-2 rounded-lg text-orange-500 hover:bg-orange-500/10 border border-transparent hover:border-orange-500/20 cursor-pointer transition duration-150"
+                    title="Delete subscription"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
           )

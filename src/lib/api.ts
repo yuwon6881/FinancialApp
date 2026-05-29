@@ -212,6 +212,20 @@ export async function toggleRecurringPayment(id: string): Promise<RecurringPayme
   return response.json()
 }
 
+export async function updateRecurringPayment(id: string, payment: RecurringPayment): Promise<RecurringPayment> {
+  const response = await fetch(`${API_BASE_URL}/recurring-payments/${id}`, {
+    method: 'PUT',
+    headers: getHeaders({
+      'Content-Type': 'application/json',
+    }),
+    body: JSON.stringify(payment),
+  })
+  if (!response.ok) {
+    throw new Error('Failed to update recurring payment')
+  }
+  return response.json()
+}
+
 export async function deleteRecurringPayment(id: string): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/recurring-payments/${id}`, {
     method: 'DELETE',

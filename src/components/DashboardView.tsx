@@ -71,13 +71,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Subcategory custom colors mapping
   const categoryColorHex: Record<string, string> = {
-    'Salary': '#10b981',
+    'Salary': '#3b82f6',
     'Social': '#ec4899',
     'Food': '#f59e0b',
     'Hobbies': '#14b8a6',
     'Software': '#6366f1',
     'Investment': '#8b5cf6',
-    'Entertainment': '#f43f5e',
+    'Entertainment': '#f97316',
     'Transport': '#a855f7',
     'Other': '#64748b',
   }
@@ -269,8 +269,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Color map for categories
   const categoryColorMap: Record<string, string> = {
-    'Salary': 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
-    'Essentials': 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+    'Salary': 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+    'Essentials': 'bg-sky-500/10 text-sky-500 border-sky-500/20',
     'Social': 'bg-pink-500/10 text-pink-500 border-pink-500/20',
     'Food': 'bg-amber-500/10 text-amber-500 border-amber-500/20',
     'Hobbies': 'bg-teal-500/10 text-teal-500 border-teal-500/20',
@@ -278,7 +278,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     'Growth': 'bg-violet-500/10 text-violet-500 border-violet-500/20',
     'Investment': 'bg-violet-500/10 text-violet-500 border-violet-500/20',
     'Stability': 'bg-teal-500/10 text-teal-500 border-teal-500/20',
-    'Entertainment': 'bg-rose-500/10 text-rose-500 border-rose-500/20',
+    'Entertainment': 'bg-orange-500/10 text-orange-500 border-orange-500/20',
     'Rewards': 'bg-pink-500/10 text-pink-500 border-pink-500/20',
     'Transport': 'bg-purple-500/10 text-purple-500 border-purple-500/20',
     'Other': 'bg-slate-500/10 text-slate-500 border-slate-500/20',
@@ -288,13 +288,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
       
       {/* Period Selection & Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-radial from-emerald-950/20 via-card to-card rounded-2xl border border-emerald-500/10">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-radial from-blue-950/20 via-card to-card rounded-2xl border border-blue-500/10">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
             Plan Ledger Dashboard
           </h2>
           <p className="text-muted-foreground text-xs mt-0.5">
-            Active Cycle: <span className="font-semibold text-emerald-500">{cycleLabel}</span>
+            Active Cycle: <span className="font-semibold text-blue-500">{cycleLabel}</span>
           </p>
         </div>
         
@@ -303,7 +303,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <select 
             value={activeSettings.selectedMonth}
             onChange={(e) => onSelectPeriod(e.target.value, activeSettings.selectedYear)}
-            className="px-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+            className="px-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
           >
             {months.map(m => (
               <option key={m} value={m}>{getCycleLabelForDropdown(m, activeSettings.selectedYear, activeSettings.cycleDay)}</option>
@@ -314,7 +314,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <select 
             value={activeSettings.selectedYear}
             onChange={(e) => onSelectPeriod(activeSettings.selectedMonth, parseInt(e.target.value))}
-            className="px-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+            className="px-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
           >
             {years.map(y => (
               <option key={y} value={y}>{y}</option>
@@ -334,12 +334,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Settings Form Drawer */}
       {showSettings && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 rounded-2xl bg-card border border-emerald-500/20 shadow-md animate-in slide-in-from-top-4 duration-200">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 rounded-2xl bg-card border border-blue-500/20 shadow-md animate-in slide-in-from-top-4 duration-200">
           
           {/* Column 1: Financial Model settings */}
           <form onSubmit={handleSaveSettings} className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-bold text-foreground border-b border-border pb-2">
-              <Settings className="size-4 text-emerald-500" /> Financial Model Parameters
+              <Settings className="size-4 text-blue-500" /> Financial Model Parameters
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -352,7 +352,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   required
                   value={targetInput}
                   onChange={e => setTargetInput(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
 
@@ -361,7 +361,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <select
                   value={cycleDayInput}
                   onChange={e => setCycleDayInput(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
                 >
                   {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
                     <option key={d} value={d}>{d}{GetDayWithSuffix(d)}</option>
@@ -373,7 +373,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="space-y-2 border-t border-border/30 pt-4">
               <div className="flex justify-between items-center text-xs font-semibold">
                 <span className="text-muted-foreground">Adjust Allocations (Must equal 100%)</span>
-                <span className={allocSum === 100 ? 'text-emerald-500 font-bold' : 'text-rose-500 font-bold'}>
+                <span className={allocSum === 100 ? 'text-blue-500 font-bold' : 'text-orange-500 font-bold'}>
                   Total: {allocSum}% {allocSum !== 100 && ' (Invalid)'}
                 </span>
               </div>
@@ -387,7 +387,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     max="100"
                     value={essentialsAllocInput}
                     onChange={e => setEssentialsAllocInput(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full px-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
                 
@@ -400,7 +400,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     max="100"
                     value={growthAllocInput}
                     onChange={e => setGrowthAllocInput(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full px-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
 
@@ -413,7 +413,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     max="100"
                     value={stabilityAllocInput}
                     onChange={e => setStabilityAllocInput(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full px-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
 
@@ -426,7 +426,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     max="100"
                     value={rewardsAllocInput}
                     onChange={e => setRewardsAllocInput(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full px-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
               </div>
@@ -437,7 +437,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               disabled={allocSum !== 100}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold cursor-pointer shadow-md transition duration-150 ${
                 allocSum === 100 
-                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white' 
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white' 
                   : 'bg-muted text-muted-foreground cursor-not-allowed opacity-60'
               }`}
             >
@@ -463,7 +463,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <button 
                       type="button"
                       onClick={() => onDeleteCategory(cat.id)}
-                      className="text-rose-500 hover:text-rose-600 cursor-pointer font-bold"
+                      className="text-orange-500 hover:text-orange-600 cursor-pointer font-bold"
                       title="Delete category"
                     >
                       &times;
@@ -479,7 +479,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   placeholder="New category name"
                   value={newCatName}
                   onChange={e => setNewCatName(e.target.value)}
-                  className="flex-1 px-3 py-1.5 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="flex-1 px-3 py-1.5 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
                 <button
                   type="button"
@@ -488,7 +488,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     onAddCategory({ name: newCatName.trim() })
                     setNewCatName('')
                   }}
-                  className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold cursor-pointer transition"
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition"
                 >
                   + Add
                 </button>
@@ -500,9 +500,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       )}
       {/* Pending Subscriptions Notifications Alert */}
       {dashboardData?.pendingNotifications && dashboardData.pendingNotifications.length > 0 && (
-        <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 animate-in slide-in-from-top-4 duration-300">
+        <div className="p-5 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 animate-in slide-in-from-top-4 duration-300">
           <div className="flex items-start gap-3">
-            <AlertCircle className="size-5 shrink-0 mt-0.5 text-amber-500" />
+            <AlertCircle className="size-5 shrink-0 mt-0.5 text-yellow-500" />
             <div className="flex-1">
               <h4 className="text-sm font-bold text-foreground">Pending Subscription Confirmations</h4>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -524,7 +524,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           </div>
                         </div>
                         <div className="text-right">
-                          <span className="text-rose-500 font-extrabold text-xs block">
+                          <span className="text-orange-500 font-extrabold text-xs block">
                             -{formatSensitive(noti.amount)}
                           </span>
                           <span className="text-[9px] text-muted-foreground">{noti.cycleLabel}</span>
@@ -539,14 +539,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                               type="date"
                               value={paidDateInput}
                               onChange={(e) => setPaidDateInput(e.target.value)}
-                              className="flex-1 px-2.5 py-1 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                              className="flex-1 px-2.5 py-1 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                             <button
                               onClick={() => {
                                 onConfirmSubscription(noti, paidDateInput)
                                 setActiveConfirmId(null)
                               }}
-                              className="px-2.5 py-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold cursor-pointer transition"
+                              className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition"
                             >
                               Confirm
                             </button>
@@ -565,7 +565,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                               setActiveConfirmId(noti.id)
                               setPaidDateInput(noti.billingDate)
                             }}
-                            className="px-2.5 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 font-bold text-[10px] rounded-lg transition duration-150 cursor-pointer"
+                            className="px-2.5 py-1.5 bg-blue-500/15 hover:bg-blue-500/25 text-blue-500 font-bold text-[10px] rounded-lg transition duration-150 cursor-pointer"
                           >
                             Mark Paid
                           </button>
@@ -576,7 +576,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                 onDeletePayment(noti.recurringPaymentId);
                               }
                             }}
-                            className="px-2.5 py-1.5 bg-rose-500/5 hover:bg-rose-500/10 text-rose-500 font-semibold text-[10px] rounded-lg transition duration-150 cursor-pointer border border-rose-500/10"
+                            className="px-2.5 py-1.5 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-[10px] rounded-lg transition duration-150 cursor-pointer border border-orange-500/10"
                           >
                             Remove Subscription
                           </button>
@@ -621,18 +621,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <td className="py-3 text-muted-foreground">{(c.allocation * 100).toFixed(0)}%</td>
                     <td className="py-3 text-right">{formatSensitive(c.target)}</td>
                     <td className="py-3 text-right text-muted-foreground">{formatSensitive(c.budget)}</td>
-                    <td className={`py-3 text-right ${c.netChange < 0 ? 'text-rose-500' : c.netChange > 0 ? 'text-emerald-500' : ''}`}>
+                    <td className={`py-3 text-right ${c.netChange < 0 ? 'text-orange-500' : c.netChange > 0 ? 'text-blue-500' : ''}`}>
                       <div>{c.netChange > 0 ? '+' : ''}{formatSensitive(c.netChange)}</div>
                       {pendingDeductionsByCategory[c.name] > 0 && (
-                        <div className="text-[10px] text-amber-500/80 font-normal">
+                        <div className="text-[10px] text-yellow-500 font-normal">
                           (-{formatSensitive(pendingDeductionsByCategory[c.name])})
                         </div>
                       )}
                     </td>
-                    <td className={`py-3 text-right font-bold ${isNeg ? 'text-rose-500' : 'text-foreground'}`}>
+                    <td className={`py-3 text-right font-bold ${isNeg ? 'text-orange-500' : 'text-foreground'}`}>
                       <div>{formatSensitive(c.remaining)}</div>
                       {pendingDeductionsByCategory[c.name] > 0 && (
-                        <div className={`text-[10px] font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-rose-500' : 'text-amber-500'}`}>
+                        <div className={`text-[10px] font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
                           ({formatSensitive(c.remaining - pendingDeductionsByCategory[c.name])})
                         </div>
                       )}
@@ -674,22 +674,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <div className="grid grid-cols-2 gap-4 text-xs border-t border-border/30 pt-2.5">
                   <div>
                     <span className="text-muted-foreground text-[10px] block mb-0.5">Net Change (This Cycle)</span>
-                    <span className={`font-semibold ${c.netChange < 0 ? 'text-rose-500' : c.netChange > 0 ? 'text-emerald-500' : 'text-foreground'}`}>
+                    <span className={`font-semibold ${c.netChange < 0 ? 'text-orange-500' : c.netChange > 0 ? 'text-blue-500' : 'text-foreground'}`}>
                       {c.netChange > 0 ? '+' : ''}{formatSensitive(c.netChange)}
                     </span>
                     {pendingDeductionsByCategory[c.name] > 0 && (
-                      <span className="text-[10px] text-amber-500/80 block font-normal">
+                      <span className="text-[10px] text-yellow-500 block font-normal">
                         (-{formatSensitive(pendingDeductionsByCategory[c.name])})
                       </span>
                     )}
                   </div>
                   <div>
                     <span className="text-muted-foreground text-[10px] block mb-0.5">Remaining Balance</span>
-                    <span className={`font-bold ${isNeg ? 'text-rose-500' : 'text-foreground'}`}>
+                    <span className={`font-bold ${isNeg ? 'text-orange-500' : 'text-foreground'}`}>
                       {formatSensitive(c.remaining)}
                     </span>
                     {pendingDeductionsByCategory[c.name] > 0 && (
-                      <span className={`text-[10px] block font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-rose-500' : 'text-amber-500'}`}>
+                      <span className={`text-[10px] block font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
                         ({formatSensitive(c.remaining - pendingDeductionsByCategory[c.name])})
                       </span>
                     )}
@@ -704,10 +704,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Grid of Metric Cards (Now 3 columns) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Total Balance (Liquid Only) */}
-        <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs hover:border-emerald-500/30 transition-all duration-300 group">
+        <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs hover:border-blue-500/30 transition-all duration-300 group">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-muted-foreground">Liquid Net Worth</span>
-            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 group-hover:scale-110 transition-transform duration-300">
+            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform duration-300">
               <Wallet className="size-4" />
             </div>
           </div>
@@ -715,16 +715,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {formatSensitive(stats.totalBalance)}
           </div>
           <p className="text-[10px] text-muted-foreground mt-1.5 flex items-start gap-1">
-            <AlertCircle className="size-3 text-emerald-500 shrink-0 mt-0.5" />
+            <AlertCircle className="size-3 text-blue-500 shrink-0 mt-0.5" />
             <span>Growth (long-term savings) is excluded.</span>
           </p>
         </div>
 
         {/* Inflow Card (Arrow points up/right, green) */}
-        <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs hover:border-emerald-500/30 transition-all duration-300 group">
+        <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs hover:border-blue-500/30 transition-all duration-300 group">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-muted-foreground">Cycle Inflow</span>
-            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 group-hover:scale-110 transition-transform duration-300">
+            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform duration-300">
               <ArrowUpRight className="size-4" />
             </div>
           </div>
@@ -732,15 +732,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {formatSensitive(stats.monthlyInflow)}
           </div>
           <p className="text-[10px] mt-1.5 text-muted-foreground">
-            Total Actual Income: <span className="font-semibold text-emerald-500">{formatSensitive(stats.monthlyIncome)}</span>
+            Total Actual Income: <span className="font-semibold text-blue-500">{formatSensitive(stats.monthlyIncome)}</span>
           </p>
         </div>
 
         {/* Expenses Card (Arrow points down/left, red) */}
-        <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs hover:border-rose-500/30 transition-all duration-300 group">
+        <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs hover:border-orange-500/30 transition-all duration-300 group">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-muted-foreground">Cycle Outflow</span>
-            <div className="p-2 rounded-lg bg-rose-500/10 text-rose-500 group-hover:scale-110 transition-transform duration-300">
+            <div className="p-2 rounded-lg bg-orange-500/10 text-orange-500 group-hover:scale-110 transition-transform duration-300">
               <ArrowDownLeft className="size-4" />
             </div>
           </div>
@@ -748,7 +748,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {formatSensitive(stats.monthlyExpenses)}
           </div>
           <p className="text-[10px] text-muted-foreground mt-1.5">
-            Active committed bills: <span className="font-semibold text-rose-500">{formatSensitive(stats.activeRecurringTotal)}</span>/mo
+            Active committed bills: <span className="font-semibold text-orange-500">{formatSensitive(stats.activeRecurringTotal)}</span>/mo
           </p>
         </div>
       </div>
@@ -784,7 +784,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
             <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
               <div 
-                className={`h-full rounded-full transition-all duration-500 ${stats.essentialsPercentRemaining > 0.5 ? 'bg-blue-500' : stats.essentialsPercentRemaining > 0.2 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                className={`h-full rounded-full transition-all duration-500 ${stats.essentialsPercentRemaining > 0.5 ? 'bg-sky-500' : stats.essentialsPercentRemaining > 0.2 ? 'bg-yellow-500' : 'bg-orange-500'}`}
                 style={{ width: `${Math.max(0, Math.min(100, stats.essentialsPercentRemaining * 100))}%` }}
               />
             </div>
@@ -823,7 +823,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <h3 className="text-md font-semibold text-foreground">Total Growth Deposited</h3>
                 <p className="text-[10px] text-muted-foreground">Cumulative Growth category investment balance</p>
               </div>
-              <TrendLineIcon className="size-4 text-emerald-500 shrink-0" />
+              <TrendLineIcon className="size-4 text-blue-500 shrink-0" />
             </div>
             {/* Period Toggle */}
             <div className="flex items-center bg-muted/40 rounded-lg p-0.5 border border-border/40 text-[9px] mb-3 w-fit">
@@ -846,8 +846,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <svg className="w-full h-full overflow-visible" viewBox="0 0 500 120" preserveAspectRatio="none">
                   <defs>
                     <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="var(--color-primary, #10b981)" stopOpacity="0.25" />
-                      <stop offset="100%" stopColor="var(--color-primary, #10b981)" stopOpacity="0.0" />
+                      <stop offset="0%" stopColor="var(--color-primary, #3b82f6)" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="var(--color-primary, #3b82f6)" stopOpacity="0.0" />
                     </linearGradient>
                   </defs>
                   
@@ -861,7 +861,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   {/* Stroke Line */}
                   <polyline
                     fill="none"
-                    stroke="#10b981"
+                    stroke="#3b82f6"
                     strokeWidth="2.5"
                     points={trendLinePoints}
                     strokeLinecap="round"
@@ -1013,7 +1013,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <h3 className="text-md font-semibold text-foreground">Subscriptions</h3>
                 <p className="text-[10px] text-muted-foreground">Bills for this active cycle</p>
               </div>
-              <Calendar className="size-4 text-emerald-500 shrink-0" />
+              <Calendar className="size-4 text-blue-500 shrink-0" />
             </div>
 
             <div className="space-y-2 mt-4 max-h-40 overflow-y-auto pr-1">
@@ -1026,18 +1026,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         {rp.category}
                       </span>
                       {rp.isPaid ? (
-                        <span className="text-[8px] px-1.5 py-0.25 font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 rounded">
+                        <span className="text-[8px] px-1.5 py-0.25 font-bold text-blue-500 bg-blue-500/10 border border-blue-500/20 rounded">
                           Paid
                         </span>
                       ) : (
-                        <span className="text-[8px] px-1.5 py-0.25 font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded">
+                        <span className="text-[8px] px-1.5 py-0.25 font-bold text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 rounded">
                           Pending
                         </span>
                       )}
                     </div>
                   </div>
                   <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                    <span className="text-rose-500 font-bold block">-{formatSensitive(rp.amount)}</span>
+                    <span className="text-orange-500 font-bold block">-{formatSensitive(rp.amount)}</span>
                     <div className="flex items-center gap-1.5">
                       {!rp.isPaid && rp.dueDate <= todayStr && (
                         <button
@@ -1047,7 +1047,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                               onConfirmSubscription(rp, pDate)
                             }
                           }}
-                          className="text-[9px] font-bold text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/25 hover:scale-[1.02] active:scale-95 px-1.5 py-0.5 rounded border border-emerald-500/20 cursor-pointer transition"
+                          className="text-[9px] font-bold text-blue-500 bg-blue-500/10 hover:bg-blue-500/25 hover:scale-[1.02] active:scale-95 px-1.5 py-0.5 rounded border border-blue-500/20 cursor-pointer transition"
                         >
                           Confirm
                         </button>
@@ -1065,7 +1065,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <button 
             onClick={() => onNavigate('recurring')}
-            className="w-full py-2 mt-4 text-center text-xs font-semibold text-emerald-500 hover:text-emerald-600 bg-emerald-500/5 hover:bg-emerald-500/10 border border-emerald-500/10 hover:border-emerald-500/20 rounded-xl transition duration-200 cursor-pointer"
+            className="w-full py-2 mt-4 text-center text-xs font-semibold text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 rounded-xl transition duration-200 cursor-pointer"
           >
             Manage Subscriptions
           </button>
@@ -1081,7 +1081,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
           <button 
             onClick={() => onNavigate('ledger')}
-            className="text-xs text-emerald-500 font-semibold hover:underline cursor-pointer"
+            className="text-xs text-blue-500 font-semibold hover:underline cursor-pointer"
           >
             View Ledger
           </button>
@@ -1094,7 +1094,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div key={t.id} className="py-3 flex items-center justify-between hover:bg-muted/30 px-2 rounded-lg transition duration-150">
                 <div className="flex items-center gap-3">
                   {/* Corrected arrows: isOutflow gets ArrowDownLeft (red), isInflow gets ArrowUpRight (green) */}
-                  <div className={`p-2 rounded-lg ${isOutflow ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                  <div className={`p-2 rounded-lg ${isOutflow ? 'bg-orange-500/10 text-orange-500' : 'bg-blue-500/10 text-blue-500'}`}>
                     {isOutflow ? <ArrowDownLeft className="size-4" /> : <ArrowUpRight className="size-4" />}
                   </div>
                   <div>
@@ -1107,7 +1107,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className={`text-sm font-bold ${isOutflow ? 'text-foreground' : 'text-emerald-500'}`}>
+                  <div className={`text-sm font-bold ${isOutflow ? 'text-foreground' : 'text-blue-500'}`}>
                     {isOutflow ? '-' : '+'}{formatSensitive(Math.abs(t.amount))}
                   </div>
                   <span className={`inline-block mt-0.5 text-[9px] px-1.5 py-0.25 font-bold rounded border ${categoryColorMap[t.category] || 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
