@@ -17,7 +17,6 @@ interface LedgerViewProps {
   onDeleteTransaction: (id: string) => void
   hideSensitive: boolean
   categories: TransactionCategory[]
-  cycleLabel: string
   selectedMonth: string
   selectedYear: number
   availableYears: number[]
@@ -31,7 +30,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   onDeleteTransaction,
   hideSensitive,
   categories,
-  cycleLabel,
   selectedMonth,
   selectedYear,
   availableYears,
@@ -697,16 +695,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       </div>
     </div>
   )
-}
-
-function GetDayWithSuffix(day: number): string {
-  if (day >= 11 && day <= 13) return 'th'
-  switch (day % 10) {
-    case 1: return 'st'
-    case 2: return 'nd'
-    case 3: return 'rd'
-    default: return 'th'
-  }
 }
 
 function getCycleLabelForDropdown(month: string, year: number, cycleDay: number): string {
