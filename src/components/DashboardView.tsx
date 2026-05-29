@@ -1254,9 +1254,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-blue-500" />Bill due</span>
                   </div>
                 </div>
-                <div className="grid grid-cols-7 gap-1 text-center">
+                <div className="grid grid-cols-7 gap-1.5 text-center">
                   {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-                    <div key={d} className="text-[9px] text-muted-foreground font-semibold pb-1">{d}</div>
+                    <div key={d} className="text-[10px] md:text-xs text-muted-foreground font-bold pb-2">{d}</div>
                   ))}
                   {/* Empty cells before start */}
                   {Array.from({ length: startDow }).map((_, i) => (
@@ -1269,21 +1269,33 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     const hasNet = net !== undefined
                     const isPositive = hasNet && net >= 0
                     const isToday = ds === todayStr
+
+                    let cellClass = "relative h-14 md:h-16 w-full rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-200 border text-xs"
+                    if (isToday) {
+                      cellClass += " ring-2 ring-blue-500 ring-offset-2 ring-offset-card bg-blue-500/10 border-blue-500/30"
+                    } else if (hasNet) {
+                      if (isPositive) {
+                        cellClass += " bg-blue-500/8 dark:bg-blue-950/20 border-blue-500/20 hover:border-blue-500/40 hover:bg-blue-500/12"
+                      } else {
+                        cellClass += " bg-orange-500/8 dark:bg-orange-950/20 border-orange-500/20 hover:border-orange-500/40 hover:bg-orange-500/12"
+                      }
+                    } else {
+                      cellClass += " bg-muted/5 dark:bg-muted/10 border-border/40 hover:bg-muted/20"
+                    }
+
                     return (
                       <div
                         key={ds}
                         title={hasNet
                           ? `${formatDisplayDate(day)}: ${net >= 0 ? '+' : ''}${net.toFixed(2)}${recs.length ? '\nBills: ' + recs.join(', ') : ''}`
                           : recs.length ? `${formatDisplayDate(day)}\nBills: ${recs.join(', ')}` : formatDisplayDate(day)}
-                        className={`relative h-11 md:h-12 w-full rounded-lg flex flex-col items-center justify-center gap-0.5 transition-all duration-150 bg-muted/5 dark:bg-muted/10 border border-border/20 ${
-                          isToday ? 'ring-2 ring-blue-500 ring-offset-1 ring-offset-card' : ''
-                        }`}
+                        className={cellClass}
                       >
-                        <span className={`leading-none text-[9px] font-bold ${isToday ? 'text-blue-500' : 'text-foreground/80'}`}>
+                        <span className={`leading-none text-xs md:text-sm font-bold ${isToday ? 'text-blue-500' : 'text-foreground/90'}`}>
                           {day.getDate()}
                         </span>
                         {hasNet && (
-                          <span className={`text-[8px] font-extrabold leading-none ${isPositive ? 'text-blue-500' : 'text-orange-500'}`}>
+                          <span className={`text-[10px] md:text-xs font-black leading-none mt-0.5 ${isPositive ? 'text-blue-500 dark:text-blue-400' : 'text-orange-500 dark:text-orange-400'}`}>
                             {isPositive ? '+' : '-'}${Math.abs(Math.round(net))}
                           </span>
                         )}
