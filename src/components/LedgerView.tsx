@@ -148,7 +148,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   }
 
   const formatSensitive = (val: number) => {
-    return hideSensitive ? '$ ••,•••.••' : formatCurrency(val)
+    return (
+      <span className={hideSensitive ? 'blur-sm select-none pointer-events-none inline-block transition-all duration-200' : 'transition-all duration-200'}>
+        {formatCurrency(val)}
+      </span>
+    )
   }
 
   // CSV export with proper quoting
@@ -530,7 +534,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     <span className={`inline-block px-2.5 py-1 rounded-lg font-bold text-xs ${
                       isOutflow ? 'bg-orange-500/10 text-orange-500' : 'bg-blue-500/10 text-blue-500'
                     }`}>
-                      {isOutflow ? `-${formatSensitive(Math.abs(t.amount))}` : `+${formatSensitive(t.amount)}`}
+                      {isOutflow ? '-' : '+'}{formatSensitive(isOutflow ? Math.abs(t.amount) : t.amount)}
                     </span>
                   )}
                 </div>

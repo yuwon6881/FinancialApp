@@ -285,3 +285,17 @@ export async function deleteCategory(id: string): Promise<void> {
   }
 }
 
+export async function verifyPassword(password: string): Promise<{ verified: boolean; message?: string }> {
+  const response = await fetch(`${API_BASE_URL}/auth/verify-password`, {
+    method: 'POST',
+    headers: getHeaders({
+      'Content-Type': 'application/json',
+    }),
+    body: JSON.stringify({ password }),
+  })
+  if (!response.ok) {
+    throw new Error('Password verification request failed')
+  }
+  return response.json()
+}
+

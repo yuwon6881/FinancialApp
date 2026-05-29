@@ -114,7 +114,11 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   }
 
   const formatSensitive = (val: number) => {
-    return hideSensitive ? '$ ••,•••.••' : formatCurrency(val)
+    return (
+      <span className={hideSensitive ? 'blur-sm select-none pointer-events-none inline-block transition-all duration-200' : 'transition-all duration-200'}>
+        {formatCurrency(val)}
+      </span>
+    )
   }
 
 

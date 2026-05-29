@@ -137,8 +137,8 @@ const TopNav: React.FC<TopNavProps> = ({
           <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 border border-blue-500/10 rounded-xl select-none">
             <Wallet className="size-3.5 text-blue-500" />
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Net Balance:</span>
-            <span className={`text-xs font-bold text-foreground transition-all duration-300 ${hideSensitive ? 'blur-xs select-none' : ''}`}>
-              {hideSensitive ? '$ ••,•••.••' : formatCurrency(totalBalance)}
+            <span className={`text-xs font-bold text-foreground transition-all duration-300 ${hideSensitive ? 'blur-sm select-none pointer-events-none' : ''}`}>
+              {formatCurrency(totalBalance)}
             </span>
           </div>
 
@@ -184,8 +184,8 @@ const TopNav: React.FC<TopNavProps> = ({
                             <span className="text-[9px] text-muted-foreground block">{noti.billingDate}</span>
                           </div>
                           <div className="text-right shrink-0">
-                            <span className="text-orange-500 font-extrabold block">
-                              -{hideSensitive ? '$ ••,•••.••' : formatCurrency(noti.amount)}
+                            <span className={`text-orange-500 font-extrabold block transition-all duration-300 ${hideSensitive ? 'blur-sm select-none pointer-events-none' : ''}`}>
+                              -{formatCurrency(noti.amount)}
                             </span>
                           </div>
                         </div>

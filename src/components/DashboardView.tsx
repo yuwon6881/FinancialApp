@@ -246,7 +246,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   }
 
   const formatSensitive = (val: number) => {
-    return hideSensitive ? '$ ••,•••.••' : formatCurrency(val)
+    return (
+      <span className={hideSensitive ? 'blur-sm select-none pointer-events-none inline-block transition-all duration-200' : 'transition-all duration-200'}>
+        {formatCurrency(val)}
+      </span>
+    )
   }
 
   // Generate SVG path for trend line
@@ -291,7 +295,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-radial from-blue-950/20 via-card to-card rounded-2xl border border-blue-500/10">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            Plan Ledger Dashboard
+            Ledger Dashboard
           </h2>
           <p className="text-muted-foreground text-xs mt-0.5">
             Active Cycle: <span className="font-semibold text-blue-500">{cycleLabel}</span>
