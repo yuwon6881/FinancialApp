@@ -926,8 +926,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <svg className="w-full h-full overflow-visible" viewBox="0 0 500 120" preserveAspectRatio="none">
                   <defs>
                     <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="var(--color-primary, #3b82f6)" stopOpacity="0.25" />
-                      <stop offset="100%" stopColor="var(--color-primary, #3b82f6)" stopOpacity="0.0" />
+                      <stop offset="0%" stopColor="var(--color-chart-line, #3b82f6)" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="var(--color-chart-line, #3b82f6)" stopOpacity="0.0" />
                     </linearGradient>
                   </defs>
                   
@@ -941,7 +941,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   {/* Stroke Line */}
                   <polyline
                     fill="none"
-                    stroke="#3b82f6"
+                    stroke="var(--color-chart-line, #3b82f6)"
                     strokeWidth="2.5"
                     points={trendLinePoints}
                     strokeLinecap="round"

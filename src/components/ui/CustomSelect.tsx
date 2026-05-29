@@ -48,7 +48,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
       </button>
 
       {isOpen && (
-        <div className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-1.5 min-w-[180px] w-max max-w-[280px] bg-card border border-border rounded-xl shadow-lg py-1 z-50 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-100`}>
+        <div className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-1.5 min-w-[180px] w-max max-w-[280px] bg-card border border-border rounded-xl shadow-lg p-1 z-50 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-100 flex flex-col gap-0.5`}>
           {options.map((opt) => (
             <button
               key={opt.value}
@@ -57,7 +57,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
                 onChange(opt.value)
                 setIsOpen(false)
               }}
-              className={`w-full text-left px-3.5 py-1.5 text-xs transition duration-100 cursor-pointer ${
+              className={`w-full text-left px-3.5 py-1.5 text-xs rounded-lg transition duration-100 cursor-pointer ${
                 opt.value === value
                   ? 'bg-blue-600 text-white font-semibold'
                   : 'hover:bg-muted text-foreground'
