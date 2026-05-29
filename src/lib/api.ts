@@ -2,6 +2,34 @@ import type { Transaction, RecurringPayment, DashboardData, TransactionCategory 
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
+interface CacheEntry {
+  data: any
+  timestamp: number
+}
+
+const queryCache = {
+  store: new Map<string, CacheEntry>(),
+  staleTime: 30000, // 30 seconds
+
+  get<T>(key: string): T | null {
+    const entry = this.store.get(key)
+    if (!entry) return null
+    if (Date.now() - entry.timestamp > this.staleTime) {
+      this.store.delete(key)
+      return null
+    }
+    return entry.data as T
+  },
+
+  set(key: string, data: any) {
+    this.store.set(key, { data, timestamp: Date.now() })
+  },
+
+  invalidateAll() {
+    this.store.clear()
+  }
+}
+
 const originalFetch = window.fetch
 window.fetch = async (...args) => {
   const response = await originalFetch(...args)
@@ -90,6 +118,7 @@ export async function login(credentials: any): Promise<{ token: string; username
   }
   const data = await response.json()
   localStorage.setItem('auth_token', data.token)
+  queryCache.invalidateAll()
   return data
 }
 
@@ -117,11 +146,16 @@ export async function logout(): Promise<void> {
     console.error('Logout request failed', e)
   } finally {
     localStorage.removeItem('auth_token')
+    queryCache.invalidateAll()
   }
 }
 
 // Dashboard
 export async function fetchDashboard(month?: string, year?: number): Promise<DashboardData> {
+  const cacheKey = `dashboard:${month || ''}:${year || ''}`
+  const cachedData = queryCache.get<DashboardData>(cacheKey)
+  if (cachedData) return cachedData
+
   let url = `${API_BASE_URL}/financial/dashboard`
   const params = new URLSearchParams()
   if (month) params.append('month', month)
@@ -139,7 +173,7 @@ export async function fetchDashboard(month?: string, year?: number): Promise<Das
     throw new Error('Failed to fetch dashboard data')
   }
   const data = await response.json()
-  return {
+  const result: DashboardData = {
     ...data,
     setting: {
       ...data.setting,
@@ -181,10 +215,6 @@ export async function fetchDashboard(month?: string, year?: number): Promise<Das
       ...pn,
       amount: deobfuscateAmount(pn.amount)
     })),
-    dismissedNotifications: (data.dismissedNotifications || []).map((dn: any) => ({
-      ...dn,
-      amount: deobfuscateAmount(dn.amount)
-    })),
     monthlyCategoryBreakdown: (data.monthlyCategoryBreakdown || []).map((cb: any) => ({
       ...cb,
       amount: deobfuscateAmount(cb.amount)
@@ -202,6 +232,9 @@ export async function fetchDashboard(month?: string, year?: number): Promise<Das
       amount: deobfuscateAmount(cb.amount)
     }))
   }
+
+  queryCache.set(cacheKey, result)
+  return result
 }
 
 export async function updateSettings(settings: {
@@ -227,6 +260,7 @@ export async function updateSettings(settings: {
   if (!response.ok) {
     throw new Error('Failed to update financial settings')
   }
+  queryCache.invalidateAll()
 }
 
 // Lightweight helper that only updates dark mode preference
@@ -241,6 +275,8 @@ export async function updateDarkMode(darkMode: boolean): Promise<void> {
   if (!response.ok) {
     // Non-fatal: silently fail (preference also stored in localStorage)
     console.warn('Failed to persist dark mode preference to server')
+  } else {
+    queryCache.invalidateAll()
   }
 }
 
@@ -255,10 +291,15 @@ export async function selectPeriod(selectedMonth: string, selectedYear: number):
   if (!response.ok) {
     throw new Error('Failed to select active period')
   }
+  queryCache.invalidateAll()
 }
 
 // Transactions
 export async function fetchTransactions(month?: string, year?: number): Promise<Transaction[]> {
+  const cacheKey = `transactions:${month || ''}:${year || ''}`
+  const cachedData = queryCache.get<Transaction[]>(cacheKey)
+  if (cachedData) return cachedData
+
   let url = `${API_BASE_URL}/transactions`
   const params = new URLSearchParams()
   if (month) params.append('month', month)
@@ -276,7 +317,9 @@ export async function fetchTransactions(month?: string, year?: number): Promise<
     throw new Error('Failed to fetch transactions')
   }
   const data = await response.json()
-  return (data || []).map(deobfuscateTransaction)
+  const result = (data || []).map(deobfuscateTransaction)
+  queryCache.set(cacheKey, result)
+  return result
 }
 
 export async function addTransaction(transaction: Omit<Transaction, 'id'> & { id?: string }): Promise<Transaction> {
@@ -294,6 +337,7 @@ export async function addTransaction(transaction: Omit<Transaction, 'id'> & { id
   if (!response.ok) {
     throw new Error('Failed to add transaction')
   }
+  queryCache.invalidateAll()
   const data = await response.json()
   return deobfuscateTransaction(data)
 }
@@ -306,10 +350,15 @@ export async function deleteTransaction(id: string): Promise<void> {
   if (!response.ok) {
     throw new Error('Failed to delete transaction')
   }
+  queryCache.invalidateAll()
 }
 
 // Recurring Payments
 export async function fetchRecurringPayments(): Promise<RecurringPayment[]> {
+  const cacheKey = 'recurringPayments'
+  const cachedData = queryCache.get<RecurringPayment[]>(cacheKey)
+  if (cachedData) return cachedData
+
   const response = await fetch(`${API_BASE_URL}/recurring-payments`, {
     headers: getHeaders(),
   })
@@ -317,7 +366,9 @@ export async function fetchRecurringPayments(): Promise<RecurringPayment[]> {
     throw new Error('Failed to fetch recurring payments')
   }
   const data = await response.json()
-  return (data || []).map(deobfuscateRecurringPayment)
+  const result = (data || []).map(deobfuscateRecurringPayment)
+  queryCache.set(cacheKey, result)
+  return result
 }
 
 export async function addRecurringPayment(payment: Omit<RecurringPayment, 'id'>): Promise<RecurringPayment> {
@@ -335,6 +386,7 @@ export async function addRecurringPayment(payment: Omit<RecurringPayment, 'id'>)
   if (!response.ok) {
     throw new Error('Failed to add recurring payment')
   }
+  queryCache.invalidateAll()
   const data = await response.json()
   return deobfuscateRecurringPayment(data)
 }
@@ -347,6 +399,7 @@ export async function toggleRecurringPayment(id: string): Promise<RecurringPayme
   if (!response.ok) {
     throw new Error('Failed to toggle recurring payment')
   }
+  queryCache.invalidateAll()
   const data = await response.json()
   return deobfuscateRecurringPayment(data)
 }
@@ -366,6 +419,7 @@ export async function updateRecurringPayment(id: string, payment: RecurringPayme
   if (!response.ok) {
     throw new Error('Failed to update recurring payment')
   }
+  queryCache.invalidateAll()
   const data = await response.json()
   return deobfuscateRecurringPayment(data)
 }
@@ -378,30 +432,24 @@ export async function deleteRecurringPayment(id: string): Promise<void> {
   if (!response.ok) {
     throw new Error('Failed to delete recurring payment')
   }
-}
-
-export async function dismissRecurringPayment(id: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/recurring-payments/dismiss`, {
-    method: 'POST',
-    headers: getHeaders({
-      'Content-Type': 'application/json',
-    }),
-    body: JSON.stringify({ id }),
-  })
-  if (!response.ok) {
-    throw new Error('Failed to dismiss recurring payment')
-  }
+  queryCache.invalidateAll()
 }
 
 // Categories Management
 export async function fetchCategories(): Promise<TransactionCategory[]> {
+  const cacheKey = 'categories'
+  const cachedData = queryCache.get<TransactionCategory[]>(cacheKey)
+  if (cachedData) return cachedData
+
   const response = await fetch(`${API_BASE_URL}/categories`, {
     headers: getHeaders(),
   })
   if (!response.ok) {
     throw new Error('Failed to fetch custom categories')
   }
-  return response.json()
+  const result = await response.json()
+  queryCache.set(cacheKey, result)
+  return result
 }
 
 export async function addCategory(category: Omit<TransactionCategory, 'id'>): Promise<TransactionCategory> {
@@ -416,6 +464,7 @@ export async function addCategory(category: Omit<TransactionCategory, 'id'>): Pr
     const err = await response.json().catch(() => ({}))
     throw new Error(err.message || 'Failed to add custom category')
   }
+  queryCache.invalidateAll()
   return response.json()
 }
 
@@ -427,6 +476,7 @@ export async function deleteCategory(id: string): Promise<void> {
   if (!response.ok) {
     throw new Error('Failed to delete custom category')
   }
+  queryCache.invalidateAll()
 }
 
 export async function verifyPassword(password: string): Promise<{ verified: boolean; message?: string }> {

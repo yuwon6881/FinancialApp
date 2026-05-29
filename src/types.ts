@@ -96,7 +96,6 @@ export interface DashboardData {
   last3TrendPoints: TrendPoint[]
   last6TrendPoints: TrendPoint[]
   pendingNotifications: PendingNotification[]
-  dismissedNotifications: PendingNotification[]
   monthlyCategoryBreakdown: CategoryBreakdown[]
   last3CategoryBreakdown: CategoryBreakdown[]
   last6CategoryBreakdown: CategoryBreakdown[]
