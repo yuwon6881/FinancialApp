@@ -1079,16 +1079,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             {totalBreakdownAmount > 0 ? (
               <div className="flex flex-col items-center gap-4 mt-2">
-                {/* SVG Doughnut Chart */}
-                <div className="relative size-28 shrink-0">
+                {/* SVG Doughnut Chart (Enlarged with custom hover expanding behavior to fit large numbers cleanly) */}
+                <div className="relative size-36 shrink-0">
                   <svg className="size-full overflow-visible" viewBox="0 0 200 200">
                     {slices.map((slice, index) => {
                       const isHovered = hoveredSlice === index
                       const pathD = getDoughnutPath(
                         100,
                         100,
-                        isHovered ? 86 : 80,
-                        isHovered ? 46 : 52,
+                        isHovered ? 96 : 90,
+                        isHovered ? 56 : 62,
                         slice.startAngle,
                         slice.endAngle
                       )
@@ -1110,7 +1110,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none text-center p-2">
                     {hoveredSlice !== null ? (
                       <>
-                        <span className="text-[10px] text-muted-foreground font-bold truncate max-w-[80px] uppercase">
+                        <span className="text-[10px] text-muted-foreground font-bold truncate max-w-[110px] uppercase">
                           {slices[hoveredSlice].category}
                         </span>
                         <span className="text-sm font-black text-foreground">
@@ -1122,7 +1122,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         <span className="text-[10px] text-muted-foreground font-bold uppercase">
                           Total
                         </span>
-                        <span className="text-xs font-black text-foreground truncate max-w-[80px]">
+                        <span className="text-xs font-black text-foreground truncate max-w-[110px]">
                           {formatSensitive(totalBreakdownAmount)}
                         </span>
                       </>
@@ -1216,6 +1216,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             const netByDay: Record<string, number> = {}
             transactions.forEach((t: any) => {
               if (t.date >= cycleStartStr && t.date <= cycleEndStr) {
+                // Internal transfers are neutral and do not affect total net activity
+                if (t.ledgerCategory && t.ledgerCategory.startsWith('Transfer:')) {
+                  return
+                }
                 netByDay[t.date] = (netByDay[t.date] || 0) + t.amount
               }
             })
