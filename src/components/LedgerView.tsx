@@ -262,7 +262,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             <h2 className="text-xl font-bold text-foreground">Double-Entry Financial Ledger</h2>
             
             {/* Cycle Selector */}
-            <div className="flex items-center gap-1.5 bg-muted/40 p-1 rounded-xl border border-border/40 select-none">
+            <div className="flex items-center gap-1.5 select-none">
               <CustomSelect
                 value={selectedMonth}
                 onChange={(val) => onSelectPeriod(val, selectedYear)}
@@ -467,7 +467,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       )}
 
       {/* Filter and Search controls */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 bg-muted/30 border border-border/60 rounded-2xl">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 bg-card border border-border/60 rounded-2xl shadow-xs">
         <div className="w-full md:w-72 relative">
           <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
           <input
