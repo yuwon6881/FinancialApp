@@ -624,16 +624,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <td className={`py-3 text-right ${c.netChange < 0 ? 'text-rose-500' : c.netChange > 0 ? 'text-emerald-500' : ''}`}>
                       <div>{c.netChange > 0 ? '+' : ''}{formatSensitive(c.netChange)}</div>
                       {pendingDeductionsByCategory[c.name] > 0 && (
-                        <div className="text-[10px] text-muted-foreground font-normal">
-                          (-{formatSensitive(pendingDeductionsByCategory[c.name])} pending)
+                        <div className="text-[10px] text-amber-500/80 font-normal">
+                          (-{formatSensitive(pendingDeductionsByCategory[c.name])})
                         </div>
                       )}
                     </td>
                     <td className={`py-3 text-right font-bold ${isNeg ? 'text-rose-500' : 'text-foreground'}`}>
                       <div>{formatSensitive(c.remaining)}</div>
                       {pendingDeductionsByCategory[c.name] > 0 && (
-                        <div className={`text-[10px] font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-rose-500/80' : 'text-emerald-500/80'}`}>
-                          ({formatSensitive(c.remaining - pendingDeductionsByCategory[c.name])} proj.)
+                        <div className={`text-[10px] font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-rose-500' : 'text-amber-500'}`}>
+                          ({formatSensitive(c.remaining - pendingDeductionsByCategory[c.name])})
                         </div>
                       )}
                     </td>
@@ -678,8 +678,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       {c.netChange > 0 ? '+' : ''}{formatSensitive(c.netChange)}
                     </span>
                     {pendingDeductionsByCategory[c.name] > 0 && (
-                      <span className="text-[10px] text-muted-foreground block font-normal">
-                        (-{formatSensitive(pendingDeductionsByCategory[c.name])} pending)
+                      <span className="text-[10px] text-amber-500/80 block font-normal">
+                        (-{formatSensitive(pendingDeductionsByCategory[c.name])})
                       </span>
                     )}
                   </div>
@@ -689,8 +689,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       {formatSensitive(c.remaining)}
                     </span>
                     {pendingDeductionsByCategory[c.name] > 0 && (
-                      <span className={`text-[10px] block font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-rose-500/80' : 'text-emerald-500/80'}`}>
-                        ({formatSensitive(c.remaining - pendingDeductionsByCategory[c.name])} proj.)
+                      <span className={`text-[10px] block font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-rose-500' : 'text-amber-500'}`}>
+                        ({formatSensitive(c.remaining - pendingDeductionsByCategory[c.name])})
                       </span>
                     )}
                   </div>
