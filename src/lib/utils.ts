@@ -28,3 +28,13 @@ export const formatCurrencyVal = (val: number, currencyCode: string = 'USD') => 
     }).format(val)
   }
 }
+
+export const getCurrencySymbol = (currencyCode: string = 'USD') => {
+  const code = currencyCode.toUpperCase()
+  if (code === 'RM' || code === 'MYR') return 'RM'
+  if (code === 'CNY') return '¥'
+  if (code === 'EUR') return '€'
+  if (code === 'GBP') return '£'
+  if (code === 'SGD') return 'S$'
+  return '$'
+}

@@ -360,7 +360,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             <h2 className="text-xl font-bold text-foreground">Double-Entry Financial Ledger</h2>
             
             {/* Cycle Selector */}
-            <div className="flex items-center gap-1.5 select-none">
+            <div className="flex items-center gap-1.5 select-none w-full sm:w-auto">
               <CustomSelect
                 value={selectedMonth}
                 onChange={(val) => onSelectPeriod(val, selectedYear)}
@@ -368,7 +368,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   value: m,
                   label: getCycleLabelForDropdown(m, selectedYear, cycleDay)
                 }))}
-                className="w-48 md:w-56"
+                className="flex-1 sm:w-56 sm:flex-initial"
               />
               <CustomSelect
                 value={selectedYear}
@@ -377,7 +377,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   value: y,
                   label: y.toString()
                 }))}
-                className="w-24"
+                className="w-24 shrink-0"
               />
             </div>
           </div>

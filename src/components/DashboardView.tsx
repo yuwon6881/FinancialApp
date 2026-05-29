@@ -11,7 +11,7 @@ import {
   TrendingUp as TrendLineIcon
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
-import { formatCurrencyVal } from '../lib/utils'
+import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
 
 
 interface DashboardViewProps {
@@ -260,13 +260,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const formatCompactNetValue = (val: number) => {
     const abs = Math.abs(Math.round(val))
+    const symbol = getCurrencySymbol(activeSettings.currency || 'USD')
     if (abs >= 1000000) {
-      return `${val < 0 ? '-' : '+'}$${(abs / 1000000).toFixed(1).replace(/\.0$/, '')}M`
+      return `${val < 0 ? '-' : '+'}${symbol}${(abs / 1000000).toFixed(1).replace(/\.0$/, '')}M`
     }
     if (abs >= 1000) {
-      return `${val < 0 ? '-' : '+'}$${(abs / 1000).toFixed(1).replace(/\.0$/, '')}k`
+      return `${val < 0 ? '-' : '+'}${symbol}${(abs / 1000).toFixed(1).replace(/\.0$/, '')}k`
     }
-    return `${val < 0 ? '-' : '+'}$${abs}`
+    return `${val < 0 ? '-' : '+'}${symbol}${abs}`
   }
 
   const formatCompactSensitive = (val: number) => {
@@ -346,7 +347,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               value: y,
               label: y.toString()
             }))}
-            className="w-20 md:w-24 shrink-0"
+            className="w-24 shrink-0"
           />
 
           {/* Configure button */}
@@ -1287,8 +1288,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <p className="text-[10px] text-muted-foreground mt-0.5">{cycleLabel}</p>
                   </div>
                   <div className="flex items-center gap-3.5 text-[10px] sm:text-xs text-muted-foreground select-none font-semibold">
-                    <span className="flex items-center gap-1"><span className="font-extrabold text-blue-500">+$</span> Net Inflow Day</span>
-                    <span className="flex items-center gap-1"><span className="font-extrabold text-orange-500">-$</span> Net Outflow Day</span>
+                    <span className="flex items-center gap-1">
+                      <span className="font-extrabold text-blue-500">+{getCurrencySymbol(activeSettings.currency || 'USD')}</span> Net Inflow Day
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="font-extrabold text-orange-500">-{getCurrencySymbol(activeSettings.currency || 'USD')}</span> Net Outflow Day
+                    </span>
                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" />Recurring Bill Due</span>
                   </div>
                 </div>
