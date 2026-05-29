@@ -89,20 +89,20 @@ const TopNav: React.FC<TopNavProps> = ({
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+      <div className="container mx-auto flex h-16 items-center justify-between px-4 relative">
         
         {/* Brand Logo and Title */}
-        <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => onTabChange('dashboard')}>
+        <div className="flex items-center gap-2 cursor-pointer select-none shrink-0" onClick={() => onTabChange('dashboard')}>
           <div className="flex size-9 items-center justify-center rounded-xl bg-radial from-blue-400 to-blue-600 shadow-md shadow-blue-500/20 text-white font-extrabold text-lg">
             F
           </div>
-          <span className="text-lg font-extrabold tracking-tight bg-linear-to-r from-foreground via-foreground to-blue-500 bg-clip-text text-transparent">
+          <span className="text-md sm:text-lg font-extrabold tracking-tight bg-linear-to-r from-foreground via-foreground to-blue-500 bg-clip-text text-transparent">
             FinancialApp
           </span>
         </div>
 
-        {/* Navigation Tabs */}
-        <nav className="hidden md:flex items-center gap-1 bg-muted/40 p-1.5 rounded-xl border border-border/40 select-none">
+        {/* Navigation Tabs - Centered absolutely on desktop */}
+        <nav className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-1 bg-muted/40 p-1.5 rounded-xl border border-border/40 select-none">
           <button
             onClick={() => onTabChange('dashboard')}
             className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer ${
@@ -136,7 +136,7 @@ const TopNav: React.FC<TopNavProps> = ({
         </nav>
 
         {/* Right Side Widgets & Actions */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-1.5 sm:gap-3 md:gap-4 shrink-0">
           
           {/* Quick Metrics (Balance Display) */}
           <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 border border-blue-500/10 rounded-xl select-none">
@@ -277,8 +277,9 @@ const TopNav: React.FC<TopNavProps> = ({
               
               {/* Add menu */}
               <MenubarMenu>
-                <MenubarTrigger className="px-2.5 py-1 text-xs font-semibold hover:bg-muted/50 rounded-lg cursor-pointer flex items-center gap-1">
-                  <Plus className="size-3.5 text-blue-500" /> Quick Add
+                <MenubarTrigger className="px-2 py-1 sm:px-2.5 text-xs font-semibold hover:bg-muted/50 rounded-lg cursor-pointer flex items-center gap-1">
+                  <Plus className="size-3.5 text-blue-500" />
+                  <span className="hidden lg:inline">Quick Add</span>
                 </MenubarTrigger>
                 <MenubarContent className="z-50 min-w-[160px] bg-card border border-border p-1 rounded-xl shadow-md">
                   <MenubarGroup>
@@ -328,33 +329,33 @@ const TopNav: React.FC<TopNavProps> = ({
         </div>
       </div>
       
-      {/* Mobile Navigation bar */}
-      <div className="flex md:hidden items-center justify-around border-t border-border/40 bg-background/90 py-2.5 px-4 select-none">
+      {/* Mobile Navigation bar (Sticky Bottom Nav) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/95 backdrop-blur-md py-2.5 px-4 flex items-center justify-around select-none shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
         <button
           onClick={() => onTabChange('dashboard')}
-          className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer ${
-            activeTab === 'dashboard' ? 'text-blue-500' : 'text-muted-foreground'
+          className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 ${
+            activeTab === 'dashboard' ? 'text-blue-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          <TrendingUp className="size-4" />
+          <TrendingUp className="size-4.5" />
           Dashboard
         </button>
         <button
           onClick={() => onTabChange('recurring')}
-          className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer ${
-            activeTab === 'recurring' ? 'text-blue-500' : 'text-muted-foreground'
+          className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 ${
+            activeTab === 'recurring' ? 'text-blue-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          <CreditCard className="size-4" />
+          <CreditCard className="size-4.5" />
           Recurring
         </button>
         <button
           onClick={() => onTabChange('ledger')}
-          className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer ${
-            activeTab === 'ledger' ? 'text-blue-500' : 'text-muted-foreground'
+          className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 ${
+            activeTab === 'ledger' ? 'text-blue-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          <Wallet className="size-4" />
+          <Wallet className="size-4.5" />
           Ledger
         </button>
       </div>

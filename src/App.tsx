@@ -322,7 +322,7 @@ function App() {
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
+      <main className="flex-1 container mx-auto px-4 py-8 pb-24 md:pb-8 max-w-7xl">
         {activeTab === 'dashboard' && (
           <DashboardView 
             dashboardData={dashboardData}
@@ -552,7 +552,7 @@ function App() {
       )}
 
       {/* Footer */}
-      <footer className="border-t border-border/40 py-6 bg-muted/10 select-none">
+      <footer className="border-t border-border/40 py-6 pb-24 md:pb-6 bg-muted/10 select-none">
         <div className="container mx-auto px-4 text-center text-xs text-muted-foreground">
           &copy; 2026 FinancialApp Inc. Double-Entry Safe Ledger System. All rights reserved.
         </div>
