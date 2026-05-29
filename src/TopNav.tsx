@@ -93,7 +93,7 @@ const TopNav: React.FC<TopNavProps> = ({
         <div className="container mx-auto flex h-16 items-center px-4">
         
         {/* Left Side (Logo and Brand) */}
-        <div className="flex-1 flex items-center justify-start min-w-0">
+        <div className="flex-1 flex items-center justify-start min-w-max">
           <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => onTabChange('dashboard')}>
             <div className="flex size-9 items-center justify-center rounded-xl bg-radial from-blue-400 to-blue-600 shadow-md shadow-blue-500/20 text-white font-extrabold text-lg shrink-0">
               F
@@ -141,7 +141,7 @@ const TopNav: React.FC<TopNavProps> = ({
         </div>
 
         {/* Right Side Widgets & Actions */}
-        <div className="flex-1 flex items-center justify-end gap-1.5 sm:gap-3 md:gap-4 min-w-0">
+        <div className="flex-1 flex items-center justify-end gap-1.5 sm:gap-3 md:gap-4 min-w-max">
           
           {/* Quick Metrics (Balance Display) */}
           <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 border border-blue-500/10 rounded-xl select-none shrink-0">
@@ -155,7 +155,7 @@ const TopNav: React.FC<TopNavProps> = ({
           {/* Sensitive Hide/Show Toggle */}
           <button
             onClick={onToggleHideSensitive}
-            className="p-1.5 border border-border/60 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition duration-150 flex items-center justify-center shrink-0"
+            className="hidden xl:flex p-1.5 border border-border/60 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition duration-150 items-center justify-center shrink-0"
             title={hideSensitive ? "Show sensitive figures" : "Hide sensitive figures"}
           >
             {hideSensitive ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
@@ -165,7 +165,7 @@ const TopNav: React.FC<TopNavProps> = ({
           <button
             onClick={onToggleDarkMode}
             id="dark-mode-toggle"
-            className="p-1.5 border border-border/60 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition duration-150 flex items-center justify-center shrink-0"
+            className="hidden xl:flex p-1.5 border border-border/60 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition duration-150 items-center justify-center shrink-0"
             title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
             {darkMode ? <Sun className="size-4" /> : <Moon className="size-4" />}
@@ -319,6 +319,26 @@ const TopNav: React.FC<TopNavProps> = ({
                   </div>
 
                   <MenubarSeparator className="my-1 border-t border-border/30" />
+                  
+                  {/* Settings toggles in dropdown */}
+                  <MenubarItem 
+                    onClick={onToggleHideSensitive}
+                    className="flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground"
+                  >
+                    {hideSensitive ? <Eye className="size-3.5 text-blue-500" /> : <EyeOff className="size-3.5 text-blue-500" />}
+                    <span>{hideSensitive ? 'Show Sensitive' : 'Hide Sensitive'}</span>
+                  </MenubarItem>
+
+                  <MenubarItem 
+                    onClick={onToggleDarkMode}
+                    className="flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground"
+                  >
+                    {darkMode ? <Sun className="size-3.5 text-blue-500" /> : <Moon className="size-3.5 text-blue-500" />}
+                    <span>{darkMode ? 'Light Theme' : 'Dark Theme'}</span>
+                  </MenubarItem>
+
+                  <MenubarSeparator className="my-1 border-t border-border/30" />
+                  
                   <MenubarItem 
                     onClick={onLogout}
                     className="flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg text-orange-500 hover:bg-orange-500/10 outline-hidden cursor-pointer"
