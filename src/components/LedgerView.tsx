@@ -32,7 +32,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [amount, setAmount] = useState('')
   const [txType, setTxType] = useState<'inflow' | 'outflow'>('outflow')
   const [category, setCategory] = useState('')
-  const [ledgerCategory, setLedgerCategory] = useState<'Essentials' | 'Growth' | 'Stability' | 'Rewards'>('Essentials')
+  const [ledgerCategory, setLedgerCategory] = useState<'Income' | 'Essentials' | 'Growth' | 'Stability' | 'Rewards'>('Essentials')
   const [date, setDate] = useState(() => {
     const now = new Date()
     const y = now.getFullYear()
@@ -40,6 +40,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     const d = String(now.getDate()).padStart(2, '0')
     return `${y}-${m}-${d}`
   })
+
+  // Reset Ledger Category to Essentials if user switches to outflow (since Income is inflow only)
+  useEffect(() => {
+    if (txType === 'outflow' && ledgerCategory === 'Income') {
+      setLedgerCategory('Essentials')
+    }
+  }, [txType, ledgerCategory])
 
   useEffect(() => {
     if (categories.length > 0 && !category) {
@@ -100,6 +107,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }, [transactions, searchTerm, selectedCategory])
 
+  const displayLedgerCategory = (cat: string) => {
+    if (cat.startsWith('IncomeSplit:')) return 'Income'
+    return cat
+  }
+
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -129,7 +141,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         escapeCsvField(t.date),
         escapeCsvField(t.description),
         escapeCsvField(t.category),
-        escapeCsvField(t.ledgerCategory),
+        displayLedgerCategory(t.ledgerCategory),
         isOutflow ? escapeCsvField(Math.abs(t.amount).toFixed(2)) : '',
         !isOutflow ? escapeCsvField(t.amount.toFixed(2)) : ''
       ]
@@ -262,6 +274,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 onChange={e => setLedgerCategory(e.target.value as any)}
                 className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition duration-200"
               >
+                {txType === 'inflow' && <option value="Income">Income (Auto-Split)</option>}
                 <option value="Essentials">Essentials</option>
                 <option value="Growth">Growth</option>
                 <option value="Stability">Stability</option>
@@ -364,7 +377,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                         {t.category}
                       </span>
                     </td>
-                    <td className="p-4 font-semibold text-muted-foreground">{t.ledgerCategory}</td>
+                    <td className="p-4 font-semibold text-muted-foreground">{displayLedgerCategory(t.ledgerCategory)}</td>
                     <td className="p-4 text-right font-medium text-rose-500">
                       {isOutflow ? formatSensitive(Math.abs(t.amount)) : '-'}
                     </td>
