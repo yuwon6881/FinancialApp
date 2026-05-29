@@ -32,7 +32,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [amount, setAmount] = useState('')
   const [txType, setTxType] = useState<'inflow' | 'outflow'>('outflow')
   const [category, setCategory] = useState('')
-  const [ledgerCategory, setLedgerCategory] = useState<'Essentials' | 'Growth' | 'Stability' | 'Rewards'>('Essentials')
+  const [ledgerCategory, setLedgerCategory] = useState<'Essentials' | 'Growth' | 'Stability' | 'Rewards' | 'Income'>('Essentials')
   const [date, setDate] = useState(() => {
     const now = new Date()
     const y = now.getFullYear()
@@ -46,6 +46,12 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       setCategory(categories[0].name)
     }
   }, [categories, category])
+
+  useEffect(() => {
+    if (txType === 'outflow' && ledgerCategory === 'Income') {
+      setLedgerCategory('Essentials')
+    }
+  }, [txType, ledgerCategory])
 
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('')
@@ -266,6 +272,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 <option value="Growth">Growth</option>
                 <option value="Stability">Stability</option>
                 <option value="Rewards">Rewards</option>
+                <option value="Income" disabled={txType === 'outflow'}>Income</option>
               </select>
             </div>
 
