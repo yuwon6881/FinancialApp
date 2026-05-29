@@ -8,12 +8,11 @@ import {
   CreditCard, 
   Calendar, 
   Bell, 
-  DollarSign, 
   Sparkles,
   X,
   Edit
 } from 'lucide-react'
-import { formatCurrencyVal } from '../lib/utils'
+import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
 
 interface RecurringPaymentsViewProps {
   payments: RecurringPayment[]
@@ -193,9 +192,11 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-muted-foreground">Billing Amount ($)</label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
+              <label className="text-xs font-semibold text-muted-foreground">Billing Amount ({getCurrencySymbol(currency)})</label>
+              <div className="relative flex items-center">
+                <span className="absolute left-3.5 text-xs font-semibold text-muted-foreground pointer-events-none select-none">
+                  {getCurrencySymbol(currency)}
+                </span>
                 <input
                   type="number"
                   step="0.01"
@@ -203,7 +204,9 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                   placeholder="0.00"
                   value={amount}
                   onChange={e => setAmount(e.target.value)}
-                  className="w-full pl-9 pr-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
+                  className={`w-full pr-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200 ${
+                    getCurrencySymbol(currency).length > 2 ? 'pl-11' : getCurrencySymbol(currency).length > 1 ? 'pl-9' : 'pl-7'
+                  }`}
                 />
               </div>
             </div>

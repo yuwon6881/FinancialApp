@@ -11,7 +11,7 @@ import {
   RefreshCw
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
-import { formatCurrencyVal } from '../lib/utils'
+import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
 
 interface LedgerViewProps {
   transactions: Transaction[]
@@ -377,7 +377,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   value: y,
                   label: y.toString()
                 }))}
-                className="w-24 shrink-0"
+                className="w-28 shrink-0"
               />
             </div>
           </div>
@@ -497,16 +497,23 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-muted-foreground">Amount ($)</label>
-              <input
-                type="number"
-                step="0.01"
-                required
-                placeholder="0.00"
-                value={amount}
-                onChange={e => setAmount(e.target.value)}
-                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
-              />
+              <label className="text-xs font-semibold text-muted-foreground">Amount ({getCurrencySymbol(currency)})</label>
+              <div className="relative flex items-center">
+                <span className="absolute left-3.5 text-xs font-semibold text-muted-foreground pointer-events-none select-none">
+                  {getCurrencySymbol(currency)}
+                </span>
+                <input
+                  type="number"
+                  step="0.01"
+                  required
+                  placeholder="0.00"
+                  value={amount}
+                  onChange={e => setAmount(e.target.value)}
+                  className={`w-full pr-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200 ${
+                    getCurrencySymbol(currency).length > 2 ? 'pl-11' : getCurrencySymbol(currency).length > 1 ? 'pl-9' : 'pl-7'
+                  }`}
+                />
+              </div>
             </div>
 
             {txType === 'transfer' ? (

@@ -347,7 +347,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               value: y,
               label: y.toString()
             }))}
-            className="w-24 shrink-0"
+            className="w-28 shrink-0"
           />
 
           {/* Configure button */}
