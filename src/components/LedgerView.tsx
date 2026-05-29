@@ -124,7 +124,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                             t.ledgerCategory.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesCategory = selectedCategory === 'All' || t.category === selectedCategory
       return matchesSearch && matchesCategory
-    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    }).sort((a, b) => {
+      const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime()
+      if (dateDiff !== 0) return dateDiff
+      return b.id.localeCompare(a.id)
+    })
   }, [transactions, searchTerm, selectedCategory])
 
   const displayLedgerCategory = (cat: string) => {

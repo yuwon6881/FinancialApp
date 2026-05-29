@@ -124,6 +124,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return (dashboardData as any)?.availableYears || [new Date().getFullYear()]
   }, [dashboardData])
 
+  const todayStr = useMemo(() => {
+    const d = new Date()
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const dateStr = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${dateStr}`
+  }, [])
+
   // Extract variables from dashboardData or fall back to defaults
   const activeSettings = dashboardData?.setting || {
     monthlyIncome: 4000.00,
@@ -159,6 +167,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const recentTransactions = dashboardData?.recentTransactions || []
   const activeRecurring = dashboardData?.activeRecurringPayments || []
+
+  const pendingDeductionsByCategory = useMemo(() => {
+    const sums: Record<string, number> = {
+      'Essentials': 0,
+      'Growth': 0,
+      'Stability': 0,
+      'Rewards': 0
+    }
+    if (activeRecurring) {
+      activeRecurring.forEach((rp: any) => {
+        if (!rp.isPaid) {
+          const cat = rp.ledgerCategory || rp.category
+          if (cat && sums[cat] !== undefined) {
+            sums[cat] += Math.abs(rp.amount)
+          }
+        }
+      })
+    }
+    return sums
+  }, [activeRecurring])
 
   // Initialize input states when opening settings
   const handleToggleSettings = () => {
@@ -594,10 +622,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <td className="py-3 text-right">{formatSensitive(c.target)}</td>
                     <td className="py-3 text-right text-muted-foreground">{formatSensitive(c.budget)}</td>
                     <td className={`py-3 text-right ${c.netChange < 0 ? 'text-rose-500' : c.netChange > 0 ? 'text-emerald-500' : ''}`}>
-                      {c.netChange > 0 ? '+' : ''}{formatSensitive(c.netChange)}
+                      <div>{c.netChange > 0 ? '+' : ''}{formatSensitive(c.netChange)}</div>
+                      {pendingDeductionsByCategory[c.name] > 0 && (
+                        <div className="text-[10px] text-muted-foreground font-normal">
+                          (-{formatSensitive(pendingDeductionsByCategory[c.name])} pending)
+                        </div>
+                      )}
                     </td>
                     <td className={`py-3 text-right font-bold ${isNeg ? 'text-rose-500' : 'text-foreground'}`}>
-                      {formatSensitive(c.remaining)}
+                      <div>{formatSensitive(c.remaining)}</div>
+                      {pendingDeductionsByCategory[c.name] > 0 && (
+                        <div className={`text-[10px] font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-rose-500/80' : 'text-emerald-500/80'}`}>
+                          ({formatSensitive(c.remaining - pendingDeductionsByCategory[c.name])} proj.)
+                        </div>
+                      )}
                     </td>
                   </tr>
                 )
@@ -639,12 +677,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <span className={`font-semibold ${c.netChange < 0 ? 'text-rose-500' : c.netChange > 0 ? 'text-emerald-500' : 'text-foreground'}`}>
                       {c.netChange > 0 ? '+' : ''}{formatSensitive(c.netChange)}
                     </span>
+                    {pendingDeductionsByCategory[c.name] > 0 && (
+                      <span className="text-[10px] text-muted-foreground block font-normal">
+                        (-{formatSensitive(pendingDeductionsByCategory[c.name])} pending)
+                      </span>
+                    )}
                   </div>
                   <div>
                     <span className="text-muted-foreground text-[10px] block mb-0.5">Remaining Balance</span>
                     <span className={`font-bold ${isNeg ? 'text-rose-500' : 'text-foreground'}`}>
                       {formatSensitive(c.remaining)}
                     </span>
+                    {pendingDeductionsByCategory[c.name] > 0 && (
+                      <span className={`text-[10px] block font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-rose-500/80' : 'text-emerald-500/80'}`}>
+                        ({formatSensitive(c.remaining - pendingDeductionsByCategory[c.name])} proj.)
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -991,7 +1039,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <div className="text-right shrink-0 flex flex-col items-end gap-1">
                     <span className="text-rose-500 font-bold block">-{formatSensitive(rp.amount)}</span>
                     <div className="flex items-center gap-1.5">
-                      {!rp.isPaid && (
+                      {!rp.isPaid && rp.dueDate <= todayStr && (
                         <button
                           onClick={() => {
                             const pDate = prompt("Enter paid date (yyyy-MM-dd):", rp.dueDate)
