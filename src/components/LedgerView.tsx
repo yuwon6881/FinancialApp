@@ -156,26 +156,32 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   // Filtered transactions
   const filteredTransactions = useMemo(() => {
+    // Group filters by their type (Ledger Buckets vs Subcategories)
+    const ledgerBuckets = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
+    const selectedBuckets = selectedFilters.filter(f => ledgerBuckets.includes(f))
+    const selectedSubcategories = selectedFilters.filter(f => !ledgerBuckets.includes(f))
+
     return transactions.filter(t => {
       const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             t.ledgerCategory.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             t.category.toLowerCase().includes(searchTerm.toLowerCase())
       
-      let matchesCategory = true
-      if (selectedFilters.length > 0) {
-        matchesCategory = selectedFilters.some(filterName => {
-          // Subcategory match
-          if (t.category === filterName) return true
-          
-          // Ledger allocation / Income match
-          if (filterName === 'Income') {
+      let matchesBucket = true
+      if (selectedBuckets.length > 0) {
+        matchesBucket = selectedBuckets.some(bucket => {
+          if (bucket === 'Income') {
             return t.ledgerCategory === 'Income' || t.ledgerCategory.startsWith('IncomeSplit:')
           }
-          return t.ledgerCategory === filterName || t.ledgerCategory.includes(filterName)
+          return t.ledgerCategory === bucket || t.ledgerCategory.includes(bucket)
         })
       }
+
+      let matchesSubcat = true
+      if (selectedSubcategories.length > 0) {
+        matchesSubcat = selectedSubcategories.some(subcat => t.category === subcat)
+      }
       
-      return matchesSearch && matchesCategory
+      return matchesSearch && matchesBucket && matchesSubcat
     }).sort((a, b) => {
       const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime()
       if (dateDiff !== 0) return dateDiff
@@ -218,6 +224,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   }
 
   const exportToCSV = () => {
+    if (hideSensitive) return
     const headers = ['Date', 'Description', 'Category', 'Ledger Category', 'Debit (Outflow)', 'Credit (Inflow)']
     const rows = filteredTransactions.map(t => {
       const isOutflow = t.amount < 0
@@ -258,7 +265,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               <select
                 value={selectedMonth}
                 onChange={(e) => onSelectPeriod(e.target.value, selectedYear)}
-                className="px-2.5 py-1 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer text-foreground font-semibold"
+                className="px-3.5 py-1.5 pr-8 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer appearance-none bg-[image:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org/2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222.5%22%3E%3Cpath%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20d%3D%22M19%209l-7%207-7-7%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1em_1em] bg-[right_0.6rem_center] bg-no-repeat text-foreground font-semibold shadow-xs transition duration-200 hover:bg-muted/30"
               >
                 {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(m => (
                   <option key={m} value={m}>{getCycleLabelForDropdown(m, selectedYear, cycleDay)}</option>
@@ -267,7 +274,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               <select
                 value={selectedYear}
                 onChange={(e) => onSelectPeriod(selectedMonth, parseInt(e.target.value))}
-                className="px-2.5 py-1 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer text-foreground font-semibold"
+                className="px-3.5 py-1.5 pr-8 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer appearance-none bg-[image:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org/2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222.5%22%3E%3Cpath%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20d%3D%22M19%209l-7%207-7-7%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1em_1em] bg-[right_0.6rem_center] bg-no-repeat text-foreground font-semibold shadow-xs transition duration-200 hover:bg-muted/30"
               >
                 {availableYears.map(y => (
                   <option key={y} value={y}>{y}</option>
@@ -280,7 +287,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         <div className="flex items-center gap-3">
           <button
             onClick={exportToCSV}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-background hover:bg-muted text-foreground font-medium text-xs transition duration-200 cursor-pointer"
+            disabled={hideSensitive}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border font-medium text-xs transition duration-200 ${
+              hideSensitive 
+                ? 'opacity-40 cursor-not-allowed bg-background text-muted-foreground' 
+                : 'bg-background hover:bg-muted text-foreground cursor-pointer'
+            }`}
+            title={hideSensitive ? 'CSV Export disabled in blur mode' : 'Export CSV'}
           >
             <Download className="size-3.5 text-muted-foreground" />
             Export CSV

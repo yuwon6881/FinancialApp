@@ -301,7 +301,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <select 
             value={activeSettings.selectedMonth}
             onChange={(e) => onSelectPeriod(e.target.value, activeSettings.selectedYear)}
-            className="px-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+            className="px-3.5 py-1.5 pr-8 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer appearance-none bg-[image:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org/2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222.5%22%3E%3Cpath%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20d%3D%22M19%209l-7%207-7-7%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1em_1em] bg-[right_0.6rem_center] bg-no-repeat text-foreground font-semibold shadow-xs transition duration-200 hover:bg-muted/30"
           >
             {months.map(m => (
               <option key={m} value={m}>{getCycleLabelForDropdown(m, activeSettings.selectedYear, activeSettings.cycleDay)}</option>
@@ -312,7 +312,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <select 
             value={activeSettings.selectedYear}
             onChange={(e) => onSelectPeriod(activeSettings.selectedMonth, parseInt(e.target.value))}
-            className="px-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+            className="px-3.5 py-1.5 pr-8 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer appearance-none bg-[image:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org/2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2024%2024%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222.5%22%3E%3Cpath%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20d%3D%22M19%209l-7%207-7-7%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1em_1em] bg-[right_0.6rem_center] bg-no-repeat text-foreground font-semibold shadow-xs transition duration-200 hover:bg-muted/30"
           >
             {years.map(y => (
               <option key={y} value={y}>{y}</option>
