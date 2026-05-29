@@ -89,59 +89,63 @@ const TopNav: React.FC<TopNavProps> = ({
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4 relative">
+      <div className="container mx-auto flex h-16 items-center px-4">
         
-        {/* Brand Logo and Title */}
-        <div className="flex items-center gap-2 cursor-pointer select-none shrink-0" onClick={() => onTabChange('dashboard')}>
-          <div className="flex size-9 items-center justify-center rounded-xl bg-radial from-blue-400 to-blue-600 shadow-md shadow-blue-500/20 text-white font-extrabold text-lg">
-            F
+        {/* Left Side (Logo and Brand) */}
+        <div className="flex-1 flex items-center justify-start min-w-0">
+          <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => onTabChange('dashboard')}>
+            <div className="flex size-9 items-center justify-center rounded-xl bg-radial from-blue-400 to-blue-600 shadow-md shadow-blue-500/20 text-white font-extrabold text-lg shrink-0">
+              F
+            </div>
+            <span className="hidden sm:inline text-md sm:text-lg font-extrabold tracking-tight bg-linear-to-r from-foreground via-foreground to-blue-500 bg-clip-text text-transparent truncate">
+              FinancialApp
+            </span>
           </div>
-          <span className="text-md sm:text-lg font-extrabold tracking-tight bg-linear-to-r from-foreground via-foreground to-blue-500 bg-clip-text text-transparent">
-            FinancialApp
-          </span>
         </div>
 
-        {/* Navigation Tabs - Centered absolutely on desktop */}
-        <nav className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-1 bg-muted/40 p-1.5 rounded-xl border border-border/40 select-none">
-          <button
-            onClick={() => onTabChange('dashboard')}
-            className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer ${
-              activeTab === 'dashboard'
-                ? 'bg-card text-foreground shadow-xs border border-border/10 font-bold scale-[1.02]'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
-            }`}
-          >
-            Dashboard
-          </button>
-          <button
-            onClick={() => onTabChange('recurring')}
-            className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer ${
-              activeTab === 'recurring'
-                ? 'bg-card text-foreground shadow-xs border border-border/10 font-bold scale-[1.02]'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
-            }`}
-          >
-            Recurring Payments
-          </button>
-          <button
-            onClick={() => onTabChange('ledger')}
-            className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer ${
-              activeTab === 'ledger'
-                ? 'bg-card text-foreground shadow-xs border border-border/10 font-bold scale-[1.02]'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
-            }`}
-          >
-            Ledger
-          </button>
-        </nav>
+        {/* Navigation Tabs - Centered mathematically on desktop, flex-safe on medium screens */}
+        <div className="hidden md:flex items-center justify-center shrink-0 mx-4">
+          <nav className="flex items-center gap-1 bg-muted/40 p-1.5 rounded-xl border border-border/40 select-none">
+            <button
+              onClick={() => onTabChange('dashboard')}
+              className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer ${
+                activeTab === 'dashboard'
+                  ? 'bg-card text-foreground shadow-xs border border-border/10 font-bold scale-[1.02]'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+              }`}
+            >
+              Dashboard
+            </button>
+            <button
+              onClick={() => onTabChange('recurring')}
+              className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer ${
+                activeTab === 'recurring'
+                  ? 'bg-card text-foreground shadow-xs border border-border/10 font-bold scale-[1.02]'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+              }`}
+            >
+              Recurring Payments
+            </button>
+            <button
+              onClick={() => onTabChange('ledger')}
+              className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer ${
+                activeTab === 'ledger'
+                  ? 'bg-card text-foreground shadow-xs border border-border/10 font-bold scale-[1.02]'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+              }`}
+            >
+              Ledger
+            </button>
+          </nav>
+        </div>
 
         {/* Right Side Widgets & Actions */}
-        <div className="flex items-center gap-1.5 sm:gap-3 md:gap-4 shrink-0">
+        <div className="flex-1 flex items-center justify-end gap-1.5 sm:gap-3 md:gap-4 min-w-0">
           
           {/* Quick Metrics (Balance Display) */}
-          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 border border-blue-500/10 rounded-xl select-none">
+          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 border border-blue-500/10 rounded-xl select-none shrink-0">
             <Wallet className="size-3.5 text-blue-500" />
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Net Balance:</span>
+            <span className="hidden xl:inline text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Net Balance:</span>
             <span className={`text-xs font-bold text-foreground transition-all duration-300 ${hideSensitive ? 'blur-sm select-none pointer-events-none' : ''}`}>
               {formatCurrency(totalBalance)}
             </span>
@@ -150,7 +154,7 @@ const TopNav: React.FC<TopNavProps> = ({
           {/* Sensitive Hide/Show Toggle */}
           <button
             onClick={onToggleHideSensitive}
-            className="p-1.5 border border-border/60 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition duration-150 flex items-center justify-center"
+            className="p-1.5 border border-border/60 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition duration-150 flex items-center justify-center shrink-0"
             title={hideSensitive ? "Show sensitive figures" : "Hide sensitive figures"}
           >
             {hideSensitive ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
@@ -160,7 +164,7 @@ const TopNav: React.FC<TopNavProps> = ({
           <button
             onClick={onToggleDarkMode}
             id="dark-mode-toggle"
-            className="p-1.5 border border-border/60 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition duration-150 flex items-center justify-center"
+            className="p-1.5 border border-border/60 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition duration-150 flex items-center justify-center shrink-0"
             title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
             {darkMode ? <Sun className="size-4" /> : <Moon className="size-4" />}
