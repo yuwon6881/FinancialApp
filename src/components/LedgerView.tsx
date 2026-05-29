@@ -14,6 +14,7 @@ import { CustomSelect } from './ui/CustomSelect'
 
 interface LedgerViewProps {
   transactions: Transaction[]
+  allTransactions: Transaction[]
   onAddTransaction: (transaction: Omit<Transaction, 'id'>) => void
   onDeleteTransaction: (id: string) => void
   hideSensitive: boolean
@@ -23,10 +24,16 @@ interface LedgerViewProps {
   availableYears: number[]
   cycleDay: number
   onSelectPeriod: (month: string, year: number) => void
+  incomingCategory: string | null
+  onClearIncomingCategory: () => void
+  showAllCycles: boolean
+  onLoadAllTransactions: () => void
+  onClearAllCycles: () => void
 }
 
 export const LedgerView: React.FC<LedgerViewProps> = ({
   transactions,
+  allTransactions,
   onAddTransaction,
   onDeleteTransaction,
   hideSensitive,
@@ -35,7 +42,12 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   selectedYear,
   availableYears,
   cycleDay,
-  onSelectPeriod
+  onSelectPeriod,
+  incomingCategory,
+  onClearIncomingCategory,
+  showAllCycles,
+  onLoadAllTransactions: _onLoadAllTransactions,
+  onClearAllCycles
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [description, setDescription] = useState('')
@@ -72,6 +84,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       setCategory(categories[0].name)
     }
   }, [categories, category])
+
+  // When incomingCategory arrives from dashboard doughnut click, apply as filter
+  useEffect(() => {
+    if (incomingCategory) {
+      setSelectedFilters([incomingCategory])
+    }
+  }, [incomingCategory])
 
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('')
@@ -155,6 +174,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setShowAddForm(false)
   }
 
+  // Source: all transactions across all cycles when showAllCycles, else current cycle only
+  const sourceTransactions = showAllCycles && allTransactions && allTransactions.length > 0 ? allTransactions : transactions
+
   // Filtered transactions
   const filteredTransactions = useMemo(() => {
     // Group filters by their type (Ledger Buckets vs Subcategories)
@@ -162,7 +184,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     const selectedBuckets = selectedFilters.filter(f => ledgerBuckets.includes(f))
     const selectedSubcategories = selectedFilters.filter(f => !ledgerBuckets.includes(f))
 
-    return transactions.filter(t => {
+    return sourceTransactions.filter(t => {
       const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             t.ledgerCategory.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             t.category.toLowerCase().includes(searchTerm.toLowerCase())
@@ -188,7 +210,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       if (dateDiff !== 0) return dateDiff
       return b.id.localeCompare(a.id)
     })
-  }, [transactions, searchTerm, selectedFilters])
+  }, [sourceTransactions, searchTerm, selectedFilters])
 
   const displayLedgerCategory = (cat: string) => {
     if (cat.startsWith('IncomeSplit:')) return 'Income'
@@ -308,6 +330,28 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Dashboard navigation filter banner */}
+      {(incomingCategory || showAllCycles) && (
+        <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-blue-500/8 border border-blue-500/20 text-xs animate-in fade-in duration-200">
+          <div className="flex items-center gap-2 text-blue-500 font-medium">
+            <span className="size-1.5 rounded-full bg-blue-500 shrink-0 animate-pulse" />
+            {showAllCycles
+              ? `Showing all cycles — filtered by "${incomingCategory || 'all'}"`
+              : `Filtered by "${incomingCategory}" (current cycle)`}
+          </div>
+          <button
+            onClick={() => {
+              onClearIncomingCategory?.()
+              onClearAllCycles?.()
+              setSelectedFilters([])
+            }}
+            className="flex items-center gap-1 text-blue-500/70 hover:text-blue-500 text-[10px] font-semibold transition cursor-pointer"
+          >
+            <X className="size-3" /> Clear filter
+          </button>
+        </div>
+      )}
 
       {/* Expandable Post Transaction Form */}
       {showAddForm && (

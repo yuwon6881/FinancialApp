@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useRef } from 'react'
 import type { DashboardData, TransactionCategory } from '../types'
 import { 
   Wallet, 
@@ -31,6 +31,7 @@ interface DashboardViewProps {
   onDeleteCategory: (id: string) => void
   onConfirmSubscription: (noti: any, paidDate: string) => void
   onDeletePayment: (id: string) => void
+  onNavigateToLedgerCategory: (category: string, allCycles: boolean) => void
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ 
@@ -43,7 +44,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onAddCategory,
   onDeleteCategory,
   onConfirmSubscription,
-  onDeletePayment
+  onDeletePayment,
+  onNavigateToLedgerCategory
 }) => {
   const [showSettings, setShowSettings] = useState(false)
   const [targetInput, setTargetInput] = useState('')
@@ -63,6 +65,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [hoveredSlice, setHoveredSlice] = useState<number | null>(null)
   // Wealth Growth trend view state
   const [trendView, setTrendView] = useState<'monthly' | '3month' | '6month' | 'yearly'>('yearly')
+  // Trend line tooltip state
+  const [hoveredTrendPoint, setHoveredTrendPoint] = useState<number | null>(null)
+  const svgRef = useRef<SVGSVGElement>(null)
 
   // Subscription Confirmation States
   const [activeConfirmId, setActiveConfirmId] = useState<string | null>(null)
@@ -752,10 +757,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* Dynamic Excel Target Metric Cards */}
+      {/* Financial Plan Metric Cards */}
       <div className="p-6 bg-card border border-border/60 rounded-2xl shadow-xs">
         <h3 className="text-md font-bold text-foreground mb-1">Financial Plan Metrics</h3>
-        <p className="text-xs text-muted-foreground mb-1">Target ratios evaluated using calculations mapped directly from spreadsheet cells.</p>
+        <p className="text-xs text-muted-foreground mb-1">Cycle-wide constraint evaluation across allocation categories and targets.</p>
         {/* Legend — protan-safe: blue (current) + orange (pending) */}
         <div className="flex items-center gap-4 mb-4">
           <div className="flex items-center gap-1.5">
@@ -923,7 +928,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {/* SVG Line Chart */}
             <div className={`h-40 flex items-end justify-center w-full relative mt-2 transition-all duration-300 ${hideSensitive ? 'blur-xs select-none pointer-events-none' : ''}`}>
               {trendLinePoints ? (
-                <svg className="w-full h-full overflow-visible" viewBox="0 0 500 120" preserveAspectRatio="none">
+                <svg ref={svgRef} className="w-full h-full overflow-visible" viewBox="0 0 500 120" preserveAspectRatio="none">
                   <defs>
                     <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="var(--color-chart-line, #3b82f6)" stopOpacity="0.25" />
@@ -948,6 +953,52 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     strokeLinejoin="round"
                     className="transition-all duration-300"
                   />
+
+                  {/* Interactive hover points + tooltips */}
+                  {activeTrendPoints.length >= 2 && (() => {
+                    const minVal = Math.min(...activeTrendPoints.map(p => p.balance), 0)
+                    const maxVal = Math.max(...activeTrendPoints.map(p => p.balance), 1000)
+                    const range = maxVal - minVal
+                    return activeTrendPoints.map((p, i) => {
+                      const x = 15 + (i / (activeTrendPoints.length - 1)) * 470
+                      const y = 120 - 15 - ((p.balance - minVal) / (range || 1)) * (120 - 15 * 2)
+                      const isHovered = hoveredTrendPoint === i
+                      return (
+                        <g key={i}>
+                          <circle
+                            cx={x} cy={y} r="12"
+                            fill="transparent"
+                            className="cursor-pointer"
+                            onMouseEnter={() => setHoveredTrendPoint(i)}
+                            onMouseLeave={() => setHoveredTrendPoint(null)}
+                          />
+                          {isHovered && (
+                            <circle cx={x} cy={y} r="4" fill="var(--color-chart-line, #3b82f6)" stroke="white" strokeWidth="1.5" />
+                          )}
+                          {!isHovered && (
+                            <circle cx={x} cy={y} r="2.5" fill="var(--color-chart-line, #3b82f6)" opacity="0.6" />
+                          )}
+                          {isHovered && (
+                            <g>
+                              <rect
+                                x={Math.min(x + 8, 390)} y={Math.max(y - 36, 4)}
+                                width="100" height="30"
+                                rx="5" ry="5"
+                                fill="var(--card)" stroke="var(--border)" strokeWidth="1"
+                                opacity="0.97"
+                              />
+                              <text x={Math.min(x + 58, 440)} y={Math.max(y - 21, 17)} textAnchor="middle" fontSize="8" fontWeight="bold" fill="currentColor">
+                                {p.month}
+                              </text>
+                              <text x={Math.min(x + 58, 440)} y={Math.max(y - 10, 28)} textAnchor="middle" fontSize="8" fill="currentColor" opacity="0.7">
+                                {hideSensitive ? '•••••' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(p.balance)}
+                              </text>
+                            </g>
+                          )}
+                        </g>
+                      )
+                    })
+                  })()}
 
                   {/* Month labels on X axis */}
                   {activeTrendPoints.length >= 2 && activeTrendPoints.map((p, i) => {
@@ -1017,6 +1068,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           className="transition-all duration-200 cursor-pointer stroke-card stroke-2 hover:opacity-90"
                           onMouseEnter={() => setHoveredSlice(index)}
                           onMouseLeave={() => setHoveredSlice(null)}
+                          onClick={() => {
+                            const isMultiCycle = chartView !== 'monthly'
+                            onNavigateToLedgerCategory?.(slice.category, isMultiCycle)
+                          }}
                         />
                       )
                     })}
@@ -1049,11 +1104,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   {slices.map((slice, index) => (
                     <div
                       key={slice.category}
-                      className={`flex items-center justify-between text-[10px] py-0.5 px-1.5 rounded-md transition-colors duration-150 ${
-                        hoveredSlice === index ? 'bg-muted/50' : ''
+                      className={`flex items-center justify-between text-[10px] py-0.5 px-1.5 rounded-md transition-colors duration-150 cursor-pointer ${
+                        hoveredSlice === index ? 'bg-muted/50' : 'hover:bg-muted/30'
                       }`}
                       onMouseEnter={() => setHoveredSlice(index)}
                       onMouseLeave={() => setHoveredSlice(null)}
+                      onClick={() => {
+                        const isMultiCycle = chartView !== 'monthly'
+                        onNavigateToLedgerCategory?.(slice.category, isMultiCycle)
+                      }}
                     >
                       <div className="flex items-center gap-1.5 truncate mr-2">
                         <span
@@ -1151,6 +1210,125 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Daily Cycle Heatmap Calendar */}
+      {(() => {
+        const cycleDay = activeSettings.cycleDay
+        const monthIdxMap: Record<string, number> = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 }
+        const selectedMonthIdx = (monthIdxMap[activeSettings.selectedMonth] ?? 0) + 1
+        const selectedYear = activeSettings.selectedYear
+
+        // Compute cycle start and end dates same as backend logic
+        const startDayActual = Math.min(cycleDay, new Date(selectedYear, selectedMonthIdx, 0).getDate())
+        const cycleStart = new Date(selectedYear, selectedMonthIdx - 1, startDayActual)
+        const cycleEnd = new Date(cycleStart)
+        cycleEnd.setMonth(cycleEnd.getMonth() + 1)
+        cycleEnd.setDate(cycleEnd.getDate() - 1)
+
+        const formatDate = (d: Date) => {
+          const y = d.getFullYear()
+          const m = String(d.getMonth() + 1).padStart(2, '0')
+          const dd = String(d.getDate()).padStart(2, '0')
+          return `${y}-${m}-${dd}`
+        }
+
+        const cycleStartStr = formatDate(cycleStart)
+        const cycleEndStr = formatDate(cycleEnd)
+
+        // Build days array
+        const days: Date[] = []
+        let cursor = new Date(cycleStart)
+        while (cursor <= cycleEnd) {
+          days.push(new Date(cursor))
+          cursor.setDate(cursor.getDate() + 1)
+        }
+
+        // Net per day from recentTransactions
+        const netByDay: Record<string, number> = {}
+        recentTransactions.forEach((t: any) => {
+          if (t.date >= cycleStartStr && t.date <= cycleEndStr) {
+            netByDay[t.date] = (netByDay[t.date] || 0) + t.amount
+          }
+        })
+
+        // Recurring bills by day
+        const recurringByDay: Record<string, string[]> = {}
+        activeRecurring.forEach((rp: any) => {
+          if (rp.dueDate >= cycleStartStr && rp.dueDate <= cycleEndStr) {
+            if (!recurringByDay[rp.dueDate]) recurringByDay[rp.dueDate] = []
+            recurringByDay[rp.dueDate].push(rp.name)
+          }
+        })
+
+        const maxAbsNet = Math.max(...Object.values(netByDay).map(Math.abs), 1)
+
+        // Start day of week for the grid (0=Sun)
+        const startDow = cycleStart.getDay()
+
+        const formatDisplayDate = (d: Date) => {
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+          return `${monthNames[d.getMonth()]} ${d.getDate()}`
+        }
+
+        return (
+          <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-md font-semibold text-foreground">Cycle Calendar</h3>
+                <p className="text-[10px] text-muted-foreground mt-0.5">{cycleLabel} &mdash; daily net activity</p>
+              </div>
+              <div className="flex items-center gap-3 text-[9px] text-muted-foreground select-none">
+                <span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm bg-blue-500/50" />Inflow day</span>
+                <span className="flex items-center gap-1"><span className="inline-block w-3 h-2 rounded-sm bg-orange-500/50" />Outflow day</span>
+                <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-blue-500" />Bill due</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-7 gap-1 text-center">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                <div key={d} className="text-[9px] text-muted-foreground font-semibold pb-1">{d}</div>
+              ))}
+              {/* Empty cells before start */}
+              {Array.from({ length: startDow }).map((_, i) => (
+                <div key={`empty-${i}`} />
+              ))}
+              {days.map((day, _i) => {
+                const ds = formatDate(day)
+                const net = netByDay[ds]
+                const recs = recurringByDay[ds] || []
+                const hasNet = net !== undefined
+                const intensity = hasNet ? Math.min(0.8, Math.abs(net) / maxAbsNet * 0.8 + 0.15) : 0
+                const isPositive = hasNet && net >= 0
+                const isToday = ds === todayStr
+                return (
+                  <div
+                    key={ds}
+                    title={hasNet
+                      ? `${formatDisplayDate(day)}: ${net >= 0 ? '+' : ''}${net.toFixed(2)}${recs.length ? '\nBills: ' + recs.join(', ') : ''}`
+                      : recs.length ? `${formatDisplayDate(day)}\nBills: ${recs.join(', ')}` : formatDisplayDate(day)}
+                    className={`relative aspect-square rounded-lg flex flex-col items-center justify-center gap-0.5 text-[9px] font-semibold transition-all duration-150 ${
+                      isToday ? 'ring-2 ring-blue-500 ring-offset-1 ring-offset-card' : ''
+                    }`}
+                    style={{
+                      backgroundColor: hasNet
+                        ? isPositive
+                          ? `rgba(59,130,246,${intensity})`
+                          : `rgba(249,115,22,${intensity})`
+                        : 'transparent'
+                    }}
+                  >
+                    <span className={`leading-none ${isToday ? 'text-blue-500' : hasNet ? (isPositive ? 'text-blue-700 dark:text-blue-200' : 'text-orange-700 dark:text-orange-200') : 'text-muted-foreground'}`}>
+                      {day.getDate()}
+                    </span>
+                    {recs.length > 0 && (
+                      <span className="size-1 rounded-full bg-blue-500 shrink-0" />
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Month Transactions List */}
       <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs">

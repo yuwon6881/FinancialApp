@@ -299,16 +299,20 @@ export async function selectPeriod(selectedMonth: string, selectedYear: number):
 }
 
 // Transactions
-export function fetchTransactions(month?: string, year?: number): Promise<Transaction[]> {
-  const cacheKey = `transactions:${month || ''}:${year || ''}`
+export function fetchTransactions(month?: string, year?: number, all?: boolean): Promise<Transaction[]> {
+  const cacheKey = all ? 'transactions:all' : `transactions:${month || ''}:${year || ''}`
   const cachedPromise = queryCache.get<Transaction[]>(cacheKey)
   if (cachedPromise) return cachedPromise
 
   const promise = (async () => {
     let url = `${API_BASE_URL}/transactions`
     const params = new URLSearchParams()
-    if (month) params.append('month', month)
-    if (year) params.append('year', year.toString())
+    if (all) {
+      params.append('all', 'true')
+    } else {
+      if (month) params.append('month', month)
+      if (year) params.append('year', year.toString())
+    }
     
     const queryString = params.toString()
     if (queryString) {

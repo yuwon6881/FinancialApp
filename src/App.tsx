@@ -22,6 +22,9 @@ function App() {
 
   const [selectedMonth, setSelectedMonth] = useState<string>('')
   const [selectedYear, setSelectedYear] = useState<number>(0)
+  const [ledgerIncomingCategory, setLedgerIncomingCategory] = useState<string | null>(null)
+  const [ledgerShowAllCycles, setLedgerShowAllCycles] = useState(false)
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([])
   const [hideSensitive, setHideSensitive] = useState<boolean>(() => {
     return localStorage.getItem('hide_sensitive') === 'true'
   })
@@ -35,6 +38,48 @@ function App() {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)
   }, [darkMode])
+
+  // Inactivity Auto-Lock
+  const LOCK_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
+  const [isLocked, setIsLocked] = useState<boolean>(() => {
+    const lastActive = Number(localStorage.getItem('last_active_time') || 0)
+    return !!localStorage.getItem('auth_token') && (Date.now() - lastActive > LOCK_TIMEOUT_MS)
+  })
+  const [lockPassword, setLockPassword] = useState('')
+  const [lockError, setLockError] = useState<string | null>(null)
+  const [lockVerifying, setLockVerifying] = useState(false)
+
+  // Inactivity tracking - update last_active_time in localStorage
+  useEffect(() => {
+    if (!token) return
+    const updateActivity = () => {
+      localStorage.setItem('last_active_time', Date.now().toString())
+    }
+    // Throttle to once per 5 seconds
+    let lastUpdate = 0
+    const throttled = () => {
+      const now = Date.now()
+      if (now - lastUpdate > 5000) {
+        lastUpdate = now
+        updateActivity()
+      }
+    }
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart']
+    events.forEach(e => window.addEventListener(e, throttled, { passive: true }))
+    return () => events.forEach(e => window.removeEventListener(e, throttled))
+  }, [token])
+
+  // Check inactivity every 15 seconds and lock if exceeded
+  useEffect(() => {
+    if (!token) return
+    const interval = setInterval(() => {
+      const lastActive = Number(localStorage.getItem('last_active_time') || Date.now())
+      if (Date.now() - lastActive > LOCK_TIMEOUT_MS) {
+        setIsLocked(true)
+      }
+    }, 15000)
+    return () => clearInterval(interval)
+  }, [token])
 
   // Password Prompt for revealing sensitive information
   const [showPasswordPrompt, setShowPasswordPrompt] = useState<boolean>(false)
@@ -186,6 +231,15 @@ function App() {
     }
   }
 
+  const handleLoadAllTransactions = async () => {
+    try {
+      const txs = await api.fetchTransactions(undefined, undefined, true)
+      setAllTransactions(txs)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   const handleConfirmSubscription = async (noti: any, paidDate: string) => {
     try {
       await api.addTransaction({
@@ -254,6 +308,15 @@ function App() {
   }, [transactions, dashboardData])
 
   const handlePostQuickTransaction = () => {
+    setActiveTab('ledger')
+  }
+
+  const handleNavigateToLedgerCategory = (category: string, allCycles: boolean) => {
+    setLedgerIncomingCategory(category)
+    setLedgerShowAllCycles(allCycles)
+    if (allCycles) {
+      handleLoadAllTransactions()
+    }
     setActiveTab('ledger')
   }
 
@@ -335,6 +398,7 @@ function App() {
             onDeleteCategory={handleDeleteCategory}
             onConfirmSubscription={handleConfirmSubscription}
             onDeletePayment={handleDeletePayment}
+            onNavigateToLedgerCategory={handleNavigateToLedgerCategory}
           />
         )}
 
@@ -353,6 +417,7 @@ function App() {
         {activeTab === 'ledger' && (
           <LedgerView 
             transactions={transactions}
+            allTransactions={allTransactions}
             onAddTransaction={handleAddTransaction}
             onDeleteTransaction={handleDeleteTransaction}
             hideSensitive={hideSensitive}
@@ -362,6 +427,11 @@ function App() {
             availableYears={dashboardData?.availableYears || [selectedYear || new Date().getFullYear()]}
             cycleDay={dashboardData?.setting?.cycleDay || 28}
             onSelectPeriod={handleSelectPeriod}
+            incomingCategory={ledgerIncomingCategory}
+            onClearIncomingCategory={() => setLedgerIncomingCategory(null)}
+            showAllCycles={ledgerShowAllCycles}
+            onLoadAllTransactions={handleLoadAllTransactions}
+            onClearAllCycles={() => { setLedgerShowAllCycles(false); setAllTransactions([]) }}
           />
         )}
       </main>
@@ -551,6 +621,69 @@ function App() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Inactivity Lock Screen */}
+      {isLocked && token && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/95 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="w-full max-w-sm flex flex-col items-center gap-6">
+            <div className="flex size-16 items-center justify-center rounded-2xl bg-radial from-blue-400 to-blue-600 shadow-xl shadow-blue-500/30 text-white font-extrabold text-3xl select-none">
+              F
+            </div>
+            <div className="text-center">
+              <h2 className="text-xl font-bold text-foreground">Session Locked</h2>
+              <p className="text-sm text-muted-foreground mt-1">You were inactive for 5 minutes. Please re-enter your password to continue.</p>
+            </div>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault()
+                setLockVerifying(true)
+                setLockError(null)
+                try {
+                  const res = await api.verifyPassword(lockPassword)
+                  if (res.verified) {
+                    localStorage.setItem('last_active_time', Date.now().toString())
+                    setIsLocked(false)
+                    setLockPassword('')
+                  } else {
+                    setLockError(res.message || 'Incorrect password.')
+                  }
+                } catch (err) {
+                  setLockError('Failed to verify. Please try again.')
+                } finally {
+                  setLockVerifying(false)
+                }
+              }}
+              className="w-full space-y-3"
+            >
+              <input
+                type="password"
+                required
+                placeholder="Enter your password"
+                value={lockPassword}
+                onChange={e => setLockPassword(e.target.value)}
+                autoFocus
+                className="w-full px-4 py-3 text-sm bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              />
+              {lockError && (
+                <p className="text-xs text-orange-500 font-semibold">{lockError}</p>
+              )}
+              <button
+                type="submit"
+                disabled={lockVerifying}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-xl shadow-lg shadow-blue-600/20 transition cursor-pointer"
+              >
+                {lockVerifying ? 'Unlocking...' : 'Unlock'}
+              </button>
+            </form>
+            <button
+              onClick={handleLogout}
+              className="text-xs text-muted-foreground hover:text-foreground transition cursor-pointer underline"
+            >
+              Sign out instead
+            </button>
           </div>
         </div>
       )}
