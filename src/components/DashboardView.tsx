@@ -262,7 +262,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-radial from-emerald-950/20 via-card to-card rounded-2xl border border-emerald-500/10">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            25/50/15/10 Plan Ledger Dashboard
+            Plan Ledger Dashboard
           </h2>
           <p className="text-muted-foreground text-xs mt-0.5">
             Active Cycle: <span className="font-semibold text-emerald-500">{cycleLabel}</span>
