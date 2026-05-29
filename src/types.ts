@@ -31,6 +31,7 @@ export interface FinancialSetting {
   rewardsAlloc: number
   cycleDay: number
   darkMode: boolean
+  currency?: string
 }
 
 export interface CategorySummary {

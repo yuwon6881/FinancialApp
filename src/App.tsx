@@ -8,6 +8,7 @@ import { LoginView } from './components/LoginView'
 import type { Transaction, RecurringPayment, DashboardData, TransactionCategory } from './types'
 import * as api from './lib/api'
 import { Loader2 } from 'lucide-react'
+import { formatCurrencyVal } from './lib/utils'
 
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'))
@@ -185,6 +186,7 @@ function App() {
     stabilityAlloc: number
     rewardsAlloc: number
     cycleDay: number
+    currency?: string
   }) => {
     try {
       await api.updateSettings(settings)
@@ -396,6 +398,7 @@ function App() {
         onDeletePayment={handleDeletePayment}
         darkMode={darkMode}
         onToggleDarkMode={handleToggleDarkMode}
+        currency={dashboardData?.setting?.currency || 'USD'}
       />
 
       {error && (
@@ -433,6 +436,7 @@ function App() {
             onUpdatePayment={handleUpdatePayment}
             hideSensitive={hideSensitive}
             categories={categoriesList}
+            currency={dashboardData?.setting?.currency || 'USD'}
           />
         )}
 
@@ -455,6 +459,7 @@ function App() {
             onLoadAllTransactions={handleLoadAllTransactions}
             onClearAllCycles={() => { setLedgerShowAllCycles(false); setAllTransactions([]) }}
             cyclesRange={ledgerCyclesRange}
+            currency={dashboardData?.setting?.currency || 'USD'}
           />
         )}
       </main>
@@ -495,7 +500,7 @@ function App() {
                     </div>
                     <div className="text-right">
                       <span className={`text-orange-500 font-extrabold text-xs block transition-all duration-300 ${hideSensitive ? 'blur-sm select-none pointer-events-none' : ''}`}>
-                        -{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(noti.amount)}
+                        -{formatCurrencyVal(noti.amount, dashboardData?.setting?.currency || 'USD')}
                       </span>
                       <span className="text-[9px] text-muted-foreground">{noti.cycleLabel}</span>
                     </div>

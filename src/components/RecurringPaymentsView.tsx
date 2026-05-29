@@ -13,6 +13,7 @@ import {
   X,
   Edit
 } from 'lucide-react'
+import { formatCurrencyVal } from '../lib/utils'
 
 interface RecurringPaymentsViewProps {
   payments: RecurringPayment[]
@@ -22,6 +23,7 @@ interface RecurringPaymentsViewProps {
   onUpdatePayment: (id: string, payment: RecurringPayment) => void
   hideSensitive: boolean
   categories: TransactionCategory[]
+  currency?: string
 }
 
 export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
@@ -31,7 +33,8 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   onDeletePayment,
   onUpdatePayment,
   hideSensitive,
-  categories
+  categories,
+  currency = 'USD'
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingPayment, setEditingPayment] = useState<RecurringPayment | null>(null)
@@ -107,10 +110,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   }
 
   const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(val)
+    return formatCurrencyVal(val, currency)
   }
 
   const formatSensitive = (val: number) => {

@@ -11,6 +11,7 @@ import {
   RefreshCw
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
+import { formatCurrencyVal } from '../lib/utils'
 
 interface LedgerViewProps {
   transactions: Transaction[]
@@ -30,6 +31,7 @@ interface LedgerViewProps {
   onLoadAllTransactions: () => void
   onClearAllCycles: () => void
   cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly'
+  currency?: string
 }
 
 function formatDateToString(d: Date): string {
@@ -93,7 +95,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   showAllCycles,
   onLoadAllTransactions: _onLoadAllTransactions,
   onClearAllCycles,
-  cyclesRange
+  cyclesRange,
+  currency = 'USD'
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [description, setDescription] = useState('')
@@ -298,10 +301,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   }
 
   const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(val)
+    return formatCurrencyVal(val, currency)
   }
 
   const formatSensitive = (val: number) => {

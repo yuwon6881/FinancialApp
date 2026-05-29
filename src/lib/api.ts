@@ -249,6 +249,7 @@ export async function updateSettings(settings: {
   rewardsAlloc: number
   cycleDay: number
   darkMode?: boolean
+  currency?: string
 }): Promise<void> {
   const payload = {
     ...settings,

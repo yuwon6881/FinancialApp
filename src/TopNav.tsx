@@ -20,6 +20,7 @@ import {
   Moon,
   Sun
 } from 'lucide-react'
+import { formatCurrencyVal } from './lib/utils'
 
 interface TopNavProps {
   activeTab: 'dashboard' | 'recurring' | 'ledger'
@@ -35,6 +36,7 @@ interface TopNavProps {
   onDeletePayment: (id: string) => void
   darkMode: boolean
   onToggleDarkMode: () => void
+  currency?: string
 }
 
 const TopNav: React.FC<TopNavProps> = ({
@@ -50,7 +52,8 @@ const TopNav: React.FC<TopNavProps> = ({
   onConfirmSubscription,
   onDeletePayment,
   darkMode,
-  onToggleDarkMode
+  onToggleDarkMode,
+  currency = 'USD'
 }) => {
   const [isBellOpen, setIsBellOpen] = useState(false)
   const [confirmNotiId, setConfirmNotiId] = useState<string | null>(null)
@@ -81,10 +84,7 @@ const TopNav: React.FC<TopNavProps> = ({
   }
 
   const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(val)
+    return formatCurrencyVal(val, currency)
   }
 
   return (

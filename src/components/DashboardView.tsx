@@ -11,6 +11,7 @@ import {
   TrendingUp as TrendLineIcon
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
+import { formatCurrencyVal } from '../lib/utils'
 
 
 interface DashboardViewProps {
@@ -24,6 +25,7 @@ interface DashboardViewProps {
     stabilityAlloc: number
     rewardsAlloc: number
     cycleDay: number
+    currency?: string
   }) => void
   onNavigate: (tab: 'dashboard' | 'recurring' | 'ledger') => void
   hideSensitive: boolean
@@ -58,6 +60,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [stabilityAllocInput, setStabilityAllocInput] = useState('')
   const [rewardsAllocInput, setRewardsAllocInput] = useState('')
   const [cycleDayInput, setCycleDayInput] = useState('28')
+  const [currencyInput, setCurrencyInput] = useState('USD')
 
   // Custom Category Forms State
   const [newCatName, setNewCatName] = useState('')
@@ -147,7 +150,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     growthAlloc: 0.25,
     stabilityAlloc: 0.15,
     rewardsAlloc: 0.10,
-    cycleDay: 28
+    cycleDay: 28,
+    currency: 'USD'
   }
 
   const cycleLabel = dashboardData?.cycleLabel || 'Jun 28th ~ Jul 27th, 2026'
@@ -202,6 +206,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       setStabilityAllocInput((activeSettings.stabilityAlloc * 100).toString())
       setRewardsAllocInput((activeSettings.rewardsAlloc * 100).toString())
       setCycleDayInput(activeSettings.cycleDay.toString())
+      setCurrencyInput(activeSettings.currency || 'USD')
     }
     setShowSettings(!showSettings)
   }
@@ -233,7 +238,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         growthAlloc: gro,
         stabilityAlloc: sta,
         rewardsAlloc: rew,
-        cycleDay: cycle
+        cycleDay: cycle,
+        currency: currencyInput
       })
       setShowSettings(false)
     }
@@ -241,10 +247,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Format currency
   const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(val)
+    return formatCurrencyVal(val, activeSettings.currency || 'USD')
   }
 
   const formatSensitive = (val: number) => {
@@ -323,7 +326,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </p>
         </div>
         
-        <div className="flex items-center gap-3 self-start md:self-center">
+        <div className="flex items-center gap-2 w-full md:w-auto">
           {/* Month Selector */}
           <CustomSelect 
             value={activeSettings.selectedMonth}
@@ -332,7 +335,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               value: m,
               label: getCycleLabelForDropdown(m, activeSettings.selectedYear, activeSettings.cycleDay)
             }))}
-            className="w-48 md:w-56"
+            className="flex-1 md:w-56 md:flex-initial"
           />
 
           {/* Year Selector */}
@@ -343,13 +346,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               value: y,
               label: y.toString()
             }))}
-            className="w-24"
+            className="w-20 md:w-24 shrink-0"
           />
 
           {/* Configure button */}
           <button 
             onClick={handleToggleSettings}
-            className="p-2 border border-border rounded-xl bg-background hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition duration-150"
+            className="p-2 border border-border rounded-xl bg-background hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition duration-150 shrink-0"
             title="Configure Ledger Constraints"
           >
             <Settings className="size-4" />
@@ -371,7 +374,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {/* Income setting has been hidden as target budgets are now based on actual monthly income */}
               
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-muted-foreground">Target Stability Fund Limit ($)</label>
+                <label className="text-xs font-semibold text-muted-foreground">Target Stability Fund Limit</label>
                 <input 
                   type="number"
                   required
@@ -379,6 +382,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   onChange={e => setTargetInput(e.target.value)}
                   className="w-full px-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-muted-foreground">Dashboard Currency</label>
+                <select
+                  value={currencyInput}
+                  onChange={e => setCurrencyInput(e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                >
+                  <option value="USD">USD ($)</option>
+                  <option value="MYR">MYR (RM)</option>
+                  <option value="CNY">CNY (¥)</option>
+                  <option value="EUR">EUR (€)</option>
+                  <option value="GBP">GBP (£)</option>
+                  <option value="SGD">SGD (S$)</option>
+                </select>
               </div>
 
               <div className="space-y-1 md:col-span-2">
