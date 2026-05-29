@@ -8,12 +8,26 @@ import { LoginView } from './components/LoginView'
 import type { Transaction, RecurringPayment, DashboardData, TransactionCategory } from './types'
 import * as api from './lib/api'
 
+type MainLedgerCategory = 'Essentials' | 'Growth' | 'Stability' | 'Rewards'
+
+function createIncomeSplitBaseId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+
+  const randomPart = typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function'
+    ? Array.from(crypto.getRandomValues(new Uint32Array(2)), value => value.toString(36)).join('-')
+    : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+
+  return `income-${randomPart}`
+}
+
 const incomeLedgerSplits = [
   { ledgerCategory: 'Essentials', getAllocation: (data: DashboardData) => data.setting.essentialsAlloc },
   { ledgerCategory: 'Growth', getAllocation: (data: DashboardData) => data.setting.growthAlloc },
   { ledgerCategory: 'Stability', getAllocation: (data: DashboardData) => data.setting.stabilityAlloc },
   { ledgerCategory: 'Rewards', getAllocation: (data: DashboardData) => data.setting.rewardsAlloc }
-] as const
+] as const satisfies ReadonlyArray<{ ledgerCategory: MainLedgerCategory; getAllocation: (data: DashboardData) => number }>
 
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'))
@@ -150,17 +164,15 @@ function App() {
     try {
       if (newTx.amount > 0 && newTx.ledgerCategory === 'Income') {
         if (!dashboardData) {
-          throw new Error('Dashboard settings must be loaded before posting Income transactions.')
+          throw new Error('Unable to split income because dashboard allocation settings are not available. Please refresh and try again.')
         }
 
         const totalAllocation = incomeLedgerSplits.reduce((sum, split) => sum + split.getAllocation(dashboardData), 0)
         if (totalAllocation <= 0) {
-          throw new Error('Set your dashboard allocation percentages before posting an Income transaction.')
+          throw new Error('Cannot split income because your allocation percentages must add up to a positive value. Update your dashboard allocations and try again.')
         }
 
-        const baseId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-          ? crypto.randomUUID()
-          : `income-${Date.now()}`
+        const baseId = createIncomeSplitBaseId()
         const totalCents = Math.round(newTx.amount * 100)
         const distributed = incomeLedgerSplits.map((split, index) => {
           const exactCents = (totalCents * split.getAllocation(dashboardData)) / totalAllocation
@@ -186,7 +198,7 @@ function App() {
         await Promise.all(
           distributed.map(split =>
             api.addTransaction({
-              id: `${baseId}-${split.ledgerCategory.toLowerCase()}`,
+              id: `${baseId}-${split.index + 1}`,
               date: newTx.date,
               description: newTx.description,
               amount: split.cents / 100,
