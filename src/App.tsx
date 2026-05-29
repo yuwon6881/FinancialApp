@@ -22,7 +22,9 @@ function App() {
 
   const [selectedMonth, setSelectedMonth] = useState<string>('')
   const [selectedYear, setSelectedYear] = useState<number>(0)
-  const [hideSensitive, setHideSensitive] = useState<boolean>(false)
+  const [hideSensitive, setHideSensitive] = useState<boolean>(() => {
+    return localStorage.getItem('hide_sensitive') === 'true'
+  })
 
   // Password Prompt for revealing sensitive information
   const [showPasswordPrompt, setShowPasswordPrompt] = useState<boolean>(false)
@@ -110,7 +112,6 @@ function App() {
   }
 
   const handleUpdateSettings = async (settings: {
-    monthlyIncome: number
     targetStabilityFund: number
     essentialsAlloc: number
     growthAlloc: number
@@ -246,6 +247,7 @@ function App() {
       setShowPasswordPrompt(true)
     } else {
       setHideSensitive(true)
+      localStorage.setItem('hide_sensitive', 'true')
     }
   }
 
@@ -463,8 +465,9 @@ function App() {
                 setPromptError(null)
                 try {
                   const res = await api.verifyPassword(confirmPassword)
-                  if (res.verified) {
+                   if (res.verified) {
                     setHideSensitive(false)
+                    localStorage.setItem('hide_sensitive', 'false')
                     setShowPasswordPrompt(false)
                     setConfirmPassword('')
                   } else {

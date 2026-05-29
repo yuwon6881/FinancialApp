@@ -16,7 +16,6 @@ interface DashboardViewProps {
   dashboardData: DashboardData | null
   onSelectPeriod: (month: string, year: number) => void
   onUpdateSettings: (settings: {
-    monthlyIncome: number
     targetStabilityFund: number
     essentialsAlloc: number
     growthAlloc: number
@@ -46,7 +45,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onDeletePayment
 }) => {
   const [showSettings, setShowSettings] = useState(false)
-  const [incomeInput, setIncomeInput] = useState('')
   const [targetInput, setTargetInput] = useState('')
   
   // Custom Allocations & Cycle setting states
@@ -134,7 +132,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Extract variables from dashboardData or fall back to defaults
   const activeSettings = dashboardData?.setting || {
-    monthlyIncome: 4000.00,
     targetStabilityFund: 10000.00,
     selectedMonth: 'Jun',
     selectedYear: 2026,
@@ -156,7 +153,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const stats = dashboardData?.stats || {
     totalBalance: 2436.00,
-    monthlyIncome: 4000.00,
+    monthlyIncome: 0.00,
     monthlyInflow: 0.00,
     monthlyExpenses: 0.00,
     activeRecurringTotal: 29.50,
@@ -191,7 +188,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // Initialize input states when opening settings
   const handleToggleSettings = () => {
     if (!showSettings) {
-      setIncomeInput(activeSettings.monthlyIncome.toString())
       setTargetInput(activeSettings.targetStabilityFund.toString())
       setEssentialsAllocInput((activeSettings.essentialsAlloc * 100).toString())
       setGrowthAllocInput((activeSettings.growthAlloc * 100).toString())
@@ -215,7 +211,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     e.preventDefault()
     if (allocSum !== 100) return
 
-    const income = parseFloat(incomeInput)
     const target = parseFloat(targetInput)
     const ess = (parseFloat(essentialsAllocInput) || 0) / 100
     const gro = (parseFloat(growthAllocInput) || 0) / 100
@@ -223,9 +218,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const rew = (parseFloat(rewardsAllocInput) || 0) / 100
     const cycle = parseInt(cycleDayInput)
 
-    if (!isNaN(income) && !isNaN(target) && !isNaN(cycle)) {
+    if (!isNaN(target) && !isNaN(cycle)) {
       onUpdateSettings({
-        monthlyIncome: income,
         targetStabilityFund: target,
         essentialsAlloc: ess,
         growthAlloc: gro,

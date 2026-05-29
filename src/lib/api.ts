@@ -23,6 +23,50 @@ function getHeaders(extraHeaders?: Record<string, string>): Record<string, strin
   return headers
 }
 
+const OBFUSCATION_KEY = "FinancialAppObfuscationKey";
+
+export function deobfuscateAmount(obfuscated: string | number | undefined | null): number {
+  if (obfuscated === undefined || obfuscated === null) return 0;
+  if (typeof obfuscated === 'number') return obfuscated;
+  try {
+    const binaryString = atob(obfuscated);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i) ^ OBFUSCATION_KEY.charCodeAt(i % OBFUSCATION_KEY.length);
+    }
+    const decoded = new TextDecoder().decode(bytes);
+    return parseFloat(decoded);
+  } catch (e) {
+    console.error("Failed to deobfuscate value:", obfuscated, e);
+    return 0;
+  }
+}
+
+export function obfuscateAmount(val: number | string): string {
+  const input = typeof val === 'number' ? val.toFixed(2) : parseFloat(val).toFixed(2);
+  const bytes = new TextEncoder().encode(input);
+  let binaryString = "";
+  for (let i = 0; i < bytes.length; i++) {
+    const xored = bytes[i] ^ OBFUSCATION_KEY.charCodeAt(i % OBFUSCATION_KEY.length);
+    binaryString += String.fromCharCode(xored);
+  }
+  return btoa(binaryString);
+}
+
+function deobfuscateTransaction(t: any): Transaction {
+  return {
+    ...t,
+    amount: deobfuscateAmount(t.amount)
+  }
+}
+
+function deobfuscateRecurringPayment(rp: any): RecurringPayment {
+  return {
+    ...rp,
+    amount: deobfuscateAmount(rp.amount)
+  }
+}
+
 // Authentication
 export async function fetchAuthStatus(): Promise<{ isRegistered: boolean }> {
   const response = await fetch(`${API_BASE_URL}/auth/status`)
@@ -94,11 +138,73 @@ export async function fetchDashboard(month?: string, year?: number): Promise<Das
   if (!response.ok) {
     throw new Error('Failed to fetch dashboard data')
   }
-  return response.json()
+  const data = await response.json()
+  return {
+    ...data,
+    setting: {
+      ...data.setting,
+      targetStabilityFund: deobfuscateAmount(data.setting.targetStabilityFund)
+    },
+    categories: (data.categories || []).map((c: any) => ({
+      ...c,
+      target: deobfuscateAmount(c.target),
+      budget: deobfuscateAmount(c.budget),
+      netChange: deobfuscateAmount(c.netChange),
+      remaining: deobfuscateAmount(c.remaining)
+    })),
+    stats: {
+      ...data.stats,
+      totalBalance: deobfuscateAmount(data.stats.totalBalance),
+      monthlyIncome: deobfuscateAmount(data.stats.monthlyIncome),
+      monthlyInflow: deobfuscateAmount(data.stats.monthlyInflow),
+      monthlyExpenses: deobfuscateAmount(data.stats.monthlyExpenses),
+      activeRecurringTotal: deobfuscateAmount(data.stats.activeRecurringTotal)
+    },
+    recentTransactions: (data.recentTransactions || []).map(deobfuscateTransaction),
+    activeRecurringPayments: (data.activeRecurringPayments || []).map((rp: any) => ({
+      ...rp,
+      amount: deobfuscateAmount(rp.amount)
+    })),
+    trendPoints: (data.trendPoints || []).map((tp: any) => ({
+      ...tp,
+      balance: deobfuscateAmount(tp.balance)
+    })),
+    last3TrendPoints: (data.last3TrendPoints || []).map((tp: any) => ({
+      ...tp,
+      balance: deobfuscateAmount(tp.balance)
+    })),
+    last6TrendPoints: (data.last6TrendPoints || []).map((tp: any) => ({
+      ...tp,
+      balance: deobfuscateAmount(tp.balance)
+    })),
+    pendingNotifications: (data.pendingNotifications || []).map((pn: any) => ({
+      ...pn,
+      amount: deobfuscateAmount(pn.amount)
+    })),
+    dismissedNotifications: (data.dismissedNotifications || []).map((dn: any) => ({
+      ...dn,
+      amount: deobfuscateAmount(dn.amount)
+    })),
+    monthlyCategoryBreakdown: (data.monthlyCategoryBreakdown || []).map((cb: any) => ({
+      ...cb,
+      amount: deobfuscateAmount(cb.amount)
+    })),
+    last3CategoryBreakdown: (data.last3CategoryBreakdown || []).map((cb: any) => ({
+      ...cb,
+      amount: deobfuscateAmount(cb.amount)
+    })),
+    last6CategoryBreakdown: (data.last6CategoryBreakdown || []).map((cb: any) => ({
+      ...cb,
+      amount: deobfuscateAmount(cb.amount)
+    })),
+    yearlyCategoryBreakdown: (data.yearlyCategoryBreakdown || []).map((cb: any) => ({
+      ...cb,
+      amount: deobfuscateAmount(cb.amount)
+    }))
+  }
 }
 
 export async function updateSettings(settings: {
-  monthlyIncome: number
   targetStabilityFund: number
   essentialsAlloc: number
   growthAlloc: number
@@ -106,12 +212,16 @@ export async function updateSettings(settings: {
   rewardsAlloc: number
   cycleDay: number
 }): Promise<void> {
+  const payload = {
+    ...settings,
+    targetStabilityFund: obfuscateAmount(settings.targetStabilityFund)
+  }
   const response = await fetch(`${API_BASE_URL}/financial/settings`, {
     method: 'PUT',
     headers: getHeaders({
       'Content-Type': 'application/json',
     }),
-    body: JSON.stringify(settings),
+    body: JSON.stringify(payload),
   })
   if (!response.ok) {
     throw new Error('Failed to update financial settings')
@@ -149,21 +259,27 @@ export async function fetchTransactions(month?: string, year?: number): Promise<
   if (!response.ok) {
     throw new Error('Failed to fetch transactions')
   }
-  return response.json()
+  const data = await response.json()
+  return (data || []).map(deobfuscateTransaction)
 }
 
 export async function addTransaction(transaction: Omit<Transaction, 'id'> & { id?: string }): Promise<Transaction> {
+  const payload = {
+    ...transaction,
+    amount: obfuscateAmount(transaction.amount)
+  }
   const response = await fetch(`${API_BASE_URL}/transactions`, {
     method: 'POST',
     headers: getHeaders({
       'Content-Type': 'application/json',
     }),
-    body: JSON.stringify(transaction),
+    body: JSON.stringify(payload),
   })
   if (!response.ok) {
     throw new Error('Failed to add transaction')
   }
-  return response.json()
+  const data = await response.json()
+  return deobfuscateTransaction(data)
 }
 
 export async function deleteTransaction(id: string): Promise<void> {
@@ -184,21 +300,27 @@ export async function fetchRecurringPayments(): Promise<RecurringPayment[]> {
   if (!response.ok) {
     throw new Error('Failed to fetch recurring payments')
   }
-  return response.json()
+  const data = await response.json()
+  return (data || []).map(deobfuscateRecurringPayment)
 }
 
 export async function addRecurringPayment(payment: Omit<RecurringPayment, 'id'>): Promise<RecurringPayment> {
+  const payload = {
+    ...payment,
+    amount: obfuscateAmount(payment.amount)
+  }
   const response = await fetch(`${API_BASE_URL}/recurring-payments`, {
     method: 'POST',
     headers: getHeaders({
       'Content-Type': 'application/json',
     }),
-    body: JSON.stringify(payment),
+    body: JSON.stringify(payload),
   })
   if (!response.ok) {
     throw new Error('Failed to add recurring payment')
   }
-  return response.json()
+  const data = await response.json()
+  return deobfuscateRecurringPayment(data)
 }
 
 export async function toggleRecurringPayment(id: string): Promise<RecurringPayment> {
@@ -209,21 +331,27 @@ export async function toggleRecurringPayment(id: string): Promise<RecurringPayme
   if (!response.ok) {
     throw new Error('Failed to toggle recurring payment')
   }
-  return response.json()
+  const data = await response.json()
+  return deobfuscateRecurringPayment(data)
 }
 
 export async function updateRecurringPayment(id: string, payment: RecurringPayment): Promise<RecurringPayment> {
+  const payload = {
+    ...payment,
+    amount: obfuscateAmount(payment.amount)
+  }
   const response = await fetch(`${API_BASE_URL}/recurring-payments/${id}`, {
     method: 'PUT',
     headers: getHeaders({
       'Content-Type': 'application/json',
     }),
-    body: JSON.stringify(payment),
+    body: JSON.stringify(payload),
   })
   if (!response.ok) {
     throw new Error('Failed to update recurring payment')
   }
-  return response.json()
+  const data = await response.json()
+  return deobfuscateRecurringPayment(data)
 }
 
 export async function deleteRecurringPayment(id: string): Promise<void> {

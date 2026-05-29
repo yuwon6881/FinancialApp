@@ -22,7 +22,6 @@ export interface RecurringPayment {
 }
 
 export interface FinancialSetting {
-  monthlyIncome: number
   targetStabilityFund: number
   selectedMonth: string
   selectedYear: number
