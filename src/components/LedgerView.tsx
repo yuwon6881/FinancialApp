@@ -18,6 +18,11 @@ interface LedgerViewProps {
   hideSensitive: boolean
   categories: TransactionCategory[]
   cycleLabel: string
+  selectedMonth: string
+  selectedYear: number
+  availableYears: number[]
+  cycleDay: number
+  onSelectPeriod: (month: string, year: number) => void
 }
 
 export const LedgerView: React.FC<LedgerViewProps> = ({
@@ -26,7 +31,12 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   onDeleteTransaction,
   hideSensitive,
   categories,
-  cycleLabel
+  cycleLabel,
+  selectedMonth,
+  selectedYear,
+  availableYears,
+  cycleDay,
+  onSelectPeriod
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [description, setDescription] = useState('')
@@ -66,7 +76,36 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('All')
+  const [selectedFilters, setSelectedFilters] = useState<string[]>([])
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false)
+
+  // Toggle filter on or off
+  const handleToggleFilter = (filterName: string) => {
+    setSelectedFilters(prev => {
+      if (prev.includes(filterName)) {
+        return prev.filter(f => f !== filterName)
+      } else {
+        return [...prev, filterName]
+      }
+    })
+  }
+
+  const handleClearFilters = () => {
+    setSelectedFilters([])
+  }
+
+  // Toggle dropdown on click out
+  useEffect(() => {
+    if (!isFilterDropdownOpen) return
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('.ledger-filter-dropdown')) {
+        setIsFilterDropdownOpen(false)
+      }
+    }
+    document.addEventListener('click', handleClick)
+    return () => document.removeEventListener('click', handleClick)
+  }, [isFilterDropdownOpen])
 
   const categoryColorMap: Record<string, string> = {
     'Salary': 'bg-blue-500/10 text-blue-500 border-blue-500/20',
@@ -121,15 +160,30 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
       const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            t.ledgerCategory.toLowerCase().includes(searchTerm.toLowerCase())
-      const matchesCategory = selectedCategory === 'All' || t.category === selectedCategory
+                            t.ledgerCategory.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            t.category.toLowerCase().includes(searchTerm.toLowerCase())
+      
+      let matchesCategory = true
+      if (selectedFilters.length > 0) {
+        matchesCategory = selectedFilters.some(filterName => {
+          // Subcategory match
+          if (t.category === filterName) return true
+          
+          // Ledger allocation / Income match
+          if (filterName === 'Income') {
+            return t.ledgerCategory === 'Income' || t.ledgerCategory.startsWith('IncomeSplit:')
+          }
+          return t.ledgerCategory === filterName || t.ledgerCategory.includes(filterName)
+        })
+      }
+      
       return matchesSearch && matchesCategory
     }).sort((a, b) => {
       const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime()
       if (dateDiff !== 0) return dateDiff
       return b.id.localeCompare(a.id)
     })
-  }, [transactions, searchTerm, selectedCategory])
+  }, [transactions, searchTerm, selectedFilters])
 
   const displayLedgerCategory = (cat: string) => {
     if (cat.startsWith('IncomeSplit:')) return 'Income'
@@ -200,11 +254,28 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         <div>
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-xl font-bold text-foreground">Double-Entry Financial Ledger</h2>
-            {cycleLabel && (
-              <span className="px-2.5 py-1 text-[11px] font-semibold bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-lg">
-                {cycleLabel}
-              </span>
-            )}
+            
+            {/* Cycle Selector */}
+            <div className="flex items-center gap-1.5 bg-muted/40 p-1 rounded-xl border border-border/40 select-none">
+              <select
+                value={selectedMonth}
+                onChange={(e) => onSelectPeriod(e.target.value, selectedYear)}
+                className="px-2.5 py-1 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer text-foreground font-semibold"
+              >
+                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(m => (
+                  <option key={m} value={m}>{getCycleLabelForDropdown(m, selectedYear, cycleDay)}</option>
+                ))}
+              </select>
+              <select
+                value={selectedYear}
+                onChange={(e) => onSelectPeriod(selectedMonth, parseInt(e.target.value))}
+                className="px-2.5 py-1 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer text-foreground font-semibold"
+              >
+                {availableYears.map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <p className="text-xs text-muted-foreground mt-1">Comprehensive posting of all accounts and transactional balances for the currently selected cycle.</p>
         </div>
@@ -396,33 +467,100 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-start md:justify-end">
-          <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5 mr-2">
-            <Filter className="size-3.5" /> Category Filter:
-          </span>
+        {/* Dropdown Multi-Select Category Filter */}
+        <div className="relative ledger-filter-dropdown w-full md:w-auto flex justify-start md:justify-end">
           <button
-            onClick={() => setSelectedCategory('All')}
-            className={`px-3 py-1.5 text-xs rounded-xl font-medium cursor-pointer border transition duration-150 ${
-              selectedCategory === 'All' 
-                ? 'bg-foreground text-background border-foreground' 
-                : 'border-border hover:bg-muted bg-background text-muted-foreground'
-            }`}
+            onClick={() => setIsFilterDropdownOpen(prev => !prev)}
+            className="w-full md:w-60 flex items-center justify-between gap-2 px-4 py-2 text-xs font-semibold bg-background border border-border rounded-xl hover:bg-muted transition duration-200 cursor-pointer select-none border-border/60"
           >
-            All
+            <span className="flex items-center gap-2 text-muted-foreground">
+              <Filter className="size-3.5" />
+              <span className="truncate">
+                {selectedFilters.length === 0 
+                  ? 'All Ledger & Subcategories' 
+                  : `${selectedFilters.length} filter${selectedFilters.length > 1 ? 's' : ''} active`}
+              </span>
+            </span>
+            <span className="text-[9px] text-muted-foreground">▼</span>
           </button>
-          {categories.map(c => (
-            <button
-              key={c.id}
-              onClick={() => setSelectedCategory(c.name)}
-              className={`px-3 py-1.5 text-xs rounded-xl font-medium cursor-pointer border transition duration-150 ${
-                selectedCategory === c.name 
-                  ? 'bg-foreground text-background border-foreground' 
-                  : 'border-border hover:bg-muted bg-background text-muted-foreground'
-              }`}
-            >
-              {c.name}
-            </button>
-          ))}
+
+          {isFilterDropdownOpen && (
+            <div className="absolute right-0 top-11 w-64 bg-card border border-border rounded-2xl shadow-xl p-4 z-40 animate-in fade-in slide-in-from-top-2 duration-150">
+              
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3">
+                <span className="text-xs font-bold text-foreground">Filter Ledger Entries</span>
+                {selectedFilters.length > 0 && (
+                  <button
+                    onClick={handleClearFilters}
+                    className="text-[9px] font-bold text-orange-500 hover:underline cursor-pointer"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+
+              {/* Scrollable sections */}
+              <div className="space-y-4 max-h-80 overflow-y-auto pr-1">
+                
+                {/* Section 1: Ledger Allocation Buckets */}
+                <div className="space-y-2">
+                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Ledger Buckets</span>
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {['Essentials', 'Growth', 'Stability', 'Rewards', 'Income'].map(bucket => {
+                      const isChecked = selectedFilters.includes(bucket)
+                      return (
+                        <label 
+                          key={bucket} 
+                          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition ${
+                            isChecked 
+                              ? 'bg-blue-500/10 border-blue-500/20 text-blue-500 font-semibold' 
+                              : 'bg-background/50 border-border hover:bg-muted text-muted-foreground'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleToggleFilter(bucket)}
+                            className="rounded border-border text-blue-500 focus:ring-blue-500 size-3"
+                          />
+                          <span>{bucket}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Section 2: Transaction Subcategories */}
+                <div className="space-y-2">
+                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Subcategories</span>
+                  <div className="grid grid-cols-1 gap-1.5 max-h-40 overflow-y-auto pr-0.5">
+                    {categories.map(c => {
+                      const isChecked = selectedFilters.includes(c.name)
+                      return (
+                        <label 
+                          key={c.id} 
+                          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition ${
+                            isChecked 
+                              ? 'bg-blue-500/10 border-blue-500/20 text-blue-500 font-semibold' 
+                              : 'bg-background/50 border-border hover:bg-muted text-muted-foreground'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleToggleFilter(c.name)}
+                            className="rounded border-border text-blue-500 focus:ring-blue-500 size-3"
+                          />
+                          <span className="truncate">{c.name}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -559,4 +697,46 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       </div>
     </div>
   )
+}
+
+function GetDayWithSuffix(day: number): string {
+  if (day >= 11 && day <= 13) return 'th'
+  switch (day % 10) {
+    case 1: return 'st'
+    case 2: return 'nd'
+    case 3: return 'rd'
+    default: return 'th'
+  }
+}
+
+function getCycleLabelForDropdown(month: string, year: number, cycleDay: number): string {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const monthIdx = months.indexOf(month)
+  if (monthIdx === -1) return month
+
+  const getSuffix = (d: number) => {
+    if (d >= 11 && d <= 13) return `${d}th`
+    switch (d % 10) {
+      case 1: return `${d}st`
+      case 2: return `${d}nd`
+      case 3: return `${d}rd`
+      default: return `${d}th`
+    }
+  }
+
+  if (cycleDay === 1) {
+    const days = new Date(year, monthIdx + 1, 0).getDate()
+    return `${month} 1st ~ ${month} ${getSuffix(days)}`
+  }
+
+  const startDayActual = Math.min(cycleDay, new Date(year, monthIdx + 1, 0).getDate())
+  const startDate = new Date(year, monthIdx, startDayActual)
+  const endDate = new Date(startDate)
+  endDate.setMonth(endDate.getMonth() + 1)
+  endDate.setDate(endDate.getDate() - 1)
+
+  const startMonthStr = months[startDate.getMonth()]
+  const endMonthStr = months[endDate.getMonth()]
+
+  return `${startMonthStr} ${getSuffix(startDate.getDate())} ~ ${endMonthStr} ${getSuffix(endDate.getDate())}`
 }

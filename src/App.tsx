@@ -358,6 +358,11 @@ function App() {
             hideSensitive={hideSensitive}
             categories={categoriesList}
             cycleLabel={dashboardData?.cycleLabel || ''}
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
+            availableYears={dashboardData?.availableYears || [selectedYear || new Date().getFullYear()]}
+            cycleDay={dashboardData?.setting?.cycleDay || 28}
+            onSelectPeriod={handleSelectPeriod}
           />
         )}
       </main>

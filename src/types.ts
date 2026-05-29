@@ -101,6 +101,7 @@ export interface DashboardData {
   last3CategoryBreakdown: CategoryBreakdown[]
   last6CategoryBreakdown: CategoryBreakdown[]
   yearlyCategoryBreakdown: CategoryBreakdown[]
+  availableYears?: number[]
 }
 
 export interface TransactionCategory {
