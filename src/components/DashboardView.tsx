@@ -282,6 +282,35 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     'Other': 'bg-slate-500/10 text-slate-500 border-slate-500/20',
   }
 
+  const projectedMetrics = useMemo(() => {
+    // 1. Essentials
+    const targetEssentials = categories.find(c => c.name === "Essentials")?.target || 1
+    const remEssentials = categories.find(c => c.name === "Essentials")?.remaining || 0
+    const pendingEssentials = pendingDeductionsByCategory['Essentials'] || 0
+    const currentEssentialsPct = stats.essentialsPercentRemaining * 100
+    const projectedEssentialsPct = Math.max(0, ((remEssentials - pendingEssentials) / targetEssentials) * 100)
+
+    // 2. Growth
+    const targetGrowth = categories.find(c => c.name === "Growth")?.target || 1
+    const netGrowth = categories.find(c => c.name === "Growth")?.netChange || 0
+    const pendingGrowth = pendingDeductionsByCategory['Growth'] || 0
+    const currentGrowthPct = stats.growthPercentAchieved * 100
+    const projectedGrowthPct = Math.max(0, ((netGrowth - pendingGrowth) / targetGrowth) * 100)
+
+    // 3. Stability
+    const targetStability = activeSettings.targetStabilityFund || 1
+    const remStability = categories.find(c => c.name === "Stability")?.remaining || 0
+    const pendingStability = pendingDeductionsByCategory['Stability'] || 0
+    const currentStabilityPct = stats.stabilityPercentReached * 100
+    const projectedStabilityPct = Math.max(0, ((remStability - pendingStability) / targetStability) * 100)
+
+    return {
+      essentials: { current: currentEssentialsPct, projected: projectedEssentialsPct, pending: pendingEssentials },
+      growth: { current: currentGrowthPct, projected: projectedGrowthPct, pending: pendingGrowth },
+      stability: { current: currentStabilityPct, projected: projectedStabilityPct, pending: pendingStability }
+    }
+  }, [categories, stats, pendingDeductionsByCategory, activeSettings])
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
       
@@ -761,12 +790,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="space-y-2 p-4 rounded-xl bg-muted/30 border border-border/40">
             <div className="flex justify-between text-xs font-semibold">
               <span className="text-muted-foreground">Growth Achieved</span>
-              <span className="text-foreground">{(stats.growthPercentAchieved * 100).toFixed(1)}%</span>
+              {projectedMetrics.growth.pending > 0 ? (
+                <span className="text-foreground">
+                  {(projectedMetrics.growth.projected).toFixed(1)}% <span className="text-muted-foreground text-[10px] font-normal">({(projectedMetrics.growth.current).toFixed(1)}% current)</span>
+                </span>
+              ) : (
+                <span className="text-foreground">{(projectedMetrics.growth.current).toFixed(1)}%</span>
+              )}
             </div>
-            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-muted rounded-full h-2 overflow-hidden flex">
               <div 
-                className="bg-violet-500 h-full rounded-full transition-all duration-500" 
-                style={{ width: `${Math.max(0, Math.min(100, stats.growthPercentAchieved * 100))}%` }}
+                className="bg-violet-500 h-full transition-all duration-500" 
+                style={{ width: `${Math.max(0, Math.min(100, projectedMetrics.growth.projected))}%` }}
+              />
+              <div 
+                className="bg-violet-500/30 h-full transition-all duration-500" 
+                style={{ width: `${Math.max(0, Math.min(100, projectedMetrics.growth.current - projectedMetrics.growth.projected))}%` }}
               />
             </div>
             <span className="text-[10px] text-muted-foreground block leading-relaxed">
@@ -778,12 +817,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="space-y-2 p-4 rounded-xl bg-muted/30 border border-border/40">
             <div className="flex justify-between text-xs font-semibold">
               <span className="text-muted-foreground">Essentials Remaining</span>
-              <span className="text-foreground">{(stats.essentialsPercentRemaining * 100).toFixed(1)}%</span>
+              {projectedMetrics.essentials.pending > 0 ? (
+                <span className="text-foreground">
+                  {(projectedMetrics.essentials.projected).toFixed(1)}% <span className="text-muted-foreground text-[10px] font-normal">({(projectedMetrics.essentials.current).toFixed(1)}% current)</span>
+                </span>
+              ) : (
+                <span className="text-foreground">{(projectedMetrics.essentials.current).toFixed(1)}%</span>
+              )}
             </div>
-            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-muted rounded-full h-2 overflow-hidden flex">
               <div 
-                className={`h-full rounded-full transition-all duration-500 ${stats.essentialsPercentRemaining > 0.5 ? 'bg-sky-500' : stats.essentialsPercentRemaining > 0.2 ? 'bg-yellow-500' : 'bg-orange-500'}`}
-                style={{ width: `${Math.max(0, Math.min(100, stats.essentialsPercentRemaining * 100))}%` }}
+                className={`h-full transition-all duration-500 ${
+                  projectedMetrics.essentials.projected > 50 ? 'bg-sky-500' : projectedMetrics.essentials.projected > 20 ? 'bg-yellow-500' : 'bg-orange-500'
+                }`}
+                style={{ width: `${Math.max(0, Math.min(100, projectedMetrics.essentials.projected))}%` }}
+              />
+              <div 
+                className={`h-full transition-all duration-500 ${
+                  projectedMetrics.essentials.current > 50 ? 'bg-sky-500/30' : projectedMetrics.essentials.current > 20 ? 'bg-yellow-500/30' : 'bg-orange-500/30'
+                }`}
+                style={{ width: `${Math.max(0, Math.min(100, projectedMetrics.essentials.current - projectedMetrics.essentials.projected))}%` }}
               />
             </div>
             <span className="text-[10px] text-muted-foreground block leading-relaxed">
@@ -795,12 +848,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="space-y-2 p-4 rounded-xl bg-muted/30 border border-border/40">
             <div className="flex justify-between text-xs font-semibold">
               <span className="text-muted-foreground">Stability Cap Reached</span>
-              <span className="text-foreground">{(stats.stabilityPercentReached * 100).toFixed(1)}%</span>
+              {projectedMetrics.stability.pending > 0 ? (
+                <span className="text-foreground">
+                  {(projectedMetrics.stability.projected).toFixed(1)}% <span className="text-muted-foreground text-[10px] font-normal">({(projectedMetrics.stability.current).toFixed(1)}% current)</span>
+                </span>
+              ) : (
+                <span className="text-foreground">{(projectedMetrics.stability.current).toFixed(1)}%</span>
+              )}
             </div>
-            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-muted rounded-full h-2 overflow-hidden flex">
               <div 
-                className="bg-teal-500 h-full rounded-full transition-all duration-500" 
-                style={{ width: `${Math.max(0, Math.min(100, stats.stabilityPercentReached * 100))}%` }}
+                className="bg-teal-500 h-full transition-all duration-500" 
+                style={{ width: `${Math.max(0, Math.min(100, projectedMetrics.stability.projected))}%` }}
+              />
+              <div 
+                className="bg-teal-500/30 h-full transition-all duration-500" 
+                style={{ width: `${Math.max(0, Math.min(100, projectedMetrics.stability.current - projectedMetrics.stability.projected))}%` }}
               />
             </div>
             <span className="text-[10px] text-muted-foreground block leading-relaxed">

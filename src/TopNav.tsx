@@ -13,7 +13,6 @@ import {
   Wallet, 
   LogOut, 
   Plus, 
-  RefreshCw,
   CreditCard,
   Eye,
   EyeOff,
@@ -280,10 +279,7 @@ const TopNav: React.FC<TopNavProps> = ({
                       New Subscription <Plus className="size-3" />
                     </MenubarItem>
                   </MenubarGroup>
-                  <MenubarSeparator className="my-1 border-t border-border/30" />
-                  <MenubarItem className="flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-not-allowed text-muted-foreground opacity-60">
-                    Sync Bank <RefreshCw className="size-3" />
-                  </MenubarItem>
+
                 </MenubarContent>
               </MenubarMenu>
 
