@@ -255,6 +255,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     )
   }
 
+  const formatCompactNetValue = (val: number) => {
+    const abs = Math.abs(Math.round(val))
+    if (abs >= 1000000) {
+      return `${val < 0 ? '-' : '+'}$${(abs / 1000000).toFixed(1).replace(/\.0$/, '')}M`
+    }
+    if (abs >= 1000) {
+      return `${val < 0 ? '-' : '+'}$${(abs / 1000).toFixed(1).replace(/\.0$/, '')}k`
+    }
+    return `${val < 0 ? '-' : '+'}$${abs}`
+  }
+
+  const formatCompactSensitive = (val: number) => {
+    return (
+      <span className={hideSensitive ? 'blur-sm select-none pointer-events-none inline-block transition-all duration-200' : 'transition-all duration-200'}>
+        {formatCompactNetValue(val)}
+      </span>
+    )
+  }
+
   // Generate SVG path for trend line
   const trendLinePoints = useMemo(() => {
     if (activeTrendPoints.length < 2) return ''
@@ -1248,10 +1267,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <h3 className="text-md font-semibold text-foreground">Cycle Calendar</h3>
                     <p className="text-[10px] text-muted-foreground mt-0.5">{cycleLabel}</p>
                   </div>
-                  <div className="flex items-center gap-3 text-[9px] text-muted-foreground select-none">
-                    <span className="flex items-center gap-1"><span className="font-bold text-blue-500">+$</span> Inflow</span>
-                    <span className="flex items-center gap-1"><span className="font-bold text-orange-500">-$</span> Outflow</span>
-                    <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-blue-500" />Bill due</span>
+                  <div className="flex items-center gap-3.5 text-[10px] sm:text-xs text-muted-foreground select-none font-semibold">
+                    <span className="flex items-center gap-1"><span className="font-extrabold text-blue-500">+$</span> Net Inflow Day</span>
+                    <span className="flex items-center gap-1"><span className="font-extrabold text-orange-500">-$</span> Net Outflow Day</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" />Recurring Bill Due</span>
                   </div>
                 </div>
                 <div className="grid grid-cols-7 gap-1.5 text-center">
@@ -1270,7 +1289,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     const isPositive = hasNet && net >= 0
                     const isToday = ds === todayStr
 
-                    let cellClass = "relative h-14 md:h-16 w-full rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-200 border text-xs"
+                    let cellClass = "relative h-12 xs:h-14 md:h-16 w-full rounded-xl flex flex-col items-center justify-center gap-0.5 md:gap-1 transition-all duration-200 border text-[10px] md:text-xs"
                     if (isToday) {
                       cellClass += " ring-2 ring-blue-500 ring-offset-2 ring-offset-card bg-blue-500/10 border-blue-500/30"
                     } else if (hasNet) {
@@ -1295,8 +1314,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           {day.getDate()}
                         </span>
                         {hasNet && (
-                          <span className={`text-[10px] md:text-xs font-black leading-none mt-0.5 ${isPositive ? 'text-blue-500 dark:text-blue-400' : 'text-orange-500 dark:text-orange-400'}`}>
-                            {isPositive ? '+' : '-'}${Math.abs(Math.round(net))}
+                          <span className={`text-[8px] xs:text-[9px] sm:text-[10px] md:text-xs font-black leading-none mt-0.5 ${isPositive ? 'text-blue-500 dark:text-blue-400' : 'text-orange-500 dark:text-orange-400'}`}>
+                            {formatCompactSensitive(net)}
                           </span>
                         )}
                         {recs.length > 0 && (
@@ -1313,8 +1332,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         {/* Active Month Recurring Payments Timeline (Spans 1 column) */}
         <div className="lg:col-span-1">
-          <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs flex flex-col justify-between h-full">
-            <div>
+          <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs flex flex-col h-full">
+            <div className="flex-1 flex flex-col min-h-0">
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <h3 className="text-md font-semibold text-foreground">Subscriptions</h3>
@@ -1323,7 +1342,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <Calendar className="size-4 text-blue-500 shrink-0" />
               </div>
 
-              <div className="space-y-2 mt-4 max-h-[180px] overflow-y-auto pr-1">
+              <div className="space-y-2 mt-4 flex-1 overflow-y-auto pr-1 min-h-0">
                 {activeRecurring.map((rp: any) => (
                   <div key={rp.id} className="flex items-center justify-between text-xs py-1.5 border-b border-border/30 last:border-b-0">
                     <div className="truncate mr-2">
@@ -1357,7 +1376,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             <button 
               onClick={() => onNavigate('recurring')}
-              className="w-full py-2 mt-4 text-center text-xs font-semibold text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 rounded-xl transition duration-200 cursor-pointer"
+              className="w-full py-2 mt-4 text-center text-xs font-semibold text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 rounded-xl transition duration-200 cursor-pointer shrink-0"
             >
               Manage Subscriptions
             </button>
