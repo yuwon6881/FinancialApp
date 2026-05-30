@@ -914,7 +914,7 @@ function getCycleLabelForDropdown(month: string, year: number, cycleDay: number)
 
   if (cycleDay === 1) {
     const days = new Date(year, monthIdx + 1, 0).getDate()
-    return `${month} 1st ~ ${month} ${getSuffix(days)}`
+    return `${month} 1st ~ ${month} ${days}${getSuffix(days)}`
   }
 
   const startDayActual = Math.min(cycleDay, new Date(year, monthIdx + 1, 0).getDate())
@@ -926,5 +926,5 @@ function getCycleLabelForDropdown(month: string, year: number, cycleDay: number)
   const startMonthStr = months[startDate.getMonth()]
   const endMonthStr = months[endDate.getMonth()]
 
-  return `${startMonthStr} ${getSuffix(startDate.getDate())} ~ ${endMonthStr} ${getSuffix(endDate.getDate())}`
+  return `${startMonthStr} ${startDate.getDate()}${getSuffix(startDate.getDate())} ~ ${endMonthStr} ${endDate.getDate()}${getSuffix(endDate.getDate())}`
 }

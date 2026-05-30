@@ -339,34 +339,39 @@ const TopNav: React.FC<TopNavProps> = ({
     </header>
 
     {/* Mobile Navigation bar (Sticky Bottom Nav) */}
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/95 backdrop-blur-md py-2.5 px-4 flex items-center justify-around select-none shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
-      <button
-        onClick={() => onTabChange('dashboard')}
-        className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 ${
-          activeTab === 'dashboard' ? 'text-blue-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
-        }`}
-      >
-        <TrendingUp className="size-4.5" />
-        Dashboard
-      </button>
-      <button
-        onClick={() => onTabChange('recurring')}
-        className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 ${
-          activeTab === 'recurring' ? 'text-blue-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
-        }`}
-      >
-        <CreditCard className="size-4.5" />
-        Recurring
-      </button>
-      <button
-        onClick={() => onTabChange('ledger')}
-        className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 ${
-          activeTab === 'ledger' ? 'text-blue-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
-        }`}
-      >
-        <Wallet className="size-4.5" />
-        Ledger
-      </button>
+    <div 
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/95 backdrop-blur-md select-none shadow-[0_-4px_12px_rgba(0,0,0,0.05)]"
+      style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))', paddingTop: '10px' }}
+    >
+      <div className="grid grid-cols-3 w-full max-w-md mx-auto justify-items-center">
+        <button
+          onClick={() => onTabChange('dashboard')}
+          className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
+            activeTab === 'dashboard' ? 'text-blue-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <TrendingUp className="size-4.5 mx-auto" />
+          <span>Dashboard</span>
+        </button>
+        <button
+          onClick={() => onTabChange('recurring')}
+          className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
+            activeTab === 'recurring' ? 'text-blue-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <CreditCard className="size-4.5 mx-auto" />
+          <span>Recurring</span>
+        </button>
+        <button
+          onClick={() => onTabChange('ledger')}
+          className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
+            activeTab === 'ledger' ? 'text-blue-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Wallet className="size-4.5 mx-auto" />
+          <span>Ledger</span>
+        </button>
+      </div>
     </div>
     </>
   )
