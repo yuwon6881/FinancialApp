@@ -21,7 +21,7 @@ export const formatCurrencyVal = (val: number, currencyCode: string = 'USD') => 
       style: 'currency',
       currency: isoCode
     }).format(val)
-  } catch (e) {
+  } catch {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'

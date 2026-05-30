@@ -808,7 +808,7 @@ function App() {
                   } else {
                     setLockError(res.message || 'Incorrect password.')
                   }
-                } catch (err) {
+                } catch {
                   setLockError('Failed to verify. Please try again.')
                 } finally {
                   setLockVerifying(false)

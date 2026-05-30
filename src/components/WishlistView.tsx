@@ -115,15 +115,6 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     return `~${roundedMonths} Months (${formattedDate})`
   }
 
-  React.useEffect(() => {
-    if (autoOpenAddModal) {
-      handleOpenAddModal()
-      onResetAutoOpen?.()
-    }
-  }, [autoOpenAddModal, onResetAutoOpen])
-
-
-
   const handleOpenAddModal = () => {
     setNameInput('')
     setPriceInput('')
@@ -132,6 +123,13 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     setIsActiveInput(wishlist.filter(w => !w.isPurchased).length === 0)
     setShowAddModal(true)
   }
+
+  React.useEffect(() => {
+    if (autoOpenAddModal) {
+      handleOpenAddModal()
+      onResetAutoOpen?.()
+    }
+  }, [autoOpenAddModal, onResetAutoOpen, wishlist])
 
   const handleOpenEditModal = (item: WishlistItem) => {
     setEditingItem(item)

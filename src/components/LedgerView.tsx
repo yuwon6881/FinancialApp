@@ -755,14 +755,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
     const rangeLabel = getCycleRangeLabel()
     const filterLabel = buildFilterLabel()
-    let title = ''
-    if (rangeLabel) {
-      title = filterLabel ? `${rangeLabel} ${filterLabel} Records` : `${rangeLabel} Records`
-    } else if (filterLabel) {
-      title = `All ${filterLabel} Records`
-    } else {
-      title = 'All Records'
-    }
+    const title = rangeLabel
+      ? (filterLabel ? `${rangeLabel} ${filterLabel} Records` : `${rangeLabel} Records`)
+      : (filterLabel ? `All ${filterLabel} Records` : 'All Records')
     return `${toFilename(title)}.csv`
   }
 
