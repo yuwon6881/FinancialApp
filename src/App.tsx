@@ -24,6 +24,8 @@ function App() {
   const [selectedMonth, setSelectedMonth] = useState<string>('')
   const [selectedYear, setSelectedYear] = useState<number>(0)
   const [ledgerIncomingCategory, setLedgerIncomingCategory] = useState<string | null>(null)
+  const [ledgerIncomingDate, setLedgerIncomingDate] = useState<string | null>(null)
+  const [ledgerIncomingTxType, setLedgerIncomingTxType] = useState<'inflow' | 'outflow' | null>(null)
   const [ledgerShowAllCycles, setLedgerShowAllCycles] = useState(false)
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([])
   const [hideSensitive, setHideSensitive] = useState<boolean>(() => {
@@ -326,14 +328,24 @@ function App() {
   useEffect(() => {
     if (activeTab !== 'ledger') {
       setLedgerIncomingCategory(null)
+      setLedgerIncomingDate(null)
+      setLedgerIncomingTxType(null)
       setLedgerCyclesRange('monthly')
       setLedgerShowAllCycles(false)
       setAllTransactions([])
     }
   }, [activeTab])
 
-  const handleNavigateToLedgerCategory = (category: string, range: 'monthly' | '3month' | '6month' | 'yearly') => {
-    setLedgerIncomingCategory(category)
+  const handleNavigateToLedger = (options: {
+    category?: string | null
+    date?: string | null
+    txType?: 'inflow' | 'outflow' | null
+    range?: 'monthly' | '3month' | '6month' | 'yearly'
+  }) => {
+    setLedgerIncomingCategory(options.category || null)
+    setLedgerIncomingDate(options.date || null)
+    setLedgerIncomingTxType(options.txType || null)
+    const range = options.range || 'monthly'
     setLedgerCyclesRange(range)
     const showAll = range !== 'monthly'
     setLedgerShowAllCycles(showAll)
@@ -423,7 +435,7 @@ function App() {
             onDeleteCategory={handleDeleteCategory}
             onConfirmSubscription={handleConfirmSubscription}
             onDeletePayment={handleDeletePayment}
-            onNavigateToLedgerCategory={handleNavigateToLedgerCategory}
+            onNavigateToLedger={handleNavigateToLedger}
           />
         )}
 
@@ -454,7 +466,13 @@ function App() {
             cycleDay={dashboardData?.setting?.cycleDay || 28}
             onSelectPeriod={handleSelectPeriod}
             incomingCategory={ledgerIncomingCategory}
-            onClearIncomingCategory={() => setLedgerIncomingCategory(null)}
+            incomingDate={ledgerIncomingDate}
+            incomingTxType={ledgerIncomingTxType}
+            onClearIncomingFilters={() => {
+              setLedgerIncomingCategory(null)
+              setLedgerIncomingDate(null)
+              setLedgerIncomingTxType(null)
+            }}
             showAllCycles={ledgerShowAllCycles}
             onLoadAllTransactions={handleLoadAllTransactions}
             onClearAllCycles={() => { setLedgerShowAllCycles(false); setAllTransactions([]) }}

@@ -152,24 +152,7 @@ const TopNav: React.FC<TopNavProps> = ({
             </span>
           </div>
 
-          {/* Sensitive Hide/Show Toggle */}
-          <button
-            onClick={onToggleHideSensitive}
-            className="hidden xl:flex p-1.5 border border-border/60 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition duration-150 items-center justify-center shrink-0"
-            title={hideSensitive ? "Show sensitive figures" : "Hide sensitive figures"}
-          >
-            {hideSensitive ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
-          </button>
 
-          {/* Dark Mode Toggle */}
-          <button
-            onClick={onToggleDarkMode}
-            id="dark-mode-toggle"
-            className="hidden xl:flex p-1.5 border border-border/60 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition duration-150 items-center justify-center shrink-0"
-            title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-          >
-            {darkMode ? <Sun className="size-4" /> : <Moon className="size-4" />}
-          </button>
 
           {/* Notification Bell Dropdown */}
           <div className="relative bell-container">

@@ -26,7 +26,9 @@ interface LedgerViewProps {
   cycleDay: number
   onSelectPeriod: (month: string, year: number) => void
   incomingCategory: string | null
-  onClearIncomingCategory: () => void
+  incomingDate?: string | null
+  incomingTxType?: 'inflow' | 'outflow' | null
+  onClearIncomingFilters?: () => void
   showAllCycles: boolean
   onLoadAllTransactions: () => void
   onClearAllCycles: () => void
@@ -91,7 +93,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   cycleDay,
   onSelectPeriod,
   incomingCategory,
-  onClearIncomingCategory,
+  incomingDate,
+  incomingTxType,
+  onClearIncomingFilters,
   showAllCycles,
   onLoadAllTransactions: _onLoadAllTransactions,
   onClearAllCycles,
@@ -134,17 +138,29 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
   }, [categories, category])
 
-  // When incomingCategory arrives from dashboard doughnut click, apply as filter
-  useEffect(() => {
-    if (incomingCategory) {
-      setSelectedFilters([incomingCategory])
-    }
-  }, [incomingCategory])
-
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFilters, setSelectedFilters] = useState<string[]>([])
+  const [selectedDateFilter, setSelectedDateFilter] = useState<string | null>(null)
+  const [selectedTxTypeFilter, setSelectedTxTypeFilter] = useState<'inflow' | 'outflow' | null>(null)
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false)
+
+  // Synchronize incoming filters from props
+  useEffect(() => {
+    if (incomingCategory) {
+      setSelectedFilters([incomingCategory])
+    } else {
+      setSelectedFilters([])
+    }
+  }, [incomingCategory])
+
+  useEffect(() => {
+    setSelectedDateFilter(incomingDate || null)
+  }, [incomingDate])
+
+  useEffect(() => {
+    setSelectedTxTypeFilter(incomingTxType || null)
+  }, [incomingTxType])
 
   // Toggle filter on or off
   const handleToggleFilter = (filterName: string) => {
@@ -282,14 +298,28 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       if (selectedSubcategories.length > 0) {
         matchesSubcat = selectedSubcategories.some(subcat => t.category === subcat)
       }
+
+      let matchesDate = true
+      if (selectedDateFilter) {
+        matchesDate = t.date === selectedDateFilter
+      }
+
+      let matchesTxType = true
+      if (selectedTxTypeFilter) {
+        if (selectedTxTypeFilter === 'inflow') {
+          matchesTxType = t.amount > 0
+        } else if (selectedTxTypeFilter === 'outflow') {
+          matchesTxType = t.amount < 0
+        }
+      }
       
-      return matchesSearch && matchesBucket && matchesSubcat
+      return matchesSearch && matchesBucket && matchesSubcat && matchesDate && matchesTxType
     }).sort((a, b) => {
       const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime()
       if (dateDiff !== 0) return dateDiff
       return b.id.localeCompare(a.id)
     })
-  }, [sourceTransactions, searchTerm, selectedFilters])
+  }, [sourceTransactions, searchTerm, selectedFilters, selectedDateFilter, selectedTxTypeFilter])
 
   const displayLedgerCategory = (cat: string) => {
     if (cat.startsWith('IncomeSplit:')) return 'Income'
@@ -408,27 +438,48 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       </div>
 
       {/* Dashboard navigation filter banner */}
-      {(incomingCategory || showAllCycles) && (
+      {(incomingCategory || incomingDate || incomingTxType || showAllCycles) && (
         <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-blue-500/8 border border-blue-500/20 text-xs animate-in fade-in duration-200">
           <div className="flex items-center gap-2 text-blue-500 font-medium">
             <span className="size-1.5 rounded-full bg-blue-500 shrink-0 animate-pulse" />
-            {showAllCycles ? (
-              cyclesRange === '3month'
-                ? `Showing last 3 cycles — filtered by "${incomingCategory || 'all'}"`
-                : cyclesRange === '6month'
-                  ? `Showing last 6 cycles — filtered by "${incomingCategory || 'all'}"`
-                  : cyclesRange === 'yearly'
-                    ? `Showing full year ${selectedYear} — filtered by "${incomingCategory || 'all'}"`
-                    : `Showing all cycles — filtered by "${incomingCategory || 'all'}"`
-            ) : (
-              `Filtered by "${incomingCategory}" (current cycle)`
-            )}
+            {(() => {
+              const parts: string[] = []
+              if (showAllCycles) {
+                if (cyclesRange === '3month') parts.push("last 3 cycles")
+                else if (cyclesRange === '6month') parts.push("last 6 cycles")
+                else if (cyclesRange === 'yearly') parts.push(`full year ${selectedYear}`)
+                else parts.push("all cycles")
+              } else {
+                parts.push("current cycle")
+              }
+
+              const filterDetails: string[] = []
+              if (incomingCategory) {
+                filterDetails.push(`category "${incomingCategory}"`)
+              }
+              if (incomingDate) {
+                const d = new Date(incomingDate)
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                const formattedDate = isNaN(d.getTime()) ? incomingDate : `${monthNames[d.getMonth()]} ${d.getDate()}${getSuffix(d.getDate())}, ${d.getFullYear()}`
+                filterDetails.push(`date ${formattedDate}`)
+              }
+              if (incomingTxType) {
+                filterDetails.push(incomingTxType === 'inflow' ? "inflows only" : "outflows only")
+              }
+
+              if (filterDetails.length > 0) {
+                return `Showing ${parts.join(', ')} — filtered by ${filterDetails.join(' and ')}`
+              }
+              return `Showing ${parts.join(', ')}`
+            })()}
           </div>
           <button
             onClick={() => {
-              onClearIncomingCategory?.()
+              onClearIncomingFilters?.()
               onClearAllCycles?.()
               setSelectedFilters([])
+              setSelectedDateFilter(null)
+              setSelectedTxTypeFilter(null)
             }}
             className="flex items-center gap-1 text-blue-500/70 hover:text-blue-500 text-[10px] font-semibold transition cursor-pointer"
           >
@@ -846,20 +897,20 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   )
 }
 
+function getSuffix(d: number): string {
+  if (d >= 11 && d <= 13) return 'th'
+  switch (d % 10) {
+    case 1: return 'st'
+    case 2: return 'nd'
+    case 3: return 'rd'
+    default: return 'th'
+  }
+}
+
 function getCycleLabelForDropdown(month: string, year: number, cycleDay: number): string {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   const monthIdx = months.indexOf(month)
   if (monthIdx === -1) return month
-
-  const getSuffix = (d: number) => {
-    if (d >= 11 && d <= 13) return `${d}th`
-    switch (d % 10) {
-      case 1: return `${d}st`
-      case 2: return `${d}nd`
-      case 3: return `${d}rd`
-      default: return `${d}th`
-    }
-  }
 
   if (cycleDay === 1) {
     const days = new Date(year, monthIdx + 1, 0).getDate()

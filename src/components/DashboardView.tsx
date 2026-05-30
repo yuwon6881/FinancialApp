@@ -34,7 +34,7 @@ interface DashboardViewProps {
   onDeleteCategory: (id: string) => void
   onConfirmSubscription: (noti: any, paidDate: string) => void
   onDeletePayment: (id: string) => void
-  onNavigateToLedgerCategory: (category: string, range: 'monthly' | '3month' | '6month' | 'yearly') => void
+  onNavigateToLedger?: (options: { category?: string | null; date?: string | null; txType?: 'inflow' | 'outflow' | null; range?: 'monthly' | '3month' | '6month' | 'yearly' }) => void
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ 
@@ -49,10 +49,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onDeleteCategory,
   onConfirmSubscription,
   onDeletePayment,
-  onNavigateToLedgerCategory
+  onNavigateToLedger
 }) => {
   const [showSettings, setShowSettings] = useState(false)
   const [targetInput, setTargetInput] = useState('')
+  const [isHoveringLiquidNetWorth, setIsHoveringLiquidNetWorth] = useState(false)
   
   // Custom Allocations & Cycle setting states
   const [essentialsAllocInput, setEssentialsAllocInput] = useState('')
@@ -657,16 +658,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <tbody className="divide-y divide-border/30 text-foreground font-medium">
               {categories.map(c => {
                 const isNeg = c.remaining < 0
+                const isHighlighted = isHoveringLiquidNetWorth && c.name !== 'Growth'
                 return (
-                  <tr key={c.name} className="hover:bg-muted/10">
-                    <td className="py-3 flex items-center gap-1.5 font-bold">
+                  <tr key={c.name} className={`hover:bg-muted/10 transition-all duration-300 ${isHighlighted ? 'bg-blue-500/5 dark:bg-blue-950/20' : ''}`}>
+                    <td className={`py-3 flex items-center gap-1.5 font-bold transition-all duration-300 ${isHighlighted ? 'border-l-2 border-blue-500 pl-2 bg-blue-500/10' : ''}`}>
                       <span className={`size-2 rounded-full ${categoryColorMap[c.name]?.split(' ')[0] || 'bg-slate-500'}`} />
                       {c.name}
                     </td>
-                    <td className="py-3 text-muted-foreground">{(c.allocation * 100).toFixed(0)}%</td>
-                    <td className="py-3 text-right">{formatSensitive(c.target)}</td>
-                    <td className="py-3 text-right text-muted-foreground">{formatSensitive(c.budget)}</td>
-                    <td className={`py-3 text-right ${c.netChange < 0 ? 'text-orange-500' : c.netChange > 0 ? 'text-blue-500' : ''}`}>
+                    <td className={`py-3 text-muted-foreground transition-all duration-300 ${isHighlighted ? 'bg-blue-500/10' : ''}`}>{(c.allocation * 100).toFixed(0)}%</td>
+                    <td className={`py-3 text-right transition-all duration-300 ${isHighlighted ? 'bg-blue-500/10' : ''}`}>{formatSensitive(c.target)}</td>
+                    <td className={`py-3 text-right text-muted-foreground transition-all duration-300 ${isHighlighted ? 'bg-blue-500/10' : ''}`}>{formatSensitive(c.budget)}</td>
+                    <td className={`py-3 text-right transition-all duration-300 ${isHighlighted ? 'bg-blue-500/10' : ''} ${c.netChange < 0 ? 'text-orange-500' : c.netChange > 0 ? 'text-blue-500' : ''}`}>
                       <div>{c.netChange > 0 ? '+' : ''}{formatSensitive(c.netChange)}</div>
                       {pendingDeductionsByCategory[c.name] > 0 && (
                         <div className="text-[10px] text-yellow-500 font-normal">
@@ -674,7 +676,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         </div>
                       )}
                     </td>
-                    <td className={`py-3 text-right font-bold ${isNeg ? 'text-orange-500' : 'text-foreground'}`}>
+                    <td className={`py-3 text-right font-bold transition-all duration-300 ${isHighlighted ? 'bg-blue-500/10' : ''} ${isNeg ? 'text-orange-500' : 'text-foreground'}`}>
                       <div>{formatSensitive(c.remaining)}</div>
                       {pendingDeductionsByCategory[c.name] > 0 && (
                         <div className={`text-[10px] font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
@@ -693,8 +695,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="block md:hidden space-y-4">
           {categories.map(c => {
             const isNeg = c.remaining < 0
+            const isHighlighted = isHoveringLiquidNetWorth && c.name !== 'Growth'
             return (
-              <div key={c.name} className="p-4 rounded-xl border border-border bg-background/50 space-y-3 shadow-xs">
+              <div 
+                key={c.name} 
+                className={`p-4 rounded-xl border transition-all duration-300 bg-background/50 space-y-3 shadow-xs ${
+                  isHighlighted 
+                    ? 'border-blue-500 ring-2 ring-blue-500/25 bg-blue-500/5 dark:bg-blue-950/20 scale-[1.01]' 
+                    : 'border-border'
+                }`}
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-bold text-sm">
                     <span className={`size-2.5 rounded-full ${categoryColorMap[c.name]?.split(' ')[0] || 'bg-slate-500'}`} />
@@ -715,7 +725,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <span className="font-semibold text-foreground">{formatSensitive(c.budget)}</span>
                   </div>
                 </div>
-
+ 
                 <div className="grid grid-cols-2 gap-4 text-xs border-t border-border/30 pt-2.5">
                   <div>
                     <span className="text-muted-foreground text-[10px] block mb-0.5">Net Change (This Cycle)</span>
@@ -749,7 +759,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Grid of Metric Cards (Now 3 columns) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Total Balance (Liquid Only) */}
-        <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs hover:border-blue-500/30 transition-all duration-300 group">
+        <div 
+          onMouseEnter={() => setIsHoveringLiquidNetWorth(true)}
+          onMouseLeave={() => setIsHoveringLiquidNetWorth(false)}
+          className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs hover:border-blue-500/30 transition-all duration-300 group"
+        >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-muted-foreground">Liquid Net Worth</span>
             <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform duration-300">
@@ -766,7 +780,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Inflow Card (Arrow points up/right, green) */}
-        <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs hover:border-blue-500/30 transition-all duration-300 group">
+        <div 
+          onClick={() => onNavigateToLedger?.({ txType: 'inflow' })}
+          className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs hover:border-blue-500/30 transition-all duration-300 group cursor-pointer"
+        >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-muted-foreground">Cycle Inflow</span>
             <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform duration-300">
@@ -782,7 +799,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Expenses Card (Arrow points down/left, red) */}
-        <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs hover:border-orange-500/30 transition-all duration-300 group">
+        <div 
+          onClick={() => onNavigateToLedger?.({ txType: 'outflow' })}
+          className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs hover:border-orange-500/30 transition-all duration-300 group cursor-pointer"
+        >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-muted-foreground">Cycle Outflow</span>
             <div className="p-2 rounded-lg bg-orange-500/10 text-orange-500 group-hover:scale-110 transition-transform duration-300">
@@ -1140,7 +1160,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           onMouseEnter={() => setHoveredSlice(index)}
                           onMouseLeave={() => setHoveredSlice(null)}
                           onClick={() => {
-                            onNavigateToLedgerCategory?.(slice.category, chartView)
+                            onNavigateToLedger?.({ category: slice.category, range: chartView })
                           }}
                         />
                       )
@@ -1180,7 +1200,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       onMouseEnter={() => setHoveredSlice(index)}
                       onMouseLeave={() => setHoveredSlice(null)}
                       onClick={() => {
-                        onNavigateToLedgerCategory?.(slice.category, chartView)
+                        onNavigateToLedger?.({ category: slice.category, range: chartView })
                       }}
                     >
                       <div className="flex items-center gap-1.5 truncate mr-2">
@@ -1313,7 +1333,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     const isPositive = hasNet && net >= 0
                     const isToday = ds === todayStr
 
-                    let cellClass = "relative h-12 xs:h-14 md:h-16 w-full rounded-xl flex flex-col items-center justify-center gap-0.5 md:gap-1 transition-all duration-200 border text-[10px] md:text-xs"
+                    let cellClass = "relative h-12 xs:h-14 md:h-16 w-full rounded-xl flex flex-col items-center justify-center gap-0.5 md:gap-1 transition-all duration-200 border text-[10px] md:text-xs cursor-pointer"
                     if (isToday) {
                       cellClass += " ring-2 ring-blue-500 ring-offset-2 ring-offset-card bg-blue-500/10 border-blue-500/30"
                     } else if (hasNet) {
@@ -1333,6 +1353,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           ? `${formatDisplayDate(day)}: ${net >= 0 ? '+' : ''}${net.toFixed(2)}${recs.length ? '\nBills: ' + recs.join(', ') : ''}`
                           : recs.length ? `${formatDisplayDate(day)}\nBills: ${recs.join(', ')}` : formatDisplayDate(day)}
                         className={cellClass}
+                        onClick={() => onNavigateToLedger?.({ date: ds })}
                       >
                         <span className={`leading-none text-xs md:text-sm font-bold ${isToday ? 'text-blue-500' : 'text-foreground/90'}`}>
                           {day.getDate()}
