@@ -1329,60 +1329,78 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       </div>
 
       {/* Ledger List - Mobile */}
-      <div className="block md:hidden space-y-4">
+      <div className="block md:hidden space-y-3">
         {displayTransactions.map(t => {
           const isOutflow = t.amount < 0
+          const isTransfer = t.ledgerCategory.startsWith('Transfer:')
+          const isSplit = t.id.includes('-split-')
+          const ledgerLabel = displayLedgerCategory(t.ledgerCategory)
+
           return (
-            <div id={`tx-row-${t.id}`} key={t.id} className="p-4 rounded-2xl border border-border bg-card space-y-3 shadow-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] text-muted-foreground font-medium">{t.date}</span>
-                <span className={`inline-block text-[10px] px-2 py-0.5 font-semibold rounded-md border ${
-                  categoryColorMap[t.category] || 'bg-slate-500/10 text-slate-500 border-slate-500/20'
-                }`}>
-                  {t.category}
-                </span>
-              </div>
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-1">
-                  <h4 className="text-xs font-bold text-foreground leading-tight">{t.description}</h4>
-                  <p className="text-[10px] text-muted-foreground">Ledger: <span className="font-semibold">{displayLedgerCategory(t.ledgerCategory)}</span></p>
+            <div id={`tx-row-${t.id}`} key={t.id} className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
+              {/* Top accent bar */}
+              <div className={`h-0.5 w-full ${
+                isTransfer ? 'bg-blue-500/60' : isOutflow ? 'bg-orange-500/60' : 'bg-emerald-500/60'
+              }`} />
+
+              <div className="p-4 space-y-3">
+                {/* Row 1: Date + Category badge */}
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-muted-foreground font-mono tracking-wide">{t.date}</span>
+                  <span className={`inline-block text-[10px] px-2 py-0.5 font-semibold rounded-full border ${
+                    categoryColorMap[t.category] || 'bg-slate-500/10 text-slate-500 border-slate-500/20'
+                  }`}>
+                    {t.category}
+                  </span>
                 </div>
-                <div className="text-right">
-                  {t.ledgerCategory.startsWith('Transfer:') ? (
-                    <span className="inline-block px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-500 font-bold text-xs">
-                      {formatSensitive(t.amount)}
-                    </span>
-                  ) : (
-                    <span className={`inline-block px-2.5 py-1 rounded-lg font-bold text-xs ${
-                      isOutflow ? 'bg-orange-500/10 text-orange-500' : 'bg-blue-500/10 text-blue-500'
-                    }`}>
-                      {isOutflow ? '-' : '+'}{formatSensitive(isOutflow ? Math.abs(t.amount) : t.amount)}
-                    </span>
-                  )}
+
+                {/* Row 2: Description + Amount */}
+                <div className="flex items-center justify-between gap-3">
+                  <h4 className="text-sm font-bold text-foreground leading-snug flex-1">{t.description}</h4>
+                  <div className="shrink-0">
+                    {isTransfer ? (
+                      <span className="text-sm font-bold text-blue-400">
+                        {formatSensitive(t.amount)}
+                      </span>
+                    ) : (
+                      <span className={`text-sm font-bold ${
+                        isOutflow ? 'text-orange-400' : 'text-emerald-400'
+                      }`}>
+                        {isOutflow ? '-' : '+'}{formatSensitive(isOutflow ? Math.abs(t.amount) : t.amount)}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="flex justify-end gap-2 pt-2 border-t border-border/30">
-                {t.id.includes('-split-') ? (
-                  <button
-                    onClick={() => setShowEditDisabledModal(true)}
-                    className="text-[11px] text-muted-foreground/45 hover:text-muted-foreground/60 bg-muted/20 hover:bg-muted/30 border border-border/40 px-3 py-1.5 rounded-lg transition duration-150 cursor-pointer"
-                  >
-                    Edit Entry
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => handleStartEdit(t)}
-                    className="text-[11px] text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 px-3 py-1.5 rounded-lg transition duration-150 cursor-pointer"
-                  >
-                    Edit Entry
-                  </button>
-                )}
-                <button
-                  onClick={() => handleDeleteClick(t)}
-                  className="text-[11px] text-orange-500 hover:text-orange-600 bg-orange-500/5 hover:bg-orange-500/10 border border-orange-500/10 hover:border-orange-500/20 px-3 py-1.5 rounded-lg transition duration-150 cursor-pointer"
-                >
-                  Delete Entry
-                </button>
+
+                {/* Row 3: Ledger category + Actions */}
+                <div className="flex items-center justify-between pt-2 border-t border-border/30">
+                  <span className="text-[10px] text-muted-foreground">
+                    Ledger: <span className="font-semibold text-foreground/70">{ledgerLabel}</span>
+                  </span>
+                  <div className="flex gap-1.5">
+                    {isSplit ? (
+                      <button
+                        onClick={() => setShowEditDisabledModal(true)}
+                        className="text-[10px] text-muted-foreground/40 bg-muted/10 border border-border/30 px-2.5 py-1 rounded-lg transition cursor-pointer"
+                      >
+                        Edit
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleStartEdit(t)}
+                        className="text-[10px] text-blue-500 bg-blue-500/8 hover:bg-blue-500/15 border border-blue-500/15 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer"
+                      >
+                        Edit
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDeleteClick(t)}
+                      className="text-[10px] text-orange-500 bg-orange-500/8 hover:bg-orange-500/15 border border-orange-500/15 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )
@@ -1430,7 +1448,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     { value: 50, label: '50' },
                     { value: 100, label: '100' }
                   ]}
-                  className="w-18"
+                  className="w-24"
                 />
               </div>
 

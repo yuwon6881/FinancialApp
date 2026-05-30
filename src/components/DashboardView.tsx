@@ -1531,17 +1531,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Month Transactions List */}
       <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-semibold text-foreground">Manual Inflows & Outflows</h3>
-            <p className="text-xs text-muted-foreground">Manual postings logged in this active cycle range</p>
-          </div>
-          <button 
-            onClick={() => onNavigate('ledger')}
-            className="text-xs text-blue-500 font-semibold hover:underline cursor-pointer"
-          >
-            View Ledger
-          </button>
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-foreground">Manual Inflows & Outflows</h3>
+          <p className="text-xs text-muted-foreground">Manual postings logged in this active cycle range</p>
         </div>
 
         <div className="divide-y divide-border/40">
@@ -1582,6 +1574,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="text-xs text-muted-foreground py-12 text-center">No manual ledger entries found for this cycle.</div>
           )}
         </div>
+
+        <button
+          onClick={() => onNavigate('ledger')}
+          className="w-full py-2 mt-4 text-center text-xs font-semibold text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 rounded-xl transition duration-200 cursor-pointer"
+        >
+          View Full Ledger
+        </button>
       </div>
     </div>
   )
