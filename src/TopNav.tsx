@@ -138,6 +138,16 @@ const TopNav: React.FC<TopNavProps> = ({
             >
               Ledger
             </button>
+            <button
+              onClick={() => onTabChange('wishlist')}
+              className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer ${
+                activeTab === 'wishlist'
+                  ? 'bg-card text-foreground shadow-xs border border-border/10 font-bold scale-[1.02]'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+              }`}
+            >
+              Wishlist
+            </button>
           </nav>
         </div>
 
