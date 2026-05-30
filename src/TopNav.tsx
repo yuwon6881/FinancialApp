@@ -138,17 +138,6 @@ const TopNav: React.FC<TopNavProps> = ({
             >
               Ledger
             </button>
-            <button
-              onClick={() => onTabChange('wishlist')}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'wishlist'
-                  ? 'bg-card text-foreground shadow-xs border border-border/10 font-bold scale-[1.02]'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
-              }`}
-            >
-              <PiggyBank className="size-3.5 text-pink-500" />
-              <span>Wishlist</span>
-            </button>
           </nav>
         </div>
 
@@ -156,9 +145,8 @@ const TopNav: React.FC<TopNavProps> = ({
         <div className="flex-1 flex items-center justify-end gap-1.5 sm:gap-3 md:gap-4 min-w-max">
           
           {/* Quick Metrics (Balance Display) */}
-          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 border border-blue-500/10 rounded-xl select-none shrink-0">
-            <Wallet className="size-3.5 text-blue-500" />
-            <span className="hidden xl:inline text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Net Balance:</span>
+          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-muted/20 border border-border/60 rounded-xl select-none shrink-0" title="Net Balance">
+            <Wallet className="size-3.5 text-muted-foreground" />
             <span className={`text-xs font-bold text-foreground transition-all duration-300 ${hideSensitive ? 'blur-sm select-none pointer-events-none' : ''}`}>
               {formatCurrency(totalBalance)}
             </span>
@@ -167,15 +155,14 @@ const TopNav: React.FC<TopNavProps> = ({
           {/* Quick Wish List Shortcut */}
           <button
             onClick={() => onTabChange('wishlist')}
-            className={`hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl border select-none shrink-0 cursor-pointer transition-all duration-150 ${
+            className={`hidden md:flex p-1.5 border rounded-xl cursor-pointer transition duration-150 items-center justify-center ${
               activeTab === 'wishlist'
-                ? 'bg-pink-500/10 border-pink-500/30 text-pink-500 font-bold scale-[1.02]'
-                : 'bg-card hover:bg-muted/30 border-border/60 text-muted-foreground hover:text-foreground'
+                ? 'bg-muted border-border text-foreground shadow-xs'
+                : 'border-border/60 hover:bg-muted text-muted-foreground hover:text-foreground'
             }`}
             title="Wish List"
           >
-            <PiggyBank className="size-3.5 text-pink-500" />
-            <span className="hidden xl:inline text-[10px] font-bold uppercase tracking-wider">Wish List</span>
+            <PiggyBank className="size-4" />
           </button>
 
 
