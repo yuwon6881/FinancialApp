@@ -500,7 +500,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                     value={priceInput}
                     onChange={e => setPriceInput(e.target.value)}
                     placeholder="0.00"
-                    className="w-full px-3.5 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition font-medium"
+                    className="w-full px-3.5 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     required
                   />
                 </div>
@@ -591,7 +591,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                     step="0.01"
                     value={priceInput}
                     onChange={e => setPriceInput(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition font-medium"
+                    className="w-full px-3.5 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     required
                   />
                 </div>
