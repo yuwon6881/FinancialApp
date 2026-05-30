@@ -644,116 +644,73 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         
         {/* Desktop View */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-border/50 text-muted-foreground font-semibold">
-                <th className="py-2.5">Category</th>
-                <th className="py-2.5">Target Alloc.</th>
-                <th className="py-2.5 text-right">Target Budget</th>
-                <th className="py-2.5 text-right">Start Budget (Carried Over)</th>
-                <th className="py-2.5 text-right">Net Change (This Cycle)</th>
-                <th className="py-2.5 text-right">Remaining Balance</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/30 text-foreground font-medium">
-              {categories.map(c => {
-                const isNeg = c.remaining < 0
-                const isHighlighted = isHoveringLiquidNetWorth && c.name !== 'Growth'
-                
-                // Color mapping for box-shadow on highlighted categories
-                let shadowColor = ''
-                let highlightBg = ''
-                if (isHighlighted) {
-                  if (c.name === 'Essentials') {
-                    shadowColor = 'rgba(14, 165, 233, 0.6)' // sky-500/60
-                    highlightBg = 'rgba(14, 165, 233, 0.04)' // bg-sky-500/4
-                  } else if (c.name === 'Stability') {
-                    shadowColor = 'rgba(20, 184, 166, 0.6)' // teal-500/60
-                    highlightBg = 'rgba(20, 184, 166, 0.04)' // bg-teal-500/4
-                  } else if (c.name === 'Rewards') {
-                    shadowColor = 'rgba(236, 72, 153, 0.6)' // pink-500/60
-                    highlightBg = 'rgba(236, 72, 153, 0.04)' // bg-pink-500/4
-                  }
+          <div className="min-w-[800px] text-xs space-y-1">
+            {/* Table Header */}
+            <div className="grid grid-cols-[1.8fr_1fr_1.5fr_2fr_2fr_2fr] items-center gap-4 border-b border-border/50 text-muted-foreground font-semibold pb-2.5 px-4 mb-2">
+              <div>Category</div>
+              <div>Target Alloc.</div>
+              <div className="text-right">Target Budget</div>
+              <div className="text-right">Start Budget (Carried Over)</div>
+              <div className="text-right">Net Change (This Cycle)</div>
+              <div className="text-right">Remaining Balance</div>
+            </div>
+            
+            {/* Table Body */}
+            {categories.map(c => {
+              const isNeg = c.remaining < 0
+              const isHighlighted = isHoveringLiquidNetWorth && c.name !== 'Growth'
+              
+              let highlightClass = 'border-transparent bg-transparent hover:bg-muted/10'
+              let transitionStyles: React.CSSProperties = {
+                transition: 'opacity 300ms, transform 300ms'
+              }
+              
+              if (isHighlighted) {
+                transitionStyles = {
+                  transition: 'opacity 300ms, transform 300ms, border-color 300ms, background-color 300ms, box-shadow 300ms'
                 }
-
-                const getCellStyles = (position: 'first' | 'middle' | 'last'): React.CSSProperties => {
-                  if (!isHighlighted) {
-                    return { transition: 'background-color 300ms, box-shadow 300ms' }
-                  }
-                  
-                  let boxShadow = ''
-                  if (position === 'first') {
-                    boxShadow = `inset 0 2px 0 0 ${shadowColor}, inset 0 -2px 0 0 ${shadowColor}, inset 2px 0 0 0 ${shadowColor}`
-                  } else if (position === 'last') {
-                    boxShadow = `inset 0 2px 0 0 ${shadowColor}, inset 0 -2px 0 0 ${shadowColor}, inset -2px 0 0 0 ${shadowColor}`
-                  } else {
-                    boxShadow = `inset 0 2px 0 0 ${shadowColor}, inset 0 -2px 0 0 ${shadowColor}`
-                  }
-                  
-                  return {
-                    boxShadow,
-                    backgroundColor: highlightBg,
-                    transition: 'background-color 300ms, box-shadow 300ms'
-                  }
+                if (c.name === 'Essentials') {
+                  highlightClass = 'border-sky-500/50 bg-sky-500/[0.04] shadow-xs'
+                } else if (c.name === 'Stability') {
+                  highlightClass = 'border-teal-500/50 bg-teal-500/[0.04] shadow-xs'
+                } else if (c.name === 'Rewards') {
+                  highlightClass = 'border-pink-500/50 bg-pink-500/[0.04] shadow-xs'
                 }
+              }
 
-                return (
-                  <tr 
-                    key={c.name} 
-                    className="hover:bg-muted/10"
-                  >
-                    <td 
-                      className="py-3 pl-2 flex items-center gap-1.5 font-bold"
-                      style={getCellStyles('first')}
-                    >
-                      <span className={`size-2 rounded-full ${categoryColorMap[c.name]?.split(' ')[0] || 'bg-slate-500'}`} />
-                      {c.name}
-                    </td>
-                    <td 
-                      className="py-3 text-muted-foreground"
-                      style={getCellStyles('middle')}
-                    >
-                      {(c.allocation * 100).toFixed(0)}%
-                    </td>
-                    <td 
-                      className="py-3 text-right"
-                      style={getCellStyles('middle')}
-                    >
-                      {formatSensitive(c.target)}
-                    </td>
-                    <td 
-                      className="py-3 text-right text-muted-foreground"
-                      style={getCellStyles('middle')}
-                    >
-                      {formatSensitive(c.budget)}
-                    </td>
-                    <td 
-                      className={`py-3 text-right ${c.netChange < 0 ? 'text-orange-500' : c.netChange > 0 ? 'text-blue-500' : ''}`}
-                      style={getCellStyles('middle')}
-                    >
-                      <div>{c.netChange > 0 ? '+' : ''}{formatSensitive(c.netChange)}</div>
-                      {pendingDeductionsByCategory[c.name] > 0 && (
-                        <div className="text-[10px] text-yellow-500 font-normal">
-                          (-{formatSensitive(pendingDeductionsByCategory[c.name])})
-                        </div>
-                      )}
-                    </td>
-                    <td 
-                      className={`py-3 pr-2 text-right font-bold ${isNeg ? 'text-orange-500' : 'text-foreground'}`}
-                      style={getCellStyles('last')}
-                    >
-                      <div>{formatSensitive(c.remaining)}</div>
-                      {pendingDeductionsByCategory[c.name] > 0 && (
-                        <div className={`text-[10px] font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
-                          ({formatSensitive(c.remaining - pendingDeductionsByCategory[c.name])})
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+              return (
+                <div 
+                  key={c.name} 
+                  className={`grid grid-cols-[1.8fr_1fr_1.5fr_2fr_2fr_2fr] items-center gap-4 py-3 px-4 rounded-xl border ${highlightClass}`}
+                  style={transitionStyles}
+                >
+                  <div className="flex items-center gap-2 font-bold text-foreground">
+                    <span className={`size-2.5 rounded-full ${categoryColorMap[c.name]?.split(' ')[0] || 'bg-slate-500'}`} />
+                    {c.name}
+                  </div>
+                  <div className="text-muted-foreground font-medium">{(c.allocation * 100).toFixed(0)}%</div>
+                  <div className="text-right font-medium text-foreground">{formatSensitive(c.target)}</div>
+                  <div className="text-right text-muted-foreground font-medium">{formatSensitive(c.budget)}</div>
+                  <div className={`text-right font-medium ${c.netChange < 0 ? 'text-orange-500' : c.netChange > 0 ? 'text-blue-500' : ''}`}>
+                    <div>{c.netChange > 0 ? '+' : ''}{formatSensitive(c.netChange)}</div>
+                    {pendingDeductionsByCategory[c.name] > 0 && (
+                      <div className="text-[10px] text-yellow-500 font-normal">
+                        (-{formatSensitive(pendingDeductionsByCategory[c.name])})
+                      </div>
+                    )}
+                  </div>
+                  <div className={`text-right font-bold ${isNeg ? 'text-orange-500' : 'text-foreground'}`}>
+                    <div>{formatSensitive(c.remaining)}</div>
+                    {pendingDeductionsByCategory[c.name] > 0 && (
+                      <div className={`text-[10px] font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
+                        ({formatSensitive(c.remaining - pendingDeductionsByCategory[c.name])})
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
 
         {/* Mobile View */}
