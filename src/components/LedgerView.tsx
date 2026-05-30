@@ -293,7 +293,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       setAppliedFilters([])
       setAppliedTxTypeFilter(null)
       setCurrentPage(1)
-      runServerFetch({ page: 1, search: '', filters: [], txType: null, pSize: pageSize })
+      setPageSize(100)  // Default 100 for server mode — covers most users' full history on page 1
+      runServerFetch({ page: 1, search: '', filters: [], txType: null, pSize: 100 })
     } else {
       setServerResult(null)
     }
@@ -1040,29 +1041,44 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
       {/* Filter and Search controls */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 bg-card border border-border/60 rounded-2xl shadow-xs">
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <div className="flex-1 md:w-72 relative">
+        {showAllCycles ? (
+          /* Server mode: unified pill search bar */
+          <div className="flex items-center w-full md:w-auto">
+            <div className="flex items-center flex-1 md:w-80 bg-background border border-border rounded-xl overflow-hidden focus-within:ring-1 focus-within:ring-blue-500/60 focus-within:border-blue-500/40 transition duration-200">
+              <Search className="size-4 text-muted-foreground ml-3 shrink-0" />
+              <input
+                type="text"
+                placeholder="Search all history..."
+                value={pendingSearchTerm}
+                onChange={e => setPendingSearchTerm(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleServerSearch() }}
+                className="flex-1 px-2.5 py-2 text-xs bg-transparent border-none outline-none placeholder:text-muted-foreground"
+              />
+              <button
+                onClick={handleServerSearch}
+                disabled={serverIsFetching}
+                className="flex items-center gap-1.5 px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 text-white text-xs font-semibold cursor-pointer transition duration-200 border-l border-blue-700/30 shrink-0 self-stretch"
+              >
+                {serverIsFetching
+                  ? <Loader2 className="size-3.5 animate-spin" />
+                  : <Search className="size-3.5" />}
+                <span>Search</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* Client mode: standard search input */
+          <div className="w-full md:w-72 relative">
             <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder={showAllCycles ? 'Search all history...' : 'Search descriptions, ledger categories...'}
-              value={showAllCycles ? pendingSearchTerm : searchTerm}
-              onChange={e => showAllCycles ? setPendingSearchTerm(e.target.value) : setSearchTerm(e.target.value)}
-              onKeyDown={e => { if (showAllCycles && e.key === 'Enter') handleServerSearch() }}
+              placeholder="Search descriptions, ledger categories..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-4 py-2 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
             />
           </div>
-          {showAllCycles && (
-            <button
-              onClick={handleServerSearch}
-              disabled={serverIsFetching}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold cursor-pointer transition shrink-0"
-            >
-              {serverIsFetching ? <Loader2 className="size-3.5 animate-spin" /> : <Search className="size-3.5" />}
-              Search
-            </button>
-          )}
-        </div>
+        )}
 
         {/* Dropdown Multi-Select Category Filter */}
         <div className="relative ledger-filter-dropdown w-full md:w-auto flex justify-start md:justify-end">
@@ -1163,9 +1179,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   <button
                     onClick={handleApplyFilters}
                     disabled={serverIsFetching}
-                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold cursor-pointer transition"
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-xs cursor-pointer transition duration-200 disabled:opacity-50
+                      bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600
+                      text-white shadow-md shadow-blue-600/20 hover:shadow-blue-600/30"
                   >
-                    {serverIsFetching ? <Loader2 className="size-3.5 animate-spin" /> : <Filter className="size-3.5" />}
+                    {serverIsFetching
+                      ? <Loader2 className="size-3.5 animate-spin" />
+                      : <Filter className="size-3.5" />}
                     Apply Filters
                   </button>
                 </div>
@@ -1392,7 +1412,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               Showing <span className="text-foreground font-semibold">{displayFrom}</span> to{' '}
               <span className="text-foreground font-semibold">{displayTo}</span>{' '}
               of <span className="text-foreground font-semibold">{displayTotal}</span> entries
-              {isServerMode && <span className="text-[9px] text-blue-500 font-bold ml-1">(server)</span>}
             </div>
             
             <div className="flex flex-wrap items-center gap-3">
