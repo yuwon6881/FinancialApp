@@ -5,7 +5,8 @@ import { DashboardView } from './components/DashboardView'
 import { RecurringPaymentsView } from './components/RecurringPaymentsView'
 import { LedgerView } from './components/LedgerView'
 import { LoginView } from './components/LoginView'
-import type { Transaction, RecurringPayment, DashboardData, TransactionCategory } from './types'
+import { WishlistView } from './components/WishlistView'
+import type { Transaction, RecurringPayment, DashboardData, TransactionCategory, WishlistItem } from './types'
 import * as api from './lib/api'
 import { Loader2 } from 'lucide-react'
 import { formatCurrencyVal } from './lib/utils'
@@ -13,11 +14,12 @@ import { formatCurrencyVal } from './lib/utils'
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'))
   const [username, setUsername] = useState<string>(localStorage.getItem('auth_username') || '')
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'recurring' | 'ledger'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'recurring' | 'ledger' | 'wishlist'>('dashboard')
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [recurringPayments, setRecurringPayments] = useState<RecurringPayment[]>([])
   const [categoriesList, setCategoriesList] = useState<TransactionCategory[]>([])
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
+  const [wishlist, setWishlist] = useState<WishlistItem[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
 
@@ -103,11 +105,12 @@ function App() {
     if (!token) return
     setLoading(true)
     try {
-      const [dbData, txs, recs, cats] = await Promise.all([
+      const [dbData, txs, recs, cats, wishes] = await Promise.all([
         api.fetchDashboard(month, year),
         api.fetchTransactions(month, year),
         api.fetchRecurringPayments(),
-        api.fetchCategories()
+        api.fetchCategories(),
+        api.fetchWishlist().catch(() => [])
       ])
       setSelectedMonth(dbData.setting.selectedMonth)
       setSelectedYear(dbData.setting.selectedYear)
@@ -115,6 +118,7 @@ function App() {
       setTransactions(txs)
       setRecurringPayments(recs)
       setCategoriesList(cats)
+      setWishlist(wishes)
       setError(null)
 
       // Sync dark mode from server preference (server wins over localStorage)
@@ -310,6 +314,56 @@ function App() {
     }
   }
 
+  // Wish List modifiers
+  const handleAddWishlistItem = async (newWish: Partial<WishlistItem>) => {
+    try {
+      await api.addWishlistItem(newWish)
+      await loadAll(selectedMonth || undefined, selectedYear || undefined)
+    } catch (err: any) {
+      console.error(err)
+      alert(err.message || 'Error adding wishlist item.')
+    }
+  }
+
+  const handleUpdateWishlistItem = async (id: number, updatedWish: WishlistItem) => {
+    try {
+      await api.updateWishlistItem(id, updatedWish)
+      await loadAll(selectedMonth || undefined, selectedYear || undefined)
+    } catch (err: any) {
+      console.error(err)
+      alert(err.message || 'Error updating wishlist item.')
+    }
+  }
+
+  const handleDeleteWishlistItem = async (id: number) => {
+    try {
+      await api.deleteWishlistItem(id)
+      await loadAll(selectedMonth || undefined, selectedYear || undefined)
+    } catch (err: any) {
+      console.error(err)
+      alert(err.message || 'Error deleting wishlist item.')
+    }
+  }
+
+  const handlePurchaseWishlistItem = async (id: number) => {
+    try {
+      await api.purchaseWishlistItem(id)
+      await loadAll(selectedMonth || undefined, selectedYear || undefined)
+    } catch (err: any) {
+      console.error(err)
+      alert(err.message || 'Error purchasing wishlist item.')
+    }
+  }
+
+  const formatSensitive = (val: number) => {
+    const formatted = formatCurrencyVal(val, dashboardData?.setting?.currency || 'USD')
+    return (
+      <span className={hideSensitive ? 'blur-sm select-none pointer-events-none inline-block transition-[filter] duration-200' : 'transition-[filter] duration-200'}>
+        {formatted}
+      </span>
+    )
+  }
+
   // Calculate Net Worth for Top Nav summary display
   const totalBalance = useMemo(() => {
     if (dashboardData) {
@@ -478,6 +532,21 @@ function App() {
             onClearAllCycles={() => { setLedgerShowAllCycles(false); setAllTransactions([]) }}
             cyclesRange={ledgerCyclesRange}
             currency={dashboardData?.setting?.currency || 'USD'}
+          />
+        )}
+
+        {activeTab === 'wishlist' && (
+          <WishlistView 
+            wishlist={wishlist}
+            rewardsBalance={dashboardData?.categories?.find(c => c.name === 'Rewards')?.remaining ?? 0}
+            rewardsTarget={dashboardData?.categories?.find(c => c.name === 'Rewards')?.target ?? 400}
+            currency={dashboardData?.setting?.currency || 'USD'}
+            hideSensitive={hideSensitive}
+            onAddItem={handleAddWishlistItem}
+            onUpdateItem={handleUpdateWishlistItem}
+            onDeleteItem={handleDeleteWishlistItem}
+            onPurchaseItem={handlePurchaseWishlistItem}
+            formatSensitive={formatSensitive}
           />
         )}
       </main>

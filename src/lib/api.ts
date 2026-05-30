@@ -1,4 +1,4 @@
-import type { Transaction, RecurringPayment, DashboardData, TransactionCategory } from '../types'
+import type { Transaction, RecurringPayment, DashboardData, TransactionCategory, WishlistItem } from '../types'
 
 const API_BASE_URL = import.meta.env.DEV 
   ? 'http://localhost:5000/api' 
@@ -508,6 +508,77 @@ export async function verifyPassword(password: string): Promise<{ verified: bool
   if (!response.ok) {
     throw new Error('Password verification request failed')
   }
+  return response.json()
+}
+
+export async function fetchWishlist(): Promise<WishlistItem[]> {
+  const cachedPromise = queryCache.get<WishlistItem[]>('wishlist')
+  if (cachedPromise) return cachedPromise
+  
+  const promise = (async () => {
+    const response = await fetch(`${API_BASE_URL}/wishlist`, {
+      headers: getHeaders(),
+    })
+    if (!response.ok) {
+      throw new Error('Failed to fetch wishlist')
+    }
+    return response.json()
+  })()
+  
+  queryCache.set('wishlist', promise, 120000)
+  return promise
+}
+
+export async function addWishlistItem(item: Partial<WishlistItem>): Promise<WishlistItem> {
+  const response = await fetch(`${API_BASE_URL}/wishlist`, {
+    method: 'POST',
+    headers: getHeaders({
+      'Content-Type': 'application/json',
+    }),
+    body: JSON.stringify(item),
+  })
+  if (!response.ok) {
+    throw new Error('Failed to create wishlist item')
+  }
+  queryCache.invalidateAll()
+  return response.json()
+}
+
+export async function updateWishlistItem(id: number, item: WishlistItem): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/wishlist/${id}`, {
+    method: 'PUT',
+    headers: getHeaders({
+      'Content-Type': 'application/json',
+    }),
+    body: JSON.stringify(item),
+  })
+  if (!response.ok) {
+    throw new Error('Failed to update wishlist item')
+  }
+  queryCache.invalidateAll()
+}
+
+export async function deleteWishlistItem(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/wishlist/${id}`, {
+    method: 'DELETE',
+    headers: getHeaders(),
+  })
+  if (!response.ok) {
+    throw new Error('Failed to delete wishlist item')
+  }
+  queryCache.invalidateAll()
+}
+
+export async function purchaseWishlistItem(id: number): Promise<{ item: WishlistItem; transaction: Transaction }> {
+  const response = await fetch(`${API_BASE_URL}/wishlist/${id}/purchase`, {
+    method: 'POST',
+    headers: getHeaders(),
+  })
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(errorBody.message || 'Failed to purchase wishlist item')
+  }
+  queryCache.invalidateAll()
   return response.json()
 }
 

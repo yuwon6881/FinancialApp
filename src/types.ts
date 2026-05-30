@@ -108,3 +108,15 @@ export interface TransactionCategory {
   id: string
   name: string
 }
+
+export interface WishlistItem {
+  id: number
+  name: string
+  price: number
+  linkUrl?: string
+  priority: string // High, Medium, Low
+  isPurchased: boolean
+  purchasedAt?: string
+  createdAt: string
+  isActive: boolean
+}

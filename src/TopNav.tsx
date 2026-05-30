@@ -18,13 +18,14 @@ import {
   EyeOff,
   Bell,
   Moon,
-  Sun
+  Sun,
+  Gift
 } from 'lucide-react'
 import { formatCurrencyVal } from './lib/utils'
 
 interface TopNavProps {
-  activeTab: 'dashboard' | 'recurring' | 'ledger'
-  onTabChange: (tab: 'dashboard' | 'recurring' | 'ledger') => void
+  activeTab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist'
+  onTabChange: (tab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist') => void
   totalBalance: number
   onPostQuickTransaction: () => void
   hideSensitive: boolean
@@ -303,6 +304,16 @@ const TopNav: React.FC<TopNavProps> = ({
 
                   <MenubarSeparator className="my-1 border-t border-border/30" />
                   
+                  <MenubarItem 
+                    onClick={() => onTabChange('wishlist')}
+                    className="flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground font-semibold"
+                  >
+                    <Gift className="size-3.5 text-pink-500" />
+                    <span>Wish List</span>
+                  </MenubarItem>
+
+                  <MenubarSeparator className="my-1 border-t border-border/30" />
+                  
                   {/* Settings toggles in dropdown */}
                   <MenubarItem 
                     onClick={onToggleHideSensitive}
@@ -343,7 +354,7 @@ const TopNav: React.FC<TopNavProps> = ({
       className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/95 backdrop-blur-md select-none shadow-[0_-4px_12px_rgba(0,0,0,0.05)]"
       style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))', paddingTop: '10px' }}
     >
-      <div className="grid grid-cols-3 w-full max-w-md mx-auto justify-items-center">
+      <div className="grid grid-cols-4 w-full max-w-md mx-auto justify-items-center">
         <button
           onClick={() => onTabChange('dashboard')}
           className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
@@ -370,6 +381,15 @@ const TopNav: React.FC<TopNavProps> = ({
         >
           <Wallet className="size-4.5 mx-auto" />
           <span>Ledger</span>
+        </button>
+        <button
+          onClick={() => onTabChange('wishlist')}
+          className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
+            activeTab === 'wishlist' ? 'text-pink-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Gift className="size-4.5 mx-auto" />
+          <span>Wishlist</span>
         </button>
       </div>
     </div>
