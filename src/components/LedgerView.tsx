@@ -395,7 +395,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       onUpdateTransaction?.(editingTxId, {
         description,
         amount: finalAmount,
-        category: txType === 'transfer' ? 'Other' : category,
+        category: txType === 'transfer' ? 'Transfer' : category,
         ledgerCategory: finalLedgerCategory,
         date
       })
@@ -403,7 +403,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       onAddTransaction({
         description,
         amount: finalAmount,
-        category: txType === 'transfer' ? 'Other' : category,
+        category: txType === 'transfer' ? 'Transfer' : category,
         ledgerCategory: finalLedgerCategory,
         date
       })
