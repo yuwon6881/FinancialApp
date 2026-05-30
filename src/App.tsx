@@ -106,9 +106,12 @@ function App() {
   )
 
   // Fetch initial ledger and dashboard statistics
-  async function loadAll(month?: string, year?: number) {
+  async function loadAll(month?: string, year?: number, forceLoading = false) {
     if (!token) return
-    setLoading(true)
+    const isBackground = transactions.length > 0 && !forceLoading
+    if (!isBackground) {
+      setLoading(true)
+    }
     try {
       const [dbData, txs, recs, cats, wishes] = await Promise.all([
         api.fetchDashboard(month, year),
@@ -145,7 +148,9 @@ function App() {
         setError('Could not connect to the database API server. Running in offline view mode.')
       }
     } finally {
-      setLoading(false)
+      if (!isBackground) {
+        setLoading(false)
+      }
     }
   }
 
@@ -183,7 +188,7 @@ function App() {
   // Period / Settings changes
   const handleSelectPeriod = async (month: string, year: number) => {
     try {
-      await loadAll(month, year)
+      await loadAll(month, year, true)
     } catch (err) {
       console.error(err)
       alert('Error updating active month.')
