@@ -292,7 +292,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
 
                     {/* Predictor Ribbon */}
                     <div className="p-3 bg-muted/40 rounded-xl border border-border/30 flex items-start gap-2.5">
-                      <TrendingUp className={`size-4 mt-0.5 shrink-0 ${canAfford ? 'text-green-500' : 'text-pink-500'}`} />
+                      {!canAfford && <TrendingUp className="size-4 mt-0.5 shrink-0 text-pink-500" />}
                       <div className="text-xs">
                         <span className="font-bold text-foreground block">
                           {getTimelineString(activeItem.price)}

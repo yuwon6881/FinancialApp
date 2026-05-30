@@ -490,6 +490,7 @@ function App() {
             onConfirmSubscription={handleConfirmSubscription}
             onDeletePayment={handleDeletePayment}
             onNavigateToLedger={handleNavigateToLedger}
+            wishlist={wishlist}
           />
         )}
 

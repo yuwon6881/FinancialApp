@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react'
-import type { DashboardData, TransactionCategory, Transaction } from '../types'
+import type { DashboardData, TransactionCategory, Transaction, WishlistItem } from '../types'
 import { 
   Wallet, 
   ArrowUpRight, 
@@ -8,7 +8,8 @@ import {
   Settings,
   Save,
   AlertCircle,
-  TrendingUp as TrendLineIcon
+  TrendingUp as TrendLineIcon,
+  PiggyBank
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
 import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
@@ -27,7 +28,7 @@ interface DashboardViewProps {
     cycleDay: number
     currency?: string
   }) => void
-  onNavigate: (tab: 'dashboard' | 'recurring' | 'ledger') => void
+  onNavigate: (tab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist') => void
   hideSensitive: boolean
   categoriesList: TransactionCategory[]
   onAddCategory: (category: Omit<TransactionCategory, 'id'>) => void
@@ -35,6 +36,7 @@ interface DashboardViewProps {
   onConfirmSubscription: (noti: any, paidDate: string) => void
   onDeletePayment: (id: string) => void
   onNavigateToLedger?: (options: { category?: string | null; date?: string | null; txType?: 'inflow' | 'outflow' | null; range?: 'monthly' | '3month' | '6month' | 'yearly' }) => void
+  wishlist?: WishlistItem[]
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ 
@@ -49,11 +51,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onDeleteCategory,
   onConfirmSubscription,
   onDeletePayment,
-  onNavigateToLedger
+  onNavigateToLedger,
+  wishlist = []
 }) => {
   const [showSettings, setShowSettings] = useState(false)
   const [targetInput, setTargetInput] = useState('')
   const [isHoveringLiquidNetWorth, setIsHoveringLiquidNetWorth] = useState(false)
+
+  // Active wishlist item for dashboard progress display
+  const activeWishlistItem = useMemo(() => {
+    return wishlist.find(w => w.isActive && !w.isPurchased) || 
+           wishlist.filter(w => !w.isPurchased).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
+  }, [wishlist])
   
   // Custom Allocations & Cycle setting states
   const [essentialsAllocInput, setEssentialsAllocInput] = useState('')
@@ -795,8 +804,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* Grid of Metric Cards (Now 3 columns) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Grid of Metric Cards */}
+      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${activeWishlistItem ? '4' : '3'} gap-4`}>
         {/* Total Balance (Liquid Only) */}
         <div 
           onMouseEnter={() => setIsHoveringLiquidNetWorth(true)}
@@ -855,6 +864,51 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             Active committed bills: <span className="font-semibold text-orange-500">{formatSensitive(stats.activeRecurringTotal)}</span>/mo
           </p>
         </div>
+
+        {/* Wishlist Goal Card (Shown when active goal exists) */}
+        {activeWishlistItem && (() => {
+          const rewardsCategory = categories.find(c => c.name === 'Rewards')
+          const rewardsBalance = rewardsCategory?.remaining ?? 0
+          const pct = Math.min(100, (rewardsBalance / activeWishlistItem.price) * 100)
+          const canAfford = rewardsBalance >= activeWishlistItem.price
+
+          return (
+            <div 
+              onClick={() => onNavigate('wishlist')}
+              className={`p-6 rounded-2xl bg-card border shadow-xs transition-all duration-300 group cursor-pointer ${
+                canAfford 
+                  ? 'border-green-500/50 hover:border-green-500/70 shadow-md shadow-green-500/5 ring-1 ring-green-500/10' 
+                  : 'border-border/60 hover:border-pink-500/30'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-muted-foreground truncate max-w-[70%]">Goal: {activeWishlistItem.name}</span>
+                <div className={`p-2 rounded-lg ${canAfford ? 'bg-green-500/10 text-green-500' : 'bg-pink-500/10 text-pink-500'} group-hover:scale-110 transition-transform duration-300`}>
+                  <PiggyBank className="size-4" />
+                </div>
+              </div>
+              <div className="text-2xl font-black text-foreground">
+                {pct.toFixed(0)}%
+              </div>
+              
+              <div className="w-full bg-muted rounded-full h-2.5 mt-2 overflow-hidden flex">
+                <div 
+                  className={`h-full transition-all duration-500 rounded-full ${
+                    canAfford 
+                      ? 'bg-green-500' 
+                      : 'bg-gradient-to-r from-pink-500 to-purple-500'
+                  }`}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+
+              <p className="text-[10px] text-muted-foreground mt-2 flex justify-between">
+                <span>{formatSensitive(rewardsBalance)} saved</span>
+                <span className="font-semibold text-foreground">{formatSensitive(activeWishlistItem.price)}</span>
+              </p>
+            </div>
+          )
+        })()}
       </div>
 
       {/* Financial Plan Metric Cards */}
