@@ -658,17 +658,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <tbody className="divide-y divide-border/30 text-foreground font-medium">
               {categories.map(c => {
                 const isNeg = c.remaining < 0
-                const isHighlighted = isHoveringLiquidNetWorth && c.name !== 'Growth'
+                const isMuted = isHoveringLiquidNetWorth && c.name === 'Growth'
                 return (
-                  <tr key={c.name} className={`hover:bg-muted/10 transition-all duration-300 ${isHighlighted ? 'bg-blue-500/5 dark:bg-blue-950/20' : ''}`}>
-                    <td className={`py-3 flex items-center gap-1.5 font-bold transition-all duration-300 ${isHighlighted ? 'border-l-2 border-blue-500 pl-2 bg-blue-500/10' : ''}`}>
+                  <tr 
+                    key={c.name} 
+                    className={`hover:bg-muted/10 transition-all duration-300 ${
+                      isMuted ? 'opacity-30 scale-[0.99]' : 'opacity-100'
+                    }`}
+                  >
+                    <td className="py-3 flex items-center gap-1.5 font-bold">
                       <span className={`size-2 rounded-full ${categoryColorMap[c.name]?.split(' ')[0] || 'bg-slate-500'}`} />
                       {c.name}
                     </td>
-                    <td className={`py-3 text-muted-foreground transition-all duration-300 ${isHighlighted ? 'bg-blue-500/10' : ''}`}>{(c.allocation * 100).toFixed(0)}%</td>
-                    <td className={`py-3 text-right transition-all duration-300 ${isHighlighted ? 'bg-blue-500/10' : ''}`}>{formatSensitive(c.target)}</td>
-                    <td className={`py-3 text-right text-muted-foreground transition-all duration-300 ${isHighlighted ? 'bg-blue-500/10' : ''}`}>{formatSensitive(c.budget)}</td>
-                    <td className={`py-3 text-right transition-all duration-300 ${isHighlighted ? 'bg-blue-500/10' : ''} ${c.netChange < 0 ? 'text-orange-500' : c.netChange > 0 ? 'text-blue-500' : ''}`}>
+                    <td className="py-3 text-muted-foreground">{(c.allocation * 100).toFixed(0)}%</td>
+                    <td className="py-3 text-right">{formatSensitive(c.target)}</td>
+                    <td className="py-3 text-right text-muted-foreground">{formatSensitive(c.budget)}</td>
+                    <td className={`py-3 text-right ${c.netChange < 0 ? 'text-orange-500' : c.netChange > 0 ? 'text-blue-500' : ''}`}>
                       <div>{c.netChange > 0 ? '+' : ''}{formatSensitive(c.netChange)}</div>
                       {pendingDeductionsByCategory[c.name] > 0 && (
                         <div className="text-[10px] text-yellow-500 font-normal">
@@ -676,7 +681,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         </div>
                       )}
                     </td>
-                    <td className={`py-3 text-right font-bold transition-all duration-300 ${isHighlighted ? 'bg-blue-500/10' : ''} ${isNeg ? 'text-orange-500' : 'text-foreground'}`}>
+                    <td className={`py-3 text-right font-bold ${isNeg ? 'text-orange-500' : 'text-foreground'}`}>
                       <div>{formatSensitive(c.remaining)}</div>
                       {pendingDeductionsByCategory[c.name] > 0 && (
                         <div className={`text-[10px] font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
@@ -695,14 +700,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="block md:hidden space-y-4">
           {categories.map(c => {
             const isNeg = c.remaining < 0
-            const isHighlighted = isHoveringLiquidNetWorth && c.name !== 'Growth'
+            const isMuted = isHoveringLiquidNetWorth && c.name === 'Growth'
             return (
               <div 
                 key={c.name} 
-                className={`p-4 rounded-xl border transition-all duration-300 bg-background/50 space-y-3 shadow-xs ${
-                  isHighlighted 
-                    ? 'border-blue-500 ring-2 ring-blue-500/25 bg-blue-500/5 dark:bg-blue-950/20 scale-[1.01]' 
-                    : 'border-border'
+                className={`p-4 rounded-xl border border-border bg-background/50 space-y-3 shadow-xs transition-all duration-300 ${
+                  isMuted ? 'opacity-30 scale-95' : 'opacity-100 scale-100'
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -842,7 +845,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             const currentPct = Math.max(0, Math.min(1, stats.growthPercentAchieved))
             const pendingGrowth = pendingDeductionsByCategory['Growth'] || 0
             const projectedRemaining = Math.max(0, (growthCat?.remaining ?? 0) - pendingGrowth)
-            const atRiskPct = Math.max(0, Math.min(currentPct, pendingGrowth / growthTarget))
+            const atRiskPct = pendingGrowth > 0 ? Math.max(0, Math.min(currentPct, pendingGrowth / growthTarget)) : 0
             const safePct = currentPct - atRiskPct
             return (
               <div className="space-y-2 p-4 rounded-xl bg-muted/30 border border-border/40">
@@ -850,7 +853,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span className="text-muted-foreground">Growth Achieved</span>
                   <span className="text-foreground">
                     {(currentPct * 100).toFixed(1)}%
-                    {atRiskPct > 0 && (
+                    {pendingGrowth > 0 && atRiskPct > 0 && (
                       <span className="text-orange-500 ml-1">→ {((currentPct - atRiskPct) * 100).toFixed(1)}%</span>
                     )}
                   </span>
@@ -860,7 +863,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     className="bg-blue-500 h-full transition-all duration-500"
                     style={{ width: `${safePct * 100}%` }}
                   />
-                  {atRiskPct > 0 && (
+                  {pendingGrowth > 0 && atRiskPct > 0 && (
                     <div
                       className="bg-orange-500 h-full transition-all duration-500"
                       style={{ width: `${atRiskPct * 100}%` }}
@@ -869,7 +872,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
                 <span className="text-[10px] text-muted-foreground block leading-relaxed">
                   Plan Target: Deposit <strong>{(activeSettings.growthAlloc * 100).toFixed(0)}%</strong> of income ({formatSensitive(growthTarget)}) into savings this cycle.
-                  {atRiskPct > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(projectedRemaining)}</span>}
+                  {pendingGrowth > 0 && atRiskPct > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(projectedRemaining)}</span>}
                 </span>
               </div>
             )
@@ -882,15 +885,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             const currentPct = Math.max(0, Math.min(1, stats.essentialsPercentRemaining))
             const pendingEss = pendingDeductionsByCategory['Essentials'] || 0
             const projectedRemaining = Math.max(0, (essentialsCat?.remaining ?? 0) - pendingEss)
-            const projectedPct = Math.max(0, projectedRemaining / essTarget)
-            const atRiskPct = Math.max(0, currentPct - projectedPct)
+            const projectedPct = pendingEss > 0 ? Math.max(0, projectedRemaining / essTarget) : currentPct
+            const atRiskPct = pendingEss > 0 ? Math.max(0, currentPct - projectedPct) : 0
             return (
               <div className="space-y-2 p-4 rounded-xl bg-muted/30 border border-border/40">
                 <div className="flex justify-between text-xs font-semibold">
                   <span className="text-muted-foreground">Essentials Remaining</span>
                   <span className="text-foreground">
                     {(currentPct * 100).toFixed(1)}%
-                    {atRiskPct > 0 && (
+                    {pendingEss > 0 && atRiskPct > 0 && (
                       <span className="text-orange-500 ml-1">→ {(projectedPct * 100).toFixed(1)}%</span>
                     )}
                   </span>
@@ -900,7 +903,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     className="bg-blue-500 h-full transition-all duration-500"
                     style={{ width: `${projectedPct * 100}%` }}
                   />
-                  {atRiskPct > 0 && (
+                  {pendingEss > 0 && atRiskPct > 0 && (
                     <div
                       className="bg-orange-500 h-full transition-all duration-500"
                       style={{ width: `${atRiskPct * 100}%` }}
@@ -909,7 +912,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
                 <span className="text-[10px] text-muted-foreground block leading-relaxed">
                   Starts at 100% of cycle target ({formatSensitive(essTarget)}). Decreases with each essentials spend.
-                  {atRiskPct > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(projectedRemaining)}</span>}
+                  {pendingEss > 0 && atRiskPct > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(projectedRemaining)}</span>}
                 </span>
               </div>
             )
@@ -923,15 +926,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             const pendingStab = pendingDeductionsByCategory['Stability'] || 0
             const currentBalance = stabilityCat?.remaining ?? 0
             const projectedBalance = Math.max(0, currentBalance - pendingStab)
-            const projectedPct = Math.max(0, Math.min(1, projectedBalance / stabilityTarget))
-            const atRiskPct = Math.max(0, currentPct - projectedPct)
+            const projectedPct = pendingStab > 0 ? Math.max(0, Math.min(1, projectedBalance / stabilityTarget)) : currentPct
+            const atRiskPct = pendingStab > 0 ? Math.max(0, currentPct - projectedPct) : 0
             return (
               <div className="space-y-2 p-4 rounded-xl bg-muted/30 border border-border/40">
                 <div className="flex justify-between text-xs font-semibold">
                   <span className="text-muted-foreground">Stability Cap Reached</span>
                   <span className="text-foreground">
                     {(currentPct * 100).toFixed(1)}%
-                    {atRiskPct > 0 && (
+                    {pendingStab > 0 && atRiskPct > 0 && (
                       <span className="text-orange-500 ml-1">→ {(projectedPct * 100).toFixed(1)}%</span>
                     )}
                   </span>
@@ -941,7 +944,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     className="bg-blue-500 h-full transition-all duration-500"
                     style={{ width: `${projectedPct * 100}%` }}
                   />
-                  {atRiskPct > 0 && (
+                  {pendingStab > 0 && atRiskPct > 0 && (
                     <div
                       className="bg-orange-500 h-full transition-all duration-500"
                       style={{ width: `${atRiskPct * 100}%` }}
@@ -950,7 +953,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
                 <span className="text-[10px] text-muted-foreground block leading-relaxed">
                   Target Stability Fund goal is <strong>{formatSensitive(activeSettings.targetStabilityFund)}</strong>. Currently at {formatSensitive(currentBalance)}.
-                  {atRiskPct > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(projectedBalance)}</span>}
+                  {pendingStab > 0 && atRiskPct > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(projectedBalance)}</span>}
                 </span>
               </div>
             )
