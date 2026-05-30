@@ -336,7 +336,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   const formatSensitive = (val: number) => {
     return (
-      <span className={hideSensitive ? 'blur-sm select-none pointer-events-none inline-block transition-all duration-200' : 'transition-all duration-200'}>
+      <span className={hideSensitive ? 'blur-sm select-none pointer-events-none inline-block transition-[filter] duration-200' : 'transition-[filter] duration-200'}>
         {formatCurrency(val)}
       </span>
     )

@@ -253,7 +253,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const formatSensitive = (val: number) => {
     return (
-      <span className={hideSensitive ? 'blur-sm select-none pointer-events-none inline-block transition-all duration-200' : 'transition-all duration-200'}>
+      <span className={hideSensitive ? 'blur-sm select-none pointer-events-none inline-block transition-[filter] duration-200' : 'transition-[filter] duration-200'}>
         {formatCurrency(val)}
       </span>
     )
@@ -273,7 +273,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const formatCompactSensitive = (val: number) => {
     return (
-      <span className={hideSensitive ? 'blur-sm select-none pointer-events-none inline-block transition-all duration-200' : 'transition-all duration-200'}>
+      <span className={hideSensitive ? 'blur-sm select-none pointer-events-none inline-block transition-[filter] duration-200' : 'transition-[filter] duration-200'}>
         {formatCompactNetValue(val)}
       </span>
     )
@@ -658,22 +658,79 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <tbody className="divide-y divide-border/30 text-foreground font-medium">
               {categories.map(c => {
                 const isNeg = c.remaining < 0
-                const isMuted = isHoveringLiquidNetWorth && c.name === 'Growth'
+                const isHighlighted = isHoveringLiquidNetWorth && c.name !== 'Growth'
+                
+                // Color mapping for box-shadow on highlighted categories
+                let shadowColor = ''
+                let highlightBg = ''
+                if (isHighlighted) {
+                  if (c.name === 'Essentials') {
+                    shadowColor = 'rgba(14, 165, 233, 0.6)' // sky-500/60
+                    highlightBg = 'rgba(14, 165, 233, 0.04)' // bg-sky-500/4
+                  } else if (c.name === 'Stability') {
+                    shadowColor = 'rgba(20, 184, 166, 0.6)' // teal-500/60
+                    highlightBg = 'rgba(20, 184, 166, 0.04)' // bg-teal-500/4
+                  } else if (c.name === 'Rewards') {
+                    shadowColor = 'rgba(236, 72, 153, 0.6)' // pink-500/60
+                    highlightBg = 'rgba(236, 72, 153, 0.04)' // bg-pink-500/4
+                  }
+                }
+
+                const getCellStyles = (position: 'first' | 'middle' | 'last'): React.CSSProperties => {
+                  if (!isHighlighted) {
+                    return { transition: 'background-color 300ms, box-shadow 300ms' }
+                  }
+                  
+                  let boxShadow = ''
+                  if (position === 'first') {
+                    boxShadow = `inset 0 2px 0 0 ${shadowColor}, inset 0 -2px 0 0 ${shadowColor}, inset 2px 0 0 0 ${shadowColor}`
+                  } else if (position === 'last') {
+                    boxShadow = `inset 0 2px 0 0 ${shadowColor}, inset 0 -2px 0 0 ${shadowColor}, inset -2px 0 0 0 ${shadowColor}`
+                  } else {
+                    boxShadow = `inset 0 2px 0 0 ${shadowColor}, inset 0 -2px 0 0 ${shadowColor}`
+                  }
+                  
+                  return {
+                    boxShadow,
+                    backgroundColor: highlightBg,
+                    transition: 'background-color 300ms, box-shadow 300ms'
+                  }
+                }
+
                 return (
                   <tr 
                     key={c.name} 
-                    className={`hover:bg-muted/10 transition-all duration-300 ${
-                      isMuted ? 'opacity-30 scale-[0.99]' : 'opacity-100'
-                    }`}
+                    className="hover:bg-muted/10"
                   >
-                    <td className="py-3 flex items-center gap-1.5 font-bold">
+                    <td 
+                      className="py-3 pl-2 flex items-center gap-1.5 font-bold"
+                      style={getCellStyles('first')}
+                    >
                       <span className={`size-2 rounded-full ${categoryColorMap[c.name]?.split(' ')[0] || 'bg-slate-500'}`} />
                       {c.name}
                     </td>
-                    <td className="py-3 text-muted-foreground">{(c.allocation * 100).toFixed(0)}%</td>
-                    <td className="py-3 text-right">{formatSensitive(c.target)}</td>
-                    <td className="py-3 text-right text-muted-foreground">{formatSensitive(c.budget)}</td>
-                    <td className={`py-3 text-right ${c.netChange < 0 ? 'text-orange-500' : c.netChange > 0 ? 'text-blue-500' : ''}`}>
+                    <td 
+                      className="py-3 text-muted-foreground"
+                      style={getCellStyles('middle')}
+                    >
+                      {(c.allocation * 100).toFixed(0)}%
+                    </td>
+                    <td 
+                      className="py-3 text-right"
+                      style={getCellStyles('middle')}
+                    >
+                      {formatSensitive(c.target)}
+                    </td>
+                    <td 
+                      className="py-3 text-right text-muted-foreground"
+                      style={getCellStyles('middle')}
+                    >
+                      {formatSensitive(c.budget)}
+                    </td>
+                    <td 
+                      className={`py-3 text-right ${c.netChange < 0 ? 'text-orange-500' : c.netChange > 0 ? 'text-blue-500' : ''}`}
+                      style={getCellStyles('middle')}
+                    >
                       <div>{c.netChange > 0 ? '+' : ''}{formatSensitive(c.netChange)}</div>
                       {pendingDeductionsByCategory[c.name] > 0 && (
                         <div className="text-[10px] text-yellow-500 font-normal">
@@ -681,7 +738,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         </div>
                       )}
                     </td>
-                    <td className={`py-3 text-right font-bold ${isNeg ? 'text-orange-500' : 'text-foreground'}`}>
+                    <td 
+                      className={`py-3 pr-2 text-right font-bold ${isNeg ? 'text-orange-500' : 'text-foreground'}`}
+                      style={getCellStyles('last')}
+                    >
                       <div>{formatSensitive(c.remaining)}</div>
                       {pendingDeductionsByCategory[c.name] > 0 && (
                         <div className={`text-[10px] font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
@@ -700,13 +760,31 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="block md:hidden space-y-4">
           {categories.map(c => {
             const isNeg = c.remaining < 0
-            const isMuted = isHoveringLiquidNetWorth && c.name === 'Growth'
+            const isHighlighted = isHoveringLiquidNetWorth && c.name !== 'Growth'
+            
+            let highlightClass = 'border-border bg-background/50'
+            let transitionStyles: React.CSSProperties = {
+              transition: 'opacity 300ms, transform 300ms'
+            }
+            
+            if (isHighlighted) {
+              transitionStyles = {
+                transition: 'opacity 300ms, transform 300ms, border-color 300ms, background-color 300ms, box-shadow 300ms'
+              }
+              if (c.name === 'Essentials') {
+                highlightClass = 'border-sky-500/60 ring-2 ring-sky-500/20 bg-sky-500/[0.02]'
+              } else if (c.name === 'Stability') {
+                highlightClass = 'border-teal-500/60 ring-2 ring-teal-500/20 bg-teal-500/[0.02]'
+              } else if (c.name === 'Rewards') {
+                highlightClass = 'border-pink-500/60 ring-2 ring-pink-500/20 bg-pink-500/[0.02]'
+              }
+            }
+
             return (
               <div 
                 key={c.name} 
-                className={`p-4 rounded-xl border border-border bg-background/50 space-y-3 shadow-xs transition-all duration-300 ${
-                  isMuted ? 'opacity-30 scale-95' : 'opacity-100 scale-100'
-                }`}
+                className={`p-4 rounded-xl border space-y-3 shadow-xs ${highlightClass}`}
+                style={transitionStyles}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-bold text-sm">
@@ -853,7 +931,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span className="text-muted-foreground">Growth Achieved</span>
                   <span className="text-foreground">
                     {(currentPct * 100).toFixed(1)}%
-                    {pendingGrowth > 0 && atRiskPct > 0 && (
+                    {pendingGrowth > 0 && (
                       <span className="text-orange-500 ml-1">→ {((currentPct - atRiskPct) * 100).toFixed(1)}%</span>
                     )}
                   </span>
@@ -872,7 +950,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
                 <span className="text-[10px] text-muted-foreground block leading-relaxed">
                   Plan Target: Deposit <strong>{(activeSettings.growthAlloc * 100).toFixed(0)}%</strong> of income ({formatSensitive(growthTarget)}) into savings this cycle.
-                  {pendingGrowth > 0 && atRiskPct > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(projectedRemaining)}</span>}
+                  {pendingGrowth > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(projectedRemaining)}</span>}
                 </span>
               </div>
             )
@@ -893,7 +971,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span className="text-muted-foreground">Essentials Remaining</span>
                   <span className="text-foreground">
                     {(currentPct * 100).toFixed(1)}%
-                    {pendingEss > 0 && atRiskPct > 0 && (
+                    {pendingEss > 0 && (
                       <span className="text-orange-500 ml-1">→ {(projectedPct * 100).toFixed(1)}%</span>
                     )}
                   </span>
@@ -912,7 +990,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
                 <span className="text-[10px] text-muted-foreground block leading-relaxed">
                   Starts at 100% of cycle target ({formatSensitive(essTarget)}). Decreases with each essentials spend.
-                  {pendingEss > 0 && atRiskPct > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(projectedRemaining)}</span>}
+                  {pendingEss > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(projectedRemaining)}</span>}
                 </span>
               </div>
             )
@@ -934,7 +1012,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span className="text-muted-foreground">Stability Cap Reached</span>
                   <span className="text-foreground">
                     {(currentPct * 100).toFixed(1)}%
-                    {pendingStab > 0 && atRiskPct > 0 && (
+                    {pendingStab > 0 && (
                       <span className="text-orange-500 ml-1">→ {(projectedPct * 100).toFixed(1)}%</span>
                     )}
                   </span>
@@ -953,7 +1031,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
                 <span className="text-[10px] text-muted-foreground block leading-relaxed">
                   Target Stability Fund goal is <strong>{formatSensitive(activeSettings.targetStabilityFund)}</strong>. Currently at {formatSensitive(currentBalance)}.
-                  {pendingStab > 0 && atRiskPct > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(projectedBalance)}</span>}
+                  {pendingStab > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(projectedBalance)}</span>}
                 </span>
               </div>
             )
