@@ -13,6 +13,7 @@ import {
   Edit
 } from 'lucide-react'
 import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
+import { CustomSelect } from './ui/CustomSelect'
 
 interface RecurringPaymentsViewProps {
   payments: RecurringPayment[]
@@ -213,15 +214,12 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
 
             <div className="space-y-1">
               <label className="text-xs font-semibold text-muted-foreground">Budget Category</label>
-              <select
+              <CustomSelect
                 value={category || (categories[0]?.name || '')}
-                onChange={e => setCategory(e.target.value)}
-                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
-              >
-                {categories.map(c => (
-                  <option key={c.id} value={c.name}>{c.name}</option>
-                ))}
-              </select>
+                onChange={val => setCategory(val)}
+                options={categories.map(c => ({ value: c.name, label: c.name }))}
+                className="w-full"
+              />
             </div>
 
             <div className="space-y-1">
@@ -237,16 +235,17 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
 
             <div className="space-y-1">
               <label className="text-xs font-semibold text-muted-foreground">Ledger Category</label>
-              <select
+              <CustomSelect
                 value={ledgerCategory}
-                onChange={e => setLedgerCategory(e.target.value as any)}
-                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
-              >
-                <option value="Essentials">Essentials</option>
-                <option value="Growth">Growth</option>
-                <option value="Stability">Stability</option>
-                <option value="Rewards">Rewards</option>
-              </select>
+                onChange={val => setLedgerCategory(val)}
+                options={[
+                  { value: 'Essentials', label: 'Essentials' },
+                  { value: 'Growth', label: 'Growth' },
+                  { value: 'Stability', label: 'Stability' },
+                  { value: 'Rewards', label: 'Rewards' }
+                ]}
+                className="w-full"
+              />
             </div>
 
             <div className="space-y-1">

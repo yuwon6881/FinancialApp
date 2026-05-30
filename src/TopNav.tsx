@@ -19,7 +19,7 @@ import {
   Bell,
   Moon,
   Sun,
-  Gift
+  PiggyBank
 } from 'lucide-react'
 import { formatCurrencyVal } from './lib/utils'
 
@@ -138,6 +138,17 @@ const TopNav: React.FC<TopNavProps> = ({
             >
               Ledger
             </button>
+            <button
+              onClick={() => onTabChange('wishlist')}
+              className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'wishlist'
+                  ? 'bg-card text-foreground shadow-xs border border-border/10 font-bold scale-[1.02]'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+              }`}
+            >
+              <PiggyBank className="size-3.5 text-pink-500" />
+              <span>Wishlist</span>
+            </button>
           </nav>
         </div>
 
@@ -152,6 +163,20 @@ const TopNav: React.FC<TopNavProps> = ({
               {formatCurrency(totalBalance)}
             </span>
           </div>
+
+          {/* Quick Wish List Shortcut */}
+          <button
+            onClick={() => onTabChange('wishlist')}
+            className={`hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl border select-none shrink-0 cursor-pointer transition-all duration-150 ${
+              activeTab === 'wishlist'
+                ? 'bg-pink-500/10 border-pink-500/30 text-pink-500 font-bold scale-[1.02]'
+                : 'bg-card hover:bg-muted/30 border-border/60 text-muted-foreground hover:text-foreground'
+            }`}
+            title="Wish List"
+          >
+            <PiggyBank className="size-3.5 text-pink-500" />
+            <span className="hidden xl:inline text-[10px] font-bold uppercase tracking-wider">Wish List</span>
+          </button>
 
 
 
@@ -304,16 +329,6 @@ const TopNav: React.FC<TopNavProps> = ({
 
                   <MenubarSeparator className="my-1 border-t border-border/30" />
                   
-                  <MenubarItem 
-                    onClick={() => onTabChange('wishlist')}
-                    className="flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground font-semibold"
-                  >
-                    <Gift className="size-3.5 text-pink-500" />
-                    <span>Wish List</span>
-                  </MenubarItem>
-
-                  <MenubarSeparator className="my-1 border-t border-border/30" />
-                  
                   {/* Settings toggles in dropdown */}
                   <MenubarItem 
                     onClick={onToggleHideSensitive}
@@ -388,7 +403,7 @@ const TopNav: React.FC<TopNavProps> = ({
             activeTab === 'wishlist' ? 'text-pink-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          <Gift className="size-4.5 mx-auto" />
+          <PiggyBank className="size-4.5 mx-auto" />
           <span>Wishlist</span>
         </button>
       </div>

@@ -388,31 +388,32 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-muted-foreground">Dashboard Currency</label>
-                <select
+                <CustomSelect
                   value={currencyInput}
-                  onChange={e => setCurrencyInput(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
-                >
-                  <option value="USD">USD ($)</option>
-                  <option value="MYR">MYR (RM)</option>
-                  <option value="CNY">CNY (¥)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="GBP">GBP (£)</option>
-                  <option value="SGD">SGD (S$)</option>
-                </select>
+                  onChange={val => setCurrencyInput(val)}
+                  options={[
+                    { value: 'USD', label: 'USD ($)' },
+                    { value: 'MYR', label: 'MYR (RM)' },
+                    { value: 'CNY', label: 'CNY (¥)' },
+                    { value: 'EUR', label: 'EUR (€)' },
+                    { value: 'GBP', label: 'GBP (£)' },
+                    { value: 'SGD', label: 'SGD (S$)' }
+                  ]}
+                  className="w-full"
+                />
               </div>
 
               <div className="space-y-1 md:col-span-2">
                 <label className="text-xs font-semibold text-muted-foreground">Cycle Start Date (Day of Month)</label>
-                <select
-                  value={cycleDayInput}
-                  onChange={e => setCycleDayInput(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
-                >
-                  {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
-                    <option key={d} value={d}>{d}{GetDayWithSuffix(d)}</option>
-                  ))}
-                </select>
+                <CustomSelect
+                  value={Number(cycleDayInput)}
+                  onChange={val => setCycleDayInput(val.toString())}
+                  options={Array.from({ length: 31 }, (_, i) => {
+                    const d = i + 1;
+                    return { value: d, label: `${d}${GetDayWithSuffix(d)}` };
+                  })}
+                  className="w-full"
+                />
               </div>
             </div>
 

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import type { WishlistItem } from '../types'
+import { CustomSelect } from './ui/CustomSelect'
 import { 
   Gift, 
   Plus, 
@@ -97,28 +98,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     return `Unlock in ~${roundedMonths} Months (${formattedDate})`
   }
 
-  const getDynamicTip = (itemPrice: number) => {
-    const remaining = itemPrice - rewardsBalance
-    if (remaining <= 0) return 'You have saved up enough! Go ahead and claim your reward.'
-    
-    // Suggest dynamic micro-sacrifice values based on currency
-    const isRM = currency === 'RM' || currency === 'MYR'
-    const mealVal = isRM ? 40 : 15
-    const coffeeVal = isRM ? 15 : 5
-    
-    if (remaining <= coffeeVal * 2) {
-      return `Skip just 1-2 coffees this cycle to unlock this goal immediately!`
-    }
-    if (remaining <= mealVal * 3) {
-      return `Dine out 2 less times this month to claim your reward weeks earlier!`
-    }
-    
-    const daysSaved = Math.round((mealVal / monthlySavingsRate) * 30)
-    if (daysSaved > 0) {
-      return `Each micro-saving of ${currency} ${mealVal} speeds up this goal by ~${daysSaved} days.`
-    }
-    return `Save remaining category budgets at the end of the cycle to speed up this goal.`
-  }
+
 
   const handleOpenAddModal = () => {
     setNameInput('')
@@ -317,9 +297,6 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                         <span className="font-bold text-foreground block">
                           {getTimelineString(activeItem.price)}
                         </span>
-                        <span className="text-[10px] text-muted-foreground mt-0.5 block leading-relaxed">
-                          {getDynamicTip(activeItem.price)}
-                        </span>
                       </div>
                     </div>
                   </div>
@@ -335,7 +312,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                           : 'bg-muted text-muted-foreground cursor-not-allowed'
                       }`}
                     >
-                      {canAfford ? 'Claim with Rewards 🎁' : `Need ${formatSensitive(activeItem.price - rewardsBalance)} More`}
+                      {canAfford ? 'Claim Reward' : <>Need {formatSensitive(activeItem.price - rewardsBalance)} More</>}
                     </button>
                     
                     <button
@@ -506,15 +483,16 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                 </div>
                 <div>
                   <label className="text-muted-foreground block mb-1">Priority</label>
-                  <select 
+                  <CustomSelect 
                     value={priorityInput}
-                    onChange={e => setPriorityInput(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition font-medium"
-                  >
-                    <option value="High">High</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Low">Low</option>
-                  </select>
+                    onChange={val => setPriorityInput(val)}
+                    options={[
+                      { value: 'High', label: 'High' },
+                      { value: 'Medium', label: 'Medium' },
+                      { value: 'Low', label: 'Low' }
+                    ]}
+                    className="w-full"
+                  />
                 </div>
               </div>
 
@@ -597,15 +575,16 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                 </div>
                 <div>
                   <label className="text-muted-foreground block mb-1">Priority</label>
-                  <select 
+                  <CustomSelect 
                     value={priorityInput}
-                    onChange={e => setPriorityInput(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition font-medium"
-                  >
-                    <option value="High">High</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Low">Low</option>
-                  </select>
+                    onChange={val => setPriorityInput(val)}
+                    options={[
+                      { value: 'High', label: 'High' },
+                      { value: 'Medium', label: 'Medium' },
+                      { value: 'Low', label: 'Low' }
+                    ]}
+                    className="w-full"
+                  />
                 </div>
               </div>
 
