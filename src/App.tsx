@@ -104,6 +104,22 @@ function App() {
     localStorage.getItem('show_notifications_on_login') !== 'false'
   )
 
+  const handleLogout = async () => {
+    await api.logout()
+    setToken(null)
+    setUsername('')
+    setDashboardData(null)
+    setTransactions([])
+    setRecurringPayments([])
+    setCategoriesList([])
+    setHasShownModalThisSession(false)
+    setShowLoginModal(false)
+    localStorage.removeItem('auth_username')
+    sessionStorage.removeItem('session_locked')
+    localStorage.removeItem('last_active_time')
+    setIsLocked(false)
+  }
+
   // Fetch initial ledger and dashboard statistics
   async function loadAll(month?: string, year?: number) {
     if (!token) return
@@ -160,22 +176,6 @@ function App() {
     localStorage.setItem('auth_username', newUsername)
     sessionStorage.setItem('session_locked', 'false')
     localStorage.setItem('last_active_time', Date.now().toString())
-    setIsLocked(false)
-  }
-
-  const handleLogout = async () => {
-    await api.logout()
-    setToken(null)
-    setUsername('')
-    setDashboardData(null)
-    setTransactions([])
-    setRecurringPayments([])
-    setCategoriesList([])
-    setHasShownModalThisSession(false)
-    setShowLoginModal(false)
-    localStorage.removeItem('auth_username')
-    sessionStorage.removeItem('session_locked')
-    localStorage.removeItem('last_active_time')
     setIsLocked(false)
   }
 

@@ -15,10 +15,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
-  useEffect(() => {
-    checkStatus()
-  }, [])
-
   async function checkStatus() {
     try {
       const res = await api.fetchAuthStatus()
@@ -28,6 +24,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       setError('Could not connect to the backend server. Please make sure the API is running.')
     }
   }
+
+  useEffect(() => {
+    checkStatus()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

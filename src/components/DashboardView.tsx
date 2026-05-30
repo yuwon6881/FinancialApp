@@ -131,20 +131,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const slices = useMemo(() => {
     let currentAngle = 0
-    return breakdownData.map((item) => {
+    const result = []
+    for (const item of breakdownData) {
       const percentage = totalBreakdownAmount > 0 ? (item.amount / totalBreakdownAmount) : 0
       const angleSweep = percentage * 360
       const startAngle = currentAngle
       const endAngle = Math.min(359.99 + startAngle, startAngle + angleSweep)
       currentAngle += angleSweep
-      return {
+      result.push({
         category: item.category,
         amount: item.amount,
         percentage,
         startAngle,
         endAngle
-      }
-    })
+      })
+    }
+    return result
   }, [breakdownData, totalBreakdownAmount])
 
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -203,8 +205,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       'Stability': 0,
       'Rewards': 0
     }
-    if (activeRecurring) {
-      activeRecurring.forEach((rp: any) => {
+    const rpList = dashboardData?.activeRecurringPayments
+    if (rpList) {
+      rpList.forEach((rp: any) => {
         if (!rp.isPaid) {
           const cat = rp.ledgerCategory || rp.category
           if (cat && sums[cat] !== undefined) {
@@ -214,7 +217,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       })
     }
     return sums
-  }, [activeRecurring])
+  }, [dashboardData?.activeRecurringPayments])
 
   // Initialize input states when opening settings
   const handleToggleSettings = () => {
@@ -1376,7 +1379,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             // Build days array
             const days: Date[] = []
-            let cursor = new Date(cycleStart)
+            const cursor = new Date(cycleStart)
             while (cursor <= cycleEnd) {
               days.push(new Date(cursor))
               cursor.setDate(cursor.getDate() + 1)
@@ -1425,7 +1428,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   {Array.from({ length: startDow }).map((_, i) => (
                     <div key={`empty-${i}`} />
                   ))}
-                  {days.map((day, _i) => {
+                  {days.map((day) => {
                     const ds = formatDate(day)
                     const net = netByDay[ds]
                     const recs = recurringByDay[ds] || []
