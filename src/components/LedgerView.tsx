@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import type { Transaction, TransactionCategory } from '../types'
 import type { PagedTransactionResult } from '../lib/api'
 import { 
@@ -254,6 +254,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   // Server-side paged all-cycles state
   const [serverResult, setServerResult] = useState<PagedTransactionResult | null>(null)
   const [serverIsFetching, setServerIsFetching] = useState(false)
+  const isInitialFetchDone = useRef(false)
   const [showExportModal, setShowExportModal] = useState(false)
   const [exportIsFetching, setExportIsFetching] = useState(false)
   // Pending (uncommitted) states — only applied on Search/Apply button click
@@ -332,18 +333,23 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       setAppliedTxTypeFilter(null)
       setCurrentPage(1)
       setPageSize(100)  // Default 100 for server mode — covers most users' full history on page 1
+      isInitialFetchDone.current = false
       runServerFetch({ page: 1, search: '', filters: [], txType: null, pSize: 100 })
+        .finally(() => {
+          isInitialFetchDone.current = true
+        })
     } else {
       setServerResult(null)
+      isInitialFetchDone.current = false
     }
   }, [showAllCycles, onFetchPagedTransactions, runServerFetch, allCyclesRange])
 
   // Re-fetch when page changes in server mode
   useEffect(() => {
-    if (showAllCycles && onFetchPagedTransactions && serverResult) {
+    if (showAllCycles && onFetchPagedTransactions && isInitialFetchDone.current) {
       runServerFetch({ page: currentPage, search: appliedSearch, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
     }
-  }, [currentPage, pageSize, showAllCycles, onFetchPagedTransactions, serverResult, runServerFetch, appliedSearch, appliedFilters, appliedTxTypeFilter, allCyclesRange])
+  }, [currentPage, pageSize, showAllCycles, onFetchPagedTransactions, runServerFetch, appliedSearch, appliedFilters, appliedTxTypeFilter, allCyclesRange])
 
   // Reset back to page 1 when search inputs or active filters are updated (client-side mode only)
   useEffect(() => {
