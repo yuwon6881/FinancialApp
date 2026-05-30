@@ -38,6 +38,8 @@ interface TopNavProps {
   darkMode: boolean
   onToggleDarkMode: () => void
   currency?: string
+  onMouseEnterWallet?: () => void
+  onMouseLeaveWallet?: () => void
 }
 
 const TopNav: React.FC<TopNavProps> = ({
@@ -54,7 +56,9 @@ const TopNav: React.FC<TopNavProps> = ({
   onDeletePayment,
   darkMode,
   onToggleDarkMode,
-  currency = 'USD'
+  currency = 'USD',
+  onMouseEnterWallet,
+  onMouseLeaveWallet
 }) => {
   const [isBellOpen, setIsBellOpen] = useState(false)
   const [confirmNotiId, setConfirmNotiId] = useState<string | null>(null)
@@ -146,9 +150,15 @@ const TopNav: React.FC<TopNavProps> = ({
         <div className="flex-1 flex items-center justify-end gap-1.5 sm:gap-3 md:gap-4 min-w-max">
           
           {/* Quick Metrics (Balance Display) */}
-          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-muted/20 border border-border/60 rounded-xl select-none shrink-0" title="Net Balance">
-            <Wallet className="size-3.5 text-muted-foreground" />
-            <span className={`text-xs font-bold text-foreground transition-all duration-300 ${hideSensitive ? 'blur-sm select-none pointer-events-none' : ''}`}>
+          <div 
+            onMouseEnter={onMouseEnterWallet}
+            onMouseLeave={onMouseLeaveWallet}
+            onClick={() => onTabChange('dashboard')}
+            className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/20 hover:border-blue-500/40 rounded-xl select-none shrink-0 cursor-pointer transition-colors duration-150" 
+            title="Net Balance (Hover to highlight categories)"
+          >
+            <Wallet className="size-3.5 text-blue-500" />
+            <span className={`text-xs font-extrabold text-blue-600 dark:text-blue-400 transition-all duration-300 ${hideSensitive ? 'blur-sm select-none pointer-events-none' : ''}`}>
               {formatCurrency(totalBalance)}
             </span>
           </div>
@@ -158,26 +168,24 @@ const TopNav: React.FC<TopNavProps> = ({
             onClick={() => onTabChange('wishlist')}
             className={`hidden md:flex p-1.5 border rounded-xl cursor-pointer transition duration-150 items-center justify-center ${
               activeTab === 'wishlist'
-                ? 'bg-pink-500/10 border-pink-500/20 text-pink-500 shadow-xs'
-                : 'border-border/60 hover:bg-muted text-muted-foreground hover:text-foreground'
+                ? 'bg-pink-500/15 border-pink-500/30 text-pink-500 shadow-xs scale-[1.02] font-bold'
+                : 'bg-pink-500/5 border-pink-500/10 text-pink-500/80 hover:bg-pink-500/10 hover:border-pink-500/20 hover:text-pink-500'
             }`}
             title="Wish List"
           >
             <PiggyBank className="size-4" />
           </button>
 
-
-
           {/* Notification Bell Dropdown */}
           <div className="relative bell-container">
             <button
               onClick={() => setIsBellOpen(prev => !prev)}
-              className="p-1.5 border border-border/60 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition duration-150 flex items-center justify-center relative"
+              className="p-1.5 bg-amber-500/5 border border-amber-500/10 hover:bg-amber-500/10 hover:border-amber-500/20 text-amber-500/80 hover:text-amber-500 rounded-xl cursor-pointer transition duration-150 flex items-center justify-center relative"
               title="Subscription Notifications"
             >
-              <Bell className="size-4" />
+              <Bell className="size-4 text-amber-500" />
               {hasAlerts && (
-                <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-yellow-500 ring-2 ring-background animate-pulse" />
+                <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-amber-500 ring-2 ring-background animate-pulse" />
               )}
             </button>
 

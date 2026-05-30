@@ -49,6 +49,57 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   const [startDateInput, setStartDateInput] = useState('')
   const [endDateInput, setEndDateInput] = useState('')
 
+  // Filter & Sorting state
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [sortOrder, setSortOrder] = useState<string>('amount-desc')
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false)
+
+  // Toggle filter on or off
+  const handleToggleCategoryFilter = (cat: string) => {
+    setSelectedCategories(prev => {
+      if (prev.includes(cat)) {
+        return prev.filter(c => c !== cat)
+      } else {
+        return [...prev, cat]
+      }
+    })
+  }
+
+  // Click outside to close filter dropdown
+  React.useEffect(() => {
+    if (!isFilterDropdownOpen) return
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('.recurring-filter-dropdown')) {
+        setIsFilterDropdownOpen(false)
+      }
+    }
+    document.addEventListener('click', handleClick)
+    return () => document.removeEventListener('click', handleClick)
+  }, [isFilterDropdownOpen])
+
+  // Filter and Sort payments
+  const filteredAndSortedPayments = React.useMemo(() => {
+    let result = [...payments]
+    
+    // Filter by category (OR condition)
+    if (selectedCategories.length > 0) {
+      result = result.filter(p => selectedCategories.includes(p.ledgerCategory))
+    }
+    
+    // Sort
+    if (sortOrder === 'amount-desc') {
+      result.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))
+    } else if (sortOrder === 'amount-asc') {
+      result.sort((a, b) => Math.abs(a.amount) - Math.abs(b.amount))
+    } else if (sortOrder === 'name-asc') {
+      result.sort((a, b) => a.name.localeCompare(b.name))
+    } else if (sortOrder === 'due-date') {
+      result.sort((a, b) => a.dueDate - b.dueDate)
+    }
+    return result
+  }, [payments, selectedCategories, sortOrder])
+
   React.useEffect(() => {
     if (autoOpenAddForm) {
       setShowAddForm(true)
@@ -281,9 +332,83 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         </div>
       )}
 
+      {/* Filter and Sort controls */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-card border border-border/60 rounded-2xl shadow-xs select-none">
+        {/* Category Multi-select dropdown */}
+        <div className="relative recurring-filter-dropdown w-full sm:w-auto">
+          <button
+            onClick={() => setIsFilterDropdownOpen(prev => !prev)}
+            className="w-full sm:w-60 flex items-center justify-between gap-2 px-4 py-2 text-xs font-semibold bg-background border border-border rounded-xl hover:bg-muted transition duration-200 cursor-pointer select-none border-border/60"
+          >
+            <span className="flex items-center gap-2 text-muted-foreground">
+              <span className="truncate">
+                {selectedCategories.length === 0 
+                  ? 'All Categories' 
+                  : `${selectedCategories.length} category filter${selectedCategories.length > 1 ? 's' : ''} active`}
+              </span>
+            </span>
+            <span className="text-[9px] text-muted-foreground">▼</span>
+          </button>
+
+          {isFilterDropdownOpen && (
+            <div className="absolute left-0 mt-2 w-60 bg-card border border-border rounded-2xl shadow-xl p-4 z-40 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3">
+                <span className="text-xs font-bold text-foreground">Filter Categories</span>
+                {selectedCategories.length > 0 && (
+                  <button
+                    onClick={() => setSelectedCategories([])}
+                    className="text-[9px] font-bold text-orange-500 hover:underline cursor-pointer"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-1 gap-1.5 max-h-48 overflow-y-auto pr-1">
+                {['Essentials', 'Growth', 'Stability', 'Rewards'].map(bucket => {
+                  const isChecked = selectedCategories.includes(bucket)
+                  return (
+                    <label 
+                      key={bucket} 
+                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition ${
+                        isChecked 
+                          ? 'bg-blue-500/10 border-blue-500/20 text-blue-500 font-semibold' 
+                          : 'bg-background/50 border-border hover:bg-muted text-muted-foreground'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => handleToggleCategoryFilter(bucket)}
+                        className="rounded border-border text-blue-500 focus:ring-blue-500 size-3"
+                      />
+                      <span>{bucket}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Sort Select */}
+        <div className="w-full sm:w-60">
+          <CustomSelect
+            value={sortOrder}
+            onChange={(val) => setSortOrder(val)}
+            options={[
+              { value: 'amount-desc', label: 'Sort by: Amount (High to Low)' },
+              { value: 'amount-asc', label: 'Sort by: Amount (Low to High)' },
+              { value: 'name-asc', label: 'Sort by: Name (A-Z)' },
+              { value: 'due-date', label: 'Sort by: Next Due Date' }
+            ]}
+            className="w-full"
+          />
+        </div>
+      </div>
+
       {/* Subscriptions Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {payments.map(rp => {
+        {filteredAndSortedPayments.map(rp => {
           return (
             <div 
               key={rp.id} 
@@ -383,9 +508,12 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
           )
         })}
         
-        {payments.length === 0 && (
+        {filteredAndSortedPayments.length === 0 && (
           <div className="p-12 text-center border border-dashed border-border rounded-2xl md:col-span-3 text-muted-foreground text-sm">
-            You don't have any subscription added yet. Click "New Subscription" above to create one.
+            {payments.length > 0 
+              ? 'No subscriptions match your filter criteria.'
+              : 'You don\'t have any subscription added yet. Click "New Subscription" above to create one.'
+            }
           </div>
         )}
       </div>

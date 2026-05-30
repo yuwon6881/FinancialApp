@@ -32,6 +32,8 @@ function App() {
   const [autoOpenLedgerAdd, setAutoOpenLedgerAdd] = useState(false)
   const [autoOpenSubscriptionAdd, setAutoOpenSubscriptionAdd] = useState(false)
   const [autoOpenWishlistAdd, setAutoOpenWishlistAdd] = useState(false)
+  const [isHoveringWallet, setIsHoveringWallet] = useState(false)
+  const [highlightedTxId, setHighlightedTxId] = useState<string | null>(null)
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([])
   const [hideSensitive, setHideSensitive] = useState<boolean>(() => {
     return localStorage.getItem('hide_sensitive') === 'true'
@@ -415,16 +417,21 @@ function App() {
     date?: string | null
     txType?: 'inflow' | 'outflow' | null
     range?: 'monthly' | '3month' | '6month' | 'yearly'
+    highlightedTxId?: string | null
+    showAllCycles?: boolean
   }) => {
     setLedgerIncomingCategory(options.category || null)
     setLedgerIncomingDate(options.date || null)
     setLedgerIncomingTxType(options.txType || null)
     const range = options.range || 'monthly'
     setLedgerCyclesRange(range)
-    const showAll = range !== 'monthly'
+    const showAll = options.showAllCycles !== undefined ? options.showAllCycles : (range !== 'monthly')
     setLedgerShowAllCycles(showAll)
     if (showAll) {
       handleLoadAllTransactions()
+    }
+    if (options.highlightedTxId) {
+      setHighlightedTxId(options.highlightedTxId)
     }
     setActiveTab('ledger')
   }
@@ -484,6 +491,8 @@ function App() {
         darkMode={darkMode}
         onToggleDarkMode={handleToggleDarkMode}
         currency={dashboardData?.setting?.currency || 'USD'}
+        onMouseEnterWallet={() => setIsHoveringWallet(true)}
+        onMouseLeaveWallet={() => setIsHoveringWallet(false)}
       />
 
       {error && (
@@ -510,6 +519,7 @@ function App() {
             onDeletePayment={handleDeletePayment}
             onNavigateToLedger={handleNavigateToLedger}
             wishlist={wishlist}
+            isHoveringWallet={isHoveringWallet}
           />
         )}
 
@@ -545,10 +555,12 @@ function App() {
             incomingCategory={ledgerIncomingCategory}
             incomingDate={ledgerIncomingDate}
             incomingTxType={ledgerIncomingTxType}
+            highlightedTxId={highlightedTxId}
             onClearIncomingFilters={() => {
               setLedgerIncomingCategory(null)
               setLedgerIncomingDate(null)
               setLedgerIncomingTxType(null)
+              setHighlightedTxId(null)
             }}
             showAllCycles={ledgerShowAllCycles}
             onLoadAllTransactions={handleLoadAllTransactions}

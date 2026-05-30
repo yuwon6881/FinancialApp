@@ -29,6 +29,7 @@ interface LedgerViewProps {
   incomingCategory: string | null
   incomingDate?: string | null
   incomingTxType?: 'inflow' | 'outflow' | null
+  highlightedTxId?: string | null
   onClearIncomingFilters?: () => void
   showAllCycles: boolean
   onLoadAllTransactions: () => void
@@ -99,6 +100,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   incomingCategory,
   incomingDate,
   incomingTxType,
+  highlightedTxId,
   onClearIncomingFilters,
   showAllCycles,
   onLoadAllTransactions: _onLoadAllTransactions,
@@ -187,6 +189,15 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [selectedDateFilter, setSelectedDateFilter] = useState<string | null>(null)
   const [selectedTxTypeFilter, setSelectedTxTypeFilter] = useState<'inflow' | 'outflow' | null>(null)
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false)
+
+  // Pagination states (Defaults: page size 10, current page 1)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+
+  // Reset back to page 1 when search inputs or active filters are updated
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, selectedFilters, selectedDateFilter, selectedTxTypeFilter, showAllCycles])
 
   // Synchronize incoming filters from props
   useEffect(() => {
@@ -375,6 +386,38 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     })
   }, [sourceTransactions, searchTerm, selectedFilters, selectedDateFilter, selectedTxTypeFilter])
 
+  const paginatedTransactions = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize
+    return filteredTransactions.slice(startIndex, startIndex + pageSize)
+  }, [filteredTransactions, currentPage, pageSize])
+
+  const totalPages = Math.ceil(filteredTransactions.length / pageSize) || 1
+
+  // Handle highlighted transaction scroll into view and page calculation
+  useEffect(() => {
+    if (highlightedTxId) {
+      const index = filteredTransactions.findIndex(t => t.id === highlightedTxId)
+      if (index !== -1) {
+        const targetPage = Math.floor(index / pageSize) + 1
+        setCurrentPage(targetPage)
+        
+        const timer = setTimeout(() => {
+          const rowEl = document.getElementById(`tx-row-${highlightedTxId}`)
+          if (rowEl) {
+            rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            rowEl.classList.add('bg-blue-500/10', 'ring-2', 'ring-blue-500/30', 'dark:bg-blue-500/20')
+            const clearTimer = setTimeout(() => {
+              rowEl.classList.remove('bg-blue-500/10', 'ring-2', 'ring-blue-500/30', 'dark:bg-blue-500/20')
+              onClearIncomingFilters?.()
+            }, 3000)
+            return () => clearTimeout(clearTimer)
+          }
+        }, 300)
+        return () => clearTimeout(timer)
+      }
+    }
+  }, [highlightedTxId, filteredTransactions, pageSize, onClearIncomingFilters])
+
   const displayLedgerCategory = (cat: string) => {
     if (cat.startsWith('IncomeSplit:')) return 'Income'
     if (cat.startsWith('Transfer:')) {
@@ -431,6 +474,38 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+  }
+
+  const renderPageNumbers = () => {
+    const pages: (number | string)[] = []
+    if (totalPages <= 5) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    } else {
+      if (currentPage <= 3) {
+        pages.push(1, 2, 3, '...', totalPages)
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1, '...', totalPages - 2, totalPages - 1, totalPages)
+      } else {
+        pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages)
+      }
+    }
+    return pages.map((p, idx) => (
+      p === '...' ? (
+        <span key={`dots-${idx}`} className="px-2 py-1.5 text-muted-foreground text-xs select-none">...</span>
+      ) : (
+        <button
+          key={`page-${p}`}
+          onClick={() => setCurrentPage(p as number)}
+          className={`px-3 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition ${
+            currentPage === p
+              ? 'bg-blue-600 border-blue-600 text-white shadow-xs'
+              : 'border-border bg-background hover:bg-muted text-foreground'
+          }`}
+        >
+          {p}
+        </button>
+      )
+    ))
   }
 
   return (
@@ -839,10 +914,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-border/30 text-xs">
-              {filteredTransactions.map(t => {
+              {paginatedTransactions.map(t => {
                 const isOutflow = t.amount < 0
                 return (
-                  <tr key={t.id} className="hover:bg-muted/10 transition duration-150">
+                  <tr id={`tx-row-${t.id}`} key={t.id} className="hover:bg-muted/10 transition duration-150">
                     <td className="p-4 font-medium text-muted-foreground">{t.date}</td>
                     <td className="p-4 font-semibold text-foreground">{t.description}</td>
                     <td className="p-4">
@@ -911,10 +986,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
       {/* Ledger List - Mobile */}
       <div className="block md:hidden space-y-4">
-        {filteredTransactions.map(t => {
+        {paginatedTransactions.map(t => {
           const isOutflow = t.amount < 0
           return (
-            <div key={t.id} className="p-4 rounded-2xl border border-border bg-card space-y-3 shadow-xs">
+            <div id={`tx-row-${t.id}`} key={t.id} className="p-4 rounded-2xl border border-border bg-card space-y-3 shadow-xs">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-muted-foreground font-medium">{t.date}</span>
                 <span className={`inline-block text-[10px] px-2 py-0.5 font-semibold rounded-md border ${
@@ -966,6 +1041,59 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* Unified Pagination Controls */}
+      {filteredTransactions.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-card border border-border/60 rounded-2xl shadow-xs text-xs select-none">
+          <div className="text-muted-foreground font-medium">
+            Showing <span className="text-foreground font-semibold">{(currentPage - 1) * pageSize + 1}</span> to{' '}
+            <span className="text-foreground font-semibold">
+              {Math.min(currentPage * pageSize, filteredTransactions.length)}
+            </span>{' '}
+            of <span className="text-foreground font-semibold">{filteredTransactions.length}</span> entries
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Page size select dropdown selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground font-medium">Rows per page:</span>
+              <CustomSelect
+                value={pageSize}
+                onChange={(val) => {
+                  setPageSize(parseInt(val))
+                  setCurrentPage(1)
+                }}
+                options={[
+                  { value: 10, label: '10' },
+                  { value: 25, label: '25' },
+                  { value: 50, label: '50' },
+                  { value: 100, label: '100' }
+                ]}
+                className="w-18"
+              />
+            </div>
+
+            {/* Navigation buttons */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-foreground disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold cursor-pointer transition"
+              >
+                Previous
+              </button>
+              {renderPageNumbers()}
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-foreground disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold cursor-pointer transition"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

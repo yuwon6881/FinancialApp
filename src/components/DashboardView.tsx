@@ -35,8 +35,16 @@ interface DashboardViewProps {
   onDeleteCategory: (id: string) => void
   onConfirmSubscription: (noti: any, paidDate: string) => void
   onDeletePayment: (id: string) => void
-  onNavigateToLedger?: (options: { category?: string | null; date?: string | null; txType?: 'inflow' | 'outflow' | null; range?: 'monthly' | '3month' | '6month' | 'yearly' }) => void
+  onNavigateToLedger?: (options: { 
+    category?: string | null; 
+    date?: string | null; 
+    txType?: 'inflow' | 'outflow' | null; 
+    range?: 'monthly' | '3month' | '6month' | 'yearly';
+    highlightedTxId?: string | null;
+    showAllCycles?: boolean;
+  }) => void
   wishlist?: WishlistItem[]
+  isHoveringWallet: boolean
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ 
@@ -52,7 +60,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onConfirmSubscription,
   onDeletePayment,
   onNavigateToLedger,
-  wishlist = []
+  wishlist = [],
+  isHoveringWallet
 }) => {
   const [showSettings, setShowSettings] = useState(false)
   const [targetInput, setTargetInput] = useState('')
@@ -668,7 +677,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {/* Table Body */}
             {categories.map(c => {
               const isNeg = c.remaining < 0
-              const isHighlighted = isHoveringLiquidNetWorth && c.name !== 'Growth'
+              const isHighlighted = (isHoveringLiquidNetWorth || isHoveringWallet) && c.name !== 'Growth'
               
               let highlightClass = 'border-transparent bg-transparent hover:bg-muted/10'
               let transitionStyles: React.CSSProperties = {
@@ -727,7 +736,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="block md:hidden space-y-4">
           {categories.map(c => {
             const isNeg = c.remaining < 0
-            const isHighlighted = isHoveringLiquidNetWorth && c.name !== 'Growth'
+            const isHighlighted = (isHoveringLiquidNetWorth || isHoveringWallet) && c.name !== 'Growth'
             
             let highlightClass = 'border-border bg-background/50'
             let transitionStyles: React.CSSProperties = {
@@ -801,6 +810,155 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
             )
           })}
+        </div>
+      </div>
+
+      {/* Financial Plan Metric Cards */}
+      <div className="p-6 bg-card border border-border/60 rounded-2xl shadow-xs">
+        <h3 className="text-md font-bold text-foreground mb-1">Financial Plan Metrics</h3>
+        <p className="text-xs text-muted-foreground mb-1">Cycle-wide constraint evaluation across allocation categories and targets.</p>
+        {/* Legend — protan-safe: blue (current) + orange (pending) */}
+        <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-2 rounded-sm bg-blue-500" />
+            <span className="text-[10px] text-muted-foreground">Current</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-2 rounded-sm bg-orange-500" />
+            <span className="text-[10px] text-muted-foreground">Pending deduction</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Growth Achieved */}
+          {(() => {
+            const growthCat = categories.find(c => c.name === 'Growth')
+            const growthTarget = growthCat?.target || 1
+            const currentPct = Math.max(0, Math.min(1, stats.growthPercentAchieved))
+            const pendingGrowth = pendingDeductionsByCategory['Growth'] || 0
+            const projectedRemaining = Math.max(0, (growthCat?.remaining ?? 0) - pendingGrowth)
+            const atRiskPct = pendingGrowth > 0 ? Math.max(0, Math.min(currentPct, pendingGrowth / growthTarget)) : 0
+            const safePct = currentPct - atRiskPct
+            return (
+              <div 
+                onClick={() => onNavigateToLedger?.({ category: 'Growth', showAllCycles: true })}
+                className="space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border/40 hover:border-blue-500/20 cursor-pointer transition-all duration-200"
+              >
+                <div className="flex justify-between text-xs font-semibold">
+                  <span className="text-muted-foreground">Growth Achieved</span>
+                  <span className="text-foreground">
+                    {(currentPct * 100).toFixed(1)}%
+                    {pendingGrowth > 0 && (
+                      <span className="text-orange-500 ml-1">→ {((currentPct - atRiskPct) * 100).toFixed(1)}%</span>
+                    )}
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden flex">
+                  <div
+                    className="bg-blue-500 h-full transition-all duration-500"
+                    style={{ width: `${safePct * 100}%` }}
+                  />
+                  {pendingGrowth > 0 && atRiskPct > 0 && (
+                    <div
+                      className="bg-orange-500 h-full transition-all duration-500"
+                      style={{ width: `${atRiskPct * 100}%` }}
+                    />
+                  )}
+                </div>
+                <span className="text-[10px] text-muted-foreground block leading-relaxed">
+                  Plan Target: Deposit <strong>{(activeSettings.growthAlloc * 100).toFixed(0)}%</strong> of income ({formatSensitive(growthTarget)}) into savings this cycle.
+                  {pendingGrowth > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(projectedRemaining)}</span>}
+                </span>
+              </div>
+            )
+          })()}
+
+          {/* Essentials Remaining */}
+          {(() => {
+            const essentialsCat = categories.find(c => c.name === 'Essentials')
+            const essTarget = essentialsCat?.target || 1
+            const currentPct = Math.max(0, Math.min(1, stats.essentialsPercentRemaining))
+            const pendingEss = pendingDeductionsByCategory['Essentials'] || 0
+            const projectedRemaining = Math.max(0, (essentialsCat?.remaining ?? 0) - pendingEss)
+            const projectedPct = pendingEss > 0 ? Math.max(0, projectedRemaining / essTarget) : currentPct
+            const atRiskPct = pendingEss > 0 ? Math.max(0, currentPct - projectedPct) : 0
+            return (
+              <div 
+                onClick={() => onNavigateToLedger?.({ category: 'Essentials', showAllCycles: false })}
+                className="space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border/40 hover:border-blue-500/20 cursor-pointer transition-all duration-200"
+              >
+                <div className="flex justify-between text-xs font-semibold">
+                  <span className="text-muted-foreground">Essentials Remaining</span>
+                  <span className="text-foreground">
+                    {(currentPct * 100).toFixed(1)}%
+                    {pendingEss > 0 && (
+                      <span className="text-orange-500 ml-1">→ {(projectedPct * 100).toFixed(1)}%</span>
+                    )}
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden flex">
+                  <div
+                    className="bg-blue-500 h-full transition-all duration-500"
+                    style={{ width: `${projectedPct * 100}%` }}
+                  />
+                  {pendingEss > 0 && atRiskPct > 0 && (
+                    <div
+                      className="bg-orange-500 h-full transition-all duration-500"
+                      style={{ width: `${atRiskPct * 100}%` }}
+                    />
+                  )}
+                </div>
+                <span className="text-[10px] text-muted-foreground block leading-relaxed">
+                  Starts at 100% of cycle target ({formatSensitive(essTarget)}). Decreases with each essentials spend.
+                  {pendingEss > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(projectedRemaining)}</span>}
+                </span>
+              </div>
+            )
+          })()}
+
+          {/* Stability Reached */}
+          {(() => {
+            const stabilityCat = categories.find(c => c.name === 'Stability')
+            const stabilityTarget = activeSettings.targetStabilityFund || 1
+            const currentPct = Math.max(0, Math.min(1, stats.stabilityPercentReached))
+            const pendingStab = pendingDeductionsByCategory['Stability'] || 0
+            const currentBalance = stabilityCat?.remaining ?? 0
+            const projectedBalance = Math.max(0, currentBalance - pendingStab)
+            const projectedPct = pendingStab > 0 ? Math.max(0, Math.min(1, projectedBalance / stabilityTarget)) : currentPct
+            const atRiskPct = pendingStab > 0 ? Math.max(0, currentPct - projectedPct) : 0
+            return (
+              <div 
+                onClick={() => onNavigateToLedger?.({ category: 'Stability', showAllCycles: true })}
+                className="space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border/40 hover:border-blue-500/20 cursor-pointer transition-all duration-200"
+              >
+                <div className="flex justify-between text-xs font-semibold">
+                  <span className="text-muted-foreground">Stability Cap Reached</span>
+                  <span className="text-foreground">
+                    {(currentPct * 100).toFixed(1)}%
+                    {pendingStab > 0 && (
+                      <span className="text-orange-500 ml-1">→ {(projectedPct * 100).toFixed(1)}%</span>
+                    )}
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden flex">
+                  <div
+                    className="bg-blue-500 h-full transition-all duration-500"
+                    style={{ width: `${projectedPct * 100}%` }}
+                  />
+                  {pendingStab > 0 && atRiskPct > 0 && (
+                    <div
+                      className="bg-orange-500 h-full transition-all duration-500"
+                      style={{ width: `${atRiskPct * 100}%` }}
+                    />
+                  )}
+                </div>
+                <span className="text-[10px] text-muted-foreground block leading-relaxed">
+                  Target Stability Fund goal is <strong>{formatSensitive(activeSettings.targetStabilityFund)}</strong>. Currently at {formatSensitive(currentBalance)}.
+                  {pendingStab > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(projectedBalance)}</span>}
+                </span>
+              </div>
+            )
+          })()}
         </div>
       </div>
 
@@ -909,146 +1067,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           )
         })()}
-      </div>
-
-      {/* Financial Plan Metric Cards */}
-      <div className="p-6 bg-card border border-border/60 rounded-2xl shadow-xs">
-        <h3 className="text-md font-bold text-foreground mb-1">Financial Plan Metrics</h3>
-        <p className="text-xs text-muted-foreground mb-1">Cycle-wide constraint evaluation across allocation categories and targets.</p>
-        {/* Legend — protan-safe: blue (current) + orange (pending) */}
-        <div className="flex items-center gap-4 mb-4">
-          <div className="flex items-center gap-1.5">
-            <span className="inline-block w-3 h-2 rounded-sm bg-blue-500" />
-            <span className="text-[10px] text-muted-foreground">Current</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="inline-block w-3 h-2 rounded-sm bg-orange-500" />
-            <span className="text-[10px] text-muted-foreground">Pending deduction</span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Growth Achieved */}
-          {(() => {
-            const growthCat = categories.find(c => c.name === 'Growth')
-            const growthTarget = growthCat?.target || 1
-            const currentPct = Math.max(0, Math.min(1, stats.growthPercentAchieved))
-            const pendingGrowth = pendingDeductionsByCategory['Growth'] || 0
-            const projectedRemaining = Math.max(0, (growthCat?.remaining ?? 0) - pendingGrowth)
-            const atRiskPct = pendingGrowth > 0 ? Math.max(0, Math.min(currentPct, pendingGrowth / growthTarget)) : 0
-            const safePct = currentPct - atRiskPct
-            return (
-              <div className="space-y-2 p-4 rounded-xl bg-muted/30 border border-border/40">
-                <div className="flex justify-between text-xs font-semibold">
-                  <span className="text-muted-foreground">Growth Achieved</span>
-                  <span className="text-foreground">
-                    {(currentPct * 100).toFixed(1)}%
-                    {pendingGrowth > 0 && (
-                      <span className="text-orange-500 ml-1">→ {((currentPct - atRiskPct) * 100).toFixed(1)}%</span>
-                    )}
-                  </span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden flex">
-                  <div
-                    className="bg-blue-500 h-full transition-all duration-500"
-                    style={{ width: `${safePct * 100}%` }}
-                  />
-                  {pendingGrowth > 0 && atRiskPct > 0 && (
-                    <div
-                      className="bg-orange-500 h-full transition-all duration-500"
-                      style={{ width: `${atRiskPct * 100}%` }}
-                    />
-                  )}
-                </div>
-                <span className="text-[10px] text-muted-foreground block leading-relaxed">
-                  Plan Target: Deposit <strong>{(activeSettings.growthAlloc * 100).toFixed(0)}%</strong> of income ({formatSensitive(growthTarget)}) into savings this cycle.
-                  {pendingGrowth > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(projectedRemaining)}</span>}
-                </span>
-              </div>
-            )
-          })()}
-
-          {/* Essentials Remaining */}
-          {(() => {
-            const essentialsCat = categories.find(c => c.name === 'Essentials')
-            const essTarget = essentialsCat?.target || 1
-            const currentPct = Math.max(0, Math.min(1, stats.essentialsPercentRemaining))
-            const pendingEss = pendingDeductionsByCategory['Essentials'] || 0
-            const projectedRemaining = Math.max(0, (essentialsCat?.remaining ?? 0) - pendingEss)
-            const projectedPct = pendingEss > 0 ? Math.max(0, projectedRemaining / essTarget) : currentPct
-            const atRiskPct = pendingEss > 0 ? Math.max(0, currentPct - projectedPct) : 0
-            return (
-              <div className="space-y-2 p-4 rounded-xl bg-muted/30 border border-border/40">
-                <div className="flex justify-between text-xs font-semibold">
-                  <span className="text-muted-foreground">Essentials Remaining</span>
-                  <span className="text-foreground">
-                    {(currentPct * 100).toFixed(1)}%
-                    {pendingEss > 0 && (
-                      <span className="text-orange-500 ml-1">→ {(projectedPct * 100).toFixed(1)}%</span>
-                    )}
-                  </span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden flex">
-                  <div
-                    className="bg-blue-500 h-full transition-all duration-500"
-                    style={{ width: `${projectedPct * 100}%` }}
-                  />
-                  {pendingEss > 0 && atRiskPct > 0 && (
-                    <div
-                      className="bg-orange-500 h-full transition-all duration-500"
-                      style={{ width: `${atRiskPct * 100}%` }}
-                    />
-                  )}
-                </div>
-                <span className="text-[10px] text-muted-foreground block leading-relaxed">
-                  Starts at 100% of cycle target ({formatSensitive(essTarget)}). Decreases with each essentials spend.
-                  {pendingEss > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(projectedRemaining)}</span>}
-                </span>
-              </div>
-            )
-          })()}
-
-          {/* Stability Reached */}
-          {(() => {
-            const stabilityCat = categories.find(c => c.name === 'Stability')
-            const stabilityTarget = activeSettings.targetStabilityFund || 1
-            const currentPct = Math.max(0, Math.min(1, stats.stabilityPercentReached))
-            const pendingStab = pendingDeductionsByCategory['Stability'] || 0
-            const currentBalance = stabilityCat?.remaining ?? 0
-            const projectedBalance = Math.max(0, currentBalance - pendingStab)
-            const projectedPct = pendingStab > 0 ? Math.max(0, Math.min(1, projectedBalance / stabilityTarget)) : currentPct
-            const atRiskPct = pendingStab > 0 ? Math.max(0, currentPct - projectedPct) : 0
-            return (
-              <div className="space-y-2 p-4 rounded-xl bg-muted/30 border border-border/40">
-                <div className="flex justify-between text-xs font-semibold">
-                  <span className="text-muted-foreground">Stability Cap Reached</span>
-                  <span className="text-foreground">
-                    {(currentPct * 100).toFixed(1)}%
-                    {pendingStab > 0 && (
-                      <span className="text-orange-500 ml-1">→ {(projectedPct * 100).toFixed(1)}%</span>
-                    )}
-                  </span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden flex">
-                  <div
-                    className="bg-blue-500 h-full transition-all duration-500"
-                    style={{ width: `${projectedPct * 100}%` }}
-                  />
-                  {pendingStab > 0 && atRiskPct > 0 && (
-                    <div
-                      className="bg-orange-500 h-full transition-all duration-500"
-                      style={{ width: `${atRiskPct * 100}%` }}
-                    />
-                  )}
-                </div>
-                <span className="text-[10px] text-muted-foreground block leading-relaxed">
-                  Target Stability Fund goal is <strong>{formatSensitive(activeSettings.targetStabilityFund)}</strong>. Currently at {formatSensitive(currentBalance)}.
-                  {pendingStab > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(projectedBalance)}</span>}
-                </span>
-              </div>
-            )
-          })()}
-        </div>
       </div>
 
       {/* Main Charts & Breakdown Section (2-column layout to prevent horizontally squeezed charts) */}
@@ -1530,7 +1548,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {recentTransactions.map((t: any) => {
             const isOutflow = t.amount < 0
             return (
-              <div key={t.id} className="py-3 flex items-center justify-between hover:bg-muted/30 px-2 rounded-lg transition duration-150">
+              <div 
+                key={t.id} 
+                onClick={() => onNavigateToLedger?.({ highlightedTxId: t.id, showAllCycles: true })}
+                className="py-3 flex items-center justify-between hover:bg-muted/30 px-2 rounded-lg transition duration-150 cursor-pointer"
+              >
                 <div className="flex items-center gap-3">
                   {/* Corrected arrows: isOutflow gets ArrowDownLeft (red), isInflow gets ArrowUpRight (green) */}
                   <div className={`p-2 rounded-lg ${isOutflow ? 'bg-orange-500/10 text-orange-500' : 'bg-blue-500/10 text-blue-500'}`}>
