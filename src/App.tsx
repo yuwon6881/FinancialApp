@@ -106,12 +106,9 @@ function App() {
   )
 
   // Fetch initial ledger and dashboard statistics
-  async function loadAll(month?: string, year?: number, forceLoading = false) {
+  async function loadAll(month?: string, year?: number) {
     if (!token) return
-    const isBackground = transactions.length > 0 && !forceLoading
-    if (!isBackground) {
-      setLoading(true)
-    }
+    setLoading(true)
     try {
       const [dbData, txs, recs, cats, wishes] = await Promise.all([
         api.fetchDashboard(month, year),
@@ -148,9 +145,7 @@ function App() {
         setError('Could not connect to the database API server. Running in offline view mode.')
       }
     } finally {
-      if (!isBackground) {
-        setLoading(false)
-      }
+      setLoading(false)
     }
   }
 
@@ -188,7 +183,7 @@ function App() {
   // Period / Settings changes
   const handleSelectPeriod = async (month: string, year: number) => {
     try {
-      await loadAll(month, year, true)
+      await loadAll(month, year)
     } catch (err) {
       console.error(err)
       alert('Error updating active month.')
@@ -474,7 +469,7 @@ function App() {
     return <LoginView onLoginSuccess={handleLoginSuccess} />
   }
 
-  if (loading) {
+  if (loading && !dashboardData) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
         <div className="flex flex-col items-center gap-4 text-center">
@@ -520,7 +515,15 @@ function App() {
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 container mx-auto px-4 py-8 pb-24 md:pb-8 max-w-7xl">
+      <main className="flex-1 container mx-auto px-4 py-8 pb-24 md:pb-8 max-w-7xl relative">
+        {loading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-[1.5px] transition-all duration-150">
+            <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-card border border-border/80 shadow-xl text-sm font-bold text-foreground select-none pointer-events-none animate-in zoom-in-95 duration-150">
+              <Loader2 className="animate-spin text-blue-500 size-4" />
+              Syncing changes...
+            </div>
+          </div>
+        )}
         {activeTab === 'dashboard' && (
           <DashboardView 
             dashboardData={dashboardData}
@@ -592,6 +595,7 @@ function App() {
             growthAlloc={dashboardData?.setting?.growthAlloc ?? 0.25}
             stabilityAlloc={dashboardData?.setting?.stabilityAlloc ?? 0.15}
             rewardsAlloc={dashboardData?.setting?.rewardsAlloc ?? 0.1}
+            onFetchPagedTransactions={api.fetchPagedTransactions}
           />
         )}
 
@@ -611,6 +615,7 @@ function App() {
             formatSensitive={formatSensitive}
             autoOpenAddModal={autoOpenWishlistAdd}
             onResetAutoOpen={() => setAutoOpenWishlistAdd(false)}
+            onNavigateToLedger={handleNavigateToLedger}
           />
         )}
       </main>

@@ -335,6 +335,44 @@ export function fetchTransactions(month?: string, year?: number, all?: boolean):
   return promise
 }
 
+export interface PagedTransactionResult {
+  items: Transaction[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+export async function fetchPagedTransactions(params: {
+  page: number
+  pageSize: number
+  search?: string
+  ledgerCategories?: string[]
+  categories?: string[]
+  txType?: 'inflow' | 'outflow' | null
+}): Promise<PagedTransactionResult> {
+  const url = new URL(`${API_BASE_URL}/transactions`)
+  url.searchParams.append('all', 'true')
+  url.searchParams.append('page', params.page.toString())
+  url.searchParams.append('pageSize', params.pageSize.toString())
+  if (params.search) url.searchParams.append('search', params.search)
+  if (params.ledgerCategories && params.ledgerCategories.length > 0)
+    url.searchParams.append('ledgerCategory', params.ledgerCategories.join(','))
+  if (params.categories && params.categories.length > 0)
+    url.searchParams.append('category', params.categories.join(','))
+  if (params.txType)
+    url.searchParams.append('txType', params.txType)
+
+  const response = await fetch(url.toString(), { headers: getHeaders() })
+  if (!response.ok) throw new Error('Failed to fetch paged transactions')
+  const data = await response.json()
+  return {
+    items: (data.items || []).map(deobfuscateTransaction),
+    total: data.total ?? 0,
+    page: data.page ?? 1,
+    pageSize: data.pageSize ?? params.pageSize
+  }
+}
+
 export async function addTransaction(transaction: Omit<Transaction, 'id'> & { id?: string }): Promise<Transaction> {
   const payload = {
     ...transaction,

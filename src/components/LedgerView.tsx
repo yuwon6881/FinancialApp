@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import type { Transaction, TransactionCategory } from '../types'
+import type { PagedTransactionResult } from '../lib/api'
 import { 
   Plus, 
   Search, 
@@ -9,7 +10,8 @@ import {
   PlusCircle,
   MinusCircle,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
 import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
@@ -45,6 +47,14 @@ interface LedgerViewProps {
   growthAlloc?: number
   stabilityAlloc?: number
   rewardsAlloc?: number
+  onFetchPagedTransactions?: (params: {
+    page: number
+    pageSize: number
+    search?: string
+    ledgerCategories?: string[]
+    categories?: string[]
+    txType?: 'inflow' | 'outflow' | null
+  }) => Promise<PagedTransactionResult>
 }
 
 function formatDateToString(d: Date): string {
@@ -121,7 +131,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   essentialsAlloc = 0.5,
   growthAlloc = 0.25,
   stabilityAlloc = 0.15,
-  rewardsAlloc = 0.1
+  rewardsAlloc = 0.1,
+  onFetchPagedTransactions
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [description, setDescription] = useState('')
@@ -234,9 +245,70 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
-  // Reset back to page 1 when search inputs or active filters are updated
+  // Server-side paged all-cycles state
+  const [serverResult, setServerResult] = useState<PagedTransactionResult | null>(null)
+  const [serverIsFetching, setServerIsFetching] = useState(false)
+  // Pending (uncommitted) states — only applied on Search/Apply button click
+  const [pendingSearchTerm, setPendingSearchTerm] = useState('')
+  const [pendingFilters, setPendingFilters] = useState<string[]>([])
+  // Applied (committed) states — what the backend has actually received
+  const [appliedSearch, setAppliedSearch] = useState('')
+  const [appliedFilters, setAppliedFilters] = useState<string[]>([])
+  const [appliedTxTypeFilter, setAppliedTxTypeFilter] = useState<'inflow' | 'outflow' | null>(null)
+
+  const ledgerBuckets = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
+
+  const runServerFetch = useCallback(async (opts: {
+    page: number
+    search: string
+    filters: string[]
+    txType: 'inflow' | 'outflow' | null
+    pSize: number
+  }) => {
+    if (!onFetchPagedTransactions) return
+    setServerIsFetching(true)
+    try {
+      const buckets = opts.filters.filter(f => ledgerBuckets.includes(f))
+      const cats = opts.filters.filter(f => !ledgerBuckets.includes(f))
+      const result = await onFetchPagedTransactions({
+        page: opts.page,
+        pageSize: opts.pSize,
+        search: opts.search || undefined,
+        ledgerCategories: buckets.length > 0 ? buckets : undefined,
+        categories: cats.length > 0 ? cats : undefined,
+        txType: opts.txType || null
+      })
+      setServerResult(result)
+    } finally {
+      setServerIsFetching(false)
+    }
+  }, [onFetchPagedTransactions])
+
+  // Trigger initial server fetch when entering all-cycles mode
   useEffect(() => {
-    setCurrentPage(1)
+    if (showAllCycles && onFetchPagedTransactions) {
+      setPendingSearchTerm('')
+      setPendingFilters([])
+      setAppliedSearch('')
+      setAppliedFilters([])
+      setAppliedTxTypeFilter(null)
+      setCurrentPage(1)
+      runServerFetch({ page: 1, search: '', filters: [], txType: null, pSize: pageSize })
+    } else {
+      setServerResult(null)
+    }
+  }, [showAllCycles])
+
+  // Re-fetch when page changes in server mode
+  useEffect(() => {
+    if (showAllCycles && onFetchPagedTransactions && serverResult) {
+      runServerFetch({ page: currentPage, search: appliedSearch, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
+    }
+  }, [currentPage, pageSize])
+
+  // Reset back to page 1 when search inputs or active filters are updated (client-side mode only)
+  useEffect(() => {
+    if (!showAllCycles) setCurrentPage(1)
   }, [searchTerm, selectedFilters, selectedDateFilter, selectedTxTypeFilter, showAllCycles])
 
   // Synchronize incoming filters from props
@@ -258,17 +330,40 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   // Toggle filter on or off
   const handleToggleFilter = (filterName: string) => {
-    setSelectedFilters(prev => {
-      if (prev.includes(filterName)) {
-        return prev.filter(f => f !== filterName)
-      } else {
-        return [...prev, filterName]
-      }
-    })
+    if (showAllCycles) {
+      // In server mode: toggle pending filters only
+      setPendingFilters(prev =>
+        prev.includes(filterName) ? prev.filter(f => f !== filterName) : [...prev, filterName]
+      )
+    } else {
+      setSelectedFilters(prev =>
+        prev.includes(filterName) ? prev.filter(f => f !== filterName) : [...prev, filterName]
+      )
+    }
   }
 
   const handleClearFilters = () => {
-    setSelectedFilters([])
+    if (showAllCycles) {
+      setPendingFilters([])
+      setAppliedFilters([])
+      setCurrentPage(1)
+      runServerFetch({ page: 1, search: appliedSearch, filters: [], txType: appliedTxTypeFilter, pSize: pageSize })
+    } else {
+      setSelectedFilters([])
+    }
+  }
+
+  const handleApplyFilters = () => {
+    setAppliedFilters(pendingFilters)
+    setCurrentPage(1)
+    setIsFilterDropdownOpen(false)
+    runServerFetch({ page: 1, search: appliedSearch, filters: pendingFilters, txType: appliedTxTypeFilter, pSize: pageSize })
+  }
+
+  const handleServerSearch = () => {
+    setAppliedSearch(pendingSearchTerm)
+    setCurrentPage(1)
+    runServerFetch({ page: 1, search: pendingSearchTerm, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
   }
 
   // Toggle dropdown on click out
@@ -539,6 +634,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     return filteredTransactions.slice(startIndex, startIndex + pageSize)
   }, [filteredTransactions, currentPage, pageSize])
 
+  // In server mode use the items from server; in client mode use local pagination
+  const displayTransactions = (showAllCycles && serverResult) ? serverResult.items : paginatedTransactions
+
   const totalPages = Math.ceil(filteredTransactions.length / pageSize) || 1
 
   // Handle highlighted transaction scroll into view and page calculation
@@ -627,17 +725,17 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     document.body.removeChild(link)
   }
 
-  const renderPageNumbers = () => {
+  const renderPageNumbers = (tp = totalPages) => {
     const pages: (number | string)[] = []
-    if (totalPages <= 5) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    if (tp <= 5) {
+      for (let i = 1; i <= tp; i++) pages.push(i)
     } else {
       if (currentPage <= 3) {
-        pages.push(1, 2, 3, '...', totalPages)
-      } else if (currentPage >= totalPages - 2) {
-        pages.push(1, '...', totalPages - 2, totalPages - 1, totalPages)
+        pages.push(1, 2, 3, '...', tp)
+      } else if (currentPage >= tp - 2) {
+        pages.push(1, '...', tp - 2, tp - 1, tp)
       } else {
-        pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages)
+        pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', tp)
       }
     }
     return pages.map((p, idx) => (
@@ -742,7 +840,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
               const filterDetails: string[] = []
               if (incomingCategory) {
-                filterDetails.push(`category "${incomingCategory}"`)
+                const isLedgerBucket = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income'].includes(incomingCategory)
+                filterDetails.push(`${isLedgerBucket ? 'ledger category' : 'category'} "${incomingCategory}"`)
               }
               if (incomingDate) {
                 const d = new Date(incomingDate)
@@ -941,15 +1040,28 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
       {/* Filter and Search controls */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 bg-card border border-border/60 rounded-2xl shadow-xs">
-        <div className="w-full md:w-72 relative">
-          <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search descriptions, ledger categories..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
-          />
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="flex-1 md:w-72 relative">
+            <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder={showAllCycles ? 'Search all history...' : 'Search descriptions, ledger categories...'}
+              value={showAllCycles ? pendingSearchTerm : searchTerm}
+              onChange={e => showAllCycles ? setPendingSearchTerm(e.target.value) : setSearchTerm(e.target.value)}
+              onKeyDown={e => { if (showAllCycles && e.key === 'Enter') handleServerSearch() }}
+              className="w-full pl-9 pr-4 py-2 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
+            />
+          </div>
+          {showAllCycles && (
+            <button
+              onClick={handleServerSearch}
+              disabled={serverIsFetching}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold cursor-pointer transition shrink-0"
+            >
+              {serverIsFetching ? <Loader2 className="size-3.5 animate-spin" /> : <Search className="size-3.5" />}
+              Search
+            </button>
+          )}
         </div>
 
         {/* Dropdown Multi-Select Category Filter */}
@@ -961,9 +1073,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             <span className="flex items-center gap-2 text-muted-foreground">
               <Filter className="size-3.5" />
               <span className="truncate">
-                {selectedFilters.length === 0 
-                  ? 'All Ledger & Subcategories' 
-                  : `${selectedFilters.length} filter${selectedFilters.length > 1 ? 's' : ''} active`}
+                {showAllCycles
+                  ? (appliedFilters.length === 0 ? 'All Ledger & Subcategories' : `${appliedFilters.length} filter${appliedFilters.length > 1 ? 's' : ''} applied`)
+                  : (selectedFilters.length === 0 ? 'All Ledger & Subcategories' : `${selectedFilters.length} filter${selectedFilters.length > 1 ? 's' : ''} active`)}
               </span>
             </span>
             <span className="text-[9px] text-muted-foreground">▼</span>
@@ -975,7 +1087,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               {/* Header */}
               <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3">
                 <span className="text-xs font-bold text-foreground">Filter Ledger Entries</span>
-                {selectedFilters.length > 0 && (
+                {(showAllCycles ? pendingFilters : selectedFilters).length > 0 && (
                   <button
                     onClick={handleClearFilters}
                     className="text-[9px] font-bold text-orange-500 hover:underline cursor-pointer"
@@ -986,14 +1098,14 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               </div>
 
               {/* Scrollable sections */}
-              <div className="space-y-4 max-h-80 overflow-y-auto pr-1">
+              <div className="space-y-4 max-h-72 overflow-y-auto pr-1">
                 
                 {/* Section 1: Ledger Allocation Buckets */}
                 <div className="space-y-2">
                   <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Ledger Buckets</span>
                   <div className="grid grid-cols-1 gap-1.5">
                     {['Essentials', 'Growth', 'Stability', 'Rewards', 'Income'].map(bucket => {
-                      const isChecked = selectedFilters.includes(bucket)
+                      const isChecked = (showAllCycles ? pendingFilters : selectedFilters).includes(bucket)
                       return (
                         <label 
                           key={bucket} 
@@ -1021,7 +1133,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Subcategories</span>
                   <div className="grid grid-cols-1 gap-1.5 max-h-40 overflow-y-auto pr-0.5">
                     {categories.map(c => {
-                      const isChecked = selectedFilters.includes(c.name)
+                      const isChecked = (showAllCycles ? pendingFilters : selectedFilters).includes(c.name)
                       return (
                         <label 
                           key={c.id} 
@@ -1044,6 +1156,20 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* Apply button — only in server mode */}
+              {showAllCycles && (
+                <div className="pt-3 mt-3 border-t border-border/40">
+                  <button
+                    onClick={handleApplyFilters}
+                    disabled={serverIsFetching}
+                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold cursor-pointer transition"
+                  >
+                    {serverIsFetching ? <Loader2 className="size-3.5 animate-spin" /> : <Filter className="size-3.5" />}
+                    Apply Filters
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1065,7 +1191,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-border/30 text-xs">
-              {paginatedTransactions.map(t => {
+              {displayTransactions.map(t => {
                 const isOutflow = t.amount < 0
                 return (
                   <tr id={`tx-row-${t.id}`} key={t.id} className="hover:bg-muted/10 transition duration-150">
@@ -1170,10 +1296,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 )
               })}
 
-              {filteredTransactions.length === 0 && (
+              {displayTransactions.length === 0 && (
                 <tr>
                   <td colSpan={7} className="p-8 text-center text-muted-foreground text-sm">
-                    No transactions match your search or filter criteria.
+                    {serverIsFetching ? 'Loading...' : 'No transactions match your search or filter criteria.'}
                   </td>
                 </tr>
               )}
@@ -1184,7 +1310,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
       {/* Ledger List - Mobile */}
       <div className="block md:hidden space-y-4">
-        {paginatedTransactions.map(t => {
+        {displayTransactions.map(t => {
           const isOutflow = t.amount < 0
           return (
             <div id={`tx-row-${t.id}`} key={t.id} className="p-4 rounded-2xl border border-border bg-card space-y-3 shadow-xs">
@@ -1242,65 +1368,75 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           )
         })}
 
-        {filteredTransactions.length === 0 && (
+        {displayTransactions.length === 0 && (
           <div className="p-8 text-center text-muted-foreground border border-border/60 rounded-2xl bg-card text-xs">
-            No transactions match your search or filter criteria.
+            {serverIsFetching ? 'Loading...' : 'No transactions match your search or filter criteria.'}
           </div>
         )}
       </div>
 
       {/* Unified Pagination Controls */}
-      {filteredTransactions.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-card border border-border/60 rounded-2xl shadow-xs text-xs select-none">
-          <div className="text-muted-foreground font-medium">
-            Showing <span className="text-foreground font-semibold">{(currentPage - 1) * pageSize + 1}</span> to{' '}
-            <span className="text-foreground font-semibold">
-              {Math.min(currentPage * pageSize, filteredTransactions.length)}
-            </span>{' '}
-            of <span className="text-foreground font-semibold">{filteredTransactions.length}</span> entries
-          </div>
-          
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Page size select dropdown selector */}
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground font-medium">Rows per page:</span>
-              <CustomSelect
-                value={pageSize}
-                onChange={(val) => {
-                  setPageSize(parseInt(val))
-                  setCurrentPage(1)
-                }}
-                options={[
-                  { value: 10, label: '10' },
-                  { value: 25, label: '25' },
-                  { value: 50, label: '50' },
-                  { value: 100, label: '100' }
-                ]}
-                className="w-18"
-              />
+      {(() => {
+        const isServerMode = showAllCycles && !!serverResult
+        const displayTotal = isServerMode ? serverResult!.total : filteredTransactions.length
+        const displayTotalPages = isServerMode
+          ? Math.ceil(serverResult!.total / pageSize) || 1
+          : totalPages
+        const displayFrom = (currentPage - 1) * pageSize + 1
+        const displayTo = Math.min(currentPage * pageSize, displayTotal)
+        if (displayTotal === 0) return null
+        return (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-card border border-border/60 rounded-2xl shadow-xs text-xs select-none">
+            <div className="text-muted-foreground font-medium flex items-center gap-2">
+              {isServerMode && serverIsFetching && <Loader2 className="size-3.5 animate-spin text-blue-500" />}
+              Showing <span className="text-foreground font-semibold">{displayFrom}</span> to{' '}
+              <span className="text-foreground font-semibold">{displayTo}</span>{' '}
+              of <span className="text-foreground font-semibold">{displayTotal}</span> entries
+              {isServerMode && <span className="text-[9px] text-blue-500 font-bold ml-1">(server)</span>}
             </div>
+            
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Page size select dropdown selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground font-medium">Rows per page:</span>
+                <CustomSelect
+                  value={pageSize}
+                  onChange={(val) => {
+                    setPageSize(parseInt(val))
+                    setCurrentPage(1)
+                  }}
+                  options={[
+                    { value: 10, label: '10' },
+                    { value: 25, label: '25' },
+                    { value: 50, label: '50' },
+                    { value: 100, label: '100' }
+                  ]}
+                  className="w-18"
+                />
+              </div>
 
-            {/* Navigation buttons */}
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-foreground disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold cursor-pointer transition"
-              >
-                Previous
-              </button>
-              {renderPageNumbers()}
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-foreground disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold cursor-pointer transition"
-              >
-                Next
-              </button>
+              {/* Navigation buttons */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1 || serverIsFetching}
+                  className="px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-foreground disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold cursor-pointer transition"
+                >
+                  Previous
+                </button>
+                {renderPageNumbers(displayTotalPages)}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, displayTotalPages))}
+                  disabled={currentPage === displayTotalPages || serverIsFetching}
+                  className="px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-foreground disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold cursor-pointer transition"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {showStabilityCapModal && pendingTxData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">

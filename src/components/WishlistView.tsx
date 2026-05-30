@@ -30,6 +30,14 @@ interface WishlistViewProps {
   formatSensitive: (val: number) => React.ReactNode
   autoOpenAddModal?: boolean
   onResetAutoOpen?: () => void
+  onNavigateToLedger?: (options: {
+    category?: string | null
+    date?: string | null
+    txType?: 'inflow' | 'outflow' | null
+    range?: 'monthly' | '3month' | '6month' | 'yearly'
+    highlightedTxId?: string | null
+    showAllCycles?: boolean
+  }) => void
 }
 
 export const WishlistView: React.FC<WishlistViewProps> = ({
@@ -45,7 +53,8 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   onPurchaseItem,
   formatSensitive,
   autoOpenAddModal,
-  onResetAutoOpen
+  onResetAutoOpen,
+  onNavigateToLedger
 }) => {
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -178,12 +187,18 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
       {/* Top Banner Ribbon */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-5 rounded-2xl bg-card border border-border/60 shadow-xs flex items-center justify-between">
+        <div 
+          onClick={() => onNavigateToLedger?.({ category: 'Rewards', showAllCycles: true })}
+          className="p-5 rounded-2xl bg-card border border-border/60 shadow-xs hover:border-pink-500/30 transition-all duration-300 group cursor-pointer flex items-center justify-between"
+        >
           <div>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Rewards Balance</span>
             <span className="text-xl font-black text-pink-500 mt-1 block">{formatSensitive(rewardsBalance)}</span>
+            <span className="text-[9px] text-pink-500 font-semibold mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-0.5">
+              View History in Ledger <ExternalLink className="size-2.5" />
+            </span>
           </div>
-          <div className="p-2.5 rounded-xl bg-pink-500/10 text-pink-500">
+          <div className="p-2.5 rounded-xl bg-pink-500/10 text-pink-500 group-hover:scale-110 transition-transform duration-300">
             <Gift className="size-5" />
           </div>
         </div>
