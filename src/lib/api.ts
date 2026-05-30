@@ -340,6 +340,8 @@ export async function exportTransactionsCsv(params: {
   ledgerCategories?: string[]
   categories?: string[]
   txType?: 'inflow' | 'outflow' | null
+  startDate?: string
+  endDate?: string
 }): Promise<{ blob: Blob; filename: string }> {
   const url = new URL(`${API_BASE_URL}/transactions/export`)
   url.searchParams.append('all', 'true')
@@ -349,6 +351,8 @@ export async function exportTransactionsCsv(params: {
   if (params.categories && params.categories.length > 0)
     url.searchParams.append('category', params.categories.join(','))
   if (params.txType) url.searchParams.append('txType', params.txType)
+  if (params.startDate) url.searchParams.append('startDate', params.startDate)
+  if (params.endDate) url.searchParams.append('endDate', params.endDate)
 
   const response = await fetch(url.toString(), { headers: getHeaders() })
   if (!response.ok) {
@@ -375,6 +379,8 @@ export async function fetchPagedTransactions(params: {
   ledgerCategories?: string[]
   categories?: string[]
   txType?: 'inflow' | 'outflow' | null
+  startDate?: string
+  endDate?: string
 }): Promise<PagedTransactionResult> {
   const url = new URL(`${API_BASE_URL}/transactions`)
   url.searchParams.append('all', 'true')
@@ -387,6 +393,8 @@ export async function fetchPagedTransactions(params: {
     url.searchParams.append('category', params.categories.join(','))
   if (params.txType)
     url.searchParams.append('txType', params.txType)
+  if (params.startDate) url.searchParams.append('startDate', params.startDate)
+  if (params.endDate) url.searchParams.append('endDate', params.endDate)
 
   const response = await fetch(url.toString(), { headers: getHeaders() })
   if (!response.ok) throw new Error('Failed to fetch paged transactions')

@@ -1540,11 +1540,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {recentTransactions.map((t: any) => {
             const isOutflow = t.amount < 0
             return (
-              <div 
-                key={t.id} 
-                onClick={() => onNavigateToLedger?.({ highlightedTxId: t.id, showAllCycles: true })}
-                className="py-3 flex items-center justify-between hover:bg-muted/30 px-2 rounded-lg transition duration-150 cursor-pointer"
-              >
+                <div 
+                  key={t.id} 
+                  onClick={() => onNavigateToLedger?.({ highlightedTxId: t.id })}
+                  className="py-3 flex items-center justify-between hover:bg-muted/30 px-2 rounded-lg transition duration-150 cursor-pointer"
+                >
                 <div className="flex items-center gap-3">
                   {/* Corrected arrows: isOutflow gets ArrowDownLeft (red), isInflow gets ArrowUpRight (green) */}
                   <div className={`p-2 rounded-lg ${isOutflow ? 'bg-orange-500/10 text-orange-500' : 'bg-blue-500/10 text-blue-500'}`}>

@@ -52,13 +52,60 @@ interface LedgerViewProps {
     ledgerCategories?: string[]
     categories?: string[]
     txType?: 'inflow' | 'outflow' | null
+    startDate?: string
+    endDate?: string
   }) => Promise<PagedTransactionResult>
   onExportTransactions?: (params: {
     search?: string
     ledgerCategories?: string[]
     categories?: string[]
     txType?: 'inflow' | 'outflow' | null
+    startDate?: string
+    endDate?: string
   }) => Promise<{ blob: Blob; filename: string }>
+}
+
+function formatDateToString(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dd}`
+}
+
+function getCycleRangeDates(year: number, monthIndex: number, cycleDay: number): { start: Date; end: Date } {
+  if (cycleDay === 1) {
+    const start = new Date(year, monthIndex - 1, 1)
+    const end = new Date(year, monthIndex, 0)
+    start.setHours(0, 0, 0, 0)
+    end.setHours(23, 59, 59, 999)
+    return { start, end }
+  }
+  const daysInStartMonth = new Date(year, monthIndex, 0).getDate()
+  const startDayActual = Math.min(cycleDay, daysInStartMonth)
+  const start = new Date(year, monthIndex - 1, startDayActual)
+  start.setHours(0, 0, 0, 0)
+
+  const end = new Date(start)
+  end.setMonth(end.getMonth() + 1)
+  end.setDate(end.getDate() - 1)
+  end.setHours(23, 59, 59, 999)
+  return { start, end }
+}
+
+function getStartOfNCyclesAgo(activeYear: number, activeMonthIndex: number, cycleDay: number, n: number): Date {
+  let curMonth = activeMonthIndex
+  let curYear = activeYear
+
+  for (let i = 0; i < n - 1; i++) {
+    curMonth--
+    if (curMonth < 1) {
+      curMonth = 12
+      curYear--
+    }
+  }
+
+  const { start } = getCycleRangeDates(curYear, curMonth, cycleDay)
+  return start
 }
 
 export const LedgerView: React.FC<LedgerViewProps> = ({
@@ -218,6 +265,34 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [appliedTxTypeFilter, setAppliedTxTypeFilter] = useState<'inflow' | 'outflow' | null>(null)
 
   const ledgerBuckets = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
+  const allCyclesRange = useMemo(() => {
+    if (!showAllCycles) return null
+    if (!cyclesRange || cyclesRange === 'monthly') return null
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    const activeMonthIdx = monthNames.indexOf(selectedMonth) + 1
+    if (activeMonthIdx <= 0) return null
+    const activeYear = selectedYear
+
+    let startDate: Date | null = null
+    let endDate: Date | null = null
+
+    if (cyclesRange === '3month') {
+      startDate = getStartOfNCyclesAgo(activeYear, activeMonthIdx, cycleDay, 3)
+      endDate = getCycleRangeDates(activeYear, activeMonthIdx, cycleDay).end
+    } else if (cyclesRange === '6month') {
+      startDate = getStartOfNCyclesAgo(activeYear, activeMonthIdx, cycleDay, 6)
+      endDate = getCycleRangeDates(activeYear, activeMonthIdx, cycleDay).end
+    } else if (cyclesRange === 'yearly') {
+      startDate = getCycleRangeDates(activeYear, 1, cycleDay).start
+      endDate = getCycleRangeDates(activeYear, 12, cycleDay).end
+    }
+
+    if (!startDate || !endDate) return null
+    return {
+      startDate: formatDateToString(startDate),
+      endDate: formatDateToString(endDate)
+    }
+  }, [showAllCycles, cyclesRange, selectedMonth, selectedYear, cycleDay])
 
   const runServerFetch = useCallback(async (opts: {
     page: number
@@ -237,13 +312,15 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         search: opts.search || undefined,
         ledgerCategories: buckets.length > 0 ? buckets : undefined,
         categories: cats.length > 0 ? cats : undefined,
-        txType: opts.txType || null
+        txType: opts.txType || null,
+        startDate: allCyclesRange?.startDate,
+        endDate: allCyclesRange?.endDate
       })
       setServerResult(result)
     } finally {
       setServerIsFetching(false)
     }
-  }, [onFetchPagedTransactions])
+  }, [onFetchPagedTransactions, allCyclesRange])
 
   // Trigger initial server fetch when entering all-cycles mode
   useEffect(() => {
@@ -259,14 +336,14 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     } else {
       setServerResult(null)
     }
-  }, [showAllCycles])
+  }, [showAllCycles, onFetchPagedTransactions, runServerFetch, allCyclesRange])
 
   // Re-fetch when page changes in server mode
   useEffect(() => {
     if (showAllCycles && onFetchPagedTransactions && serverResult) {
       runServerFetch({ page: currentPage, search: appliedSearch, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
     }
-  }, [currentPage, pageSize])
+  }, [currentPage, pageSize, showAllCycles, onFetchPagedTransactions, serverResult, runServerFetch, appliedSearch, appliedFilters, appliedTxTypeFilter, allCyclesRange])
 
   // Reset back to page 1 when search inputs or active filters are updated (client-side mode only)
   useEffect(() => {
@@ -630,9 +707,72 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     return str
   }
 
-  const getExportFilename = (scope: 'page' | 'all') => {
-    const dateStamp = new Date().toLocaleDateString('en-CA')
-    return `financial_ledger_${scope}_${dateStamp}.csv`
+  const toFilename = (value: string) => {
+    return value
+      .replace(/[<>:"/\\|?*]+/g, '')
+      .replace(/~/g, '-')
+      .replace(/[,\s]+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/_+$/g, '')
+  }
+
+  const getCycleRangeLabel = () => {
+    if (cyclesRange === '3month') return 'Last 3 Cycles'
+    if (cyclesRange === '6month') return 'Last 6 Cycles'
+    if (cyclesRange === 'yearly') return `Full Year ${selectedYear}`
+    return ''
+  }
+
+  const buildFilterLabel = () => {
+    const buckets = appliedFilters.filter(f => ledgerBuckets.includes(f))
+    const cats = appliedFilters.filter(f => !ledgerBuckets.includes(f))
+    const categoryFilters = [...buckets, ...cats]
+    const parts: string[] = []
+    if (categoryFilters.length > 0) {
+      const label = categoryFilters.join(' + ')
+      parts.push(`${label} ${categoryFilters.length > 1 ? 'Categories' : 'Category'}`)
+    }
+    if (appliedTxTypeFilter) {
+      parts.push(appliedTxTypeFilter === 'inflow' ? 'Inflows' : 'Outflows')
+    }
+    if (appliedSearch) {
+      parts.push(`Search ${appliedSearch}`)
+    }
+    return parts.join(' ')
+  }
+
+  const getExportAllFilename = () => {
+    if (!showAllCycles) {
+      const cycleLabel = getCycleLabelForDropdown(selectedMonth, selectedYear, cycleDay)
+      return `${toFilename(cycleLabel)}.csv`
+    }
+
+    const rangeLabel = getCycleRangeLabel()
+    const filterLabel = buildFilterLabel()
+    let title = ''
+    if (rangeLabel) {
+      title = filterLabel ? `${rangeLabel} ${filterLabel} Records` : `${rangeLabel} Records`
+    } else if (filterLabel) {
+      title = `All ${filterLabel} Records`
+    } else {
+      title = 'All Records'
+    }
+    return `${toFilename(title)}.csv`
+  }
+
+  const getPageExportFilename = (rows: Transaction[]) => {
+    if (rows.length === 0) {
+      return `Ledger_Page_${currentPage}.csv`
+    }
+    const dates = rows.map(r => r.date)
+    let minDate = dates[0]
+    let maxDate = dates[0]
+    for (const d of dates) {
+      if (d < minDate) minDate = d
+      if (d > maxDate) maxDate = d
+    }
+    const label = minDate === maxDate ? minDate : `${minDate}_to_${maxDate}`
+    return `${toFilename(label)}.csv`
   }
 
   const buildCsvContent = (rows: Transaction[]) => {
@@ -679,7 +819,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const handleExportPage = () => {
     if (hideSensitive) return
     const rows = isServerMode ? (serverResult?.items || []) : paginatedTransactions
-    downloadCsvRows(rows, getExportFilename('page'))
+    downloadCsvRows(rows, getPageExportFilename(rows))
     setShowExportModal(false)
   }
 
@@ -694,9 +834,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           search: appliedSearch || undefined,
           ledgerCategories: buckets.length > 0 ? buckets : undefined,
           categories: cats.length > 0 ? cats : undefined,
-          txType: appliedTxTypeFilter || null
+          txType: appliedTxTypeFilter || null,
+          startDate: allCyclesRange?.startDate,
+          endDate: allCyclesRange?.endDate
         })
-        downloadCsvBlob(result.blob, result.filename || getExportFilename('all'))
+        downloadCsvBlob(result.blob, getExportAllFilename())
         setShowExportModal(false)
       } catch (err) {
         console.error(err)
@@ -706,7 +848,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       }
       return
     }
-    downloadCsvRows(filteredTransactions, getExportFilename('all'))
+    downloadCsvRows(filteredTransactions, getExportAllFilename())
     setShowExportModal(false)
   }
 
@@ -1416,7 +1558,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               of <span className="text-foreground font-semibold">{displayTotal}</span> entries
             </div>
             
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-col sm:flex-row flex-wrap items-center gap-3 w-full sm:w-auto">
               {/* Page size select dropdown selector */}
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground font-medium">Rows per page:</span>
@@ -1437,22 +1579,43 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               </div>
 
               {/* Navigation buttons */}
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1 || serverIsFetching}
-                  className="px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-foreground disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold cursor-pointer transition"
-                >
-                  Previous
-                </button>
-                {renderPageNumbers(displayTotalPages)}
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, displayTotalPages))}
-                  disabled={currentPage === displayTotalPages || serverIsFetching}
-                  className="px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-foreground disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold cursor-pointer transition"
-                >
-                  Next
-                </button>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 sm:hidden">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1 || serverIsFetching}
+                    className="px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-foreground disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold cursor-pointer transition"
+                  >
+                    Prev
+                  </button>
+                  <span className="text-[10px] text-muted-foreground font-semibold">
+                    Page {currentPage} / {displayTotalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, displayTotalPages))}
+                    disabled={currentPage === displayTotalPages || serverIsFetching}
+                    className="px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-foreground disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold cursor-pointer transition"
+                  >
+                    Next
+                  </button>
+                </div>
+                <div className="hidden sm:flex items-center gap-1">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1 || serverIsFetching}
+                    className="px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-foreground disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold cursor-pointer transition"
+                  >
+                    Previous
+                  </button>
+                  {renderPageNumbers(displayTotalPages)}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, displayTotalPages))}
+                    disabled={currentPage === displayTotalPages || serverIsFetching}
+                    className="px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-foreground disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold cursor-pointer transition"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </div>
           </div>
