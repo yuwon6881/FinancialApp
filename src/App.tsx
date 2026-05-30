@@ -235,6 +235,9 @@ function App() {
     try {
       await api.addTransaction(newTx)
       await loadAll(selectedMonth || undefined, selectedYear || undefined)
+      if (ledgerShowAllCycles) {
+        await handleLoadAllTransactions()
+      }
     } catch (err) {
       console.error(err)
       alert('Error adding transaction on the server.')
@@ -245,6 +248,9 @@ function App() {
     try {
       await api.deleteTransaction(id)
       await loadAll(selectedMonth || undefined, selectedYear || undefined)
+      if (ledgerShowAllCycles) {
+        await handleLoadAllTransactions()
+      }
     } catch (err) {
       console.error(err)
       alert('Error deleting transaction on the server.')
@@ -255,6 +261,9 @@ function App() {
     try {
       await api.updateTransaction(id, updatedTx)
       await loadAll(selectedMonth || undefined, selectedYear || undefined)
+      if (ledgerShowAllCycles) {
+        await handleLoadAllTransactions()
+      }
     } catch (err) {
       console.error(err)
       alert('Error updating transaction on the server.')
@@ -281,6 +290,9 @@ function App() {
         ledgerCategory: noti.ledgerCategory
       })
       await loadAll(selectedMonth || undefined, selectedYear || undefined)
+      if (ledgerShowAllCycles) {
+        await handleLoadAllTransactions()
+      }
     } catch (err) {
       console.error(err)
       alert('Error confirming subscription payment.')
