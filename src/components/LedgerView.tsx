@@ -8,7 +8,8 @@ import {
   X,
   PlusCircle,
   MinusCircle,
-  RefreshCw
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
 import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
@@ -151,6 +152,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   } | null>(null)
   const [selectedSplitOption, setSelectedSplitOption] = useState<'default' | 'essentials' | 'growth' | 'rewards' | 'proportion'>('proportion')
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [txToDelete, setTxToDelete] = useState<Transaction | null>(null)
+
   useEffect(() => {
     if (autoOpenAddForm) {
       setShowAddForm(true)
@@ -186,12 +190,24 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setShowAddForm(true)
   }
 
-  // Reset Ledger Category to Essentials if user switches to outflow (since Income is inflow only)
+  // Reset Ledger Category and Category defaults on transaction type changes (adding mode only)
   useEffect(() => {
-    if (txType === 'outflow' && ledgerCategory === 'Income') {
-      setLedgerCategory('Essentials')
+    if (editingTxId) return
+
+    if (txType === 'inflow') {
+      setLedgerCategory('Income')
+      const hasSalary = categories.some(c => c.name === 'Salary')
+      if (hasSalary) {
+        setCategory('Salary')
+      } else if (categories.length > 0) {
+        setCategory(categories[0].name)
+      }
+    } else if (txType === 'outflow') {
+      if (ledgerCategory === 'Income') {
+        setLedgerCategory('Essentials')
+      }
     }
-  }, [txType, ledgerCategory])
+  }, [txType, categories, editingTxId])
 
   // Auto-generate description for transfers
   useEffect(() => {
@@ -359,6 +375,29 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const handleCancelStabilityCapModal = () => {
     setShowStabilityCapModal(false)
     setPendingTxData(null)
+  }
+
+  const handleDeleteClick = (t: Transaction) => {
+    setTxToDelete(t)
+    setShowDeleteModal(true)
+  }
+
+  const handleConfirmDelete = () => {
+    if (!txToDelete) return
+
+    let deleteId = txToDelete.id
+    if (txToDelete.id.includes('-split-')) {
+      deleteId = txToDelete.id.split('-split-')[0]
+    }
+
+    onDeleteTransaction(deleteId)
+    setShowDeleteModal(false)
+    setTxToDelete(null)
+  }
+
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false)
+    setTxToDelete(null)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -1063,14 +1102,16 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       )}
                     </td>
                     <td className="p-4 text-center flex items-center justify-center gap-2">
+                      {!t.id.includes('-split-') && (
+                        <button
+                          onClick={() => handleStartEdit(t)}
+                          className="text-xs text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer"
+                        >
+                          Edit
+                        </button>
+                      )}
                       <button
-                        onClick={() => handleStartEdit(t)}
-                        className="text-xs text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => onDeleteTransaction(t.id)}
+                        onClick={() => handleDeleteClick(t)}
                         className="text-xs text-orange-500 hover:text-orange-600 bg-orange-500/5 hover:bg-orange-500/10 border border-orange-500/10 hover:border-orange-500/20 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer"
                       >
                         Delete
@@ -1126,14 +1167,16 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 </div>
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t border-border/30">
+                {!t.id.includes('-split-') && (
+                  <button
+                    onClick={() => handleStartEdit(t)}
+                    className="text-[11px] text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 px-3 py-1.5 rounded-lg transition duration-150 cursor-pointer"
+                  >
+                    Edit Entry
+                  </button>
+                )}
                 <button
-                  onClick={() => handleStartEdit(t)}
-                  className="text-[11px] text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 px-3 py-1.5 rounded-lg transition duration-150 cursor-pointer"
-                >
-                  Edit Entry
-                </button>
-                <button
-                  onClick={() => onDeleteTransaction(t.id)}
+                  onClick={() => handleDeleteClick(t)}
                   className="text-[11px] text-orange-500 hover:text-orange-600 bg-orange-500/5 hover:bg-orange-500/10 border border-orange-500/10 hover:border-orange-500/20 px-3 py-1.5 rounded-lg transition duration-150 cursor-pointer"
                 >
                   Delete Entry
@@ -1320,6 +1363,55 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md transition cursor-pointer"
               >
                 Confirm Allocation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteModal && txToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-2 text-orange-500 pb-2 border-b border-border/40">
+              <span className="p-1.5 rounded-lg bg-orange-500/10 text-orange-500">
+                <AlertCircle className="size-5" />
+              </span>
+              <h3 className="text-md font-bold text-foreground">Confirm Deletion</h3>
+            </div>
+
+            <div className="space-y-3 text-xs leading-relaxed text-muted-foreground">
+              {txToDelete.id.includes('-split-') ? (
+                <p>
+                  This transaction is a <span className="font-semibold text-foreground">split transfer sub-record</span> of an Income Auto-Split. Deleting it will delete the main Income record and all other category splits associated with it.
+                </p>
+              ) : (txToDelete.ledgerCategory === 'Income' || txToDelete.ledgerCategory.startsWith('IncomeSplit:')) ? (
+                <p>
+                  This is the <span className="font-semibold text-foreground">main Income Auto-Split record</span>. Deleting it will delete all its associated category sub-split records as well.
+                </p>
+              ) : (
+                <p>
+                  Are you sure you want to delete this transaction: <span className="font-semibold text-foreground">"{txToDelete.description}"</span> of <span className="font-bold text-foreground">{formatSensitive(txToDelete.amount)}</span>?
+                </p>
+              )}
+              <p className="text-[10px] text-orange-500/90 font-medium bg-orange-500/5 p-2 rounded-lg border border-orange-500/10">
+                Warning: This action is permanent and cannot be undone.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleCancelDelete}
+                className="px-4 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-muted text-foreground transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="px-5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-md transition cursor-pointer"
+              >
+                Confirm Delete
               </button>
             </div>
           </div>
