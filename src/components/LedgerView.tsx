@@ -18,7 +18,6 @@ import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
 
 interface LedgerViewProps {
   transactions: Transaction[]
-  allTransactions: Transaction[]
   onAddTransaction: (transaction: Omit<Transaction, 'id'>) => void
   onDeleteTransaction: (id: string) => void
   onUpdateTransaction?: (id: string, transaction: Omit<Transaction, 'id'>) => void
@@ -35,7 +34,6 @@ interface LedgerViewProps {
   highlightedTxId?: string | null
   onClearIncomingFilters?: () => void
   showAllCycles: boolean
-  onLoadAllTransactions: () => void
   onClearAllCycles: () => void
   cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly'
   currency?: string
@@ -55,55 +53,16 @@ interface LedgerViewProps {
     categories?: string[]
     txType?: 'inflow' | 'outflow' | null
   }) => Promise<PagedTransactionResult>
-}
-
-function formatDateToString(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${dd}`
-}
-
-function getCycleRangeDates(year: number, monthIndex: number, cycleDay: number): { start: Date; end: Date } {
-  if (cycleDay === 1) {
-    const start = new Date(year, monthIndex - 1, 1)
-    const end = new Date(year, monthIndex, 0)
-    start.setHours(0, 0, 0, 0)
-    end.setHours(23, 59, 59, 999)
-    return { start, end }
-  } else {
-    const daysInStartMonth = new Date(year, monthIndex, 0).getDate()
-    const startDayActual = Math.min(cycleDay, daysInStartMonth)
-    const start = new Date(year, monthIndex - 1, startDayActual)
-    start.setHours(0, 0, 0, 0)
-    
-    const end = new Date(start)
-    end.setMonth(end.getMonth() + 1)
-    end.setDate(end.getDate() - 1)
-    end.setHours(23, 59, 59, 999)
-    return { start, end }
-  }
-}
-
-function getStartOfNCyclesAgo(activeYear: number, activeMonthIndex: number, cycleDay: number, n: number): Date {
-  let curMonth = activeMonthIndex
-  let curYear = activeYear
-  
-  for (let i = 0; i < n - 1; i++) {
-    curMonth--
-    if (curMonth < 1) {
-      curMonth = 12
-      curYear--
-    }
-  }
-  
-  const { start } = getCycleRangeDates(curYear, curMonth, cycleDay)
-  return start
+  onExportTransactions?: (params: {
+    search?: string
+    ledgerCategories?: string[]
+    categories?: string[]
+    txType?: 'inflow' | 'outflow' | null
+  }) => Promise<{ blob: Blob; filename: string }>
 }
 
 export const LedgerView: React.FC<LedgerViewProps> = ({
   transactions,
-  allTransactions,
   onAddTransaction,
   onDeleteTransaction,
   onUpdateTransaction,
@@ -120,7 +79,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   highlightedTxId,
   onClearIncomingFilters,
   showAllCycles,
-  onLoadAllTransactions: _onLoadAllTransactions,
   onClearAllCycles,
   cyclesRange,
   currency = 'USD',
@@ -132,7 +90,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   growthAlloc = 0.25,
   stabilityAlloc = 0.15,
   rewardsAlloc = 0.1,
-  onFetchPagedTransactions
+  onFetchPagedTransactions,
+  onExportTransactions
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [description, setDescription] = useState('')
@@ -248,6 +207,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   // Server-side paged all-cycles state
   const [serverResult, setServerResult] = useState<PagedTransactionResult | null>(null)
   const [serverIsFetching, setServerIsFetching] = useState(false)
+  const [showExportModal, setShowExportModal] = useState(false)
+  const [exportIsFetching, setExportIsFetching] = useState(false)
   // Pending (uncommitted) states — only applied on Search/Apply button click
   const [pendingSearchTerm, setPendingSearchTerm] = useState('')
   const [pendingFilters, setPendingFilters] = useState<string[]>([])
@@ -548,38 +509,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     resetFormFields()
   }
 
-  // Source: all transactions across all cycles when showAllCycles, else current cycle only
-  const sourceTransactions = useMemo(() => {
-    if (!showAllCycles || !allTransactions || allTransactions.length === 0) {
-      return transactions
-    }
-
-    const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    const activeMonthIdx = MONTH_NAMES.indexOf(selectedMonth) + 1
-    const activeYear = selectedYear
-
-    let startDate: Date | null = null
-    let endDate: Date | null = null
-
-    if (cyclesRange === '3month') {
-      startDate = getStartOfNCyclesAgo(activeYear, activeMonthIdx, cycleDay, 3)
-      endDate = getCycleRangeDates(activeYear, activeMonthIdx, cycleDay).end
-    } else if (cyclesRange === '6month') {
-      startDate = getStartOfNCyclesAgo(activeYear, activeMonthIdx, cycleDay, 6)
-      endDate = getCycleRangeDates(activeYear, activeMonthIdx, cycleDay).end
-    } else if (cyclesRange === 'yearly') {
-      startDate = getCycleRangeDates(activeYear, 1, cycleDay).start
-      endDate = getCycleRangeDates(activeYear, 12, cycleDay).end
-    }
-
-    if (startDate && endDate) {
-      const startStr = formatDateToString(startDate)
-      const endStr = formatDateToString(endDate)
-      return allTransactions.filter(t => t.date >= startStr && t.date <= endStr)
-    }
-
-    return allTransactions
-  }, [showAllCycles, allTransactions, transactions, selectedMonth, selectedYear, cycleDay, cyclesRange])
+  const sourceTransactions = useMemo(() => transactions, [transactions])
 
   // Filtered transactions
   const filteredTransactions = useMemo(() => {
@@ -688,6 +618,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     )
   }
 
+  const isServerMode = showAllCycles && !!serverResult
+
   // CSV export with proper quoting
   const escapeCsvField = (val: string | number) => {
     const str = String(val)
@@ -698,10 +630,14 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     return str
   }
 
-  const exportToCSV = () => {
-    if (hideSensitive) return
+  const getExportFilename = (scope: 'page' | 'all') => {
+    const dateStamp = new Date().toLocaleDateString('en-CA')
+    return `financial_ledger_${scope}_${dateStamp}.csv`
+  }
+
+  const buildCsvContent = (rows: Transaction[]) => {
     const headers = ['Date', 'Description', 'Category', 'Ledger Category', 'Debit (Outflow)', 'Credit (Inflow)']
-    const rows = filteredTransactions.map(t => {
+    const dataRows = rows.map(t => {
       const isOutflow = t.amount < 0
       const isTransfer = t.ledgerCategory.startsWith('Transfer:')
       return [
@@ -713,17 +649,65 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         isTransfer ? escapeCsvField(t.amount.toFixed(2)) : (!isOutflow ? escapeCsvField(t.amount.toFixed(2)) : '')
       ]
     })
-    
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + [headers.join(','), ...rows.map(e => e.join(','))].join('\n')
-      
-    const encodedUri = encodeURI(csvContent)
-    const link = document.createElement("a")
-    link.setAttribute("href", encodedUri)
-    link.setAttribute("download", `financial_ledger_${new Date().toLocaleDateString('en-CA')}.csv`)
+    return [headers.join(','), ...dataRows.map(e => e.join(','))].join('\n')
+  }
+
+  const downloadCsvRows = (rows: Transaction[], filename: string) => {
+    const csvContent = buildCsvContent(rows)
+    const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(csvBlob)
+    const link = document.createElement('a')
+    link.setAttribute('href', url)
+    link.setAttribute('download', filename)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  const downloadCsvBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.setAttribute('href', url)
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  const handleExportPage = () => {
+    if (hideSensitive) return
+    const rows = isServerMode ? (serverResult?.items || []) : paginatedTransactions
+    downloadCsvRows(rows, getExportFilename('page'))
+    setShowExportModal(false)
+  }
+
+  const handleExportAll = async () => {
+    if (hideSensitive) return
+    if (isServerMode && onExportTransactions) {
+      setExportIsFetching(true)
+      try {
+        const buckets = appliedFilters.filter(f => ledgerBuckets.includes(f))
+        const cats = appliedFilters.filter(f => !ledgerBuckets.includes(f))
+        const result = await onExportTransactions({
+          search: appliedSearch || undefined,
+          ledgerCategories: buckets.length > 0 ? buckets : undefined,
+          categories: cats.length > 0 ? cats : undefined,
+          txType: appliedTxTypeFilter || null
+        })
+        downloadCsvBlob(result.blob, result.filename || getExportFilename('all'))
+        setShowExportModal(false)
+      } catch (err) {
+        console.error(err)
+        alert('Failed to export transactions.')
+      } finally {
+        setExportIsFetching(false)
+      }
+      return
+    }
+    downloadCsvRows(filteredTransactions, getExportFilename('all'))
+    setShowExportModal(false)
   }
 
   const renderPageNumbers = (tp = totalPages) => {
@@ -793,7 +777,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={exportToCSV}
+            onClick={() => setShowExportModal(true)}
             disabled={hideSensitive}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border font-medium text-xs transition duration-200 ${
               hideSensitive 
@@ -1474,6 +1458,59 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           </div>
         )
       })()}
+
+      {showExportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-2 text-blue-500 pb-2 border-b border-border/40">
+              <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
+                <Download className="size-5" />
+              </span>
+              <h3 className="text-md font-bold text-foreground">Export Ledger CSV</h3>
+            </div>
+
+            <div className="space-y-2 text-xs leading-relaxed text-muted-foreground">
+              <p>
+                Choose whether to export the current page or the full result set based on your active filters.
+              </p>
+              <p className="text-[10px] text-muted-foreground/80">
+                Full exports use a server-side download to avoid large client loads.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={handleExportPage}
+                disabled={exportIsFetching}
+                className="px-4 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-muted text-foreground transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Export This Page
+              </button>
+              <button
+                type="button"
+                onClick={handleExportAll}
+                disabled={exportIsFetching}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {exportIsFetching && <Loader2 className="size-3.5 animate-spin" />}
+                Export Entire Result
+              </button>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowExportModal(false)}
+                disabled={exportIsFetching}
+                className="px-4 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-muted text-foreground transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showStabilityCapModal && pendingTxData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">

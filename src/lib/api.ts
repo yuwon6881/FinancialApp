@@ -335,6 +335,32 @@ export function fetchTransactions(month?: string, year?: number, all?: boolean):
   return promise
 }
 
+export async function exportTransactionsCsv(params: {
+  search?: string
+  ledgerCategories?: string[]
+  categories?: string[]
+  txType?: 'inflow' | 'outflow' | null
+}): Promise<{ blob: Blob; filename: string }> {
+  const url = new URL(`${API_BASE_URL}/transactions/export`)
+  url.searchParams.append('all', 'true')
+  if (params.search) url.searchParams.append('search', params.search)
+  if (params.ledgerCategories && params.ledgerCategories.length > 0)
+    url.searchParams.append('ledgerCategory', params.ledgerCategories.join(','))
+  if (params.categories && params.categories.length > 0)
+    url.searchParams.append('category', params.categories.join(','))
+  if (params.txType) url.searchParams.append('txType', params.txType)
+
+  const response = await fetch(url.toString(), { headers: getHeaders() })
+  if (!response.ok) {
+    throw new Error('Failed to export transactions')
+  }
+  const blob = await response.blob()
+  const disposition = response.headers.get('content-disposition') || ''
+  const match = /filename="?([^"]+)"?/i.exec(disposition)
+  const fallback = `financial_ledger_${new Date().toLocaleDateString('en-CA')}.csv`
+  return { blob, filename: match?.[1] || fallback }
+}
+
 export interface PagedTransactionResult {
   items: Transaction[]
   total: number
@@ -638,4 +664,3 @@ export async function purchaseWishlistItem(id: number): Promise<{ item: Wishlist
   queryCache.invalidateAll()
   return response.json()
 }
-

@@ -34,7 +34,6 @@ function App() {
   const [autoOpenWishlistAdd, setAutoOpenWishlistAdd] = useState(false)
   const [isHoveringWallet, setIsHoveringWallet] = useState(false)
   const [highlightedTxId, setHighlightedTxId] = useState<string | null>(null)
-  const [allTransactions, setAllTransactions] = useState<Transaction[]>([])
   const [hideSensitive, setHideSensitive] = useState<boolean>(() => {
     return localStorage.getItem('hide_sensitive') === 'true'
   })
@@ -235,9 +234,6 @@ function App() {
     try {
       await api.addTransaction(newTx)
       await loadAll(selectedMonth || undefined, selectedYear || undefined)
-      if (ledgerShowAllCycles) {
-        await handleLoadAllTransactions()
-      }
     } catch (err) {
       console.error(err)
       alert('Error adding transaction on the server.')
@@ -248,9 +244,6 @@ function App() {
     try {
       await api.deleteTransaction(id)
       await loadAll(selectedMonth || undefined, selectedYear || undefined)
-      if (ledgerShowAllCycles) {
-        await handleLoadAllTransactions()
-      }
     } catch (err) {
       console.error(err)
       alert('Error deleting transaction on the server.')
@@ -261,21 +254,9 @@ function App() {
     try {
       await api.updateTransaction(id, updatedTx)
       await loadAll(selectedMonth || undefined, selectedYear || undefined)
-      if (ledgerShowAllCycles) {
-        await handleLoadAllTransactions()
-      }
     } catch (err) {
       console.error(err)
       alert('Error updating transaction on the server.')
-    }
-  }
-
-  const handleLoadAllTransactions = async () => {
-    try {
-      const txs = await api.fetchTransactions(undefined, undefined, true)
-      setAllTransactions(txs)
-    } catch (err) {
-      console.error(err)
     }
   }
 
@@ -290,9 +271,6 @@ function App() {
         ledgerCategory: noti.ledgerCategory
       })
       await loadAll(selectedMonth || undefined, selectedYear || undefined)
-      if (ledgerShowAllCycles) {
-        await handleLoadAllTransactions()
-      }
     } catch (err) {
       console.error(err)
       alert('Error confirming subscription payment.')
@@ -420,7 +398,6 @@ function App() {
       setLedgerIncomingTxType(null)
       setLedgerCyclesRange('monthly')
       setLedgerShowAllCycles(false)
-      setAllTransactions([])
     }
   }, [activeTab])
 
@@ -439,9 +416,6 @@ function App() {
     setLedgerCyclesRange(range)
     const showAll = options.showAllCycles !== undefined ? options.showAllCycles : (range !== 'monthly')
     setLedgerShowAllCycles(showAll)
-    if (showAll) {
-      handleLoadAllTransactions()
-    }
     if (options.highlightedTxId) {
       setHighlightedTxId(options.highlightedTxId)
     }
@@ -561,7 +535,6 @@ function App() {
         {activeTab === 'ledger' && (
           <LedgerView 
             transactions={transactions}
-            allTransactions={allTransactions}
             onAddTransaction={handleAddTransaction}
             onDeleteTransaction={handleDeleteTransaction}
             onUpdateTransaction={handleUpdateTransaction}
@@ -583,8 +556,7 @@ function App() {
               setHighlightedTxId(null)
             }}
             showAllCycles={ledgerShowAllCycles}
-            onLoadAllTransactions={handleLoadAllTransactions}
-            onClearAllCycles={() => { setLedgerShowAllCycles(false); setAllTransactions([]) }}
+            onClearAllCycles={() => { setLedgerShowAllCycles(false) }}
             cyclesRange={ledgerCyclesRange}
             currency={dashboardData?.setting?.currency || 'USD'}
             autoOpenAddForm={autoOpenLedgerAdd}
@@ -596,6 +568,7 @@ function App() {
             stabilityAlloc={dashboardData?.setting?.stabilityAlloc ?? 0.15}
             rewardsAlloc={dashboardData?.setting?.rewardsAlloc ?? 0.1}
             onFetchPagedTransactions={api.fetchPagedTransactions}
+            onExportTransactions={api.exportTransactionsCsv}
           />
         )}
 
