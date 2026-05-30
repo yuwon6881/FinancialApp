@@ -27,7 +27,7 @@ interface TopNavProps {
   activeTab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist'
   onTabChange: (tab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist') => void
   totalBalance: number
-  onPostQuickTransaction: () => void
+  onQuickAction?: (action: 'transaction' | 'subscription' | 'wishlist') => void
   hideSensitive: boolean
   onToggleHideSensitive: () => void
   onLogout: () => void
@@ -44,7 +44,7 @@ const TopNav: React.FC<TopNavProps> = ({
   activeTab,
   onTabChange,
   totalBalance,
-  onPostQuickTransaction,
+  onQuickAction,
   hideSensitive,
   onToggleHideSensitive,
   onLogout,
@@ -91,6 +91,7 @@ const TopNav: React.FC<TopNavProps> = ({
   return (
     <>
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md">
+        <div className="h-[2.5px] w-full bg-gradient-to-r from-blue-500 via-violet-500 to-pink-500" />
         <div className="container mx-auto flex h-16 items-center px-4">
         
         {/* Left Side (Logo and Brand) */}
@@ -112,7 +113,7 @@ const TopNav: React.FC<TopNavProps> = ({
               onClick={() => onTabChange('dashboard')}
               className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer ${
                 activeTab === 'dashboard'
-                  ? 'bg-card text-foreground shadow-xs border border-border/10 font-bold scale-[1.02]'
+                  ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20 font-bold scale-[1.02]'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
               }`}
             >
@@ -122,7 +123,7 @@ const TopNav: React.FC<TopNavProps> = ({
               onClick={() => onTabChange('recurring')}
               className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer ${
                 activeTab === 'recurring'
-                  ? 'bg-card text-foreground shadow-xs border border-border/10 font-bold scale-[1.02]'
+                  ? 'bg-violet-500/10 text-violet-500 border border-violet-500/20 font-bold scale-[1.02]'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
               }`}
             >
@@ -132,7 +133,7 @@ const TopNav: React.FC<TopNavProps> = ({
               onClick={() => onTabChange('ledger')}
               className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer ${
                 activeTab === 'ledger'
-                  ? 'bg-card text-foreground shadow-xs border border-border/10 font-bold scale-[1.02]'
+                  ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-bold scale-[1.02]'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
               }`}
             >
@@ -157,7 +158,7 @@ const TopNav: React.FC<TopNavProps> = ({
             onClick={() => onTabChange('wishlist')}
             className={`hidden md:flex p-1.5 border rounded-xl cursor-pointer transition duration-150 items-center justify-center ${
               activeTab === 'wishlist'
-                ? 'bg-muted border-border text-foreground shadow-xs'
+                ? 'bg-pink-500/10 border-pink-500/20 text-pink-500 shadow-xs'
                 : 'border-border/60 hover:bg-muted text-muted-foreground hover:text-foreground'
             }`}
             title="Wish List"
@@ -285,19 +286,24 @@ const TopNav: React.FC<TopNavProps> = ({
                 <MenubarContent className="z-50 min-w-[160px] bg-card border border-border p-1 rounded-xl shadow-md">
                   <MenubarGroup>
                     <MenubarItem 
-                      onClick={onPostQuickTransaction}
+                      onClick={() => onQuickAction?.('transaction')}
                       className="flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer"
                     >
-                      Post Transaction <Plus className="size-3" />
+                      Post Transaction <Plus className="size-3 text-blue-500" />
                     </MenubarItem>
                     <MenubarItem 
-                      onClick={() => onTabChange('recurring')}
+                      onClick={() => onQuickAction?.('subscription')}
                       className="flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer"
                     >
-                      New Subscription <Plus className="size-3" />
+                      New Subscription <Plus className="size-3 text-violet-500" />
+                    </MenubarItem>
+                    <MenubarItem 
+                      onClick={() => onQuickAction?.('wishlist')}
+                      className="flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer"
+                    >
+                      Add Wish Goal <Plus className="size-3 text-pink-500" />
                     </MenubarItem>
                   </MenubarGroup>
-
                 </MenubarContent>
               </MenubarMenu>
 
@@ -369,7 +375,7 @@ const TopNav: React.FC<TopNavProps> = ({
         <button
           onClick={() => onTabChange('recurring')}
           className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
-            activeTab === 'recurring' ? 'text-blue-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
+            activeTab === 'recurring' ? 'text-violet-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           <CreditCard className="size-4.5 mx-auto" />
@@ -378,7 +384,7 @@ const TopNav: React.FC<TopNavProps> = ({
         <button
           onClick={() => onTabChange('ledger')}
           className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
-            activeTab === 'ledger' ? 'text-blue-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
+            activeTab === 'ledger' ? 'text-emerald-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           <Wallet className="size-4.5 mx-auto" />

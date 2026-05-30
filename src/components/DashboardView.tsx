@@ -1541,7 +1541,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
                       <span>{t.date}</span>
                       <span>•</span>
-                      <span>{t.ledgerCategory}</span>
+                      <span>{t.ledgerCategory.startsWith('Transfer:') ? 'Transfer' : t.ledgerCategory.startsWith('IncomeSplit:') ? 'Income' : t.ledgerCategory}</span>
                     </div>
                   </div>
                 </div>

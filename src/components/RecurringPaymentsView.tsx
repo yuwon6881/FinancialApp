@@ -24,6 +24,8 @@ interface RecurringPaymentsViewProps {
   hideSensitive: boolean
   categories: TransactionCategory[]
   currency?: string
+  autoOpenAddForm?: boolean
+  onResetAutoOpen?: () => void
 }
 
 export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
@@ -34,7 +36,9 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   onUpdatePayment,
   hideSensitive,
   categories,
-  currency = 'USD'
+  currency = 'USD',
+  autoOpenAddForm,
+  onResetAutoOpen
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingPayment, setEditingPayment] = useState<RecurringPayment | null>(null)
@@ -44,6 +48,13 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   const [ledgerCategory, setLedgerCategory] = useState<'Essentials' | 'Growth' | 'Stability' | 'Rewards'>('Essentials')
   const [startDateInput, setStartDateInput] = useState('')
   const [endDateInput, setEndDateInput] = useState('')
+
+  React.useEffect(() => {
+    if (autoOpenAddForm) {
+      setShowAddForm(true)
+      onResetAutoOpen?.()
+    }
+  }, [autoOpenAddForm, onResetAutoOpen])
 
   React.useEffect(() => {
     if (categories.length > 0 && !category) {

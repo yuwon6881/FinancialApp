@@ -52,6 +52,8 @@ export interface DashboardStats {
   growthPercentAchieved: number
   essentialsPercentRemaining: number
   stabilityPercentReached: number
+  pastThreeMonthsRewardsAverage: number
+  hasRewardsHistory: boolean
 }
 
 export interface ActiveRecurringPayment {

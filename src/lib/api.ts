@@ -195,7 +195,8 @@ export function fetchDashboard(month?: string, year?: number): Promise<Dashboard
         monthlyIncome: deobfuscateAmount(data.stats.monthlyIncome),
         monthlyInflow: deobfuscateAmount(data.stats.monthlyInflow),
         monthlyExpenses: deobfuscateAmount(data.stats.monthlyExpenses),
-        activeRecurringTotal: deobfuscateAmount(data.stats.activeRecurringTotal)
+        activeRecurringTotal: deobfuscateAmount(data.stats.activeRecurringTotal),
+        pastThreeMonthsRewardsAverage: deobfuscateAmount(data.stats.pastThreeMonthsRewardsAverage)
       },
       recentTransactions: (data.recentTransactions || []).map(deobfuscateTransaction),
       activeRecurringPayments: (data.activeRecurringPayments || []).map((rp: any) => ({
@@ -361,6 +362,24 @@ export async function deleteTransaction(id: string): Promise<void> {
   })
   if (!response.ok) {
     throw new Error('Failed to delete transaction')
+  }
+  queryCache.invalidateAll()
+}
+
+export async function updateTransaction(id: string, transaction: Omit<Transaction, 'id'>): Promise<void> {
+  const payload = {
+    ...transaction,
+    amount: obfuscateAmount(transaction.amount)
+  }
+  const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
+    method: 'PUT',
+    headers: getHeaders({
+      'Content-Type': 'application/json',
+    }),
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) {
+    throw new Error('Failed to update transaction')
   }
   queryCache.invalidateAll()
 }

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import type { WishlistItem } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
+import { formatCurrencyVal } from '../lib/utils'
 import { 
   Gift, 
   Plus, 
@@ -9,7 +10,6 @@ import {
   Sparkles, 
   Clock, 
   CheckCircle2,
-  TrendingUp,
   X,
   Target,
   Edit2
@@ -19,6 +19,8 @@ interface WishlistViewProps {
   wishlist: WishlistItem[]
   rewardsBalance: number
   rewardsTarget: number
+  pastThreeMonthsRewardsAverage: number
+  hasRewardsHistory: boolean
   currency: string
   hideSensitive: boolean
   onAddItem: (item: Partial<WishlistItem>) => Promise<void>
@@ -26,18 +28,24 @@ interface WishlistViewProps {
   onDeleteItem: (id: number) => Promise<void>
   onPurchaseItem: (id: number) => Promise<void>
   formatSensitive: (val: number) => React.ReactNode
+  autoOpenAddModal?: boolean
+  onResetAutoOpen?: () => void
 }
 
 export const WishlistView: React.FC<WishlistViewProps> = ({
   wishlist,
   rewardsBalance,
   rewardsTarget,
+  pastThreeMonthsRewardsAverage,
+  hasRewardsHistory,
   currency,
   onAddItem,
   onUpdateItem,
   onDeleteItem,
   onPurchaseItem,
-  formatSensitive
+  formatSensitive,
+  autoOpenAddModal,
+  onResetAutoOpen
 }) => {
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -79,12 +87,12 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   }, [wishlist, rewardsBalance])
 
   // Calculation for timeline prediction
-  const monthlySavingsRate = rewardsTarget > 0 ? rewardsTarget : 100 // fallback to 100/mo
-  const getTimelineString = (itemPrice: number) => {
+  const getTimelineString = (itemPrice: number, rate: number) => {
     const remaining = itemPrice - rewardsBalance
     if (remaining <= 0) return 'Available Now! 🎉'
+    if (rate <= 0) return 'N/A'
     
-    const months = remaining / monthlySavingsRate
+    const months = remaining / rate
     const days = Math.ceil(months * 30)
     
     const today = new Date()
@@ -92,11 +100,18 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     const formattedDate = targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     
     if (days < 30) {
-      return `Unlock in ~${days} Days (${formattedDate})`
+      return `~${days} Days (${formattedDate})`
     }
     const roundedMonths = (days / 30).toFixed(1)
-    return `Unlock in ~${roundedMonths} Months (${formattedDate})`
+    return `~${roundedMonths} Months (${formattedDate})`
   }
+
+  React.useEffect(() => {
+    if (autoOpenAddModal) {
+      handleOpenAddModal()
+      onResetAutoOpen?.()
+    }
+  }, [autoOpenAddModal, onResetAutoOpen])
 
 
 
@@ -291,14 +306,32 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                     </div>
 
                     {/* Predictor Ribbon */}
-                    <div className="p-3 bg-muted/40 rounded-xl border border-border/30 flex items-start gap-2.5">
-                      {!canAfford && <TrendingUp className="size-4 mt-0.5 shrink-0 text-pink-500" />}
-                      <div className="text-xs">
-                        <span className="font-bold text-foreground block">
-                          {getTimelineString(activeItem.price)}
-                        </span>
+                    {!canAfford && (
+                      <div className="grid grid-cols-2 gap-3 p-3 bg-muted/40 rounded-xl border border-border/30">
+                        <div className="space-y-1">
+                          <span className="text-[10px] uppercase tracking-wider font-extrabold text-blue-500">Optimistic Projection</span>
+                          <span className="text-[11px] font-bold text-foreground block">
+                            {getTimelineString(activeItem.price, rewardsTarget > 0 ? rewardsTarget : 100)}
+                          </span>
+                          <span className="text-[9px] text-muted-foreground block font-medium">Based on target budget ({formatCurrencyVal(rewardsTarget, currency)}/mo)</span>
+                        </div>
+                        <div className="space-y-1 border-l border-border/30 pl-3">
+                          <span className="text-[10px] uppercase tracking-wider font-extrabold text-violet-500">Realistic Projection</span>
+                          <span className="text-[11px] font-bold text-foreground block">
+                            {hasRewardsHistory 
+                              ? getTimelineString(activeItem.price, pastThreeMonthsRewardsAverage)
+                              : 'N/A'
+                            }
+                          </span>
+                          <span className="text-[9px] text-muted-foreground block font-medium">
+                            {hasRewardsHistory 
+                              ? `Based on past 3-mo savings (${formatCurrencyVal(pastThreeMonthsRewardsAverage, currency)}/mo)`
+                              : 'No past savings history'
+                            }
+                          </span>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* Actions */}

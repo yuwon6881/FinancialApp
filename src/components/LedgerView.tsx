@@ -18,6 +18,7 @@ interface LedgerViewProps {
   allTransactions: Transaction[]
   onAddTransaction: (transaction: Omit<Transaction, 'id'>) => void
   onDeleteTransaction: (id: string) => void
+  onUpdateTransaction?: (id: string, transaction: Omit<Transaction, 'id'>) => void
   hideSensitive: boolean
   categories: TransactionCategory[]
   selectedMonth: string
@@ -34,6 +35,8 @@ interface LedgerViewProps {
   onClearAllCycles: () => void
   cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly'
   currency?: string
+  autoOpenAddForm?: boolean
+  onResetAutoOpen?: () => void
 }
 
 function formatDateToString(d: Date): string {
@@ -85,6 +88,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   allTransactions,
   onAddTransaction,
   onDeleteTransaction,
+  onUpdateTransaction,
   hideSensitive,
   categories,
   selectedMonth,
@@ -100,7 +104,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   onLoadAllTransactions: _onLoadAllTransactions,
   onClearAllCycles,
   cyclesRange,
-  currency = 'USD'
+  currency = 'USD',
+  autoOpenAddForm,
+  onResetAutoOpen
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [description, setDescription] = useState('')
@@ -117,6 +123,43 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     const d = String(now.getDate()).padStart(2, '0')
     return `${y}-${m}-${d}`
   })
+
+  const [editingTxId, setEditingTxId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (autoOpenAddForm) {
+      setShowAddForm(true)
+      onResetAutoOpen?.()
+    }
+  }, [autoOpenAddForm, onResetAutoOpen])
+
+  const handleStartEdit = (t: Transaction) => {
+    setEditingTxId(t.id)
+    setDescription(t.description)
+    setAmount(Math.abs(t.amount).toString())
+    setDate(t.date)
+    if (t.ledgerCategory.startsWith('Transfer:')) {
+      setTxType('transfer')
+      const parts = t.ledgerCategory.substring(9).split('->')
+      if (parts.length === 2) {
+        setTransferSource(parts[0].trim() as any)
+        setTransferTarget(parts[1].trim() as any)
+      }
+    } else {
+      if (t.amount < 0) {
+        setTxType('outflow')
+      } else {
+        setTxType('inflow')
+      }
+      setCategory(t.category)
+      if (t.ledgerCategory.startsWith('IncomeSplit:')) {
+        setLedgerCategory('Income')
+      } else {
+        setLedgerCategory(t.ledgerCategory as any)
+      }
+    }
+    setShowAddForm(true)
+  }
 
   // Reset Ledger Category to Essentials if user switches to outflow (since Income is inflow only)
   useEffect(() => {
@@ -219,13 +262,23 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       finalLedgerCategory = `Transfer:${transferSource}->${transferTarget}` as any
     }
 
-    onAddTransaction({
-      description,
-      amount: finalAmount,
-      category: txType === 'transfer' ? 'Other' : category,
-      ledgerCategory: finalLedgerCategory,
-      date
-    })
+    if (editingTxId) {
+      onUpdateTransaction?.(editingTxId, {
+        description,
+        amount: finalAmount,
+        category: txType === 'transfer' ? 'Other' : category,
+        ledgerCategory: finalLedgerCategory,
+        date
+      })
+    } else {
+      onAddTransaction({
+        description,
+        amount: finalAmount,
+        category: txType === 'transfer' ? 'Other' : category,
+        ledgerCategory: finalLedgerCategory,
+        date
+      })
+    }
 
     // Reset fields
     setDescription('')
@@ -236,6 +289,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     const mo = String(now.getMonth() + 1).padStart(2, '0')
     const d = String(now.getDate()).padStart(2, '0')
     setDate(`${y}-${mo}-${d}`)
+    setEditingTxId(null)
     setShowAddForm(false)
   }
 
@@ -324,8 +378,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const displayLedgerCategory = (cat: string) => {
     if (cat.startsWith('IncomeSplit:')) return 'Income'
     if (cat.startsWith('Transfer:')) {
-      const parts = cat.replace('Transfer:', '').split('->')
-      return `Transfer: ${parts[0]} → ${parts[1]}`
+      return 'Transfer'
     }
     return cat
   }
@@ -428,7 +481,15 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             Export CSV
           </button>
           <button
-            onClick={() => setShowAddForm(prev => !prev)}
+            onClick={() => {
+              if (showAddForm) {
+                setDescription('')
+                setAmount('')
+                setLedgerCategory('Essentials')
+                setEditingTxId(null)
+              }
+              setShowAddForm(prev => !prev)
+            }}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs shadow-lg shadow-blue-600/10 hover:shadow-blue-600/20 transition duration-200 cursor-pointer"
           >
             {showAddForm ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
@@ -492,7 +553,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       {showAddForm && (
         <div className="p-6 rounded-2xl bg-card border border-blue-500/20 shadow-md animate-in slide-in-from-top-4 duration-300">
           <h3 className="text-md font-semibold text-foreground mb-4 flex items-center gap-2">
-            <PlusCircle className="size-4 text-blue-500" /> Post New Ledger Entry
+            <PlusCircle className="size-4 text-blue-500" /> {editingTxId ? 'Edit Ledger Entry' : 'Post New Ledger Entry'}
           </h3>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
             
@@ -645,7 +706,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 type="submit"
                 className="w-full md:w-auto px-6 py-2.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md transition duration-200 cursor-pointer"
               >
-                Post Entry
+                {editingTxId ? 'Update Entry' : 'Post Entry'}
               </button>
             </div>
           </form>
@@ -818,7 +879,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                         <span className="text-muted-foreground/30">-</span>
                       )}
                     </td>
-                    <td className="p-4 text-center">
+                    <td className="p-4 text-center flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => handleStartEdit(t)}
+                        className="text-xs text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer"
+                      >
+                        Edit
+                      </button>
                       <button
                         onClick={() => onDeleteTransaction(t.id)}
                         className="text-xs text-orange-500 hover:text-orange-600 bg-orange-500/5 hover:bg-orange-500/10 border border-orange-500/10 hover:border-orange-500/20 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer"
@@ -875,7 +942,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   )}
                 </div>
               </div>
-              <div className="flex justify-end pt-2 border-t border-border/30">
+              <div className="flex justify-end gap-2 pt-2 border-t border-border/30">
+                <button
+                  onClick={() => handleStartEdit(t)}
+                  className="text-[11px] text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 px-3 py-1.5 rounded-lg transition duration-150 cursor-pointer"
+                >
+                  Edit Entry
+                </button>
                 <button
                   onClick={() => onDeleteTransaction(t.id)}
                   className="text-[11px] text-orange-500 hover:text-orange-600 bg-orange-500/5 hover:bg-orange-500/10 border border-orange-500/10 hover:border-orange-500/20 px-3 py-1.5 rounded-lg transition duration-150 cursor-pointer"

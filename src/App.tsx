@@ -29,6 +29,9 @@ function App() {
   const [ledgerIncomingDate, setLedgerIncomingDate] = useState<string | null>(null)
   const [ledgerIncomingTxType, setLedgerIncomingTxType] = useState<'inflow' | 'outflow' | null>(null)
   const [ledgerShowAllCycles, setLedgerShowAllCycles] = useState(false)
+  const [autoOpenLedgerAdd, setAutoOpenLedgerAdd] = useState(false)
+  const [autoOpenSubscriptionAdd, setAutoOpenSubscriptionAdd] = useState(false)
+  const [autoOpenWishlistAdd, setAutoOpenWishlistAdd] = useState(false)
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([])
   const [hideSensitive, setHideSensitive] = useState<boolean>(() => {
     return localStorage.getItem('hide_sensitive') === 'true'
@@ -195,7 +198,7 @@ function App() {
     currency?: string
   }) => {
     try {
-      await api.updateSettings(settings)
+      await api.updateSettings({ ...settings, darkMode })
       await loadAll(selectedMonth || undefined, selectedYear || undefined)
     } catch (err) {
       console.error(err)
@@ -243,6 +246,16 @@ function App() {
     } catch (err) {
       console.error(err)
       alert('Error deleting transaction on the server.')
+    }
+  }
+
+  const handleUpdateTransaction = async (id: string, updatedTx: Omit<Transaction, 'id'>) => {
+    try {
+      await api.updateTransaction(id, updatedTx)
+      await loadAll(selectedMonth || undefined, selectedYear || undefined)
+    } catch (err) {
+      console.error(err)
+      alert('Error updating transaction on the server.')
     }
   }
 
@@ -372,13 +385,20 @@ function App() {
     return transactions.reduce((acc, t) => acc + t.amount, 0)
   }, [transactions, dashboardData])
 
-  const handlePostQuickTransaction = () => {
-    setActiveTab('ledger')
-  }
-
   const [ledgerCyclesRange, setLedgerCyclesRange] = useState<'monthly' | '3month' | '6month' | 'yearly'>('monthly')
 
-  // Automatically clear filters when navigating away from the ledger tab
+  const handleQuickAction = (action: 'transaction' | 'subscription' | 'wishlist') => {
+    if (action === 'transaction') {
+      setActiveTab('ledger')
+      setAutoOpenLedgerAdd(true)
+    } else if (action === 'subscription') {
+      setActiveTab('recurring')
+      setAutoOpenSubscriptionAdd(true)
+    } else if (action === 'wishlist') {
+      setActiveTab('wishlist')
+      setAutoOpenWishlistAdd(true)
+    }
+  }
   useEffect(() => {
     if (activeTab !== 'ledger') {
       setLedgerIncomingCategory(null)
@@ -449,12 +469,11 @@ function App() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col selection:bg-blue-500/20 selection:text-blue-500">
       
-      {/* Top Nav Component */}
       <TopNav 
         activeTab={activeTab} 
         onTabChange={setActiveTab} 
         totalBalance={totalBalance}
-        onPostQuickTransaction={handlePostQuickTransaction}
+        onQuickAction={handleQuickAction}
         hideSensitive={hideSensitive}
         onToggleHideSensitive={handleToggleHideSensitive}
         onLogout={handleLogout}
@@ -504,6 +523,8 @@ function App() {
             hideSensitive={hideSensitive}
             categories={categoriesList}
             currency={dashboardData?.setting?.currency || 'USD'}
+            autoOpenAddForm={autoOpenSubscriptionAdd}
+            onResetAutoOpen={() => setAutoOpenSubscriptionAdd(false)}
           />
         )}
 
@@ -513,6 +534,7 @@ function App() {
             allTransactions={allTransactions}
             onAddTransaction={handleAddTransaction}
             onDeleteTransaction={handleDeleteTransaction}
+            onUpdateTransaction={handleUpdateTransaction}
             hideSensitive={hideSensitive}
             categories={categoriesList}
             selectedMonth={selectedMonth}
@@ -533,6 +555,8 @@ function App() {
             onClearAllCycles={() => { setLedgerShowAllCycles(false); setAllTransactions([]) }}
             cyclesRange={ledgerCyclesRange}
             currency={dashboardData?.setting?.currency || 'USD'}
+            autoOpenAddForm={autoOpenLedgerAdd}
+            onResetAutoOpen={() => setAutoOpenLedgerAdd(false)}
           />
         )}
 
@@ -541,6 +565,8 @@ function App() {
             wishlist={wishlist}
             rewardsBalance={dashboardData?.categories?.find(c => c.name === 'Rewards')?.remaining ?? 0}
             rewardsTarget={dashboardData?.categories?.find(c => c.name === 'Rewards')?.target ?? 400}
+            pastThreeMonthsRewardsAverage={dashboardData?.stats?.pastThreeMonthsRewardsAverage ?? 0}
+            hasRewardsHistory={dashboardData?.stats?.hasRewardsHistory ?? false}
             currency={dashboardData?.setting?.currency || 'USD'}
             hideSensitive={hideSensitive}
             onAddItem={handleAddWishlistItem}
@@ -548,6 +574,8 @@ function App() {
             onDeleteItem={handleDeleteWishlistItem}
             onPurchaseItem={handlePurchaseWishlistItem}
             formatSensitive={formatSensitive}
+            autoOpenAddModal={autoOpenWishlistAdd}
+            onResetAutoOpen={() => setAutoOpenWishlistAdd(false)}
           />
         )}
       </main>
