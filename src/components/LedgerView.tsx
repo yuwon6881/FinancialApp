@@ -154,6 +154,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [txToDelete, setTxToDelete] = useState<Transaction | null>(null)
+  const [showEditDisabledModal, setShowEditDisabledModal] = useState(false)
 
   useEffect(() => {
     if (autoOpenAddForm) {
@@ -567,6 +568,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   const displayLedgerCategory = (cat: string) => {
     if (cat.startsWith('IncomeSplit:')) return 'Income'
+    if (cat.startsWith('Transfer:Income->')) {
+      return cat.substring(17)
+    }
     if (cat.startsWith('Transfer:')) {
       return 'Transfer'
     }
@@ -1076,33 +1080,78 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     </td>
                     <td className="p-4 font-semibold text-muted-foreground">{displayLedgerCategory(t.ledgerCategory)}</td>
                     <td className="p-4 text-right font-medium">
-                      {t.ledgerCategory.startsWith('Transfer:') ? (
-                        <span className="inline-block px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-500 font-bold text-xs">
-                          {formatSensitive(t.amount)}
-                        </span>
-                      ) : isOutflow ? (
-                        <span className="inline-block px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-500 font-bold text-xs">
-                          {formatSensitive(Math.abs(t.amount))}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground/30">-</span>
-                      )}
+                      {(() => {
+                        const isIncomeRecord = t.ledgerCategory === 'Income' || t.ledgerCategory.startsWith('IncomeSplit:')
+                        const isSplitSub = t.id.includes('-split-')
+                        if (isIncomeRecord) {
+                          return (
+                            <span className="inline-block px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-500 font-bold text-xs">
+                              {formatSensitive(t.amount)}
+                            </span>
+                          )
+                        }
+                        if (isSplitSub) {
+                          return <span className="text-muted-foreground/30">-</span>
+                        }
+                        if (t.ledgerCategory.startsWith('Transfer:')) {
+                          return (
+                            <span className="inline-block px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-500 font-bold text-xs">
+                              {formatSensitive(t.amount)}
+                            </span>
+                          )
+                        }
+                        return isOutflow ? (
+                          <span className="inline-block px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-500 font-bold text-xs">
+                            {formatSensitive(Math.abs(t.amount))}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/30">-</span>
+                        )
+                      })()}
                     </td>
                     <td className="p-4 text-right font-medium">
-                      {t.ledgerCategory.startsWith('Transfer:') ? (
-                        <span className="inline-block px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-500 font-bold text-xs">
-                          {formatSensitive(t.amount)}
-                        </span>
-                      ) : !isOutflow ? (
-                        <span className="inline-block px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-500 font-bold text-xs">
-                          {formatSensitive(t.amount)}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground/30">-</span>
-                      )}
+                      {(() => {
+                        const isIncomeRecord = t.ledgerCategory === 'Income' || t.ledgerCategory.startsWith('IncomeSplit:')
+                        const isSplitSub = t.id.includes('-split-')
+                        if (isIncomeRecord) {
+                          return (
+                            <span className="inline-block px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-500 font-bold text-xs">
+                              {formatSensitive(t.amount)}
+                            </span>
+                          )
+                        }
+                        if (isSplitSub) {
+                          return (
+                            <span className="inline-block px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-500 font-bold text-xs">
+                              {formatSensitive(t.amount)}
+                            </span>
+                          )
+                        }
+                        if (t.ledgerCategory.startsWith('Transfer:')) {
+                          return (
+                            <span className="inline-block px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-500 font-bold text-xs">
+                              {formatSensitive(t.amount)}
+                            </span>
+                          )
+                        }
+                        return !isOutflow ? (
+                          <span className="inline-block px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-500 font-bold text-xs">
+                            {formatSensitive(t.amount)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/30">-</span>
+                        )
+                      })()}
                     </td>
                     <td className="p-4 text-center flex items-center justify-center gap-2">
-                      {!t.id.includes('-split-') && (
+                      {t.id.includes('-split-') ? (
+                        <button
+                          onClick={() => setShowEditDisabledModal(true)}
+                          className="text-xs text-muted-foreground/45 hover:text-muted-foreground/60 bg-muted/20 hover:bg-muted/30 border border-border/40 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer"
+                        >
+                          Edit
+                        </button>
+                      ) : (
                         <button
                           onClick={() => handleStartEdit(t)}
                           className="text-xs text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer"
@@ -1167,7 +1216,14 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 </div>
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t border-border/30">
-                {!t.id.includes('-split-') && (
+                {t.id.includes('-split-') ? (
+                  <button
+                    onClick={() => setShowEditDisabledModal(true)}
+                    className="text-[11px] text-muted-foreground/45 hover:text-muted-foreground/60 bg-muted/20 hover:bg-muted/30 border border-border/40 px-3 py-1.5 rounded-lg transition duration-150 cursor-pointer"
+                  >
+                    Edit Entry
+                  </button>
+                ) : (
                   <button
                     onClick={() => handleStartEdit(t)}
                     className="text-[11px] text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 px-3 py-1.5 rounded-lg transition duration-150 cursor-pointer"
@@ -1412,6 +1468,38 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 className="px-5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-md transition cursor-pointer"
               >
                 Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditDisabledModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-2 text-blue-500 pb-2 border-b border-border/40">
+              <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
+                <AlertCircle className="size-5" />
+              </span>
+              <h3 className="text-md font-bold text-foreground">Editing Disabled</h3>
+            </div>
+
+            <div className="space-y-3 text-xs leading-relaxed text-muted-foreground">
+              <p>
+                This transaction is a <span className="font-semibold text-foreground">split transfer sub-record</span> generated automatically from an Income Auto-Split.
+              </p>
+              <p>
+                To edit this transaction's amount, description, or split allocations, please find and edit the main <span className="font-semibold text-foreground">Income (Auto-Split)</span> record.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowEditDisabledModal(false)}
+                className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md transition cursor-pointer"
+              >
+                Close
               </button>
             </div>
           </div>
