@@ -1340,20 +1340,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             return (
               <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs h-full">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-md font-semibold text-foreground">Cycle Calendar</h3>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{cycleLabel}</p>
-                  </div>
-                  <div className="flex items-center gap-3.5 text-[10px] sm:text-xs text-muted-foreground select-none font-semibold">
-                    <span className="flex items-center gap-1">
-                      <span className="font-extrabold text-blue-500">+{getCurrencySymbol(activeSettings.currency || 'USD')}</span> Net Inflow Day
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="font-extrabold text-orange-500">-{getCurrencySymbol(activeSettings.currency || 'USD')}</span> Net Outflow Day
-                    </span>
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" />Recurring Bill Due</span>
-                  </div>
+                <div className="mb-4">
+                  <h3 className="text-md font-semibold text-foreground">Cycle Calendar</h3>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{cycleLabel}</p>
                 </div>
                 <div className="grid grid-cols-7 gap-1.5 text-center">
                   {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
