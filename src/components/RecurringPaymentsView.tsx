@@ -8,7 +8,6 @@ import {
   CreditCard, 
   Calendar, 
   Bell, 
-  Sparkles,
   X,
   Edit
 } from 'lucide-react'
@@ -189,8 +188,8 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
       
       {/* Header section with Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs md:col-span-2 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="w-full">
+        <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold text-foreground">Recurring Bills & Subscriptions</h2>
             <p className="text-xs text-muted-foreground mt-0.5">Track, toggle, and manage your recurring committed outlays.</p>
@@ -218,19 +217,6 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
             {showAddForm ? <X className="size-4" /> : <Plus className="size-4" />}
             {showAddForm ? 'Cancel' : 'New Subscription'}
           </button>
-        </div>
-
-        {/* Info card */}
-        <div className="p-6 rounded-2xl bg-radial from-blue-950/20 via-card to-card border border-blue-500/10 flex items-start gap-4">
-          <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500">
-            <Sparkles className="size-5" />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-foreground">Excel Seeding Active</h3>
-            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              Subscriptions are automatically filtered month-by-month. Start dates determine when bills first appear in your monthly ledger reports.
-            </p>
-          </div>
         </div>
       </div>
 

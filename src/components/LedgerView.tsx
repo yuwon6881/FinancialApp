@@ -38,6 +38,12 @@ interface LedgerViewProps {
   currency?: string
   autoOpenAddForm?: boolean
   onResetAutoOpen?: () => void
+  stabilityBalance?: number
+  stabilityTarget?: number
+  essentialsAlloc?: number
+  growthAlloc?: number
+  stabilityAlloc?: number
+  rewardsAlloc?: number
 }
 
 function formatDateToString(d: Date): string {
@@ -108,7 +114,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   cyclesRange,
   currency = 'USD',
   autoOpenAddForm,
-  onResetAutoOpen
+  onResetAutoOpen,
+  stabilityBalance = 0,
+  stabilityTarget = 10000,
+  essentialsAlloc = 0.5,
+  growthAlloc = 0.25,
+  stabilityAlloc = 0.15,
+  rewardsAlloc = 0.1
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [description, setDescription] = useState('')
@@ -127,6 +139,17 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   })
 
   const [editingTxId, setEditingTxId] = useState<string | null>(null)
+
+  const [showStabilityCapModal, setShowStabilityCapModal] = useState(false)
+  const [pendingTxData, setPendingTxData] = useState<{
+    description: string
+    amount: number
+    category: string
+    date: string
+    isEdit: boolean
+    id?: string
+  } | null>(null)
+  const [selectedSplitOption, setSelectedSplitOption] = useState<'default' | 'essentials' | 'growth' | 'rewards' | 'proportion'>('proportion')
 
   useEffect(() => {
     if (autoOpenAddForm) {
@@ -256,6 +279,88 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     'Other': 'bg-slate-500/10 text-slate-500 border-slate-500/20',
   }
 
+  const resetFormFields = () => {
+    setDescription('')
+    setAmount('')
+    setLedgerCategory('Essentials')
+    const now = new Date()
+    const y = now.getFullYear()
+    const mo = String(now.getMonth() + 1).padStart(2, '0')
+    const d = String(now.getDate()).padStart(2, '0')
+    setDate(`${y}-${mo}-${d}`)
+    setEditingTxId(null)
+    setShowAddForm(false)
+  }
+
+  const calcAllocSplits = (option: 'default' | 'essentials' | 'growth' | 'rewards' | 'proportion') => {
+    let ess = essentialsAlloc
+    let gro = growthAlloc
+    let sta = stabilityAlloc
+    let rew = rewardsAlloc
+
+    if (option === 'essentials') {
+      ess = essentialsAlloc + stabilityAlloc
+      sta = 0
+    } else if (option === 'growth') {
+      gro = growthAlloc + stabilityAlloc
+      sta = 0
+    } else if (option === 'rewards') {
+      rew = rewardsAlloc + stabilityAlloc
+      sta = 0
+    } else if (option === 'proportion') {
+      const sum = essentialsAlloc + growthAlloc + rewardsAlloc
+      if (sum > 0) {
+        ess = essentialsAlloc + stabilityAlloc * (essentialsAlloc / sum)
+        gro = growthAlloc + stabilityAlloc * (growthAlloc / sum)
+        rew = rewardsAlloc + stabilityAlloc * (rewardsAlloc / sum)
+      } else {
+        ess = essentialsAlloc + stabilityAlloc / 3
+        gro = growthAlloc + stabilityAlloc / 3
+        rew = rewardsAlloc + stabilityAlloc / 3
+      }
+      sta = 0
+    }
+
+    return { ess, gro, sta, rew }
+  }
+
+  const handleConfirmStabilityCapSplit = (option: 'default' | 'essentials' | 'growth' | 'rewards' | 'proportion') => {
+    if (!pendingTxData) return
+
+    let splitSpec = 'Income'
+    if (option !== 'default') {
+      const { ess, gro, sta, rew } = calcAllocSplits(option)
+      splitSpec = `IncomeSplit:${(ess * 100).toFixed(4)},${(gro * 100).toFixed(4)},${(sta * 100).toFixed(4)},${(rew * 100).toFixed(4)}`
+    }
+
+    if (pendingTxData.isEdit && pendingTxData.id) {
+      onUpdateTransaction?.(pendingTxData.id, {
+        description: pendingTxData.description,
+        amount: pendingTxData.amount,
+        category: pendingTxData.category,
+        ledgerCategory: splitSpec,
+        date: pendingTxData.date
+      })
+    } else {
+      onAddTransaction({
+        description: pendingTxData.description,
+        amount: pendingTxData.amount,
+        category: pendingTxData.category,
+        ledgerCategory: splitSpec,
+        date: pendingTxData.date
+      })
+    }
+
+    setShowStabilityCapModal(false)
+    setPendingTxData(null)
+    resetFormFields()
+  }
+
+  const handleCancelStabilityCapModal = () => {
+    setShowStabilityCapModal(false)
+    setPendingTxData(null)
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!description || !amount || !date) return
@@ -271,6 +376,19 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     } else if (txType === 'transfer') {
       finalAmount = Math.abs(parsedAmount)
       finalLedgerCategory = `Transfer:${transferSource}->${transferTarget}` as any
+    }
+
+    if (txType === 'inflow' && ledgerCategory === 'Income' && stabilityBalance >= stabilityTarget) {
+      setPendingTxData({
+        description,
+        amount: finalAmount,
+        category: category,
+        date,
+        isEdit: !!editingTxId,
+        id: editingTxId || undefined
+      })
+      setShowStabilityCapModal(true)
+      return
     }
 
     if (editingTxId) {
@@ -291,17 +409,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       })
     }
 
-    // Reset fields
-    setDescription('')
-    setAmount('')
-    setLedgerCategory('Essentials')
-    const now = new Date()
-    const y = now.getFullYear()
-    const mo = String(now.getMonth() + 1).padStart(2, '0')
-    const d = String(now.getDate()).padStart(2, '0')
-    setDate(`${y}-${mo}-${d}`)
-    setEditingTxId(null)
-    setShowAddForm(false)
+    resetFormFields()
   }
 
   // Source: all transactions across all cycles when showAllCycles, else current cycle only
@@ -1089,6 +1197,129 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 className="px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-foreground disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold cursor-pointer transition"
               >
                 Next
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showStabilityCapModal && pendingTxData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
+                  <PlusCircle className="size-5" />
+                </span>
+                <h3 className="text-md font-bold text-foreground">Stability Cap Threshold Reached</h3>
+              </div>
+              <button 
+                onClick={handleCancelStabilityCapModal}
+                className="text-muted-foreground hover:text-foreground transition cursor-pointer"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Your Stability Fund has reached its cap target of <span className="font-semibold text-foreground">{formatSensitive(stabilityTarget)}</span> (Current balance: <span className="font-semibold text-blue-500">{formatSensitive(stabilityBalance)}</span>). 
+              </p>
+              <p className="text-xs text-muted-foreground">
+                How would you like to allocate the upcoming inflow of <span className="font-semibold text-foreground">{formatSensitive(pendingTxData.amount)}</span>?
+              </p>
+
+              <div className="space-y-2 mt-4 max-h-[300px] overflow-y-auto pr-1">
+                {[
+                  {
+                    id: 'default',
+                    title: 'Keep Default Allocation',
+                    desc: 'Maintain standard split settings, continuing to deposit into the Stability Fund.',
+                  },
+                  {
+                    id: 'essentials',
+                    title: 'Redirect Stability to Essentials',
+                    desc: 'Add the Stability portion to Essentials allocation.',
+                  },
+                  {
+                    id: 'growth',
+                    title: 'Redirect Stability to Growth',
+                    desc: 'Add the Stability portion to Growth allocation.',
+                  },
+                  {
+                    id: 'rewards',
+                    title: 'Redirect Stability to Rewards',
+                    desc: 'Add the Stability portion to Rewards allocation.',
+                  },
+                  {
+                    id: 'proportion',
+                    title: 'Distribute Stability Proportionally',
+                    desc: 'Distribute the Stability portion across Essentials, Growth, and Rewards relative to their original weights.',
+                  }
+                ].map((opt) => {
+                  const { ess, gro, sta, rew } = calcAllocSplits(opt.id as any)
+                  const totalAmt = pendingTxData.amount
+                  return (
+                    <label
+                      key={opt.id}
+                      onClick={() => setSelectedSplitOption(opt.id as any)}
+                      className={`flex flex-col gap-1.5 p-3 rounded-xl border transition cursor-pointer select-none ${
+                        selectedSplitOption === opt.id
+                          ? 'bg-blue-500/10 border-blue-500/30 ring-1 ring-blue-500/30'
+                          : 'border-border hover:bg-muted/50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-foreground">{opt.title}</span>
+                        <input
+                          type="radio"
+                          name="splitOption"
+                          checked={selectedSplitOption === opt.id}
+                          onChange={() => setSelectedSplitOption(opt.id as any)}
+                          className="size-3.5 text-blue-600 border-border focus:ring-blue-500"
+                        />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground leading-relaxed">{opt.desc}</p>
+                      
+                      {/* Split Preview Grid */}
+                      <div className="grid grid-cols-4 gap-2 mt-1.5 pt-1.5 border-t border-border/30 text-[10px]">
+                        <div className="flex flex-col">
+                          <span className="text-muted-foreground font-semibold">Essentials</span>
+                          <span className="text-foreground font-bold font-mono">{(ess * 100).toFixed(1)}% ({formatSensitive(totalAmt * ess)})</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-muted-foreground font-semibold">Growth</span>
+                          <span className="text-foreground font-bold font-mono">{(gro * 100).toFixed(1)}% ({formatSensitive(totalAmt * gro)})</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-muted-foreground font-semibold">Stability</span>
+                          <span className={`${sta === 0 ? 'text-muted-foreground/50' : 'text-foreground'} font-bold font-mono`}>{(sta * 100).toFixed(1)}% ({formatSensitive(totalAmt * sta)})</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-muted-foreground font-semibold">Rewards</span>
+                          <span className="text-foreground font-bold font-mono">{(rew * 100).toFixed(1)}% ({formatSensitive(totalAmt * rew)})</span>
+                        </div>
+                      </div>
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t border-border/40 pt-4 mt-2">
+              <button
+                type="button"
+                onClick={handleCancelStabilityCapModal}
+                className="px-4 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-muted text-foreground transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleConfirmStabilityCapSplit(selectedSplitOption)}
+                className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md transition cursor-pointer"
+              >
+                Confirm Allocation
               </button>
             </div>
           </div>

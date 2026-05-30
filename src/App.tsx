@@ -569,6 +569,12 @@ function App() {
             currency={dashboardData?.setting?.currency || 'USD'}
             autoOpenAddForm={autoOpenLedgerAdd}
             onResetAutoOpen={() => setAutoOpenLedgerAdd(false)}
+            stabilityBalance={dashboardData?.categories?.find(c => c.name === 'Stability')?.remaining ?? 0}
+            stabilityTarget={dashboardData?.setting?.targetStabilityFund ?? 10000}
+            essentialsAlloc={dashboardData?.setting?.essentialsAlloc ?? 0.5}
+            growthAlloc={dashboardData?.setting?.growthAlloc ?? 0.25}
+            stabilityAlloc={dashboardData?.setting?.stabilityAlloc ?? 0.15}
+            rewardsAlloc={dashboardData?.setting?.rewardsAlloc ?? 0.1}
           />
         )}
 
