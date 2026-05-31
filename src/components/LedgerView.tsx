@@ -339,15 +339,18 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   // Trigger initial server fetch when entering all-cycles mode
   useEffect(() => {
     if (showAllCycles && onFetchPagedTransactions) {
+      const initialFilters = incomingCategory ? [incomingCategory] : []
+      const initialTxType = incomingTxType || null
+
       setPendingSearchTerm('')
-      setPendingFilters([])
+      setPendingFilters(initialFilters)
       setAppliedSearch('')
-      setAppliedFilters([])
-      setAppliedTxTypeFilter(null)
+      setAppliedFilters(initialFilters)
+      setAppliedTxTypeFilter(initialTxType)
       setCurrentPage(1)
       setPageSize(100)  // Default 100 for server mode — covers most users' full history on page 1
       isInitialFetchDone.current = false
-      runServerFetch({ page: 1, search: '', filters: [], txType: null, pSize: 100 })
+      runServerFetch({ page: 1, search: '', filters: initialFilters, txType: initialTxType, pSize: 100 })
         .finally(() => {
           isInitialFetchDone.current = true
         })
@@ -355,7 +358,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       setServerResult(null)
       isInitialFetchDone.current = false
     }
-  }, [showAllCycles, onFetchPagedTransactions, runServerFetch, allCyclesRange])
+  }, [showAllCycles, onFetchPagedTransactions, runServerFetch, allCyclesRange, incomingCategory, incomingTxType])
 
   // Re-fetch when page changes in server mode
   useEffect(() => {
