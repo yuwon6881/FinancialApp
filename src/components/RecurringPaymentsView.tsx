@@ -48,6 +48,9 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   const [startDateInput, setStartDateInput] = useState('')
   const [endDateInput, setEndDateInput] = useState('')
 
+  const formRef = React.useRef<HTMLDivElement>(null)
+  const firstInputRef = React.useRef<HTMLInputElement>(null)
+
   // Filter & Sorting state
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [sortOrder, setSortOrder] = useState<string>('amount-desc')
@@ -105,6 +108,15 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
       onResetAutoOpen?.()
     }
   }, [autoOpenAddForm, onResetAutoOpen])
+
+  React.useEffect(() => {
+    if (showAddForm) {
+      setTimeout(() => {
+        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        firstInputRef.current?.focus()
+      }, 100)
+    }
+  }, [showAddForm, editingPayment])
 
   React.useEffect(() => {
     if (categories.length > 0 && !category) {
@@ -222,7 +234,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
 
       {/* Add Subscription Form Drawer/Panel */}
       {showAddForm && (
-        <div className="p-6 rounded-2xl bg-card border border-blue-500/20 shadow-md animate-in slide-in-from-top-4 duration-300">
+        <div ref={formRef} className="p-6 rounded-2xl bg-card border border-blue-500/20 shadow-md animate-in slide-in-from-top-4 duration-300">
           <h3 className="text-md font-semibold text-foreground mb-4 flex items-center gap-2">
             {editingPayment ? <Edit className="size-4 text-blue-500" /> : <Plus className="size-4 text-blue-500" />} 
             {editingPayment ? 'Edit Subscription' : 'Add New Recurring Payment'}
@@ -231,6 +243,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
             <div className="space-y-1">
               <label className="text-xs font-semibold text-muted-foreground">Subscription Name</label>
               <input
+                ref={firstInputRef}
                 type="text"
                 required
                 placeholder="e.g. Netflix, Spotify"

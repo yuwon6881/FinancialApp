@@ -158,6 +158,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   const [editingTxId, setEditingTxId] = useState<string | null>(null)
 
+  const formRef = React.useRef<HTMLDivElement>(null)
+  const firstInputRef = React.useRef<HTMLInputElement>(null)
+
   const [showStabilityCapModal, setShowStabilityCapModal] = useState(false)
   const [pendingTxData, setPendingTxData] = useState<{
     description: string
@@ -179,6 +182,15 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       onResetAutoOpen?.()
     }
   }, [autoOpenAddForm, onResetAutoOpen])
+
+  useEffect(() => {
+    if (showAddForm) {
+      setTimeout(() => {
+        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        firstInputRef.current?.focus()
+      }, 100)
+    }
+  }, [showAddForm, editingTxId])
 
   const handleStartEdit = (t: Transaction) => {
     setEditingTxId(t.id)
@@ -1004,7 +1016,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
       {/* Expandable Post Transaction Form */}
       {showAddForm && (
-        <div className="p-6 rounded-2xl bg-card border border-blue-500/20 shadow-md animate-in slide-in-from-top-4 duration-300">
+        <div ref={formRef} className="p-6 rounded-2xl bg-card border border-blue-500/20 shadow-md animate-in slide-in-from-top-4 duration-300">
           <h3 className="text-md font-semibold text-foreground mb-4 flex items-center gap-2">
             <PlusCircle className="size-4 text-blue-500" /> {editingTxId ? 'Edit Ledger Entry' : 'Post New Ledger Entry'}
           </h3>
@@ -1052,6 +1064,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             <div className="space-y-1">
               <label className="text-xs font-semibold text-muted-foreground">Description</label>
               <input
+                ref={firstInputRef}
                 type="text"
                 required
                 placeholder="e.g. Grocery Store, Paycheck"
