@@ -170,7 +170,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     isEdit: boolean
     id?: string
   } | null>(null)
-  const [selectedSplitOption, setSelectedSplitOption] = useState<'default' | 'essentials' | 'growth' | 'rewards' | 'proportion'>('proportion')
+  const [selectedRedirectCategories, setSelectedRedirectCategories] = useState<('Essentials' | 'Growth' | 'Rewards')[]>(['Rewards'])
+  const [isRedirectMode, setIsRedirectMode] = useState<boolean>(true)
 
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [txToDelete, setTxToDelete] = useState<Transaction | null>(null)
@@ -461,44 +462,82 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setShowAddForm(false)
   }
 
-  const calcAllocSplits = (option: 'default' | 'essentials' | 'growth' | 'rewards' | 'proportion') => {
+  const handleToggleCategory = (cat: 'Essentials' | 'Growth' | 'Rewards') => {
+    setSelectedRedirectCategories(prev => {
+      if (prev.includes(cat)) {
+        return prev.filter(c => c !== cat)
+      } else {
+        return [...prev, cat]
+      }
+    })
+  }
+
+  const calcRedirectionSplits = (
+    keepDefault: boolean,
+    selectedTargets: ('Essentials' | 'Growth' | 'Rewards')[]
+  ) => {
     let ess = essentialsAlloc
     let gro = growthAlloc
     let sta = stabilityAlloc
     let rew = rewardsAlloc
 
-    if (option === 'essentials') {
-      ess = essentialsAlloc + stabilityAlloc
-      sta = 0
-    } else if (option === 'growth') {
-      gro = growthAlloc + stabilityAlloc
-      sta = 0
-    } else if (option === 'rewards') {
-      rew = rewardsAlloc + stabilityAlloc
-      sta = 0
-    } else if (option === 'proportion') {
-      const sum = essentialsAlloc + growthAlloc + rewardsAlloc
-      if (sum > 0) {
-        ess = essentialsAlloc + stabilityAlloc * (essentialsAlloc / sum)
-        gro = growthAlloc + stabilityAlloc * (growthAlloc / sum)
-        rew = rewardsAlloc + stabilityAlloc * (rewardsAlloc / sum)
-      } else {
-        ess = essentialsAlloc + stabilityAlloc / 3
-        gro = growthAlloc + stabilityAlloc / 3
-        rew = rewardsAlloc + stabilityAlloc / 3
-      }
-      sta = 0
+    if (keepDefault || !pendingTxData) {
+      return { ess, gro, sta, rew }
     }
+
+    const txAmount = pendingTxData.amount
+    const defaultStabilityContribution = txAmount * stabilityAlloc
+
+    // Check if cap is already reached or mid-deposit
+    const isCapReached = stabilityBalance >= stabilityTarget
+    
+    let actualStabilityShare = 0
+    if (!isCapReached) {
+      const stabilityNeeded = Math.max(0, stabilityTarget - stabilityBalance)
+      if (defaultStabilityContribution > stabilityNeeded) {
+        // Capped mid-deposit
+        actualStabilityShare = stabilityNeeded / txAmount
+      } else {
+        actualStabilityShare = stabilityAlloc
+      }
+    }
+
+    const redirectShare = stabilityAlloc - actualStabilityShare
+    sta = actualStabilityShare
+
+    if (redirectShare > 0 && selectedTargets.length > 0) {
+      const N = selectedTargets.length
+      const baseSharePerTarget = Math.floor((redirectShare / N) * 10000) / 10000
+      const sumOfShares = baseSharePerTarget * N
+      const remainder = redirectShare - sumOfShares
+
+      selectedTargets.forEach((target, index) => {
+        let addedShare = baseSharePerTarget
+        if (index === 0) {
+          addedShare += remainder
+        }
+
+        if (target === 'Essentials') ess += addedShare
+        if (target === 'Growth') gro += addedShare
+        if (target === 'Rewards') rew += addedShare
+      })
+    }
+
+    // Round everything to 4 decimal places
+    ess = Math.round(ess * 10000) / 10000
+    gro = Math.round(gro * 10000) / 10000
+    sta = Math.round(sta * 10000) / 10000
+    rew = Math.round(rew * 10000) / 10000
 
     return { ess, gro, sta, rew }
   }
 
-  const handleConfirmStabilityCapSplit = (option: 'default' | 'essentials' | 'growth' | 'rewards' | 'proportion') => {
+  const handleConfirmStabilityCapSplit = () => {
     if (!pendingTxData) return
 
     let splitSpec = 'Income'
-    if (option !== 'default') {
-      const { ess, gro, sta, rew } = calcAllocSplits(option)
+    if (isRedirectMode) {
+      const { ess, gro, sta, rew } = calcRedirectionSplits(false, selectedRedirectCategories)
       splitSpec = `IncomeSplit:${(ess * 100).toFixed(4)},${(gro * 100).toFixed(4)},${(sta * 100).toFixed(4)},${(rew * 100).toFixed(4)}`
     }
 
@@ -570,7 +609,12 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       finalLedgerCategory = `Transfer:${transferSource}->${transferTarget}` as any
     }
 
-    if (txType === 'inflow' && ledgerCategory === 'Income' && stabilityBalance >= stabilityTarget) {
+    const isIncome = txType === 'inflow' && ledgerCategory === 'Income'
+    const isCapReached = stabilityBalance >= stabilityTarget
+    const defaultStabilityContribution = finalAmount * stabilityAlloc
+    const isCapReachedMidDeposit = !isCapReached && (stabilityBalance + defaultStabilityContribution > stabilityTarget)
+
+    if (isIncome && (isCapReached || isCapReachedMidDeposit)) {
       setPendingTxData({
         description,
         amount: finalAmount,
@@ -1689,128 +1733,201 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         </div>
       )}
 
-      {showStabilityCapModal && pendingTxData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="w-full max-w-2xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-border/40 pb-3">
-              <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
-                  <PlusCircle className="size-5" />
-                </span>
-                <h3 className="text-md font-bold text-foreground">Stability Cap Threshold Reached</h3>
+      {showStabilityCapModal && pendingTxData && (() => {
+        const isCapReached = stabilityBalance >= stabilityTarget
+        const defaultStabilityContribution = pendingTxData.amount * stabilityAlloc
+        const stabilityNeeded = Math.max(0, stabilityTarget - stabilityBalance)
+        const overflowAmt = isCapReached ? defaultStabilityContribution : (defaultStabilityContribution - stabilityNeeded)
+
+        const previewAlloc = calcRedirectionSplits(!isRedirectMode, selectedRedirectCategories)
+        const totalAmt = pendingTxData.amount
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+            <div className="w-full max-w-2xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
+                    <PlusCircle className="size-5" />
+                  </span>
+                  <h3 className="text-md font-bold text-foreground">
+                    {isCapReached ? 'Stability Cap Threshold Reached' : 'Stability Fund Overflow Detected'}
+                  </h3>
+                </div>
+                <button 
+                  onClick={handleCancelStabilityCapModal}
+                  className="text-muted-foreground hover:text-foreground transition cursor-pointer"
+                >
+                  <X className="size-5" />
+                </button>
               </div>
-              <button 
-                onClick={handleCancelStabilityCapModal}
-                className="text-muted-foreground hover:text-foreground transition cursor-pointer"
-              >
-                <X className="size-5" />
-              </button>
-            </div>
 
-            <div className="space-y-3">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Your Stability Fund has reached its cap target of <span className="font-semibold text-foreground">{formatSensitive(stabilityTarget)}</span> (Current balance: <span className="font-semibold text-blue-500">{formatSensitive(stabilityBalance)}</span>). 
-              </p>
-              <p className="text-xs text-muted-foreground">
-                How would you like to allocate the upcoming inflow of <span className="font-semibold text-foreground">{formatSensitive(pendingTxData.amount)}</span>?
-              </p>
+              <div className="space-y-3 text-xs">
+                <p className="text-muted-foreground leading-relaxed">
+                  Your Stability Fund target is <span className="font-semibold text-foreground">{formatSensitive(stabilityTarget)}</span> (Current balance: <span className="font-semibold text-blue-500">{formatSensitive(stabilityBalance)}</span>).
+                </p>
+                
+                {isCapReached ? (
+                  <p className="text-muted-foreground">
+                    Since the Stability Fund is already fully funded, the Stability portion of <span className="font-semibold text-foreground">{(stabilityAlloc * 100).toFixed(1)}% ({formatSensitive(defaultStabilityContribution)})</span> from this <span className="font-semibold text-foreground">{formatSensitive(pendingTxData.amount)}</span> transaction can be redirected.
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground">
+                    This transaction requires <span className="font-semibold text-foreground">{formatSensitive(stabilityNeeded)}</span> to fully fund the Stability target. The remaining <span className="font-semibold text-orange-500">{formatSensitive(overflowAmt)}</span> is an overflow amount and can be redirected.
+                  </p>
+                )}
 
-              <div className="space-y-2 mt-4 max-h-[300px] overflow-y-auto pr-1">
-                {[
-                  {
-                    id: 'default',
-                    title: 'Keep Default Allocation',
-                    desc: 'Maintain standard split settings, continuing to deposit into the Stability Fund.',
-                  },
-                  {
-                    id: 'essentials',
-                    title: 'Redirect Stability to Essentials',
-                    desc: 'Add the Stability portion to Essentials allocation.',
-                  },
-                  {
-                    id: 'growth',
-                    title: 'Redirect Stability to Growth',
-                    desc: 'Add the Stability portion to Growth allocation.',
-                  },
-                  {
-                    id: 'rewards',
-                    title: 'Redirect Stability to Rewards',
-                    desc: 'Add the Stability portion to Rewards allocation.',
-                  },
-                  {
-                    id: 'proportion',
-                    title: 'Distribute Stability Proportionally',
-                    desc: 'Distribute the Stability portion across Essentials, Growth, and Rewards relative to their original weights.',
-                  }
-                ].map((opt) => {
-                  const { ess, gro, sta, rew } = calcAllocSplits(opt.id as any)
-                  const totalAmt = pendingTxData.amount
-                  return (
+                <div className="space-y-4 mt-4">
+                  {/* Allocation Mode Choice */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-semibold">
                     <label
-                      key={opt.id}
-                      onClick={() => setSelectedSplitOption(opt.id as any)}
-                      className={`flex flex-col gap-1.5 p-3 rounded-xl border transition cursor-pointer select-none ${
-                        selectedSplitOption === opt.id
+                      onClick={() => setIsRedirectMode(false)}
+                      className={`flex flex-col gap-1 p-3 rounded-xl border transition cursor-pointer select-none ${
+                        !isRedirectMode
                           ? 'bg-blue-500/10 border-blue-500/30 ring-1 ring-blue-500/30'
                           : 'border-border hover:bg-muted/50'
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-foreground">{opt.title}</span>
+                        <span className="font-bold text-foreground">Keep Default Allocation</span>
                         <input
                           type="radio"
-                          name="splitOption"
-                          checked={selectedSplitOption === opt.id}
-                          onChange={() => setSelectedSplitOption(opt.id as any)}
+                          name="allocationMode"
+                          checked={!isRedirectMode}
+                          onChange={() => setIsRedirectMode(false)}
                           className="size-3.5 text-blue-600 border-border focus:ring-blue-500"
                         />
                       </div>
-                      <p className="text-[10px] text-muted-foreground leading-relaxed">{opt.desc}</p>
-                      
-                      {/* Split Preview Grid */}
-                      <div className="grid grid-cols-4 gap-2 mt-1.5 pt-1.5 border-t border-border/30 text-[10px]">
-                        <div className="flex flex-col">
-                          <span className="text-muted-foreground font-semibold">Essentials</span>
-                          <span className="text-foreground font-bold font-mono">{(ess * 100).toFixed(1)}% ({formatSensitive(totalAmt * ess)})</span>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-muted-foreground font-semibold">Growth</span>
-                          <span className="text-foreground font-bold font-mono">{(gro * 100).toFixed(1)}% ({formatSensitive(totalAmt * gro)})</span>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-muted-foreground font-semibold">Stability</span>
-                          <span className={`${sta === 0 ? 'text-muted-foreground/50' : 'text-foreground'} font-bold font-mono`}>{(sta * 100).toFixed(1)}% ({formatSensitive(totalAmt * sta)})</span>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-muted-foreground font-semibold">Rewards</span>
-                          <span className="text-foreground font-bold font-mono">{(rew * 100).toFixed(1)}% ({formatSensitive(totalAmt * rew)})</span>
-                        </div>
-                      </div>
+                      <p className="text-[10px] text-muted-foreground font-normal leading-relaxed">
+                        Deposit into Stability anyway, exceeding target cap.
+                      </p>
                     </label>
-                  )
-                })}
+
+                    <label
+                      onClick={() => setIsRedirectMode(true)}
+                      className={`flex flex-col gap-1 p-3 rounded-xl border transition cursor-pointer select-none ${
+                        isRedirectMode
+                          ? 'bg-blue-500/10 border-blue-500/30 ring-1 ring-blue-500/30'
+                          : 'border-border hover:bg-muted/50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-foreground">Redirect Stability Overflow</span>
+                        <input
+                          type="radio"
+                          name="allocationMode"
+                          checked={isRedirectMode}
+                          onChange={() => setIsRedirectMode(true)}
+                          className="size-3.5 text-blue-600 border-border focus:ring-blue-500"
+                        />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground font-normal leading-relaxed">
+                        Redistribute the overflow portion to selected categories.
+                      </p>
+                    </label>
+                  </div>
+
+                  {/* Redirection Multi-select Checklist */}
+                  {isRedirectMode && (
+                    <div className="p-4 rounded-xl border border-border bg-muted/20 space-y-3">
+                      <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                        <span className="font-bold text-foreground">Redirect Targets (Multi-select)</span>
+                        <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">
+                          Select one or more categories
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        {[
+                          { value: 'Rewards', label: 'Rewards', isRecommended: true },
+                          { value: 'Essentials', label: 'Essentials', isRecommended: false },
+                          { value: 'Growth', label: 'Growth', isRecommended: false }
+                        ].map((target) => {
+                          const isChecked = selectedRedirectCategories.includes(target.value as any)
+                          return (
+                            <label
+                              key={target.value}
+                              onClick={(e) => {
+                                e.preventDefault()
+                                handleToggleCategory(target.value as any)
+                              }}
+                              className={`relative flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer select-none transition ${
+                                isChecked
+                                  ? 'bg-blue-500/10 border-blue-500/30 text-blue-600 font-bold'
+                                  : 'bg-background/50 border-border hover:bg-muted text-muted-foreground'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => {}}
+                                className="rounded border-border text-blue-500 focus:ring-blue-500 size-3.5"
+                              />
+                              <div className="flex flex-col">
+                                <span className="leading-tight">{target.label}</span>
+                                {target.isRecommended && (
+                                  <span className="text-[8px] font-bold text-emerald-500 mt-0.5">
+                                    Recommended
+                                  </span>
+                                )}
+                              </div>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Allocation Preview Grid */}
+                  <div className="p-4 rounded-xl border border-border/60 bg-background/50">
+                    <h4 className="font-bold text-foreground mb-3">Live Split Preview</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div className="flex flex-col">
+                        <span className="text-muted-foreground font-semibold">Essentials</span>
+                        <span className="text-foreground font-bold font-mono text-sm">{(previewAlloc.ess * 100).toFixed(1)}%</span>
+                        <span className="text-[10px] text-muted-foreground font-mono">{formatSensitive(totalAmt * previewAlloc.ess)}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-muted-foreground font-semibold">Growth</span>
+                        <span className="text-foreground font-bold font-mono text-sm">{(previewAlloc.gro * 100).toFixed(1)}%</span>
+                        <span className="text-[10px] text-muted-foreground font-mono">{formatSensitive(totalAmt * previewAlloc.gro)}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-muted-foreground font-semibold">Stability</span>
+                        <span className={`font-bold font-mono text-sm ${previewAlloc.sta === 0 ? 'text-muted-foreground/50' : 'text-foreground'}`}>{(previewAlloc.sta * 100).toFixed(1)}%</span>
+                        <span className="text-[10px] text-muted-foreground font-mono">{formatSensitive(totalAmt * previewAlloc.sta)}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-muted-foreground font-semibold">Rewards</span>
+                        <span className="text-foreground font-bold font-mono text-sm">{(previewAlloc.rew * 100).toFixed(1)}%</span>
+                        <span className="text-[10px] text-muted-foreground font-mono">{formatSensitive(totalAmt * previewAlloc.rew)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 border-t border-border/40 pt-4 mt-2">
+                <button
+                  type="button"
+                  onClick={handleCancelStabilityCapModal}
+                  className="px-4 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-muted text-foreground transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isRedirectMode && selectedRedirectCategories.length === 0}
+                  onClick={handleConfirmStabilityCapSplit}
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-muted disabled:text-muted-foreground text-white text-xs font-semibold shadow-md transition cursor-pointer"
+                >
+                  Confirm Allocation
+                </button>
               </div>
             </div>
-
-            <div className="flex justify-end gap-3 border-t border-border/40 pt-4 mt-2">
-              <button
-                type="button"
-                onClick={handleCancelStabilityCapModal}
-                className="px-4 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-muted text-foreground transition cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => handleConfirmStabilityCapSplit(selectedSplitOption)}
-                className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md transition cursor-pointer"
-              >
-                Confirm Allocation
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {showDeleteModal && txToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
