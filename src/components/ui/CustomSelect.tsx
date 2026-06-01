@@ -48,7 +48,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
       </button>
 
       {isOpen && (
-        <div className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-1.5 min-w-[180px] w-max max-w-[280px] bg-card border border-border rounded-xl shadow-lg p-1 z-50 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-100 flex flex-col gap-0.5`}>
+        <div className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-1.5 min-w-[180px] w-max max-w-[calc(100vw-32px)] sm:max-w-[280px] bg-card border border-border rounded-xl shadow-lg p-1 z-50 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-100 flex flex-col gap-0.5`}>
           {options.map((opt) => (
             <button
               key={opt.value}

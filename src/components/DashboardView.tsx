@@ -370,6 +370,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               label: y.toString()
             }))}
             className="w-28 shrink-0"
+            align="right"
           />
 
           {/* Configure button */}
@@ -385,7 +386,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Settings Form Drawer */}
       {showSettings && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 rounded-2xl bg-card border border-blue-500/20 shadow-md animate-in slide-in-from-top-4 duration-200">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-4 sm:p-6 rounded-2xl bg-card border border-blue-500/20 shadow-md animate-in slide-in-from-top-4 duration-200">
           
           {/* Column 1: Financial Model settings */}
           <form onSubmit={handleSaveSettings} className="space-y-4">
@@ -602,52 +603,56 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       {isConfirming ? (
                         <div className="flex flex-col gap-2 p-2 bg-muted/30 border border-border/40 rounded-lg animate-in slide-in-from-bottom-2 duration-200">
                           <label className="text-[10px] font-bold text-muted-foreground">Select Paid Date:</label>
-                          <div className="flex gap-2">
+                          <div className="flex flex-col sm:flex-row gap-2">
                             <input
                               type="date"
                               value={paidDateInput}
                               onChange={(e) => setPaidDateInput(e.target.value)}
-                              className="flex-1 px-2.5 py-1 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              className="w-full sm:flex-1 px-2.5 py-1 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
-                            <button
-                              onClick={() => {
-                                onConfirmSubscription(noti, paidDateInput)
-                                setActiveConfirmId(null)
-                              }}
-                              className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition"
-                            >
-                              Confirm
-                            </button>
-                            <button
-                              onClick={() => setActiveConfirmId(null)}
-                              className="px-2.5 py-1 bg-muted hover:bg-muted/80 text-foreground rounded-lg text-xs font-semibold cursor-pointer transition border border-border"
-                            >
-                              Cancel
-                            </button>
+                            <div className="flex gap-2 w-full sm:w-auto">
+                              <button
+                                onClick={() => {
+                                  onConfirmSubscription(noti, paidDateInput)
+                                  setActiveConfirmId(null)
+                                }}
+                                className="flex-1 sm:flex-initial px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition text-center"
+                              >
+                                Confirm
+                              </button>
+                              <button
+                                onClick={() => setActiveConfirmId(null)}
+                                className="flex-1 sm:flex-initial px-2.5 py-1.5 bg-muted hover:bg-muted/80 text-foreground rounded-lg text-xs font-semibold cursor-pointer transition border border-border text-center"
+                              >
+                                Cancel
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-end gap-2 border-t border-border/20 pt-2">
-                          <button
-                            onClick={() => {
-                              setActiveConfirmId(noti.id)
-                              setPaidDateInput(noti.billingDate)
-                            }}
-                            className="px-2.5 py-1.5 bg-blue-500/15 hover:bg-blue-500/25 text-blue-500 font-bold text-[10px] rounded-lg transition duration-150 cursor-pointer"
-                          >
-                            Mark Paid
-                          </button>
-                          <button
-                            onClick={() => {
-                              const confirmResult = window.confirm("Are you sure you want to delete this recurring subscription? This will cancel all future notifications for this subscription.");
-                              if (confirmResult) {
-                                onDeletePayment(noti.recurringPaymentId);
-                              }
-                            }}
-                            className="px-2.5 py-1.5 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-[10px] rounded-lg transition duration-150 cursor-pointer border border-orange-500/10"
-                          >
-                            Remove Subscription
-                          </button>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 border-t border-border/20 pt-2">
+                          <div className="flex gap-2 w-full sm:w-auto">
+                            <button
+                              onClick={() => {
+                                setActiveConfirmId(noti.id)
+                                setPaidDateInput(noti.billingDate)
+                              }}
+                              className="flex-1 sm:flex-initial px-2.5 py-1.5 bg-blue-500/15 hover:bg-blue-500/25 text-blue-500 font-bold text-[10px] rounded-lg transition duration-150 cursor-pointer text-center"
+                            >
+                              Mark Paid
+                            </button>
+                            <button
+                              onClick={() => {
+                                const confirmResult = window.confirm("Are you sure you want to delete this recurring subscription? This will cancel all future notifications for this subscription.");
+                                if (confirmResult) {
+                                  onDeletePayment(noti.recurringPaymentId);
+                                }
+                              }}
+                              className="flex-1 sm:flex-initial px-2.5 py-1.5 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-[10px] rounded-lg transition duration-150 cursor-pointer border border-orange-500/10 text-center"
+                            >
+                              Remove Subscription
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>

@@ -190,7 +190,7 @@ const TopNav: React.FC<TopNavProps> = ({
             </button>
 
             {isBellOpen && (
-              <div className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-2xl shadow-xl p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="absolute right-[-30px] sm:right-0 mt-2 w-[calc(100vw-32px)] sm:w-80 bg-card border border-border rounded-2xl shadow-xl p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                 <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3 select-none">
                   <h4 className="text-xs font-bold text-foreground">Subscription Notifications</h4>
                   <span className="text-[9px] text-muted-foreground font-semibold">
@@ -218,38 +218,40 @@ const TopNav: React.FC<TopNavProps> = ({
                         {isConfirming ? (
                           <div className="flex flex-col gap-1.5 p-1.5 bg-background border border-border rounded-lg mt-1 animate-in slide-in-from-bottom-1 duration-150">
                             <label className="text-[8px] font-bold text-muted-foreground">Paid Date:</label>
-                            <div className="flex gap-1.5">
+                            <div className="flex flex-col sm:flex-row gap-1.5">
                               <input
                                 type="date"
                                 value={paidDate}
                                 onChange={e => setPaidDate(e.target.value)}
-                                className="flex-1 px-1.5 py-0.5 text-[10px] bg-background border border-border rounded focus:outline-none"
+                                className="w-full sm:flex-1 px-1.5 py-0.5 text-[10px] bg-background border border-border rounded focus:outline-none"
                               />
-                              <button
-                                onClick={() => {
-                                  onConfirmSubscription(noti, paidDate)
-                                  setConfirmNotiId(null)
-                                }}
-                                className="px-2 py-0.5 bg-blue-600 text-white rounded text-[10px] font-bold cursor-pointer hover:bg-blue-700"
-                              >
-                                Pay
-                              </button>
-                              <button
-                                onClick={() => setConfirmNotiId(null)}
-                                className="px-1.5 py-0.5 bg-muted text-foreground border border-border rounded text-[10px] font-semibold cursor-pointer"
-                              >
-                                X
-                              </button>
+                              <div className="flex gap-1.5 w-full sm:w-auto">
+                                <button
+                                  onClick={() => {
+                                    onConfirmSubscription(noti, paidDate)
+                                    setConfirmNotiId(null)
+                                  }}
+                                  className="flex-1 sm:flex-initial px-2 py-0.5 bg-blue-600 text-white rounded text-[10px] font-bold cursor-pointer hover:bg-blue-700 text-center"
+                                >
+                                  Pay
+                                </button>
+                                <button
+                                  onClick={() => setConfirmNotiId(null)}
+                                  className="px-1.5 py-0.5 bg-muted text-foreground border border-border rounded text-[10px] font-semibold cursor-pointer text-center"
+                                >
+                                  X
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ) : (
-                          <div className="flex items-center justify-end gap-1.5 border-t border-border/10 pt-1.5 mt-0.5">
+                          <div className="flex flex-wrap items-center justify-end gap-1.5 border-t border-border/10 pt-1.5 mt-0.5">
                             <button
                               onClick={() => {
                                 setConfirmNotiId(noti.id)
                                 setPaidDate(noti.billingDate)
                               }}
-                              className="px-2 py-1 bg-blue-500/15 hover:bg-blue-500/25 text-blue-500 font-bold text-[9px] rounded transition cursor-pointer"
+                              className="flex-1 sm:flex-initial px-2 py-1 bg-blue-500/15 hover:bg-blue-500/25 text-blue-500 font-bold text-[9px] rounded transition cursor-pointer text-center whitespace-nowrap"
                             >
                               Confirm Paid
                             </button>
@@ -260,10 +262,10 @@ const TopNav: React.FC<TopNavProps> = ({
                                   onDeletePayment(noti.recurringPaymentId);
                                 }
                               }}
-                              className="px-2 py-1 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-[9px] rounded border border-orange-500/10 transition cursor-pointer"
+                              className="flex-1 sm:flex-initial px-2 py-1 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-[9px] rounded border border-orange-500/10 transition cursor-pointer text-center whitespace-nowrap"
                               title="Delete subscription definition entirely"
                             >
-                              Remove Subscription
+                              Remove
                             </button>
                           </div>
                         )}

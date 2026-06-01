@@ -635,43 +635,47 @@ function App() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-end gap-2 border-t border-border/20 pt-2.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[9px] font-bold text-muted-foreground">Paid Date:</span>
-                      <input
-                        type="date"
-                        defaultValue={noti.billingDate}
-                        id={`modal-date-${noti.id}`}
-                        className="px-2.5 py-1 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
-                      <button
-                        onClick={() => {
-                          const dateVal = (document.getElementById(`modal-date-${noti.id}`) as HTMLInputElement)?.value || noti.billingDate
-                          handleConfirmSubscription(noti, dateVal)
-                        }}
-                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition shadow-sm"
-                      >
-                        Confirm Paid
-                      </button>
-                      <button
-                        onClick={() => {
-                          const confirmResult = window.confirm("Are you sure you want to delete this recurring subscription? This will cancel all future notifications for this subscription.");
-                          if (confirmResult) {
-                            handleDeletePayment(noti.recurringPaymentId);
-                          }
-                        }}
-                        className="px-3 py-1.5 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-xs rounded-lg transition duration-150 cursor-pointer border border-orange-500/10"
-                      >
-                        Remove Subscription
-                      </button>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 border-t border-border/20 pt-2.5">
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:justify-end">
+                      <div className="flex items-center gap-1.5 flex-1 sm:flex-initial min-w-[140px]">
+                        <span className="text-[9px] font-bold text-muted-foreground shrink-0">Paid Date:</span>
+                        <input
+                          type="date"
+                          defaultValue={noti.billingDate}
+                          id={`modal-date-${noti.id}`}
+                          className="w-full px-2 py-1 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <button
+                          onClick={() => {
+                            const dateVal = (document.getElementById(`modal-date-${noti.id}`) as HTMLInputElement)?.value || noti.billingDate
+                            handleConfirmSubscription(noti, dateVal)
+                          }}
+                          className="flex-1 sm:flex-initial px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition shadow-sm whitespace-nowrap text-center"
+                        >
+                          Confirm Paid
+                        </button>
+                        <button
+                          onClick={() => {
+                            const confirmResult = window.confirm("Are you sure you want to delete this recurring subscription? This will cancel all future notifications for this subscription.");
+                            if (confirmResult) {
+                              handleDeletePayment(noti.recurringPaymentId);
+                            }
+                          }}
+                          className="flex-1 sm:flex-initial px-3 py-1.5 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-xs rounded-lg transition duration-150 cursor-pointer border border-orange-500/10 whitespace-nowrap text-center"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="flex items-center justify-between border-t border-border/40 pt-4 mt-2">
-              <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between border-t border-border/40 pt-4 mt-2">
+              <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer w-full sm:w-auto">
                 <input
                   type="checkbox"
                   checked={modalCheckbox}
@@ -685,7 +689,7 @@ function App() {
               </label>
               <button
                 onClick={() => setShowLoginModal(false)}
-                className="px-4 py-2 bg-foreground text-background font-bold text-xs rounded-xl hover:bg-foreground/90 transition shadow-sm cursor-pointer"
+                className="w-full sm:w-auto px-4 py-2 bg-foreground text-background font-bold text-xs rounded-xl hover:bg-foreground/90 transition shadow-sm cursor-pointer text-center"
               >
                 Close
               </button>
