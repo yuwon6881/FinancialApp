@@ -22,6 +22,7 @@ import {
   PiggyBank
 } from 'lucide-react'
 import { formatCurrencyVal } from './lib/utils'
+import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 
 interface TopNavProps {
   activeTab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist'
@@ -63,6 +64,7 @@ const TopNav: React.FC<TopNavProps> = ({
   const [isBellOpen, setIsBellOpen] = useState(false)
   const [confirmNotiId, setConfirmNotiId] = useState<string | null>(null)
   const [paidDate, setPaidDate] = useState('')
+  const [notiToDelete, setNotiToDelete] = useState<any | null>(null)
 
   useEffect(() => {
     if (!isBellOpen) return
@@ -257,10 +259,7 @@ const TopNav: React.FC<TopNavProps> = ({
                             </button>
                             <button
                               onClick={() => {
-                                const confirmResult = window.confirm("Are you sure you want to delete this recurring subscription? This will cancel all future notifications for this subscription.");
-                                if (confirmResult) {
-                                  onDeletePayment(noti.recurringPaymentId);
-                                }
+                                setNotiToDelete(noti)
                               }}
                               className="flex-1 sm:flex-initial px-2 py-1 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-[9px] rounded border border-orange-500/10 transition cursor-pointer text-center whitespace-nowrap"
                               title="Delete subscription definition entirely"
@@ -411,6 +410,20 @@ const TopNav: React.FC<TopNavProps> = ({
         </button>
       </div>
     </div>
+    <CustomConfirmModal
+      isOpen={!!notiToDelete}
+      title="Remove Subscription"
+      message="Are you sure you want to delete this recurring subscription? This will cancel all future notifications for this subscription."
+      confirmText="Remove"
+      cancelText="Cancel"
+      onConfirm={() => {
+        if (notiToDelete) {
+          onDeletePayment(notiToDelete.recurringPaymentId)
+          setNotiToDelete(null)
+        }
+      }}
+      onCancel={() => setNotiToDelete(null)}
+    />
     </>
   )
 }

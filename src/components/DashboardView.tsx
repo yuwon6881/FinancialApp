@@ -12,6 +12,7 @@ import {
   PiggyBank
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
+import { CustomConfirmModal } from './ui/CustomConfirmModal'
 import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
 
 
@@ -66,6 +67,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [showSettings, setShowSettings] = useState(false)
   const [targetInput, setTargetInput] = useState('')
   const [isHoveringLiquidNetWorth, setIsHoveringLiquidNetWorth] = useState(false)
+  const [notiToDelete, setNotiToDelete] = useState<any | null>(null)
 
   // Active wishlist item for dashboard progress display
   const activeWishlistItem = useMemo(() => {
@@ -643,10 +645,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         </button>
                         <button
                           onClick={() => {
-                            const confirmResult = window.confirm("Are you sure you want to delete this recurring subscription? This will cancel all future notifications for this subscription.");
-                            if (confirmResult) {
-                              onDeletePayment(noti.recurringPaymentId);
-                            }
+                            setNotiToDelete(noti)
                           }}
                           className="flex-1 sm:flex-initial px-2.5 py-1.5 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-[10px] rounded-lg transition duration-150 cursor-pointer border border-orange-500/10 text-center"
                         >
@@ -661,6 +660,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
       )}
+
+      <CustomConfirmModal
+        isOpen={!!notiToDelete}
+        title="Remove Subscription"
+        message="Are you sure you want to delete this recurring subscription? This will cancel all future notifications for this subscription."
+        confirmText="Remove"
+        cancelText="Cancel"
+        onConfirm={() => {
+          if (notiToDelete) {
+            onDeletePayment(notiToDelete.recurringPaymentId)
+            setNotiToDelete(null)
+          }
+        }}
+        onCancel={() => setNotiToDelete(null)}
+      />
 
       {/* Categories Roll Table (Month Sheet Columns B-E) */}
       <div className="p-6 bg-card border border-border/60 rounded-2xl shadow-xs">

@@ -63,6 +63,7 @@ interface LedgerViewProps {
     startDate?: string
     endDate?: string
   }) => Promise<{ blob: Blob; filename: string }>
+  onShowAlert?: (message: string, title?: string) => void
 }
 
 function formatDateToString(d: Date): string {
@@ -138,7 +139,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   stabilityAlloc = 0.15,
   rewardsAlloc = 0.1,
   onFetchPagedTransactions,
-  onExportTransactions
+  onExportTransactions,
+  onShowAlert
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [description, setDescription] = useState('')
@@ -902,7 +904,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         setShowExportModal(false)
       } catch (err) {
         console.error(err)
-        alert('Failed to export transactions.')
+        if (onShowAlert) {
+          onShowAlert('Failed to export transactions.', 'Export Error')
+        } else {
+          alert('Failed to export transactions.')
+        }
       } finally {
         setExportIsFetching(false)
       }

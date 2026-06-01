@@ -10,6 +10,8 @@ import type { Transaction, RecurringPayment, DashboardData, TransactionCategory,
 import * as api from './lib/api'
 import { Loader2 } from 'lucide-react'
 import { formatCurrencyVal } from './lib/utils'
+import { CustomAlertModal } from './components/ui/CustomAlertModal'
+import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'))
@@ -42,6 +44,16 @@ function App() {
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     return localStorage.getItem('dark_mode') === 'true'
   })
+
+  const [customAlert, setCustomAlert] = useState<{ message: string; title: string } | null>(null)
+  const [confirmModalData, setConfirmModalData] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null)
+
+  const showAlert = (message: string, title: string = 'Notification') => {
+    setCustomAlert({ message, title })
+  }
+
+  // Shadow the global alert function
+  const alert = (message: string) => showAlert(message, 'Notification')
 
   // Apply/remove the 'dark' class on <html> whenever darkMode changes
   useEffect(() => {
@@ -569,6 +581,7 @@ function App() {
             rewardsAlloc={dashboardData?.setting?.rewardsAlloc ?? 0.1}
             onFetchPagedTransactions={api.fetchPagedTransactions}
             onExportTransactions={api.exportTransactionsCsv}
+            onShowAlert={showAlert}
           />
         )}
 
@@ -658,10 +671,11 @@ function App() {
                         </button>
                         <button
                           onClick={() => {
-                            const confirmResult = window.confirm("Are you sure you want to delete this recurring subscription? This will cancel all future notifications for this subscription.");
-                            if (confirmResult) {
-                              handleDeletePayment(noti.recurringPaymentId);
-                            }
+                            setConfirmModalData({
+                              title: 'Remove Subscription',
+                              message: 'Are you sure you want to delete this recurring subscription? This will cancel all future notifications for this subscription.',
+                              onConfirm: () => handleDeletePayment(noti.recurringPaymentId)
+                            })
                           }}
                           className="flex-1 sm:flex-initial px-3 py-1.5 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-xs rounded-lg transition duration-150 cursor-pointer border border-orange-500/10 whitespace-nowrap text-center"
                         >
@@ -856,6 +870,27 @@ function App() {
           &copy; 2026 FinancialApp Inc. Double-Entry Safe Ledger System. All rights reserved.
         </div>
       </footer>
+      <CustomAlertModal
+        isOpen={!!customAlert}
+        title={customAlert?.title || 'Notification'}
+        message={customAlert?.message || ''}
+        onClose={() => setCustomAlert(null)}
+      />
+
+      <CustomConfirmModal
+        isOpen={!!confirmModalData}
+        title={confirmModalData?.title || 'Confirmation'}
+        message={confirmModalData?.message || ''}
+        confirmText="Confirm"
+        cancelText="Cancel"
+        onConfirm={() => {
+          if (confirmModalData) {
+            confirmModalData.onConfirm()
+            setConfirmModalData(null)
+          }
+        }}
+        onCancel={() => setConfirmModalData(null)}
+      />
     </div>
   )
 }
