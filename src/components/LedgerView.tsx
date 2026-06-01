@@ -971,7 +971,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   value: y,
                   label: y.toString()
                 }))}
-                className="w-28 shrink-0"
+                className="w-20 sm:w-28 shrink-0"
+                align="right"
               />
             </div>
           </div>

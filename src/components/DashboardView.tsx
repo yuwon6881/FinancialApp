@@ -339,7 +339,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
       
       {/* Period Selection & Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-radial from-blue-950/20 via-card to-card rounded-2xl border border-blue-500/10">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 sm:p-6 bg-radial from-blue-950/20 via-card to-card rounded-2xl border border-blue-500/10">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
             Ledger Dashboard
@@ -349,7 +349,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </p>
         </div>
         
-        <div className="flex items-center gap-2 w-full md:w-auto">
+        <div className="flex items-center gap-1.5 sm:gap-2 w-full md:w-auto">
           {/* Month Selector */}
           <CustomSelect 
             value={activeSettings.selectedMonth}
@@ -369,7 +369,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               value: y,
               label: y.toString()
             }))}
-            className="w-28 shrink-0"
+            className="w-20 sm:w-28 shrink-0"
             align="right"
           />
 
