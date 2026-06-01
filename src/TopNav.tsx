@@ -190,7 +190,7 @@ const TopNav: React.FC<TopNavProps> = ({
             </button>
 
             {isBellOpen && (
-              <div className="absolute right-[-30px] sm:right-0 mt-2 w-[calc(100vw-32px)] sm:w-80 bg-card border border-border rounded-2xl shadow-xl p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="fixed sm:absolute top-16 sm:top-auto left-4 right-4 sm:left-auto sm:right-0 mt-2 sm:w-80 bg-card border border-border rounded-2xl shadow-xl p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                 <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3 select-none">
                   <h4 className="text-xs font-bold text-foreground">Subscription Notifications</h4>
                   <span className="text-[9px] text-muted-foreground font-semibold">
