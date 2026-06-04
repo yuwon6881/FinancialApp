@@ -249,6 +249,14 @@ function App() {
       
       setLoading(false)
       setIsInitializing(false)
+      const loader = document.getElementById('initial-loader')
+      if (loader) {
+        loader.style.transition = 'opacity 0.25s ease-out'
+        loader.style.opacity = '0'
+        setTimeout(() => {
+          loader.remove()
+        }, 250)
+      }
     }
     
     initialize()
@@ -530,27 +538,7 @@ function App() {
   }
 
   if (isInitializing) {
-    return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4 relative select-none">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-[30%] left-[30%] -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl animate-pulse" />
-          <div className="absolute bottom-[30%] right-[30%] translate-x-1/2 translate-y-1/2 w-96 h-96 rounded-full bg-emerald-500/10 blur-3xl animate-pulse" />
-        </div>
-
-        <div className="flex flex-col items-center gap-6 text-center relative z-10 animate-in fade-in duration-500">
-          <div className="flex size-16 items-center justify-center rounded-2xl bg-radial from-blue-500 to-emerald-600 shadow-xl shadow-blue-500/10 text-white font-extrabold text-3xl animate-pulse">
-            F
-          </div>
-          <div className="flex flex-col items-center gap-2">
-            <h2 className="text-sm font-black tracking-widest text-foreground uppercase">FinancialApp</h2>
-            <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground mt-1">
-              <Loader2 className="animate-spin text-emerald-500 size-4" />
-              Initializing secure ledger session...
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+    return <div className="min-h-screen bg-[#090d16]" />
   }
 
   if (!token) {
