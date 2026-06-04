@@ -1,4 +1,4 @@
-const CACHE_NAME = 'financial-app-v2';
+const CACHE_NAME = 'financial-app-v1';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -34,10 +34,12 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
-  self.clients.claim();
+  // Do NOT call self.clients.claim() immediately on activation.
+  // This avoids forcing control over active client pages mid-load,
+  // which causes Android's WebAPK standalone wrapper to close and relaunch.
 });
 
-// Fetch Event - cache-first with stale-while-revalidate for dynamic assets
+// Fetch Event
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
@@ -46,6 +48,30 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // 1. Navigation requests (like loading the app root / index.html) -> Network-First
+  // This ensures online users always get the latest index.html pointing to fresh JS/CSS hashes,
+  // preventing 404 crashes on startup when older bundle hashes are deleted from the server.
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          // Offline fallback
+          return caches.match(event.request) || caches.match('/index.html') || caches.match('/');
+        })
+    );
+    return;
+  }
+
+  // 2. Static and sub-resources -> Cache-First with Stale-While-Revalidate
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
