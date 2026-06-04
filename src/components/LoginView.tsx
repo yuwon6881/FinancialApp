@@ -4,30 +4,27 @@ import * as api from '../lib/api'
 
 interface LoginViewProps {
   onLoginSuccess: (token: string, username: string) => void
+  isRegistered: boolean | null
+  authStatusError: string | null
 }
 
-export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
-  const [isRegistered, setIsRegistered] = useState<boolean | null>(null)
+export const LoginView: React.FC<LoginViewProps> = ({ 
+  onLoginSuccess, 
+  isRegistered, 
+  authStatusError 
+}) => {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(authStatusError)
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
-  async function checkStatus() {
-    try {
-      const res = await api.fetchAuthStatus()
-      setIsRegistered(res.isRegistered)
-    } catch (err) {
-      console.error(err)
-      setError('Could not connect to the backend server. Please make sure the API is running.')
-    }
-  }
-
   useEffect(() => {
-    checkStatus()
-  }, [])
+    if (authStatusError) {
+      setError(authStatusError)
+    }
+  }, [authStatusError])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

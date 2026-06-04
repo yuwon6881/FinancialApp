@@ -14,6 +14,9 @@ import { CustomAlertModal } from './components/ui/CustomAlertModal'
 import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 
 function App() {
+  const [isInitializing, setIsInitializing] = useState<boolean>(true)
+  const [isRegistered, setIsRegistered] = useState<boolean | null>(null)
+  const [authStatusError, setAuthStatusError] = useState<string | null>(null)
   const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'))
   const [username, setUsername] = useState<string>(localStorage.getItem('auth_username') || '')
   const [activeTab, setActiveTab] = useState<'dashboard' | 'recurring' | 'ledger' | 'wishlist'>('dashboard')
@@ -23,7 +26,7 @@ function App() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [wishlist, setWishlist] = useState<WishlistItem[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState<boolean>(true)
+  const [loading, setLoading] = useState<boolean>(false)
 
   const [selectedMonth, setSelectedMonth] = useState<string>('')
   const [selectedYear, setSelectedYear] = useState<number>(0)
@@ -176,8 +179,83 @@ function App() {
     }
   }
 
+  // Centralized Startup/Initialization Lifecycle
   useEffect(() => {
-    if (token) {
+    async function initialize() {
+      const storedToken = localStorage.getItem('auth_token')
+      
+      if (storedToken) {
+        try {
+          const [dbData, txs, recs, cats, wishes] = await Promise.all([
+            api.fetchDashboard(),
+            api.fetchTransactions(),
+            api.fetchRecurringPayments(),
+            api.fetchCategories(),
+            api.fetchWishlist().catch(() => [])
+          ])
+          
+          setSelectedMonth(dbData.setting.selectedMonth)
+          setSelectedYear(dbData.setting.selectedYear)
+          setDashboardData(dbData)
+          setTransactions(txs)
+          setRecurringPayments(recs)
+          setCategoriesList(cats)
+          setWishlist(wishes)
+          setError(null)
+          
+          const serverDark = dbData.setting.darkMode ?? false
+          setDarkMode(serverDark)
+          localStorage.setItem('dark_mode', serverDark.toString())
+          
+          if (dbData.pendingNotifications && dbData.pendingNotifications.length > 0) {
+            if (localStorage.getItem('show_notifications_on_login') !== 'false') {
+              setShowLoginModal(true)
+            }
+            setHasShownModalThisSession(true)
+          }
+
+          setIsRegistered(true)
+        } catch (err: any) {
+          console.error('Initialization fetch failed:', err)
+          if (err.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
+            await api.logout()
+            setToken(null)
+            localStorage.removeItem('auth_username')
+            sessionStorage.removeItem('session_locked')
+            localStorage.removeItem('last_active_time')
+            setIsLocked(false)
+            
+            try {
+              const statusRes = await api.fetchAuthStatus()
+              setIsRegistered(statusRes.isRegistered)
+            } catch (statusErr) {
+              console.error('Auth status check failed during recovery:', statusErr)
+              setAuthStatusError('Could not connect to the backend server.')
+            }
+          } else {
+            setError('Could not connect to the database API server. Running in offline view mode.')
+            setIsRegistered(true)
+          }
+        }
+      } else {
+        try {
+          const statusRes = await api.fetchAuthStatus()
+          setIsRegistered(statusRes.isRegistered)
+        } catch (err) {
+          console.error('Auth status check failed:', err)
+          setAuthStatusError('Could not connect to the backend server.')
+        }
+      }
+      
+      setLoading(false)
+      setIsInitializing(false)
+    }
+    
+    initialize()
+  }, [])
+
+  useEffect(() => {
+    if (token && !isInitializing) {
       loadAll()
     }
   }, [token])
@@ -451,8 +529,38 @@ function App() {
     api.updateDarkMode(newDark).catch(err => console.warn('Dark mode sync failed:', err))
   }
 
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4 relative select-none">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-[30%] left-[30%] -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl animate-pulse" />
+          <div className="absolute bottom-[30%] right-[30%] translate-x-1/2 translate-y-1/2 w-96 h-96 rounded-full bg-emerald-500/10 blur-3xl animate-pulse" />
+        </div>
+
+        <div className="flex flex-col items-center gap-6 text-center relative z-10 animate-in fade-in duration-500">
+          <div className="flex size-16 items-center justify-center rounded-2xl bg-radial from-blue-500 to-emerald-600 shadow-xl shadow-blue-500/10 text-white font-extrabold text-3xl animate-pulse">
+            F
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <h2 className="text-sm font-black tracking-widest text-foreground uppercase">FinancialApp</h2>
+            <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground mt-1">
+              <Loader2 className="animate-spin text-emerald-500 size-4" />
+              Initializing secure ledger session...
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (!token) {
-    return <LoginView onLoginSuccess={handleLoginSuccess} />
+    return (
+      <LoginView 
+        onLoginSuccess={handleLoginSuccess} 
+        isRegistered={isRegistered}
+        authStatusError={authStatusError}
+      />
+    )
   }
 
   if (loading && !dashboardData) {
