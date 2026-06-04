@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import type { WishlistItem } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
+import { formatCurrencyVal } from '../lib/utils'
 import {
   Gift, 
   Plus, 
@@ -46,6 +47,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   pastThreeMonthsRewardsAverage,
   hasRewardsHistory,
   currency,
+  hideSensitive,
   onAddItem,
   onUpdateItem,
   onDeleteItem,
@@ -325,7 +327,13 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                           <span className="text-[11px] font-bold text-foreground block">
                             {getTimelineString(activeItem.price, rewardsTarget > 0 ? rewardsTarget : 100)}
                           </span>
-                          <span className="text-[9px] text-muted-foreground block font-medium">Based on target budget ({formatSensitive(rewardsTarget)}/mo)</span>
+                          <span className="text-[9px] text-muted-foreground block font-medium">
+                            Based on target budget (
+                            <span className={hideSensitive ? 'blur-sm select-none pointer-events-none inline-block' : 'inline-block'}>
+                              {formatCurrencyVal(rewardsTarget, currency)}
+                            </span>
+                            /mo)
+                          </span>
                         </div>
                         <div className="space-y-1 border-l border-border/30 pl-3">
                           <span className="text-[10px] uppercase tracking-wider font-extrabold text-violet-500">Realistic Projection</span>
@@ -336,10 +344,17 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                             }
                           </span>
                           <span className="text-[9px] text-muted-foreground block font-medium">
-                            {hasRewardsHistory 
-                              ? `Based on past 3-mo savings (${formatSensitive(pastThreeMonthsRewardsAverage)}/mo)`
-                              : 'No past savings history'
-                            }
+                            {hasRewardsHistory ? (
+                              <>
+                                Based on past 3-mo savings (
+                                <span className={hideSensitive ? 'blur-sm select-none pointer-events-none inline-block' : 'inline-block'}>
+                                  {formatCurrencyVal(pastThreeMonthsRewardsAverage, currency)}
+                                </span>
+                                /mo)
+                              </>
+                            ) : (
+                              'No past savings history'
+                            )}
                           </span>
                         </div>
                       </div>
