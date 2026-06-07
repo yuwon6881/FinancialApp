@@ -31,6 +31,7 @@ export interface FinancialSetting {
   rewardsAlloc: number
   cycleDay: number
   darkMode: boolean
+  hideSensitive: boolean
   currency?: string
 }
 

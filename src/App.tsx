@@ -37,7 +37,7 @@ function App() {
   const [isHoveringWallet, setIsHoveringWallet] = useState(false)
   const [highlightedTxId, setHighlightedTxId] = useState<string | null>(null)
   const [hideSensitive, setHideSensitive] = useState<boolean>(() => {
-    return localStorage.getItem('hide_sensitive') === 'true'
+    return localStorage.getItem('hide_sensitive') !== 'false'
   })
 
   // Dark mode — initialize from localStorage immediately, sync with server after load
@@ -123,9 +123,9 @@ function App() {
     setDashboardData(null)
     setTransactions([])
     setRecurringPayments([])
-    setCategoriesList([])
     setHasShownModalThisSession(false)
     setShowLoginModal(false)
+    setHideSensitive(true)
     localStorage.removeItem('auth_username')
     sessionStorage.removeItem('session_locked')
     localStorage.removeItem('last_active_time')
@@ -157,6 +157,11 @@ function App() {
       const serverDark = dbData.setting.darkMode ?? false
       setDarkMode(serverDark)
       localStorage.setItem('dark_mode', serverDark.toString())
+
+      // Sync hide sensitive from server preference (server wins over localStorage)
+      const serverHideSensitive = dbData.setting.hideSensitive ?? true
+      setHideSensitive(serverHideSensitive)
+      localStorage.setItem('hide_sensitive', serverHideSensitive.toString())
 
       if (dbData.pendingNotifications && dbData.pendingNotifications.length > 0 && !hasShownModalThisSession) {
         if (localStorage.getItem('show_notifications_on_login') !== 'false') {
@@ -211,7 +216,7 @@ function App() {
     currency?: string
   }) => {
     try {
-      await api.updateSettings({ ...settings, darkMode })
+      await api.updateSettings({ ...settings, darkMode, hideSensitive })
       await loadAll(selectedMonth || undefined, selectedYear || undefined)
     } catch (err) {
       console.error(err)
@@ -440,6 +445,7 @@ function App() {
     } else {
       setHideSensitive(true)
       localStorage.setItem('hide_sensitive', 'true')
+      api.updateHideSensitive(true).catch(err => console.warn('Hide sensitive sync failed:', err))
     }
   }
 
@@ -739,14 +745,15 @@ function App() {
                 setPromptError(null)
                 try {
                   const res = await api.verifyPassword(confirmPassword)
-                   if (res.verified) {
-                    setHideSensitive(false)
-                    localStorage.setItem('hide_sensitive', 'false')
-                    setShowPasswordPrompt(false)
-                    setConfirmPassword('')
-                  } else {
-                    setPromptError(res.message || 'Incorrect password.')
-                  }
+                    if (res.verified) {
+                     setHideSensitive(false)
+                     localStorage.setItem('hide_sensitive', 'false')
+                     setShowPasswordPrompt(false)
+                     setConfirmPassword('')
+                     await api.updateHideSensitive(false).catch(err => console.warn('Hide sensitive sync failed:', err))
+                   } else {
+                     setPromptError(res.message || 'Incorrect password.')
+                   }
                 } catch (err) {
                   console.error(err)
                   setPromptError('Failed to contact verification server.')

@@ -250,6 +250,7 @@ export async function updateSettings(settings: {
   rewardsAlloc: number
   cycleDay: number
   darkMode?: boolean
+  hideSensitive?: boolean
   currency?: string
 }): Promise<void> {
   const payload = {
@@ -281,6 +282,22 @@ export async function updateDarkMode(darkMode: boolean): Promise<void> {
   if (!response.ok) {
     // Non-fatal: silently fail (preference also stored in localStorage)
     console.warn('Failed to persist dark mode preference to server')
+  } else {
+    queryCache.invalidateAll()
+  }
+}
+
+// Lightweight helper that only updates hide sensitive preference
+export async function updateHideSensitive(hideSensitive: boolean): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/financial/hide-sensitive`, {
+    method: 'PUT',
+    headers: getHeaders({
+      'Content-Type': 'application/json',
+    }),
+    body: JSON.stringify({ hideSensitive }),
+  })
+  if (!response.ok) {
+    console.warn('Failed to persist hide sensitive preference to server')
   } else {
     queryCache.invalidateAll()
   }
