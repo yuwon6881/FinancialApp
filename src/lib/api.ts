@@ -36,8 +36,13 @@ const originalFetch = window.fetch
 window.fetch = async (...args) => {
   const response = await originalFetch(...args)
   const url = typeof args[0] === 'string' ? args[0] : (args[0] as any).url || ''
-  if (!response.ok && response.status === 401 && !url.includes('/auth/login') && !url.includes('/auth/status')) {
-    throw new Error('401 Unauthorized')
+  if (!response.ok) {
+    if (response.status === 401 && !url.includes('/auth/login') && !url.includes('/auth/status')) {
+      throw new Error('401 Unauthorized')
+    }
+    if (response.status === 423) {
+      throw new Error('423 Locked')
+    }
   }
   return response
 }
@@ -617,6 +622,18 @@ export async function verifyPassword(password: string): Promise<{ verified: bool
     throw new Error('Password verification request failed')
   }
   return response.json()
+}
+
+export async function lockSession(): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/auth/lock`, {
+    method: 'POST',
+    headers: getHeaders(),
+  })
+  if (!response.ok) {
+    console.warn('Failed to lock session on server')
+  } else {
+    queryCache.invalidateAll()
+  }
 }
 
 export async function fetchWishlist(): Promise<WishlistItem[]> {

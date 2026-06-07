@@ -98,6 +98,7 @@ function App() {
       if (Date.now() - lastActive > LOCK_TIMEOUT_MS) {
         setIsLocked(true)
         sessionStorage.setItem('session_locked', 'true')
+        api.lockSession().catch(err => console.warn('Failed to lock session on server:', err))
       }
     }, 15000)
     return () => clearInterval(interval)
@@ -173,6 +174,9 @@ function App() {
       console.error(err)
       if (err.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
         handleLogout()
+      } else if (err.message && err.message.includes('423')) {
+        setIsLocked(true)
+        sessionStorage.setItem('session_locked', 'true')
       } else {
         setError('Could not connect to the database API server. Running in offline view mode.')
       }
