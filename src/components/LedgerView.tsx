@@ -64,6 +64,8 @@ interface LedgerViewProps {
     endDate?: string
   }) => Promise<{ blob: Blob; filename: string }>
   onShowAlert?: (message: string, title?: string) => void
+  activeSyncId?: string | null
+  onStartEditPending?: (id: string | null) => void
 }
 
 function formatDateToString(d: Date): string {
@@ -140,7 +142,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   rewardsAlloc = 0.1,
   onFetchPagedTransactions,
   onExportTransactions,
-  onShowAlert
+  onShowAlert,
+  activeSyncId = null,
+  onStartEditPending
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [description, setDescription] = useState('')
@@ -195,11 +199,38 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
   }, [showAddForm, editingTxId])
 
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawVal = e.target.value;
+    if (!rawVal) {
+      setAmount('');
+      return;
+    }
+    const digits = rawVal.replace(/\D/g, '');
+    if (!digits) {
+      setAmount('');
+      return;
+    }
+    const parsed = parseInt(digits, 10);
+    if (parsed === 0) {
+      if (amount === '0.00' || amount === '') {
+        setAmount('');
+      } else {
+        setAmount('0.00');
+      }
+      return;
+    }
+    const numericValue = parsed / 100;
+    setAmount(numericValue.toFixed(2));
+  };
+
   const handleStartEdit = (t: Transaction) => {
     setEditingTxId(t.id)
     setDescription(t.description)
-    setAmount(Math.abs(t.amount).toString())
+    setAmount(Math.abs(t.amount).toFixed(2))
     setDate(t.date)
+    if (onStartEditPending) {
+      onStartEditPending(t.id.startsWith('temp_') ? t.id : null)
+    }
     if (t.ledgerCategory.startsWith('Transfer:')) {
       setTxType('transfer')
       const parts = t.ledgerCategory.substring(9).split('->')
@@ -463,6 +494,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     const mo = String(now.getMonth() + 1).padStart(2, '0')
     const d = String(now.getDate()).padStart(2, '0')
     setDate(`${y}-${mo}-${d}`)
+    if (editingTxId && editingTxId.startsWith('temp_') && onStartEditPending) {
+      onStartEditPending(null)
+    }
     setEditingTxId(null)
     setShowAddForm(false)
   }
@@ -1004,6 +1038,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 setDescription('')
                 setAmount('')
                 setLedgerCategory('Essentials')
+                if (editingTxId && editingTxId.startsWith('temp_') && onStartEditPending) {
+                  onStartEditPending(null)
+                }
                 setEditingTxId(null)
               }
               setShowAddForm(prev => !prev)
@@ -1135,12 +1172,12 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   {getCurrencySymbol(currency)}
                 </span>
                 <input
-                  type="number"
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   required
                   placeholder="0.00"
                   value={amount}
-                  onChange={e => setAmount(e.target.value)}
+                  onChange={handleAmountChange}
                   className={`w-full pr-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200 ${
                     getCurrencySymbol(currency).length > 2 ? 'pl-11' : getCurrencySymbol(currency).length > 1 ? 'pl-9' : 'pl-7'
                   }`}
@@ -1410,7 +1447,24 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 return (
                   <tr id={`tx-row-${t.id}`} key={t.id} className="hover:bg-muted/10 transition duration-150">
                     <td className="p-4 font-medium text-muted-foreground">{t.date}</td>
-                    <td className="p-4 font-semibold text-foreground">{t.description}</td>
+                    <td className="p-4 font-semibold text-foreground flex items-center gap-2">
+                      <span>{t.description}</span>
+                      {(t as any).isPendingSync && (
+                        <span 
+                          title={t.id === activeSyncId ? "Syncing to database..." : "Pending sync (offline)"} 
+                          className="inline-flex items-center text-[9px] px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 shrink-0 select-none"
+                        >
+                          {t.id === activeSyncId ? (
+                            <>
+                              <Loader2 className="size-2 animate-spin shrink-0 mr-1" />
+                              Syncing
+                            </>
+                          ) : (
+                            "Pending"
+                          )}
+                        </span>
+                      )}
+                    </td>
                     <td className="p-4">
                       <span className={`inline-block text-[10px] px-2 py-0.5 font-semibold rounded-md border ${
                         categoryColorMap[t.category] || 'bg-slate-500/10 text-slate-500 border-slate-500/20'
@@ -1494,14 +1548,16 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       ) : (
                         <button
                           onClick={() => handleStartEdit(t)}
-                          className="text-xs text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer"
+                          disabled={t.id === activeSyncId}
+                          className="text-xs text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           Edit
                         </button>
                       )}
                       <button
                         onClick={() => handleDeleteClick(t)}
-                        className="text-xs text-orange-500 hover:text-orange-600 bg-orange-500/5 hover:bg-orange-500/10 border border-orange-500/10 hover:border-orange-500/20 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer"
+                        disabled={t.id === activeSyncId}
+                        className="text-xs text-orange-500 hover:text-orange-600 bg-orange-500/5 hover:bg-orange-500/10 border border-orange-500/10 hover:border-orange-500/20 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         Delete
                       </button>
@@ -1550,7 +1606,21 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
                 {/* Row 2: Description + Amount */}
                 <div className="flex items-center justify-between gap-3">
-                  <h4 className="text-sm font-bold text-foreground leading-snug flex-1">{t.description}</h4>
+                  <div className="flex-1 flex items-center gap-1.5 min-w-0">
+                    <h4 className="text-sm font-bold text-foreground leading-snug truncate">{t.description}</h4>
+                    {(t as any).isPendingSync && (
+                      <span 
+                        title={t.id === activeSyncId ? "Syncing to database..." : "Pending sync (offline)"} 
+                        className="inline-flex items-center text-[9px] px-1 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 shrink-0 select-none"
+                      >
+                        {t.id === activeSyncId ? (
+                          <Loader2 className="size-2 animate-spin text-amber-500" />
+                        ) : (
+                          "Pending"
+                        )}
+                      </span>
+                    )}
+                  </div>
                   <div className="shrink-0">
                     {isTransfer ? (
                       <span className="text-sm font-bold text-blue-400">
@@ -1582,14 +1652,16 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     ) : (
                       <button
                         onClick={() => handleStartEdit(t)}
-                        className="text-[10px] text-blue-500 bg-blue-500/8 hover:bg-blue-500/15 border border-blue-500/15 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer"
+                        disabled={t.id === activeSyncId}
+                        className="text-[10px] text-blue-500 bg-blue-500/8 hover:bg-blue-500/15 border border-blue-500/15 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         Edit
                       </button>
                     )}
                     <button
                       onClick={() => handleDeleteClick(t)}
-                      className="text-[10px] text-orange-500 bg-orange-500/8 hover:bg-orange-500/15 border border-orange-500/15 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer"
+                      disabled={t.id === activeSyncId}
+                      className="text-[10px] text-orange-500 bg-orange-500/8 hover:bg-orange-500/15 border border-orange-500/15 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       Delete
                     </button>

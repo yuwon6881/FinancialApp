@@ -41,6 +41,7 @@ interface TopNavProps {
   currency?: string
   onMouseEnterWallet?: () => void
   onMouseLeaveWallet?: () => void
+  isSyncing?: boolean
 }
 
 const TopNav: React.FC<TopNavProps> = ({
@@ -59,7 +60,8 @@ const TopNav: React.FC<TopNavProps> = ({
   onToggleDarkMode,
   currency = 'USD',
   onMouseEnterWallet,
-  onMouseLeaveWallet
+  onMouseLeaveWallet,
+  isSyncing = false
 }) => {
   const [isBellOpen, setIsBellOpen] = useState(false)
   const [confirmNotiId, setConfirmNotiId] = useState<string | null>(null)
@@ -110,6 +112,12 @@ const TopNav: React.FC<TopNavProps> = ({
               FinancialApp
             </span>
           </div>
+          {isSyncing && (
+            <div className="ml-2.5 flex items-center gap-1.5 px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-md text-[10px] font-bold text-blue-500 animate-pulse select-none shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+              Syncing...
+            </div>
+          )}
         </div>
 
         {/* Navigation Tabs - Centered mathematically on desktop, flex-safe on medium screens */}

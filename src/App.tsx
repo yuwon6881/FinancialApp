@@ -17,13 +17,56 @@ function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'))
   const [username, setUsername] = useState<string>(localStorage.getItem('auth_username') || '')
   const [activeTab, setActiveTab] = useState<'dashboard' | 'recurring' | 'ledger' | 'wishlist'>('dashboard')
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [recurringPayments, setRecurringPayments] = useState<RecurringPayment[]>([])
-  const [categoriesList, setCategoriesList] = useState<TransactionCategory[]>([])
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
-  const [wishlist, setWishlist] = useState<WishlistItem[]>([])
+  
+  const [transactions, setTransactions] = useState<Transaction[]>(() => {
+    try {
+      const cached = localStorage.getItem('cached_transactions')
+      return cached ? JSON.parse(cached) : []
+    } catch { return [] }
+  })
+  const [recurringPayments, setRecurringPayments] = useState<RecurringPayment[]>(() => {
+    try {
+      const cached = localStorage.getItem('cached_recurring_payments')
+      return cached ? JSON.parse(cached) : []
+    } catch { return [] }
+  })
+  const [categoriesList, setCategoriesList] = useState<TransactionCategory[]>(() => {
+    try {
+      const cached = localStorage.getItem('cached_categories')
+      return cached ? JSON.parse(cached) : []
+    } catch { return [] }
+  })
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(() => {
+    try {
+      const cached = localStorage.getItem('cached_dashboard_data')
+      return cached ? JSON.parse(cached) : null
+    } catch { return null }
+  })
+  const [wishlist, setWishlist] = useState<WishlistItem[]>(() => {
+    try {
+      const cached = localStorage.getItem('cached_wishlist')
+      return cached ? JSON.parse(cached) : []
+    } catch { return [] }
+  })
+  
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState<boolean>(true)
+  const [loading, setLoading] = useState<boolean>(() => {
+    return !localStorage.getItem('cached_dashboard_data')
+  })
+
+  // Sync Queue States
+  const [pendingTransactions, setPendingTransactions] = useState<Transaction[]>(() => {
+    try {
+      const cached = localStorage.getItem('pending_transactions')
+      return cached ? JSON.parse(cached) : []
+    } catch { return [] }
+  })
+  const [isBackgroundSyncing, setIsBackgroundSyncing] = useState<boolean>(false)
+  const [actionLoading, setActionLoading] = useState<boolean>(false)
+  const [activeSyncId, setActiveSyncId] = useState<string | null>(null)
+  const [syncBackoffUntil, setSyncBackoffUntil] = useState<number>(0)
+  const [editingPendingId, setEditingPendingId] = useState<string | null>(null)
+
 
   const [selectedMonth, setSelectedMonth] = useState<string>('')
   const [selectedYear, setSelectedYear] = useState<number>(0)
@@ -124,19 +167,33 @@ function App() {
     setDashboardData(null)
     setTransactions([])
     setRecurringPayments([])
+    setPendingTransactions([])
+    setEditingPendingId(null)
     setHasShownModalThisSession(false)
     setShowLoginModal(false)
     setHideSensitive(true)
+    
+    // Clear LocalStorage cache
     localStorage.removeItem('auth_username')
     sessionStorage.removeItem('session_locked')
     localStorage.removeItem('last_active_time')
+    localStorage.removeItem('cached_dashboard_data')
+    localStorage.removeItem('cached_transactions')
+    localStorage.removeItem('cached_recurring_payments')
+    localStorage.removeItem('cached_categories')
+    localStorage.removeItem('cached_wishlist')
+    localStorage.removeItem('pending_transactions')
     setIsLocked(false)
   }
 
   // Fetch initial ledger and dashboard statistics
-  async function loadAll(month?: string, year?: number) {
+  async function loadAll(month?: string, year?: number, isBackground = false) {
     if (!token) return
-    setLoading(true)
+    if (!isBackground) {
+      setLoading(true)
+    } else {
+      setIsBackgroundSyncing(true)
+    }
     try {
       const [dbData, txs, recs, cats, wishes] = await Promise.all([
         api.fetchDashboard(month, year),
@@ -153,6 +210,13 @@ function App() {
       setCategoriesList(cats)
       setWishlist(wishes)
       setError(null)
+
+      // Save to localStorage cache
+      localStorage.setItem('cached_dashboard_data', JSON.stringify(dbData))
+      localStorage.setItem('cached_transactions', JSON.stringify(txs))
+      localStorage.setItem('cached_recurring_payments', JSON.stringify(recs))
+      localStorage.setItem('cached_categories', JSON.stringify(cats))
+      localStorage.setItem('cached_wishlist', JSON.stringify(wishes))
 
       // Sync dark mode from server preference (server wins over localStorage)
       const serverDark = dbData.setting.darkMode ?? false
@@ -182,12 +246,14 @@ function App() {
       }
     } finally {
       setLoading(false)
+      setIsBackgroundSyncing(false)
     }
   }
 
   useEffect(() => {
     if (token) {
-      loadAll()
+      const hasCache = !!localStorage.getItem('cached_dashboard_data');
+      loadAll(undefined, undefined, hasCache);
     }
   }, [token])
 
@@ -251,33 +317,69 @@ function App() {
 
 
   // Transaction modifiers
+  const handleEditPendingTransaction = (id: string, updatedTx: Omit<Transaction, 'id'>) => {
+    if (id === activeSyncId) return;
+    setPendingTransactions(prev => prev.map(t => {
+      if (t.id === id) {
+        return { ...t, ...updatedTx } as Transaction;
+      }
+      return t;
+    }));
+  };
+
+  const handleDeletePendingTransaction = (id: string) => {
+    if (id === activeSyncId) return;
+    setPendingTransactions(prev => prev.filter(t => t.id !== id));
+  };
+
   const handleAddTransaction = async (newTx: Omit<Transaction, 'id'>) => {
-    try {
-      await api.addTransaction(newTx)
-      await loadAll(selectedMonth || undefined, selectedYear || undefined)
-    } catch (err) {
-      console.error(err)
-      alert('Error adding transaction on the server.')
-    }
+    const tempId = 'temp_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+    const pendingTx: Transaction = {
+      ...newTx,
+      id: tempId,
+      isPendingSync: true
+    } as any;
+
+    setPendingTransactions(prev => [...prev, pendingTx]);
   }
 
   const handleDeleteTransaction = async (id: string) => {
+    if (id.startsWith('temp_')) {
+      handleDeletePendingTransaction(id);
+      if (id === editingPendingId) {
+        setEditingPendingId(null);
+      }
+      return;
+    }
+
+    setActionLoading(true)
     try {
       await api.deleteTransaction(id)
       await loadAll(selectedMonth || undefined, selectedYear || undefined)
     } catch (err) {
       console.error(err)
       alert('Error deleting transaction on the server.')
+    } finally {
+      setActionLoading(false)
     }
   }
 
   const handleUpdateTransaction = async (id: string, updatedTx: Omit<Transaction, 'id'>) => {
+    if (id.startsWith('temp_')) {
+      handleEditPendingTransaction(id, updatedTx);
+      setEditingPendingId(null);
+      return;
+    }
+
+    setActionLoading(true)
     try {
       await api.updateTransaction(id, updatedTx)
       await loadAll(selectedMonth || undefined, selectedYear || undefined)
     } catch (err) {
       console.error(err)
       alert('Error updating transaction on the server.')
+    } finally {
+      setActionLoading(false)
     }
   }
 
@@ -381,8 +483,142 @@ function App() {
     }
   }
 
+  // Save pending transactions to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('pending_transactions', JSON.stringify(pendingTransactions))
+  }, [pendingTransactions])
+
+  // Single mount-time warming ping
+  useEffect(() => {
+    if (token) {
+      api.pingServer().catch(err => console.log('Warming ping failed:', err));
+    }
+  }, [token]);
+
+  // Background Sync Queue Worker
+  useEffect(() => {
+    const nextTx = pendingTransactions[0];
+    if (nextTx && nextTx.id === editingPendingId) {
+      return;
+    }
+
+    if (!token || pendingTransactions.length === 0 || isBackgroundSyncing || activeSyncId || Date.now() < syncBackoffUntil) {
+      if (pendingTransactions.length > 0 && Date.now() < syncBackoffUntil && !isBackgroundSyncing && !activeSyncId) {
+        const remaining = syncBackoffUntil - Date.now();
+        const t = setTimeout(() => {
+          setSyncBackoffUntil(0);
+        }, remaining);
+        return () => clearTimeout(t);
+      }
+      return;
+    }
+
+    let isSubscribed = true;
+
+    async function processQueue() {
+      setIsBackgroundSyncing(true);
+      const nextTx = pendingTransactions[0];
+      if (!nextTx) {
+        setIsBackgroundSyncing(false);
+        return;
+      }
+
+      setActiveSyncId(nextTx.id);
+
+      try {
+        const { id, isPendingSync, ...txPayload } = nextTx as any;
+        await api.addTransaction(txPayload);
+
+        if (!isSubscribed) return;
+
+        // Success: remove from queue
+        setPendingTransactions(prev => prev.filter(item => item.id !== nextTx.id));
+
+        // Refresh dashboard silently
+        const [dbData, txs, wishes] = await Promise.all([
+          api.fetchDashboard(selectedMonth || undefined, selectedYear || undefined),
+          api.fetchTransactions(selectedMonth || undefined, selectedYear || undefined),
+          api.fetchWishlist().catch(() => [])
+        ]);
+
+        if (!isSubscribed) return;
+
+        setDashboardData(dbData);
+        setTransactions(txs);
+        setWishlist(wishes);
+        
+        localStorage.setItem('cached_dashboard_data', JSON.stringify(dbData));
+        localStorage.setItem('cached_transactions', JSON.stringify(txs));
+        localStorage.setItem('cached_wishlist', JSON.stringify(wishes));
+        setError(null);
+      } catch (err: any) {
+        console.error('Failed to sync transaction:', err);
+        if (isSubscribed) {
+          if (err.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
+            handleLogout();
+          } else {
+            setError('Sync pending: Server is offline or waking up...');
+            setSyncBackoffUntil(Date.now() + 15000); // Back off 15s
+          }
+        }
+      } finally {
+        if (isSubscribed) {
+          setActiveSyncId(null);
+          setIsBackgroundSyncing(false);
+        }
+      }
+    }
+
+    processQueue();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [token, pendingTransactions, isBackgroundSyncing, activeSyncId, syncBackoffUntil, selectedMonth, selectedYear]);
+
+  // Combine synced and pending transactions
+  const allTransactions = useMemo(() => {
+    return [...pendingTransactions, ...transactions];
+  }, [pendingTransactions, transactions]);
+
+  // Create optimistic dashboardData from server data + pending queue
+  const optimisticDashboardData = useMemo(() => {
+    if (!dashboardData) return null;
+    
+    const data = { ...dashboardData };
+    data.stats = { ...data.stats };
+    data.categories = data.categories.map(c => ({ ...c }));
+    data.recentTransactions = [...data.recentTransactions];
+
+    pendingTransactions.forEach(t => {
+      data.stats.totalBalance += t.amount;
+      
+      if (!data.recentTransactions.some(rt => rt.id === t.id)) {
+        data.recentTransactions = [t, ...data.recentTransactions];
+      }
+
+      const catName = t.category || t.ledgerCategory;
+      const cat = data.categories.find(c => c.name.toLowerCase() === catName.toLowerCase());
+      if (cat) {
+        cat.netChange += t.amount;
+        cat.remaining += t.amount;
+      }
+      
+      if (t.amount > 0) {
+        data.stats.monthlyInflow += t.amount;
+        if (t.ledgerCategory.startsWith('IncomeSplit:')) {
+          data.stats.monthlyIncome += t.amount;
+        }
+      } else {
+        data.stats.monthlyExpenses += Math.abs(t.amount);
+      }
+    });
+
+    return data;
+  }, [dashboardData, pendingTransactions]);
+
   const formatSensitive = (val: number) => {
-    const formatted = formatCurrencyVal(val, dashboardData?.setting?.currency || 'USD')
+    const formatted = formatCurrencyVal(val, optimisticDashboardData?.setting?.currency || 'USD')
     return (
       <span className={hideSensitive ? 'blur-sm select-none pointer-events-none inline-block transition-[filter] duration-200' : 'transition-[filter] duration-200'}>
         {formatted}
@@ -392,11 +628,11 @@ function App() {
 
   // Calculate Net Worth for Top Nav summary display
   const totalBalance = useMemo(() => {
-    if (dashboardData) {
-      return dashboardData.stats.totalBalance
+    if (optimisticDashboardData) {
+      return optimisticDashboardData.stats.totalBalance
     }
-    return transactions.reduce((acc, t) => acc + t.amount, 0)
-  }, [transactions, dashboardData])
+    return allTransactions.reduce((acc, t) => acc + t.amount, 0)
+  }, [allTransactions, optimisticDashboardData])
 
   const [ledgerCyclesRange, setLedgerCyclesRange] = useState<'monthly' | '3month' | '6month' | 'yearly'>('monthly')
 
@@ -465,7 +701,7 @@ function App() {
     return <LoginView onLoginSuccess={handleLoginSuccess} />
   }
 
-  if (loading && !dashboardData) {
+  if (loading && !optimisticDashboardData) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
         <div className="flex flex-col items-center gap-4 text-center">
@@ -493,14 +729,15 @@ function App() {
         onToggleHideSensitive={handleToggleHideSensitive}
         onLogout={handleLogout}
         username={username}
-        pendingNotifications={dashboardData?.pendingNotifications || []}
+        pendingNotifications={optimisticDashboardData?.pendingNotifications || []}
         onConfirmSubscription={handleConfirmSubscription}
         onDeletePayment={handleDeletePayment}
         darkMode={darkMode}
         onToggleDarkMode={handleToggleDarkMode}
-        currency={dashboardData?.setting?.currency || 'USD'}
+        currency={optimisticDashboardData?.setting?.currency || 'USD'}
         onMouseEnterWallet={() => setIsHoveringWallet(true)}
         onMouseLeaveWallet={() => setIsHoveringWallet(false)}
+        isSyncing={isBackgroundSyncing || pendingTransactions.length > 0}
       />
 
       {error && (
@@ -512,7 +749,7 @@ function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 container mx-auto px-4 py-8 pb-24 md:pb-8 max-w-7xl relative">
-        {loading && (
+        {(loading || actionLoading) && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-[1.5px] transition-all duration-150">
             <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-card border border-border/80 shadow-xl text-sm font-bold text-foreground select-none pointer-events-none animate-in zoom-in-95 duration-150">
               <Loader2 className="animate-spin text-blue-500 size-4" />
@@ -522,8 +759,8 @@ function App() {
         )}
         {activeTab === 'dashboard' && (
           <DashboardView 
-            dashboardData={dashboardData}
-            transactions={transactions}
+            dashboardData={optimisticDashboardData}
+            transactions={allTransactions}
             onSelectPeriod={handleSelectPeriod}
             onUpdateSettings={handleUpdateSettings}
             onNavigate={setActiveTab}
@@ -548,7 +785,7 @@ function App() {
             onUpdatePayment={handleUpdatePayment}
             hideSensitive={hideSensitive}
             categories={categoriesList}
-            currency={dashboardData?.setting?.currency || 'USD'}
+            currency={optimisticDashboardData?.setting?.currency || 'USD'}
             autoOpenAddForm={autoOpenSubscriptionAdd}
             onResetAutoOpen={() => setAutoOpenSubscriptionAdd(false)}
           />
@@ -556,7 +793,7 @@ function App() {
 
         {activeTab === 'ledger' && (
           <LedgerView 
-            transactions={transactions}
+            transactions={allTransactions}
             onAddTransaction={handleAddTransaction}
             onDeleteTransaction={handleDeleteTransaction}
             onUpdateTransaction={handleUpdateTransaction}
@@ -564,8 +801,8 @@ function App() {
             categories={categoriesList}
             selectedMonth={selectedMonth}
             selectedYear={selectedYear}
-            availableYears={dashboardData?.availableYears || [selectedYear || new Date().getFullYear()]}
-            cycleDay={dashboardData?.setting?.cycleDay || 28}
+            availableYears={optimisticDashboardData?.availableYears || [selectedYear || new Date().getFullYear()]}
+            cycleDay={optimisticDashboardData?.setting?.cycleDay || 28}
             onSelectPeriod={handleSelectPeriod}
             incomingCategory={ledgerIncomingCategory}
             incomingDate={ledgerIncomingDate}
@@ -580,29 +817,31 @@ function App() {
             showAllCycles={ledgerShowAllCycles}
             onClearAllCycles={() => { setLedgerShowAllCycles(false) }}
             cyclesRange={ledgerCyclesRange}
-            currency={dashboardData?.setting?.currency || 'USD'}
+            currency={optimisticDashboardData?.setting?.currency || 'USD'}
             autoOpenAddForm={autoOpenLedgerAdd}
             onResetAutoOpen={() => setAutoOpenLedgerAdd(false)}
-            stabilityBalance={dashboardData?.categories?.find(c => c.name === 'Stability')?.remaining ?? 0}
-            stabilityTarget={dashboardData?.setting?.targetStabilityFund ?? 10000}
-            essentialsAlloc={dashboardData?.setting?.essentialsAlloc ?? 0.5}
-            growthAlloc={dashboardData?.setting?.growthAlloc ?? 0.25}
-            stabilityAlloc={dashboardData?.setting?.stabilityAlloc ?? 0.15}
-            rewardsAlloc={dashboardData?.setting?.rewardsAlloc ?? 0.1}
+            stabilityBalance={optimisticDashboardData?.categories?.find(c => c.name === 'Stability')?.remaining ?? 0}
+            stabilityTarget={optimisticDashboardData?.setting?.targetStabilityFund ?? 10000}
+            essentialsAlloc={optimisticDashboardData?.setting?.essentialsAlloc ?? 0.5}
+            growthAlloc={optimisticDashboardData?.setting?.growthAlloc ?? 0.25}
+            stabilityAlloc={optimisticDashboardData?.setting?.stabilityAlloc ?? 0.15}
+            rewardsAlloc={optimisticDashboardData?.setting?.rewardsAlloc ?? 0.1}
             onFetchPagedTransactions={api.fetchPagedTransactions}
             onExportTransactions={api.exportTransactionsCsv}
             onShowAlert={showAlert}
+            activeSyncId={activeSyncId}
+            onStartEditPending={setEditingPendingId}
           />
         )}
 
         {activeTab === 'wishlist' && (
           <WishlistView 
             wishlist={wishlist}
-            rewardsBalance={dashboardData?.categories?.find(c => c.name === 'Rewards')?.remaining ?? 0}
-            rewardsTarget={dashboardData?.categories?.find(c => c.name === 'Rewards')?.target ?? 400}
-            pastThreeMonthsRewardsAverage={dashboardData?.stats?.pastThreeMonthsRewardsAverage ?? 0}
-            hasRewardsHistory={dashboardData?.stats?.hasRewardsHistory ?? false}
-            currency={dashboardData?.setting?.currency || 'USD'}
+            rewardsBalance={optimisticDashboardData?.categories?.find(c => c.name === 'Rewards')?.remaining ?? 0}
+            rewardsTarget={optimisticDashboardData?.categories?.find(c => c.name === 'Rewards')?.target ?? 400}
+            pastThreeMonthsRewardsAverage={optimisticDashboardData?.stats?.pastThreeMonthsRewardsAverage ?? 0}
+            hasRewardsHistory={optimisticDashboardData?.stats?.hasRewardsHistory ?? false}
+            currency={optimisticDashboardData?.setting?.currency || 'USD'}
             hideSensitive={hideSensitive}
             onAddItem={handleAddWishlistItem}
             onUpdateItem={handleUpdateWishlistItem}
@@ -617,7 +856,7 @@ function App() {
       </main>
 
       {/* Modal Popup for Pending Subscriptions on Login */}
-      {showLoginModal && dashboardData?.pendingNotifications && dashboardData.pendingNotifications.length > 0 && (
+      {showLoginModal && optimisticDashboardData?.pendingNotifications && optimisticDashboardData.pendingNotifications.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="w-full max-w-2xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
@@ -638,7 +877,7 @@ function App() {
             </div>
 
             <div className="space-y-3 overflow-y-auto max-h-80 pr-1 py-1">
-              {dashboardData.pendingNotifications.map((noti) => (
+              {optimisticDashboardData.pendingNotifications.map((noti) => (
                 <div key={noti.id} className="p-4 rounded-xl bg-muted/30 border border-border/40 shadow-xs flex flex-col gap-3">
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -652,7 +891,7 @@ function App() {
                     </div>
                     <div className="text-right">
                       <span className={`text-orange-500 font-extrabold text-xs block transition-all duration-300 ${hideSensitive ? 'blur-sm select-none pointer-events-none' : ''}`}>
-                        -{formatCurrencyVal(noti.amount, dashboardData?.setting?.currency || 'USD')}
+                        -{formatCurrencyVal(noti.amount, optimisticDashboardData?.setting?.currency || 'USD')}
                       </span>
                       <span className="text-[9px] text-muted-foreground">{noti.cycleLabel}</span>
                     </div>

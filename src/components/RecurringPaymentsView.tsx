@@ -44,6 +44,30 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('')
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawVal = e.target.value;
+    if (!rawVal) {
+      setAmount('');
+      return;
+    }
+    const digits = rawVal.replace(/\D/g, '');
+    if (!digits) {
+      setAmount('');
+      return;
+    }
+    const parsed = parseInt(digits, 10);
+    if (parsed === 0) {
+      if (amount === '0.00' || amount === '') {
+        setAmount('');
+      } else {
+        setAmount('0.00');
+      }
+      return;
+    }
+    const numericValue = parsed / 100;
+    setAmount(numericValue.toFixed(2));
+  };
   const [ledgerCategory, setLedgerCategory] = useState<'Essentials' | 'Growth' | 'Stability' | 'Rewards'>('Essentials')
   const [startDateInput, setStartDateInput] = useState('')
   const [endDateInput, setEndDateInput] = useState('')
@@ -260,12 +284,12 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                   {getCurrencySymbol(currency)}
                 </span>
                 <input
-                  type="number"
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   required
                   placeholder="0.00"
                   value={amount}
-                  onChange={e => setAmount(e.target.value)}
+                  onChange={handleAmountChange}
                   className={`w-full pr-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200 ${
                     getCurrencySymbol(currency).length > 2 ? 'pl-11' : getCurrencySymbol(currency).length > 1 ? 'pl-9' : 'pl-7'
                   }`}
@@ -481,7 +505,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                   <button
                     onClick={() => {
                       setName(rp.name)
-                      setAmount(Math.abs(rp.amount).toString())
+                      setAmount(Math.abs(rp.amount).toFixed(2))
                       setCategory(rp.category)
                       setLedgerCategory(rp.ledgerCategory as any)
                       setStartDateInput(rp.startDate)

@@ -65,6 +65,30 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   const [nameInput, setNameInput] = useState('')
   const [priceInput, setPriceInput] = useState('')
   const [linkInput, setLinkInput] = useState('')
+
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawVal = e.target.value;
+    if (!rawVal) {
+      setPriceInput('');
+      return;
+    }
+    const digits = rawVal.replace(/\D/g, '');
+    if (!digits) {
+      setPriceInput('');
+      return;
+    }
+    const parsed = parseInt(digits, 10);
+    if (parsed === 0) {
+      if (priceInput === '0.00' || priceInput === '') {
+        setPriceInput('');
+      } else {
+        setPriceInput('0.00');
+      }
+      return;
+    }
+    const numericValue = parsed / 100;
+    setPriceInput(numericValue.toFixed(2));
+  };
   const [priorityInput, setPriorityInput] = useState('Medium')
   const [isActiveInput, setIsActiveInput] = useState(false)
 
@@ -135,7 +159,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   const handleOpenEditModal = (item: WishlistItem) => {
     setEditingItem(item)
     setNameInput(item.name)
-    setPriceInput(item.price.toString())
+    setPriceInput(item.price.toFixed(2))
     setLinkInput(item.linkUrl || '')
     setPriorityInput(item.priority)
     setIsActiveInput(item.isActive)
@@ -532,10 +556,10 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                 <div>
                   <label className="text-muted-foreground block mb-1">Price ({currency}) *</label>
                   <input 
-                    type="number" 
-                    step="0.01"
+                    type="text" 
+                    inputMode="decimal"
                     value={priceInput}
-                    onChange={e => setPriceInput(e.target.value)}
+                    onChange={handlePriceChange}
                     placeholder="0.00"
                     className="w-full px-3.5 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     required
@@ -625,10 +649,10 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                 <div>
                   <label className="text-muted-foreground block mb-1">Price ({currency}) *</label>
                   <input 
-                    type="number" 
-                    step="0.01"
+                    type="text" 
+                    inputMode="decimal"
                     value={priceInput}
-                    onChange={e => setPriceInput(e.target.value)}
+                    onChange={handlePriceChange}
                     className="w-full px-3.5 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     required
                   />

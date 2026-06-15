@@ -706,3 +706,14 @@ export async function purchaseWishlistItem(id: number): Promise<{ item: Wishlist
   queryCache.invalidateAll()
   return response.json()
 }
+
+export async function pingServer(): Promise<{ status: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/ping`)
+    if (!response.ok) throw new Error('Status not ok')
+    return response.json()
+  } catch (e) {
+    return { status: 'waking_up' }
+  }
+}
+
