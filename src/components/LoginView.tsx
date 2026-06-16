@@ -7,7 +7,10 @@ interface LoginViewProps {
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
-  const [isRegistered, setIsRegistered] = useState<boolean | null>(null)
+  const [isRegistered, setIsRegistered] = useState<boolean | null>(() => {
+    const cached = localStorage.getItem('cached_is_registered')
+    return cached === 'true' ? true : cached === 'false' ? false : null
+  })
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -19,9 +22,13 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     try {
       const res = await api.fetchAuthStatus()
       setIsRegistered(res.isRegistered)
+      localStorage.setItem('cached_is_registered', res.isRegistered.toString())
+      setError(null)
     } catch (err) {
       console.error(err)
-      setError('Could not connect to the backend server. Please make sure the API is running.')
+      if (localStorage.getItem('cached_is_registered') === null) {
+        setError('Could not connect to the backend server. Please make sure the API is running.')
+      }
     }
   }
 
