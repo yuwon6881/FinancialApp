@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import './App.css'
 import TopNav from "./TopNav.tsx"
 import { DashboardView } from './components/DashboardView'
@@ -66,6 +66,7 @@ function App() {
   const [activeSyncId, setActiveSyncId] = useState<string | null>(null)
   const [syncBackoffUntil, setSyncBackoffUntil] = useState<number>(0)
   const [editingPendingId, setEditingPendingId] = useState<string | null>(null)
+  const isSyncingRef = useRef<boolean>(false)
 
 
   const [selectedMonth, setSelectedMonth] = useState<string>('')
@@ -502,8 +503,8 @@ function App() {
       return;
     }
 
-    if (!token || pendingTransactions.length === 0 || isBackgroundSyncing || activeSyncId || Date.now() < syncBackoffUntil) {
-      if (pendingTransactions.length > 0 && Date.now() < syncBackoffUntil && !isBackgroundSyncing && !activeSyncId) {
+    if (!token || pendingTransactions.length === 0 || isSyncingRef.current || Date.now() < syncBackoffUntil) {
+      if (pendingTransactions.length > 0 && Date.now() < syncBackoffUntil && !isSyncingRef.current) {
         const remaining = syncBackoffUntil - Date.now();
         const t = setTimeout(() => {
           setSyncBackoffUntil(0);
@@ -516,9 +517,11 @@ function App() {
     let isSubscribed = true;
 
     async function processQueue() {
+      isSyncingRef.current = true;
       setIsBackgroundSyncing(true);
       const nextTx = pendingTransactions[0];
       if (!nextTx) {
+        isSyncingRef.current = false;
         setIsBackgroundSyncing(false);
         return;
       }
@@ -565,6 +568,7 @@ function App() {
         if (isSubscribed) {
           setActiveSyncId(null);
           setIsBackgroundSyncing(false);
+          isSyncingRef.current = false;
         }
       }
     }
@@ -574,7 +578,7 @@ function App() {
     return () => {
       isSubscribed = false;
     };
-  }, [token, pendingTransactions, isBackgroundSyncing, activeSyncId, syncBackoffUntil, selectedMonth, selectedYear]);
+  }, [token, pendingTransactions, syncBackoffUntil, selectedMonth, selectedYear, editingPendingId]);
 
   // Combine synced and pending transactions
   const allTransactions = useMemo(() => {

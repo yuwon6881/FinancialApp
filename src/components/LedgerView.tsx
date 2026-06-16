@@ -734,6 +734,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }).sort((a, b) => {
       const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime()
       if (dateDiff !== 0) return dateDiff
+      
+      const aPending = (a as any).isPendingSync ? 1 : 0
+      const bPending = (b as any).isPendingSync ? 1 : 0
+      if (bPending !== aPending) {
+        return bPending - aPending
+      }
+      
       return b.id.localeCompare(a.id)
     })
   }, [sourceTransactions, searchTerm, selectedFilters, selectedDateFilter, selectedTxTypeFilter])
