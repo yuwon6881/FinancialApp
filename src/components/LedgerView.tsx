@@ -18,9 +18,9 @@ import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
 
 interface LedgerViewProps {
   transactions: Transaction[]
-  onAddTransaction: (transaction: Omit<Transaction, 'id'>) => void
-  onDeleteTransaction: (id: string) => void
-  onUpdateTransaction?: (id: string, transaction: Omit<Transaction, 'id'>) => void
+  onAddTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void> | void
+  onDeleteTransaction: (id: string) => Promise<void> | void
+  onUpdateTransaction?: (id: string, transaction: Omit<Transaction, 'id'>) => Promise<void> | void
   hideSensitive: boolean
   categories: TransactionCategory[]
   selectedMonth: string
@@ -400,6 +400,15 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
   }, [currentPage, pageSize, showAllCycles, onFetchPagedTransactions, runServerFetch, appliedSearch, appliedFilters, appliedTxTypeFilter, allCyclesRange])
 
+  // Re-fetch server result when activeSyncId transitions from non-null to null (sync completed)
+  const prevActiveSyncId = useRef<string | null>(null)
+  useEffect(() => {
+    if (showAllCycles && prevActiveSyncId.current !== null && activeSyncId === null && onFetchPagedTransactions && isInitialFetchDone.current) {
+      runServerFetch({ page: currentPage, search: appliedSearch, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
+    }
+    prevActiveSyncId.current = activeSyncId
+  }, [activeSyncId, showAllCycles, currentPage, appliedSearch, appliedFilters, appliedTxTypeFilter, pageSize, onFetchPagedTransactions, runServerFetch])
+
   // Reset back to page 1 when search inputs or active filters are updated (client-side mode only)
   useEffect(() => {
     if (!showAllCycles) setCurrentPage(1)
@@ -571,7 +580,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     return { ess, gro, sta, rew }
   }
 
-  const handleConfirmStabilityCapSplit = () => {
+  const handleConfirmStabilityCapSplit = async () => {
     if (!pendingTxData) return
 
     let splitSpec = 'Income'
@@ -581,15 +590,18 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
 
     if (pendingTxData.isEdit && pendingTxData.id) {
-      onUpdateTransaction?.(pendingTxData.id, {
+      await onUpdateTransaction?.(pendingTxData.id, {
         description: pendingTxData.description,
         amount: pendingTxData.amount,
         category: pendingTxData.category,
         ledgerCategory: splitSpec,
         date: pendingTxData.date
       })
+      if (showAllCycles && onFetchPagedTransactions) {
+        runServerFetch({ page: currentPage, search: appliedSearch, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
+      }
     } else {
-      onAddTransaction({
+      await onAddTransaction({
         description: pendingTxData.description,
         amount: pendingTxData.amount,
         category: pendingTxData.category,
@@ -613,7 +625,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setShowDeleteModal(true)
   }
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!txToDelete) return
 
     let deleteId = txToDelete.id
@@ -621,9 +633,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       deleteId = txToDelete.id.split('-split-')[0]
     }
 
-    onDeleteTransaction(deleteId)
     setShowDeleteModal(false)
     setTxToDelete(null)
+
+    await onDeleteTransaction(deleteId)
+    if (showAllCycles && onFetchPagedTransactions) {
+      runServerFetch({ page: currentPage, search: appliedSearch, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
+    }
   }
 
   const handleCancelDelete = () => {
@@ -631,7 +647,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setTxToDelete(null)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!description || !amount || !date) return
 
@@ -667,15 +683,18 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
 
     if (editingTxId) {
-      onUpdateTransaction?.(editingTxId, {
+      await onUpdateTransaction?.(editingTxId, {
         description,
         amount: finalAmount,
         category: txType === 'transfer' ? 'Transfer' : category,
         ledgerCategory: finalLedgerCategory,
         date
       })
+      if (showAllCycles && onFetchPagedTransactions) {
+        runServerFetch({ page: currentPage, search: appliedSearch, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
+      }
     } else {
-      onAddTransaction({
+      await onAddTransaction({
         description,
         amount: finalAmount,
         category: txType === 'transfer' ? 'Transfer' : category,
@@ -688,6 +707,67 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   }
 
   const sourceTransactions = useMemo(() => transactions, [transactions])
+
+  const pendingTransactions = useMemo(() => {
+    return transactions.filter(t => (t as any).isPendingSync)
+  }, [transactions])
+
+  const filteredPendingTransactions = useMemo(() => {
+    if (!showAllCycles) return []
+    
+    const ledgerBuckets = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
+    const selectedBuckets = appliedFilters.filter(f => ledgerBuckets.includes(f))
+    const selectedSubcategories = appliedFilters.filter(f => !ledgerBuckets.includes(f))
+
+    return pendingTransactions.filter(t => {
+      // Date range filter
+      if (allCyclesRange) {
+        const txDate = new Date(t.date)
+        const startLimit = new Date(allCyclesRange.startDate)
+        const endLimit = new Date(allCyclesRange.endDate)
+        startLimit.setHours(0, 0, 0, 0)
+        endLimit.setHours(23, 59, 59, 999)
+        if (txDate < startLimit || txDate > endLimit) return false
+      }
+
+      // Search term filter
+      if (appliedSearch) {
+        const matchesSearch = t.description.toLowerCase().includes(appliedSearch.toLowerCase()) ||
+                              t.ledgerCategory.toLowerCase().includes(appliedSearch.toLowerCase()) ||
+                              t.category.toLowerCase().includes(appliedSearch.toLowerCase())
+        if (!matchesSearch) return false
+      }
+
+      // Buckets filter
+      if (selectedBuckets.length > 0) {
+        const matchesBucket = selectedBuckets.some(bucket => {
+          if (bucket === 'Income') {
+            return t.ledgerCategory === 'Income' || t.ledgerCategory.startsWith('IncomeSplit:')
+          }
+          return t.ledgerCategory === bucket || t.ledgerCategory.includes(bucket)
+        })
+        if (!matchesBucket) return false
+      }
+
+      // Subcategories filter
+      if (selectedSubcategories.length > 0) {
+        const matchesSubcat = selectedSubcategories.some(subcat => t.category === subcat)
+        if (!matchesSubcat) return false
+      }
+
+      // Transaction type filter
+      if (appliedTxTypeFilter) {
+        if (appliedTxTypeFilter === 'inflow' && t.amount <= 0) return false
+        if (appliedTxTypeFilter === 'outflow' && t.amount >= 0) return false
+      }
+
+      return true
+    }).sort((a, b) => {
+      const dateDiff = b.date.localeCompare(a.date)
+      if (dateDiff !== 0) return dateDiff
+      return b.id.localeCompare(a.id)
+    })
+  }, [pendingTransactions, showAllCycles, appliedSearch, appliedFilters, appliedTxTypeFilter, allCyclesRange])
 
   // Filtered transactions
   const filteredTransactions = useMemo(() => {
@@ -732,7 +812,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       
       return matchesSearch && matchesBucket && matchesSubcat && matchesDate && matchesTxType
     }).sort((a, b) => {
-      const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime()
+      const dateDiff = b.date.localeCompare(a.date)
       if (dateDiff !== 0) return dateDiff
       
       const aPending = (a as any).isPendingSync ? 1 : 0
@@ -750,8 +830,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     return filteredTransactions.slice(startIndex, startIndex + pageSize)
   }, [filteredTransactions, currentPage, pageSize])
 
-  // In server mode use the items from server; in client mode use local pagination
-  const displayTransactions = (showAllCycles && serverResult) ? serverResult.items : paginatedTransactions
+  // In server mode use the items from server with prepended matching pending transactions; in client mode use local pagination
+  const displayTransactions = useMemo(() => {
+    if (showAllCycles && serverResult) {
+      return [...filteredPendingTransactions, ...serverResult.items]
+    }
+    return paginatedTransactions
+  }, [showAllCycles, serverResult, filteredPendingTransactions, paginatedTransactions])
 
   const totalPages = Math.ceil(filteredTransactions.length / pageSize) || 1
 
