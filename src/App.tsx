@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import './App.css'
 import TopNav from "./TopNav.tsx"
 import { DashboardView } from './components/DashboardView'
@@ -496,89 +496,103 @@ function App() {
     }
   }, [token]);
 
-  // Background Sync Queue Worker
+  // Background Sync Queue Worker Refs
+  const pendingTxRef = useRef(pendingTransactions);
+  const editingPendingIdRef = useRef(editingPendingId);
+  const syncBackoffUntilRef = useRef(syncBackoffUntil);
+
   useEffect(() => {
-    const nextTx = pendingTransactions[0];
-    if (nextTx && nextTx.id === editingPendingId) {
-      return;
-    }
+    pendingTxRef.current = pendingTransactions;
+  }, [pendingTransactions]);
 
-    if (!token || pendingTransactions.length === 0 || isSyncingRef.current || Date.now() < syncBackoffUntil) {
-      if (pendingTransactions.length > 0 && Date.now() < syncBackoffUntil && !isSyncingRef.current) {
-        const remaining = syncBackoffUntil - Date.now();
-        const t = setTimeout(() => {
-          setSyncBackoffUntil(0);
-        }, remaining);
-        return () => clearTimeout(t);
-      }
-      return;
-    }
+  useEffect(() => {
+    editingPendingIdRef.current = editingPendingId;
+  }, [editingPendingId]);
 
-    let isSubscribed = true;
+  useEffect(() => {
+    syncBackoffUntilRef.current = syncBackoffUntil;
+  }, [syncBackoffUntil]);
 
-    async function processQueue() {
-      isSyncingRef.current = true;
-      setIsBackgroundSyncing(true);
-      const nextTx = pendingTransactions[0];
-      if (!nextTx) {
-        isSyncingRef.current = false;
-        setIsBackgroundSyncing(false);
-        return;
-      }
+  const processQueue = useCallback(async () => {
+    if (!token || isSyncingRef.current) return;
+    isSyncingRef.current = true;
+    setIsBackgroundSyncing(true);
 
-      setActiveSyncId(nextTx.id);
+    try {
+      while (true) {
+        const queue = pendingTxRef.current;
+        const nextTx = queue[0];
+        if (!nextTx) break;
 
-      try {
-        const { id, isPendingSync, ...txPayload } = nextTx as any;
-        await api.addTransaction(txPayload);
+        if (nextTx.id === editingPendingIdRef.current) {
+          break;
+        }
 
-        if (!isSubscribed) return;
+        if (Date.now() < syncBackoffUntilRef.current) {
+          break;
+        }
 
-        // Success: remove from queue
-        setPendingTransactions(prev => prev.filter(item => item.id !== nextTx.id));
+        setActiveSyncId(nextTx.id);
 
-        // Refresh dashboard silently
-        const [dbData, txs, wishes] = await Promise.all([
-          api.fetchDashboard(selectedMonth || undefined, selectedYear || undefined),
-          api.fetchTransactions(selectedMonth || undefined, selectedYear || undefined),
-          api.fetchWishlist().catch(() => [])
-        ]);
+        try {
+          const { id, isPendingSync, ...txPayload } = nextTx as any;
+          await api.addTransaction(txPayload);
 
-        if (!isSubscribed) return;
+          // Success: remove from queue
+          const updatedQueue = pendingTxRef.current.filter(item => item.id !== nextTx.id);
+          pendingTxRef.current = updatedQueue;
+          setPendingTransactions(updatedQueue);
 
-        setDashboardData(dbData);
-        setTransactions(txs);
-        setWishlist(wishes);
-        
-        localStorage.setItem('cached_dashboard_data', JSON.stringify(dbData));
-        localStorage.setItem('cached_transactions', JSON.stringify(txs));
-        localStorage.setItem('cached_wishlist', JSON.stringify(wishes));
-        setError(null);
-      } catch (err: any) {
-        console.error('Failed to sync transaction:', err);
-        if (isSubscribed) {
+          // Refresh dashboard silently
+          const [dbData, txs, wishes] = await Promise.all([
+            api.fetchDashboard(selectedMonth || undefined, selectedYear || undefined),
+            api.fetchTransactions(selectedMonth || undefined, selectedYear || undefined),
+            api.fetchWishlist().catch(() => [])
+          ]);
+
+          setDashboardData(dbData);
+          setTransactions(txs);
+          setWishlist(wishes);
+          
+          localStorage.setItem('cached_dashboard_data', JSON.stringify(dbData));
+          localStorage.setItem('cached_transactions', JSON.stringify(txs));
+          localStorage.setItem('cached_wishlist', JSON.stringify(wishes));
+          setError(null);
+        } catch (err: any) {
+          console.error('Failed to sync transaction:', err);
           if (err.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
             handleLogout();
+            break;
           } else {
             setError('Sync pending: Server is offline or waking up...');
-            setSyncBackoffUntil(Date.now() + 15000); // Back off 15s
+            const backoff = Date.now() + 15000;
+            syncBackoffUntilRef.current = backoff;
+            setSyncBackoffUntil(backoff);
+            break;
           }
         }
-      } finally {
-        if (isSubscribed) {
-          setActiveSyncId(null);
-          setIsBackgroundSyncing(false);
-          isSyncingRef.current = false;
-        }
       }
+    } finally {
+      setActiveSyncId(null);
+      setIsBackgroundSyncing(false);
+      isSyncingRef.current = false;
+    }
+  }, [token, selectedMonth, selectedYear]);
+
+  useEffect(() => {
+    if (!token || pendingTransactions.length === 0) return;
+
+    if (Date.now() < syncBackoffUntil) {
+      const remaining = syncBackoffUntil - Date.now();
+      const t = setTimeout(() => {
+        syncBackoffUntilRef.current = 0;
+        setSyncBackoffUntil(0);
+      }, remaining);
+      return () => clearTimeout(t);
     }
 
     processQueue();
-
-    return () => {
-      isSubscribed = false;
-    };
-  }, [token, pendingTransactions, syncBackoffUntil, selectedMonth, selectedYear, editingPendingId]);
+  }, [token, pendingTransactions, syncBackoffUntil, processQueue]);
 
   // Combine synced and pending transactions
   const allTransactions = useMemo(() => {
