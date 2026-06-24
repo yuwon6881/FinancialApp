@@ -162,6 +162,10 @@ function App() {
   )
 
   const handleLogout = async () => {
+    if (username && pendingTransactions.length > 0) {
+      localStorage.setItem(`pending_transactions_backup_${username}`, JSON.stringify(pendingTransactions));
+    }
+
     await api.logout()
     setToken(null)
     setUsername('')
@@ -265,6 +269,22 @@ function App() {
     sessionStorage.setItem('session_locked', 'false')
     localStorage.setItem('last_active_time', Date.now().toString())
     setIsLocked(false)
+
+    // Restore any backed up pending transactions for this user
+    const backupKey = `pending_transactions_backup_${newUsername}`;
+    const cachedBackup = localStorage.getItem(backupKey);
+    if (cachedBackup) {
+      try {
+        const backedUpTxs = JSON.parse(cachedBackup);
+        if (Array.isArray(backedUpTxs) && backedUpTxs.length > 0) {
+          setPendingTransactions(backedUpTxs);
+          localStorage.setItem('pending_transactions', cachedBackup);
+        }
+      } catch (e) {
+        console.error('Failed to parse backed up pending transactions:', e);
+      }
+      localStorage.removeItem(backupKey);
+    }
   }
 
   // Period / Settings changes
@@ -335,11 +355,13 @@ function App() {
 
   const handleAddTransaction = async (newTx: Omit<Transaction, 'id'>) => {
     const tempId = 'temp_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+    const serverTxId = 'tx_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
     const pendingTx: Transaction = {
       ...newTx,
       id: tempId,
+      serverTxId: serverTxId,
       isPendingSync: true
-    } as any;
+    };
 
     setPendingTransactions(prev => [...prev, pendingTx]);
   }
@@ -535,8 +557,12 @@ function App() {
         setActiveSyncId(nextTx.id);
 
         try {
-          const { id, isPendingSync, ...txPayload } = nextTx as any;
-          await api.addTransaction(txPayload);
+          const { id, isPendingSync, serverTxId, ...txPayload } = nextTx as any;
+          const payloadToSend = {
+            ...txPayload,
+            id: serverTxId || id
+          };
+          await api.addTransaction(payloadToSend);
 
           // Success: remove from queue
           const updatedQueue = pendingTxRef.current.filter(item => item.id !== nextTx.id);

@@ -5,6 +5,8 @@ export interface Transaction {
   category: string
   ledgerCategory: string
   amount: number // Positive for inflow, negative for outflow
+  serverTxId?: string
+  isPendingSync?: boolean
 }
 
 export interface RecurringPayment {
