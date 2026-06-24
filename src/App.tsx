@@ -354,8 +354,8 @@ function App() {
   };
 
   const handleAddTransaction = async (newTx: Omit<Transaction, 'id'>) => {
-    const tempId = 'temp_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
-    const serverTxId = 'tx_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+    const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+    const serverTxId = 'tx-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
     const pendingTx: Transaction = {
       ...newTx,
       id: tempId,
