@@ -37,8 +37,13 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Skip caching for API calls or non-GET requests
-  if (url.pathname.startsWith('/api') || event.request.method !== 'GET') {
+  // Skip caching for API calls, ping endpoints, cross-origin requests, or non-GET requests
+  if (
+    url.origin !== self.location.origin ||
+    url.pathname.startsWith('/api') ||
+    url.pathname.includes('/ping') ||
+    event.request.method !== 'GET'
+  ) {
     return;
   }
 

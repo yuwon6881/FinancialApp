@@ -709,7 +709,7 @@ export async function purchaseWishlistItem(id: number): Promise<{ item: Wishlist
 
 export async function pingServer(): Promise<{ status: string }> {
   try {
-    const response = await fetch(`${API_BASE_URL}/ping`)
+    const response = await fetch(`${API_BASE_URL}/ping?t=${Date.now()}`)
     if (!response.ok) throw new Error('Status not ok')
     return response.json()
   } catch (e) {
