@@ -25,6 +25,9 @@ const queryCache = {
 
   set(key: string, promise: Promise<any>, staleTime = 30000) {
     this.store.set(key, { promise, timestamp: Date.now(), staleTime })
+    promise.catch(() => {
+      this.store.delete(key)
+    })
   },
 
   invalidateAll() {
@@ -621,7 +624,11 @@ export async function verifyPassword(password: string): Promise<{ verified: bool
   if (!response.ok) {
     throw new Error('Password verification request failed')
   }
-  return response.json()
+  const data = await response.json()
+  if (data && data.verified) {
+    queryCache.invalidateAll()
+  }
+  return data
 }
 
 export async function lockSession(): Promise<void> {

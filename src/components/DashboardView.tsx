@@ -897,7 +897,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {(() => {
             const essentialsCat = categories.find(c => c.name === 'Essentials')
             const essTarget = essentialsCat?.target || 1
-            const currentPct = Math.max(0, Math.min(1, stats.essentialsPercentRemaining))
+            const currentPct = Math.max(0, Math.min(1, (essentialsCat?.remaining ?? 0) / essTarget))
             const pendingEss = pendingDeductionsByCategory['Essentials'] || 0
             const projectedRemaining = Math.max(0, (essentialsCat?.remaining ?? 0) - pendingEss)
             const projectedPct = pendingEss > 0 ? Math.max(0, projectedRemaining / essTarget) : currentPct

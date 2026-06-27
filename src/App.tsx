@@ -16,7 +16,13 @@ import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'))
   const [username, setUsername] = useState<string>(localStorage.getItem('auth_username') || '')
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'recurring' | 'ledger' | 'wishlist'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'recurring' | 'ledger' | 'wishlist'>(() => {
+    return (localStorage.getItem('active_tab') as any) || 'dashboard'
+  })
+
+  useEffect(() => {
+    localStorage.setItem('active_tab', activeTab)
+  }, [activeTab])
   
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     try {
@@ -67,10 +73,29 @@ function App() {
   const [syncBackoffUntil, setSyncBackoffUntil] = useState<number>(0)
   const [editingPendingId, setEditingPendingId] = useState<string | null>(null)
   const isSyncingRef = useRef<boolean>(false)
+  const isServerAwakeRef = useRef<boolean>(false)
 
 
-  const [selectedMonth, setSelectedMonth] = useState<string>('')
-  const [selectedYear, setSelectedYear] = useState<number>(0)
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    try {
+      const cached = localStorage.getItem('cached_dashboard_data')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        return parsed?.setting?.selectedMonth || ''
+      }
+    } catch {}
+    return ''
+  })
+  const [selectedYear, setSelectedYear] = useState<number>(() => {
+    try {
+      const cached = localStorage.getItem('cached_dashboard_data')
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        return parsed?.setting?.selectedYear || 0
+      }
+    } catch {}
+    return 0
+  })
   const [ledgerIncomingCategory, setLedgerIncomingCategory] = useState<string | null>(null)
   const [ledgerIncomingDate, setLedgerIncomingDate] = useState<string | null>(null)
   const [ledgerIncomingTxType, setLedgerIncomingTxType] = useState<'inflow' | 'outflow' | null>(null)
@@ -162,8 +187,8 @@ function App() {
   )
 
   const handleLogout = async () => {
-    if (username && pendingTransactions.length > 0) {
-      localStorage.setItem(`pending_transactions_backup_${username}`, JSON.stringify(pendingTransactions));
+    if (pendingTransactions.length > 0) {
+      localStorage.setItem('pending_transactions_backup', JSON.stringify(pendingTransactions));
     }
 
     await api.logout()
@@ -215,6 +240,7 @@ function App() {
       setCategoriesList(cats)
       setWishlist(wishes)
       setError(null)
+      isServerAwakeRef.current = true
 
       // Save to localStorage cache
       localStorage.setItem('cached_dashboard_data', JSON.stringify(dbData))
@@ -248,6 +274,7 @@ function App() {
         sessionStorage.setItem('session_locked', 'true')
       } else {
         setError('Could not connect to the database API server. Running in offline view mode.')
+        isServerAwakeRef.current = false
       }
     } finally {
       setLoading(false)
@@ -270,9 +297,8 @@ function App() {
     localStorage.setItem('last_active_time', Date.now().toString())
     setIsLocked(false)
 
-    // Restore any backed up pending transactions for this user
-    const backupKey = `pending_transactions_backup_${newUsername}`;
-    const cachedBackup = localStorage.getItem(backupKey);
+    // Restore any backed up pending transactions
+    const cachedBackup = localStorage.getItem('pending_transactions_backup');
     if (cachedBackup) {
       try {
         const backedUpTxs = JSON.parse(cachedBackup);
@@ -283,13 +309,14 @@ function App() {
       } catch (e) {
         console.error('Failed to parse backed up pending transactions:', e);
       }
-      localStorage.removeItem(backupKey);
+      localStorage.removeItem('pending_transactions_backup');
     }
   }
 
   // Period / Settings changes
   const handleSelectPeriod = async (month: string, year: number) => {
     try {
+      await api.selectPeriod(month, year)
       await loadAll(month, year)
     } catch (err) {
       console.error(err)
@@ -511,12 +538,7 @@ function App() {
     localStorage.setItem('pending_transactions', JSON.stringify(pendingTransactions))
   }, [pendingTransactions])
 
-  // Single mount-time warming ping
-  useEffect(() => {
-    if (token) {
-      api.pingServer().catch(err => console.log('Warming ping failed:', err));
-    }
-  }, [token]);
+  // Warming ping and background sync are managed by wakeUpAndSync below
 
   // Background Sync Queue Worker Refs
   const pendingTxRef = useRef(pendingTransactions);
@@ -619,6 +641,55 @@ function App() {
 
     processQueue();
   }, [token, pendingTransactions, syncBackoffUntil, processQueue]);
+
+  // Server wake-up and background sync task
+  const wakeUpAndSync = useCallback(async () => {
+    if (!token) return
+
+    let attempts = 0
+    const maxAttempts = 15 // try for 75 seconds
+
+    const runPing = async () => {
+      if (!token || isServerAwakeRef.current) return
+
+      try {
+        const res = await api.pingServer()
+        if (res && res.status !== 'waking_up') {
+          console.log('Server is awake! Performing initial load and processing queue...')
+          isServerAwakeRef.current = true
+          await loadAll(selectedMonth || undefined, selectedYear || undefined, true)
+          processQueue()
+          return
+        }
+      } catch (err) {
+        console.log('Wake-up ping failed:', err)
+      }
+
+      attempts++
+      if (attempts < maxAttempts) {
+        setTimeout(runPing, 5000)
+      }
+    }
+
+    runPing()
+  }, [token, selectedMonth, selectedYear, processQueue])
+
+  // Trigger wakeUpAndSync on mount or online status change
+  useEffect(() => {
+    if (token) {
+      wakeUpAndSync()
+
+      const handleOnline = () => {
+        console.log('Browser went online, starting wake-up ping...')
+        wakeUpAndSync()
+      }
+
+      window.addEventListener('online', handleOnline)
+      return () => {
+        window.removeEventListener('online', handleOnline)
+      }
+    }
+  }, [token, wakeUpAndSync])
 
   // Combine synced and pending transactions
   const allTransactions = useMemo(() => {
