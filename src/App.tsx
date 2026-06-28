@@ -285,7 +285,17 @@ function App() {
   useEffect(() => {
     if (token) {
       const hasCache = !!localStorage.getItem('cached_dashboard_data');
-      loadAll(undefined, undefined, hasCache);
+      let cachedMonth: string | undefined = undefined;
+      let cachedYear: number | undefined = undefined;
+      try {
+        const cached = localStorage.getItem('cached_dashboard_data');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          cachedMonth = parsed?.setting?.selectedMonth || undefined;
+          cachedYear = parsed?.setting?.selectedYear || undefined;
+        }
+      } catch {}
+      loadAll(cachedMonth, cachedYear, hasCache);
     }
   }, [token])
 
@@ -657,7 +667,17 @@ function App() {
         if (res && res.status !== 'waking_up') {
           console.log('Server is awake! Performing initial load and processing queue...')
           isServerAwakeRef.current = true
-          await loadAll(selectedMonth || undefined, selectedYear || undefined, true)
+          let cachedMonth: string | undefined = undefined;
+          let cachedYear: number | undefined = undefined;
+          try {
+            const cached = localStorage.getItem('cached_dashboard_data');
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              cachedMonth = parsed?.setting?.selectedMonth || undefined;
+              cachedYear = parsed?.setting?.selectedYear || undefined;
+            }
+          } catch {}
+          await loadAll(cachedMonth, cachedYear, true)
           processQueue()
           return
         }
@@ -672,7 +692,7 @@ function App() {
     }
 
     runPing()
-  }, [token, selectedMonth, selectedYear, processQueue])
+  }, [token, processQueue])
 
   // Trigger wakeUpAndSync on mount or online status change
   useEffect(() => {
