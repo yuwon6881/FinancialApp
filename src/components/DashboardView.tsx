@@ -36,6 +36,8 @@ interface DashboardViewProps {
   onDeleteCategory: (id: string) => void
   onConfirmSubscription: (noti: any, paidDate: string) => void
   onDeletePayment: (id: string) => void
+  onDiscardNotification?: (notiId: string) => void
+  discardedNotificationIds?: Set<string>
   onNavigateToLedger?: (options: { 
     category?: string | null; 
     date?: string | null; 
@@ -60,6 +62,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onDeleteCategory,
   onConfirmSubscription,
   onDeletePayment,
+  onDiscardNotification,
+  discardedNotificationIds = new Set(),
   onNavigateToLedger,
   wishlist = [],
   isHoveringWallet
@@ -208,9 +212,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       'Rewards': 0
     }
     const rpList = dashboardData?.activeRecurringPayments
+    // Build a set of recurringPaymentIds that are discarded to exclude them from pending deductions
+    const discardedRpIds = new Set(
+      (dashboardData?.pendingNotifications || []).filter(n => discardedNotificationIds.has(n.id)).map(n => n.recurringPaymentId)
+    )
     if (rpList) {
       rpList.forEach((rp: any) => {
-        if (!rp.isPaid) {
+        if (!rp.isPaid && !discardedRpIds.has(rp.id)) {
           const cat = rp.ledgerCategory || rp.category
           if (cat && sums[cat] !== undefined) {
             sums[cat] += Math.abs(rp.amount)
@@ -219,7 +227,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       })
     }
     return sums
-  }, [dashboardData?.activeRecurringPayments])
+  }, [dashboardData?.activeRecurringPayments, dashboardData?.pendingNotifications, discardedNotificationIds])
 
   // Initialize input states when opening settings
   const handleToggleSettings = () => {
@@ -569,97 +577,107 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
       )}
+      
       {/* Pending Subscriptions Notifications Alert */}
-      {dashboardData?.pendingNotifications && dashboardData.pendingNotifications.length > 0 && (
-        <div className="p-5 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 animate-in slide-in-from-top-4 duration-300">
-          <div className="flex items-center gap-2.5 mb-2.5">
-            <AlertCircle className="size-5 shrink-0 text-yellow-500" />
-            <h4 className="text-sm font-bold text-foreground">Pending Subscription Confirmations</h4>
-          </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            You have {dashboardData.pendingNotifications.length} subscription billing cycle{dashboardData.pendingNotifications.length > 1 ? 's' : ''} awaiting confirmation.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-            {dashboardData.pendingNotifications.map((noti) => {
-              const isConfirming = activeConfirmId === noti.id
-              return (
-                <div key={noti.id} className="p-3.5 rounded-xl bg-card border border-border/40 shadow-xs flex flex-col justify-between gap-3">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <span className="font-bold text-foreground text-xs block">{noti.name}</span>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <span className={`inline-block text-[9px] px-1.5 py-0.5 font-bold rounded border ${categoryColorMap[noti.category] || 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
-                          {noti.category}
+      {(() => {
+        const visibleNotifications = (dashboardData?.pendingNotifications || []).filter(n => !discardedNotificationIds.has(n.id))
+        if (visibleNotifications.length === 0) return null
+        return (
+          <div className="p-5 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 animate-in slide-in-from-top-4 duration-300">
+            <div className="flex items-center gap-2.5 mb-2.5">
+              <AlertCircle className="size-5 shrink-0 text-yellow-500" />
+              <h4 className="text-sm font-bold text-foreground">Pending Subscription Confirmations</h4>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              You have {visibleNotifications.length} subscription billing cycle{visibleNotifications.length > 1 ? 's' : ''} awaiting confirmation.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+              {visibleNotifications.map((noti) => {
+                const isConfirming = activeConfirmId === noti.id
+                return (
+                  <div key={noti.id} className="p-3.5 rounded-xl bg-card border border-border/40 shadow-xs flex flex-col justify-between gap-3">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <span className="font-bold text-foreground text-xs block">{noti.name}</span>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className={`inline-block text-[9px] px-1.5 py-0.5 font-bold rounded border ${categoryColorMap[noti.category] || 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
+                            {noti.category}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">{noti.billingDate}</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-orange-500 font-extrabold text-xs block">
+                          -{formatSensitive(noti.amount)}
                         </span>
-                        <span className="text-[10px] text-muted-foreground">{noti.billingDate}</span>
+                        <span className="text-[9px] text-muted-foreground">{noti.cycleLabel}</span>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className="text-orange-500 font-extrabold text-xs block">
-                        -{formatSensitive(noti.amount)}
-                      </span>
-                      <span className="text-[9px] text-muted-foreground">{noti.cycleLabel}</span>
-                    </div>
-                  </div>
 
-                  {isConfirming ? (
-                    <div className="flex flex-col gap-2 p-2 bg-muted/30 border border-border/40 rounded-lg animate-in slide-in-from-bottom-2 duration-200">
-                      <label className="text-[10px] font-bold text-muted-foreground">Select Paid Date:</label>
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <input
-                          type="date"
-                          value={paidDateInput}
-                          onChange={(e) => setPaidDateInput(e.target.value)}
-                          className="w-full sm:flex-1 px-2.5 py-1 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
-                        <div className="flex gap-2 w-full sm:w-auto">
+                    {isConfirming ? (
+                      <div className="flex flex-col gap-2 p-2 bg-muted/30 border border-border/40 rounded-lg animate-in slide-in-from-bottom-2 duration-200">
+                        <label className="text-[10px] font-bold text-muted-foreground">Select Paid Date:</label>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <input
+                            type="date"
+                            value={paidDateInput}
+                            onChange={(e) => setPaidDateInput(e.target.value)}
+                            className="w-full sm:flex-1 px-2.5 py-1 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          />
+                          <div className="flex gap-2 w-full sm:w-auto">
+                            <button
+                              onClick={() => {
+                                onConfirmSubscription(noti, paidDateInput)
+                                setActiveConfirmId(null)
+                              }}
+                              className="flex-1 sm:flex-initial px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition text-center"
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              onClick={() => setActiveConfirmId(null)}
+                              className="flex-1 sm:flex-initial px-2.5 py-1.5 bg-muted hover:bg-muted/80 text-foreground rounded-lg text-xs font-semibold cursor-pointer transition border border-border text-center"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 border-t border-border/20 pt-2">
+                        <div className="flex gap-2 w-full sm:w-auto flex-wrap">
                           <button
                             onClick={() => {
-                              onConfirmSubscription(noti, paidDateInput)
-                              setActiveConfirmId(null)
+                              setActiveConfirmId(noti.id)
+                              setPaidDateInput(noti.billingDate)
                             }}
-                            className="flex-1 sm:flex-initial px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition text-center"
+                            className="flex-1 sm:flex-initial px-2.5 py-1.5 bg-blue-500/15 hover:bg-blue-500/25 text-blue-500 font-bold text-[10px] rounded-lg transition duration-150 cursor-pointer text-center"
                           >
-                            Confirm
+                            Mark Paid
                           </button>
                           <button
-                            onClick={() => setActiveConfirmId(null)}
-                            className="flex-1 sm:flex-initial px-2.5 py-1.5 bg-muted hover:bg-muted/80 text-foreground rounded-lg text-xs font-semibold cursor-pointer transition border border-border text-center"
+                            onClick={() => { setNotiToDelete(noti) }}
+                            className="flex-1 sm:flex-initial px-2.5 py-1.5 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-[10px] rounded-lg transition duration-150 cursor-pointer border border-orange-500/10 text-center"
                           >
-                            Cancel
+                            Remove Subscription
+                          </button>
+                          <button
+                            onClick={() => onDiscardNotification?.(noti.id)}
+                            className="flex-1 sm:flex-initial px-2.5 py-1.5 bg-muted/60 hover:bg-muted text-muted-foreground font-semibold text-[10px] rounded-lg transition duration-150 cursor-pointer border border-border/40 text-center"
+                            title="Dismiss this billing cycle only — won't affect future cycles"
+                          >
+                            Discard
                           </button>
                         </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 border-t border-border/20 pt-2">
-                      <div className="flex gap-2 w-full sm:w-auto">
-                        <button
-                          onClick={() => {
-                            setActiveConfirmId(noti.id)
-                            setPaidDateInput(noti.billingDate)
-                          }}
-                          className="flex-1 sm:flex-initial px-2.5 py-1.5 bg-blue-500/15 hover:bg-blue-500/25 text-blue-500 font-bold text-[10px] rounded-lg transition duration-150 cursor-pointer text-center"
-                        >
-                          Mark Paid
-                        </button>
-                        <button
-                          onClick={() => {
-                            setNotiToDelete(noti)
-                          }}
-                          className="flex-1 sm:flex-initial px-2.5 py-1.5 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-[10px] rounded-lg transition duration-150 cursor-pointer border border-orange-500/10 text-center"
-                        >
-                          Remove Subscription
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       <CustomConfirmModal
         isOpen={!!notiToDelete}

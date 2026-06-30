@@ -186,6 +186,14 @@ function App() {
     localStorage.getItem('show_notifications_on_login') !== 'false'
   )
 
+  // Discarded notifications (dismissed for current month only, keyed by "{rpId}-{y}-{m}")
+  const [discardedNotificationIds, setDiscardedNotificationIds] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem('discarded_notifications')
+      return raw ? new Set<string>(JSON.parse(raw)) : new Set<string>()
+    } catch { return new Set<string>() }
+  })
+
   const handleLogout = async () => {
     if (pendingTransactions.length > 0) {
       localStorage.setItem('pending_transactions_backup', JSON.stringify(pendingTransactions));
@@ -458,6 +466,15 @@ function App() {
       console.error(err)
       alert('Error confirming subscription payment.')
     }
+  }
+
+  const handleDiscardNotification = (notiId: string) => {
+    setDiscardedNotificationIds(prev => {
+      const next = new Set(prev)
+      next.add(notiId)
+      localStorage.setItem('discarded_notifications', JSON.stringify(Array.from(next)))
+      return next
+    })
   }
 
 
@@ -905,6 +922,8 @@ function App() {
             onDeleteCategory={handleDeleteCategory}
             onConfirmSubscription={handleConfirmSubscription}
             onDeletePayment={handleDeletePayment}
+            onDiscardNotification={handleDiscardNotification}
+            discardedNotificationIds={discardedNotificationIds}
             onNavigateToLedger={handleNavigateToLedger}
             wishlist={wishlist}
             isHoveringWallet={isHoveringWallet}
@@ -976,6 +995,7 @@ function App() {
             rewardsTarget={optimisticDashboardData?.categories?.find(c => c.name === 'Rewards')?.target ?? 400}
             pastThreeMonthsRewardsAverage={optimisticDashboardData?.stats?.pastThreeMonthsRewardsAverage ?? 0}
             hasRewardsHistory={optimisticDashboardData?.stats?.hasRewardsHistory ?? false}
+            rewardsHistoryMonthCount={Math.max(1, optimisticDashboardData?.last3TrendPoints?.length ?? 1)}
             currency={optimisticDashboardData?.setting?.currency || 'USD'}
             hideSensitive={hideSensitive}
             onAddItem={handleAddWishlistItem}
@@ -991,7 +1011,7 @@ function App() {
       </main>
 
       {/* Modal Popup for Pending Subscriptions on Login */}
-      {showLoginModal && optimisticDashboardData?.pendingNotifications && optimisticDashboardData.pendingNotifications.length > 0 && (
+      {showLoginModal && optimisticDashboardData?.pendingNotifications && optimisticDashboardData.pendingNotifications.filter(n => !discardedNotificationIds.has(n.id)).length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="w-full max-w-2xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
@@ -1012,7 +1032,7 @@ function App() {
             </div>
 
             <div className="space-y-3 overflow-y-auto max-h-80 pr-1 py-1">
-              {optimisticDashboardData.pendingNotifications.map((noti) => (
+              {optimisticDashboardData.pendingNotifications.filter(n => !discardedNotificationIds.has(n.id)).map((noti) => (
                 <div key={noti.id} className="p-4 rounded-xl bg-muted/30 border border-border/40 shadow-xs flex flex-col gap-3">
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -1064,6 +1084,13 @@ function App() {
                           className="flex-1 sm:flex-initial px-3 py-1.5 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-xs rounded-lg transition duration-150 cursor-pointer border border-orange-500/10 whitespace-nowrap text-center"
                         >
                           Remove
+                        </button>
+                        <button
+                          onClick={() => handleDiscardNotification(noti.id)}
+                          className="flex-1 sm:flex-initial px-3 py-1.5 bg-muted hover:bg-muted/80 text-muted-foreground font-semibold text-xs rounded-lg transition duration-150 cursor-pointer border border-border/40 whitespace-nowrap text-center"
+                          title="Dismiss for this billing cycle only"
+                        >
+                          Discard
                         </button>
                       </div>
                     </div>
