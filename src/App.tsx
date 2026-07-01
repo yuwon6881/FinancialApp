@@ -1303,7 +1303,7 @@ function App() {
           )}
 
           {/* Speed Dial Menu Items */}
-          <div className={`md:hidden fixed bottom-[76px] right-4 z-40 flex flex-col gap-3 items-end transition-all duration-300 ${isFabOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+          <div className={`md:hidden fixed bottom-[148px] right-8 z-40 flex flex-col gap-3.5 items-end transition-all duration-300 ${isFabOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
             {/* Action 1: Add Wish Goal */}
             <div className="flex items-center gap-2.5">
               <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-foreground shadow-xs select-none">
@@ -1314,9 +1314,9 @@ function App() {
                   handleQuickAction('wishlist')
                   setIsFabOpen(false)
                 }}
-                className="size-10 rounded-full bg-pink-500 hover:bg-pink-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition cursor-pointer"
+                className="size-11 rounded-full bg-pink-500 hover:bg-pink-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition cursor-pointer"
               >
-                <PiggyBank className="size-4.5" />
+                <PiggyBank className="size-5" />
               </button>
             </div>
 
@@ -1330,9 +1330,9 @@ function App() {
                   handleQuickAction('subscription')
                   setIsFabOpen(false)
                 }}
-                className="size-10 rounded-full bg-violet-500 hover:bg-violet-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition cursor-pointer"
+                className="size-11 rounded-full bg-violet-500 hover:bg-violet-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition cursor-pointer"
               >
-                <CreditCard className="size-4.5" />
+                <CreditCard className="size-5" />
               </button>
             </div>
 
@@ -1346,9 +1346,9 @@ function App() {
                   handleQuickAction('transaction')
                   setIsFabOpen(false)
                 }}
-                className="size-10 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition cursor-pointer"
+                className="size-11 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition cursor-pointer"
               >
-                <Wallet className="size-4.5" />
+                <Wallet className="size-5" />
               </button>
             </div>
           </div>
@@ -1356,10 +1356,10 @@ function App() {
           {/* Main FAB Toggle Button */}
           <button
             onClick={() => setIsFabOpen(prev => !prev)}
-            className="md:hidden fixed bottom-[76px] right-4 z-40 flex items-center justify-center size-12 rounded-full bg-gradient-to-tr from-blue-600 to-sky-500 text-white shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
+            className="md:hidden fixed bottom-[80px] right-6 z-40 flex items-center justify-center size-14 rounded-full bg-gradient-to-tr from-blue-600 to-sky-500 text-white shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
             style={{ transform: isFabOpen ? 'rotate(135deg)' : 'rotate(0deg)' }}
           >
-            <Plus className="size-6 transition-transform duration-300" />
+            <Plus className="size-7 transition-transform duration-300" />
           </button>
         </>
       )}

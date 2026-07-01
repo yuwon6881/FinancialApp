@@ -337,8 +337,12 @@ const TopNav: React.FC<TopNavProps> = ({
                   </MenubarGroup>
                 </MenubarContent>
               </MenubarMenu>
+            </Menubar>
+          </div>
 
-              {/* Profile/Account menu */}
+          {/* Profile/Account menu */}
+          <div className="border border-border/60 rounded-xl bg-background shrink-0">
+            <Menubar className="border-0 h-9 px-1 bg-transparent">
               <MenubarMenu>
                 <MenubarTrigger className="p-1 rounded-full cursor-pointer hover:bg-muted/50">
                   <div className="size-7 rounded-full bg-linear-to-tr from-blue-500 to-sky-400 text-white font-extrabold flex items-center justify-center text-xs border border-blue-500/20">
@@ -380,7 +384,6 @@ const TopNav: React.FC<TopNavProps> = ({
                   </MenubarItem>
                 </MenubarContent>
               </MenubarMenu>
-              
             </Menubar>
           </div>
           
