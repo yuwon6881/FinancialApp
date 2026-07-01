@@ -1085,6 +1085,10 @@ function App() {
             hideSensitive={hideSensitive}
             currency={optimisticDashboardData?.setting?.currency || 'USD'}
             onCancel={() => setActiveTab('ledger')}
+            onAddAnother={() => {
+              setActiveTab('ledger')
+              setAutoOpenLedgerAdd(true)
+            }}
           />
         )}
       </main>

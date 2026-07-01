@@ -10,6 +10,7 @@ interface DraftStagingViewProps {
   hideSensitive: boolean
   currency?: string
   onCancel: () => void
+  onAddAnother?: () => void
 }
 
 export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
@@ -18,7 +19,8 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
   onDeleteDraftTransaction,
   hideSensitive,
   currency = 'USD',
-  onCancel
+  onCancel,
+  onAddAnother
 }) => {
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null)
   
@@ -84,6 +86,15 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
             <p className="text-xs text-muted-foreground mt-0.5">Pending upload to server.</p>
           </div>
         </div>
+
+        {onAddAnother && (
+          <button
+            onClick={onAddAnother}
+            className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer transition select-none shrink-0"
+          >
+            <span>+ Add Entry</span>
+          </button>
+        )}
       </div>
 
       {/* Draft Items List */}

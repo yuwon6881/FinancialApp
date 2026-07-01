@@ -151,25 +151,24 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
 
   return (
     <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-6">
-      <div className="flex items-center justify-between border-b border-border/30 pb-3">
-        <div className="flex items-center gap-2">
-          <Calendar className="size-5 text-blue-500" />
-          <h3 className="text-sm font-bold text-foreground">Subscriptions Billing Timeline</h3>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border/30 pb-3 gap-2">
+        <div>
+          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+            <Calendar className="size-5 text-blue-500" />
+            <span>Subscriptions Billing Timeline</span>
+          </h3>
+          <p className="text-[10px] text-muted-foreground mt-0.5 font-semibold">
+            Cycle Range: {startLabel} – {endLabel}
+          </p>
         </div>
-        <div className="text-[10px] text-muted-foreground font-semibold bg-muted/50 px-2 py-1 rounded-lg">
+        <div className="text-[10px] text-muted-foreground font-semibold bg-muted/50 px-2 py-1 rounded-lg whitespace-nowrap shrink-0 self-start sm:self-center">
           Cycle: {selectedMonth} {year}
         </div>
       </div>
 
       {/* Visual Timeline Section */}
-      <div className="p-6 bg-muted/10 rounded-2xl border border-border/40 space-y-7 select-none">
+      <div className="p-6 bg-muted/10 rounded-2xl border border-border/40 select-none">
         
-        {/* Cycle boundary labels header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider border-b border-border/20 pb-2.5 gap-1.5 sm:gap-0">
-          <div>Cycle Start: <span className="text-foreground font-bold bg-muted px-2 py-0.5 rounded-md">{startLabel}</span></div>
-          <div>Cycle End: <span className="text-foreground font-bold bg-muted px-2 py-0.5 rounded-md">{endLabel}</span></div>
-        </div>
-
         {/* The horizontal line container */}
         <div className="relative pt-12 pb-16 px-3.5">
           <div className="relative h-1.5 bg-muted rounded-full">
