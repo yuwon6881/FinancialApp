@@ -131,101 +131,113 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
       </div>
 
       {/* Visual Timeline Section */}
-      <div className="relative pt-12 pb-14 px-6 bg-muted/15 rounded-xl border border-border/20">
+      <div className="p-6 bg-muted/10 rounded-2xl border border-border/40 space-y-7 select-none">
         
-        {/* Cycle boundary labels */}
-        <div className="absolute top-2 left-6 text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider">
-          Cycle Start ({startLabel})
-        </div>
-        <div className="absolute top-2 right-6 text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider text-right">
-          Cycle End ({endLabel})
+        {/* Cycle boundary labels header */}
+        <div className="flex justify-between items-center text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider border-b border-border/20 pb-2.5">
+          <div>Cycle Start: <span className="text-foreground font-bold bg-muted px-2 py-0.5 rounded-md">{startLabel}</span></div>
+          <div>Cycle End: <span className="text-foreground font-bold bg-muted px-2 py-0.5 rounded-md">{endLabel}</span></div>
         </div>
 
-        {/* The horizontal line */}
-        <div className="relative h-1.5 bg-muted rounded-full">
-          {/* Progress bar to show today's position */}
-          {(() => {
-            const todayTime = new Date().getTime()
-            if (todayTime >= startTime && todayTime <= endTime) {
-              const todayPct = ((todayTime - startTime) / durationMs) * 100
+        {/* The horizontal line container */}
+        <div className="relative pt-6 pb-8 px-2.5">
+          <div className="relative h-1.5 bg-muted rounded-full">
+            {/* Progress bar to show today's position */}
+            {(() => {
+              const todayTime = new Date().getTime()
+              if (todayTime >= startTime && todayTime <= endTime) {
+                const todayPct = ((todayTime - startTime) / durationMs) * 100
+                return (
+                  <div 
+                    className="absolute left-0 top-0 h-full bg-blue-500/30 rounded-full"
+                    style={{ width: `${todayPct}%` }}
+                  />
+                )
+              }
+              return null
+            })()}
+
+            {/* Render grouped timeline nodes */}
+            {timelineNodes.map((node, index) => {
+              const isTop = index % 2 === 0 // Alternate label positions up/down
+              
+              // Determine status based on all bills in the node
+              const allPaid = node.bills.every(b => b.status === 'Paid')
+              const anyPending = node.bills.some(b => b.status === 'Pending')
+              const allDiscarded = node.bills.every(b => b.status === 'Discarded')
+
+              let dotColor = 'bg-amber-500 ring-amber-500/20' // Pending
+              if (allPaid) {
+                dotColor = 'bg-green-500 ring-green-500/20'
+              } else if (allDiscarded) {
+                dotColor = 'bg-slate-400 ring-slate-400/20'
+              } else if (!anyPending) {
+                // Mixed state, but none pending (e.g. Paid & Discarded)
+                dotColor = 'bg-green-500 ring-green-500/20'
+              }
+
+              const formattedDueDay = new Date(node.dueDate).getDate()
+
+              // Construct readable label for single or multiple bills
+              let labelText = ''
+              if (node.bills.length === 1) {
+                labelText = node.bills[0].name
+              } else if (node.bills.length === 2) {
+                labelText = `${node.bills[0].name} & ${node.bills[1].name}`
+              } else {
+                labelText = `${node.bills.length} Bills`
+              }
+
+              // Dynamic label alignment to prevent clipping on the boundaries
+              let alignClasses = 'left-1/2 -translate-x-1/2 items-center'
+              if (node.percent < 15) {
+                alignClasses = 'left-0 items-start'
+              } else if (node.percent > 85) {
+                alignClasses = 'left-auto right-0 items-end'
+              }
+
               return (
-                <div 
-                  className="absolute left-0 top-0 h-full bg-blue-500/30 rounded-full"
-                  style={{ width: `${todayPct}%` }}
-                />
-              )
-            }
-            return null
-          })()}
-
-          {/* Render grouped timeline nodes */}
-          {timelineNodes.map((node, index) => {
-            const isTop = index % 2 === 0 // Alternate label positions up/down
-            
-            // Determine status based on all bills in the node
-            const allPaid = node.bills.every(b => b.status === 'Paid')
-            const anyPending = node.bills.some(b => b.status === 'Pending')
-            const allDiscarded = node.bills.every(b => b.status === 'Discarded')
-
-            let dotColor = 'bg-amber-500 ring-amber-500/20' // Pending
-            if (allPaid) {
-              dotColor = 'bg-green-500 ring-green-500/20'
-            } else if (allDiscarded) {
-              dotColor = 'bg-slate-400 ring-slate-400/20'
-            } else if (!anyPending) {
-              // Mixed state, but none pending (e.g. Paid & Discarded)
-              dotColor = 'bg-green-500 ring-green-500/20'
-            }
-
-            const formattedDueDay = new Date(node.dueDate).getDate()
-
-            // Construct readable label for single or multiple bills
-            let labelText = ''
-            if (node.bills.length === 1) {
-              labelText = node.bills[0].name
-            } else if (node.bills.length === 2) {
-              labelText = `${node.bills[0].name} & ${node.bills[1].name}`
-            } else {
-              labelText = `${node.bills.length} Bills`
-            }
-
-            return (
-              <div
-                key={node.dueDate}
-                style={{ left: `${node.percent}%` }}
-                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 group z-10"
-              >
-                {/* Node trigger dot */}
-                <button
-                  onClick={() => handleNodeClick(node)}
-                  className={`size-3.5 rounded-full border border-card ${dotColor} hover:scale-125 focus:scale-125 focus:ring-4 active:scale-95 transition duration-150 shadow-md cursor-pointer flex items-center justify-center`}
-                  title={`${node.bills.length} item(s) due: ${node.dueDate}`}
+                <div
+                  key={node.dueDate}
+                  style={{ left: `${node.percent}%` }}
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 group z-10"
                 >
-                  {node.bills.length > 1 && (
-                    <span className="text-[7px] text-white font-extrabold">{node.bills.length}</span>
-                  )}
-                </button>
+                  {/* Node trigger dot */}
+                  <button
+                    onClick={() => handleNodeClick(node)}
+                    className={`size-3.5 rounded-full border border-card ${dotColor} hover:scale-125 focus:scale-125 focus:ring-4 active:scale-95 transition duration-150 shadow-md cursor-pointer flex items-center justify-center`}
+                    title={`${node.bills.length} item(s) due: ${node.dueDate}`}
+                  >
+                    {node.bills.length > 1 && (
+                      <span className="text-[7px] text-white font-extrabold">{node.bills.length}</span>
+                    )}
+                  </button>
 
-                {/* Alternating Labels */}
-                <div 
-                  className={`absolute left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none select-none ${
-                    isTop ? 'bottom-full mb-2.5' : 'top-full mt-2.5'
-                  }`}
-                >
-                  {/* Small line connector */}
-                  <div className={`w-[1px] h-2.5 bg-border/80 ${isTop ? 'order-last' : 'order-first'}`} />
-                  
-                  {/* Info Badge */}
-                  <span className={`px-2 py-0.75 rounded-md text-[9px] font-bold text-foreground border border-border bg-card whitespace-nowrap shadow-xs flex items-center gap-1 ${
-                    allDiscarded ? 'line-through opacity-60 text-muted-foreground' : ''
-                  }`}>
-                    <span className="truncate max-w-[120px]">{labelText}</span>
-                    <span className="text-muted-foreground font-semibold">({formattedDueDay})</span>
-                  </span>
+                  {/* Alternating Labels */}
+                  <div 
+                    className={`absolute flex flex-col pointer-events-none select-none ${alignClasses} ${
+                      isTop ? 'bottom-full mb-2.5' : 'top-full mt-2.5'
+                    }`}
+                  >
+                    {/* Small line connector */}
+                    <div className={`w-[1px] h-2.5 bg-border/80 ${
+                      isTop ? 'order-last' : 'order-first'
+                    } ${
+                      node.percent < 15 ? 'ml-1.5' : node.percent > 85 ? 'mr-1.5' : ''
+                    }`} />
+                    
+                    {/* Info Badge */}
+                    <span className={`px-2 py-0.75 rounded-md text-[9px] font-bold text-foreground border border-border bg-card whitespace-nowrap shadow-xs flex items-center gap-1 ${
+                      allDiscarded ? 'line-through opacity-60 text-muted-foreground' : ''
+                    }`}>
+                      <span className="truncate max-w-[120px]">{labelText}</span>
+                      <span className="text-muted-foreground font-semibold">({formattedDueDay})</span>
+                    </span>
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       </div>
 

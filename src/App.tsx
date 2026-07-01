@@ -1450,12 +1450,10 @@ function App() {
                 setIsFabOpen(prev => !prev)
               }
             }}
-            className={`fixed bottom-[80px] right-6 z-40 flex items-center justify-center size-14 rounded-full text-white shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer ${
-              activeFormType === 'transaction' || activeTab === 'drafts'
-                ? 'bg-gradient-to-tr from-emerald-600 to-green-500 shadow-emerald-500/10'
-                : 'bg-gradient-to-tr from-blue-600 to-sky-500 shadow-blue-500/10'
-            } ${
-              activeFormType || activeTab === 'drafts' ? '' : 'md:hidden'
+            className={`fixed bottom-[80px] right-6 flex items-center justify-center size-14 rounded-full text-white shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer ${
+              activeFormType || activeTab === 'drafts'
+                ? 'bg-gradient-to-tr from-emerald-600 to-green-500 shadow-emerald-500/20 z-[60]'
+                : 'bg-gradient-to-tr from-blue-600 to-sky-500 shadow-blue-500/10 z-40 md:hidden'
             }`}
             style={{ 
               transform: (!activeFormType && activeTab !== 'drafts' && isFabOpen) ? 'rotate(135deg)' : 'rotate(0deg)' 
