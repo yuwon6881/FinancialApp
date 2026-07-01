@@ -1277,7 +1277,7 @@ function App() {
       {/* Footer */}
       <footer className="border-t border-border/40 py-6 pb-24 md:pb-6 bg-muted/10 select-none">
         <div className="container mx-auto px-4 text-center text-xs text-muted-foreground">
-          &copy; 2026 FinancialApp Inc. Double-Entry Safe Ledger System. All rights reserved.
+          &copy; {new Date().getFullYear()} FinancialApp. All rights reserved.
         </div>
       </footer>
       <CustomAlertModal

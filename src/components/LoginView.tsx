@@ -91,8 +91,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           </h1>
           <p className="text-xs text-muted-foreground">
             {!isRegistered 
-              ? 'First-Time Setup: Initialize your master administrator credentials.' 
-              : 'Secure, password-protected double-entry safe ledger.'}
+              ? 'Create your password to get started.' 
+              : 'Enter password to unlock your dashboard.'}
           </p>
         </div>
 
@@ -108,18 +108,16 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           <div className="space-y-1">
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Username</label>
             <div className="relative">
-              <User className="absolute left-3.5 top-3 size-4 text-muted-foreground" />
+              <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/70 size-4 pointer-events-none" />
               <input
                 type="text"
                 required
                 disabled={loading}
-                placeholder="e.g. admin"
+                placeholder="Admin username"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 autoComplete="off"
-                readOnly
-                onFocus={(e) => e.target.removeAttribute('readonly')}
-                className="w-full pl-10 pr-4 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition duration-200"
+                className="w-full pl-10 pr-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
               />
             </div>
           </div>
@@ -128,7 +126,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           <div className="space-y-1">
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Password</label>
             <div className="relative">
-              <Lock className="absolute left-3.5 top-3 size-4 text-muted-foreground" />
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/70 size-4 pointer-events-none" />
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
@@ -137,9 +135,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 autoComplete="new-password"
-                readOnly
-                onFocus={(e) => e.target.removeAttribute('readonly')}
-                className="w-full pl-10 pr-10 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition duration-200"
+                className="w-full pl-10 pr-10 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
               />
               <button
                 type="button"
@@ -182,7 +178,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
             ) : !isRegistered ? (
               <>
-                <Sparkles className="size-4" /> Create Admin Credentials
+                <Sparkles className="size-4" /> Create Credentials
               </>
             ) : (
               'Unlock Ledger Dashboard'
@@ -191,7 +187,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         </form>
 
         <div className="text-center text-[10px] text-muted-foreground select-none">
-          Double-Entry Safe Ledger System. All data encrypted in local SQLite instance.
+          Secure Personal Financial Ledger
         </div>
       </div>
     </div>
