@@ -720,6 +720,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     const selectedSubcategories = appliedFilters.filter(f => !ledgerBuckets.includes(f))
 
     return pendingTransactions.filter(t => {
+      if (t.ledgerCategory === 'Discarded') return false
       // Date range filter
       if (allCyclesRange) {
         const txDate = new Date(t.date)
@@ -777,6 +778,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     const selectedSubcategories = selectedFilters.filter(f => !ledgerBuckets.includes(f))
 
     return sourceTransactions.filter(t => {
+      if (t.ledgerCategory === 'Discarded') return false
       const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             t.ledgerCategory.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             t.category.toLowerCase().includes(searchTerm.toLowerCase())

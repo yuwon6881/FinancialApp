@@ -42,6 +42,7 @@ interface TopNavProps {
   onMouseEnterWallet?: () => void
   onMouseLeaveWallet?: () => void
   isSyncing?: boolean
+  onDiscardSubscription?: (noti: any) => void
 }
 
 const TopNav: React.FC<TopNavProps> = ({
@@ -61,7 +62,8 @@ const TopNav: React.FC<TopNavProps> = ({
   currency = 'USD',
   onMouseEnterWallet,
   onMouseLeaveWallet,
-  isSyncing = false
+  isSyncing = false,
+  onDiscardSubscription
 }) => {
   const [isBellOpen, setIsBellOpen] = useState(false)
   const [confirmNotiId, setConfirmNotiId] = useState<string | null>(null)
@@ -265,6 +267,18 @@ const TopNav: React.FC<TopNavProps> = ({
                             >
                               Confirm Paid
                             </button>
+                            {onDiscardSubscription && (
+                              <button
+                                onClick={() => {
+                                  onDiscardSubscription(noti)
+                                  setIsBellOpen(false)
+                                }}
+                                className="flex-1 sm:flex-initial px-2 py-1 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-[9px] rounded transition cursor-pointer text-center whitespace-nowrap"
+                                title="Discard this cycle's payment"
+                              >
+                                Discard
+                              </button>
+                            )}
                             <button
                               onClick={() => {
                                 setNotiToDelete(noti)
