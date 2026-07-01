@@ -183,6 +183,106 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [txToDelete, setTxToDelete] = useState<Transaction | null>(null)
   const [showEditDisabledModal, setShowEditDisabledModal] = useState(false)
 
+  // Autocomplete suggestion state
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1)
+  const suggestionsRef = useRef<HTMLDivElement>(null)
+
+  // Build unique suggestion entries from past transactions (most recent first, deduped by description)
+  const suggestionEntries = useMemo(() => {
+    const seen = new Map<string, { description: string; category: string; ledgerCategory: string; date: string }>()
+    // Sort by date descending so we keep the most recent category mapping
+    const sorted = [...transactions]
+      .filter(t => !t.ledgerCategory.startsWith('Transfer:') && t.ledgerCategory !== 'Discarded' && !t.description.startsWith('[Split:') && !t.description.startsWith('[Discarded]'))
+      .sort((a, b) => b.date.localeCompare(a.date))
+    for (const t of sorted) {
+      const key = t.description.toLowerCase().trim()
+      if (!seen.has(key) && key.length > 0) {
+        seen.set(key, {
+          description: t.description,
+          category: t.category,
+          ledgerCategory: t.ledgerCategory.startsWith('IncomeSplit:') ? 'Income' : t.ledgerCategory,
+          date: t.date
+        })
+      }
+    }
+    return Array.from(seen.values())
+  }, [transactions])
+
+  // Filter suggestions based on current description input
+  const filteredSuggestions = useMemo(() => {
+    if (!description.trim() || description.trim().length < 1) return []
+    const query = description.toLowerCase().trim()
+    return suggestionEntries
+      .filter(s => s.description.toLowerCase().includes(query))
+      .slice(0, 8) // Limit to 8 suggestions
+  }, [description, suggestionEntries])
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    if (!showSuggestions) return
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('.description-autocomplete')) {
+        setShowSuggestions(false)
+        setSelectedSuggestionIndex(-1)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showSuggestions])
+
+  const handleSelectSuggestion = (suggestion: { description: string; category: string; ledgerCategory: string }) => {
+    setDescription(suggestion.description)
+    setShowSuggestions(false)
+    setSelectedSuggestionIndex(-1)
+
+    // Auto-fill category and ledger category (only if not editing and not in transfer mode)
+    if (txType !== 'transfer') {
+      const validLedgerCats = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
+      if (validLedgerCats.includes(suggestion.ledgerCategory)) {
+        setLedgerCategory(suggestion.ledgerCategory as any)
+        // Sync txType based on suggestion's ledger category
+        if (suggestion.ledgerCategory === 'Income') {
+          setTxType('inflow')
+        } else if (txType === 'inflow') {
+          setTxType('outflow')
+        }
+      }
+      if (suggestion.category) {
+        setCategory(suggestion.category)
+      }
+    }
+  }
+
+  const handleDescriptionKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions || filteredSuggestions.length === 0) return
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setSelectedSuggestionIndex(prev => Math.min(prev + 1, filteredSuggestions.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSelectedSuggestionIndex(prev => Math.max(prev - 1, -1))
+    } else if (e.key === 'Enter' && selectedSuggestionIndex >= 0) {
+      e.preventDefault()
+      handleSelectSuggestion(filteredSuggestions[selectedSuggestionIndex])
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false)
+      setSelectedSuggestionIndex(-1)
+    }
+  }
+
+  // Scroll the selected suggestion into view
+  useEffect(() => {
+    if (selectedSuggestionIndex >= 0 && suggestionsRef.current) {
+      const items = suggestionsRef.current.querySelectorAll('[data-suggestion]')
+      if (items[selectedSuggestionIndex]) {
+        items[selectedSuggestionIndex].scrollIntoView({ block: 'nearest' })
+      }
+    }
+  }, [selectedSuggestionIndex])
+
   useEffect(() => {
     if (autoOpenAddForm) {
       setShowAddForm(true)
@@ -1246,7 +1346,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               </div>
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1 relative description-autocomplete">
               <label className="text-xs font-semibold text-muted-foreground">Description</label>
               <input
                 ref={firstInputRef}
@@ -1254,9 +1354,54 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 required
                 placeholder="e.g. Grocery Store, Paycheck"
                 value={description}
-                onChange={e => setDescription(e.target.value)}
+                onChange={e => {
+                  setDescription(e.target.value)
+                  setShowSuggestions(true)
+                  setSelectedSuggestionIndex(-1)
+                }}
+                onFocus={() => {
+                  if (description.trim().length >= 1) setShowSuggestions(true)
+                }}
+                onKeyDown={handleDescriptionKeyDown}
+                autoComplete="off"
                 className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
               />
+              {showSuggestions && filteredSuggestions.length > 0 && (
+                <div
+                  ref={suggestionsRef}
+                  className="absolute z-50 w-full mt-1 max-h-52 overflow-y-auto bg-card border border-border/80 rounded-xl shadow-xl animate-in fade-in slide-in-from-top-2 duration-150"
+                >
+                  {filteredSuggestions.map((s, idx) => {
+                    const query = description.toLowerCase().trim()
+                    const matchIdx = s.description.toLowerCase().indexOf(query)
+                    let rendered: React.ReactNode = s.description
+                    if (matchIdx >= 0 && query.length > 0) {
+                      const before = s.description.slice(0, matchIdx)
+                      const match = s.description.slice(matchIdx, matchIdx + query.length)
+                      const after = s.description.slice(matchIdx + query.length)
+                      rendered = <>{before}<span className="text-blue-500 font-bold">{match}</span>{after}</>
+                    }
+                    return (
+                      <button
+                        key={s.description}
+                        data-suggestion
+                        type="button"
+                        onClick={() => handleSelectSuggestion(s)}
+                        className={`w-full text-left px-3.5 py-2 text-sm flex items-center justify-between gap-2 cursor-pointer transition duration-100 first:rounded-t-xl last:rounded-b-xl ${
+                          idx === selectedSuggestionIndex
+                            ? 'bg-blue-500/10 text-foreground'
+                            : 'hover:bg-muted/50 text-foreground'
+                        }`}
+                      >
+                        <span className="truncate">{rendered}</span>
+                        <span className="inline-block text-[9px] px-1.5 py-0.5 font-semibold rounded border bg-slate-500/10 text-muted-foreground border-border/30 shrink-0">
+                          {s.ledgerCategory} · {s.category}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
 
             <div className="space-y-1">
