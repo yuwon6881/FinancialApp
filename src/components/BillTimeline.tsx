@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import type { ActiveRecurringPayment } from '../types'
-import { Calendar, CheckCircle2, AlertCircle, X, Ban } from 'lucide-react'
+import { Calendar, CheckCircle2, AlertCircle, X, Ban, List } from 'lucide-react'
 import { formatCurrencyVal } from '../lib/utils'
 
 interface BillTimelineProps {
@@ -12,6 +12,12 @@ interface BillTimelineProps {
   hideSensitive: boolean
   onConfirmSubscription?: (noti: any, paidDate: string) => void
   onDiscardSubscription?: (noti: any) => void
+}
+
+interface TimelineNode {
+  dueDate: string
+  percent: number
+  bills: ActiveRecurringPayment[]
 }
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -48,6 +54,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
   onDiscardSubscription
 }) => {
   const [selectedBill, setSelectedBill] = useState<ActiveRecurringPayment | null>(null)
+  const [selectedNode, setSelectedNode] = useState<TimelineNode | null>(null)
   const [payDateInput, setPayDateInput] = useState('')
 
   // Determine current month index (0-11)
@@ -79,21 +86,37 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
     )
   }
 
-  // Map and sort active bills by their due date time
-  const timelineBills = activeRecurringPayments
-    .map(p => {
-      const dueTime = new Date(p.dueDate).getTime()
-      // Calculate relative position (0% to 100%)
+  // Group bills by due date to prevent overlapping nodes on the timeline
+  const uniqueDatesMap: { [dateStr: string]: ActiveRecurringPayment[] } = {}
+  activeRecurringPayments.forEach(p => {
+    if (!uniqueDatesMap[p.dueDate]) {
+      uniqueDatesMap[p.dueDate] = []
+    }
+    uniqueDatesMap[p.dueDate].push(p)
+  })
+
+  // Map groups to timeline nodes and sort chronologically
+  const timelineNodes: TimelineNode[] = Object.entries(uniqueDatesMap)
+    .map(([dueDate, bills]) => {
+      const dueTime = new Date(dueDate).getTime()
       let percent = durationMs > 0 ? ((dueTime - startTime) / durationMs) * 100 : 0
-      // Bound
       percent = Math.max(0, Math.min(100, percent))
       return {
-        ...p,
-        dueTime,
-        percent
+        dueDate,
+        percent,
+        bills
       }
     })
-    .sort((a, b) => a.dueTime - b.dueTime)
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+
+  const handleNodeClick = (node: TimelineNode) => {
+    if (node.bills.length === 1) {
+      setSelectedBill(node.bills[0])
+      setPayDateInput(node.bills[0].dueDate)
+    } else {
+      setSelectedNode(node)
+    }
+  }
 
   return (
     <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-6">
@@ -135,33 +158,53 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
             return null
           })()}
 
-          {/* Render subscription nodes */}
-          {timelineBills.map((bill, index) => {
-            const isPaid = bill.status === 'Paid'
-            const isDiscarded = bill.status === 'Discarded'
+          {/* Render grouped timeline nodes */}
+          {timelineNodes.map((node, index) => {
             const isTop = index % 2 === 0 // Alternate label positions up/down
+            
+            // Determine status based on all bills in the node
+            const allPaid = node.bills.every(b => b.status === 'Paid')
+            const anyPending = node.bills.some(b => b.status === 'Pending')
+            const allDiscarded = node.bills.every(b => b.status === 'Discarded')
 
-            let dotColor = 'bg-amber-500 ring-amber-500/20'
-            if (isPaid) dotColor = 'bg-green-500 ring-green-500/20'
-            if (isDiscarded) dotColor = 'bg-slate-400 ring-slate-400/20'
+            let dotColor = 'bg-amber-500 ring-amber-500/20' // Pending
+            if (allPaid) {
+              dotColor = 'bg-green-500 ring-green-500/20'
+            } else if (allDiscarded) {
+              dotColor = 'bg-slate-400 ring-slate-400/20'
+            } else if (!anyPending) {
+              // Mixed state, but none pending (e.g. Paid & Discarded)
+              dotColor = 'bg-green-500 ring-green-500/20'
+            }
 
-            const formattedDueDay = new Date(bill.dueDate).getDate()
+            const formattedDueDay = new Date(node.dueDate).getDate()
+
+            // Construct readable label for single or multiple bills
+            let labelText = ''
+            if (node.bills.length === 1) {
+              labelText = node.bills[0].name
+            } else if (node.bills.length === 2) {
+              labelText = `${node.bills[0].name} & ${node.bills[1].name}`
+            } else {
+              labelText = `${node.bills.length} Bills`
+            }
 
             return (
               <div
-                key={bill.id}
-                style={{ left: `${bill.percent}%` }}
+                key={node.dueDate}
+                style={{ left: `${node.percent}%` }}
                 className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 group z-10"
               >
                 {/* Node trigger dot */}
                 <button
-                  onClick={() => {
-                    setSelectedBill(bill)
-                    setPayDateInput(bill.dueDate)
-                  }}
-                  className={`size-3.5 rounded-full border border-card ${dotColor} hover:scale-125 focus:scale-125 focus:ring-4 active:scale-95 transition duration-150 shadow-md cursor-pointer`}
-                  title={`${bill.name} - Due: ${bill.dueDate}`}
-                />
+                  onClick={() => handleNodeClick(node)}
+                  className={`size-3.5 rounded-full border border-card ${dotColor} hover:scale-125 focus:scale-125 focus:ring-4 active:scale-95 transition duration-150 shadow-md cursor-pointer flex items-center justify-center`}
+                  title={`${node.bills.length} item(s) due: ${node.dueDate}`}
+                >
+                  {node.bills.length > 1 && (
+                    <span className="text-[7px] text-white font-extrabold">{node.bills.length}</span>
+                  )}
+                </button>
 
                 {/* Alternating Labels */}
                 <div 
@@ -174,9 +217,9 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                   
                   {/* Info Badge */}
                   <span className={`px-2 py-0.75 rounded-md text-[9px] font-bold text-foreground border border-border bg-card whitespace-nowrap shadow-xs flex items-center gap-1 ${
-                    isDiscarded ? 'line-through opacity-60 text-muted-foreground' : ''
+                    allDiscarded ? 'line-through opacity-60 text-muted-foreground' : ''
                   }`}>
-                    <span>{bill.name}</span>
+                    <span className="truncate max-w-[120px]">{labelText}</span>
                     <span className="text-muted-foreground font-semibold">({formattedDueDay})</span>
                   </span>
                 </div>
@@ -186,9 +229,61 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
         </div>
       </div>
 
-      {timelineBills.length === 0 && (
+      {timelineNodes.length === 0 && (
         <div className="text-xs text-muted-foreground text-center py-6">
           No active subscriptions scheduled for this cycle.
+        </div>
+      )}
+
+      {/* Multiple Bills Selector Modal */}
+      {selectedNode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="w-full max-w-sm bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <div className="flex items-center gap-2">
+                <List className="size-4 text-blue-500" />
+                <h3 className="text-sm font-bold text-foreground">Bills Due on {selectedNode.dueDate}</h3>
+              </div>
+              <button
+                onClick={() => setSelectedNode(null)}
+                className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition cursor-pointer"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {selectedNode.bills.map(bill => {
+                const isPaid = bill.status === 'Paid'
+                const isDiscarded = bill.status === 'Discarded'
+                
+                let statusStyle = 'text-amber-500 bg-amber-500/10'
+                if (isPaid) statusStyle = 'text-green-500 bg-green-500/10'
+                if (isDiscarded) statusStyle = 'text-slate-400 bg-slate-500/10 line-through'
+
+                return (
+                  <button
+                    key={bill.id}
+                    onClick={() => {
+                      setSelectedBill(bill)
+                      setPayDateInput(bill.dueDate)
+                      setSelectedNode(null)
+                    }}
+                    className="w-full p-3 rounded-xl border border-border/60 bg-muted/10 hover:bg-muted/30 transition flex items-center justify-between text-left cursor-pointer"
+                  >
+                    <div>
+                      <div className="text-xs font-bold text-foreground">{bill.name}</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">{bill.ledgerCategory} / {bill.category}</div>
+                    </div>
+                    <div className="text-right flex flex-col items-end gap-1 font-semibold">
+                      <span className="text-xs font-extrabold text-foreground">{formatSensitive(Math.abs(bill.amount))}</span>
+                      <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${statusStyle}`}>{bill.status}</span>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
         </div>
       )}
 

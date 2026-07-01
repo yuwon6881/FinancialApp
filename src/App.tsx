@@ -427,7 +427,7 @@ function App() {
 
     setDraftTransactions(prev => [...prev, draftTx]);
     triggerVibration(15);
-    showAlert('Transaction added to Drafts batch! Tap the Drafts badge in the header to view and sync.', 'Draft Staged');
+    setActiveTab('drafts');
   }
 
   const handleUpdateDraftTransaction = (id: string, updated: Transaction) => {
@@ -1450,7 +1450,11 @@ function App() {
                 setIsFabOpen(prev => !prev)
               }
             }}
-            className={`fixed bottom-[80px] right-6 z-40 flex items-center justify-center size-14 rounded-full bg-gradient-to-tr from-blue-600 to-sky-500 text-white shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer ${
+            className={`fixed bottom-[80px] right-6 z-40 flex items-center justify-center size-14 rounded-full text-white shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer ${
+              activeFormType === 'transaction' || activeTab === 'drafts'
+                ? 'bg-gradient-to-tr from-emerald-600 to-green-500 shadow-emerald-500/10'
+                : 'bg-gradient-to-tr from-blue-600 to-sky-500 shadow-blue-500/10'
+            } ${
               activeFormType || activeTab === 'drafts' ? '' : 'md:hidden'
             }`}
             style={{ 
