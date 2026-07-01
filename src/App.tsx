@@ -916,6 +916,7 @@ function App() {
             wishlist={wishlist}
             isHoveringWallet={isHoveringWallet}
             onDiscardSubscription={handleDiscardSubscription}
+            onAddTransaction={handleAddTransaction}
           />
         )}
 
@@ -1305,52 +1306,52 @@ function App() {
           {/* Speed Dial Menu Items */}
           <div className={`md:hidden fixed bottom-[148px] right-8 z-40 flex flex-col gap-3.5 items-end transition-all duration-300 ${isFabOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
             {/* Action 1: Add Wish Goal */}
-            <div className="flex items-center gap-2.5">
-              <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-foreground shadow-xs select-none">
+            <button
+              onClick={() => {
+                handleQuickAction('wishlist')
+                setIsFabOpen(false)
+              }}
+              className="flex items-center gap-2.5 group cursor-pointer focus:outline-none"
+            >
+              <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-foreground shadow-xs select-none group-hover:bg-muted transition duration-150">
                 Add Wish Goal
               </span>
-              <button
-                onClick={() => {
-                  handleQuickAction('wishlist')
-                  setIsFabOpen(false)
-                }}
-                className="size-11 rounded-full bg-pink-500 hover:bg-pink-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition cursor-pointer"
-              >
+              <div className="size-11 rounded-full bg-pink-500 group-hover:bg-pink-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition">
                 <PiggyBank className="size-5" />
-              </button>
-            </div>
+              </div>
+            </button>
 
             {/* Action 2: New Subscription */}
-            <div className="flex items-center gap-2.5">
-              <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-foreground shadow-xs select-none">
+            <button
+              onClick={() => {
+                handleQuickAction('subscription')
+                setIsFabOpen(false)
+              }}
+              className="flex items-center gap-2.5 group cursor-pointer focus:outline-none"
+            >
+              <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-foreground shadow-xs select-none group-hover:bg-muted transition duration-150">
                 New Subscription
               </span>
-              <button
-                onClick={() => {
-                  handleQuickAction('subscription')
-                  setIsFabOpen(false)
-                }}
-                className="size-11 rounded-full bg-violet-500 hover:bg-violet-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition cursor-pointer"
-              >
+              <div className="size-11 rounded-full bg-violet-500 group-hover:bg-violet-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition">
                 <CreditCard className="size-5" />
-              </button>
-            </div>
+              </div>
+            </button>
 
             {/* Action 3: Post Transaction */}
-            <div className="flex items-center gap-2.5">
-              <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-foreground shadow-xs select-none">
+            <button
+              onClick={() => {
+                handleQuickAction('transaction')
+                setIsFabOpen(false)
+              }}
+              className="flex items-center gap-2.5 group cursor-pointer focus:outline-none"
+            >
+              <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-foreground shadow-xs select-none group-hover:bg-muted transition duration-150">
                 Post Transaction
               </span>
-              <button
-                onClick={() => {
-                  handleQuickAction('transaction')
-                  setIsFabOpen(false)
-                }}
-                className="size-11 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition cursor-pointer"
-              >
+              <div className="size-11 rounded-full bg-emerald-500 group-hover:bg-emerald-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition">
                 <Wallet className="size-5" />
-              </button>
-            </div>
+              </div>
+            </button>
           </div>
 
           {/* Main FAB Toggle Button */}

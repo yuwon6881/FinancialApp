@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react'
-import type { DashboardData, TransactionCategory, Transaction, WishlistItem } from '../types'
+import type { Transaction, DashboardData, TransactionCategory, WishlistItem } from '../types'
 import { 
   Wallet, 
   ArrowUpRight, 
@@ -9,7 +9,8 @@ import {
   Save,
   AlertCircle,
   TrendingUp as TrendLineIcon,
-  PiggyBank
+  PiggyBank,
+  Edit2
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
 import { CustomConfirmModal } from './ui/CustomConfirmModal'
@@ -47,6 +48,7 @@ interface DashboardViewProps {
   wishlist?: WishlistItem[]
   isHoveringWallet: boolean
   onDiscardSubscription?: (noti: any) => void
+  onAddTransaction?: (newTx: Omit<Transaction, 'id'>) => Promise<void>
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ 
@@ -64,7 +66,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigateToLedger,
   wishlist = [],
   isHoveringWallet,
-  onDiscardSubscription
+  onDiscardSubscription,
+  onAddTransaction
 }) => {
   const [showSettings, setShowSettings] = useState(false)
   const [targetInput, setTargetInput] = useState('')
@@ -87,6 +90,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Custom Category Forms State
   const [newCatName, setNewCatName] = useState('')
+
+  // Balance adjustment modal state
+  const [adjustingCategory, setAdjustingCategory] = useState<any | null>(null)
+  const [newBalanceInput, setNewBalanceInput] = useState<string>('')
+  const [adjustmentDescription, setAdjustmentDescription] = useState<string>('Balance Adjustment')
 
   // Subcategory Pie Chart States
   const [chartView, setChartView] = useState<'monthly' | '3month' | '6month' | 'yearly'>('monthly')
@@ -530,19 +538,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               
               {/* Category mini-list */}
               <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1 select-none">
-                {categoriesList.map(cat => (
-                  <div key={cat.id} className="flex items-center justify-between bg-muted/40 px-2.5 py-1.5 rounded-lg text-xs hover:bg-muted/60 transition">
-                    <span className="font-semibold">{cat.name}</span>
-                    <button 
-                      type="button"
-                      onClick={() => onDeleteCategory(cat.id)}
-                      className="text-orange-500 hover:text-orange-600 cursor-pointer font-bold"
-                      title="Delete category"
-                    >
-                      &times;
-                    </button>
-                  </div>
-                ))}
+                {categoriesList
+                  .filter(cat => cat.name.toLowerCase() !== 'transfer' && cat.name.toLowerCase() !== 'adjustment')
+                  .map(cat => (
+                    <div key={cat.id} className="flex items-center justify-between bg-muted/40 px-2.5 py-1.5 rounded-lg text-xs hover:bg-muted/60 transition">
+                      <span className="font-semibold">{cat.name}</span>
+                      <button 
+                        type="button"
+                        onClick={() => onDeleteCategory(cat.id)}
+                        className="text-orange-500 hover:text-orange-600 cursor-pointer font-bold"
+                        title="Delete category"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))}
               </div>
 
               {/* Add category inline form */}
@@ -557,8 +567,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    if (!newCatName.trim()) return
-                    onAddCategory({ name: newCatName.trim() })
+                    const trimmed = newCatName.trim()
+                    if (!trimmed) return
+                    const lower = trimmed.toLowerCase()
+                    if (lower === 'transfer' || lower === 'adjustment') {
+                      alert('System reserved category name.')
+                      return
+                    }
+                    onAddCategory({ name: trimmed })
                     setNewCatName('')
                   }}
                   className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition"
@@ -748,8 +764,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       </div>
                     )}
                   </div>
-                  <div className={`text-right font-bold ${isNeg ? 'text-orange-500' : 'text-foreground'}`}>
-                    <div>{formatSensitive(c.remaining)}</div>
+                  <div className="text-right flex flex-col items-end gap-1">
+                    <div className="flex items-center gap-1.5 justify-end">
+                      <span className={`font-bold ${isNeg ? 'text-orange-500' : 'text-foreground'}`}>
+                        {formatSensitive(c.remaining)}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setAdjustingCategory(c)
+                          setNewBalanceInput(c.remaining.toFixed(2))
+                          setAdjustmentDescription('Balance Adjustment')
+                        }}
+                        className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground cursor-pointer transition select-none"
+                        title="Adjust balance"
+                      >
+                        <Edit2 className="size-3" />
+                      </button>
+                    </div>
                     {pendingDeductionsByCategory[c.name] > 0 && (
                       <div className={`text-[10px] font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
                         ({formatSensitive(c.remaining - pendingDeductionsByCategory[c.name])})
@@ -827,9 +858,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </div>
                   <div>
                     <span className="text-muted-foreground text-[10px] block mb-0.5">Remaining Balance</span>
-                    <span className={`font-bold ${isNeg ? 'text-orange-500' : 'text-foreground'}`}>
-                      {formatSensitive(c.remaining)}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`font-bold ${isNeg ? 'text-orange-500' : 'text-foreground'}`}>
+                        {formatSensitive(c.remaining)}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setAdjustingCategory(c)
+                          setNewBalanceInput(c.remaining.toFixed(2))
+                          setAdjustmentDescription('Balance Adjustment')
+                        }}
+                        className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground cursor-pointer transition select-none"
+                        title="Adjust balance"
+                      >
+                        <Edit2 className="size-3" />
+                      </button>
+                    </div>
                     {pendingDeductionsByCategory[c.name] > 0 && (
                       <span className={`text-[10px] block font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
                         ({formatSensitive(c.remaining - pendingDeductionsByCategory[c.name])})
@@ -1616,6 +1660,111 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           View Full Ledger
         </button>
       </div>
+
+      {/* Adjust Balance Modal */}
+      {adjustingCategory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="w-full max-w-sm bg-card border border-border/85 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <h3 className="text-sm font-bold text-foreground">Adjust {adjustingCategory.name} Balance</h3>
+              <button
+                onClick={() => setAdjustingCategory(null)}
+                className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition cursor-pointer font-bold text-sm"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="text-xs space-y-3">
+              <div>
+                <span className="text-muted-foreground block mb-0.5">Current Remaining Balance:</span>
+                <span className="font-bold text-foreground">{formatSensitive(adjustingCategory.remaining)}</span>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-muted-foreground block">Target Remaining Balance</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  required
+                  placeholder="0.00"
+                  value={newBalanceInput}
+                  onChange={e => setNewBalanceInput(e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-muted-foreground block">Adjustment Description</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Ledger alignment"
+                  value={adjustmentDescription}
+                  onChange={e => setAdjustmentDescription(e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              {(() => {
+                const parsed = parseFloat(newBalanceInput)
+                if (isNaN(parsed)) return null
+                const diff = parsed - adjustingCategory.remaining
+                return (
+                  <div className="p-3 bg-muted/40 border border-border/50 rounded-xl text-[10px] text-muted-foreground select-none">
+                    Calculated ledger entry: <span className={`font-bold ${diff > 0 ? 'text-blue-500' : diff < 0 ? 'text-orange-500' : ''}`}>
+                      {diff > 0 ? '+' : ''}{diff.toFixed(2)}
+                    </span>
+                  </div>
+                )
+              })()}
+            </div>
+
+            <div className="flex gap-2.5 pt-2 border-t border-border/20 justify-end">
+              <button
+                type="button"
+                onClick={() => setAdjustingCategory(null)}
+                className="px-4 py-2 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-xs rounded-xl transition duration-150 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const targetVal = parseFloat(newBalanceInput)
+                  if (isNaN(targetVal)) {
+                    alert('Please enter a valid balance amount.')
+                    return
+                  }
+                  const diff = targetVal - adjustingCategory.remaining
+                  if (Math.abs(diff) < 0.005) {
+                    setAdjustingCategory(null)
+                    return
+                  }
+                  
+                  const now = new Date()
+                  const y = now.getFullYear()
+                  const mo = String(now.getMonth() + 1).padStart(2, '0')
+                  const d = String(now.getDate()).padStart(2, '0')
+                  const dateStr = `${y}-${mo}-${d}`
+
+                  onAddTransaction?.({
+                    description: adjustmentDescription.trim() || 'Balance Adjustment',
+                    amount: diff,
+                    category: 'Adjustment',
+                    ledgerCategory: adjustingCategory.name,
+                    date: dateStr
+                  })
+                  setAdjustingCategory(null)
+                }}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition duration-150 cursor-pointer shadow-md"
+              >
+                Save Adjustment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
