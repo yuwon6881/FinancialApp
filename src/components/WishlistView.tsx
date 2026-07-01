@@ -64,7 +64,6 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   // Form states
   const [nameInput, setNameInput] = useState('')
   const [priceInput, setPriceInput] = useState('')
-  const [linkInput, setLinkInput] = useState('')
 
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawVal = e.target.value;
@@ -140,10 +139,9 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     return `~${roundedMonths} Months (${formattedDate})`
   }
 
-  const handleOpenAddModal = () => {
+   const handleOpenAddModal = () => {
     setNameInput('')
     setPriceInput('')
-    setLinkInput('')
     setPriorityInput('Medium')
     setIsActiveInput(wishlist.filter(w => !w.isPurchased).length === 0)
     setShowAddModal(true)
@@ -160,7 +158,6 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     setEditingItem(item)
     setNameInput(item.name)
     setPriceInput(item.price.toFixed(2))
-    setLinkInput(item.linkUrl || '')
     setPriorityInput(item.priority)
     setIsActiveInput(item.isActive)
     setShowEditModal(true)
@@ -171,14 +168,14 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     const price = parseFloat(priceInput)
     if (!nameInput.trim() || isNaN(price) || price <= 0) return
 
-    await onAddItem({
+    const newGoal = {
       name: nameInput,
       price,
-      linkUrl: linkInput.trim() || undefined,
       priority: priorityInput,
       isActive: isActiveInput
-    })
+    }
     setShowAddModal(false)
+    await onAddItem(newGoal)
   }
 
   const handleSaveEdit = async (e: React.FormEvent) => {
@@ -187,16 +184,16 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     const price = parseFloat(priceInput)
     if (!nameInput.trim() || isNaN(price) || price <= 0) return
 
-    await onUpdateItem(editingItem.id, {
+    const updatedGoal = {
       ...editingItem,
       name: nameInput,
       price,
-      linkUrl: linkInput.trim() || undefined,
       priority: priorityInput,
       isActive: isActiveInput
-    })
+    }
     setShowEditModal(false)
     setEditingItem(null)
+    await onUpdateItem(editingItem.id, updatedGoal)
   }
 
   const handleToggleActive = async (item: WishlistItem) => {
@@ -301,18 +298,8 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                     </div>
 
                     <div>
-                      <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2">
+                      <h2 className="text-xl font-extrabold text-foreground">
                         {activeItem.name}
-                        {activeItem.linkUrl && (
-                          <a 
-                            href={activeItem.linkUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="text-blue-500 hover:text-blue-600 transition"
-                          >
-                            <ExternalLink className="size-4" />
-                          </a>
-                        )}
                       </h2>
                       <div className="text-3xl font-black text-foreground mt-2">
                         {formatSensitive(activeItem.price)}
@@ -580,16 +567,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                 </div>
               </div>
 
-              <div>
-                <label className="text-muted-foreground block mb-1">Store / Link URL (Optional)</label>
-                <input 
-                  type="url" 
-                  value={linkInput}
-                  onChange={e => setLinkInput(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full px-3.5 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition font-medium"
-                />
-              </div>
+
 
               <div className="flex items-center gap-2 py-1 select-none">
                 <input 
@@ -672,15 +650,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                 </div>
               </div>
 
-              <div>
-                <label className="text-muted-foreground block mb-1">Store / Link URL (Optional)</label>
-                <input 
-                  type="url" 
-                  value={linkInput}
-                  onChange={e => setLinkInput(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition font-medium"
-                />
-              </div>
+
 
               <div className="flex items-center gap-2 py-1 select-none">
                 <input 
