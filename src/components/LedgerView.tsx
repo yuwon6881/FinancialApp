@@ -182,6 +182,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [txToDelete, setTxToDelete] = useState<Transaction | null>(null)
   const [showEditDisabledModal, setShowEditDisabledModal] = useState(false)
+  const [amountRevealed, setAmountRevealed] = useState(false) // For sensitive mode: blur amount until focused
 
   // Autocomplete suggestion state
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -327,6 +328,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setEditingTxId(t.id)
     setDescription(t.description)
     setAmount(Math.abs(t.amount).toFixed(2))
+    setAmountRevealed(false) // Start blurred in sensitive mode
     setDate(t.date)
     if (onStartEditPending) {
       onStartEditPending(t.id.startsWith('temp_') ? t.id : null)
@@ -1229,13 +1231,30 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           <button
             onClick={() => {
               if (showAddForm) {
+                // Closing the form — reset everything
                 setDescription('')
                 setAmount('')
                 setLedgerCategory('Essentials')
+                setTxType('outflow')
+                setCategory(categories.length > 0 ? categories[0].name : '')
                 if (editingTxId && editingTxId.startsWith('temp_') && onStartEditPending) {
                   onStartEditPending(null)
                 }
                 setEditingTxId(null)
+              } else {
+                // Opening the form fresh — reset to defaults
+                setDescription('')
+                setAmount('')
+                setTxType('outflow')
+                setLedgerCategory('Essentials')
+                setCategory(categories.length > 0 ? categories[0].name : '')
+                setAmountRevealed(false)
+                setEditingTxId(null)
+                const now = new Date()
+                const y = now.getFullYear()
+                const mo = String(now.getMonth() + 1).padStart(2, '0')
+                const d = String(now.getDate()).padStart(2, '0')
+                setDate(`${y}-${mo}-${d}`)
               }
               setShowAddForm(prev => !prev)
             }}
@@ -1417,9 +1436,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   placeholder="0.00"
                   value={amount}
                   onChange={handleAmountChange}
+                  onFocus={() => setAmountRevealed(true)}
+                  onBlur={() => setAmountRevealed(false)}
                   className={`w-full pr-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200 ${
                     getCurrencySymbol(currency).length > 2 ? 'pl-11' : getCurrencySymbol(currency).length > 1 ? 'pl-9' : 'pl-7'
-                  }`}
+                  } ${hideSensitive && editingTxId && !amountRevealed ? 'blur-sm' : ''}`}
                 />
               </div>
             </div>
