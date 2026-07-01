@@ -21,8 +21,6 @@ interface WishlistViewProps {
   rewardsTarget: number
   pastThreeMonthsRewardsAverage: number
   hasRewardsHistory: boolean
-  /** Number of actual months with rewards history (1–3), used to correct the server avg */ 
-  rewardsHistoryMonthCount?: number
   currency: string
   hideSensitive: boolean
   onAddItem: (item: Partial<WishlistItem>) => Promise<void>
@@ -48,7 +46,6 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   rewardsTarget,
   pastThreeMonthsRewardsAverage,
   hasRewardsHistory,
-  rewardsHistoryMonthCount = 3,
   currency,
   hideSensitive,
   onAddItem,
@@ -122,16 +119,6 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   const affordableCount = useMemo(() => {
     return wishlist.filter(w => !w.isPurchased && rewardsBalance >= w.price).length
   }, [wishlist, rewardsBalance])
-
-  // Corrected realistic savings rate:
-  // The server computes pastThreeMonthsRewardsAverage as (totalRewardsSavings / 3) even if fewer months exist.
-  // We correct this by using the actual month count: corrected = (serverAvg * 3) / actualMonths.
-  const correctedRealisticRate = useMemo(() => {
-    if (!hasRewardsHistory || pastThreeMonthsRewardsAverage <= 0) return 0
-    const actualMonths = Math.max(1, Math.min(3, rewardsHistoryMonthCount))
-    // Recover the true total and divide by actual months
-    return (pastThreeMonthsRewardsAverage * 3) / actualMonths
-  }, [pastThreeMonthsRewardsAverage, hasRewardsHistory, rewardsHistoryMonthCount])
 
   // Calculation for timeline prediction
   const getTimelineString = (itemPrice: number, rate: number) => {
@@ -375,17 +362,17 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                         <div className="space-y-1 border-l border-border/30 pl-3">
                           <span className="text-[10px] uppercase tracking-wider font-extrabold text-violet-500">Realistic Projection</span>
                           <span className="text-[11px] font-bold text-foreground block">
-                            {hasRewardsHistory && correctedRealisticRate > 0
-                              ? getTimelineString(activeItem.price, correctedRealisticRate)
+                            {hasRewardsHistory 
+                              ? getTimelineString(activeItem.price, pastThreeMonthsRewardsAverage)
                               : 'N/A'
                             }
                           </span>
                           <span className="text-[9px] text-muted-foreground block font-medium">
-                            {hasRewardsHistory && correctedRealisticRate > 0 ? (
+                            {hasRewardsHistory ? (
                               <>
-                                Based on {rewardsHistoryMonthCount === 1 ? 'last month' : `${rewardsHistoryMonthCount}-mo avg`} (
+                                Based on past 3-mo savings (
                                 <span className={hideSensitive ? 'blur-sm select-none pointer-events-none inline-block' : 'inline-block'}>
-                                  {formatCurrencyVal(correctedRealisticRate, currency)}
+                                  {formatCurrencyVal(pastThreeMonthsRewardsAverage, currency)}
                                 </span>
                                 /mo)
                               </>

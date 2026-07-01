@@ -8,7 +8,7 @@ import { LoginView } from './components/LoginView'
 import { WishlistView } from './components/WishlistView'
 import type { Transaction, RecurringPayment, DashboardData, TransactionCategory, WishlistItem } from './types'
 import * as api from './lib/api'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Plus, Wallet, CreditCard, PiggyBank } from 'lucide-react'
 import { formatCurrencyVal } from './lib/utils'
 import { CustomAlertModal } from './components/ui/CustomAlertModal'
 import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
@@ -16,6 +16,7 @@ import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'))
   const [username, setUsername] = useState<string>(localStorage.getItem('auth_username') || '')
+  const [isFabOpen, setIsFabOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'dashboard' | 'recurring' | 'ledger' | 'wishlist'>(() => {
     return (localStorage.getItem('active_tab') as any) || 'dashboard'
   })
@@ -225,9 +226,9 @@ function App() {
       setIsBackgroundSyncing(true)
     }
     try {
-      const [dbData, txs, recs, cats, wishes] = await Promise.all([
-        api.fetchDashboard(month, year),
-        api.fetchTransactions(month, year),
+      const dbData = await api.fetchDashboard(month, year)
+      const [txs, recs, cats, wishes] = await Promise.all([
+        api.fetchTransactions(dbData.setting.selectedMonth, dbData.setting.selectedYear),
         api.fetchRecurringPayments(),
         api.fetchCategories(),
         api.fetchWishlist().catch(() => [])
@@ -619,19 +620,7 @@ function App() {
           setPendingTransactions(updatedQueue);
 
           // Refresh dashboard silently
-          const [dbData, txs, wishes] = await Promise.all([
-            api.fetchDashboard(selectedMonth || undefined, selectedYear || undefined),
-            api.fetchTransactions(selectedMonth || undefined, selectedYear || undefined),
-            api.fetchWishlist().catch(() => [])
-          ]);
-
-          setDashboardData(dbData);
-          setTransactions(txs);
-          setWishlist(wishes);
-          
-          localStorage.setItem('cached_dashboard_data', JSON.stringify(dbData));
-          localStorage.setItem('cached_transactions', JSON.stringify(txs));
-          localStorage.setItem('cached_wishlist', JSON.stringify(wishes));
+          await loadAll(selectedMonth || undefined, selectedYear || undefined, true);
           setError(null);
         } catch (err: any) {
           console.error('Failed to sync transaction:', err);
@@ -1301,6 +1290,79 @@ function App() {
         }}
         onCancel={() => setConfirmModalData(null)}
       />
+
+      {/* Mobile Floating Action Button (FAB) & Speed Dial Menu */}
+      {token && (
+        <>
+          {/* Backdrop Blur Overlay when speed dial is open */}
+          {isFabOpen && (
+            <div 
+              onClick={() => setIsFabOpen(false)}
+              className="md:hidden fixed inset-0 z-30 bg-background/60 backdrop-blur-xs animate-in fade-in duration-200"
+            />
+          )}
+
+          {/* Speed Dial Menu Items */}
+          <div className={`md:hidden fixed bottom-[76px] right-4 z-40 flex flex-col gap-3 items-end transition-all duration-300 ${isFabOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+            {/* Action 1: Add Wish Goal */}
+            <div className="flex items-center gap-2.5">
+              <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-foreground shadow-xs select-none">
+                Add Wish Goal
+              </span>
+              <button
+                onClick={() => {
+                  handleQuickAction('wishlist')
+                  setIsFabOpen(false)
+                }}
+                className="size-10 rounded-full bg-pink-500 hover:bg-pink-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition cursor-pointer"
+              >
+                <PiggyBank className="size-4.5" />
+              </button>
+            </div>
+
+            {/* Action 2: New Subscription */}
+            <div className="flex items-center gap-2.5">
+              <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-foreground shadow-xs select-none">
+                New Subscription
+              </span>
+              <button
+                onClick={() => {
+                  handleQuickAction('subscription')
+                  setIsFabOpen(false)
+                }}
+                className="size-10 rounded-full bg-violet-500 hover:bg-violet-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition cursor-pointer"
+              >
+                <CreditCard className="size-4.5" />
+              </button>
+            </div>
+
+            {/* Action 3: Post Transaction */}
+            <div className="flex items-center gap-2.5">
+              <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-foreground shadow-xs select-none">
+                Post Transaction
+              </span>
+              <button
+                onClick={() => {
+                  handleQuickAction('transaction')
+                  setIsFabOpen(false)
+                }}
+                className="size-10 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition cursor-pointer"
+              >
+                <Wallet className="size-4.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Main FAB Toggle Button */}
+          <button
+            onClick={() => setIsFabOpen(prev => !prev)}
+            className="md:hidden fixed bottom-[76px] right-4 z-40 flex items-center justify-center size-12 rounded-full bg-gradient-to-tr from-blue-600 to-sky-500 text-white shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
+            style={{ transform: isFabOpen ? 'rotate(135deg)' : 'rotate(0deg)' }}
+          >
+            <Plus className="size-6 transition-transform duration-300" />
+          </button>
+        </>
+      )}
     </div>
   )
 }

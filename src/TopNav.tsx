@@ -305,7 +305,7 @@ const TopNav: React.FC<TopNavProps> = ({
           </div>
 
           {/* Quick Actions Menubar (Shadcn UI) */}
-          <div className="border border-border/60 rounded-xl bg-background shrink-0">
+          <div className="hidden sm:block border border-border/60 rounded-xl bg-background shrink-0">
             <Menubar className="border-0 h-9 px-1 bg-transparent">
               
               {/* Add menu */}
