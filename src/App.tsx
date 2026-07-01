@@ -8,7 +8,8 @@ import { LoginView } from './components/LoginView'
 import { WishlistView } from './components/WishlistView'
 import type { Transaction, RecurringPayment, DashboardData, TransactionCategory, WishlistItem } from './types'
 import * as api from './lib/api'
-import { Loader2, Plus, Wallet, CreditCard, PiggyBank } from 'lucide-react'
+import { Loader2, Plus, Wallet, CreditCard, PiggyBank, Check, Upload } from 'lucide-react'
+import { DraftStagingView } from './components/DraftStagingView'
 import { formatCurrencyVal } from './lib/utils'
 import { CustomAlertModal } from './components/ui/CustomAlertModal'
 import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
@@ -17,7 +18,7 @@ function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'))
   const [username, setUsername] = useState<string>(localStorage.getItem('auth_username') || '')
   const [isFabOpen, setIsFabOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'recurring' | 'ledger' | 'wishlist'>(() => {
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'recurring' | 'ledger' | 'wishlist' | 'drafts'>(() => {
     return (localStorage.getItem('active_tab') as any) || 'dashboard'
   })
 
@@ -115,10 +116,6 @@ function App() {
     return localStorage.getItem('dark_mode') === 'true'
   })
 
-  const [vibrationEnabled, setVibrationEnabled] = useState<boolean>(() => {
-    return localStorage.getItem('vibration_enabled') !== 'false'
-  })
-
   const [draftTransactions, setDraftTransactions] = useState<Transaction[]>(() => {
     try {
       const stored = localStorage.getItem('draft_transactions')
@@ -127,6 +124,15 @@ function App() {
       return []
     }
   })
+
+  const [activeFormType, setActiveFormType] = useState<'transaction' | 'subscription' | 'wishlist' | null>(null)
+
+  // Redirect from drafts tab if queue is empty
+  useEffect(() => {
+    if (activeTab === 'drafts' && draftTransactions.length === 0) {
+      setActiveTab('ledger')
+    }
+  }, [activeTab, draftTransactions])
 
   // Persist draft transactions to localStorage
   useEffect(() => {
@@ -278,10 +284,7 @@ function App() {
       setHideSensitive(serverHideSensitive)
       localStorage.setItem('hide_sensitive', serverHideSensitive.toString())
 
-      // Sync vibration enabled from server preference
-      const serverVibration = dbData.setting.vibrationEnabled ?? true
-      setVibrationEnabled(serverVibration)
-      localStorage.setItem('vibration_enabled', serverVibration.toString())
+
 
       if (dbData.pendingNotifications && dbData.pendingNotifications.length > 0 && !hasShownModalThisSession) {
         if (localStorage.getItem('show_notifications_on_login') !== 'false') {
@@ -424,6 +427,7 @@ function App() {
 
     setDraftTransactions(prev => [...prev, draftTx]);
     triggerVibration(15);
+    showAlert('Transaction added to Drafts batch! Tap the Drafts badge in the header to view and sync.', 'Draft Staged');
   }
 
   const handleUpdateDraftTransaction = (id: string, updated: Transaction) => {
@@ -466,6 +470,7 @@ function App() {
     setActionLoading(true)
     try {
       await api.deleteTransaction(id)
+      triggerVibration(30)
       await loadAll(selectedMonth || undefined, selectedYear || undefined)
     } catch (err) {
       console.error(err)
@@ -485,6 +490,7 @@ function App() {
     setActionLoading(true)
     try {
       await api.updateTransaction(id, updatedTx)
+      triggerVibration(15)
       await loadAll(selectedMonth || undefined, selectedYear || undefined)
     } catch (err) {
       console.error(err)
@@ -888,16 +894,8 @@ function App() {
     api.updateDarkMode(newDark).catch(err => console.warn('Dark mode sync failed:', err))
   }
 
-  const handleToggleVibration = async () => {
-    const newVal = !vibrationEnabled
-    setVibrationEnabled(newVal)
-    localStorage.setItem('vibration_enabled', newVal.toString())
-    // Persist to server
-    api.updateVibration(newVal).catch(err => console.warn('Vibration setting sync failed:', err))
-  }
-
   const triggerVibration = (pattern: number | number[] = 15) => {
-    if (vibrationEnabled && navigator.vibrate) {
+    if (navigator.vibrate) {
       try {
         navigator.vibrate(pattern)
       } catch {}
@@ -947,8 +945,6 @@ function App() {
         isSyncing={isBackgroundSyncing || pendingTransactions.length > 0}
         onDiscardSubscription={handleDiscardSubscription}
         draftCount={draftTransactions.length}
-        vibrationEnabled={vibrationEnabled}
-        onToggleVibration={handleToggleVibration}
       />
 
       {error && (
@@ -1007,6 +1003,7 @@ function App() {
             onResetAutoOpen={() => setAutoOpenSubscriptionAdd(false)}
             onConfirmSubscription={handleConfirmSubscription}
             onDiscardSubscription={handleDiscardSubscription}
+            onFormOpenChange={(open) => setActiveFormType(open ? 'subscription' : null)}
           />
         )}
 
@@ -1050,10 +1047,7 @@ function App() {
             onShowAlert={showAlert}
             activeSyncId={activeSyncId}
             onStartEditPending={setEditingPendingId}
-            draftTransactions={draftTransactions}
-            onUpdateDraftTransaction={handleUpdateDraftTransaction}
-            onDeleteDraftTransaction={handleDeleteDraftTransaction}
-            onSyncDraftBatch={handleSyncDraftBatch}
+            onFormOpenChange={(open) => setActiveFormType(open ? 'transaction' : null)}
           />
         )}
 
@@ -1074,6 +1068,18 @@ function App() {
             autoOpenAddModal={autoOpenWishlistAdd}
             onResetAutoOpen={() => setAutoOpenWishlistAdd(false)}
             onNavigateToLedger={handleNavigateToLedger}
+            onFormOpenChange={(open) => setActiveFormType(open ? 'wishlist' : null)}
+          />
+        )}
+
+        {activeTab === 'drafts' && draftTransactions.length > 0 && (
+          <DraftStagingView 
+            draftTransactions={draftTransactions}
+            onUpdateDraftTransaction={handleUpdateDraftTransaction}
+            onDeleteDraftTransaction={handleDeleteDraftTransaction}
+            hideSensitive={hideSensitive}
+            currency={optimisticDashboardData?.setting?.currency || 'USD'}
+            onCancel={() => setActiveTab('ledger')}
           />
         )}
       </main>
@@ -1435,11 +1441,36 @@ function App() {
 
           {/* Main FAB Toggle Button */}
           <button
-            onClick={() => setIsFabOpen(prev => !prev)}
-            className="md:hidden fixed bottom-[80px] right-6 z-40 flex items-center justify-center size-14 rounded-full bg-gradient-to-tr from-blue-600 to-sky-500 text-white shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
-            style={{ transform: isFabOpen ? 'rotate(135deg)' : 'rotate(0deg)' }}
+            onClick={() => {
+              if (activeFormType) {
+                document.getElementById('quick-add-form-submit-btn')?.click()
+              } else if (activeTab === 'drafts') {
+                handleSyncDraftBatch()
+              } else {
+                setIsFabOpen(prev => !prev)
+              }
+            }}
+            className={`fixed bottom-[80px] right-6 z-40 flex items-center justify-center size-14 rounded-full bg-gradient-to-tr from-blue-600 to-sky-500 text-white shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer ${
+              activeFormType || activeTab === 'drafts' ? '' : 'md:hidden'
+            }`}
+            style={{ 
+              transform: (!activeFormType && activeTab !== 'drafts' && isFabOpen) ? 'rotate(135deg)' : 'rotate(0deg)' 
+            }}
+            title={
+              activeFormType 
+                ? 'Confirm and Save' 
+                : activeTab === 'drafts' 
+                  ? 'Sync Batch to Server' 
+                  : 'Open Menu'
+            }
           >
-            <Plus className="size-7 transition-transform duration-300" />
+            {activeFormType ? (
+              <Check className="size-7" />
+            ) : activeTab === 'drafts' ? (
+              <Upload className="size-6" />
+            ) : (
+              <Plus className="size-7" />
+            )}
           </button>
         </>
       )}

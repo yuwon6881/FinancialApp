@@ -20,15 +20,14 @@ import {
   Moon,
   Sun,
   PiggyBank,
-  Vibrate,
   FileText
 } from 'lucide-react'
 import { formatCurrencyVal } from './lib/utils'
 import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 
 interface TopNavProps {
-  activeTab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist'
-  onTabChange: (tab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist') => void
+  activeTab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist' | 'drafts'
+  onTabChange: (tab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist' | 'drafts') => void
   totalBalance: number
   onQuickAction?: (action: 'transaction' | 'subscription' | 'wishlist') => void
   hideSensitive: boolean
@@ -46,8 +45,6 @@ interface TopNavProps {
   isSyncing?: boolean
   onDiscardSubscription?: (noti: any) => void
   draftCount?: number
-  vibrationEnabled?: boolean
-  onToggleVibration?: () => void
 }
 
 const TopNav: React.FC<TopNavProps> = ({
@@ -69,9 +66,7 @@ const TopNav: React.FC<TopNavProps> = ({
   onMouseLeaveWallet,
   isSyncing = false,
   onDiscardSubscription,
-  draftCount = 0,
-  vibrationEnabled = true,
-  onToggleVibration
+  draftCount = 0
 }) => {
   const [isBellOpen, setIsBellOpen] = useState(false)
   const [confirmNotiId, setConfirmNotiId] = useState<string | null>(null)
@@ -130,7 +125,7 @@ const TopNav: React.FC<TopNavProps> = ({
           )}
           {draftCount > 0 && (
             <div 
-              onClick={() => onTabChange('ledger')}
+              onClick={() => onTabChange('drafts')}
               className="ml-2.5 flex items-center gap-1 px-2.5 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-md text-[10px] font-bold text-amber-500 cursor-pointer select-none shrink-0 hover:bg-amber-500/25 transition duration-150 animate-in fade-in zoom-in-95"
               title="Draft transactions waiting to be synced to the server"
             >
@@ -392,20 +387,7 @@ const TopNav: React.FC<TopNavProps> = ({
                     <span>{darkMode ? 'Light Theme' : 'Dark Theme'}</span>
                   </MenubarItem>
 
-                  {onToggleVibration && (
-                    <MenubarItem 
-                      onClick={() => {
-                        onToggleVibration()
-                        if (!vibrationEnabled && navigator.vibrate) {
-                          navigator.vibrate(20)
-                        }
-                      }}
-                      className="flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground"
-                    >
-                      <Vibrate className={`size-3.5 ${vibrationEnabled ? 'text-blue-500' : 'text-muted-foreground'}`} />
-                      <span>{vibrationEnabled ? 'Disable Vibration' : 'Enable Vibration'}</span>
-                    </MenubarItem>
-                  )}
+
 
                   <MenubarSeparator className="my-1 border-t border-border/30" />
                   

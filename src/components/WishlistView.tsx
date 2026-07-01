@@ -38,6 +38,7 @@ interface WishlistViewProps {
     highlightedTxId?: string | null
     showAllCycles?: boolean
   }) => void
+  onFormOpenChange?: (open: boolean) => void
 }
 
 export const WishlistView: React.FC<WishlistViewProps> = ({
@@ -55,11 +56,16 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   formatSensitive,
   autoOpenAddModal,
   onResetAutoOpen,
-  onNavigateToLedger
+  onNavigateToLedger,
+  onFormOpenChange
 }) => {
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingItem, setEditingItem] = useState<WishlistItem | null>(null)
+
+  React.useEffect(() => {
+    onFormOpenChange?.(showAddModal || showEditModal)
+  }, [showAddModal, showEditModal, onFormOpenChange])
   
   // Form states
   const [nameInput, setNameInput] = useState('')
@@ -588,12 +594,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md shadow-blue-600/10 transition cursor-pointer"
-                >
-                  Add Goal
-                </button>
+                <button type="submit" id="quick-add-form-submit-btn" className="hidden" />
               </div>
             </form>
           </div>
@@ -671,12 +672,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md shadow-blue-600/10 transition cursor-pointer"
-                >
-                  Save Changes
-                </button>
+                <button type="submit" id="quick-add-form-submit-btn" className="hidden" />
               </div>
             </form>
           </div>

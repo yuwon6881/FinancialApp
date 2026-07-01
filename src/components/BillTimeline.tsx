@@ -3,7 +3,7 @@ import type { ActiveRecurringPayment } from '../types'
 import { Calendar, CheckCircle2, AlertCircle, X, Ban } from 'lucide-react'
 import { formatCurrencyVal } from '../lib/utils'
 
-interface BillCalendarProps {
+interface BillTimelineProps {
   activeRecurringPayments: ActiveRecurringPayment[]
   selectedMonth: string
   selectedYear: number
@@ -15,12 +15,33 @@ interface BillCalendarProps {
 }
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-export const BillCalendar: React.FC<BillCalendarProps> = ({
+function getCycleRangeDates(year: number, monthIndex: number, cycleDay: number): { start: Date; end: Date } {
+  if (cycleDay === 1) {
+    const start = new Date(year, monthIndex - 1, 1)
+    const end = new Date(year, monthIndex, 0)
+    return { start, end }
+  }
+  const start = new Date(year, monthIndex - 1, cycleDay)
+  const end = new Date(year, monthIndex, cycleDay - 1)
+  return { start, end }
+}
+
+function getDaySuffix(d: number) {
+  if (d >= 11 && d <= 13) return 'th'
+  switch (d % 10) {
+    case 1: return 'st'
+    case 2: return 'nd'
+    case 3: return 'rd'
+    default: return 'th'
+  }
+}
+
+export const BillTimeline: React.FC<BillTimelineProps> = ({
   activeRecurringPayments,
   selectedMonth,
   selectedYear,
+  cycleDay,
   currency = 'USD',
   hideSensitive,
   onConfirmSubscription,
@@ -33,39 +54,19 @@ export const BillCalendar: React.FC<BillCalendarProps> = ({
   const monthIndex = MONTH_NAMES.indexOf(selectedMonth) !== -1 ? MONTH_NAMES.indexOf(selectedMonth) : new Date().getMonth()
   const year = selectedYear > 0 ? selectedYear : new Date().getFullYear()
 
-  // Generate calendar grid
-  const firstDay = new Date(year, monthIndex, 1).getDay()
-  const totalDays = new Date(year, monthIndex + 1, 0).getDate()
-  const prevTotalDays = new Date(year, monthIndex, 0).getDate()
+  // Cycle range dates
+  const { start: cycleStart, end: cycleEnd } = getCycleRangeDates(year, monthIndex + 1, cycleDay)
 
-  const gridCells: { day: number; dateStr: string; isCurrentMonth: boolean }[] = []
+  const startTime = cycleStart.getTime()
+  const endTime = cycleEnd.getTime()
+  const durationMs = endTime - startTime
 
-  // Prev month cells
-  for (let i = firstDay - 1; i >= 0; i--) {
-    const prevDay = prevTotalDays - i
-    const prevMonthIdx = monthIndex === 0 ? 11 : monthIndex - 1
-    const prevMonthYear = monthIndex === 0 ? year - 1 : year
-    const dStr = `${prevMonthYear}-${String(prevMonthIdx + 1).padStart(2, '0')}-${String(prevDay).padStart(2, '0')}`
-    gridCells.push({ day: prevDay, dateStr: dStr, isCurrentMonth: false })
-  }
+  // Format date labels
+  const startMonthStr = MONTH_NAMES[cycleStart.getMonth()]
+  const endMonthStr = MONTH_NAMES[cycleEnd.getMonth()]
+  const startLabel = `${startMonthStr} ${cycleStart.getDate()}${getDaySuffix(cycleStart.getDate())}`
+  const endLabel = `${endMonthStr} ${cycleEnd.getDate()}${getDaySuffix(cycleEnd.getDate())}`
 
-  // Current month cells
-  for (let i = 1; i <= totalDays; i++) {
-    const dStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`
-    gridCells.push({ day: i, dateStr: dStr, isCurrentMonth: true })
-  }
-
-  // Next month cells (pad to complete rows of 7)
-  const totalCells = Math.ceil(gridCells.length / 7) * 7
-  const nextMonthCellsNeeded = totalCells - gridCells.length
-  for (let i = 1; i <= nextMonthCellsNeeded; i++) {
-    const nextMonthIdx = monthIndex === 11 ? 0 : monthIndex + 1
-    const nextMonthYear = monthIndex === 11 ? year + 1 : year
-    const dStr = `${nextMonthYear}-${String(nextMonthIdx + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`
-    gridCells.push({ day: i, dateStr: dStr, isCurrentMonth: false })
-  }
-
-  // Helper to format currency values safely
   const formatCurrency = (val: number) => {
     return formatCurrencyVal(val, currency)
   }
@@ -78,98 +79,118 @@ export const BillCalendar: React.FC<BillCalendarProps> = ({
     )
   }
 
-  // Group recurring bills by date string
-  const getBillsForDate = (dateStr: string) => {
-    return activeRecurringPayments.filter(p => p.dueDate === dateStr)
-  }
+  // Map and sort active bills by their due date time
+  const timelineBills = activeRecurringPayments
+    .map(p => {
+      const dueTime = new Date(p.dueDate).getTime()
+      // Calculate relative position (0% to 100%)
+      let percent = durationMs > 0 ? ((dueTime - startTime) / durationMs) * 100 : 0
+      // Bound
+      percent = Math.max(0, Math.min(100, percent))
+      return {
+        ...p,
+        dueTime,
+        percent
+      }
+    })
+    .sort((a, b) => a.dueTime - b.dueTime)
 
   return (
-    <div className="p-5 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-6">
+      <div className="flex items-center justify-between border-b border-border/30 pb-3">
         <div className="flex items-center gap-2">
           <Calendar className="size-5 text-blue-500" />
-          <h3 className="text-sm font-bold text-foreground">Visual Bill Calendar</h3>
+          <h3 className="text-sm font-bold text-foreground">Subscriptions Billing Timeline</h3>
         </div>
         <div className="text-[10px] text-muted-foreground font-semibold bg-muted/50 px-2 py-1 rounded-lg">
-          Cycle Month: {selectedMonth} {year}
+          Cycle: {selectedMonth} {year}
         </div>
       </div>
 
-      {/* Grid week headers */}
-      <div className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-bold text-muted-foreground uppercase tracking-wider pb-1 border-b border-border/30">
-        {DAYS_OF_WEEK.map(d => (
-          <div key={d} className="py-1">{d}</div>
-        ))}
-      </div>
+      {/* Visual Timeline Section */}
+      <div className="relative pt-12 pb-14 px-6 bg-muted/15 rounded-xl border border-border/20">
+        
+        {/* Cycle boundary labels */}
+        <div className="absolute top-2 left-6 text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider">
+          Cycle Start ({startLabel})
+        </div>
+        <div className="absolute top-2 right-6 text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider text-right">
+          Cycle End ({endLabel})
+        </div>
 
-      {/* Grid Days */}
-      <div className="grid grid-cols-7 gap-1.5">
-        {gridCells.map((cell, idx) => {
-          const bills = getBillsForDate(cell.dateStr)
-          const isToday = new Date().toDateString() === new Date(cell.dateStr).toDateString()
+        {/* The horizontal line */}
+        <div className="relative h-1.5 bg-muted rounded-full">
+          {/* Progress bar to show today's position */}
+          {(() => {
+            const todayTime = new Date().getTime()
+            if (todayTime >= startTime && todayTime <= endTime) {
+              const todayPct = ((todayTime - startTime) / durationMs) * 100
+              return (
+                <div 
+                  className="absolute left-0 top-0 h-full bg-blue-500/30 rounded-full"
+                  style={{ width: `${todayPct}%` }}
+                />
+              )
+            }
+            return null
+          })()}
 
-          return (
-            <div
-              key={idx}
-              className={`min-h-[70px] sm:min-h-[85px] p-1.5 rounded-xl border flex flex-col justify-between transition-all duration-150 ${
-                cell.isCurrentMonth
-                  ? isToday
-                    ? 'border-blue-500 bg-blue-500/[0.02] shadow-xs'
-                    : 'border-border/60 bg-card'
-                  : 'border-border/30 bg-muted/10 opacity-50'
-              }`}
-            >
-              <div className="flex justify-between items-start">
-                <span className={`text-[10px] font-bold ${
-                  cell.isCurrentMonth 
-                    ? isToday 
-                      ? 'text-blue-500 font-extrabold size-4 flex items-center justify-center rounded-full bg-blue-500/10'
-                      : 'text-foreground' 
-                    : 'text-muted-foreground'
-                }`}>
-                  {cell.day}
-                </span>
-                {bills.length > 0 && (
-                  <span className="text-[8px] font-extrabold text-blue-500 bg-blue-500/10 px-1 rounded-sm">
-                    {bills.length} Bill{bills.length > 1 ? 's' : ''}
-                  </span>
-                )}
-              </div>
+          {/* Render subscription nodes */}
+          {timelineBills.map((bill, index) => {
+            const isPaid = bill.status === 'Paid'
+            const isDiscarded = bill.status === 'Discarded'
+            const isTop = index % 2 === 0 // Alternate label positions up/down
 
-              {/* Bills Container for this cell */}
-              <div className="space-y-1 mt-1 flex-1 flex flex-col justify-end">
-                {bills.slice(0, 2).map(bill => {
-                  const isPaid = bill.status === 'Paid'
-                  const isDiscarded = bill.status === 'Discarded'
+            let dotColor = 'bg-amber-500 ring-amber-500/20'
+            if (isPaid) dotColor = 'bg-green-500 ring-green-500/20'
+            if (isDiscarded) dotColor = 'bg-slate-400 ring-slate-400/20'
+
+            const formattedDueDay = new Date(bill.dueDate).getDate()
+
+            return (
+              <div
+                key={bill.id}
+                style={{ left: `${bill.percent}%` }}
+                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 group z-10"
+              >
+                {/* Node trigger dot */}
+                <button
+                  onClick={() => {
+                    setSelectedBill(bill)
+                    setPayDateInput(bill.dueDate)
+                  }}
+                  className={`size-3.5 rounded-full border border-card ${dotColor} hover:scale-125 focus:scale-125 focus:ring-4 active:scale-95 transition duration-150 shadow-md cursor-pointer`}
+                  title={`${bill.name} - Due: ${bill.dueDate}`}
+                />
+
+                {/* Alternating Labels */}
+                <div 
+                  className={`absolute left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none select-none ${
+                    isTop ? 'bottom-full mb-2.5' : 'top-full mt-2.5'
+                  }`}
+                >
+                  {/* Small line connector */}
+                  <div className={`w-[1px] h-2.5 bg-border/80 ${isTop ? 'order-last' : 'order-first'}`} />
                   
-                  let badgeStyle = 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                  if (isPaid) badgeStyle = 'bg-green-500/10 text-green-500 border border-green-500/20'
-                  if (isDiscarded) badgeStyle = 'bg-slate-500/10 text-slate-400 border border-slate-500/10 line-through opacity-60'
-
-                  return (
-                    <button
-                      key={bill.id}
-                      onClick={() => {
-                        setSelectedBill(bill)
-                        setPayDateInput(bill.dueDate)
-                      }}
-                      className={`w-full text-[8px] font-extrabold py-0.5 px-1 rounded-md text-left truncate cursor-pointer transition select-none flex items-center gap-0.5 ${badgeStyle}`}
-                    >
-                      <span className="truncate flex-1">{bill.name}</span>
-                      <span className="shrink-0">{hideSensitive ? '***' : formatCurrency(Math.abs(bill.amount))}</span>
-                    </button>
-                  )
-                })}
-                {bills.length > 2 && (
-                  <div className="text-[7px] text-muted-foreground font-bold text-center">
-                    +{bills.length - 2} more
-                  </div>
-                )}
+                  {/* Info Badge */}
+                  <span className={`px-2 py-0.75 rounded-md text-[9px] font-bold text-foreground border border-border bg-card whitespace-nowrap shadow-xs flex items-center gap-1 ${
+                    isDiscarded ? 'line-through opacity-60 text-muted-foreground' : ''
+                  }`}>
+                    <span>{bill.name}</span>
+                    <span className="text-muted-foreground font-semibold">({formattedDueDay})</span>
+                  </span>
+                </div>
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
+
+      {timelineBills.length === 0 && (
+        <div className="text-xs text-muted-foreground text-center py-6">
+          No active subscriptions scheduled for this cycle.
+        </div>
+      )}
 
       {/* Bill Detail / Quick Action Modal Overlay */}
       {selectedBill && (
@@ -215,7 +236,7 @@ export const BillCalendar: React.FC<BillCalendarProps> = ({
                       ? 'bg-green-500/10 text-green-500' 
                       : selectedBill.status === 'Discarded' 
                         ? 'bg-slate-500/10 text-slate-400 line-through' 
-                        : 'bg-amber-500/10 text-amber-500 animate-pulse'
+                        : 'bg-amber-500/10 text-amber-500'
                   }`}>{selectedBill.status}</span>
                 </div>
                 <div>

@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
 import { CustomSelect } from './ui/CustomSelect'
-import { BillCalendar } from './BillCalendar'
+import { BillTimeline } from './BillTimeline'
 
 interface RecurringPaymentsViewProps {
   payments: RecurringPayment[]
@@ -32,6 +32,7 @@ interface RecurringPaymentsViewProps {
   onResetAutoOpen?: () => void
   onConfirmSubscription?: (noti: any, paidDate: string) => void
   onDiscardSubscription?: (noti: any) => void
+  onFormOpenChange?: (open: boolean) => void
 }
 
 export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
@@ -50,10 +51,15 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   autoOpenAddForm,
   onResetAutoOpen,
   onConfirmSubscription,
-  onDiscardSubscription
+  onDiscardSubscription,
+  onFormOpenChange
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingPayment, setEditingPayment] = useState<RecurringPayment | null>(null)
+
+  React.useEffect(() => {
+    onFormOpenChange?.(showAddForm)
+  }, [showAddForm, onFormOpenChange])
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('')
@@ -269,8 +275,8 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         </div>
       </div>
 
-      {/* Visual Bill Calendar */}
-      <BillCalendar
+      {/* Visual Bill Timeline */}
+      <BillTimeline
         activeRecurringPayments={activeRecurringPayments}
         selectedMonth={selectedMonth}
         selectedYear={selectedYear}
@@ -368,14 +374,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
               />
             </div>
 
-            <div className="md:col-span-3 pt-2">
-              <button
-                type="submit"
-                className="w-full md:w-auto px-6 py-2.5 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md transition duration-200 cursor-pointer"
-              >
-                {editingPayment ? 'Update Subscription' : 'Save Subscription'}
-              </button>
-            </div>
+            <button type="submit" id="quick-add-form-submit-btn" className="hidden" />
           </form>
         </div>
       )}
