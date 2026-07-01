@@ -96,7 +96,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
   })
 
   // Map groups to timeline nodes and sort chronologically
-  const timelineNodes: TimelineNode[] = Object.entries(uniqueDatesMap)
+  const rawNodes = Object.entries(uniqueDatesMap)
     .map(([dueDate, bills]) => {
       const dueTime = new Date(dueDate).getTime()
       let percent = durationMs > 0 ? ((dueTime - startTime) / durationMs) * 100 : 0
@@ -109,7 +109,38 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
     })
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
 
-  const handleNodeClick = (node: TimelineNode) => {
+  // Dynamic vertical staggering leader offsets to prevent label collision
+  let lastTopPct = -100
+  let lastBottomPct = -100
+
+  const timelineNodes = rawNodes.map((node, idx) => {
+    const isTop = idx % 2 === 0
+    let level: 'short' | 'long' = 'short'
+
+    if (isTop) {
+      if (node.percent - lastTopPct < 15) {
+        level = 'long'
+        lastTopPct = node.percent + 15
+      } else {
+        lastTopPct = node.percent
+      }
+    } else {
+      if (node.percent - lastBottomPct < 15) {
+        level = 'long'
+        lastBottomPct = node.percent + 15
+      } else {
+        lastBottomPct = node.percent
+      }
+    }
+
+    return {
+      ...node,
+      isTop,
+      level
+    }
+  })
+
+  const handleNodeClick = (node: any) => {
     if (node.bills.length === 1) {
       setSelectedBill(node.bills[0])
       setPayDateInput(node.bills[0].dueDate)
@@ -134,13 +165,13 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
       <div className="p-6 bg-muted/10 rounded-2xl border border-border/40 space-y-7 select-none">
         
         {/* Cycle boundary labels header */}
-        <div className="flex justify-between items-center text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider border-b border-border/20 pb-2.5">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider border-b border-border/20 pb-2.5 gap-1.5 sm:gap-0">
           <div>Cycle Start: <span className="text-foreground font-bold bg-muted px-2 py-0.5 rounded-md">{startLabel}</span></div>
           <div>Cycle End: <span className="text-foreground font-bold bg-muted px-2 py-0.5 rounded-md">{endLabel}</span></div>
         </div>
 
         {/* The horizontal line container */}
-        <div className="relative pt-6 pb-8 px-2.5">
+        <div className="relative pt-12 pb-16 px-3.5">
           <div className="relative h-1.5 bg-muted rounded-full">
             {/* Progress bar to show today's position */}
             {(() => {
@@ -158,9 +189,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
             })()}
 
             {/* Render grouped timeline nodes */}
-            {timelineNodes.map((node, index) => {
-              const isTop = index % 2 === 0 // Alternate label positions up/down
-              
+            {timelineNodes.map((node) => {
               // Determine status based on all bills in the node
               const allPaid = node.bills.every(b => b.status === 'Paid')
               const anyPending = node.bills.some(b => b.status === 'Pending')
@@ -196,6 +225,13 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                 alignClasses = 'left-auto right-0 items-end'
               }
 
+              // Set staggered spacing height margin
+              const spacingMargin = node.isTop 
+                ? (node.level === 'long' ? 'mb-9' : 'mb-2.5')
+                : (node.level === 'long' ? 'mt-9' : 'mt-2.5')
+
+              const connectorHeight = node.level === 'long' ? '36px' : '10px'
+
               return (
                 <div
                   key={node.dueDate}
@@ -213,18 +249,21 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                     )}
                   </button>
 
-                  {/* Alternating Labels */}
+                  {/* Alternating & Staggered Labels */}
                   <div 
                     className={`absolute flex flex-col pointer-events-none select-none ${alignClasses} ${
-                      isTop ? 'bottom-full mb-2.5' : 'top-full mt-2.5'
+                      node.isTop ? `bottom-full ${spacingMargin}` : `top-full ${spacingMargin}`
                     }`}
                   >
                     {/* Small line connector */}
-                    <div className={`w-[1px] h-2.5 bg-border/80 ${
-                      isTop ? 'order-last' : 'order-first'
-                    } ${
-                      node.percent < 15 ? 'ml-1.5' : node.percent > 85 ? 'mr-1.5' : ''
-                    }`} />
+                    <div 
+                      className={`w-[1px] bg-border/80 ${
+                        node.isTop ? 'order-last' : 'order-first'
+                      } ${
+                        node.percent < 15 ? 'ml-1.5' : node.percent > 85 ? 'mr-1.5' : ''
+                      }`}
+                      style={{ height: connectorHeight }}
+                    />
                     
                     {/* Info Badge */}
                     <span className={`px-2 py-0.75 rounded-md text-[9px] font-bold text-foreground border border-border bg-card whitespace-nowrap shadow-xs flex items-center gap-1 ${

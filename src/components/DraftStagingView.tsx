@@ -79,15 +79,11 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
           <div>
             <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
               <FileText className="size-5 text-amber-500" />
-              <span>Draft Staging Queue</span>
+              <span>Queueing Transactions</span>
             </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Review and prepare transactions before committing to server.</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Pending upload to server.</p>
           </div>
         </div>
-
-        <span className="text-xs font-bold text-amber-500 bg-amber-500/10 px-3 py-1 rounded-xl">
-          {draftTransactions.length} Draft{draftTransactions.length > 1 ? 's' : ''} Staged
-        </span>
       </div>
 
       {/* Draft Items List */}
@@ -193,10 +189,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
         })}
       </div>
 
-      <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 text-xs text-muted-foreground select-none flex items-center gap-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-        <span>Use the float button below to submit the entire batch queue to the server.</span>
-      </div>
+
     </div>
   )
 }

@@ -134,6 +134,11 @@ function App() {
     }
   }, [activeTab, draftTransactions])
 
+  // Reset activeFormType when tab changes to clear form tick FABs
+  useEffect(() => {
+    setActiveFormType(null)
+  }, [activeTab])
+
   // Persist draft transactions to localStorage
   useEffect(() => {
     localStorage.setItem('draft_transactions', JSON.stringify(draftTransactions))
