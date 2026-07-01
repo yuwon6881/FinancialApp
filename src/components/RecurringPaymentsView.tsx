@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import type { RecurringPayment, TransactionCategory } from '../types'
+import type { RecurringPayment, TransactionCategory, ActiveRecurringPayment } from '../types'
 import { 
   Plus, 
   Trash2, 
@@ -13,9 +13,14 @@ import {
 } from 'lucide-react'
 import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
 import { CustomSelect } from './ui/CustomSelect'
+import { BillCalendar } from './BillCalendar'
 
 interface RecurringPaymentsViewProps {
   payments: RecurringPayment[]
+  activeRecurringPayments: ActiveRecurringPayment[]
+  selectedMonth: string
+  selectedYear: number
+  cycleDay: number
   onAddPayment: (payment: Omit<RecurringPayment, 'id'>) => void
   onToggleActive: (id: string) => void
   onDeletePayment: (id: string) => void
@@ -25,10 +30,16 @@ interface RecurringPaymentsViewProps {
   currency?: string
   autoOpenAddForm?: boolean
   onResetAutoOpen?: () => void
+  onConfirmSubscription?: (noti: any, paidDate: string) => void
+  onDiscardSubscription?: (noti: any) => void
 }
 
 export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   payments,
+  activeRecurringPayments,
+  selectedMonth,
+  selectedYear,
+  cycleDay,
   onAddPayment,
   onToggleActive,
   onDeletePayment,
@@ -37,7 +48,9 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   categories,
   currency = 'USD',
   autoOpenAddForm,
-  onResetAutoOpen
+  onResetAutoOpen,
+  onConfirmSubscription,
+  onDiscardSubscription
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingPayment, setEditingPayment] = useState<RecurringPayment | null>(null)
@@ -255,6 +268,18 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Visual Bill Calendar */}
+      <BillCalendar
+        activeRecurringPayments={activeRecurringPayments}
+        selectedMonth={selectedMonth}
+        selectedYear={selectedYear}
+        cycleDay={cycleDay}
+        currency={currency}
+        hideSensitive={hideSensitive}
+        onConfirmSubscription={onConfirmSubscription}
+        onDiscardSubscription={onDiscardSubscription}
+      />
 
       {/* Add Subscription Form Drawer/Panel */}
       {showAddForm && (

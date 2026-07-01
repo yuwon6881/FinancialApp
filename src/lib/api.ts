@@ -311,6 +311,21 @@ export async function updateHideSensitive(hideSensitive: boolean): Promise<void>
   }
 }
 
+export async function updateVibration(vibrationEnabled: boolean): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/financial/vibration`, {
+    method: 'PUT',
+    headers: getHeaders({
+      'Content-Type': 'application/json',
+    }),
+    body: JSON.stringify({ vibrationEnabled }),
+  })
+  if (!response.ok) {
+    console.warn('Failed to persist vibration preference to server')
+  } else {
+    queryCache.invalidateAll()
+  }
+}
+
 export async function selectPeriod(selectedMonth: string, selectedYear: number): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/financial/select-period`, {
     method: 'POST',

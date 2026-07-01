@@ -115,6 +115,24 @@ function App() {
     return localStorage.getItem('dark_mode') === 'true'
   })
 
+  const [vibrationEnabled, setVibrationEnabled] = useState<boolean>(() => {
+    return localStorage.getItem('vibration_enabled') !== 'false'
+  })
+
+  const [draftTransactions, setDraftTransactions] = useState<Transaction[]>(() => {
+    try {
+      const stored = localStorage.getItem('draft_transactions')
+      return stored ? JSON.parse(stored) : []
+    } catch {
+      return []
+    }
+  })
+
+  // Persist draft transactions to localStorage
+  useEffect(() => {
+    localStorage.setItem('draft_transactions', JSON.stringify(draftTransactions))
+  }, [draftTransactions])
+
   const [customAlert, setCustomAlert] = useState<{ message: string; title: string } | null>(null)
   const [confirmModalData, setConfirmModalData] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null)
 
@@ -260,6 +278,11 @@ function App() {
       setHideSensitive(serverHideSensitive)
       localStorage.setItem('hide_sensitive', serverHideSensitive.toString())
 
+      // Sync vibration enabled from server preference
+      const serverVibration = dbData.setting.vibrationEnabled ?? true
+      setVibrationEnabled(serverVibration)
+      localStorage.setItem('vibration_enabled', serverVibration.toString())
+
       if (dbData.pendingNotifications && dbData.pendingNotifications.length > 0 && !hasShownModalThisSession) {
         if (localStorage.getItem('show_notifications_on_login') !== 'false') {
           setShowLoginModal(true)
@@ -392,17 +415,44 @@ function App() {
   };
 
   const handleAddTransaction = async (newTx: Omit<Transaction, 'id'>) => {
-    const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
-    const serverTxId = 'tx-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
-    const pendingTx: Transaction = {
+    const draftId = 'draft_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+    const draftTx: Transaction = {
       ...newTx,
-      id: tempId,
-      serverTxId: serverTxId,
+      id: draftId,
       isPendingSync: true
     };
 
-    setPendingTransactions(prev => [...prev, pendingTx]);
+    setDraftTransactions(prev => [...prev, draftTx]);
+    triggerVibration(15);
   }
+
+  const handleUpdateDraftTransaction = (id: string, updated: Transaction) => {
+    setDraftTransactions(prev => prev.map(t => t.id === id ? updated : t));
+    triggerVibration(15);
+  };
+
+  const handleDeleteDraftTransaction = (id: string) => {
+    setDraftTransactions(prev => prev.filter(t => t.id !== id));
+    triggerVibration(30);
+  };
+
+  const handleSyncDraftBatch = () => {
+    if (draftTransactions.length === 0) return;
+
+    const finalPending = draftTransactions.map(d => {
+      const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+      const serverTxId = 'tx-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
+      return {
+        ...d,
+        id: tempId,
+        serverTxId
+      };
+    });
+
+    setDraftTransactions([]);
+    triggerVibration([25, 45, 25]);
+    setPendingTransactions(prev => [...prev, ...finalPending]);
+  };
 
   const handleDeleteTransaction = async (id: string) => {
     if (id.startsWith('temp_')) {
@@ -838,6 +888,22 @@ function App() {
     api.updateDarkMode(newDark).catch(err => console.warn('Dark mode sync failed:', err))
   }
 
+  const handleToggleVibration = async () => {
+    const newVal = !vibrationEnabled
+    setVibrationEnabled(newVal)
+    localStorage.setItem('vibration_enabled', newVal.toString())
+    // Persist to server
+    api.updateVibration(newVal).catch(err => console.warn('Vibration setting sync failed:', err))
+  }
+
+  const triggerVibration = (pattern: number | number[] = 15) => {
+    if (vibrationEnabled && navigator.vibrate) {
+      try {
+        navigator.vibrate(pattern)
+      } catch {}
+    }
+  }
+
   if (!token) {
     return <LoginView onLoginSuccess={handleLoginSuccess} />
   }
@@ -880,6 +946,9 @@ function App() {
         onMouseLeaveWallet={() => setIsHoveringWallet(false)}
         isSyncing={isBackgroundSyncing || pendingTransactions.length > 0}
         onDiscardSubscription={handleDiscardSubscription}
+        draftCount={draftTransactions.length}
+        vibrationEnabled={vibrationEnabled}
+        onToggleVibration={handleToggleVibration}
       />
 
       {error && (
@@ -923,6 +992,10 @@ function App() {
         {activeTab === 'recurring' && (
           <RecurringPaymentsView 
             payments={recurringPayments}
+            activeRecurringPayments={optimisticDashboardData?.activeRecurringPayments || []}
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
+            cycleDay={optimisticDashboardData?.setting?.cycleDay || 28}
             onAddPayment={handleAddPayment}
             onToggleActive={handleToggleActive}
             onDeletePayment={handleDeletePayment}
@@ -932,6 +1005,8 @@ function App() {
             currency={optimisticDashboardData?.setting?.currency || 'USD'}
             autoOpenAddForm={autoOpenSubscriptionAdd}
             onResetAutoOpen={() => setAutoOpenSubscriptionAdd(false)}
+            onConfirmSubscription={handleConfirmSubscription}
+            onDiscardSubscription={handleDiscardSubscription}
           />
         )}
 
@@ -975,6 +1050,10 @@ function App() {
             onShowAlert={showAlert}
             activeSyncId={activeSyncId}
             onStartEditPending={setEditingPendingId}
+            draftTransactions={draftTransactions}
+            onUpdateDraftTransaction={handleUpdateDraftTransaction}
+            onDeleteDraftTransaction={handleDeleteDraftTransaction}
+            onSyncDraftBatch={handleSyncDraftBatch}
           />
         )}
 

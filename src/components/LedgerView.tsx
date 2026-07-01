@@ -11,7 +11,10 @@ import {
   MinusCircle,
   RefreshCw,
   AlertCircle,
-  Loader2
+  Loader2,
+  Edit2,
+  Trash2,
+  FileText
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
 import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
@@ -66,6 +69,10 @@ interface LedgerViewProps {
   onShowAlert?: (message: string, title?: string) => void
   activeSyncId?: string | null
   onStartEditPending?: (id: string | null) => void
+  draftTransactions?: Transaction[]
+  onUpdateDraftTransaction?: (id: string, updated: Transaction) => void
+  onDeleteDraftTransaction?: (id: string) => void
+  onSyncDraftBatch?: () => void
 }
 
 function formatDateToString(d: Date): string {
@@ -144,7 +151,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   onExportTransactions,
   onShowAlert,
   activeSyncId = null,
-  onStartEditPending
+  onStartEditPending,
+  draftTransactions = [],
+  onUpdateDraftTransaction,
+  onDeleteDraftTransaction,
+  onSyncDraftBatch
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [description, setDescription] = useState('')
@@ -163,6 +174,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   })
 
   const [editingTxId, setEditingTxId] = useState<string | null>(null)
+  const [editingDraftId, setEditingDraftId] = useState<string | null>(null)
 
   const formRef = React.useRef<HTMLDivElement>(null)
   const firstInputRef = React.useRef<HTMLInputElement>(null)
@@ -609,7 +621,31 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       onStartEditPending(null)
     }
     setEditingTxId(null)
+    setEditingDraftId(null)
     setShowAddForm(false)
+  }
+
+  const handleOpenEditDraft = (draft: Transaction) => {
+    setEditingDraftId(draft.id)
+    setDescription(draft.description)
+    setAmount(Math.abs(draft.amount).toString())
+    setDate(draft.date)
+    setCategory(draft.category)
+    
+    // Parse txType and ledger category
+    if (draft.ledgerCategory.startsWith('Transfer:')) {
+      setTxType('transfer')
+      const match = draft.ledgerCategory.match(/Transfer:(\w+)->(\w+)/)
+      if (match) {
+        setTransferSource(match[1] as any)
+        setTransferTarget(match[2] as any)
+      }
+    } else {
+      setTxType(draft.amount < 0 ? 'outflow' : 'inflow')
+      setLedgerCategory(draft.ledgerCategory as any)
+    }
+    
+    setShowAddForm(true)
   }
 
   const handleToggleCategory = (cat: 'Essentials' | 'Growth' | 'Rewards') => {
@@ -784,7 +820,17 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       return
     }
 
-    if (editingTxId) {
+    if (editingDraftId) {
+      onUpdateDraftTransaction?.(editingDraftId, {
+        id: editingDraftId,
+        description,
+        amount: finalAmount,
+        category: txType === 'transfer' ? 'Transfer' : category,
+        ledgerCategory: finalLedgerCategory,
+        date
+      })
+      setEditingDraftId(null)
+    } else if (editingTxId) {
       await onUpdateTransaction?.(editingTxId, {
         description,
         amount: finalAmount,
@@ -1265,6 +1311,59 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Drafts Staging Section */}
+      {draftTransactions && draftTransactions.length > 0 && (
+        <div className="p-5 rounded-2xl bg-amber-500/[0.03] border border-amber-500/20 shadow-md space-y-4 animate-in slide-in-from-top-4 duration-300 select-none">
+          <div className="flex items-center justify-between border-b border-amber-500/10 pb-2">
+            <h3 className="text-xs font-bold text-amber-500 flex items-center gap-1.5">
+              <FileText className="size-4" />
+              <span>Unsaved Draft Batch ({draftTransactions.length})</span>
+            </h3>
+            <button
+              onClick={onSyncDraftBatch}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-[10px] font-bold shadow-md cursor-pointer transition select-none"
+            >
+              🚀 Sync Batch to Server
+            </button>
+          </div>
+
+          <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1 font-semibold text-xs text-foreground">
+            {draftTransactions.map(draft => (
+              <div key={draft.id} className="flex items-center justify-between bg-muted/40 px-3.5 py-2.5 rounded-xl hover:bg-muted/60 transition">
+                <div className="min-w-0 flex-1 pr-4">
+                  <div className="font-bold text-foreground truncate">{draft.description}</div>
+                  <div className="text-[9px] text-muted-foreground font-normal mt-0.5">
+                    {draft.date} • {draft.ledgerCategory.startsWith('Transfer:') ? 'Transfer' : draft.ledgerCategory}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className={`font-bold ${draft.amount < 0 ? 'text-orange-500' : 'text-blue-500'}`}>
+                    {draft.amount > 0 ? '+' : ''}
+                    {formatSensitive(draft.amount)}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleOpenEditDraft(draft)}
+                      className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground cursor-pointer transition select-none"
+                      title="Edit draft entry"
+                    >
+                      <Edit2 className="size-3.5" />
+                    </button>
+                    <button
+                      onClick={() => onDeleteDraftTransaction?.(draft.id)}
+                      className="p-1.5 hover:bg-orange-500/10 rounded-lg text-muted-foreground hover:text-orange-500 cursor-pointer transition select-none"
+                      title="Remove draft entry"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Dashboard navigation filter banner */}
       {(incomingCategory || incomingDate || incomingTxType || showAllCycles) && (

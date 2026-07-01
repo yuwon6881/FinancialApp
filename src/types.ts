@@ -35,6 +35,7 @@ export interface FinancialSetting {
   darkMode: boolean
   hideSensitive: boolean
   currency?: string
+  vibrationEnabled?: boolean
 }
 
 export interface CategorySummary {
@@ -61,11 +62,16 @@ export interface DashboardStats {
 
 export interface ActiveRecurringPayment {
   id: string
+  recurringPaymentId: string
   name: string
   amount: number
   category: string
   ledgerCategory: string
   dueDate: string
+  isPaid: boolean
+  isDiscarded: boolean
+  status: "Pending" | "Paid" | "Discarded"
+  paidDate?: string | null
 }
 
 export interface TrendPoint {
