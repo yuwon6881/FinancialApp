@@ -160,21 +160,29 @@ function App() {
     const vv = window.visualViewport
     const root = document.documentElement
 
-    // The keyboard animates open/closed and visualViewport streams a new
-    // height every frame. We track it 1:1 (no CSS transition) so the sheet
-    // stays glued to the keyboard edge — smooth, not jittery. Updates are
-    // coalesced to one per frame and skipped when the height is unchanged,
+    // Track the visible viewport height (--app-vvh, caps the sheet) and the
+    // keyboard inset (--app-kb, how far to lift the sheet). The sheet is moved
+    // with a compositor `translate` (see index.css) rather than by animating
+    // layout, so it stays glued to the keyboard smoothly instead of trailing
+    // it. Updates are coalesced to one per frame and no-op changes skipped,
     // which also prevents a scroll->resize->scroll feedback loop.
     let rafId = 0
     let lastH = -1
+    let lastKb = -1
     const applyViewport = () => {
       if (rafId) return
       rafId = requestAnimationFrame(() => {
         rafId = 0
         const h = Math.round(vv ? vv.height : window.innerHeight)
-        if (Math.abs(h - lastH) < 1) return
-        lastH = h
-        root.style.setProperty('--app-vvh', `${h}px`)
+        const kb = vv ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) : 0
+        if (h !== lastH) {
+          lastH = h
+          root.style.setProperty('--app-vvh', `${h}px`)
+        }
+        if (kb !== lastKb) {
+          lastKb = kb
+          root.style.setProperty('--app-kb', `${kb}px`)
+        }
       })
     }
 
