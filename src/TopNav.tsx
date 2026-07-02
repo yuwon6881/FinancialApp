@@ -25,6 +25,7 @@ import {
 import { formatCurrencyVal } from './lib/utils'
 import { triggerHaptic } from './lib/haptics'
 import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
+import { SwipeableRow } from './components/ui/SwipeableRow'
 
 interface TopNavProps {
   activeTab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist' | 'drafts'
@@ -230,22 +231,82 @@ const TopNav: React.FC<TopNavProps> = ({
                 <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
                   {allAlerts.map(noti => {
                     const isConfirming = confirmNotiId === noti.id
-                    return (
-                      <div key={noti.id} className="p-2.5 rounded-xl bg-muted/30 border border-border/30 text-xs flex flex-col gap-2">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="truncate">
-                            <span className="font-semibold text-foreground truncate block max-w-[140px]">{noti.name}</span>
-                            <span className="text-[9px] text-muted-foreground block">{noti.billingDate}</span>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <span className={`text-orange-500 font-extrabold block transition-all duration-300 ${hideSensitive ? 'blur-sm select-none pointer-events-none' : ''}`}>
-                              -{formatCurrency(noti.amount)}
-                            </span>
-                          </div>
+                    const notificationBody = (
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <span className="font-semibold text-foreground truncate block">{noti.name}</span>
+                          <span className="text-[9px] text-muted-foreground block">{noti.billingDate}</span>
                         </div>
-
+                        <div className="text-right shrink-0">
+                          <span className={`text-orange-500 font-extrabold block transition-all duration-300 ${hideSensitive ? 'blur-sm select-none pointer-events-none' : ''}`}>
+                            -{formatCurrency(noti.amount)}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                    const startConfirm = () => {
+                      setConfirmNotiId(noti.id)
+                      setPaidDate(noti.billingDate)
+                    }
+                    const discardNotification = () => {
+                      onDiscardSubscription?.(noti)
+                      setIsBellOpen(false)
+                    }
+                    const notificationActions = (
+                      <>
+                        <button
+                          onClick={startConfirm}
+                          className="flex-1 flex items-center justify-center bg-blue-600 text-white text-[10px] font-bold active:bg-blue-700 transition"
+                        >
+                          Pay
+                        </button>
+                        {onDiscardSubscription && (
+                          <button
+                            onClick={discardNotification}
+                            className="flex-1 flex items-center justify-center bg-slate-600 text-white text-[10px] font-bold active:bg-slate-700 transition"
+                          >
+                            Skip
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setNotiToDelete(noti)}
+                          className="flex-1 flex items-center justify-center bg-orange-600 text-white text-[10px] font-bold active:bg-orange-700 transition"
+                        >
+                          Remove
+                        </button>
+                      </>
+                    )
+                    const notificationDesktopActions = (
+                      <>
+                        <button
+                          onClick={startConfirm}
+                          className="px-2 py-1 bg-blue-500/15 hover:bg-blue-500/25 text-blue-500 font-bold text-[9px] rounded transition cursor-pointer text-center whitespace-nowrap"
+                        >
+                          Pay
+                        </button>
+                        {onDiscardSubscription && (
+                          <button
+                            onClick={discardNotification}
+                            className="px-2 py-1 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-[9px] rounded transition cursor-pointer text-center whitespace-nowrap"
+                            title="Discard this cycle's payment"
+                          >
+                            Skip
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setNotiToDelete(noti)}
+                          className="px-2 py-1 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-[9px] rounded border border-orange-500/10 transition cursor-pointer text-center whitespace-nowrap"
+                          title="Delete subscription definition entirely"
+                        >
+                          Remove
+                        </button>
+                      </>
+                    )
+                    return (
+                      <div key={noti.id}>
                         {isConfirming ? (
                           <div className="flex flex-col gap-1.5 p-1.5 bg-background border border-border rounded-lg mt-1 animate-in slide-in-from-bottom-1 duration-150">
+                            {notificationBody}
                             <label className="text-[8px] font-bold text-muted-foreground">Paid Date:</label>
                             <div className="flex flex-col sm:flex-row gap-1.5">
                               <input
@@ -274,38 +335,15 @@ const TopNav: React.FC<TopNavProps> = ({
                             </div>
                           </div>
                         ) : (
-                          <div className="flex flex-wrap items-center justify-end gap-1.5 border-t border-border/10 pt-1.5 mt-0.5">
-                            <button
-                              onClick={() => {
-                                setConfirmNotiId(noti.id)
-                                setPaidDate(noti.billingDate)
-                              }}
-                              className="flex-1 sm:flex-initial px-2 py-1 bg-blue-500/15 hover:bg-blue-500/25 text-blue-500 font-bold text-[9px] rounded transition cursor-pointer text-center whitespace-nowrap"
-                            >
-                              Confirm Paid
-                            </button>
-                            {onDiscardSubscription && (
-                              <button
-                                onClick={() => {
-                                  onDiscardSubscription(noti)
-                                  setIsBellOpen(false)
-                                }}
-                                className="flex-1 sm:flex-initial px-2 py-1 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-[9px] rounded transition cursor-pointer text-center whitespace-nowrap"
-                                title="Discard this cycle's payment"
-                              >
-                                Discard
-                              </button>
-                            )}
-                            <button
-                              onClick={() => {
-                                setNotiToDelete(noti)
-                              }}
-                              className="flex-1 sm:flex-initial px-2 py-1 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-[9px] rounded border border-orange-500/10 transition cursor-pointer text-center whitespace-nowrap"
-                              title="Delete subscription definition entirely"
-                            >
-                              Remove
-                            </button>
-                          </div>
+                          <SwipeableRow
+                            className="rounded-xl bg-muted/30 border border-border/30 text-xs"
+                            contentClassName="p-2.5"
+                            actionsWidth={180}
+                            actions={notificationActions}
+                            desktopActions={notificationDesktopActions}
+                          >
+                            {notificationBody}
+                          </SwipeableRow>
                         )}
                       </div>
                     )

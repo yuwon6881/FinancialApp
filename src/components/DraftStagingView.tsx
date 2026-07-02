@@ -82,29 +82,11 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
           <div>
             <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
               <FileText className="size-5 text-amber-500" />
-              <span>Queueing Transactions</span>
+              <span>Queue</span>
             </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Pending upload to server.</p>
           </div>
         </div>
-
-        {onAddAnother && (
-          <button
-            onClick={onAddAnother}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 cursor-pointer transition select-none shrink-0 active:scale-95"
-          >
-            <Plus className="size-4" />
-            <span>Add Entry</span>
-          </button>
-        )}
       </div>
-
-      {/* Swipe hint (mobile only) */}
-      {draftTransactions.some(d => d.id !== editingDraftId) && (
-        <p className="md:hidden text-[11px] text-muted-foreground/70 -mt-2 px-1 select-none">
-          Swipe a card left to edit or delete it.
-        </p>
-      )}
 
       {/* Draft Items List */}
       <div className="space-y-3">
