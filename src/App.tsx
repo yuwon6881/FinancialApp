@@ -22,6 +22,10 @@ import { PendingSubscriptionsModal } from './components/PendingSubscriptionsModa
 import { PasswordPromptModal } from './components/PasswordPromptModal'
 import { LockScreen } from './components/LockScreen'
 
+const createLocalId = (prefix: string, separator = '_') => {
+  return `${prefix}${separator}${Date.now()}${separator}${Math.random().toString(36).substring(2, 9)}`
+}
+
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'))
   const [username, setUsername] = useState<string>(localStorage.getItem('auth_username') || '')
@@ -51,6 +55,7 @@ function App() {
   const [actionLoading, setActionLoading] = useState<boolean>(false)
   const [activeSyncId, setActiveSyncId] = useState<string | null>(null)
   const [syncBackoffUntil, setSyncBackoffUntil] = useState<number>(0)
+  const [syncCountdownMs, setSyncCountdownMs] = useState<number>(0)
   const [editingPendingId, setEditingPendingId] = useState<string | null>(null)
   const isSyncingRef = useRef<boolean>(false)
   const isServerAwakeRef = useRef<boolean>(false)
@@ -127,7 +132,7 @@ function App() {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)
     const meta = document.querySelector('meta[name="theme-color"]')
-    if (meta) meta.setAttribute('content', darkMode ? '#101418' : '#f7f8fa')
+    if (meta) meta.setAttribute('content', darkMode ? '#101418' : '#f4f8fb')
   }, [darkMode])
 
   // Inactivity Auto-Lock
@@ -389,7 +394,7 @@ function App() {
   };
 
   const handleAddTransaction = async (newTx: Omit<Transaction, 'id'>) => {
-    const draftId = 'draft_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+    const draftId = createLocalId('draft');
     const draftTx: Transaction = {
       ...newTx,
       id: draftId,
@@ -425,8 +430,8 @@ function App() {
     if (draftTransactions.length === 0) return;
 
     const finalPending = draftTransactions.map(d => {
-      const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
-      const serverTxId = 'tx-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
+      const tempId = createLocalId('temp');
+      const serverTxId = createLocalId('tx', '-');
       return {
         ...d,
         id: tempId,
@@ -647,6 +652,21 @@ function App() {
     syncBackoffUntilRef.current = syncBackoffUntil;
   }, [syncBackoffUntil]);
 
+  useEffect(() => {
+    if (!syncBackoffUntil) {
+      setSyncCountdownMs(0)
+      return
+    }
+
+    const updateCountdown = () => {
+      setSyncCountdownMs(Math.max(0, syncBackoffUntil - Date.now()))
+    }
+
+    updateCountdown()
+    const interval = window.setInterval(updateCountdown, 1000)
+    return () => window.clearInterval(interval)
+  }, [syncBackoffUntil])
+
   const processQueue = useCallback(async () => {
     if (!token || isSyncingRef.current) return;
     isSyncingRef.current = true;
@@ -669,7 +689,8 @@ function App() {
         setActiveSyncId(nextTx.id);
 
         try {
-          const { id, isPendingSync, serverTxId, ...txPayload } = nextTx as any;
+          const { id, serverTxId, ...txPayload } = nextTx as any;
+          delete txPayload.isPendingSync;
           const payloadToSend = {
             ...txPayload,
             id: serverTxId || id
@@ -906,11 +927,11 @@ function App() {
 
   if (loading && !optimisticDashboardData) {
     return (
-      <div className="min-h-screen bg-background text-foreground p-4">
+      <div className="app-shell min-h-screen text-foreground p-4">
         <div className="container mx-auto max-w-7xl py-6 space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-radial from-blue-400 to-blue-600 text-white font-extrabold animate-pulse">F</div>
+              <div className="flex size-10 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 via-sky-400 to-teal-500 text-white font-extrabold animate-pulse shadow-lg shadow-blue-500/20">F</div>
               <div>
                 <Skeleton className="h-4 w-32" />
                 <Skeleton className="mt-2 h-2 w-20" />
@@ -924,7 +945,7 @@ function App() {
             <CardSkeleton />
             <CardSkeleton />
           </div>
-          <div className="rounded-2xl border border-border/60 bg-card p-5">
+          <div className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
             <Skeleton className="h-4 w-40" />
             <Skeleton className="mt-5 h-28 w-full rounded-xl" />
             <Skeleton className="mt-4 h-28 w-full rounded-xl" />
@@ -935,7 +956,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col selection:bg-blue-500/20 selection:text-blue-500">
+    <div className="app-shell min-h-screen text-foreground flex flex-col selection:bg-blue-500/20 selection:text-blue-500">
       
       <ToastViewport toasts={toasts} onDismiss={dismissToast} />
 
@@ -958,8 +979,8 @@ function App() {
         onMouseLeaveWallet={() => setIsHoveringWallet(false)}
         isSyncing={isBackgroundSyncing || pendingTransactions.length > 0}
         syncLabel={
-          syncBackoffUntil > Date.now()
-            ? `Retrying ${Math.ceil((syncBackoffUntil - Date.now()) / 1000)}s`
+          syncCountdownMs > 0
+            ? `Retrying ${Math.ceil(syncCountdownMs / 1000)}s`
             : activeSyncId
               ? 'Syncing 1 item'
               : pendingTransactions.length > 0
@@ -984,10 +1005,10 @@ function App() {
         onRefresh={() => loadAll(selectedMonth || undefined, selectedYear || undefined, true)}
         disabled={loading || actionLoading || isLocked}
       >
-      <main className="flex-1 container mx-auto px-4 py-8 pb-24 md:pb-8 max-w-7xl relative">
+      <main className="flex-1 container mx-auto px-4 py-6 sm:py-8 pb-24 md:pb-8 max-w-7xl relative">
         {(loading || actionLoading) && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-[1.5px] transition-all duration-150">
-            <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-card border border-border/80 shadow-xl text-sm font-bold text-foreground select-none pointer-events-none animate-in zoom-in-95 duration-150">
+            <div className="app-panel flex items-center gap-2.5 px-4 py-3 rounded-xl bg-card/95 border border-border/80 shadow-xl text-sm font-bold text-foreground select-none pointer-events-none animate-in zoom-in-95 duration-150">
               <Loader2 className="animate-spin text-blue-500 size-4" />
               Syncing changes...
             </div>
@@ -1168,7 +1189,7 @@ function App() {
       />
 
       {/* Footer */}
-      <footer className="border-t border-border/40 py-6 pb-24 md:pb-6 bg-muted/10 select-none">
+      <footer className="border-t border-border/40 py-6 pb-24 md:pb-6 bg-background/45 backdrop-blur select-none">
         <div className="container mx-auto px-4 text-center text-xs text-muted-foreground">
           &copy; {new Date().getFullYear()} FinancialApp. All rights reserved.
         </div>

@@ -107,19 +107,75 @@ const TopNav: React.FC<TopNavProps> = ({
     return formatCurrencyVal(val, currency)
   }
 
+  const navItems: Array<{
+    tab: AppTab
+    label: string
+    mobileLabel: string
+    Icon: React.ComponentType<{ className?: string }>
+    activeClass: string
+    iconClass: string
+    dotClass: string
+  }> = [
+    {
+      tab: 'dashboard',
+      label: 'Dashboard',
+      mobileLabel: 'Dashboard',
+      Icon: TrendingUp,
+      activeClass: 'bg-blue-500/12 text-blue-600 dark:text-blue-400 border-blue-500/25 shadow-blue-500/10',
+      iconClass: 'text-blue-500',
+      dotClass: 'bg-blue-500'
+    },
+    {
+      tab: 'recurring',
+      label: 'Recurring',
+      mobileLabel: 'Recurring',
+      Icon: CreditCard,
+      activeClass: 'bg-violet-500/12 text-violet-600 dark:text-violet-400 border-violet-500/25 shadow-violet-500/10',
+      iconClass: 'text-violet-500',
+      dotClass: 'bg-violet-500'
+    },
+    {
+      tab: 'ledger',
+      label: 'Ledger',
+      mobileLabel: 'Ledger',
+      Icon: Wallet,
+      activeClass: 'bg-teal-500/12 text-teal-600 dark:text-teal-400 border-teal-500/25 shadow-teal-500/10',
+      iconClass: 'text-teal-500',
+      dotClass: 'bg-teal-500'
+    },
+    {
+      tab: 'wishlist',
+      label: 'Wishlist',
+      mobileLabel: 'Wishlist',
+      Icon: PiggyBank,
+      activeClass: 'bg-pink-500/12 text-pink-600 dark:text-pink-400 border-pink-500/25 shadow-pink-500/10',
+      iconClass: 'text-pink-500',
+      dotClass: 'bg-pink-500'
+    },
+    {
+      tab: 'settings',
+      label: 'Settings',
+      mobileLabel: 'Settings',
+      Icon: Settings,
+      activeClass: 'bg-slate-500/12 text-slate-600 dark:text-slate-300 border-slate-500/25 shadow-slate-500/10',
+      iconClass: 'text-slate-500',
+      dotClass: 'bg-slate-500'
+    }
+  ]
+
   return (
     <>
       <header
-        className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md"
+        className="glass-nav sticky top-0 z-50 w-full border-b border-border/40 backdrop-blur-xl"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
-        <div className="h-[2.5px] w-full bg-gradient-to-r from-blue-500 via-violet-500 to-pink-500" />
+        <div className="h-[2.5px] w-full bg-gradient-to-r from-blue-500 via-teal-500 via-amber-500 to-pink-500" />
         <div className="container mx-auto flex h-16 items-center px-4">
         
         {/* Left Side (Logo and Brand) */}
         <div className="flex-1 flex items-center justify-start min-w-max">
           <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => onTabChange('dashboard')}>
-            <div className="flex size-9 items-center justify-center rounded-xl bg-radial from-blue-400 to-blue-600 shadow-md shadow-blue-500/20 text-white font-extrabold text-lg shrink-0">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 via-sky-400 to-teal-500 shadow-md shadow-blue-500/20 text-white font-extrabold text-lg shrink-0 transition-transform duration-200 hover:scale-105">
               F
             </div>
             <span className="hidden sm:inline text-md sm:text-lg font-extrabold tracking-tight bg-linear-to-r from-foreground via-foreground to-blue-500 bg-clip-text text-transparent truncate">
@@ -146,47 +202,26 @@ const TopNav: React.FC<TopNavProps> = ({
 
         {/* Navigation Tabs - Centered mathematically on desktop, flex-safe on medium screens */}
         <div className="hidden md:flex items-center justify-center shrink-0 mx-4">
-          <nav className="flex items-center gap-1 bg-muted/40 p-1.5 rounded-xl border border-border/40 select-none">
-            <button
-              onClick={() => onTabChange('dashboard')}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer ${
-                activeTab === 'dashboard'
-                  ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20 font-bold scale-[1.02]'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
-              }`}
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={() => onTabChange('recurring')}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer ${
-                activeTab === 'recurring'
-                  ? 'bg-violet-500/10 text-violet-500 border border-violet-500/20 font-bold scale-[1.02]'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
-              }`}
-            >
-              Recurring Payments
-            </button>
-            <button
-              onClick={() => onTabChange('ledger')}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer ${
-                activeTab === 'ledger'
-                  ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-bold scale-[1.02]'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
-              }`}
-            >
-              Ledger
-            </button>
-            <button
-              onClick={() => onTabChange('settings')}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer ${
-                activeTab === 'settings'
-                  ? 'bg-slate-500/10 text-slate-500 border border-slate-500/20 font-bold scale-[1.02]'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
-              }`}
-            >
-              Settings
-            </button>
+          <nav className="flex items-center gap-1 bg-card/72 p-1.5 rounded-xl border border-border/50 shadow-sm select-none">
+            {navItems.map(({ tab, label, Icon, activeClass, iconClass, dotClass }) => {
+              const isActive = activeTab === tab
+              return (
+                <button
+                  key={tab}
+                  onClick={() => onTabChange(tab)}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all duration-200 cursor-pointer ${
+                    isActive
+                      ? `${activeClass} font-bold shadow-sm scale-[1.02]`
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/45'
+                  }`}
+                >
+                  <Icon className={`size-3.5 ${isActive ? iconClass : 'text-muted-foreground'}`} />
+                  <span>{label}</span>
+                  {isActive && <span className={`absolute -bottom-1 left-1/2 h-1 w-5 -translate-x-1/2 rounded-full ${dotClass}`} />}
+                </button>
+              )
+            })}
           </nav>
         </div>
 
@@ -471,55 +506,31 @@ const TopNav: React.FC<TopNavProps> = ({
 
     {/* Mobile Navigation bar (Sticky Bottom Nav) */}
     <div 
-      className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/95 backdrop-blur-md select-none shadow-[0_-4px_12px_rgba(0,0,0,0.05)]"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/88 backdrop-blur-xl select-none shadow-[0_-12px_30px_rgba(0,0,0,0.08)]"
       style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))', paddingTop: '10px' }}
     >
       <div className="grid grid-cols-5 w-full max-w-md mx-auto justify-items-center">
-        <button
-          onClick={() => { triggerHaptic(8); onTabChange('dashboard') }}
-          className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
-            activeTab === 'dashboard' ? 'text-blue-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <TrendingUp className="size-4.5 mx-auto" />
-          <span>Dashboard</span>
-        </button>
-        <button
-          onClick={() => { triggerHaptic(8); onTabChange('recurring') }}
-          className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
-            activeTab === 'recurring' ? 'text-violet-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <CreditCard className="size-4.5 mx-auto" />
-          <span>Recurring</span>
-        </button>
-        <button
-          onClick={() => { triggerHaptic(8); onTabChange('ledger') }}
-          className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
-            activeTab === 'ledger' ? 'text-emerald-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Wallet className="size-4.5 mx-auto" />
-          <span>Ledger</span>
-        </button>
-        <button
-          onClick={() => { triggerHaptic(8); onTabChange('wishlist') }}
-          className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
-            activeTab === 'wishlist' ? 'text-pink-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <PiggyBank className="size-4.5 mx-auto" />
-          <span>Wishlist</span>
-        </button>
-        <button
-          onClick={() => { triggerHaptic(8); onTabChange('settings') }}
-          className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
-            activeTab === 'settings' ? 'text-slate-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Settings className="size-4.5 mx-auto" />
-          <span>Settings</span>
-        </button>
+        {navItems.map(({ tab, mobileLabel, Icon, activeClass, iconClass, dotClass }) => {
+          const isActive = activeTab === tab
+          return (
+            <button
+              key={tab}
+              onClick={() => { triggerHaptic(8); onTabChange(tab) }}
+              aria-current={isActive ? 'page' : undefined}
+              className={`relative flex min-w-0 flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
+                isActive ? 'scale-105 font-bold text-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <span className={`relative flex size-8 items-center justify-center rounded-xl border transition-all duration-200 ${
+                isActive ? `${activeClass} shadow-sm` : 'border-transparent bg-transparent'
+              }`}>
+                <Icon className={`size-4.5 mx-auto ${isActive ? iconClass : 'text-muted-foreground'}`} />
+                {isActive && <span className={`absolute -top-0.5 -right-0.5 size-1.5 rounded-full ${dotClass}`} />}
+              </span>
+              <span className="truncate max-w-full px-0.5">{mobileLabel}</span>
+            </button>
+          )
+        })}
       </div>
     </div>
     <CustomConfirmModal

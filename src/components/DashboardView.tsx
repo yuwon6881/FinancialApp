@@ -243,17 +243,43 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   }, [activeTrendPoints])
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+    <div className="space-y-6 soft-rise">
       
       {/* Period Selection & Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 sm:p-6 bg-radial from-blue-950/20 via-card to-card rounded-2xl border border-blue-500/10">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            Ledger Dashboard
-          </h2>
-          <p className="text-muted-foreground text-xs mt-0.5">
-            Active Cycle: <span className="font-semibold text-blue-500">{cycleLabel}</span>
-          </p>
+      <div className="app-panel overflow-hidden rounded-2xl border border-blue-500/15 bg-card/90">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 sm:p-6 bg-linear-to-br from-blue-500/10 via-transparent to-teal-500/10">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/15">
+              <Wallet className="size-5" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                Ledger Dashboard
+              </h2>
+              <p className="text-muted-foreground text-xs mt-0.5 truncate">
+                Active Cycle: <span className="font-semibold text-blue-500">{cycleLabel}</span>
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-2 sm:flex sm:flex-wrap gap-2 text-[10px] font-bold text-muted-foreground">
+            <div className="status-chip rounded-lg px-2.5 py-1.5">
+              <span className="block text-blue-500">Inflow</span>
+              <span className="text-foreground">{formatSensitive(stats.monthlyInflow)}</span>
+            </div>
+            <div className="status-chip rounded-lg px-2.5 py-1.5">
+              <span className="block text-orange-500">Outflow</span>
+              <span className="text-foreground">{formatSensitive(stats.monthlyExpenses)}</span>
+            </div>
+            <div className="status-chip rounded-lg px-2.5 py-1.5">
+              <span className="block text-teal-500">Cycle Day</span>
+              <span className="text-foreground">{activeSettings.cycleDay}</span>
+            </div>
+            <div className="status-chip rounded-lg px-2.5 py-1.5">
+              <span className="block text-pink-500">Year</span>
+              <span className="text-foreground">{activeSettings.selectedYear}</span>
+            </div>
+          </div>
         </div>
         
         <div className="flex items-center gap-1.5 sm:gap-2 w-full md:w-auto">
@@ -283,17 +309,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Configure button */}
           <button 
             onClick={() => onNavigate('settings')}
-            className="p-2 border border-border rounded-xl bg-background hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition duration-150 shrink-0"
+            className="interactive-card p-2 border border-border rounded-xl bg-background/80 hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition duration-150 shrink-0"
             title="Open settings"
           >
             <Settings className="size-4" />
           </button>
         </div>
+        </div>
       </div>
 
       {/* Pending Subscriptions Notifications Alert */}
       {dashboardData?.pendingNotifications && dashboardData.pendingNotifications.length > 0 && (
-        <div className="p-5 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 animate-in slide-in-from-top-4 duration-300">
+        <div className="app-panel p-5 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 animate-in slide-in-from-top-4 duration-300">
           <div className="flex items-center gap-2.5 mb-2.5">
             <AlertCircle className="size-5 shrink-0 text-yellow-500" />
             <h4 className="text-sm font-bold text-foreground">Pending Subscription Confirmations</h4>
@@ -441,7 +468,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       />
 
       {/* Categories Roll Table (Month Sheet Columns B-E) */}
-      <div className="p-6 bg-card border border-border/60 rounded-2xl shadow-xs">
+      <div className="app-panel p-6 bg-card/92 border border-border/60 rounded-2xl">
         <h3 className="text-md font-bold text-foreground mb-1">Carryover Rolling Ledgers</h3>
         <p className="text-xs text-muted-foreground mb-4">Starting budget carries forward from previous month's remaining balance.</p>
         
@@ -628,7 +655,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* Financial Plan Metric Cards */}
-      <div className="p-6 bg-card border border-border/60 rounded-2xl shadow-xs">
+      <div className="app-panel p-6 bg-card/92 border border-border/60 rounded-2xl">
         <h3 className="text-md font-bold text-foreground mb-1">Financial Plan Metrics</h3>
         <p className="text-xs text-muted-foreground mb-1">Cycle-wide constraint evaluation across allocation categories and targets.</p>
         {/* Legend — protan-safe: blue (current) + orange (pending) */}
@@ -656,7 +683,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             return (
               <div 
                 onClick={() => onNavigateToLedger?.({ category: 'Growth', showAllCycles: true })}
-                className="space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border/40 hover:border-blue-500/20 cursor-pointer transition-all duration-200"
+                className="interactive-card space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border/40 hover:border-blue-500/20 cursor-pointer transition-all duration-200"
               >
                 <div className="flex justify-between text-xs font-semibold">
                   <span className="text-muted-foreground">Growth Achieved</span>
@@ -699,7 +726,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             return (
               <div 
                 onClick={() => onNavigateToLedger?.({ category: 'Essentials', showAllCycles: false })}
-                className="space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border/40 hover:border-blue-500/20 cursor-pointer transition-all duration-200"
+                className="interactive-card space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border/40 hover:border-blue-500/20 cursor-pointer transition-all duration-200"
               >
                 <div className="flex justify-between text-xs font-semibold">
                   <span className="text-muted-foreground">Essentials Remaining</span>
@@ -743,7 +770,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             return (
               <div 
                 onClick={() => onNavigateToLedger?.({ category: 'Stability', showAllCycles: true })}
-                className="space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border/40 hover:border-blue-500/20 cursor-pointer transition-all duration-200"
+                className="interactive-card space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border/40 hover:border-blue-500/20 cursor-pointer transition-all duration-200"
               >
                 <div className="flex justify-between text-xs font-semibold">
                   <span className="text-muted-foreground">Stability Cap Reached</span>
@@ -782,7 +809,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div 
           onMouseEnter={() => setIsHoveringLiquidNetWorth(true)}
           onMouseLeave={() => setIsHoveringLiquidNetWorth(false)}
-          className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs hover:border-blue-500/30 transition-all duration-300 group"
+          className="metric-card interactive-card app-panel p-6 rounded-2xl bg-card/92 border border-border/60 hover:border-blue-500/30 transition-all duration-300 group"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-muted-foreground">Liquid Net Worth</span>
@@ -802,7 +829,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Inflow Card (Arrow points up/right, green) */}
         <div 
           onClick={() => onNavigateToLedger?.({ txType: 'inflow' })}
-          className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs hover:border-blue-500/30 transition-all duration-300 group cursor-pointer"
+          className="metric-card interactive-card app-panel p-6 rounded-2xl bg-card/92 border border-border/60 hover:border-blue-500/30 transition-all duration-300 group cursor-pointer"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-muted-foreground">Cycle Inflow</span>
@@ -821,7 +848,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Expenses Card (Arrow points down/left, red) */}
         <div 
           onClick={() => onNavigateToLedger?.({ txType: 'outflow' })}
-          className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs hover:border-orange-500/30 transition-all duration-300 group cursor-pointer"
+          className="metric-card interactive-card app-panel p-6 rounded-2xl bg-card/92 border border-border/60 hover:border-orange-500/30 transition-all duration-300 group cursor-pointer"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-muted-foreground">Cycle Outflow</span>
@@ -847,7 +874,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           return (
             <div 
               onClick={() => onNavigate('wishlist')}
-              className={`p-6 rounded-2xl bg-card border shadow-xs transition-all duration-300 group cursor-pointer ${
+              className={`metric-card interactive-card app-panel p-6 rounded-2xl bg-card/92 border transition-all duration-300 group cursor-pointer ${
                 canAfford 
                   ? 'border-green-500/50 hover:border-green-500/70 shadow-md shadow-green-500/5 ring-1 ring-green-500/10' 
                   : 'border-border/60 hover:border-pink-500/30'
@@ -887,7 +914,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Balance Trend Line */}
-        <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs flex flex-col justify-between">
+        <div className="app-panel p-6 rounded-2xl bg-card/92 border border-border/60 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
               <div>
@@ -1053,7 +1080,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Category Expenditures Doughnut Chart */}
-        <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs flex flex-col justify-between">
+        <div className="app-panel p-6 rounded-2xl bg-card/92 border border-border/60 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-4 gap-2">
               <div>
@@ -1243,7 +1270,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             }
 
             return (
-              <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs h-full">
+              <div className="app-panel p-6 rounded-2xl bg-card/92 border border-border/60 h-full">
                 <div className="mb-4">
                   <h3 className="text-md font-semibold text-foreground">Cycle Calendar</h3>
                   <p className="text-[10px] text-muted-foreground mt-0.5">{cycleLabel}</p>
@@ -1308,7 +1335,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         {/* Active Month Recurring Payments Timeline (Spans 1 column) */}
         <div className="lg:col-span-1">
-          <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs flex flex-col h-full">
+          <div className="app-panel p-6 rounded-2xl bg-card/92 border border-border/60 flex flex-col h-full">
             <div className="flex-1 flex flex-col min-h-0">
               <div className="flex items-center justify-between mb-2">
                 <div>
@@ -1365,7 +1392,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* Month Transactions List */}
-      <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs">
+      <div className="app-panel p-6 rounded-2xl bg-card/92 border border-border/60">
         <div className="mb-4">
           <h3 className="text-lg font-semibold text-foreground">Manual Inflows & Outflows</h3>
           <p className="text-xs text-muted-foreground">Manual postings logged in this active cycle range</p>
