@@ -33,6 +33,7 @@ function App() {
 
   useEffect(() => {
     localStorage.setItem('active_tab', activeTab)
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [activeTab])
   
   const [transactions, setTransactions] = useState<Transaction[]>(() => getCachedJSON(CACHE_KEYS.transactions, []))
@@ -97,7 +98,12 @@ function App() {
   }, [draftTransactions])
 
   const [customAlert, setCustomAlert] = useState<{ message: string; title: string } | null>(null)
-  const [confirmModalData, setConfirmModalData] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null)
+  const [confirmModalData, setConfirmModalData] = useState<{
+    title: string
+    message: string
+    confirmText?: string
+    onConfirm: () => void
+  } | null>(null)
   const [toasts, setToasts] = useState<ToastMessage[]>([])
 
   const showToast = (message: string, title: string = 'Notification', tone: ToastTone = 'info') => {
@@ -355,6 +361,16 @@ function App() {
     }
   }
 
+  const requestDeleteCategory = (id: string) => {
+    const category = categoriesList.find(cat => cat.id === id)
+    setConfirmModalData({
+      title: 'Delete Category',
+      message: `Delete "${category?.name || 'this category'}"? Existing transactions that use it may keep the old category name, but it will no longer be available for new entries.`,
+      confirmText: 'Delete',
+      onConfirm: () => { void handleDeleteCategory(id) }
+    })
+  }
+
 
   // Transaction modifiers
   const handleEditPendingTransaction = (id: string, updatedTx: Omit<Transaction, 'id'>) => {
@@ -395,6 +411,16 @@ function App() {
     setDraftTransactions(prev => prev.filter(t => t.id !== id));
     triggerVibration(30);
   };
+
+  const requestDeleteDraftTransaction = (id: string) => {
+    const draft = draftTransactions.find(t => t.id === id)
+    setConfirmModalData({
+      title: 'Delete Draft',
+      message: `Delete draft "${draft?.description || 'transaction'}"? This removes it from the draft queue before it is synced.`,
+      confirmText: 'Delete',
+      onConfirm: () => handleDeleteDraftTransaction(id)
+    })
+  }
 
   const handleSyncDraftBatch = () => {
     if (draftTransactions.length === 0) return;
@@ -537,6 +563,16 @@ function App() {
     }
   }
 
+  const requestDeletePayment = (id: string) => {
+    const payment = recurringPayments.find(p => p.id === id)
+    setConfirmModalData({
+      title: 'Delete Subscription',
+      message: `Delete "${payment?.name || 'this recurring subscription'}"? This will cancel all future notifications for this subscription.`,
+      confirmText: 'Delete',
+      onConfirm: () => { void handleDeletePayment(id) }
+    })
+  }
+
   // Wish List modifiers
   const handleAddWishlistItem = async (newWish: Partial<WishlistItem>) => {
     try {
@@ -566,6 +602,16 @@ function App() {
       console.error(err)
       alert(err.message || 'Error deleting wishlist item.')
     }
+  }
+
+  const requestDeleteWishlistItem = async (id: number): Promise<void> => {
+    const item = wishlist.find(w => w.id === id)
+    setConfirmModalData({
+      title: 'Delete Wishlist Item',
+      message: `Delete "${item?.name || 'this wishlist item'}"? This removes the savings goal from your wishlist.`,
+      confirmText: 'Delete',
+      onConfirm: () => { void handleDeleteWishlistItem(id) }
+    })
   }
 
   const handlePurchaseWishlistItem = async (id: number) => {
@@ -975,7 +1021,7 @@ function App() {
             onToggleHideSensitive={handleToggleHideSensitive}
             onUpdateSettings={handleUpdateSettings}
             onAddCategory={handleAddCategory}
-            onDeleteCategory={handleDeleteCategory}
+            onDeleteCategory={requestDeleteCategory}
           />
         )}
 
@@ -988,7 +1034,7 @@ function App() {
             cycleDay={optimisticDashboardData?.setting?.cycleDay || 28}
             onAddPayment={handleAddPayment}
             onToggleActive={handleToggleActive}
-            onDeletePayment={handleDeletePayment}
+            onDeletePayment={requestDeletePayment}
             onUpdatePayment={handleUpdatePayment}
             hideSensitive={hideSensitive}
             categories={categoriesList}
@@ -1054,7 +1100,7 @@ function App() {
             hideSensitive={hideSensitive}
             onAddItem={handleAddWishlistItem}
             onUpdateItem={handleUpdateWishlistItem}
-            onDeleteItem={handleDeleteWishlistItem}
+            onDeleteItem={requestDeleteWishlistItem}
             onPurchaseItem={handlePurchaseWishlistItem}
             formatSensitive={formatSensitive}
             autoOpenAddModal={autoOpenWishlistAdd}
@@ -1067,7 +1113,7 @@ function App() {
           <DraftStagingView 
             draftTransactions={draftTransactions}
             onUpdateDraftTransaction={handleUpdateDraftTransaction}
-            onDeleteDraftTransaction={handleDeleteDraftTransaction}
+            onDeleteDraftTransaction={requestDeleteDraftTransaction}
             hideSensitive={hideSensitive}
             currency={optimisticDashboardData?.setting?.currency || 'USD'}
             onCancel={() => setActiveTab('ledger')}
@@ -1096,6 +1142,7 @@ function App() {
         onRemoveSubscription={(recurringPaymentId) => setConfirmModalData({
           title: 'Remove Subscription',
           message: 'Are you sure you want to delete this recurring subscription? This will cancel all future notifications for this subscription.',
+          confirmText: 'Remove',
           onConfirm: () => handleDeletePayment(recurringPaymentId)
         })}
       />
@@ -1138,7 +1185,7 @@ function App() {
         isOpen={!!confirmModalData}
         title={confirmModalData?.title || 'Confirmation'}
         message={confirmModalData?.message || ''}
-        confirmText="Confirm"
+        confirmText={confirmModalData?.confirmText || 'Confirm'}
         cancelText="Cancel"
         onConfirm={() => {
           if (confirmModalData) {
