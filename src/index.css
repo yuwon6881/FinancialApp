@@ -87,6 +87,10 @@
 :root {
     color-scheme: light;
     --radius: 0.75rem;
+    /* Keyboard inset. Set ONCE (debounced) by App.tsx after the keyboard
+       settles, then the sheet lifts with a single CSS transition — no
+       per-frame tracking, so no jitter. 0 when no keyboard / on desktop. */
+    --app-kb: 0px;
     /* Crisp, spacious light mode — layered off-whites, slate ink */
     --background: #f6f8fc;
     --foreground: #0f1729;
@@ -469,6 +473,15 @@ html {
         touch-action: pan-y;
         /* Keep the last field clear of the keyboard edge when scrolling. */
         scroll-padding-bottom: 5rem;
+        /* Lift above the keyboard in ONE smooth transition (driven by a single,
+           debounced --app-kb write — no per-frame updates, so no jitter). On
+           browsers that honour interactive-widget=resizes-content the inset
+           computes to ~0 and the browser handles it natively instead. Uses the
+           standalone `translate` property so it never fights the entrance
+           transform. */
+        translate: 0 calc(-1 * var(--app-kb, 0px));
+        transition: translate 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+        will-change: translate;
         /* tailwindcss-animate enter vars: slide up instead of zoom on mobile */
         --tw-enter-translate-y: 100%;
         --tw-enter-scale: 1;

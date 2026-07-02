@@ -1,4 +1,4 @@
-const CACHE_NAME = 'financial-app-v3';
+const CACHE_NAME = 'financial-app-v4';
 const SHELL_ASSETS = [
   '/',
   '/index.html',

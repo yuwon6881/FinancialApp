@@ -152,11 +152,44 @@ function App() {
     if (meta) meta.setAttribute('content', darkMode ? '#0a0d14' : '#f6f8fc')
   }, [darkMode])
 
-  // Keyboard avoidance for bottom-sheet modals is handled natively via the
-  // viewport `interactive-widget=resizes-content` hint (see index.html) plus
-  // dvh-based sheet sizing in index.css — the browser resizes the viewport
-  // smoothly when the keyboard opens, with no JS in the loop (a JS-driven
-  // approach fought the browser's own repositioning and jittered).
+  // Keyboard avoidance for bottom-sheet modals.
+  //
+  // Preferred path: the `interactive-widget=resizes-content` viewport hint
+  // (index.html) lets the browser resize the viewport for the keyboard
+  // natively and smoothly — on those browsers the inset below computes to ~0
+  // and this does nothing. Fallback (e.g. iOS Safari, which ignores that
+  // hint): we measure the keyboard inset and expose it as --app-kb so the
+  // sheet lifts above the keyboard (index.css).
+  //
+  // Critically, --app-kb is written ONCE per keyboard open/close — debounced
+  // until the viewport stops changing — so the sheet moves in a single CSS
+  // transition rather than being dragged frame-by-frame (which jittered).
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const root = document.documentElement
+    let settleTimer: number | undefined
+    let lastKb = -1
+
+    const commit = () => {
+      const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))
+      if (kb === lastKb) return
+      lastKb = kb
+      root.style.setProperty('--app-kb', `${kb}px`)
+    }
+
+    const onChange = () => {
+      // Wait for the keyboard animation to finish, then set the inset once.
+      window.clearTimeout(settleTimer)
+      settleTimer = window.setTimeout(commit, 90)
+    }
+
+    vv.addEventListener('resize', onChange)
+    return () => {
+      vv.removeEventListener('resize', onChange)
+      window.clearTimeout(settleTimer)
+    }
+  }, [])
 
   // Inactivity Auto-Lock
   const LOCK_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
