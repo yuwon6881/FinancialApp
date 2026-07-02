@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react'
 import type { WishlistItem } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { SwipeableRow } from './ui/SwipeableRow'
-import { formatCurrencyVal } from '../lib/utils'
+import { formatCurrencyVal, maskCurrencyInput } from '../lib/utils'
 import {
   Gift, 
   Plus, 
@@ -67,27 +67,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   const [priceInput, setPriceInput] = useState('')
 
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawVal = e.target.value;
-    if (!rawVal) {
-      setPriceInput('');
-      return;
-    }
-    const digits = rawVal.replace(/\D/g, '');
-    if (!digits) {
-      setPriceInput('');
-      return;
-    }
-    const parsed = parseInt(digits, 10);
-    if (parsed === 0) {
-      if (priceInput === '0.00' || priceInput === '') {
-        setPriceInput('');
-      } else {
-        setPriceInput('0.00');
-      }
-      return;
-    }
-    const numericValue = parsed / 100;
-    setPriceInput(numericValue.toFixed(2));
+    setPriceInput(maskCurrencyInput(e.target.value, priceInput));
   };
   const [priorityInput, setPriorityInput] = useState('Medium')
   const [isActiveInput, setIsActiveInput] = useState(false)

@@ -12,7 +12,7 @@ import {
   Edit,
   ChevronDown
 } from 'lucide-react'
-import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
+import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput } from '../lib/utils'
 import { triggerHaptic } from '../lib/haptics'
 import { CustomSelect } from './ui/CustomSelect'
 import { BillTimeline } from './BillTimeline'
@@ -62,27 +62,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   const [category, setCategory] = useState('')
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawVal = e.target.value;
-    if (!rawVal) {
-      setAmount('');
-      return;
-    }
-    const digits = rawVal.replace(/\D/g, '');
-    if (!digits) {
-      setAmount('');
-      return;
-    }
-    const parsed = parseInt(digits, 10);
-    if (parsed === 0) {
-      if (amount === '0.00' || amount === '') {
-        setAmount('');
-      } else {
-        setAmount('0.00');
-      }
-      return;
-    }
-    const numericValue = parsed / 100;
-    setAmount(numericValue.toFixed(2));
+    setAmount(maskCurrencyInput(e.target.value, amount));
   };
   const [ledgerCategory, setLedgerCategory] = useState<'Essentials' | 'Growth' | 'Stability' | 'Rewards'>('Essentials')
   const [startDateInput, setStartDateInput] = useState('')

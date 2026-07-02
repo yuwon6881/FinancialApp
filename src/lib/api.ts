@@ -719,7 +719,7 @@ export async function pingServer(): Promise<{ status: string }> {
     const response = await fetch(`${API_BASE_URL}/ping?t=${Date.now()}`)
     if (!response.ok) throw new Error('Status not ok')
     return response.json()
-  } catch (e) {
+  } catch {
     return { status: 'waking_up' }
   }
 }

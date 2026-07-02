@@ -29,6 +29,22 @@ export const formatCurrencyVal = (val: number, currencyCode: string = 'USD') => 
   }
 }
 
+// Masks a raw currency input as the user types: strips non-digits, treats the
+// value as cents, and renders it as a "0.00"-style decimal string.
+export const maskCurrencyInput = (rawVal: string, currentValue: string): string => {
+  if (!rawVal) return ''
+
+  const digits = rawVal.replace(/\D/g, '')
+  if (!digits) return ''
+
+  const parsed = parseInt(digits, 10)
+  if (parsed === 0) {
+    return currentValue === '0.00' || currentValue === '' ? '' : '0.00'
+  }
+
+  return (parsed / 100).toFixed(2)
+}
+
 export const getCurrencySymbol = (currencyCode: string = 'USD') => {
   const code = currencyCode.toUpperCase()
   if (code === 'RM' || code === 'MYR') return 'RM'
