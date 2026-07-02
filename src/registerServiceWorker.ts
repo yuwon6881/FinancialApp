@@ -1,4 +1,9 @@
+import { isNativePlatform } from './lib/native'
+
 export function register() {
+  // Inside the Capacitor native shell the OS handles offline/caching and the
+  // splash screen; a service worker there is unnecessary and can interfere.
+  if (isNativePlatform()) return
   if (!('serviceWorker' in navigator) || !import.meta.env.PROD) return
 
   window.addEventListener('load', () => {

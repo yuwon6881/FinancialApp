@@ -24,6 +24,7 @@ import { CACHE_KEYS, getCachedJSON, setCachedJSON, hasCachedKey, getCachedDashbo
 import { PendingSubscriptionsModal } from './components/PendingSubscriptionsModal'
 import { PasswordPromptModal } from './components/PasswordPromptModal'
 import { LockScreen } from './components/LockScreen'
+import { applyStatusBarTheme, hideSplash } from './lib/native'
 
 const createLocalId = (prefix: string, separator = '_') => {
   return `${prefix}${separator}${Date.now()}${separator}${Math.random().toString(36).substring(2, 9)}`
@@ -150,7 +151,16 @@ function App() {
     document.documentElement.classList.toggle('dark', darkMode)
     const meta = document.querySelector('meta[name="theme-color"]')
     if (meta) meta.setAttribute('content', darkMode ? '#0a0d14' : '#f6f8fc')
+    // Keep the native status bar in sync with the theme (no-op on web).
+    applyStatusBarTheme(darkMode)
   }, [darkMode])
+
+  // Dismiss the native splash once the app has painted, so there's no blank
+  // frame between splash and content (no-op on web).
+  useEffect(() => {
+    const id = requestAnimationFrame(() => requestAnimationFrame(() => hideSplash()))
+    return () => cancelAnimationFrame(id)
+  }, [])
 
   // Keyboard avoidance: none needed. Mobile modals are top-anchored (see
   // index.css), so they sit above the on-screen keyboard and never move when
