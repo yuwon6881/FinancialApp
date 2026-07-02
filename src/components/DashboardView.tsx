@@ -801,11 +801,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       </div>
                     )}
                   </div>
-                  <div className="text-right flex flex-col items-end gap-1">
-                    <div className="flex items-center gap-1.5 justify-end">
-                      <span className={`font-bold ${isNeg ? 'text-orange-500' : 'text-foreground'}`}>
+                  <div className="flex items-start justify-end gap-1.5 text-right">
+                    <div className="flex min-w-[96px] flex-col items-end gap-1">
+                      <div className={`font-bold ${isNeg ? 'text-orange-500' : 'text-foreground'}`}>
                         {formatSensitive(c.remaining)}
-                      </span>
+                      </div>
+                      {pendingDeductionsByCategory[c.name] > 0 && (
+                        <div className={`text-[10px] font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
+                          ({formatSensitive(c.remaining - pendingDeductionsByCategory[c.name])})
+                        </div>
+                      )}
+                    </div>
+                    <div className="w-6 shrink-0">
                       <button
                         onClick={() => {
                           setAdjustingCategory(c)
@@ -818,11 +825,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         <Edit2 className="size-3" />
                       </button>
                     </div>
-                    {pendingDeductionsByCategory[c.name] > 0 && (
-                      <div className={`text-[10px] font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
-                        ({formatSensitive(c.remaining - pendingDeductionsByCategory[c.name])})
-                      </div>
-                    )}
                   </div>
                 </div>
               )
