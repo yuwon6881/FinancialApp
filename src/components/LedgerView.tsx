@@ -18,6 +18,7 @@ import {
 import { CustomSelect } from './ui/CustomSelect'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
+import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } from '../lib/categoryColors'
 
 interface LedgerViewProps {
   transactions: Transaction[]
@@ -1699,11 +1700,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       return (
                         <label 
                           key={bucket} 
-                          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition ${
-                            isChecked 
-                              ? 'bg-blue-500/10 border-blue-500/20 text-blue-500 font-semibold' 
-                              : 'bg-background/50 border-border hover:bg-muted text-muted-foreground'
-                          }`}
+                          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition ${getCategoryFilterClass(bucket, isChecked)}`}
                         >
                           <input
                             type="checkbox"
@@ -1711,6 +1708,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                             onChange={() => handleToggleFilter(bucket)}
                             className="rounded border-border text-blue-500 focus:ring-blue-500 size-3"
                           />
+                          <span className={`size-2 rounded-full ${getCategoryDotClass(bucket)}`} />
                           <span>{bucket}</span>
                         </label>
                       )
@@ -1727,11 +1725,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       return (
                         <label 
                           key={c.id} 
-                          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition ${
-                            isChecked 
-                              ? 'bg-blue-500/10 border-blue-500/20 text-blue-500 font-semibold' 
-                              : 'bg-background/50 border-border hover:bg-muted text-muted-foreground'
-                          }`}
+                          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition ${getCategoryFilterClass(c.name, isChecked)}`}
                         >
                           <input
                             type="checkbox"
@@ -1739,6 +1733,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                             onChange={() => handleToggleFilter(c.name)}
                             className="rounded border-border text-blue-500 focus:ring-blue-500 size-3"
                           />
+                          <span className={`size-2 rounded-full ${getCategoryDotClass(c.name)}`} />
                           <span className="truncate">{c.name}</span>
                         </label>
                       )
@@ -1815,7 +1810,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                         {t.category}
                       </span>
                     </td>
-                    <td className="p-4 font-semibold text-muted-foreground">{displayLedgerCategory(t.ledgerCategory)}</td>
+                    <td className="p-4">
+                      <span className={`inline-block text-[10px] px-2 py-0.5 font-semibold rounded-md border ${getCategoryBadgeClass(t.ledgerCategory)}`}>
+                        {displayLedgerCategory(t.ledgerCategory)}
+                      </span>
+                    </td>
                     <td className="p-4 text-right font-medium">
                       {(() => {
                         const isIncomeRecord = t.ledgerCategory === 'Income' || t.ledgerCategory.startsWith('IncomeSplit:')
@@ -2018,8 +2017,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
                 {/* Row 3: Ledger category (Edit / Delete moved to swipe drawer) */}
                 <div className="flex items-center justify-between pt-2 border-t border-border/30">
-                  <span className="text-[10px] text-muted-foreground">
-                    Ledger: <span className="font-semibold text-foreground/70">{ledgerLabel}</span>
+                  <span className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                    Ledger:
+                    <span className={`inline-block px-1.5 py-0.5 rounded-md border font-semibold ${getCategoryBadgeClass(t.ledgerCategory)}`}>
+                      {ledgerLabel}
+                    </span>
                   </span>
                   {isSyncing && (
                     <span className="text-[9px] text-muted-foreground/60 flex items-center gap-1 select-none">

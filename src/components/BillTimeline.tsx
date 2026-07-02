@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import type { ActiveRecurringPayment } from '../types'
 import { Calendar, CheckCircle2, AlertCircle, X, Ban, List } from 'lucide-react'
 import { formatCurrencyVal } from '../lib/utils'
+import { getCategoryBadgeClass } from '../lib/categoryColors'
 
 interface BillTimelineProps {
   activeRecurringPayments: ActiveRecurringPayment[]
@@ -379,7 +380,14 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                   >
                     <div>
                       <div className="text-xs font-bold text-foreground">{bill.name}</div>
-                      <div className="text-[10px] text-muted-foreground mt-0.5">{bill.ledgerCategory} / {bill.category}</div>
+                      <div className="flex flex-wrap items-center gap-1 mt-1">
+                        <span className={`inline-block px-1.5 py-0.5 rounded border font-semibold text-[9px] ${getCategoryBadgeClass(bill.ledgerCategory)}`}>
+                          {bill.ledgerCategory}
+                        </span>
+                        <span className={`inline-block px-1.5 py-0.5 rounded border font-semibold text-[9px] ${getCategoryBadgeClass(bill.category)}`}>
+                          {bill.category}
+                        </span>
+                      </div>
                     </div>
                     <div className="text-right flex flex-col items-end gap-1 font-semibold">
                       <span className="text-xs font-extrabold text-foreground">{formatSensitive(Math.abs(bill.amount))}</span>
@@ -452,7 +460,12 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                 </div>
                 <div>
                   <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-0.5">Main Category</span>
-                  <span className="text-xs text-foreground font-bold">{selectedBill.ledgerCategory} / {selectedBill.category}</span>
+                  <span className={`inline-block px-1.5 py-0.5 rounded border font-semibold text-[10px] ${getCategoryBadgeClass(selectedBill.ledgerCategory)}`}>
+                    {selectedBill.ledgerCategory}
+                  </span>
+                  <span className={`inline-block ml-1 px-1.5 py-0.5 rounded border font-semibold text-[10px] ${getCategoryBadgeClass(selectedBill.category)}`}>
+                    {selectedBill.category}
+                  </span>
                 </div>
               </div>
 

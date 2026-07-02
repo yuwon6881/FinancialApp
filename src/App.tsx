@@ -6,7 +6,8 @@ import { RecurringPaymentsView } from './components/RecurringPaymentsView'
 import { LedgerView } from './components/LedgerView'
 import { LoginView } from './components/LoginView'
 import { WishlistView } from './components/WishlistView'
-import type { Transaction, RecurringPayment, DashboardData, TransactionCategory, WishlistItem } from './types'
+import { SettingsView } from './components/SettingsView'
+import { APP_TABS, type AppTab, type Transaction, type RecurringPayment, type DashboardData, type TransactionCategory, type WishlistItem } from './types'
 import * as api from './lib/api'
 import { Loader2, Plus, Wallet, CreditCard, PiggyBank, Upload } from 'lucide-react'
 import { DraftStagingView } from './components/DraftStagingView'
@@ -21,8 +22,9 @@ function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'))
   const [username, setUsername] = useState<string>(localStorage.getItem('auth_username') || '')
   const [isFabOpen, setIsFabOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'recurring' | 'ledger' | 'wishlist' | 'drafts'>(() => {
-    return (localStorage.getItem('active_tab') as any) || 'dashboard'
+  const [activeTab, setActiveTab] = useState<AppTab>(() => {
+    const cached = localStorage.getItem('active_tab')
+    return APP_TABS.includes(cached as AppTab) ? cached as AppTab : 'dashboard'
   })
 
   useEffect(() => {
@@ -917,7 +919,9 @@ function App() {
     if (navigator.vibrate) {
       try {
         navigator.vibrate(pattern)
-      } catch {}
+      } catch {
+        // Some browsers reject vibrate() calls outside a user gesture; safe to ignore.
+      }
     }
   }
 
@@ -1019,12 +1023,8 @@ function App() {
             dashboardData={optimisticDashboardData}
             transactions={allTransactions}
             onSelectPeriod={handleSelectPeriod}
-            onUpdateSettings={handleUpdateSettings}
             onNavigate={setActiveTab}
             hideSensitive={hideSensitive}
-            categoriesList={categoriesList}
-            onAddCategory={handleAddCategory}
-            onDeleteCategory={handleDeleteCategory}
             onConfirmSubscription={handleConfirmSubscription}
             onDeletePayment={handleDeletePayment}
             onNavigateToLedger={handleNavigateToLedger}
@@ -1032,6 +1032,20 @@ function App() {
             isHoveringWallet={isHoveringWallet}
             onDiscardSubscription={handleDiscardSubscription}
             onAddTransaction={handleAddTransaction}
+          />
+        )}
+
+        {activeTab === 'settings' && (
+          <SettingsView
+            dashboardData={optimisticDashboardData}
+            categoriesList={categoriesList}
+            darkMode={darkMode}
+            hideSensitive={hideSensitive}
+            onToggleDarkMode={handleToggleDarkMode}
+            onToggleHideSensitive={handleToggleHideSensitive}
+            onUpdateSettings={handleUpdateSettings}
+            onAddCategory={handleAddCategory}
+            onDeleteCategory={handleDeleteCategory}
           />
         )}
 

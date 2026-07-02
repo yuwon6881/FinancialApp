@@ -16,6 +16,7 @@ import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
 import { triggerHaptic } from '../lib/haptics'
 import { CustomSelect } from './ui/CustomSelect'
 import { BillTimeline } from './BillTimeline'
+import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } from '../lib/categoryColors'
 
 interface RecurringPaymentsViewProps {
   payments: RecurringPayment[]
@@ -458,11 +459,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                   return (
                     <label 
                       key={bucket} 
-                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition ${
-                        isChecked 
-                          ? 'bg-blue-500/10 border-blue-500/20 text-blue-500 font-semibold' 
-                          : 'bg-background/50 border-border hover:bg-muted text-muted-foreground'
-                      }`}
+                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition ${getCategoryFilterClass(bucket, isChecked)}`}
                     >
                       <input
                         type="checkbox"
@@ -470,6 +467,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                         onChange={() => handleToggleCategoryFilter(bucket)}
                         className="rounded border-border text-blue-500 focus:ring-blue-500 size-3"
                       />
+                      <span className={`size-2 rounded-full ${getCategoryDotClass(bucket)}`} />
                       <span>{bucket}</span>
                     </label>
                   )
@@ -516,7 +514,9 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                         <span className="text-[9px] font-semibold bg-muted px-1.5 py-0.5 rounded text-muted-foreground">Paused</span>
                       )}
                     </h3>
-                    <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">{rp.category}</span>
+                    <span className={`inline-block mt-1 text-[10px] px-1.5 py-0.5 font-semibold rounded border ${getCategoryBadgeClass(rp.category)}`}>
+                      {rp.category}
+                    </span>
                   </div>
                   
                   {/* Status Toggle Button */}
@@ -550,7 +550,9 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                     <span className="text-muted-foreground flex items-center gap-1.5">
                       <CreditCard className="size-3.5" /> Ledger Category
                     </span>
-                    <span className="text-foreground font-medium">{rp.ledgerCategory}</span>
+                    <span className={`inline-block px-1.5 py-0.5 rounded-md border font-semibold ${getCategoryBadgeClass(rp.ledgerCategory)}`}>
+                      {rp.ledgerCategory}
+                    </span>
                   </div>
                   {rp.endDate && (
                     <div className="flex items-center justify-between">
