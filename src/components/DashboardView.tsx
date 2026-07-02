@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
 import { CustomConfirmModal } from './ui/CustomConfirmModal'
+import { SwipeableRow } from './ui/SwipeableRow'
 import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
 
 
@@ -602,28 +603,82 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
             {dashboardData.pendingNotifications.map((noti) => {
               const isConfirming = activeConfirmId === noti.id
-              return (
-                <div key={noti.id} className="p-3.5 rounded-xl bg-card border border-border/40 shadow-xs flex flex-col justify-between gap-3">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <span className="font-bold text-foreground text-xs block">{noti.name}</span>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <span className={`inline-block text-[9px] px-1.5 py-0.5 font-bold rounded border ${categoryColorMap[noti.category] || 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
-                          {noti.category}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground">{noti.billingDate}</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-orange-500 font-extrabold text-xs block">
-                        -{formatSensitive(noti.amount)}
+              const notificationBody = (
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <span className="font-bold text-foreground text-xs truncate block">{noti.name}</span>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <span className={`inline-block text-[9px] px-1.5 py-0.5 font-bold rounded border ${categoryColorMap[noti.category] || 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
+                        {noti.category}
                       </span>
-                      <span className="text-[9px] text-muted-foreground">{noti.cycleLabel}</span>
+                      <span className="text-[10px] text-muted-foreground">{noti.billingDate}</span>
                     </div>
                   </div>
-
+                  <div className="text-right shrink-0">
+                    <span className="text-orange-500 font-extrabold text-xs block">
+                      -{formatSensitive(noti.amount)}
+                    </span>
+                    <span className="text-[9px] text-muted-foreground">{noti.cycleLabel}</span>
+                  </div>
+                </div>
+              )
+              const startConfirm = () => {
+                setActiveConfirmId(noti.id)
+                setPaidDateInput(noti.billingDate)
+              }
+              const dashboardActions = (
+                <>
+                  <button
+                    onClick={startConfirm}
+                    className="flex-1 flex items-center justify-center bg-blue-600 text-white text-[10px] font-bold active:bg-blue-700 transition"
+                  >
+                    Pay
+                  </button>
+                  {onDiscardSubscription && (
+                    <button
+                      onClick={() => onDiscardSubscription(noti)}
+                      className="flex-1 flex items-center justify-center bg-slate-600 text-white text-[10px] font-bold active:bg-slate-700 transition"
+                    >
+                      Skip
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setNotiToDelete(noti)}
+                    className="flex-1 flex items-center justify-center bg-orange-600 text-white text-[10px] font-bold active:bg-orange-700 transition"
+                  >
+                    Remove
+                  </button>
+                </>
+              )
+              const dashboardDesktopActions = (
+                <>
+                  <button
+                    onClick={startConfirm}
+                    className="px-2.5 py-1.5 bg-blue-500/15 hover:bg-blue-500/25 text-blue-500 font-bold text-[10px] rounded-lg transition duration-150 cursor-pointer text-center whitespace-nowrap"
+                  >
+                    Pay
+                  </button>
+                  {onDiscardSubscription && (
+                    <button
+                      onClick={() => onDiscardSubscription(noti)}
+                      className="px-2.5 py-1.5 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-[10px] rounded-lg transition duration-150 cursor-pointer text-center whitespace-nowrap"
+                    >
+                      Skip
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setNotiToDelete(noti)}
+                    className="px-2.5 py-1.5 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-[10px] rounded-lg transition duration-150 cursor-pointer border border-orange-500/10 text-center whitespace-nowrap"
+                  >
+                    Remove
+                  </button>
+                </>
+              )
+              return (
+                <div key={noti.id} className="p-3.5 rounded-xl bg-card border border-border/40 shadow-xs flex flex-col justify-between gap-3">
                   {isConfirming ? (
                     <div className="flex flex-col gap-2 p-2 bg-muted/30 border border-border/40 rounded-lg animate-in slide-in-from-bottom-2 duration-200">
+                      {notificationBody}
                       <label className="text-[10px] font-bold text-muted-foreground">Select Paid Date:</label>
                       <div className="flex flex-col sm:flex-row gap-2">
                         <input
@@ -652,35 +707,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       </div>
                     </div>
                   ) : (
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 border-t border-border/20 pt-2">
-                      <div className="flex gap-2 w-full sm:w-auto">
-                        <button
-                          onClick={() => {
-                            setActiveConfirmId(noti.id)
-                            setPaidDateInput(noti.billingDate)
-                          }}
-                          className="flex-1 sm:flex-initial px-2.5 py-1.5 bg-blue-500/15 hover:bg-blue-500/25 text-blue-500 font-bold text-[10px] rounded-lg transition duration-150 cursor-pointer text-center"
-                        >
-                          Mark Paid
-                        </button>
-                        {onDiscardSubscription && (
-                          <button
-                            onClick={() => onDiscardSubscription(noti)}
-                            className="flex-1 sm:flex-initial px-2.5 py-1.5 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-[10px] rounded-lg transition duration-150 cursor-pointer text-center"
-                          >
-                            Discard
-                          </button>
-                        )}
-                        <button
-                          onClick={() => {
-                            setNotiToDelete(noti)
-                          }}
-                          className="flex-1 sm:flex-initial px-2.5 py-1.5 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-[10px] rounded-lg transition duration-150 cursor-pointer border border-orange-500/10 text-center"
-                        >
-                          Remove Subscription
-                        </button>
-                      </div>
-                    </div>
+                    <SwipeableRow
+                      className="rounded-xl border border-border/40 bg-card"
+                      contentClassName="p-0"
+                      actionsWidth={180}
+                      actions={dashboardActions}
+                      desktopActions={dashboardDesktopActions}
+                    >
+                      {notificationBody}
+                    </SwipeableRow>
                   )}
                 </div>
               )
