@@ -111,17 +111,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Subcategory custom colors mapping
   const categoryColorHex: Record<string, string> = {
-    'Salary': '#3b82f6',
-    'Social': '#ec4899',
-    'Food': '#f59e0b',
-    'Hobbies': '#14b8a6',
-    'Software': '#6366f1',
-    'Investment': '#8b5cf6',
-    'Entertainment': '#f97316',
-    'Transport': '#a855f7',
-    'Other': '#64748b',
+    'Salary': 'var(--color-blue-500, #0072b2)',
+    'Social': 'var(--color-pink-500, #cc79a7)',
+    'Food': 'var(--color-amber-500, #e69f00)',
+    'Hobbies': 'var(--color-teal-500, #009e73)',
+    'Software': 'var(--color-sky-500, #56b4e9)',
+    'Investment': 'var(--color-violet-500, #cc79a7)',
+    'Entertainment': 'var(--color-orange-500, #d55e00)',
+    'Transport': 'var(--color-purple-500, #7e6dc9)',
+    'Other': 'var(--color-slate-500, #5d6978)',
   }
-  const getCategoryColor = (name: string) => categoryColorHex[name] || '#64748b'
+  const getCategoryColor = (name: string) => categoryColorHex[name] || 'var(--color-slate-500, #5d6978)'
 
   const breakdownData = useMemo(() => {
     if (chartView === 'yearly') return dashboardData?.yearlyCategoryBreakdown || []
