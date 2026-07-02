@@ -17,6 +17,10 @@ import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 import { PullToRefresh } from './components/ui/PullToRefresh'
 import { ToastViewport, type ToastMessage, type ToastTone } from './components/ui/ToastViewport'
 import { CardSkeleton, Skeleton } from './components/ui/Skeleton'
+import { CACHE_KEYS, getCachedJSON, setCachedJSON, hasCachedKey, getCachedDashboardPeriod } from './lib/cache'
+import { PendingSubscriptionsModal } from './components/PendingSubscriptionsModal'
+import { PasswordPromptModal } from './components/PasswordPromptModal'
+import { LockScreen } from './components/LockScreen'
 
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'))
@@ -31,49 +35,17 @@ function App() {
     localStorage.setItem('active_tab', activeTab)
   }, [activeTab])
   
-  const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    try {
-      const cached = localStorage.getItem('cached_transactions')
-      return cached ? JSON.parse(cached) : []
-    } catch { return [] }
-  })
-  const [recurringPayments, setRecurringPayments] = useState<RecurringPayment[]>(() => {
-    try {
-      const cached = localStorage.getItem('cached_recurring_payments')
-      return cached ? JSON.parse(cached) : []
-    } catch { return [] }
-  })
-  const [categoriesList, setCategoriesList] = useState<TransactionCategory[]>(() => {
-    try {
-      const cached = localStorage.getItem('cached_categories')
-      return cached ? JSON.parse(cached) : []
-    } catch { return [] }
-  })
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(() => {
-    try {
-      const cached = localStorage.getItem('cached_dashboard_data')
-      return cached ? JSON.parse(cached) : null
-    } catch { return null }
-  })
-  const [wishlist, setWishlist] = useState<WishlistItem[]>(() => {
-    try {
-      const cached = localStorage.getItem('cached_wishlist')
-      return cached ? JSON.parse(cached) : []
-    } catch { return [] }
-  })
-  
+  const [transactions, setTransactions] = useState<Transaction[]>(() => getCachedJSON(CACHE_KEYS.transactions, []))
+  const [recurringPayments, setRecurringPayments] = useState<RecurringPayment[]>(() => getCachedJSON(CACHE_KEYS.recurringPayments, []))
+  const [categoriesList, setCategoriesList] = useState<TransactionCategory[]>(() => getCachedJSON(CACHE_KEYS.categories, []))
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(() => getCachedJSON(CACHE_KEYS.dashboardData, null))
+  const [wishlist, setWishlist] = useState<WishlistItem[]>(() => getCachedJSON(CACHE_KEYS.wishlist, []))
+
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState<boolean>(() => {
-    return !localStorage.getItem('cached_dashboard_data')
-  })
+  const [loading, setLoading] = useState<boolean>(() => !hasCachedKey(CACHE_KEYS.dashboardData))
 
   // Sync Queue States
-  const [pendingTransactions, setPendingTransactions] = useState<Transaction[]>(() => {
-    try {
-      const cached = localStorage.getItem('pending_transactions')
-      return cached ? JSON.parse(cached) : []
-    } catch { return [] }
-  })
+  const [pendingTransactions, setPendingTransactions] = useState<Transaction[]>(() => getCachedJSON(CACHE_KEYS.pendingTransactions, []))
   const [isBackgroundSyncing, setIsBackgroundSyncing] = useState<boolean>(false)
   const [actionLoading, setActionLoading] = useState<boolean>(false)
   const [activeSyncId, setActiveSyncId] = useState<string | null>(null)
@@ -83,26 +55,8 @@ function App() {
   const isServerAwakeRef = useRef<boolean>(false)
 
 
-  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
-    try {
-      const cached = localStorage.getItem('cached_dashboard_data')
-      if (cached) {
-        const parsed = JSON.parse(cached)
-        return parsed?.setting?.selectedMonth || ''
-      }
-    } catch {}
-    return ''
-  })
-  const [selectedYear, setSelectedYear] = useState<number>(() => {
-    try {
-      const cached = localStorage.getItem('cached_dashboard_data')
-      if (cached) {
-        const parsed = JSON.parse(cached)
-        return parsed?.setting?.selectedYear || 0
-      }
-    } catch {}
-    return 0
-  })
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => getCachedDashboardPeriod().month || '')
+  const [selectedYear, setSelectedYear] = useState<number>(() => getCachedDashboardPeriod().year || 0)
   const [ledgerIncomingCategory, setLedgerIncomingCategory] = useState<string | null>(null)
   const [ledgerIncomingDate, setLedgerIncomingDate] = useState<string | null>(null)
   const [ledgerIncomingTxType, setLedgerIncomingTxType] = useState<'inflow' | 'outflow' | null>(null)
@@ -175,9 +129,6 @@ function App() {
   const [isLocked, setIsLocked] = useState<boolean>(() => {
     return sessionStorage.getItem('session_locked') === 'true'
   })
-  const [lockPassword, setLockPassword] = useState('')
-  const [lockError, setLockError] = useState<string | null>(null)
-  const [lockVerifying, setLockVerifying] = useState(false)
 
   // Inactivity tracking - update last_active_time in localStorage
   useEffect(() => {
@@ -216,9 +167,6 @@ function App() {
 
   // Password Prompt for revealing sensitive information
   const [showPasswordPrompt, setShowPasswordPrompt] = useState<boolean>(false)
-  const [confirmPassword, setConfirmPassword] = useState<string>('')
-  const [promptError, setPromptError] = useState<string | null>(null)
-  const [promptVerifying, setPromptVerifying] = useState<boolean>(false)
 
   // Login Notification Modal States
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false)
@@ -248,12 +196,12 @@ function App() {
     localStorage.removeItem('auth_username')
     sessionStorage.removeItem('session_locked')
     localStorage.removeItem('last_active_time')
-    localStorage.removeItem('cached_dashboard_data')
-    localStorage.removeItem('cached_transactions')
-    localStorage.removeItem('cached_recurring_payments')
-    localStorage.removeItem('cached_categories')
-    localStorage.removeItem('cached_wishlist')
-    localStorage.removeItem('pending_transactions')
+    localStorage.removeItem(CACHE_KEYS.dashboardData)
+    localStorage.removeItem(CACHE_KEYS.transactions)
+    localStorage.removeItem(CACHE_KEYS.recurringPayments)
+    localStorage.removeItem(CACHE_KEYS.categories)
+    localStorage.removeItem(CACHE_KEYS.wishlist)
+    localStorage.removeItem(CACHE_KEYS.pendingTransactions)
     setIsLocked(false)
   }
 
@@ -284,11 +232,11 @@ function App() {
       isServerAwakeRef.current = true
 
       // Save to localStorage cache
-      localStorage.setItem('cached_dashboard_data', JSON.stringify(dbData))
-      localStorage.setItem('cached_transactions', JSON.stringify(txs))
-      localStorage.setItem('cached_recurring_payments', JSON.stringify(recs))
-      localStorage.setItem('cached_categories', JSON.stringify(cats))
-      localStorage.setItem('cached_wishlist', JSON.stringify(wishes))
+      setCachedJSON(CACHE_KEYS.dashboardData, dbData)
+      setCachedJSON(CACHE_KEYS.transactions, txs)
+      setCachedJSON(CACHE_KEYS.recurringPayments, recs)
+      setCachedJSON(CACHE_KEYS.categories, cats)
+      setCachedJSON(CACHE_KEYS.wishlist, wishes)
 
       // Sync dark mode from server preference (server wins over localStorage)
       const serverDark = dbData.setting.darkMode ?? false
@@ -327,17 +275,8 @@ function App() {
 
   useEffect(() => {
     if (token) {
-      const hasCache = !!localStorage.getItem('cached_dashboard_data');
-      let cachedMonth: string | undefined = undefined;
-      let cachedYear: number | undefined = undefined;
-      try {
-        const cached = localStorage.getItem('cached_dashboard_data');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          cachedMonth = parsed?.setting?.selectedMonth || undefined;
-          cachedYear = parsed?.setting?.selectedYear || undefined;
-        }
-      } catch {}
+      const hasCache = hasCachedKey(CACHE_KEYS.dashboardData);
+      const { month: cachedMonth, year: cachedYear } = getCachedDashboardPeriod();
       loadAll(cachedMonth, cachedYear, hasCache);
     }
   }, [token])
@@ -357,7 +296,7 @@ function App() {
         const backedUpTxs = JSON.parse(cachedBackup);
         if (Array.isArray(backedUpTxs) && backedUpTxs.length > 0) {
           setPendingTransactions(backedUpTxs);
-          localStorage.setItem('pending_transactions', cachedBackup);
+          localStorage.setItem(CACHE_KEYS.pendingTransactions, cachedBackup);
         }
       } catch (e) {
         console.error('Failed to parse backed up pending transactions:', e);
@@ -641,7 +580,7 @@ function App() {
 
   // Save pending transactions to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('pending_transactions', JSON.stringify(pendingTransactions))
+    setCachedJSON(CACHE_KEYS.pendingTransactions, pendingTransactions)
   }, [pendingTransactions])
 
   // Warming ping and background sync are managed by wakeUpAndSync below
@@ -750,16 +689,7 @@ function App() {
         if (res && res.status !== 'waking_up') {
           console.log('Server is awake! Performing initial load and processing queue...')
           isServerAwakeRef.current = true
-          let cachedMonth: string | undefined = undefined;
-          let cachedYear: number | undefined = undefined;
-          try {
-            const cached = localStorage.getItem('cached_dashboard_data');
-            if (cached) {
-              const parsed = JSON.parse(cached);
-              cachedMonth = parsed?.setting?.selectedMonth || undefined;
-              cachedYear = parsed?.setting?.selectedYear || undefined;
-            }
-          } catch {}
+          const { month: cachedMonth, year: cachedYear } = getCachedDashboardPeriod();
           await loadAll(cachedMonth, cachedYear, true)
           processQueue()
           return
@@ -1150,286 +1080,46 @@ function App() {
       </main>
       </PullToRefresh>
 
-      {/* Modal Popup for Pending Subscriptions on Login */}
-      {showLoginModal && optimisticDashboardData?.pendingNotifications && optimisticDashboardData.pendingNotifications.length > 0 && (
-        <div
-          onClick={() => setShowLoginModal(false)}
-          className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            className="sheet-panel w-full max-w-2xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex items-center justify-between border-b border-border/40 pb-3">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
-                <h3 className="text-md font-bold text-foreground">Pending Subscription Payments</h3>
-              </div>
-              <button
-                onClick={() => setShowLoginModal(false)}
-                className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition cursor-pointer font-bold"
-              >
-                &times;
-              </button>
-            </div>
+      <PendingSubscriptionsModal
+        isOpen={showLoginModal}
+        pendingNotifications={optimisticDashboardData?.pendingNotifications || []}
+        currency={optimisticDashboardData?.setting?.currency || 'USD'}
+        hideSensitive={hideSensitive}
+        showOnLoginChecked={modalCheckbox}
+        onToggleShowOnLogin={(checked) => {
+          setModalCheckbox(checked)
+          localStorage.setItem('show_notifications_on_login', checked ? 'true' : 'false')
+        }}
+        onClose={() => setShowLoginModal(false)}
+        onConfirmSubscription={handleConfirmSubscription}
+        onDiscardSubscription={handleDiscardSubscription}
+        onRemoveSubscription={(recurringPaymentId) => setConfirmModalData({
+          title: 'Remove Subscription',
+          message: 'Are you sure you want to delete this recurring subscription? This will cancel all future notifications for this subscription.',
+          onConfirm: () => handleDeletePayment(recurringPaymentId)
+        })}
+      />
 
-            <div className="text-xs text-muted-foreground">
-              The following subscription renewals have arrived or passed. Please confirm which bills have been paid to register them in the ledger.
-            </div>
+      <PasswordPromptModal
+        isOpen={showPasswordPrompt}
+        onClose={() => setShowPasswordPrompt(false)}
+        onVerified={() => {
+          setHideSensitive(false)
+          localStorage.setItem('hide_sensitive', 'false')
+          setShowPasswordPrompt(false)
+          api.updateHideSensitive(false).catch(err => console.warn('Hide sensitive sync failed:', err))
+        }}
+      />
 
-            <div className="space-y-3 overflow-y-auto max-h-80 pr-1 py-1">
-              {optimisticDashboardData.pendingNotifications.map((noti) => (
-                <div key={noti.id} className="p-4 rounded-xl bg-muted/30 border border-border/40 shadow-xs flex flex-col gap-3">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <span className="font-bold text-foreground text-xs block">{noti.name}</span>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <span className="inline-block text-[9px] px-1.5 py-0.5 font-bold rounded border bg-slate-500/10 text-slate-500 border-slate-500/20">
-                          {noti.category}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground">{noti.billingDate}</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <span className={`text-orange-500 font-extrabold text-xs block transition-all duration-300 ${hideSensitive ? 'blur-sm select-none pointer-events-none' : ''}`}>
-                        -{formatCurrencyVal(noti.amount, optimisticDashboardData?.setting?.currency || 'USD')}
-                      </span>
-                      <span className="text-[9px] text-muted-foreground">{noti.cycleLabel}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 border-t border-border/20 pt-2.5">
-                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:justify-end">
-                      <div className="flex items-center gap-1.5 flex-1 sm:flex-initial min-w-[140px]">
-                        <span className="text-[9px] font-bold text-muted-foreground shrink-0">Paid Date:</span>
-                        <input
-                          type="date"
-                          defaultValue={noti.billingDate}
-                          id={`modal-date-${noti.id}`}
-                          className="w-full px-2 py-1 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
-                      </div>
-                      <div className="flex gap-2 w-full sm:w-auto">
-                        <button
-                          onClick={() => {
-                            const dateVal = (document.getElementById(`modal-date-${noti.id}`) as HTMLInputElement)?.value || noti.billingDate
-                            handleConfirmSubscription(noti, dateVal)
-                          }}
-                          className="flex-1 sm:flex-initial px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition shadow-sm whitespace-nowrap text-center"
-                        >
-                          Confirm Paid
-                        </button>
-                        <button
-                          onClick={() => handleDiscardSubscription(noti)}
-                          className="flex-1 sm:flex-initial px-3 py-1.5 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-xs rounded-lg transition duration-150 cursor-pointer border border-slate-500/10 whitespace-nowrap text-center"
-                        >
-                          Discard
-                        </button>
-                        <button
-                          onClick={() => {
-                            setConfirmModalData({
-                              title: 'Remove Subscription',
-                              message: 'Are you sure you want to delete this recurring subscription? This will cancel all future notifications for this subscription.',
-                              onConfirm: () => handleDeletePayment(noti.recurringPaymentId)
-                            })
-                          }}
-                          className="flex-1 sm:flex-initial px-3 py-1.5 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-xs rounded-lg transition duration-150 cursor-pointer border border-orange-500/10 whitespace-nowrap text-center"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between border-t border-border/40 pt-4 mt-2">
-              <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer w-full sm:w-auto">
-                <input
-                  type="checkbox"
-                  checked={modalCheckbox}
-                  onChange={(e) => {
-                    setModalCheckbox(e.target.checked)
-                    localStorage.setItem('show_notifications_on_login', e.target.checked ? 'true' : 'false')
-                  }}
-                  className="rounded border-border text-blue-500 focus:ring-blue-500"
-                />
-                Show this notification automatically every time I log in
-              </label>
-              <button
-                onClick={() => setShowLoginModal(false)}
-                className="w-full sm:w-auto px-4 py-2 bg-foreground text-background font-bold text-xs rounded-xl hover:bg-foreground/90 transition shadow-sm cursor-pointer text-center"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Password Gate Prompt Modal */}
-      {showPasswordPrompt && (
-        <div
-          onClick={() => {
-            setShowPasswordPrompt(false)
-            setConfirmPassword('')
-            setPromptError(null)
-          }}
-          className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            className="sheet-panel w-full max-w-sm bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex items-center justify-between border-b border-border/40 pb-2">
-              <h3 className="text-sm font-bold text-foreground">Verify Identity</h3>
-              <button
-                onClick={() => {
-                  setShowPasswordPrompt(false)
-                  setConfirmPassword('')
-                  setPromptError(null)
-                }}
-                className="text-muted-foreground hover:text-foreground text-sm font-bold cursor-pointer"
-              >
-                &times;
-              </button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Please enter your password to confirm you are the owner before revealing sensitive financial figures.
-            </p>
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault()
-                setPromptVerifying(true)
-                setPromptError(null)
-                try {
-                  const res = await api.verifyPassword(confirmPassword)
-                    if (res.verified) {
-                     setHideSensitive(false)
-                     localStorage.setItem('hide_sensitive', 'false')
-                     setShowPasswordPrompt(false)
-                     setConfirmPassword('')
-                     await api.updateHideSensitive(false).catch(err => console.warn('Hide sensitive sync failed:', err))
-                   } else {
-                     setPromptError(res.message || 'Incorrect password.')
-                   }
-                } catch (err) {
-                  console.error(err)
-                  setPromptError('Failed to contact verification server.')
-                } finally {
-                  setPromptVerifying(false)
-                }
-              }}
-              className="space-y-4"
-            >
-              <div className="space-y-1">
-                <input
-                  type="password"
-                  required
-                  placeholder="Enter password"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  autoComplete="new-password"
-                  readOnly
-                  onFocus={(e) => e.target.removeAttribute('readonly')}
-                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  autoFocus
-                />
-                {promptError && (
-                  <p className="text-[10px] text-orange-500 font-semibold mt-1">
-                    {promptError}
-                  </p>
-                )}
-              </div>
-              <div className="flex gap-2 justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPasswordPrompt(false)
-                    setConfirmPassword('')
-                    setPromptError(null)
-                  }}
-                  className="px-4 py-2 border border-border hover:bg-muted text-foreground text-xs font-semibold rounded-xl cursor-pointer transition duration-150"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={promptVerifying}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl cursor-pointer transition duration-150 shadow-md shadow-blue-600/10"
-                >
-                  {promptVerifying ? 'Verifying...' : 'Verify'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Inactivity Lock Screen */}
-      {isLocked && token && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/95 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="w-full max-w-sm flex flex-col items-center gap-6">
-            <div className="flex size-16 items-center justify-center rounded-2xl bg-radial from-blue-400 to-blue-600 shadow-xl shadow-blue-500/30 text-white font-extrabold text-3xl select-none">
-              F
-            </div>
-            <div className="text-center">
-              <h2 className="text-xl font-bold text-foreground">Session Locked</h2>
-              <p className="text-sm text-muted-foreground mt-1">You were inactive for 5 minutes. Please re-enter your password to continue.</p>
-            </div>
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault()
-                setLockVerifying(true)
-                setLockError(null)
-                try {
-                  const res = await api.verifyPassword(lockPassword)
-                  if (res.verified) {
-                    localStorage.setItem('last_active_time', Date.now().toString())
-                    sessionStorage.setItem('session_locked', 'false')
-                    setIsLocked(false)
-                    setLockPassword('')
-                  } else {
-                    setLockError(res.message || 'Incorrect password.')
-                  }
-                } catch {
-                  setLockError('Failed to verify. Please try again.')
-                } finally {
-                  setLockVerifying(false)
-                }
-              }}
-              className="w-full space-y-3"
-            >
-              <input
-                type="password"
-                required
-                placeholder="Enter your password"
-                value={lockPassword}
-                onChange={e => setLockPassword(e.target.value)}
-                autoFocus
-                className="w-full px-4 py-3 text-sm bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-              />
-              {lockError && (
-                <p className="text-xs text-orange-500 font-semibold">{lockError}</p>
-              )}
-              <button
-                type="submit"
-                disabled={lockVerifying}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-xl shadow-lg shadow-blue-600/20 transition cursor-pointer"
-              >
-                {lockVerifying ? 'Unlocking...' : 'Unlock'}
-              </button>
-            </form>
-            <button
-              onClick={handleLogout}
-              className="text-xs text-muted-foreground hover:text-foreground transition cursor-pointer underline"
-            >
-              Sign out instead
-            </button>
-          </div>
-        </div>
-      )}
+      <LockScreen
+        isOpen={isLocked && !!token}
+        onUnlocked={() => {
+          localStorage.setItem('last_active_time', Date.now().toString())
+          sessionStorage.setItem('session_locked', 'false')
+          setIsLocked(false)
+        }}
+        onSignOut={handleLogout}
+      />
 
       {/* Footer */}
       <footer className="border-t border-border/40 py-6 pb-24 md:pb-6 bg-muted/10 select-none">

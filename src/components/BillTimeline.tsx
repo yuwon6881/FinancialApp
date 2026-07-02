@@ -111,35 +111,23 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
 
   // Dynamic vertical staggering leader offsets to prevent label collision
-  let lastTopPct = -100
-  let lastBottomPct = -100
-
-  const timelineNodes = rawNodes.map((node, idx) => {
+  const timelineNodes = rawNodes.reduce<{
+    nodes: (TimelineNode & { isTop: boolean; level: 'short' | 'long' })[]
+    lastTopPct: number
+    lastBottomPct: number
+  }>((acc, node, idx) => {
     const isTop = idx % 2 === 0
-    let level: 'short' | 'long' = 'short'
-
-    if (isTop) {
-      if (node.percent - lastTopPct < 15) {
-        level = 'long'
-        lastTopPct = node.percent + 15
-      } else {
-        lastTopPct = node.percent
-      }
-    } else {
-      if (node.percent - lastBottomPct < 15) {
-        level = 'long'
-        lastBottomPct = node.percent + 15
-      } else {
-        lastBottomPct = node.percent
-      }
-    }
+    const referencePct = isTop ? acc.lastTopPct : acc.lastBottomPct
+    const isCrowded = node.percent - referencePct < 15
+    const level: 'short' | 'long' = isCrowded ? 'long' : 'short'
+    const nextPct = isCrowded ? node.percent + 15 : node.percent
 
     return {
-      ...node,
-      isTop,
-      level
+      nodes: [...acc.nodes, { ...node, isTop, level }],
+      lastTopPct: isTop ? nextPct : acc.lastTopPct,
+      lastBottomPct: isTop ? acc.lastBottomPct : nextPct
     }
-  })
+  }, { nodes: [], lastTopPct: -100, lastBottomPct: -100 }).nodes
 
   const handleNodeClick = (node: any) => {
     if (node.bills.length === 1) {
@@ -261,14 +249,11 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
               const formattedDueDay = new Date(node.dueDate).getDate()
 
               // Construct readable label for single or multiple bills
-              let labelText = ''
-              if (node.bills.length === 1) {
-                labelText = node.bills[0].name
-              } else if (node.bills.length === 2) {
-                labelText = `${node.bills[0].name} & ${node.bills[1].name}`
-              } else {
-                labelText = `${node.bills.length} Bills`
-              }
+              const labelText = node.bills.length === 1
+                ? node.bills[0].name
+                : node.bills.length === 2
+                  ? `${node.bills[0].name} & ${node.bills[1].name}`
+                  : `${node.bills.length} Bills`
 
               // Dynamic label alignment to prevent clipping on the boundaries
               let alignClasses = 'left-1/2 -translate-x-1/2 items-center'
