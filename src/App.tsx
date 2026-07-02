@@ -1,14 +1,14 @@
 import { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import './App.css'
 import TopNav from "./TopNav.tsx"
-import { LoginView } from './components/LoginView'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { APP_TABS, type AppTab, type Transaction, type RecurringPayment, type DashboardData, type TransactionCategory, type WishlistItem } from './types'
 import * as api from './lib/api'
 import { Loader2, Plus, Wallet, CreditCard, PiggyBank, Upload } from 'lucide-react'
 
-// Tab views are code-split so the initial bundle only ships the shell + the
-// first view. Each chunk loads on demand behind a shimmer fallback.
+// Every view is code-split so the initial bundle only ships the shell. Each
+// chunk loads on demand behind an instant blank-shell fallback (no flash).
+const LoginView = lazy(() => import('./components/LoginView').then(m => ({ default: m.LoginView })))
 const DashboardView = lazy(() => import('./components/DashboardView').then(m => ({ default: m.DashboardView })))
 const RecurringPaymentsView = lazy(() => import('./components/RecurringPaymentsView').then(m => ({ default: m.RecurringPaymentsView })))
 const LedgerView = lazy(() => import('./components/LedgerView').then(m => ({ default: m.LedgerView })))
@@ -30,24 +30,8 @@ const createLocalId = (prefix: string, separator = '_') => {
   return `${prefix}${separator}${Date.now()}${separator}${Math.random().toString(36).substring(2, 9)}`
 }
 
-// Shimmer shown while a lazily-loaded tab chunk is fetched.
-const ViewFallback = () => (
-  <div className="space-y-6" aria-busy="true" aria-label="Loading view">
-    <div className="app-panel rounded-2xl border border-border/60 bg-card/90 p-6">
-      <Skeleton className="h-5 w-48" />
-      <Skeleton className="mt-3 h-3 w-64" />
-    </div>
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <CardSkeleton />
-      <CardSkeleton />
-      <CardSkeleton />
-    </div>
-    <div className="app-panel rounded-2xl border border-border/60 bg-card/90 p-6">
-      <Skeleton className="h-4 w-40" />
-      <Skeleton className="mt-5 h-28 w-full rounded-xl" />
-    </div>
-  </div>
-)
+// Instant, flash-free placeholder while a lazily-loaded chunk is fetched.
+const ViewFallback = () => <div className="app-shell min-h-screen" />
 
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'))
@@ -987,7 +971,11 @@ function App() {
   }
 
   if (!token) {
-    return <LoginView onLoginSuccess={handleLoginSuccess} />
+    return (
+      <Suspense fallback={<ViewFallback />}>
+        <LoginView onLoginSuccess={handleLoginSuccess} />
+      </Suspense>
+    )
   }
 
   if (loading && !optimisticDashboardData) {
