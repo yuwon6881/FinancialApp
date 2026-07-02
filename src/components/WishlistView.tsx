@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import type { WishlistItem } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
+import { SwipeableRow } from './ui/SwipeableRow'
 import { formatCurrencyVal } from '../lib/utils'
 import {
   Gift, 
@@ -432,54 +433,83 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
 
           <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1">
             {queuedItems.length > 0 ? (
-              queuedItems.map(item => {
+              queuedItems.map((item, idx) => {
                 const pct = Math.min(100, (rewardsBalance / item.price) * 100)
                 const canAfford = rewardsBalance >= item.price
 
                 return (
-                  <div 
+                  <SwipeableRow
                     key={item.id}
-                    className={`p-4 rounded-xl bg-card border border-border/60 hover:border-blue-500/20 shadow-xs flex items-center justify-between gap-4 transition duration-200 group ${
-                      canAfford ? 'border-green-500/20 bg-green-500/[0.01]' : ''
+                    hint={idx === 0}
+                    className={`rounded-xl border shadow-xs transition duration-200 group ${
+                      canAfford ? 'border-green-500/30' : 'border-border/60 hover:border-blue-500/20'
                     }`}
+                    contentClassName="p-4"
+                    actionsWidth={174}
+                    actions={
+                      <>
+                        <button
+                          onClick={() => handleToggleActive(item)}
+                          className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-500 text-white text-[10px] font-bold active:bg-blue-600 transition"
+                        >
+                          <Sparkles className="size-3.5" />
+                          Focus
+                        </button>
+                        <button
+                          onClick={() => handleOpenEditModal(item)}
+                          className="flex-1 flex flex-col items-center justify-center gap-1 bg-slate-500 text-white text-[10px] font-bold active:bg-slate-600 transition"
+                        >
+                          <Edit2 className="size-3.5" />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => onDeleteItem(item.id)}
+                          className="flex-1 flex flex-col items-center justify-center gap-1 bg-red-500 text-white text-[10px] font-bold active:bg-red-600 transition"
+                        >
+                          <Trash2 className="size-3.5" />
+                          Delete
+                        </button>
+                      </>
+                    }
+                    desktopActions={
+                      <>
+                        <button
+                          onClick={() => handleToggleActive(item)}
+                          className="px-2.5 py-1.5 bg-blue-500/10 text-blue-500 hover:bg-blue-500 text-xs font-bold rounded-lg border border-blue-500/10 hover:text-white transition cursor-pointer"
+                        >
+                          Focus
+                        </button>
+                        <button
+                          onClick={() => handleOpenEditModal(item)}
+                          className="p-1.5 hover:bg-muted text-muted-foreground rounded-lg border border-transparent hover:border-border/40 transition cursor-pointer"
+                        >
+                          <Edit2 className="size-3.5" />
+                        </button>
+                        <button
+                          onClick={() => onDeleteItem(item.id)}
+                          className="p-1.5 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 rounded-lg border border-transparent hover:border-red-500/10 transition cursor-pointer"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </>
+                    }
                   >
-                    <div className="space-y-1.5 min-w-0 flex-1">
+                    <div className="space-y-1.5 min-w-0">
                       <div className="flex items-center gap-2">
                         <h4 className="font-bold text-foreground text-xs truncate">{item.name}</h4>
                         {canAfford && (
-                          <span className="size-1.5 rounded-full bg-green-500 animate-pulse" title="Ready to claim" />
+                          <span className="size-1.5 rounded-full bg-green-500 animate-pulse shrink-0" title="Ready to claim" />
                         )}
                       </div>
                       <div className="text-sm font-extrabold text-foreground">{formatSensitive(item.price)}</div>
                       <div className="w-full bg-muted rounded-full h-1 overflow-hidden">
-                        <div 
-                          className={`h-full ${canAfford ? 'bg-green-500' : 'bg-pink-500'}`} 
-                          style={{ width: `${pct}%` }} 
+                        <div
+                          className={`h-full ${canAfford ? 'bg-green-500' : 'bg-pink-500'}`}
+                          style={{ width: `${pct}%` }}
                         />
                       </div>
                     </div>
-                    
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        onClick={() => handleToggleActive(item)}
-                        className="px-2.5 py-1.5 bg-blue-500/10 text-blue-500 hover:bg-blue-500 text-xs font-bold rounded-lg border border-blue-500/10 hover:text-white transition cursor-pointer"
-                      >
-                        Focus
-                      </button>
-                      <button
-                        onClick={() => handleOpenEditModal(item)}
-                        className="p-1.5 hover:bg-muted text-muted-foreground rounded-lg border border-transparent hover:border-border/40 transition cursor-pointer"
-                      >
-                        <Edit2 className="size-3.5" />
-                      </button>
-                      <button
-                        onClick={() => onDeleteItem(item.id)}
-                        className="p-1.5 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 rounded-lg border border-transparent hover:border-red-500/10 transition cursor-pointer"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
-                    </div>
-                  </div>
+                  </SwipeableRow>
                 )
               })
             ) : (
