@@ -9,7 +9,8 @@ import {
   Calendar, 
   Bell, 
   X,
-  Edit
+  Edit,
+  ChevronDown
 } from 'lucide-react'
 import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
 import { triggerHaptic } from '../lib/haptics'
@@ -55,6 +56,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingPayment, setEditingPayment] = useState<RecurringPayment | null>(null)
+  const [showTimeline, setShowTimeline] = useState(false)
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('')
@@ -262,16 +264,38 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
       </div>
 
       {/* Visual Bill Timeline */}
-      <BillTimeline
-        activeRecurringPayments={activeRecurringPayments}
-        selectedMonth={selectedMonth}
-        selectedYear={selectedYear}
-        cycleDay={cycleDay}
-        currency={currency}
-        hideSensitive={hideSensitive}
-        onConfirmSubscription={onConfirmSubscription}
-        onDiscardSubscription={onDiscardSubscription}
-      />
+      <div className="rounded-2xl bg-card border border-border/60 shadow-xs overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowTimeline(prev => !prev)}
+          className="w-full flex items-center justify-between gap-3 p-4 text-left cursor-pointer hover:bg-muted/20 transition select-none"
+        >
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+              <Calendar className="size-4 text-blue-500 shrink-0" />
+              <span className="truncate">Billing Timeline</span>
+            </h3>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              {showTimeline ? 'Visible for this session.' : 'Tap to view scheduled billing dates.'}
+            </p>
+          </div>
+          <ChevronDown className={`size-4 text-muted-foreground shrink-0 transition-transform duration-200 ${showTimeline ? 'rotate-180' : ''}`} />
+        </button>
+        {showTimeline && (
+          <div className="border-t border-border/40 p-4">
+            <BillTimeline
+              activeRecurringPayments={activeRecurringPayments}
+              selectedMonth={selectedMonth}
+              selectedYear={selectedYear}
+              cycleDay={cycleDay}
+              currency={currency}
+              hideSensitive={hideSensitive}
+              onConfirmSubscription={onConfirmSubscription}
+              onDiscardSubscription={onDiscardSubscription}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Add / Edit Subscription Modal (bottom sheet on mobile) */}
       {showAddForm && (
