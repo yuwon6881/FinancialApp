@@ -104,6 +104,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // Trend line tooltip state
   const [hoveredTrendPoint, setHoveredTrendPoint] = useState<number | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
+  // On touch, the first tap of a pie slice reveals its detail rather than navigating.
+  const sliceTouchedRef = useRef(false)
 
   // Subscription Confirmation States
   const [activeConfirmId, setActiveConfirmId] = useState<string | null>(null)
@@ -1358,7 +1360,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           className="transition-all duration-200 cursor-pointer stroke-card stroke-2 hover:opacity-90"
                           onMouseEnter={() => setHoveredSlice(index)}
                           onMouseLeave={() => setHoveredSlice(null)}
+                          onTouchStart={() => { sliceTouchedRef.current = true; setHoveredSlice(index) }}
                           onClick={() => {
+                            // Touch: first tap just reveals the slice detail (navigate via the legend below)
+                            if (sliceTouchedRef.current) { sliceTouchedRef.current = false; return }
                             onNavigateToLedger?.({ category: slice.category, range: chartView })
                           }}
                         />
@@ -1679,11 +1684,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {adjustingCategory && (
         <div
           onClick={() => setAdjustingCategory(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+          className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
         >
           <div
             onClick={e => e.stopPropagation()}
-            className="w-full max-w-sm bg-card border border-border/85 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+            className="sheet-panel w-full max-w-sm bg-card border border-border/85 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
               <h3 className="text-sm font-bold text-foreground">Adjust {adjustingCategory.name} Balance</h3>

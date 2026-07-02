@@ -12,6 +12,7 @@ import {
   Edit
 } from 'lucide-react'
 import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
+import { triggerHaptic } from '../lib/haptics'
 import { CustomSelect } from './ui/CustomSelect'
 import { BillTimeline } from './BillTimeline'
 
@@ -478,8 +479,8 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                   </div>
                   
                   {/* Status Toggle Button */}
-                  <button 
-                    onClick={() => onToggleActive(rp.id)}
+                  <button
+                    onClick={() => { triggerHaptic(10); onToggleActive(rp.id) }}
                     className="text-muted-foreground hover:text-foreground cursor-pointer transition duration-150"
                   >
                     {rp.active ? (

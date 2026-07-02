@@ -1225,11 +1225,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           </div>
           <p className="text-xs text-muted-foreground mt-1">Comprehensive posting of all accounts and transactional balances for the currently selected cycle.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center md:w-auto md:gap-3">
           <button
             onClick={() => setShowExportModal(true)}
             disabled={hideSensitive}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border font-medium text-xs transition duration-200 ${
+            className={`flex flex-1 items-center justify-center gap-2 whitespace-nowrap px-4 py-2.5 rounded-xl border border-border font-medium text-xs transition duration-200 md:flex-initial ${
               hideSensitive 
                 ? 'opacity-40 cursor-not-allowed bg-background text-muted-foreground' 
                 : 'bg-background hover:bg-muted text-foreground cursor-pointer'
@@ -1269,7 +1269,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               }
               setShowAddForm(prev => !prev)
             }}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs shadow-lg shadow-blue-600/10 hover:shadow-blue-600/20 transition duration-200 cursor-pointer"
+            className="flex flex-1 items-center justify-center gap-2 whitespace-nowrap px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs shadow-lg shadow-blue-600/10 hover:shadow-blue-600/20 transition duration-200 cursor-pointer md:flex-initial"
           >
             {showAddForm ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
             {showAddForm ? 'Cancel' : 'Post Transaction'}
@@ -1279,8 +1279,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
       {/* Dashboard navigation filter banner */}
       {(incomingCategory || incomingDate || incomingTxType || showAllCycles) && (
-        <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-blue-500/8 border border-blue-500/20 text-xs animate-in fade-in duration-200">
-          <div className="flex items-center gap-2 text-blue-500 font-medium">
+        <div className="flex items-start sm:items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-blue-500/8 border border-blue-500/20 text-xs animate-in fade-in duration-200">
+          <div className="flex min-w-0 items-start sm:items-center gap-2 text-blue-500 font-medium leading-relaxed">
             <span className="size-1.5 rounded-full bg-blue-500 shrink-0 animate-pulse" />
             {(() => {
               const parts: string[] = []
@@ -1322,7 +1322,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               setSelectedDateFilter(null)
               setSelectedTxTypeFilter(null)
             }}
-            className="flex items-center gap-1 text-blue-500/70 hover:text-blue-500 text-[10px] font-semibold transition cursor-pointer"
+            className="flex shrink-0 items-center gap-1 whitespace-nowrap text-blue-500/70 hover:text-blue-500 text-[10px] font-semibold transition cursor-pointer"
           >
             <X className="size-3" /> Clear filter
           </button>
@@ -1534,12 +1534,15 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         </div>
       )}
 
-      {/* Filter and Search controls */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 bg-card border border-border/60 rounded-2xl shadow-xs">
+      {/* Filter and Search controls (sticky under the header so filtering long lists is reachable) */}
+      <div
+        style={{ top: 'calc(4rem + env(safe-area-inset-top, 0px))' }}
+        className="sticky z-30 flex flex-col md:flex-row items-center justify-between gap-4 p-4 bg-card border border-border/60 rounded-2xl shadow-xs"
+      >
         {showAllCycles ? (
           /* Server mode: unified pill search bar */
-          <div className="flex items-center w-full md:w-auto">
-            <div className="flex items-center flex-1 md:w-80 bg-background border border-border rounded-xl overflow-hidden focus-within:ring-1 focus-within:ring-blue-500/60 focus-within:border-blue-500/40 transition duration-200">
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-0 md:w-auto">
+            <div className="flex min-w-0 items-center flex-1 md:w-80 bg-background border border-border rounded-xl sm:rounded-r-none sm:border-r-0 overflow-hidden focus-within:ring-1 focus-within:ring-blue-500/60 focus-within:border-blue-500/40 transition duration-200">
               <Search className="size-4 text-muted-foreground ml-3 shrink-0" />
               <input
                 type="text"
@@ -1547,19 +1550,19 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 value={pendingSearchTerm}
                 onChange={e => setPendingSearchTerm(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') handleServerSearch() }}
-                className="flex-1 px-2.5 py-2 text-xs bg-transparent border-none outline-none placeholder:text-muted-foreground"
+                className="min-w-0 flex-1 px-2.5 py-2.5 text-xs bg-transparent border-none outline-none placeholder:text-muted-foreground"
               />
-              <button
-                onClick={handleServerSearch}
-                disabled={serverIsFetching}
-                className="flex items-center gap-1.5 px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 text-white text-xs font-semibold cursor-pointer transition duration-200 border-l border-blue-700/30 shrink-0 self-stretch"
-              >
-                {serverIsFetching
-                  ? <Loader2 className="size-3.5 animate-spin" />
-                  : <Search className="size-3.5" />}
-                <span>Search</span>
-              </button>
             </div>
+            <button
+              onClick={handleServerSearch}
+              disabled={serverIsFetching}
+              className="flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl sm:rounded-l-none px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 text-white text-xs font-semibold cursor-pointer transition duration-200 border border-blue-600 sm:border-l border-blue-700/30 whitespace-nowrap"
+            >
+              {serverIsFetching
+                ? <Loader2 className="size-3.5 animate-spin" />
+                : <Search className="size-3.5" />}
+              <span>Search</span>
+            </button>
           </div>
         ) : (
           /* Client mode: standard search input */
@@ -1593,7 +1596,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           </button>
 
           {isFilterDropdownOpen && (
-            <div className="absolute right-0 top-11 w-64 bg-card border border-border rounded-2xl shadow-xl p-4 z-40 animate-in fade-in slide-in-from-top-2 duration-150">
+            <div className="absolute left-0 right-0 top-11 w-full sm:left-auto sm:w-64 bg-card border border-border rounded-2xl shadow-xl p-4 z-40 animate-in fade-in slide-in-from-top-2 duration-150">
               
               {/* Header */}
               <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3">
@@ -1601,7 +1604,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 {(showAllCycles ? pendingFilters : selectedFilters).length > 0 && (
                   <button
                     onClick={handleClearFilters}
-                    className="text-[9px] font-bold text-orange-500 hover:underline cursor-pointer"
+                    className="text-[9px] font-bold text-orange-500 hover:underline cursor-pointer whitespace-nowrap"
                   >
                     Clear All
                   </button>

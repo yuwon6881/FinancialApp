@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { ChevronsLeft } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useIsMobile } from '../../lib/useIsMobile'
+import { triggerHaptic } from '../../lib/haptics'
 
 // Module-level registry so only a single row is ever open at a time.
 let closeActiveRow: (() => void) | null = null
@@ -115,7 +116,9 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
       s.active = false
       setDragOffset(prev => {
         if (prev === null) return null
-        setOpen(prev < -actionsWidth / 2)
+        const shouldOpen = prev < -actionsWidth / 2
+        if (shouldOpen && !open) triggerHaptic(10)
+        setOpen(shouldOpen)
         return null
       })
     }
