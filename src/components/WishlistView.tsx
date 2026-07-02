@@ -528,7 +528,9 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
       {/* Add Item Modal */}
       {showAddModal && (
         <div
-          onClick={() => setShowAddModal(false)}
+          onClick={e => {
+            if (e.target === e.currentTarget) setShowAddModal(false)
+          }}
           className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
         >
           <div
@@ -619,7 +621,9 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
       {/* Edit Item Modal */}
       {showEditModal && editingItem && (
         <div
-          onClick={() => setShowEditModal(false)}
+          onClick={e => {
+            if (e.target === e.currentTarget) setShowEditModal(false)
+          }}
           className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
         >
           <div

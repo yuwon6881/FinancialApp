@@ -5,7 +5,6 @@ import {
   ArrowUpRight, 
   ArrowDownLeft, 
   Calendar, 
-  Settings,
   AlertCircle,
   TrendingUp as TrendLineIcon,
   PiggyBank,
@@ -246,10 +245,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     <div className="space-y-6 soft-rise">
       
       {/* Period Selection & Header */}
-      <div className="app-panel overflow-hidden rounded-2xl border border-blue-500/15 bg-card/90">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 sm:p-6 bg-linear-to-br from-blue-500/10 via-transparent to-teal-500/10">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
+      <div className="app-panel relative z-40 overflow-visible rounded-2xl border border-blue-500/15 bg-card/90">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 p-4 sm:p-6 rounded-2xl bg-linear-to-br from-blue-500/10 via-transparent to-teal-500/10">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-3">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/15">
               <Wallet className="size-5" />
             </div>
@@ -262,27 +261,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </p>
             </div>
           </div>
-          <div className="mt-4 grid grid-cols-2 sm:flex sm:flex-wrap gap-2 text-[10px] font-bold text-muted-foreground">
-            <div className="status-chip rounded-lg px-2.5 py-1.5">
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] font-bold text-muted-foreground">
+            <div className="status-chip rounded-lg px-2.5 py-1.5 min-w-0">
               <span className="block text-blue-500">Inflow</span>
-              <span className="text-foreground">{formatSensitive(stats.monthlyInflow)}</span>
+              <span className="block truncate text-foreground">{formatSensitive(stats.monthlyInflow)}</span>
             </div>
-            <div className="status-chip rounded-lg px-2.5 py-1.5">
+            <div className="status-chip rounded-lg px-2.5 py-1.5 min-w-0">
               <span className="block text-orange-500">Outflow</span>
-              <span className="text-foreground">{formatSensitive(stats.monthlyExpenses)}</span>
+              <span className="block truncate text-foreground">{formatSensitive(stats.monthlyExpenses)}</span>
             </div>
-            <div className="status-chip rounded-lg px-2.5 py-1.5">
+            <div className="status-chip rounded-lg px-2.5 py-1.5 min-w-0">
               <span className="block text-teal-500">Cycle Day</span>
-              <span className="text-foreground">{activeSettings.cycleDay}</span>
+              <span className="block truncate text-foreground">{activeSettings.cycleDay}</span>
             </div>
-            <div className="status-chip rounded-lg px-2.5 py-1.5">
+            <div className="status-chip rounded-lg px-2.5 py-1.5 min-w-0">
               <span className="block text-pink-500">Year</span>
-              <span className="text-foreground">{activeSettings.selectedYear}</span>
+              <span className="block truncate text-foreground">{activeSettings.selectedYear}</span>
             </div>
           </div>
         </div>
         
-        <div className="flex items-center gap-1.5 sm:gap-2 w-full md:w-auto">
+        <div className="relative z-50 grid grid-cols-[minmax(0,1fr)_5.5rem] sm:grid-cols-[minmax(14rem,1fr)_7rem] gap-2 w-full lg:w-auto lg:min-w-[22rem]">
           {/* Month Selector */}
           <CustomSelect 
             value={activeSettings.selectedMonth}
@@ -291,7 +290,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               value: m,
               label: getCycleLabelForDropdown(m, activeSettings.selectedYear, activeSettings.cycleDay)
             }))}
-            className="flex-1 md:w-56 md:flex-initial"
+            className="w-full"
           />
 
           {/* Year Selector */}
@@ -302,18 +301,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               value: y,
               label: y.toString()
             }))}
-            className="w-20 sm:w-28 shrink-0"
+            className="w-full"
             align="right"
           />
-
-          {/* Configure button */}
-          <button 
-            onClick={() => onNavigate('settings')}
-            className="interactive-card p-2 border border-border rounded-xl bg-background/80 hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition duration-150 shrink-0"
-            title="Open settings"
-          >
-            <Settings className="size-4" />
-          </button>
         </div>
         </div>
       </div>
@@ -1451,7 +1441,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Adjust Balance Modal */}
       {adjustingCategory && (
         <div
-          onClick={() => setAdjustingCategory(null)}
+          onClick={e => {
+            if (e.target === e.currentTarget) setAdjustingCategory(null)
+          }}
           className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
         >
           <div

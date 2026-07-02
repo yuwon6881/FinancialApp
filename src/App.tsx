@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense, type ReactNode } from 'react'
+import { App as CapacitorApp } from '@capacitor/app'
 import { SplashScreen } from '@capacitor/splash-screen'
 import './App.css'
 import TopNav from "./TopNav.tsx"
@@ -34,23 +35,23 @@ const createLocalId = (prefix: string, separator = '_') => {
 // Instant, flash-free placeholder while a lazily-loaded chunk is fetched.
 const ViewFallback = () => <div className="app-shell min-h-screen" />
 
-let launchHandoffStarted = false
+let launchCoverDismissed = false
 
 const nextPaint = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
 
-const finishLaunchHandoff = async () => {
-  if (launchHandoffStarted) return
-  launchHandoffStarted = true
-
+const hideNativeSplashAfterPaint = async () => {
   await nextPaint()
   await nextPaint()
-
   await SplashScreen.hide().catch(() => undefined)
+}
+
+const finishLaunchHandoff = async () => {
+  await hideNativeSplashAfterPaint()
+
+  if (launchCoverDismissed) return
+  launchCoverDismissed = true
 
   document.documentElement.classList.add('app-ready')
-  window.setTimeout(() => {
-    document.getElementById('launch-cover')?.remove()
-  }, 260)
 }
 
 const LaunchReady = ({ children }: { children: ReactNode }) => {
@@ -74,6 +75,18 @@ function App() {
     localStorage.setItem('active_tab', activeTab)
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [activeTab])
+
+  useEffect(() => {
+    let cleanup: (() => void) | undefined
+
+    void CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) void hideNativeSplashAfterPaint()
+    }).then(handle => {
+      cleanup = () => { void handle.remove() }
+    })
+
+    return () => cleanup?.()
+  }, [])
   
   const [transactions, setTransactions] = useState<Transaction[]>(() => getCachedJSON(CACHE_KEYS.transactions, []))
   const [recurringPayments, setRecurringPayments] = useState<RecurringPayment[]>(() => getCachedJSON(CACHE_KEYS.recurringPayments, []))

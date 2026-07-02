@@ -1288,7 +1288,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       {/* Post Transaction Modal (bottom sheet on mobile) */}
       {showAddForm && (
         <div
-          onClick={handleCloseForm}
+          onClick={e => {
+            if (e.target === e.currentTarget) handleCloseForm()
+          }}
           className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
         >
           <div
@@ -2063,8 +2065,16 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       })()}
 
       {showExportModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+        <div
+          onClick={e => {
+            if (e.target === e.currentTarget && !exportIsFetching) setShowExportModal(false)
+          }}
+          className="sheet-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="sheet-panel w-full max-w-md bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+          >
             <div className="flex items-center gap-2 text-blue-500 pb-2 border-b border-border/40">
               <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
                 <Download className="size-5" />
@@ -2125,8 +2135,16 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         const totalAmt = pendingTxData.amount
 
         return (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-            <div className="w-full max-w-2xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+          <div
+            onClick={e => {
+              if (e.target === e.currentTarget) handleCancelStabilityCapModal()
+            }}
+            className="sheet-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              className="sheet-panel w-full max-w-2xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+            >
               <div className="flex items-center justify-between border-b border-border/40 pb-3">
                 <div className="flex items-center gap-2">
                   <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
@@ -2312,8 +2330,16 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       })()}
 
       {showDeleteModal && txToDelete && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+        <div
+          onClick={e => {
+            if (e.target === e.currentTarget) handleCancelDelete()
+          }}
+          className="sheet-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="sheet-panel w-full max-w-md bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+          >
             <div className="flex items-center gap-2 text-orange-500 pb-2 border-b border-border/40">
               <span className="p-1.5 rounded-lg bg-orange-500/10 text-orange-500">
                 <AlertCircle className="size-5" />
@@ -2361,8 +2387,16 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       )}
 
       {showEditDisabledModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+        <div
+          onClick={e => {
+            if (e.target === e.currentTarget) setShowEditDisabledModal(false)
+          }}
+          className="sheet-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="sheet-panel w-full max-w-md bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+          >
             <div className="flex items-center gap-2 text-blue-500 pb-2 border-b border-border/40">
               <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
                 <AlertCircle className="size-5" />

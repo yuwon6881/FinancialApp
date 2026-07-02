@@ -281,7 +281,9 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
       {/* Add / Edit Subscription Modal (bottom sheet on mobile) */}
       {showAddForm && (
         <div
-          onClick={handleCancelForm}
+          onClick={e => {
+            if (e.target === e.currentTarget) handleCancelForm()
+          }}
           className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
         >
           <div
