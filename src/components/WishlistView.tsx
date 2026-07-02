@@ -39,7 +39,6 @@ interface WishlistViewProps {
     highlightedTxId?: string | null
     showAllCycles?: boolean
   }) => void
-  onFormOpenChange?: (open: boolean) => void
 }
 
 export const WishlistView: React.FC<WishlistViewProps> = ({
@@ -57,17 +56,12 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   formatSensitive,
   autoOpenAddModal,
   onResetAutoOpen,
-  onNavigateToLedger,
-  onFormOpenChange
+  onNavigateToLedger
 }) => {
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingItem, setEditingItem] = useState<WishlistItem | null>(null)
 
-  React.useEffect(() => {
-    onFormOpenChange?.(showAddModal || showEditModal)
-  }, [showAddModal, showEditModal, onFormOpenChange])
-  
   // Form states
   const [nameInput, setNameInput] = useState('')
   const [priceInput, setPriceInput] = useState('')
@@ -623,14 +617,19 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               </div>
 
               <div className="flex items-center gap-3 border-t border-border/30 pt-4 mt-6">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setShowAddModal(false)}
                   className="flex-1 py-2.5 bg-muted hover:bg-muted/80 text-muted-foreground rounded-xl font-bold transition cursor-pointer"
                 >
                   Cancel
                 </button>
-                <button type="submit" id="quick-add-form-submit-btn" className="hidden" />
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md shadow-blue-600/10 transition cursor-pointer"
+                >
+                  Add Goal
+                </button>
               </div>
             </form>
           </div>
@@ -707,14 +706,19 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               </div>
 
               <div className="flex items-center gap-3 border-t border-border/30 pt-4 mt-6">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setShowEditModal(false)}
                   className="flex-1 py-2.5 bg-muted hover:bg-muted/80 text-muted-foreground rounded-xl font-bold transition cursor-pointer"
                 >
                   Cancel
                 </button>
-                <button type="submit" id="quick-add-form-submit-btn" className="hidden" />
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md shadow-blue-600/10 transition cursor-pointer"
+                >
+                  Save Changes
+                </button>
               </div>
             </form>
           </div>

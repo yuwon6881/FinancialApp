@@ -69,7 +69,6 @@ interface LedgerViewProps {
   onShowAlert?: (message: string, title?: string) => void
   activeSyncId?: string | null
   onStartEditPending?: (id: string | null) => void
-  onFormOpenChange?: (open: boolean) => void
 }
 
 function formatDateToString(d: Date): string {
@@ -148,14 +147,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   onExportTransactions,
   onShowAlert,
   activeSyncId = null,
-  onStartEditPending,
-  onFormOpenChange
+  onStartEditPending
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
-
-  React.useEffect(() => {
-    onFormOpenChange?.(showAddForm)
-  }, [showAddForm, onFormOpenChange])
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
   const [txType, setTxType] = useState<'inflow' | 'outflow' | 'transfer'>('outflow')
@@ -173,7 +167,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   const [editingTxId, setEditingTxId] = useState<string | null>(null)
 
-  const formRef = React.useRef<HTMLDivElement>(null)
   const firstInputRef = React.useRef<HTMLInputElement>(null)
 
   const [showStabilityCapModal, setShowStabilityCapModal] = useState(false)
@@ -300,14 +293,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
   }, [autoOpenAddForm, onResetAutoOpen])
 
-  useEffect(() => {
-    if (showAddForm) {
-      setTimeout(() => {
-        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        firstInputRef.current?.focus()
-      }, 100)
-    }
-  }, [showAddForm, editingTxId])
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawVal = e.target.value;
@@ -614,6 +599,21 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     const mo = String(now.getMonth() + 1).padStart(2, '0')
     const d = String(now.getDate()).padStart(2, '0')
     setDate(`${y}-${mo}-${d}`)
+    if (editingTxId && editingTxId.startsWith('temp_') && onStartEditPending) {
+      onStartEditPending(null)
+    }
+    setEditingTxId(null)
+    setShowAddForm(false)
+  }
+
+  // Fully reset and close the transaction modal (used by Cancel / close / backdrop)
+  const handleCloseForm = () => {
+    setDescription('')
+    setAmount('')
+    setLedgerCategory('Essentials')
+    setTxType('outflow')
+    setCategory(categories.length > 0 ? categories[0].name : '')
+    setAmountRevealed(false)
     if (editingTxId && editingTxId.startsWith('temp_') && onStartEditPending) {
       onStartEditPending(null)
     }
@@ -1329,15 +1329,32 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         </div>
       )}
 
-      {/* Expandable Post Transaction Form */}
+      {/* Post Transaction Modal (bottom sheet on mobile) */}
       {showAddForm && (
-        <div ref={formRef} className="p-6 rounded-2xl bg-card border border-blue-500/20 shadow-md animate-in slide-in-from-top-4 duration-300">
-          <h3 className="text-md font-semibold text-foreground mb-4 flex items-center gap-2">
-            <PlusCircle className="size-4 text-blue-500" /> {editingTxId ? 'Edit Ledger Entry' : 'Post New Ledger Entry'}
-          </h3>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            
-            <div className="space-y-1">
+        <div
+          onClick={handleCloseForm}
+          className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="sheet-panel w-full max-w-xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <h3 className="text-md font-bold text-foreground flex items-center gap-2">
+                <PlusCircle className="size-4 text-blue-500" /> {editingTxId ? 'Edit Ledger Entry' : 'Post New Ledger Entry'}
+              </h3>
+              <button
+                type="button"
+                onClick={handleCloseForm}
+                className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition cursor-pointer"
+                title="Close"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+            <div className="space-y-1 sm:col-span-2">
               <label className="text-xs font-semibold text-muted-foreground">Transaction Type</label>
               <div className="flex gap-2">
                 <button
@@ -1529,20 +1546,35 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               />
             </div>
 
-            <button type="submit" id="quick-add-form-submit-btn" className="hidden" />
+            <div className="sm:col-span-2 flex gap-2 justify-end border-t border-border/30 pt-4 mt-1">
+              <button
+                type="button"
+                onClick={handleCloseForm}
+                className="px-4 py-2.5 rounded-xl border border-border text-xs font-semibold hover:bg-muted text-foreground transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-600/10 transition cursor-pointer"
+              >
+                {editingTxId ? 'Save Changes' : 'Post Transaction'}
+              </button>
+            </div>
           </form>
+          </div>
         </div>
       )}
 
       {/* Filter and Search controls (sticky under the header so filtering long lists is reachable) */}
       <div
         style={{ top: 'calc(4rem + env(safe-area-inset-top, 0px))' }}
-        className="sticky z-30 flex flex-col md:flex-row items-center justify-between gap-4 p-4 bg-card border border-border/60 rounded-2xl shadow-xs"
+        className="sticky z-30 flex flex-row items-center justify-between gap-2 md:gap-4 p-2 md:p-4 bg-card/90 supports-[backdrop-filter]:bg-card/75 backdrop-blur-md border border-border/60 rounded-xl md:rounded-2xl shadow-sm"
       >
         {showAllCycles ? (
           /* Server mode: unified pill search bar */
-          <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-0 md:w-auto">
-            <div className="flex min-w-0 items-center flex-1 md:w-80 bg-background border border-border rounded-xl sm:rounded-r-none sm:border-r-0 overflow-hidden focus-within:ring-1 focus-within:ring-blue-500/60 focus-within:border-blue-500/40 transition duration-200">
+          <div className="flex min-w-0 flex-1 items-stretch md:w-auto">
+            <div className="flex min-w-0 items-center flex-1 md:w-80 bg-background border border-border rounded-l-xl border-r-0 overflow-hidden focus-within:ring-1 focus-within:ring-blue-500/60 focus-within:border-blue-500/40 transition duration-200">
               <Search className="size-4 text-muted-foreground ml-3 shrink-0" />
               <input
                 type="text"
@@ -1556,17 +1588,17 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             <button
               onClick={handleServerSearch}
               disabled={serverIsFetching}
-              className="flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl sm:rounded-l-none px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 text-white text-xs font-semibold cursor-pointer transition duration-200 border border-blue-600 sm:border-l border-blue-700/30 whitespace-nowrap"
+              className="flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-r-xl px-3 md:px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 text-white text-xs font-semibold cursor-pointer transition duration-200 border border-blue-600 border-l-0 whitespace-nowrap"
             >
               {serverIsFetching
                 ? <Loader2 className="size-3.5 animate-spin" />
                 : <Search className="size-3.5" />}
-              <span>Search</span>
+              <span className="hidden sm:inline">Search</span>
             </button>
           </div>
         ) : (
           /* Client mode: standard search input */
-          <div className="w-full md:w-72 relative">
+          <div className="relative flex-1 md:w-72 md:flex-initial">
             <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
             <input
               type="text"
@@ -1579,20 +1611,25 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         )}
 
         {/* Dropdown Multi-Select Category Filter */}
-        <div className="relative ledger-filter-dropdown w-full md:w-auto flex justify-start md:justify-end">
+        <div className="relative ledger-filter-dropdown shrink-0 flex justify-end">
           <button
             onClick={() => setIsFilterDropdownOpen(prev => !prev)}
-            className="w-full md:w-60 flex items-center justify-between gap-2 px-4 py-2 text-xs font-semibold bg-background border border-border rounded-xl hover:bg-muted transition duration-200 cursor-pointer select-none border-border/60"
+            className="relative flex items-center justify-center md:justify-between gap-2 shrink-0 px-3 md:px-4 py-2.5 md:w-60 text-xs font-semibold bg-background border border-border/60 rounded-xl hover:bg-muted transition duration-200 cursor-pointer select-none"
           >
             <span className="flex items-center gap-2 text-muted-foreground">
-              <Filter className="size-3.5" />
-              <span className="truncate">
+              <Filter className="size-4 md:size-3.5" />
+              <span className="hidden md:inline truncate">
                 {showAllCycles
                   ? (appliedFilters.length === 0 ? 'All Ledger & Subcategories' : `${appliedFilters.length} filter${appliedFilters.length > 1 ? 's' : ''} applied`)
                   : (selectedFilters.length === 0 ? 'All Ledger & Subcategories' : `${selectedFilters.length} filter${selectedFilters.length > 1 ? 's' : ''} active`)}
               </span>
             </span>
-            <span className="text-[9px] text-muted-foreground">▼</span>
+            <span className="hidden md:inline text-[9px] text-muted-foreground">▼</span>
+            {(showAllCycles ? appliedFilters.length : selectedFilters.length) > 0 && (
+              <span className="md:hidden absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 flex items-center justify-center rounded-full bg-blue-600 text-white text-[9px] font-bold">
+                {showAllCycles ? appliedFilters.length : selectedFilters.length}
+              </span>
+            )}
           </button>
 
           {isFilterDropdownOpen && (

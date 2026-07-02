@@ -111,10 +111,11 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
     <>
       {isMobile && (
         <div
-          className="fixed left-0 right-0 z-40 flex justify-center pointer-events-none"
+          className="fixed left-0 right-0 z-[55] flex justify-center pointer-events-none"
           style={{
-            top: 'calc(env(safe-area-inset-top, 0px) + 8px)',
-            transform: `translateY(${(refreshing ? THRESHOLD : pull) - 46}px)`,
+            // Sit just below the sticky header so the spinner is always visible.
+            top: 'calc(4rem + env(safe-area-inset-top, 0px))',
+            transform: `translateY(${(refreshing ? 10 : Math.min(pull, MAX_PULL) * 0.5) - 6}px)`,
             opacity: visible ? 1 : 0,
             transition: dragging && !refreshing ? 'none' : 'transform 200ms ease, opacity 200ms ease',
           }}
