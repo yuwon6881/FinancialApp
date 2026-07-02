@@ -1,19 +1,22 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import type { Transaction, TransactionCategory } from '../types'
 import type { PagedTransactionResult } from '../lib/api'
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Download, 
+import {
+  Plus,
+  Search,
+  Filter,
+  Download,
   X,
   PlusCircle,
   MinusCircle,
   RefreshCw,
   AlertCircle,
-  Loader2
+  Loader2,
+  Edit2,
+  Trash2
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
+import { SwipeableRow } from './ui/SwipeableRow'
 import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
 
 interface LedgerViewProps {
@@ -1839,16 +1842,53 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         </div>
       </div>
 
-      {/* Ledger List - Mobile */}
+      {/* Ledger List - Mobile (swipe a row left to reveal Edit / Delete) */}
       <div className="block md:hidden space-y-3">
-        {displayTransactions.map(t => {
+        {displayTransactions.map((t, idx) => {
           const isOutflow = t.amount < 0
           const isTransfer = t.ledgerCategory.startsWith('Transfer:')
           const isSplit = t.id.includes('-split-')
           const ledgerLabel = displayLedgerCategory(t.ledgerCategory)
+          const isSyncing = t.id === activeSyncId
 
           return (
-            <div id={`tx-row-${t.id}`} key={t.id} className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
+            <SwipeableRow
+              id={`tx-row-${t.id}`}
+              key={t.id}
+              hint={idx === 0}
+              className="rounded-2xl border border-border shadow-xs"
+              actionsWidth={128}
+              actions={
+                <>
+                  {isSplit ? (
+                    <button
+                      onClick={() => setShowEditDisabledModal(true)}
+                      className="flex-1 flex flex-col items-center justify-center gap-1 bg-slate-500 text-white text-[11px] font-bold active:bg-slate-600 transition"
+                    >
+                      <Edit2 className="size-4" />
+                      Edit
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleStartEdit(t)}
+                      disabled={isSyncing}
+                      className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-500 text-white text-[11px] font-bold active:bg-blue-600 transition disabled:opacity-50 disabled:pointer-events-none"
+                    >
+                      <Edit2 className="size-4" />
+                      Edit
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleDeleteClick(t)}
+                    disabled={isSyncing}
+                    className="flex-1 flex flex-col items-center justify-center gap-1 bg-red-500 text-white text-[11px] font-bold active:bg-red-600 transition disabled:opacity-50 disabled:pointer-events-none"
+                  >
+                    <Trash2 className="size-4" />
+                    Delete
+                  </button>
+                </>
+              }
+            >
               {/* Top accent bar */}
               <div className={`h-0.5 w-full ${
                 isTransfer ? 'bg-blue-500/60' : isOutflow ? 'bg-orange-500/60' : 'bg-emerald-500/60'
@@ -1870,11 +1910,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   <div className="flex-1 flex items-center gap-1.5 min-w-0">
                     <h4 className="text-sm font-bold text-foreground leading-snug truncate">{t.description}</h4>
                     {(t as any).isPendingSync && (
-                      <span 
-                        title={t.id === activeSyncId ? "Syncing to database..." : "Pending sync (offline)"} 
+                      <span
+                        title={isSyncing ? "Syncing to database..." : "Pending sync (offline)"}
                         className="inline-flex items-center text-[9px] px-1 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 shrink-0 select-none"
                       >
-                        {t.id === activeSyncId ? (
+                        {isSyncing ? (
                           <Loader2 className="size-2 animate-spin text-amber-500" />
                         ) : (
                           "Pending"
@@ -1897,39 +1937,19 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   </div>
                 </div>
 
-                {/* Row 3: Ledger category + Actions */}
+                {/* Row 3: Ledger category (Edit / Delete moved to swipe drawer) */}
                 <div className="flex items-center justify-between pt-2 border-t border-border/30">
                   <span className="text-[10px] text-muted-foreground">
                     Ledger: <span className="font-semibold text-foreground/70">{ledgerLabel}</span>
                   </span>
-                  <div className="flex gap-1.5">
-                    {isSplit ? (
-                      <button
-                        onClick={() => setShowEditDisabledModal(true)}
-                        className="text-[10px] text-muted-foreground/40 bg-muted/10 border border-border/30 px-2.5 py-1 rounded-lg transition cursor-pointer"
-                      >
-                        Edit
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleStartEdit(t)}
-                        disabled={t.id === activeSyncId}
-                        className="text-[10px] text-blue-500 bg-blue-500/8 hover:bg-blue-500/15 border border-blue-500/15 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        Edit
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleDeleteClick(t)}
-                      disabled={t.id === activeSyncId}
-                      className="text-[10px] text-orange-500 bg-orange-500/8 hover:bg-orange-500/15 border border-orange-500/15 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      Delete
-                    </button>
-                  </div>
+                  {isSyncing && (
+                    <span className="text-[9px] text-muted-foreground/60 flex items-center gap-1 select-none">
+                      <Loader2 className="size-2.5 animate-spin" /> Syncing
+                    </span>
+                  )}
                 </div>
               </div>
-            </div>
+            </SwipeableRow>
           )
         })}
 
