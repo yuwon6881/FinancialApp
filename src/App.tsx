@@ -8,7 +8,7 @@ import { LoginView } from './components/LoginView'
 import { WishlistView } from './components/WishlistView'
 import type { Transaction, RecurringPayment, DashboardData, TransactionCategory, WishlistItem } from './types'
 import * as api from './lib/api'
-import { Loader2, Plus, Wallet, CreditCard, PiggyBank, Check, Upload } from 'lucide-react'
+import { Loader2, Plus, Wallet, CreditCard, PiggyBank, Upload } from 'lucide-react'
 import { DraftStagingView } from './components/DraftStagingView'
 import { formatCurrencyVal } from './lib/utils'
 import { CustomAlertModal } from './components/ui/CustomAlertModal'
@@ -126,19 +126,12 @@ function App() {
     }
   })
 
-  const [activeFormType, setActiveFormType] = useState<'transaction' | 'subscription' | 'wishlist' | null>(null)
-
   // Redirect from drafts tab if queue is empty
   useEffect(() => {
     if (activeTab === 'drafts' && draftTransactions.length === 0) {
       setActiveTab('ledger')
     }
   }, [activeTab, draftTransactions])
-
-  // Reset activeFormType when tab changes to clear form tick FABs
-  useEffect(() => {
-    setActiveFormType(null)
-  }, [activeTab])
 
   // Persist draft transactions to localStorage
   useEffect(() => {
@@ -1016,7 +1009,6 @@ function App() {
             onResetAutoOpen={() => setAutoOpenSubscriptionAdd(false)}
             onConfirmSubscription={handleConfirmSubscription}
             onDiscardSubscription={handleDiscardSubscription}
-            onFormOpenChange={(open) => setActiveFormType(open ? 'subscription' : null)}
           />
         )}
 
@@ -1060,7 +1052,6 @@ function App() {
             onShowAlert={showAlert}
             activeSyncId={activeSyncId}
             onStartEditPending={setEditingPendingId}
-            onFormOpenChange={(open) => setActiveFormType(open ? 'transaction' : null)}
           />
         )}
 
@@ -1081,7 +1072,6 @@ function App() {
             autoOpenAddModal={autoOpenWishlistAdd}
             onResetAutoOpen={() => setAutoOpenWishlistAdd(false)}
             onNavigateToLedger={handleNavigateToLedger}
-            onFormOpenChange={(open) => setActiveFormType(open ? 'wishlist' : null)}
           />
         )}
 
@@ -1479,34 +1469,24 @@ function App() {
           {/* Main FAB Toggle Button */}
           <button
             onClick={() => {
-              if (activeFormType) {
-                document.getElementById('quick-add-form-submit-btn')?.click()
-              } else if (activeTab === 'drafts') {
+              if (activeTab === 'drafts') {
                 handleSyncDraftBatch()
               } else {
                 setIsFabOpen(prev => !prev)
               }
             }}
             className={`fixed right-6 flex items-center justify-center size-14 rounded-full text-white shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer ${
-              activeFormType || activeTab === 'drafts'
-                ? 'bg-gradient-to-tr from-emerald-600 to-green-500 shadow-emerald-500/20 z-[60]'
+              activeTab === 'drafts'
+                ? 'bg-gradient-to-tr from-emerald-600 to-green-500 shadow-emerald-500/20 z-40'
                 : 'bg-gradient-to-tr from-blue-600 to-sky-500 shadow-blue-500/10 z-40 md:hidden'
             }`}
             style={{
               bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))',
-              transform: (!activeFormType && activeTab !== 'drafts' && isFabOpen) ? 'rotate(135deg)' : 'rotate(0deg)'
+              transform: (activeTab !== 'drafts' && isFabOpen) ? 'rotate(135deg)' : 'rotate(0deg)'
             }}
-            title={
-              activeFormType 
-                ? 'Confirm and Save' 
-                : activeTab === 'drafts' 
-                  ? 'Sync Batch to Server' 
-                  : 'Open Menu'
-            }
+            title={activeTab === 'drafts' ? 'Sync Batch to Server' : 'Open Menu'}
           >
-            {activeFormType ? (
-              <Check className="size-7" />
-            ) : activeTab === 'drafts' ? (
+            {activeTab === 'drafts' ? (
               <Upload className="size-6" />
             ) : (
               <Plus className="size-7" />

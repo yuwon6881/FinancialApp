@@ -33,7 +33,6 @@ interface RecurringPaymentsViewProps {
   onResetAutoOpen?: () => void
   onConfirmSubscription?: (noti: any, paidDate: string) => void
   onDiscardSubscription?: (noti: any) => void
-  onFormOpenChange?: (open: boolean) => void
 }
 
 export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
@@ -52,15 +51,10 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   autoOpenAddForm,
   onResetAutoOpen,
   onConfirmSubscription,
-  onDiscardSubscription,
-  onFormOpenChange
+  onDiscardSubscription
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingPayment, setEditingPayment] = useState<RecurringPayment | null>(null)
-
-  React.useEffect(() => {
-    onFormOpenChange?.(showAddForm)
-  }, [showAddForm, onFormOpenChange])
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('')
@@ -92,7 +86,6 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   const [startDateInput, setStartDateInput] = useState('')
   const [endDateInput, setEndDateInput] = useState('')
 
-  const formRef = React.useRef<HTMLDivElement>(null)
   const firstInputRef = React.useRef<HTMLInputElement>(null)
 
   // Filter & Sorting state
@@ -153,14 +146,6 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     }
   }, [autoOpenAddForm, onResetAutoOpen])
 
-  React.useEffect(() => {
-    if (showAddForm) {
-      setTimeout(() => {
-        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        firstInputRef.current?.focus()
-      }, 100)
-    }
-  }, [showAddForm, editingPayment])
 
   React.useEffect(() => {
     if (categories.length > 0 && !category) {
@@ -288,14 +273,31 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         onDiscardSubscription={onDiscardSubscription}
       />
 
-      {/* Add Subscription Form Drawer/Panel */}
+      {/* Add / Edit Subscription Modal (bottom sheet on mobile) */}
       {showAddForm && (
-        <div ref={formRef} className="p-6 rounded-2xl bg-card border border-blue-500/20 shadow-md animate-in slide-in-from-top-4 duration-300">
-          <h3 className="text-md font-semibold text-foreground mb-4 flex items-center gap-2">
-            {editingPayment ? <Edit className="size-4 text-blue-500" /> : <Plus className="size-4 text-blue-500" />} 
-            {editingPayment ? 'Edit Subscription' : 'Add New Recurring Payment'}
-          </h3>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div
+          onClick={handleCancelForm}
+          className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="sheet-panel w-full max-w-xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <h3 className="text-md font-bold text-foreground flex items-center gap-2">
+                {editingPayment ? <Edit className="size-4 text-blue-500" /> : <Plus className="size-4 text-blue-500" />}
+                {editingPayment ? 'Edit Subscription' : 'Add New Recurring Payment'}
+              </h3>
+              <button
+                type="button"
+                onClick={handleCancelForm}
+                className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition cursor-pointer"
+                title="Close"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-xs font-semibold text-muted-foreground">Subscription Name</label>
               <input
@@ -375,8 +377,23 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
               />
             </div>
 
-            <button type="submit" id="quick-add-form-submit-btn" className="hidden" />
+            <div className="sm:col-span-2 flex gap-2 justify-end border-t border-border/30 pt-4 mt-1">
+              <button
+                type="button"
+                onClick={handleCancelForm}
+                className="px-4 py-2.5 rounded-xl border border-border text-xs font-semibold hover:bg-muted text-foreground transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-600/10 transition cursor-pointer"
+              >
+                {editingPayment ? 'Save Changes' : 'Add Subscription'}
+              </button>
+            </div>
           </form>
+          </div>
         </div>
       )}
 
