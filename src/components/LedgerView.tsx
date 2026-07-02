@@ -17,7 +17,9 @@ import {
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
 import { SwipeableRow } from './ui/SwipeableRow'
-import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
+import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput, displayLedgerCategory } from '../lib/utils'
+import { getCategoryBadgeClass } from '../lib/categoryColors'
+import { downloadCsvBlob, downloadCsvRows, toFilename } from '../lib/csvExport'
 
 interface LedgerViewProps {
   transactions: Transaction[]
@@ -320,27 +322,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawVal = e.target.value;
-    if (!rawVal) {
-      setAmount('');
-      return;
-    }
-    const digits = rawVal.replace(/\D/g, '');
-    if (!digits) {
-      setAmount('');
-      return;
-    }
-    const parsed = parseInt(digits, 10);
-    if (parsed === 0) {
-      if (amount === '0.00' || amount === '') {
-        setAmount('');
-      } else {
-        setAmount('0.00');
-      }
-      return;
-    }
-    const numericValue = parsed / 100;
-    setAmount(numericValue.toFixed(2));
+    setAmount(maskCurrencyInput(e.target.value, amount));
   };
 
   const handleStartEdit = (t: Transaction) => {
@@ -602,18 +584,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     document.addEventListener('click', handleClick)
     return () => document.removeEventListener('click', handleClick)
   }, [isFilterDropdownOpen])
-
-  const categoryColorMap: Record<string, string> = {
-    'Salary': 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-    'Social': 'bg-pink-500/10 text-pink-500 border-pink-500/20',
-    'Food': 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-    'Hobbies': 'bg-teal-500/10 text-teal-500 border-teal-500/20',
-    'Software': 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20',
-    'Investment': 'bg-violet-500/10 text-violet-500 border-violet-500/20',
-    'Entertainment': 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-    'Transport': 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-    'Other': 'bg-slate-500/10 text-slate-500 border-slate-500/20',
-  }
 
   const resetFormFields = () => {
     setDescription('')
@@ -1005,17 +975,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
   }, [highlightedTxId, filteredTransactions, pageSize, onClearIncomingFilters])
 
-  const displayLedgerCategory = (cat: string) => {
-    if (cat.startsWith('IncomeSplit:')) return 'Income'
-    if (cat.startsWith('Transfer:Income->')) {
-      return cat.substring(17)
-    }
-    if (cat.startsWith('Transfer:')) {
-      return 'Transfer'
-    }
-    return cat
-  }
-
   const formatCurrency = (val: number) => {
     return formatCurrencyVal(val, currency)
   }
@@ -1029,25 +988,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   }
 
   const isServerMode = showAllCycles && !!serverResult
-
-  // CSV export with proper quoting
-  const escapeCsvField = (val: string | number) => {
-    const str = String(val)
-    // Wrap in quotes if it contains comma, quote, or newline
-    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-      return `"${str.replace(/"/g, '""')}"`
-    }
-    return str
-  }
-
-  const toFilename = (value: string) => {
-    return value
-      .replace(/[<>:"/\\|?*]+/g, '')
-      .replace(/~/g, '-')
-      .replace(/[,\s]+/g, '_')
-      .replace(/_+/g, '_')
-      .replace(/_+$/g, '')
-  }
 
   const getCycleRangeLabel = () => {
     if (cyclesRange === '3month') return 'Last 3 Cycles'
@@ -1101,47 +1041,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
     const label = minDate === maxDate ? minDate : `${minDate}_to_${maxDate}`
     return `${toFilename(label)}.csv`
-  }
-
-  const buildCsvContent = (rows: Transaction[]) => {
-    const headers = ['Date', 'Description', 'Category', 'Ledger Category', 'Debit (Outflow)', 'Credit (Inflow)']
-    const dataRows = rows.map(t => {
-      const isOutflow = t.amount < 0
-      const isTransfer = t.ledgerCategory.startsWith('Transfer:')
-      return [
-        escapeCsvField(t.date),
-        escapeCsvField(t.description),
-        escapeCsvField(t.category),
-        displayLedgerCategory(t.ledgerCategory),
-        isTransfer ? escapeCsvField(t.amount.toFixed(2)) : (isOutflow ? escapeCsvField(Math.abs(t.amount).toFixed(2)) : ''),
-        isTransfer ? escapeCsvField(t.amount.toFixed(2)) : (!isOutflow ? escapeCsvField(t.amount.toFixed(2)) : '')
-      ]
-    })
-    return [headers.join(','), ...dataRows.map(e => e.join(','))].join('\n')
-  }
-
-  const downloadCsvRows = (rows: Transaction[], filename: string) => {
-    const csvContent = buildCsvContent(rows)
-    const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(csvBlob)
-    const link = document.createElement('a')
-    link.setAttribute('href', url)
-    link.setAttribute('download', filename)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }
-
-  const downloadCsvBlob = (blob: Blob, filename: string) => {
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.setAttribute('href', url)
-    link.setAttribute('download', filename)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
   }
 
   const handleExportPage = () => {
@@ -1810,7 +1709,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     </td>
                     <td className="p-4">
                       <span className={`inline-block text-[10px] px-2 py-0.5 font-semibold rounded-md border ${
-                        categoryColorMap[t.category] || 'bg-slate-500/10 text-slate-500 border-slate-500/20'
+                        getCategoryBadgeClass(t.category)
                       }`}>
                         {t.category}
                       </span>
@@ -1978,7 +1877,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-muted-foreground font-mono tracking-wide">{t.date}</span>
                   <span className={`inline-block text-[10px] px-2 py-0.5 font-semibold rounded-full border ${
-                    categoryColorMap[t.category] || 'bg-slate-500/10 text-slate-500 border-slate-500/20'
+                    getCategoryBadgeClass(t.category)
                   }`}>
                     {t.category}
                   </span>

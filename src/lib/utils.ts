@@ -54,3 +54,17 @@ export const getCurrencySymbol = (currencyCode: string = 'USD') => {
   if (code === 'SGD') return 'S$'
   return '$'
 }
+
+// Maps a raw ledgerCategory value (which may carry an encoded split/transfer
+// spec, e.g. "IncomeSplit:50,25,15,10" or "Transfer:Growth-Stability") to the
+// label a user should see.
+export const displayLedgerCategory = (cat: string) => {
+  if (cat.startsWith('IncomeSplit:')) return 'Income'
+  if (cat.startsWith('Transfer:Income->')) {
+    return cat.substring(17)
+  }
+  if (cat.startsWith('Transfer:')) {
+    return 'Transfer'
+  }
+  return cat
+}
