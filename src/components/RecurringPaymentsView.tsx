@@ -18,6 +18,7 @@ import { CustomSelect } from './ui/CustomSelect'
 import { BillTimeline } from './BillTimeline'
 import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } from '../lib/categoryColors'
 import { useDialog } from '../lib/useDialog'
+import { useSheetDrag } from '../lib/useSheetDrag'
 
 interface RecurringPaymentsViewProps {
   payments: RecurringPayment[]
@@ -196,6 +197,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   }
 
   const addFormPanelRef = useDialog<HTMLDivElement>(showAddForm, handleCancelForm)
+  const addFormDrag = useSheetDrag(handleCancelForm)
 
   const formatCurrency = (val: number) => {
     return formatCurrencyVal(val, currency)
@@ -293,6 +295,8 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
             aria-modal="true"
             aria-label={editingPayment ? 'Edit subscription' : 'Add new recurring payment'}
             onClick={e => e.stopPropagation()}
+            {...addFormDrag.handlers}
+            style={addFormDrag.style}
             className="sheet-panel w-full max-w-xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto outline-none"
           >
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
