@@ -271,9 +271,9 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
 
               // Dynamic label alignment to prevent clipping on the boundaries
               let alignClasses = 'left-1/2 -translate-x-1/2 items-center'
-              if (node.percent < 8) {
+              if (node.percent < 3) {
                 alignClasses = 'left-0 items-start'
-              } else if (node.percent > 92) {
+              } else if (node.percent > 97) {
                 alignClasses = 'left-auto right-0 items-end'
               }
 
@@ -314,7 +314,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                       className={`w-[1px] bg-border/80 ${
                         node.isTop ? 'order-last' : 'order-first'
                       } ${
-                        node.percent < 8 ? 'ml-1.5' : node.percent > 92 ? 'mr-1.5' : ''
+                        node.percent < 3 ? 'ml-1.5' : node.percent > 97 ? 'mr-1.5' : ''
                       }`}
                       style={{ height: connectorHeight }}
                     />
