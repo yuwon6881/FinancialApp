@@ -549,7 +549,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               </button>
             </div>
             
-            <form onSubmit={handleSaveAdd} className="space-y-4 text-xs font-semibold">
+            <form onSubmit={handleSaveAdd} autoComplete="off" className="space-y-4 text-xs font-semibold">
               <div>
                 <label className="text-muted-foreground block mb-1">Goal Name *</label>
                 <input 
@@ -644,7 +644,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               </button>
             </div>
             
-            <form onSubmit={handleSaveEdit} className="space-y-4 text-xs font-semibold">
+            <form onSubmit={handleSaveEdit} autoComplete="off" className="space-y-4 text-xs font-semibold">
               <div>
                 <label className="text-muted-foreground block mb-1">Goal Name *</label>
                 <input 

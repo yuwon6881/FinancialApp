@@ -1289,7 +1289,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 <X className="size-4" />
               </button>
             </div>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} autoComplete="off" className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
             <div className="space-y-1 sm:col-span-2">
               <label className="text-xs font-semibold text-muted-foreground">Transaction Type</label>

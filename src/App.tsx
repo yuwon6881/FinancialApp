@@ -179,9 +179,12 @@ function App() {
     }
 
     const onChange = () => {
-      // Wait for the keyboard animation to finish, then set the inset once.
+      // Wait for the viewport to fully settle before setting the inset once.
+      // The window is wide enough to absorb the keyboard AND any autofill
+      // accessory row that slides in just after it, so the sheet lifts a
+      // single time rather than twice (which read as a stutter).
       window.clearTimeout(settleTimer)
-      settleTimer = window.setTimeout(commit, 90)
+      settleTimer = window.setTimeout(commit, 180)
     }
 
     vv.addEventListener('resize', onChange)

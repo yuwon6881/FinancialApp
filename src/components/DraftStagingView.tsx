@@ -106,6 +106,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                     <input
                       type="text"
                       required
+                      autoComplete="off"
                       value={description}
                       onChange={e => setDescription(e.target.value)}
                       className="w-full px-3 py-2 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -119,6 +120,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                       enterKeyHint="done"
                       step="0.01"
                       required
+                      autoComplete="off"
                       value={amount}
                       onChange={e => setAmount(e.target.value)}
                       className="w-full px-3 py-2 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"

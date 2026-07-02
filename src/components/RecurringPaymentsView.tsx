@@ -309,7 +309,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                 <X className="size-4" />
               </button>
             </div>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} autoComplete="off" className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-xs font-semibold text-muted-foreground">Subscription Name</label>
               <input

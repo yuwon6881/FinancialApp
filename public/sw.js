@@ -1,4 +1,4 @@
-const CACHE_NAME = 'financial-app-v4';
+const CACHE_NAME = 'financial-app-v5';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -55,22 +55,25 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigation requests (root / index.html) → Network-First
+  // Navigation requests (root / index.html) → Cache-First (stale-while-revalidate).
+  // Painting the cached shell immediately avoids the blank/home-screen flash on
+  // launch that a network-first wait produces. Freshness is handled separately:
+  // the new SW re-caches index.html on install and the client reloads once when
+  // it activates (see registerServiceWorker.ts), so a new deploy still lands.
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const clone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return networkResponse;
-        })
-        .catch(() => {
-          return caches.match(event.request)
-            .then((r) => r || caches.match('/index.html'))
-            .then((r) => r || caches.match('/'));
-        })
+      caches.match('/index.html').then((cached) => {
+        const network = fetch(event.request)
+          .then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200) {
+              const clone = networkResponse.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', clone));
+            }
+            return networkResponse;
+          })
+          .catch(() => cached);
+        return cached || network;
+      })
     );
     return;
   }
