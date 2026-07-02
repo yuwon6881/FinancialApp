@@ -193,37 +193,44 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   // Build unique suggestion entries from past transactions (most recent first, deduped by description)
   const suggestionEntries = useMemo(() => {
-    const seen = new Map<string, { description: string; category: string; ledgerCategory: string; date: string }>()
+    const seen = new Map<string, { description: string; category: string; ledgerCategory: string; date: string; txType: 'inflow' | 'outflow' }>()
     // Sort by date descending so we keep the most recent category mapping
     const sorted = [...transactions]
       .filter(t => !t.ledgerCategory.startsWith('Transfer:') && t.ledgerCategory !== 'Discarded' && !t.description.startsWith('[Split:') && !t.description.startsWith('[Discarded]'))
       .sort((a, b) => b.date.localeCompare(a.date))
     for (const t of sorted) {
-      const key = t.description.toLowerCase().trim()
+      const entryType = t.amount >= 0 || t.ledgerCategory.startsWith('IncomeSplit:') ? 'inflow' : 'outflow'
+      const key = `${entryType}:${t.description.toLowerCase().trim()}`
       if (!seen.has(key) && key.length > 0) {
         seen.set(key, {
           description: t.description,
           category: t.category,
           ledgerCategory: t.ledgerCategory.startsWith('IncomeSplit:') ? 'Income' : t.ledgerCategory,
-          date: t.date
+          date: t.date,
+          txType: entryType
         })
       }
     }
     return Array.from(seen.values())
   }, [transactions])
 
+  const activeSuggestionEntries = useMemo(() => {
+    if (txType === 'transfer') return []
+    return suggestionEntries.filter(s => s.txType === txType)
+  }, [suggestionEntries, txType])
+
   // Filter suggestions based on current description input
   const filteredSuggestions = useMemo(() => {
     if (!description.trim() || description.trim().length < 1) return []
     const query = description.toLowerCase().trim()
-    return suggestionEntries
+    return activeSuggestionEntries
       .filter(s => s.description.toLowerCase().includes(query))
       .slice(0, 8) // Limit to 8 suggestions
-  }, [description, suggestionEntries])
+  }, [description, activeSuggestionEntries])
 
   const quickSuggestionEntries = useMemo(() => {
-    return suggestionEntries.slice(0, 5)
-  }, [suggestionEntries])
+    return activeSuggestionEntries.slice(0, 5)
+  }, [activeSuggestionEntries])
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -239,7 +246,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showSuggestions])
 
-  const handleSelectSuggestion = (suggestion: { description: string; category: string; ledgerCategory: string }) => {
+  const handleSelectSuggestion = (suggestion: { description: string; category: string; ledgerCategory: string; txType?: 'inflow' | 'outflow' }) => {
     setDescription(suggestion.description)
     setShowSuggestions(false)
     setSelectedSuggestionIndex(-1)
@@ -250,11 +257,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       if (validLedgerCats.includes(suggestion.ledgerCategory)) {
         setLedgerCategory(suggestion.ledgerCategory as any)
         // Sync txType based on suggestion's ledger category
-        if (suggestion.ledgerCategory === 'Income') {
-          setTxType('inflow')
-        } else if (txType === 'inflow') {
-          setTxType('outflow')
-        }
+        if (suggestion.txType && suggestion.txType !== txType) return
       }
       if (suggestion.category) {
         setCategory(suggestion.category)
@@ -1472,7 +1475,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 </div>
               )}
               {!description.trim() && quickSuggestionEntries.length > 0 && (
-                <div className="flex gap-1.5 overflow-x-auto pt-1 pb-0.5">
+                <div className="no-scrollbar flex gap-1.5 overflow-x-auto pt-1 pb-0.5">
                   {quickSuggestionEntries.map(s => (
                     <button
                       key={s.description}
