@@ -16,7 +16,6 @@ import {
   Edit2
 } from 'lucide-react'
 import { useDialog } from '../lib/useDialog'
-import { useSheetDrag } from '../lib/useSheetDrag'
 
 interface WishlistViewProps {
   wishlist: WishlistItem[]
@@ -65,8 +64,6 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   const [editingItem, setEditingItem] = useState<WishlistItem | null>(null)
   const addModalRef = useDialog<HTMLDivElement>(showAddModal, () => setShowAddModal(false))
   const editModalRef = useDialog<HTMLDivElement>(showEditModal, () => setShowEditModal(false))
-  const addModalDrag = useSheetDrag(() => setShowAddModal(false))
-  const editModalDrag = useSheetDrag(() => setShowEditModal(false))
 
   // Form states
   const [nameInput, setNameInput] = useState('')
@@ -543,8 +540,6 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
             aria-modal="true"
             aria-label="Add new wish goal"
             onClick={e => e.stopPropagation()}
-            {...addModalDrag.handlers}
-            style={addModalDrag.style}
             className="sheet-panel w-full max-w-md bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto outline-none"
           >
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
@@ -640,8 +635,6 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
             aria-modal="true"
             aria-label="Edit wish goal"
             onClick={e => e.stopPropagation()}
-            {...editModalDrag.handlers}
-            style={editModalDrag.style}
             className="sheet-panel w-full max-w-md bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto outline-none"
           >
             <div className="flex items-center justify-between border-b border-border/40 pb-3">

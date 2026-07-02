@@ -87,12 +87,6 @@
 :root {
     color-scheme: light;
     --radius: 0.75rem;
-    /* Height of the visual viewport (area NOT covered by the on-screen keyboard)
-       and the keyboard inset. Kept in sync by the visualViewport listener in
-       App.tsx; fall back to full viewport / no keyboard before JS runs or on
-       desktop. */
-    --app-vvh: 100dvh;
-    --app-kb: 0px;
     /* Crisp, spacious light mode — layered off-whites, slate ink */
     --background: #f6f8fc;
     --foreground: #0f1729;
@@ -457,8 +451,10 @@ html {
     .sheet-backdrop {
         align-items: flex-end;
         padding: 0;
-        /* Backdrop stays full-height (no per-frame layout). The sheet is lifted
-           above the keyboard via a compositor `translate` on the panel below. */
+        /* dvh reflects the keyboard-adjusted viewport thanks to the
+           interactive-widget=resizes-content hint (see index.html), so the
+           bottom-anchored sheet sits above the keyboard with the browser
+           animating the resize natively — smooth, no JS. */
         height: 100dvh;
         overscroll-behavior: contain;
         touch-action: none;
@@ -466,20 +462,13 @@ html {
     .sheet-panel {
         width: 100%;
         max-width: none;
-        /* Cap to the area above the keyboard so tall forms stay fully reachable
-           (scroll internally) rather than extending under the keyboard. */
-        max-height: var(--app-vvh, 100dvh);
+        max-height: 100dvh;
         border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
         padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
         overscroll-behavior: contain;
         touch-action: pan-y;
+        /* Keep the last field clear of the keyboard edge when scrolling. */
         scroll-padding-bottom: 5rem;
-        /* Lift the sheet above the keyboard. `translate` (not `transform`) is
-           used so it composes with the entrance animation's transform instead
-           of fighting it, and it's GPU-composited so it tracks the keyboard
-           smoothly with no layout cost — fixing the earlier lag/jitter. */
-        translate: 0 calc(-1 * var(--app-kb, 0px));
-        will-change: translate;
         /* tailwindcss-animate enter vars: slide up instead of zoom on mobile */
         --tw-enter-translate-y: 100%;
         --tw-enter-scale: 1;

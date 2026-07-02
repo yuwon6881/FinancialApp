@@ -1,7 +1,6 @@
 import React, { useEffect, useId } from 'react'
 import { X } from 'lucide-react'
 import { useDialog } from '../../lib/useDialog'
-import { useSheetDrag } from '../../lib/useSheetDrag'
 
 interface BottomSheetProps {
   isOpen: boolean
@@ -22,7 +21,6 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 }) => {
   const panelRef = useDialog<HTMLDivElement>(isOpen, onClose)
   const titleId = useId()
-  const { handlers, style } = useSheetDrag(onClose)
 
   useEffect(() => {
     if (!isOpen) return
@@ -47,8 +45,6 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
         aria-labelledby={titleId}
         tabIndex={-1}
         onClick={e => e.stopPropagation()}
-        {...handlers}
-        style={style}
         className={`sheet-panel w-full ${maxWidthClassName} bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto outline-none`}
       >
         <div className="flex items-center justify-between border-b border-border/40 pb-3">

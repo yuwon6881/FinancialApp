@@ -152,72 +152,11 @@ function App() {
     if (meta) meta.setAttribute('content', darkMode ? '#0a0d14' : '#f6f8fc')
   }, [darkMode])
 
-  // Keep --app-vvh in sync with the visual viewport so bottom-sheet modals
-  // rest above the on-screen keyboard instead of falling behind it. Also
-  // scroll whichever field gains focus into view inside its sheet, so the
-  // caret is never hidden by the keyboard as the sheet's height changes.
-  useEffect(() => {
-    const vv = window.visualViewport
-    const root = document.documentElement
-
-    // Track the visible viewport height (--app-vvh, caps the sheet) and the
-    // keyboard inset (--app-kb, how far to lift the sheet). The sheet is moved
-    // with a compositor `translate` (see index.css) rather than by animating
-    // layout, so it stays glued to the keyboard smoothly instead of trailing
-    // it. Updates are coalesced to one per frame and no-op changes skipped,
-    // which also prevents a scroll->resize->scroll feedback loop.
-    let rafId = 0
-    let lastH = -1
-    let lastKb = -1
-    const applyViewport = () => {
-      if (rafId) return
-      rafId = requestAnimationFrame(() => {
-        rafId = 0
-        const h = Math.round(vv ? vv.height : window.innerHeight)
-        const kb = vv ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) : 0
-        if (h !== lastH) {
-          lastH = h
-          root.style.setProperty('--app-vvh', `${h}px`)
-        }
-        if (kb !== lastKb) {
-          lastKb = kb
-          root.style.setProperty('--app-kb', `${kb}px`)
-        }
-      })
-    }
-
-    applyViewport()
-    vv?.addEventListener('resize', applyViewport)
-    vv?.addEventListener('scroll', applyViewport)
-
-    let scrollTimer: number | undefined
-    const isSheetLayout = () => window.matchMedia('(max-width: 639px)').matches
-    const handleFocusIn = (e: FocusEvent) => {
-      // Only relevant to the mobile bottom-sheet layout, where the keyboard
-      // overlays the sheet. Desktop dialogs are centered with no OS keyboard.
-      if (!isSheetLayout()) return
-      const el = e.target as HTMLElement | null
-      if (!el || !el.matches?.('input, textarea, select')) return
-      if (!el.closest('.sheet-panel')) return
-      // Wait for the keyboard to open and --app-vvh to settle, then bring the
-      // field into view. Instant (not smooth) so it doesn't animate against the
-      // keyboard's own motion, and 'nearest' so an already-visible field
-      // doesn't move at all — only obscured ones scroll.
-      window.clearTimeout(scrollTimer)
-      scrollTimer = window.setTimeout(() => {
-        el.scrollIntoView({ block: 'nearest', behavior: 'auto' })
-      }, 350)
-    }
-    document.addEventListener('focusin', handleFocusIn)
-
-    return () => {
-      vv?.removeEventListener('resize', applyViewport)
-      vv?.removeEventListener('scroll', applyViewport)
-      document.removeEventListener('focusin', handleFocusIn)
-      if (rafId) cancelAnimationFrame(rafId)
-      window.clearTimeout(scrollTimer)
-    }
-  }, [])
+  // Keyboard avoidance for bottom-sheet modals is handled natively via the
+  // viewport `interactive-widget=resizes-content` hint (see index.html) plus
+  // dvh-based sheet sizing in index.css — the browser resizes the viewport
+  // smoothly when the keyboard opens, with no JS in the loop (a JS-driven
+  // approach fought the browser's own repositioning and jittered).
 
   // Inactivity Auto-Lock
   const LOCK_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes

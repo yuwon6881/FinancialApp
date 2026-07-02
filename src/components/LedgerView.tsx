@@ -21,7 +21,6 @@ import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput, displayLedgerC
 import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } from '../lib/categoryColors'
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../lib/csvExport'
 import { useDialog } from '../lib/useDialog'
-import { useSheetDrag } from '../lib/useSheetDrag'
 
 interface LedgerViewProps {
   transactions: Transaction[]
@@ -627,7 +626,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   // Dialog a11y: Esc-to-close, focus trap, return focus to the opener.
   const addFormPanelRef = useDialog<HTMLDivElement>(showAddForm, handleCloseForm)
-  const addFormDrag = useSheetDrag(handleCloseForm)
 
   const handleToggleCategory = (cat: 'Essentials' | 'Growth' | 'Rewards') => {
     setSelectedRedirectCategories(prev => {
@@ -1276,8 +1274,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             aria-modal="true"
             aria-label={editingTxId ? 'Edit ledger entry' : 'Post new ledger entry'}
             onClick={e => e.stopPropagation()}
-            {...addFormDrag.handlers}
-            style={addFormDrag.style}
             className="sheet-panel w-full max-w-xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto outline-none"
           >
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
