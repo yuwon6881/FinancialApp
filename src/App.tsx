@@ -672,13 +672,12 @@ function App() {
           };
           await api.addTransaction(payloadToSend);
 
-          // Success: remove from queue
+          // Keep the optimistic row visible until the refreshed server row is loaded.
+          await loadAll(selectedMonth || undefined, selectedYear || undefined, true);
+
           const updatedQueue = pendingTxRef.current.filter(item => item.id !== nextTx.id);
           pendingTxRef.current = updatedQueue;
           setPendingTransactions(updatedQueue);
-
-          // Refresh dashboard silently
-          await loadAll(selectedMonth || undefined, selectedYear || undefined, true);
           setError(null);
         } catch (err: any) {
           console.error('Failed to sync transaction:', err);
