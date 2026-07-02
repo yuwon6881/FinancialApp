@@ -86,143 +86,154 @@
 
 :root {
     color-scheme: light;
-    --radius: 0.625rem;
-    --background: #f4f8fb;
-    --foreground: #17202a;
+    --radius: 0.75rem;
+    /* Crisp, spacious light mode — layered off-whites, slate ink */
+    --background: #f6f8fc;
+    --foreground: #0f1729;
     --card: #ffffff;
-    --card-foreground: #17202a;
+    --card-foreground: #0f1729;
     --popover: #ffffff;
-    --popover-foreground: #17202a;
-    --primary: #0072b2;
+    --popover-foreground: #0f1729;
+    /* Primary = deep electric indigo (reserved for actions/highlights) */
+    --primary: #4f46e5;
     --primary-foreground: #ffffff;
-    --secondary: #eef1f4;
-    --secondary-foreground: #17202a;
-    --muted: #eef1f4;
-    --muted-foreground: #5d6978;
-    --accent: #d8ecf8;
-    --accent-foreground: #12405f;
-    --destructive: #d55e00;
+    --secondary: #eef1f7;
+    --secondary-foreground: #0f1729;
+    --muted: #eef1f7;
+    --muted-foreground: #64708a;
+    --accent: #e7e9fe;
+    --accent-foreground: #312a8a;
+    /* Destructive = sophisticated crimson/coral */
+    --destructive: #e11d48;
     --destructive-foreground: #ffffff;
-    --border: #d8dee6;
-    --input: #d8dee6;
-    --ring: #0072b2;
-    --chart-line: #0072b2;
-    --chart-1: #0072b2;
-    --chart-2: #009e73;
-    --chart-3: #e69f00;
-    --chart-4: #cc79a7;
-    --chart-5: #d55e00;
+    --border: #e5e9f2;
+    --input: #e5e9f2;
+    --ring: #4f46e5;
+    --chart-line: #4f46e5;
+    --chart-1: #4f46e5;
+    --chart-2: #10b981;
+    --chart-3: #f59e0b;
+    --chart-4: #ec4899;
+    --chart-5: #f43f5e;
     --sidebar: #ffffff;
-    --sidebar-foreground: #17202a;
-    --sidebar-primary: #0072b2;
+    --sidebar-foreground: #0f1729;
+    --sidebar-primary: #4f46e5;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #eef1f4;
-    --sidebar-accent-foreground: #17202a;
-    --sidebar-border: #d8dee6;
-    --sidebar-ring: #0072b2;
-    --ledger-blue-400: #3394c8;
-    --ledger-blue-500: #0072b2;
-    --ledger-blue-600: #005f96;
-    --ledger-blue-700: #004f7d;
-    --ledger-sky-400: #56b4e9;
-    --ledger-sky-500: #2c9ed9;
-    --ledger-income-400: #28b88e;
-    --ledger-income-500: #009e73;
-    --ledger-income-600: #007f5f;
-    --ledger-expense-400: #e77732;
-    --ledger-expense-500: #d55e00;
-    --ledger-expense-600: #b94f00;
-    --ledger-expense-700: #964000;
-    --ledger-pending-400: #f0b83a;
-    --ledger-pending-500: #e69f00;
-    --ledger-pending-600: #bd8200;
-    --ledger-transfer-400: #d98fbd;
-    --ledger-transfer-500: #cc79a7;
-    --ledger-transfer-600: #ac5d8c;
-    --ledger-purple-400: #9a8bd7;
-    --ledger-purple-500: #7e6dc9;
-    --ledger-purple-600: #6654ad;
-    --ledger-wishlist-400: #d98fbd;
-    --ledger-wishlist-500: #cc79a7;
-    --ledger-wishlist-600: #ac5d8c;
-    --ledger-neutral-400: #7a8594;
-    --ledger-neutral-500: #5d6978;
-    --ledger-neutral-600: #46515e;
-    --app-grid: rgba(0, 114, 178, 0.07);
-    --app-surface-a: rgba(86, 180, 233, 0.18);
-    --app-surface-b: rgba(0, 158, 115, 0.1);
-    --app-surface-c: rgba(204, 121, 167, 0.11);
-    --app-shadow: 0 18px 50px rgba(20, 46, 69, 0.08);
+    --sidebar-accent: #eef1f7;
+    --sidebar-accent-foreground: #0f1729;
+    --sidebar-border: #e5e9f2;
+    --sidebar-ring: #4f46e5;
+    /* Indigo family — brand / primary / credits-as-actions */
+    --ledger-blue-400: #6366f1;
+    --ledger-blue-500: #4f46e5;
+    --ledger-blue-600: #4338ca;
+    --ledger-blue-700: #3730a3;
+    --ledger-sky-400: #38bdf8;
+    --ledger-sky-500: #0ea5e9;
+    /* Emerald / mint — positive cash flow & credits */
+    --ledger-income-400: #34d399;
+    --ledger-income-500: #10b981;
+    --ledger-income-600: #059669;
+    /* Coral / crimson — debits & expenses */
+    --ledger-expense-400: #fb7185;
+    --ledger-expense-500: #f43f5e;
+    --ledger-expense-600: #e11d48;
+    --ledger-expense-700: #be123c;
+    --ledger-pending-400: #fbbf24;
+    --ledger-pending-500: #f59e0b;
+    --ledger-pending-600: #d97706;
+    --ledger-transfer-400: #a78bfa;
+    --ledger-transfer-500: #8b5cf6;
+    --ledger-transfer-600: #7c3aed;
+    --ledger-purple-400: #c084fc;
+    --ledger-purple-500: #a855f7;
+    --ledger-purple-600: #9333ea;
+    --ledger-wishlist-400: #f472b6;
+    --ledger-wishlist-500: #ec4899;
+    --ledger-wishlist-600: #db2777;
+    --ledger-neutral-400: #94a3b8;
+    --ledger-neutral-500: #64748b;
+    --ledger-neutral-600: #475569;
+    --app-grid: rgba(79, 70, 229, 0.06);
+    --app-surface-a: rgba(99, 102, 241, 0.16);
+    --app-surface-b: rgba(16, 185, 129, 0.09);
+    --app-surface-c: rgba(236, 72, 153, 0.08);
+    --app-shadow: 0 20px 55px -12px rgba(23, 30, 55, 0.14);
 }
 
 .dark {
     color-scheme: dark;
-    --background: #101418;
-    --foreground: #f1f4f7;
-    --card: #171d23;
-    --card-foreground: #f1f4f7;
-    --popover: #171d23;
-    --popover-foreground: #f1f4f7;
-    --primary: #56b4e9;
-    --primary-foreground: #09131a;
-    --secondary: #222a32;
-    --secondary-foreground: #f1f4f7;
-    --muted: #222a32;
-    --muted-foreground: #aab4c0;
-    --accent: #173345;
-    --accent-foreground: #d9f1ff;
-    --destructive: #e77732;
-    --destructive-foreground: #180a02;
-    --border: #33404c;
-    --input: #33404c;
-    --ring: #56b4e9;
-    --chart-line: #56b4e9;
-    --chart-1: #56b4e9;
-    --chart-2: #2dbe91;
-    --chart-3: #f0b83a;
-    --chart-4: #d98fbd;
-    --chart-5: #e77732;
-    --sidebar: #171d23;
-    --sidebar-foreground: #f1f4f7;
-    --sidebar-primary: #56b4e9;
-    --sidebar-primary-foreground: #09131a;
-    --sidebar-accent: #222a32;
-    --sidebar-accent-foreground: #f1f4f7;
-    --sidebar-border: #33404c;
-    --sidebar-ring: #56b4e9;
-    --ledger-blue-400: #7ccdf2;
-    --ledger-blue-500: #56b4e9;
-    --ledger-blue-600: #3a9dd4;
-    --ledger-blue-700: #237fb2;
-    --ledger-sky-400: #8ad7f6;
-    --ledger-sky-500: #7ccdf2;
-    --ledger-income-400: #52d2aa;
-    --ledger-income-500: #2dbe91;
-    --ledger-income-600: #1c9d78;
-    --ledger-expense-400: #f09358;
-    --ledger-expense-500: #e77732;
-    --ledger-expense-600: #c76025;
-    --ledger-expense-700: #a44d1b;
-    --ledger-pending-400: #ffd36a;
-    --ledger-pending-500: #f0b83a;
-    --ledger-pending-600: #d19924;
-    --ledger-transfer-400: #e4a8cc;
-    --ledger-transfer-500: #d98fbd;
-    --ledger-transfer-600: #be70a0;
-    --ledger-purple-400: #b3a7e8;
-    --ledger-purple-500: #9a8bd7;
-    --ledger-purple-600: #8170bf;
-    --ledger-wishlist-400: #e4a8cc;
-    --ledger-wishlist-500: #d98fbd;
-    --ledger-wishlist-600: #be70a0;
-    --ledger-neutral-400: #aab4c0;
-    --ledger-neutral-500: #8794a3;
-    --ledger-neutral-600: #6f7c8a;
-    --app-grid: rgba(124, 205, 242, 0.08);
-    --app-surface-a: rgba(86, 180, 233, 0.12);
-    --app-surface-b: rgba(45, 190, 145, 0.08);
-    --app-surface-c: rgba(217, 143, 189, 0.08);
-    --app-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+    /* Deep obsidian — rich, never pure black */
+    --background: #0a0d14;
+    --foreground: #eef1f7;
+    --card: #12161f;
+    --card-foreground: #eef1f7;
+    --popover: #12161f;
+    --popover-foreground: #eef1f7;
+    /* Primary = luminous electric indigo, pops on obsidian */
+    --primary: #818cf8;
+    --primary-foreground: #0a0d14;
+    --secondary: #1b212c;
+    --secondary-foreground: #eef1f7;
+    --muted: #1b212c;
+    --muted-foreground: #9aa6b8;
+    --accent: #1e1f45;
+    --accent-foreground: #dcdefe;
+    --destructive: #fb7185;
+    --destructive-foreground: #1a060c;
+    --border: #262e3b;
+    --input: #262e3b;
+    --ring: #818cf8;
+    --chart-line: #818cf8;
+    --chart-1: #818cf8;
+    --chart-2: #34d399;
+    --chart-3: #fbbf24;
+    --chart-4: #f472b6;
+    --chart-5: #fb7185;
+    --sidebar: #12161f;
+    --sidebar-foreground: #eef1f7;
+    --sidebar-primary: #818cf8;
+    --sidebar-primary-foreground: #0a0d14;
+    --sidebar-accent: #1b212c;
+    --sidebar-accent-foreground: #eef1f7;
+    --sidebar-border: #262e3b;
+    --sidebar-ring: #818cf8;
+    /* Indigo family */
+    --ledger-blue-400: #a5b4fc;
+    --ledger-blue-500: #818cf8;
+    --ledger-blue-600: #6366f1;
+    --ledger-blue-700: #4f46e5;
+    --ledger-sky-400: #7dd3fc;
+    --ledger-sky-500: #38bdf8;
+    /* Emerald / mint */
+    --ledger-income-400: #6ee7b7;
+    --ledger-income-500: #34d399;
+    --ledger-income-600: #10b981;
+    /* Coral / crimson */
+    --ledger-expense-400: #fda4af;
+    --ledger-expense-500: #fb7185;
+    --ledger-expense-600: #f43f5e;
+    --ledger-expense-700: #e11d48;
+    --ledger-pending-400: #fcd34d;
+    --ledger-pending-500: #fbbf24;
+    --ledger-pending-600: #f59e0b;
+    --ledger-transfer-400: #c4b5fd;
+    --ledger-transfer-500: #a78bfa;
+    --ledger-transfer-600: #8b5cf6;
+    --ledger-purple-400: #d8b4fe;
+    --ledger-purple-500: #c084fc;
+    --ledger-purple-600: #a855f7;
+    --ledger-wishlist-400: #f9a8d4;
+    --ledger-wishlist-500: #f472b6;
+    --ledger-wishlist-600: #ec4899;
+    --ledger-neutral-400: #9aa6b8;
+    --ledger-neutral-500: #7c8aa0;
+    --ledger-neutral-600: #64748b;
+    --app-grid: rgba(129, 140, 248, 0.09);
+    --app-surface-a: rgba(129, 140, 248, 0.14);
+    --app-surface-b: rgba(52, 211, 153, 0.08);
+    --app-surface-c: rgba(244, 114, 182, 0.07);
+    --app-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.55);
 }
 
 .app-shell {
@@ -256,16 +267,36 @@
 
 .app-panel {
     box-shadow: var(--app-shadow);
+    /* Hairline top highlight for the premium "lit glass" edge */
+    background-clip: padding-box;
+}
+
+.app-panel::after {
+    /* handled per-component; reserved */
 }
 
 .interactive-card {
     transform: translateZ(0);
-    transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease, background-color 180ms ease;
+    transition: border-color 150ms ease-in-out, box-shadow 150ms ease-in-out,
+        transform 150ms ease-in-out, background-color 150ms ease-in-out;
 }
 
 .interactive-card:hover {
     transform: translateY(-2px);
     box-shadow: var(--app-shadow);
+}
+
+.interactive-card:active {
+    transform: translateY(0) scale(0.995);
+    transition-duration: 90ms;
+}
+
+/* Gentle scale-down feedback for primary buttons on press */
+.press-scale {
+    transition: transform 120ms ease-out;
+}
+.press-scale:active {
+    transform: scale(0.96);
 }
 
 .metric-card {
@@ -311,16 +342,72 @@
     animation: soft-rise 420ms ease both;
 }
 
+/* Elegant shimmering skeleton loaders (replaces jarring spinners) */
+@keyframes skeleton-shimmer {
+    from { background-position: 200% 0; }
+    to   { background-position: -200% 0; }
+}
+
+.skeleton-shimmer {
+    background-color: color-mix(in srgb, var(--muted) 70%, transparent);
+    background-image: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in srgb, var(--foreground) 8%, transparent) 45%,
+        color-mix(in srgb, var(--foreground) 12%, transparent) 50%,
+        color-mix(in srgb, var(--foreground) 8%, transparent) 55%,
+        transparent 100%
+    );
+    background-size: 200% 100%;
+    background-repeat: no-repeat;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+/* Chart craftsmanship: soft glow under the trend line + a smooth path
+   draw-in on load. Line uses pathLength="1" so one keyframe fits any data. */
+.chart-glow {
+    filter: drop-shadow(0 6px 14px color-mix(in srgb, var(--chart-line) 45%, transparent));
+}
+
+@keyframes trend-draw {
+    from { stroke-dashoffset: 1; }
+    to   { stroke-dashoffset: 0; }
+}
+
+.trend-draw {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: trend-draw 1100ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes area-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.area-fade {
+    animation: area-fade 900ms ease-out 250ms both;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .interactive-card,
     .metric-card::after,
-    .soft-rise {
+    .soft-rise,
+    .skeleton-shimmer,
+    .trend-draw,
+    .area-fade,
+    .press-scale {
         animation: none !important;
         transition-duration: 0.01ms !important;
     }
 
     .interactive-card:hover {
         transform: none;
+    }
+
+    .trend-draw {
+        stroke-dasharray: none;
+        stroke-dashoffset: 0;
     }
 }
 
@@ -405,10 +492,36 @@ html {
     * {
         @apply border-border outline-ring/50;
     }
+    html {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text",
+            "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        /* Inter's optical-size + contextual alternates for a sharper, premium read */
+        font-feature-settings: "cv11", "ss01", "cv02";
+        text-rendering: optimizeLegibility;
+    }
     body {
         @apply bg-background text-foreground;
         scrollbar-width: thin;
         scrollbar-color: var(--border) transparent;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        letter-spacing: -0.011em;
+    }
+    /* Financial figures: perfectly aligned tabular lining numerals so columns
+       never jitter when values change or animate. Applies to every currency/
+       metric surface across the app without touching each component. */
+    .font-black,
+    .font-extrabold,
+    .font-bold,
+    th,
+    td,
+    input,
+    table {
+        font-variant-numeric: tabular-nums lining-nums;
+        font-feature-settings: "tnum" 1, "lnum" 1, "cv11", "ss01";
+    }
+    h1, h2, h3, h4 {
+        letter-spacing: -0.02em;
     }
     
     /* Chrome, Edge, Safari scrollbar customizations */

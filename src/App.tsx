@@ -132,7 +132,7 @@ function App() {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)
     const meta = document.querySelector('meta[name="theme-color"]')
-    if (meta) meta.setAttribute('content', darkMode ? '#101418' : '#f4f8fb')
+    if (meta) meta.setAttribute('content', darkMode ? '#0a0d14' : '#f6f8fc')
   }, [darkMode])
 
   // Inactivity Auto-Lock

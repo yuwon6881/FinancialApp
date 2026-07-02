@@ -976,22 +976,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       </linearGradient>
                     </defs>
                     
-                    {/* Fill Area */}
+                    {/* Fill Area — gradient drop beneath the line, fades in on load */}
                     <path
+                      key={`area-${trendView}`}
                       d={`M 15,105 L ${trendLinePoints} L 485,105 Z`}
                       fill="url(#chartGradient)"
-                      className="transition-all duration-300"
+                      className="area-fade"
                     />
-                    
-                    {/* Stroke Line */}
+
+                    {/* Stroke Line — soft glow + smooth path draw-in (re-draws on period switch) */}
                     <polyline
+                      key={`line-${trendView}`}
                       fill="none"
-                      stroke="var(--color-chart-line, #3b82f6)"
+                      stroke="var(--color-chart-line, #4f46e5)"
                       strokeWidth="2.5"
                       points={trendLinePoints}
+                      pathLength={1}
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      className="transition-all duration-300"
+                      className="chart-glow trend-draw"
                     />
                   </svg>
 

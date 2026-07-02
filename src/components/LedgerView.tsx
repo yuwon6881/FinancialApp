@@ -1683,7 +1683,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 <th className="p-4">Category</th>
                 <th className="p-4">Ledger Category</th>
                 <th className="p-4 text-right text-orange-500/90 font-bold">Debit (Outflow)</th>
-                <th className="p-4 text-right text-blue-500/90 font-bold">Credit (Inflow)</th>
+                <th className="p-4 text-right text-emerald-500/90 font-bold">Credit (Inflow)</th>
                 <th className="p-4 text-center">Actions</th>
               </tr>
             </thead>
@@ -1759,27 +1759,27 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                         const isSplitSub = t.id.includes('-split-')
                         if (isIncomeRecord) {
                           return (
-                            <span className="inline-block px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-500 font-bold text-xs">
+                            <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-xs">
                               {formatSensitive(t.amount)}
                             </span>
                           )
                         }
                         if (isSplitSub) {
                           return (
-                            <span className="inline-block px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-500 font-bold text-xs">
+                            <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-xs">
                               {formatSensitive(t.amount)}
                             </span>
                           )
                         }
                         if (t.ledgerCategory.startsWith('Transfer:')) {
                           return (
-                            <span className="inline-block px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-500 font-bold text-xs">
+                            <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-xs">
                               {formatSensitive(t.amount)}
                             </span>
                           )
                         }
                         return !isOutflow ? (
-                          <span className="inline-block px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-500 font-bold text-xs">
+                          <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-xs">
                             {formatSensitive(t.amount)}
                           </span>
                         ) : (
