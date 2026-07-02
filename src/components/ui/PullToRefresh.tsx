@@ -10,8 +10,9 @@ interface PullToRefreshProps {
   children: React.ReactNode
 }
 
-const THRESHOLD = 64
+const THRESHOLD = 48
 const MAX_PULL = 96
+const PULL_RESISTANCE = 0.72
 
 /**
  * Native-style pull-to-refresh for the mobile PWA. Active only on touch/mobile
@@ -37,6 +38,10 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
     setPull(v)
   }
 
+  const resetPullState = () => {
+    setPullBoth(0)
+  }
+
   useEffect(() => {
     if (!isMobile || disabled) return
 
@@ -53,20 +58,20 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
       if (!s.active || refreshingRef.current) return
       const dy = e.touches[0].clientY - s.startY
       if (dy <= 0) {
-        if (s.pulling) setPullBoth(0)
+        if (s.pulling) resetPullState()
         return
       }
-      if (window.scrollY > 0) {
+      if (!s.pulling && window.scrollY > 0) {
         s.active = false
         s.pulling = false
-        if (pullRef.current) setPullBoth(0)
+        if (pullRef.current) resetPullState()
         return
       }
       if (!s.pulling && dy < 8) return
       s.pulling = true
       setDragging(true)
       e.preventDefault()
-      setPullBoth(Math.min(MAX_PULL, dy * 0.5))
+      setPullBoth(Math.min(MAX_PULL, dy * PULL_RESISTANCE))
     }
 
     const onEnd = async () => {
@@ -85,22 +90,22 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
         } finally {
           refreshingRef.current = false
           setRefreshing(false)
-          setPullBoth(0)
+          resetPullState()
         }
       } else {
-        setPullBoth(0)
+        resetPullState()
       }
     }
 
     window.addEventListener('touchstart', onStart, { passive: true })
     window.addEventListener('touchmove', onMove, { passive: false })
-    window.addEventListener('touchend', onEnd, { passive: true })
-    window.addEventListener('touchcancel', onEnd, { passive: true })
+    document.addEventListener('touchend', onEnd, { passive: true })
+    document.addEventListener('touchcancel', onEnd, { passive: true })
     return () => {
       window.removeEventListener('touchstart', onStart)
       window.removeEventListener('touchmove', onMove)
-      window.removeEventListener('touchend', onEnd)
-      window.removeEventListener('touchcancel', onEnd)
+      document.removeEventListener('touchend', onEnd)
+      document.removeEventListener('touchcancel', onEnd)
     }
   }, [isMobile, disabled])
 

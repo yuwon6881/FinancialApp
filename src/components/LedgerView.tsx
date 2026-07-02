@@ -231,8 +231,15 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   }, [description, activeSuggestionEntries])
 
   const quickSuggestionEntries = useMemo(() => {
-    return activeSuggestionEntries.slice(0, 5)
+    return activeSuggestionEntries.slice(0, 12)
   }, [activeSuggestionEntries])
+
+  const handleQuickSuggestionsWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const el = e.currentTarget
+    if (el.scrollWidth <= el.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return
+    el.scrollLeft += e.deltaY
+    e.preventDefault()
+  }
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -1374,7 +1381,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 </div>
               )}
               {!description.trim() && quickSuggestionEntries.length > 0 && (
-                <div className="no-scrollbar flex gap-1.5 overflow-x-auto pt-1 pb-0.5">
+                <div
+                  onWheel={handleQuickSuggestionsWheel}
+                  className="no-scrollbar flex gap-1.5 overflow-x-auto overscroll-x-contain pt-1 pb-0.5"
+                >
                   {quickSuggestionEntries.map(s => (
                     <button
                       key={s.description}
@@ -1516,7 +1526,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               <Search className="size-4 text-muted-foreground ml-3 shrink-0" />
               <input
                 type="text"
-                placeholder="Search all history..."
+                placeholder=""
                 value={pendingSearchTerm}
                 onChange={e => setPendingSearchTerm(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') handleServerSearch() }}
@@ -1540,7 +1550,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search descriptions, ledger categories..."
+              placeholder=""
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-4 py-2 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"

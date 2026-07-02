@@ -398,7 +398,6 @@ function App() {
 
     setDraftTransactions(prev => [...prev, draftTx]);
     triggerVibration(15);
-    showToast('Entry saved to the draft queue.', 'Draft saved', 'success')
     setActiveTab('drafts');
   }
 
