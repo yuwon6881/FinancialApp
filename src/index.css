@@ -453,25 +453,29 @@ html {
    overlay and .sheet-panel to the dialog; desktop keeps the centered dialog. */
 @media (max-width: 639px) {
     .sheet-backdrop {
+        top: auto;
+        bottom: 0;
         align-items: flex-end;
         padding: 0;
         /* Constrain to the visible viewport so the bottom-anchored sheet always
            rests just above the on-screen keyboard instead of falling behind it. */
         height: var(--app-vvh, 100dvh);
         min-height: 0;
+        max-height: var(--app-vvh, 100dvh);
+        overflow: hidden;
         overscroll-behavior: contain;
         touch-action: none;
-        /* Smoothly follow the keyboard show/hide instead of snapping. */
-        transition: height 180ms ease-out;
     }
     .sheet-panel {
         width: 100%;
         max-width: none;
-        max-height: var(--app-vvh, 100dvh);
+        max-height: calc(var(--app-vvh, 100dvh) - 0.5rem);
         border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
         padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
         overscroll-behavior: contain;
         touch-action: pan-y;
+        transform: translate3d(0, 0, 0);
+        will-change: transform;
         /* Give the last field breathing room so it clears the keyboard edge
            and remains reachable when scrolling within the sheet. */
         scroll-padding-bottom: 5rem;

@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense, type ReactNode } from 'react'
+import { SplashScreen } from '@capacitor/splash-screen'
 import './App.css'
 import TopNav from "./TopNav.tsx"
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -32,6 +33,33 @@ const createLocalId = (prefix: string, separator = '_') => {
 
 // Instant, flash-free placeholder while a lazily-loaded chunk is fetched.
 const ViewFallback = () => <div className="app-shell min-h-screen" />
+
+let launchHandoffStarted = false
+
+const nextPaint = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+
+const finishLaunchHandoff = async () => {
+  if (launchHandoffStarted) return
+  launchHandoffStarted = true
+
+  await nextPaint()
+  await nextPaint()
+
+  await SplashScreen.hide().catch(() => undefined)
+
+  document.documentElement.classList.add('app-ready')
+  window.setTimeout(() => {
+    document.getElementById('launch-cover')?.remove()
+  }, 260)
+}
+
+const LaunchReady = ({ children }: { children: ReactNode }) => {
+  useEffect(() => {
+    void finishLaunchHandoff()
+  }, [])
+
+  return <>{children}</>
+}
 
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'))
@@ -143,44 +171,72 @@ function App() {
   }, [darkMode])
 
   // Keep --app-vvh in sync with the visual viewport so bottom-sheet modals
-  // rest above the on-screen keyboard instead of falling behind it. Also
-  // scroll whichever field gains focus into view inside its sheet, so the
-  // caret is never hidden by the keyboard as the sheet's height changes.
+  // track the keyboard using one throttled style write per frame.
   useEffect(() => {
     const vv = window.visualViewport
     const root = document.documentElement
+    let viewportRaf = 0
+    const focusTimers = new Set<number>()
 
     const applyViewport = () => {
       const h = vv ? vv.height : window.innerHeight
       root.style.setProperty('--app-vvh', `${Math.round(h)}px`)
     }
 
-    applyViewport()
-    vv?.addEventListener('resize', applyViewport)
-    vv?.addEventListener('scroll', applyViewport)
+    const scheduleViewport = () => {
+      if (viewportRaf) return
+      viewportRaf = window.requestAnimationFrame(() => {
+        viewportRaf = 0
+        applyViewport()
+      })
+    }
 
-    let scrollTimer: number | undefined
+    const ensureFocusedFieldVisible = (el: HTMLElement, panel: HTMLElement) => {
+      const panelRect = panel.getBoundingClientRect()
+      const elRect = el.getBoundingClientRect()
+      const topPadding = 18
+      const bottomPadding = 24
+
+      if (elRect.bottom > panelRect.bottom - bottomPadding) {
+        panel.scrollTop += elRect.bottom - panelRect.bottom + bottomPadding
+      } else if (elRect.top < panelRect.top + topPadding) {
+        panel.scrollTop -= panelRect.top + topPadding - elRect.top
+      }
+    }
+
+    const scheduleFocusCheck = (el: HTMLElement, panel: HTMLElement, delay: number) => {
+      const timer = window.setTimeout(() => {
+        focusTimers.delete(timer)
+        ensureFocusedFieldVisible(el, panel)
+      }, delay)
+      focusTimers.add(timer)
+    }
+
     const isSheetLayout = () => window.matchMedia('(max-width: 639px)').matches
     const handleFocusIn = (e: FocusEvent) => {
-      // Only relevant to the mobile bottom-sheet layout, where the keyboard
-      // overlays the sheet. Desktop dialogs are centered with no OS keyboard.
       if (!isSheetLayout()) return
       const el = e.target as HTMLElement | null
       if (!el || !el.matches?.('input, textarea, select')) return
-      if (!el.closest('.sheet-panel')) return
-      // Wait for the keyboard to open and --app-vvh to settle, then center it.
-      window.clearTimeout(scrollTimer)
-      scrollTimer = window.setTimeout(() => {
-        el.scrollIntoView({ block: 'center', behavior: 'smooth' })
-      }, 320)
+      const panel = el.closest('.sheet-panel') as HTMLElement | null
+      if (!panel) return
+
+      scheduleFocusCheck(el, panel, 120)
+      scheduleFocusCheck(el, panel, 280)
     }
+
+    applyViewport()
+    vv?.addEventListener('resize', scheduleViewport)
+    vv?.addEventListener('scroll', scheduleViewport)
+    window.addEventListener('resize', scheduleViewport)
     document.addEventListener('focusin', handleFocusIn)
 
     return () => {
-      vv?.removeEventListener('resize', applyViewport)
-      vv?.removeEventListener('scroll', applyViewport)
+      vv?.removeEventListener('resize', scheduleViewport)
+      vv?.removeEventListener('scroll', scheduleViewport)
+      window.removeEventListener('resize', scheduleViewport)
       document.removeEventListener('focusin', handleFocusIn)
-      window.clearTimeout(scrollTimer)
+      if (viewportRaf) window.cancelAnimationFrame(viewportRaf)
+      focusTimers.forEach(timer => window.clearTimeout(timer))
     }
   }, [])
 
@@ -973,38 +1029,42 @@ function App() {
   if (!token) {
     return (
       <Suspense fallback={<ViewFallback />}>
-        <LoginView onLoginSuccess={handleLoginSuccess} />
+        <LaunchReady>
+          <LoginView onLoginSuccess={handleLoginSuccess} />
+        </LaunchReady>
       </Suspense>
     )
   }
 
   if (loading && !optimisticDashboardData) {
     return (
-      <div className="app-shell min-h-screen text-foreground p-4">
-        <div className="container mx-auto max-w-7xl py-6 space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 via-sky-400 to-teal-500 text-white font-extrabold animate-pulse shadow-lg shadow-blue-500/20">F</div>
-              <div>
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="mt-2 h-2 w-20" />
+      <LaunchReady>
+        <div className="app-shell min-h-screen text-foreground p-4">
+          <div className="container mx-auto max-w-7xl py-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex size-10 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 via-sky-400 to-teal-500 text-white font-extrabold animate-pulse shadow-lg shadow-blue-500/20">F</div>
+                <div>
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="mt-2 h-2 w-20" />
+                </div>
               </div>
+              <Loader2 className="animate-spin text-blue-500 size-5" />
             </div>
-            <Loader2 className="animate-spin text-blue-500 size-5" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <CardSkeleton />
-            <CardSkeleton />
-            <CardSkeleton />
-            <CardSkeleton />
-          </div>
-          <div className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="mt-5 h-28 w-full rounded-xl" />
-            <Skeleton className="mt-4 h-28 w-full rounded-xl" />
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <CardSkeleton />
+              <CardSkeleton />
+              <CardSkeleton />
+              <CardSkeleton />
+            </div>
+            <div className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="mt-5 h-28 w-full rounded-xl" />
+              <Skeleton className="mt-4 h-28 w-full rounded-xl" />
+            </div>
           </div>
         </div>
-      </div>
+      </LaunchReady>
     )
   }
 
@@ -1069,6 +1129,7 @@ function App() {
         )}
         <ErrorBoundary variant="inline" resetKey={activeTab}>
         <Suspense fallback={<ViewFallback />}>
+        <LaunchReady>
         {activeTab === 'dashboard' && (
           <DashboardView
             dashboardData={optimisticDashboardData}
@@ -1198,6 +1259,7 @@ function App() {
             }}
           />
         )}
+        </LaunchReady>
         </Suspense>
         </ErrorBoundary>
       </main>

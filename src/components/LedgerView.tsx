@@ -636,6 +636,18 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     canClose: () => !suggestionsRef.current,
   })
 
+  useEffect(() => {
+    if (!showAddForm) return
+    const isMobileSheet = window.matchMedia('(max-width: 639px), (pointer: coarse)').matches
+    if (isMobileSheet) return
+
+    const focusTimer = window.setTimeout(() => {
+      firstInputRef.current?.focus()
+    }, 90)
+
+    return () => window.clearTimeout(focusTimer)
+  }, [showAddForm])
+
 
 
   const handleToggleCategory = (cat: 'Essentials' | 'Growth' | 'Rewards') => {
@@ -1346,7 +1358,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               <label className="text-xs font-semibold text-muted-foreground">Description</label>
               <input
                 ref={firstInputRef}
-                autoFocus
                 type="text"
                 required
                 placeholder="e.g. Grocery Store, Paycheck"

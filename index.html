@@ -17,8 +17,33 @@
       rel="stylesheet"
     />
     <title>FinancialApp — Ledger</title>
+    <style>
+      #launch-cover {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        display: grid;
+        place-items: center;
+        background: #0a0d14;
+        opacity: 1;
+        transition: opacity 180ms ease;
+      }
+
+      #launch-cover img {
+        width: 96px;
+        height: 96px;
+      }
+
+      html.app-ready #launch-cover {
+        opacity: 0;
+        pointer-events: none;
+      }
+    </style>
   </head>
   <body>
+    <div id="launch-cover" aria-hidden="true">
+      <img src="/icon-192.png" alt="" />
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
