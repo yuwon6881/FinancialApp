@@ -7,7 +7,7 @@ import * as serviceWorker from './registerServiceWorker'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ErrorBoundary>
+    <ErrorBoundary variant="screen">
       <App />
     </ErrorBoundary>
   </StrictMode>,

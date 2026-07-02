@@ -39,12 +39,19 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
   if (toasts.length === 0) return null
 
   return (
-    <div className="fixed left-3 right-3 top-[calc(4.75rem+env(safe-area-inset-top,0px))] z-[120] flex flex-col gap-2 pointer-events-none sm:left-auto sm:right-4 sm:w-80">
+    <div
+      role="region"
+      aria-label="Notifications"
+      aria-live="polite"
+      aria-atomic="false"
+      className="fixed left-3 right-3 top-[calc(4.75rem+env(safe-area-inset-top,0px))] z-[120] flex flex-col gap-2 pointer-events-none sm:left-auto sm:right-4 sm:w-80"
+    >
       {toasts.map(toast => {
         const tone = toast.tone || 'info'
         return (
           <div
             key={toast.id}
+            role={tone === 'error' || tone === 'warning' ? 'alert' : 'status'}
             className={`pointer-events-auto flex items-start gap-3 rounded-xl border p-3 shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200 ${toneClass[tone]}`}
           >
             <div className="mt-0.5 shrink-0">{toneIcon[tone]}</div>

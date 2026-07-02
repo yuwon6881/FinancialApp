@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import * as api from '../lib/api'
 import { useDialog } from '../lib/useDialog'
 
@@ -12,6 +12,7 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified }: PasswordPro
   const [confirmPassword, setConfirmPassword] = useState('')
   const [promptError, setPromptError] = useState<string | null>(null)
   const [promptVerifying, setPromptVerifying] = useState(false)
+  const panelRef = useRef<HTMLDivElement>(null)
 
   const handleClose = () => {
     onClose()
@@ -19,7 +20,8 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified }: PasswordPro
     setPromptError(null)
   }
 
-  const panelRef = useDialog<HTMLDivElement>(isOpen, handleClose)
+  // Focus trap + Escape (autoFocus off: the password input owns initial focus).
+  useDialog({ isOpen, onClose: handleClose, ref: panelRef, autoFocus: false })
 
   if (!isOpen) return null
 
@@ -32,12 +34,12 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified }: PasswordPro
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Verify identity"
+        aria-labelledby="pw-prompt-title"
         onClick={e => e.stopPropagation()}
-        className="sheet-panel w-full max-w-sm bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto outline-none"
+        className="sheet-panel w-full max-w-sm bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto focus:outline-none"
       >
         <div className="flex items-center justify-between border-b border-border/40 pb-2">
-          <h3 className="text-sm font-bold text-foreground">Verify Identity</h3>
+          <h3 id="pw-prompt-title" className="text-sm font-bold text-foreground">Verify Identity</h3>
           <button
             onClick={handleClose}
             className="text-muted-foreground hover:text-foreground text-sm font-bold cursor-pointer"

@@ -1,84 +1,105 @@
 import { useEffect, useRef } from 'react'
 
-const FOCUSABLE = [
+const FOCUSABLE_SELECTOR = [
   'a[href]',
   'button:not([disabled])',
-  'input:not([disabled])',
-  'select:not([disabled])',
   'textarea:not([disabled])',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
   '[tabindex]:not([tabindex="-1"])',
 ].join(',')
 
-/**
- * Accessibility behaviour shared by every modal/dialog:
- *  - Escape closes it.
- *  - Focus is moved into the panel on open and trapped (Tab / Shift+Tab cycle).
- *  - Focus returns to the element that opened it on close.
- *
- * Attach the returned ref to the dialog panel element and spread the standard
- * dialog ARIA attributes yourself (role="dialog" aria-modal="true").
- */
-export function useDialog<T extends HTMLElement = HTMLDivElement>(
-  isOpen: boolean,
-  onClose: () => void,
-) {
-  const panelRef = useRef<T | null>(null)
-  const restoreFocusRef = useRef<HTMLElement | null>(null)
+interface UseDialogOptions {
+  isOpen: boolean
+  onClose: () => void
+  /** Ref to the dialog panel that should trap focus. */
+  ref: React.RefObject<HTMLElement | null>
+  /**
+   * Guard for the Escape key. Return false to swallow this Escape (e.g. an
+   * open autocomplete inside the dialog should consume the first Escape).
+   * Defaults to always allowing close.
+   */
+  canClose?: () => boolean
+  /** Skip auto-focusing the first element (when the panel manages its own focus). */
+  autoFocus?: boolean
+}
 
-  // Keep the latest onClose without making it an effect dependency, so passing
-  // an inline callback doesn't re-run focus/listener setup on every render.
+/**
+ * Accessibility behaviour shared by every modal dialog:
+ *  - marks the panel as a focus trap (Tab / Shift+Tab cycle within it)
+ *  - moves focus into the dialog on open and restores it to the trigger on close
+ *  - closes on Escape (respecting an optional guard so nested widgets win first)
+ *
+ * The keydown listener runs on `document` in the bubble phase, so React's own
+ * onKeyDown handlers inside the dialog run first and can pre-empt the Escape.
+ */
+export function useDialog({ isOpen, onClose, ref, canClose, autoFocus = true }: UseDialogOptions) {
+  const previouslyFocused = useRef<HTMLElement | null>(null)
   const onCloseRef = useRef(onClose)
+  const canCloseRef = useRef(canClose)
+
   useEffect(() => {
     onCloseRef.current = onClose
-  }, [onClose])
+    canCloseRef.current = canClose
+  })
 
   useEffect(() => {
     if (!isOpen) return
-    const panel = panelRef.current
 
-    // Remember what was focused so we can restore it when the dialog closes.
-    restoreFocusRef.current = document.activeElement as HTMLElement | null
+    previouslyFocused.current = document.activeElement as HTMLElement | null
 
-    // Move focus into the dialog (first field, else the panel itself). Defer a
-    // frame so lazily-mounted content and autofocus refs settle first.
     const focusTimer = window.setTimeout(() => {
-      if (!panel) return
-      if (panel.contains(document.activeElement)) return
-      const first = panel.querySelector<HTMLElement>(FOCUSABLE)
-      ;(first ?? panel).focus?.()
-    }, 30)
+      const panel = ref.current
+      if (!panel || !autoFocus) return
+      // Respect an element that already grabbed focus (e.g. autoFocus input).
+      if (panel.contains(document.activeElement) && document.activeElement !== panel) return
+      const focusables = panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      ;(focusables[0] ?? panel).focus()
+    }, 40)
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      const panel = ref.current
+      if (!panel) return
+
       if (e.key === 'Escape') {
-        e.stopPropagation()
+        if (canCloseRef.current && !canCloseRef.current()) return
+        e.preventDefault()
         onCloseRef.current()
         return
       }
-      if (e.key !== 'Tab' || !panel) return
-      const focusables = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
-        el => el.offsetParent !== null || el === document.activeElement,
-      )
-      if (focusables.length === 0) return
+
+      if (e.key !== 'Tab') return
+      const focusables = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))
+        .filter(el => el.offsetWidth > 0 || el.offsetHeight > 0 || el === document.activeElement)
+      if (focusables.length === 0) {
+        e.preventDefault()
+        panel.focus()
+        return
+      }
       const first = focusables[0]
       const last = focusables[focusables.length - 1]
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault()
-        last.focus()
-      } else if (!e.shiftKey && document.activeElement === last) {
+      const active = document.activeElement as HTMLElement
+
+      if (e.shiftKey) {
+        if (active === first || !panel.contains(active)) {
+          e.preventDefault()
+          last.focus()
+        }
+      } else if (active === last || !panel.contains(active)) {
         e.preventDefault()
         first.focus()
       }
     }
 
-    document.addEventListener('keydown', handleKeyDown, true)
+    document.addEventListener('keydown', handleKeyDown)
+
     return () => {
       window.clearTimeout(focusTimer)
-      document.removeEventListener('keydown', handleKeyDown, true)
-      // Restore focus to the opener (guard against elements that have gone away).
-      const el = restoreFocusRef.current
-      if (el && document.contains(el)) el.focus?.()
+      document.removeEventListener('keydown', handleKeyDown)
+      const prev = previouslyFocused.current
+      if (prev && typeof prev.focus === 'function' && document.contains(prev)) {
+        prev.focus()
+      }
     }
-  }, [isOpen])
-
-  return panelRef
+  }, [isOpen, ref, autoFocus])
 }

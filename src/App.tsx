@@ -1,19 +1,20 @@
 import { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import './App.css'
 import TopNav from "./TopNav.tsx"
-// Route-level code splitting: each tab view is its own chunk, fetched on
-// demand. Only one view mounts at a time, so this keeps the initial bundle
-// (and PWA cold start) lean. Named exports are mapped to a default for lazy().
-const DashboardView = lazy(() => import('./components/DashboardView').then(m => ({ default: m.DashboardView })))
-const RecurringPaymentsView = lazy(() => import('./components/RecurringPaymentsView').then(m => ({ default: m.RecurringPaymentsView })))
-const LedgerView = lazy(() => import('./components/LedgerView').then(m => ({ default: m.LedgerView })))
-const LoginView = lazy(() => import('./components/LoginView').then(m => ({ default: m.LoginView })))
-const WishlistView = lazy(() => import('./components/WishlistView').then(m => ({ default: m.WishlistView })))
-const SettingsView = lazy(() => import('./components/SettingsView').then(m => ({ default: m.SettingsView })))
-const DraftStagingView = lazy(() => import('./components/DraftStagingView').then(m => ({ default: m.DraftStagingView })))
+import { LoginView } from './components/LoginView'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { APP_TABS, type AppTab, type Transaction, type RecurringPayment, type DashboardData, type TransactionCategory, type WishlistItem } from './types'
 import * as api from './lib/api'
 import { Loader2, Plus, Wallet, CreditCard, PiggyBank, Upload } from 'lucide-react'
+
+// Tab views are code-split so the initial bundle only ships the shell + the
+// first view. Each chunk loads on demand behind a shimmer fallback.
+const DashboardView = lazy(() => import('./components/DashboardView').then(m => ({ default: m.DashboardView })))
+const RecurringPaymentsView = lazy(() => import('./components/RecurringPaymentsView').then(m => ({ default: m.RecurringPaymentsView })))
+const LedgerView = lazy(() => import('./components/LedgerView').then(m => ({ default: m.LedgerView })))
+const WishlistView = lazy(() => import('./components/WishlistView').then(m => ({ default: m.WishlistView })))
+const SettingsView = lazy(() => import('./components/SettingsView').then(m => ({ default: m.SettingsView })))
+const DraftStagingView = lazy(() => import('./components/DraftStagingView').then(m => ({ default: m.DraftStagingView })))
 import { formatCurrencyVal } from './lib/utils'
 import { CustomAlertModal } from './components/ui/CustomAlertModal'
 import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
@@ -24,23 +25,27 @@ import { CACHE_KEYS, getCachedJSON, setCachedJSON, hasCachedKey, getCachedDashbo
 import { PendingSubscriptionsModal } from './components/PendingSubscriptionsModal'
 import { PasswordPromptModal } from './components/PasswordPromptModal'
 import { LockScreen } from './components/LockScreen'
-import { applyStatusBarTheme, hideSplash } from './lib/native'
 
 const createLocalId = (prefix: string, separator = '_') => {
   return `${prefix}${separator}${Date.now()}${separator}${Math.random().toString(36).substring(2, 9)}`
 }
 
-// Shown while a lazily-loaded tab chunk is being fetched. Uses the shimmer
-// skeleton so a tab switch feels like content loading, not a spinner stall.
+// Shimmer shown while a lazily-loaded tab chunk is fetched.
 const ViewFallback = () => (
-  <div className="space-y-6 soft-rise">
-    <Skeleton className="h-24 w-full rounded-2xl" />
+  <div className="space-y-6" aria-busy="true" aria-label="Loading view">
+    <div className="app-panel rounded-2xl border border-border/60 bg-card/90 p-6">
+      <Skeleton className="h-5 w-48" />
+      <Skeleton className="mt-3 h-3 w-64" />
+    </div>
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <CardSkeleton />
       <CardSkeleton />
       <CardSkeleton />
     </div>
-    <Skeleton className="h-64 w-full rounded-2xl" />
+    <div className="app-panel rounded-2xl border border-border/60 bg-card/90 p-6">
+      <Skeleton className="h-4 w-40" />
+      <Skeleton className="mt-5 h-28 w-full rounded-xl" />
+    </div>
   </div>
 )
 
@@ -151,22 +156,49 @@ function App() {
     document.documentElement.classList.toggle('dark', darkMode)
     const meta = document.querySelector('meta[name="theme-color"]')
     if (meta) meta.setAttribute('content', darkMode ? '#0a0d14' : '#f6f8fc')
-    // Keep the native status bar in sync with the theme (no-op on web).
-    applyStatusBarTheme(darkMode)
   }, [darkMode])
 
-  // Dismiss the native splash once the app has painted, so there's no blank
-  // frame between splash and content (no-op on web).
+  // Keep --app-vvh in sync with the visual viewport so bottom-sheet modals
+  // rest above the on-screen keyboard instead of falling behind it. Also
+  // scroll whichever field gains focus into view inside its sheet, so the
+  // caret is never hidden by the keyboard as the sheet's height changes.
   useEffect(() => {
-    const id = requestAnimationFrame(() => requestAnimationFrame(() => hideSplash()))
-    return () => cancelAnimationFrame(id)
-  }, [])
+    const vv = window.visualViewport
+    const root = document.documentElement
 
-  // Keyboard avoidance: none needed. Mobile modals are top-anchored (see
-  // index.css), so they sit above the on-screen keyboard and never move when
-  // it opens/closes — which removes the jitter/stutter that any keyboard-
-  // tracking approach produced. Tall forms scroll internally and the browser
-  // brings the focused field into view natively.
+    const applyViewport = () => {
+      const h = vv ? vv.height : window.innerHeight
+      root.style.setProperty('--app-vvh', `${Math.round(h)}px`)
+    }
+
+    applyViewport()
+    vv?.addEventListener('resize', applyViewport)
+    vv?.addEventListener('scroll', applyViewport)
+
+    let scrollTimer: number | undefined
+    const isSheetLayout = () => window.matchMedia('(max-width: 639px)').matches
+    const handleFocusIn = (e: FocusEvent) => {
+      // Only relevant to the mobile bottom-sheet layout, where the keyboard
+      // overlays the sheet. Desktop dialogs are centered with no OS keyboard.
+      if (!isSheetLayout()) return
+      const el = e.target as HTMLElement | null
+      if (!el || !el.matches?.('input, textarea, select')) return
+      if (!el.closest('.sheet-panel')) return
+      // Wait for the keyboard to open and --app-vvh to settle, then center it.
+      window.clearTimeout(scrollTimer)
+      scrollTimer = window.setTimeout(() => {
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      }, 320)
+    }
+    document.addEventListener('focusin', handleFocusIn)
+
+    return () => {
+      vv?.removeEventListener('resize', applyViewport)
+      vv?.removeEventListener('scroll', applyViewport)
+      document.removeEventListener('focusin', handleFocusIn)
+      window.clearTimeout(scrollTimer)
+    }
+  }, [])
 
   // Inactivity Auto-Lock
   const LOCK_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
@@ -884,7 +916,6 @@ function App() {
   const [ledgerCyclesRange, setLedgerCyclesRange] = useState<'monthly' | '3month' | '6month' | 'yearly'>('monthly')
 
   const handleQuickAction = (action: 'transaction' | 'subscription' | 'wishlist') => {
-    triggerVibration(12)
     if (action === 'transaction') {
       setActiveTab('ledger')
       setAutoOpenLedgerAdd(true)
@@ -956,11 +987,7 @@ function App() {
   }
 
   if (!token) {
-    return (
-      <Suspense fallback={<div className="app-shell min-h-screen" />}>
-        <LoginView onLoginSuccess={handleLoginSuccess} />
-      </Suspense>
-    )
+    return <LoginView onLoginSuccess={handleLoginSuccess} />
   }
 
   if (loading && !optimisticDashboardData) {
@@ -1052,6 +1079,7 @@ function App() {
             </div>
           </div>
         )}
+        <ErrorBoundary variant="inline" resetKey={activeTab}>
         <Suspense fallback={<ViewFallback />}>
         {activeTab === 'dashboard' && (
           <DashboardView
@@ -1183,6 +1211,7 @@ function App() {
           />
         )}
         </Suspense>
+        </ErrorBoundary>
       </main>
       </PullToRefresh>
 
@@ -1327,7 +1356,6 @@ function App() {
               if (activeTab === 'drafts') {
                 handleSyncDraftBatch()
               } else {
-                triggerVibration(10)
                 setIsFabOpen(prev => !prev)
               }
             }}

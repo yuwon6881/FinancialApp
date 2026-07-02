@@ -17,25 +17,6 @@
       rel="stylesheet"
     />
     <title>FinancialApp — Ledger</title>
-    <!-- Paint the correct theme background on the very first frame, before the
-         JS bundle loads and React mounts. Without this the window is blank on
-         cold start, which on installed PWAs shows as a white/home-screen flash
-         between the splash screen and the app. Also applies the dark class
-         early so there's no flash of the wrong theme. -->
-    <script>
-      (function () {
-        try {
-          var dark = localStorage.getItem('dark_mode') === 'true'
-          var root = document.documentElement
-          if (dark) root.classList.add('dark')
-          root.style.backgroundColor = dark ? '#0a0d14' : '#f6f8fc'
-        } catch (e) {}
-      })()
-    </script>
-    <style>
-      html, body, #root { background-color: #f6f8fc; min-height: 100%; }
-      html.dark, html.dark body, html.dark #root { background-color: #0a0d14; }
-    </style>
   </head>
   <body>
     <div id="root"></div>

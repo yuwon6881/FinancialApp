@@ -1,62 +1,90 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
-import { AlertTriangle, RotateCw } from 'lucide-react'
+import { AlertTriangle, RotateCcw } from 'lucide-react'
 
-interface Props {
+interface ErrorBoundaryProps {
   children: ReactNode
+  /** Optional custom fallback. When omitted, a friendly default card is shown. */
+  fallback?: (error: Error, reset: () => void) => ReactNode
+  /**
+   * Changing this value resets the boundary (e.g. pass the active tab so a
+   * per-view crash clears itself when the user navigates elsewhere).
+   */
+  resetKey?: unknown
+  /** Whether to show the full-screen shell (root boundary) or an inline card. */
+  variant?: 'screen' | 'inline'
 }
 
-interface State {
-  hasError: boolean
+interface ErrorBoundaryState {
   error: Error | null
 }
 
-/**
- * Top-level safety net. A render error anywhere in the tree would otherwise
- * white-screen the whole PWA; here we catch it and show a recoverable card.
- * Crucially we do NOT clear localStorage, so the offline sync queue, drafts
- * and cached ledger survive a reload.
- */
-export class ErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false, error: null }
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { error: null }
 
-  static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error }
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { error }
+  }
+
+  componentDidUpdate(prevProps: ErrorBoundaryProps) {
+    // Auto-recover when the reset key changes (e.g. tab navigation).
+    if (this.state.error && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ error: null })
+    }
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    // Surfaced in the console / any attached logging; kept non-fatal.
-    console.error('Unhandled UI error:', error, info.componentStack)
+    // Keep a breadcrumb for debugging without crashing the app.
+    console.error('[ErrorBoundary]', error, info.componentStack)
   }
 
-  handleReload = () => {
-    window.location.reload()
-  }
+  reset = () => this.setState({ error: null })
 
   render() {
-    if (!this.state.hasError) return this.props.children
+    const { error } = this.state
+    if (!error) return this.props.children
+
+    if (this.props.fallback) return this.props.fallback(error, this.reset)
+
+    const inline = this.props.variant === 'inline'
 
     return (
-      <div className="app-shell min-h-screen flex items-center justify-center p-6 text-foreground">
-        <div className="app-panel max-w-md w-full rounded-2xl border border-border/60 bg-card/92 p-8 text-center soft-rise">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-red-500/10 text-red-500">
+      <div
+        role="alert"
+        className={
+          inline
+            ? 'app-panel rounded-2xl border border-border/60 bg-card/92 p-8 text-center'
+            : 'app-shell min-h-screen flex items-center justify-center p-6 text-foreground'
+        }
+      >
+        <div className="flex max-w-sm flex-col items-center gap-4">
+          <div className="flex size-12 items-center justify-center rounded-2xl bg-orange-500/10 text-orange-500 border border-orange-500/20">
             <AlertTriangle className="size-6" />
           </div>
-          <h1 className="mt-5 text-lg font-bold tracking-tight">Something went wrong</h1>
-          <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-            The app hit an unexpected error. Your data is safe — nothing was lost.
-            Reloading usually fixes it.
-          </p>
-          {this.state.error?.message && (
-            <p className="mt-3 text-[11px] font-mono text-muted-foreground/70 bg-muted/50 rounded-lg px-3 py-2 break-words">
-              {this.state.error.message}
+          <div className="space-y-1.5">
+            <h2 className="text-lg font-bold tracking-tight text-foreground">Something went wrong</h2>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              An unexpected error interrupted this view. Your saved and queued data is safe —
+              try again, or reload the app.
             </p>
-          )}
-          <button
-            onClick={this.handleReload}
-            className="press-scale mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-sm transition hover:opacity-90 cursor-pointer"
-          >
-            <RotateCw className="size-4" /> Reload app
-          </button>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={this.reset}
+              className="press-scale inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-muted cursor-pointer"
+            >
+              <RotateCcw className="size-3.5" /> Try again
+            </button>
+            {!inline && (
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="press-scale inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-blue-600/10 transition hover:bg-blue-700 cursor-pointer"
+              >
+                Reload app
+              </button>
+            )}
+          </div>
         </div>
       </div>
     )

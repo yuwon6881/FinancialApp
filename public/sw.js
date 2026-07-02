@@ -1,4 +1,4 @@
-const CACHE_NAME = 'financial-app-v6';
+const CACHE_NAME = 'financial-app-v3';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -10,15 +10,7 @@ const SHELL_ASSETS = [
 // Do NOT call skipWaiting() here. Forcing an immediate takeover while the
 // WebAPK standalone activity is still bootstrapping causes Android to kill
 // and restart the activity (the "flash-quit-reopen" behaviour).
-// Instead the *client* asks us to activate (SKIP_WAITING message below) only
-// after the page has finished loading, then reloads once — safe, and it makes
-// new deploys actually reach installed PWAs instead of waiting forever.
-self.addEventListener('message', (event) => {
-  if (event.data === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-});
-
+// The new SW will activate naturally the next time the user opens the app.
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -55,25 +47,22 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigation requests (root / index.html) → Cache-First (stale-while-revalidate).
-  // Painting the cached shell immediately avoids the blank/home-screen flash on
-  // launch that a network-first wait produces. Freshness is handled separately:
-  // the new SW re-caches index.html on install and the client reloads once when
-  // it activates (see registerServiceWorker.ts), so a new deploy still lands.
+  // Navigation requests (root / index.html) → Network-First
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      caches.match('/index.html').then((cached) => {
-        const network = fetch(event.request)
-          .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              const clone = networkResponse.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', clone));
-            }
-            return networkResponse;
-          })
-          .catch(() => cached);
-        return cached || network;
-      })
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const clone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match(event.request)
+            .then((r) => r || caches.match('/index.html'))
+            .then((r) => r || caches.match('/'));
+        })
     );
     return;
   }

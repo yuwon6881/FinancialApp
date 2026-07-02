@@ -193,6 +193,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1)
   const suggestionsRef = useRef<HTMLDivElement>(null)
+  const addFormPanelRef = useRef<HTMLDivElement>(null)
 
   // Build unique suggestion entries from past transactions (most recent first, deduped by description)
   const suggestionEntries = useMemo(() => {
@@ -624,8 +625,18 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setShowAddForm(false)
   }
 
-  // Dialog a11y: Esc-to-close, focus trap, return focus to the opener.
-  const addFormPanelRef = useDialog<HTMLDivElement>(showAddForm, handleCloseForm)
+  // Modal a11y: focus trap + Escape. The first Escape is consumed by the open
+  // description autocomplete (canClose returns false while it is showing), so a
+  // second Escape is needed to actually dismiss the form.
+  useDialog({
+    isOpen: showAddForm,
+    onClose: handleCloseForm,
+    ref: addFormPanelRef,
+    autoFocus: false,
+    canClose: () => !suggestionsRef.current,
+  })
+
+
 
   const handleToggleCategory = (cat: 'Essentials' | 'Growth' | 'Rewards') => {
     setSelectedRedirectCategories(prev => {
@@ -1272,12 +1283,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             ref={addFormPanelRef}
             role="dialog"
             aria-modal="true"
-            aria-label={editingTxId ? 'Edit ledger entry' : 'Post new ledger entry'}
+            aria-labelledby="ledger-form-title"
+            tabIndex={-1}
             onClick={e => e.stopPropagation()}
-            className="sheet-panel w-full max-w-xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto outline-none"
+            className="sheet-panel w-full max-w-xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto focus:outline-none"
           >
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
-              <h3 className="text-md font-bold text-foreground flex items-center gap-2">
+              <h3 id="ledger-form-title" className="text-md font-bold text-foreground flex items-center gap-2">
                 <PlusCircle className="size-4 text-blue-500" /> {editingTxId ? 'Edit Ledger Entry' : 'Post New Ledger Entry'}
               </h3>
               <button
@@ -1289,7 +1301,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 <X className="size-4" />
               </button>
             </div>
-          <form onSubmit={handleSubmit} autoComplete="off" className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
             <div className="space-y-1 sm:col-span-2">
               <label className="text-xs font-semibold text-muted-foreground">Transaction Type</label>
@@ -1334,9 +1346,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               <label className="text-xs font-semibold text-muted-foreground">Description</label>
               <input
                 ref={firstInputRef}
+                autoFocus
                 type="text"
                 required
-                enterKeyHint="next"
                 placeholder="e.g. Grocery Store, Paycheck"
                 value={description}
                 onChange={e => {
@@ -1415,7 +1427,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 <input
                   type="text"
                   inputMode="decimal"
-                  enterKeyHint="done"
                   required
                   placeholder="0.00"
                   value={amount}
