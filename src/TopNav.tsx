@@ -235,7 +235,7 @@ const TopNav: React.FC<TopNavProps> = ({
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <span className="font-semibold text-foreground truncate block">{noti.name}</span>
-                          <span className="text-[9px] text-muted-foreground block">{noti.billingDate}</span>
+                          <span className="text-[9px] text-muted-foreground block whitespace-nowrap">{noti.billingDate}</span>
                         </div>
                         <div className="text-right shrink-0">
                           <span className={`text-orange-500 font-extrabold block transition-all duration-300 ${hideSensitive ? 'blur-sm select-none pointer-events-none' : ''}`}>
@@ -336,9 +336,9 @@ const TopNav: React.FC<TopNavProps> = ({
                           </div>
                         ) : (
                           <SwipeableRow
-                            className="rounded-xl bg-muted/30 border border-border/30 text-xs"
+                            className="rounded-xl bg-muted/30 text-xs"
                             contentClassName="p-2.5"
-                            actionsWidth={180}
+                            actionsWidth={168}
                             actions={notificationActions}
                             desktopActions={notificationDesktopActions}
                           >
