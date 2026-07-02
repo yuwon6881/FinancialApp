@@ -1,16 +1,19 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import './App.css'
 import TopNav from "./TopNav.tsx"
-import { DashboardView } from './components/DashboardView'
-import { RecurringPaymentsView } from './components/RecurringPaymentsView'
-import { LedgerView } from './components/LedgerView'
-import { LoginView } from './components/LoginView'
-import { WishlistView } from './components/WishlistView'
-import { SettingsView } from './components/SettingsView'
+// Route-level code splitting: each tab view is its own chunk, fetched on
+// demand. Only one view mounts at a time, so this keeps the initial bundle
+// (and PWA cold start) lean. Named exports are mapped to a default for lazy().
+const DashboardView = lazy(() => import('./components/DashboardView').then(m => ({ default: m.DashboardView })))
+const RecurringPaymentsView = lazy(() => import('./components/RecurringPaymentsView').then(m => ({ default: m.RecurringPaymentsView })))
+const LedgerView = lazy(() => import('./components/LedgerView').then(m => ({ default: m.LedgerView })))
+const LoginView = lazy(() => import('./components/LoginView').then(m => ({ default: m.LoginView })))
+const WishlistView = lazy(() => import('./components/WishlistView').then(m => ({ default: m.WishlistView })))
+const SettingsView = lazy(() => import('./components/SettingsView').then(m => ({ default: m.SettingsView })))
+const DraftStagingView = lazy(() => import('./components/DraftStagingView').then(m => ({ default: m.DraftStagingView })))
 import { APP_TABS, type AppTab, type Transaction, type RecurringPayment, type DashboardData, type TransactionCategory, type WishlistItem } from './types'
 import * as api from './lib/api'
 import { Loader2, Plus, Wallet, CreditCard, PiggyBank, Upload } from 'lucide-react'
-import { DraftStagingView } from './components/DraftStagingView'
 import { formatCurrencyVal } from './lib/utils'
 import { CustomAlertModal } from './components/ui/CustomAlertModal'
 import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
@@ -25,6 +28,20 @@ import { LockScreen } from './components/LockScreen'
 const createLocalId = (prefix: string, separator = '_') => {
   return `${prefix}${separator}${Date.now()}${separator}${Math.random().toString(36).substring(2, 9)}`
 }
+
+// Shown while a lazily-loaded tab chunk is being fetched. Uses the shimmer
+// skeleton so a tab switch feels like content loading, not a spinner stall.
+const ViewFallback = () => (
+  <div className="space-y-6 soft-rise">
+    <Skeleton className="h-24 w-full rounded-2xl" />
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <CardSkeleton />
+      <CardSkeleton />
+      <CardSkeleton />
+    </div>
+    <Skeleton className="h-64 w-full rounded-2xl" />
+  </div>
+)
 
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'))
@@ -893,6 +910,7 @@ function App() {
   const [ledgerCyclesRange, setLedgerCyclesRange] = useState<'monthly' | '3month' | '6month' | 'yearly'>('monthly')
 
   const handleQuickAction = (action: 'transaction' | 'subscription' | 'wishlist') => {
+    triggerVibration(12)
     if (action === 'transaction') {
       setActiveTab('ledger')
       setAutoOpenLedgerAdd(true)
@@ -964,7 +982,11 @@ function App() {
   }
 
   if (!token) {
-    return <LoginView onLoginSuccess={handleLoginSuccess} />
+    return (
+      <Suspense fallback={<div className="app-shell min-h-screen" />}>
+        <LoginView onLoginSuccess={handleLoginSuccess} />
+      </Suspense>
+    )
   }
 
   if (loading && !optimisticDashboardData) {
@@ -1056,8 +1078,9 @@ function App() {
             </div>
           </div>
         )}
+        <Suspense fallback={<ViewFallback />}>
         {activeTab === 'dashboard' && (
-          <DashboardView 
+          <DashboardView
             dashboardData={optimisticDashboardData}
             transactions={allTransactions}
             onSelectPeriod={handleSelectPeriod}
@@ -1185,6 +1208,7 @@ function App() {
             }}
           />
         )}
+        </Suspense>
       </main>
       </PullToRefresh>
 
@@ -1329,6 +1353,7 @@ function App() {
               if (activeTab === 'drafts') {
                 handleSyncDraftBatch()
               } else {
+                triggerVibration(10)
                 setIsFabOpen(prev => !prev)
               }
             }}

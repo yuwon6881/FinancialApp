@@ -115,6 +115,8 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Amount</label>
                     <input
                       type="number"
+                      inputMode="decimal"
+                      enterKeyHint="done"
                       step="0.01"
                       required
                       value={amount}

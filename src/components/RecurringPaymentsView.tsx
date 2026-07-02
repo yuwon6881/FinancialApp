@@ -17,6 +17,7 @@ import { triggerHaptic } from '../lib/haptics'
 import { CustomSelect } from './ui/CustomSelect'
 import { BillTimeline } from './BillTimeline'
 import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } from '../lib/categoryColors'
+import { useDialog } from '../lib/useDialog'
 
 interface RecurringPaymentsViewProps {
   payments: RecurringPayment[]
@@ -194,6 +195,8 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     setShowAddForm(false)
   }
 
+  const addFormPanelRef = useDialog<HTMLDivElement>(showAddForm, handleCancelForm)
+
   const formatCurrency = (val: number) => {
     return formatCurrencyVal(val, currency)
   }
@@ -285,8 +288,12 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
           className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
         >
           <div
+            ref={addFormPanelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={editingPayment ? 'Edit subscription' : 'Add new recurring payment'}
             onClick={e => e.stopPropagation()}
-            className="sheet-panel w-full max-w-xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+            className="sheet-panel w-full max-w-xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto outline-none"
           >
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
               <h3 className="text-md font-bold text-foreground flex items-center gap-2">

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import * as api from '../lib/api'
+import { useDialog } from '../lib/useDialog'
 
 interface PasswordPromptModalProps {
   isOpen: boolean
@@ -12,13 +13,15 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified }: PasswordPro
   const [promptError, setPromptError] = useState<string | null>(null)
   const [promptVerifying, setPromptVerifying] = useState(false)
 
-  if (!isOpen) return null
-
   const handleClose = () => {
     onClose()
     setConfirmPassword('')
     setPromptError(null)
   }
+
+  const panelRef = useDialog<HTMLDivElement>(isOpen, handleClose)
+
+  if (!isOpen) return null
 
   return (
     <div
@@ -26,8 +29,12 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified }: PasswordPro
       className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
     >
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Verify identity"
         onClick={e => e.stopPropagation()}
-        className="sheet-panel w-full max-w-sm bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+        className="sheet-panel w-full max-w-sm bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto outline-none"
       >
         <div className="flex items-center justify-between border-b border-border/40 pb-2">
           <h3 className="text-sm font-bold text-foreground">Verify Identity</h3>

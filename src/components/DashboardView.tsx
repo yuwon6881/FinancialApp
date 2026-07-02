@@ -12,6 +12,7 @@ import {
   Edit2
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
+import { AnimatedNumber } from './ui/AnimatedNumber'
 import { CustomConfirmModal } from './ui/CustomConfirmModal'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
@@ -818,7 +819,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           <div className="text-2xl font-black text-foreground">
-            {formatSensitive(stats.totalBalance)}
+            <AnimatedNumber value={stats.totalBalance} format={formatCurrency} hideSensitive={hideSensitive} />
           </div>
           <p className="text-[10px] text-muted-foreground mt-1.5 flex items-start gap-1">
             <AlertCircle className="size-3 text-blue-500 shrink-0 mt-0.5" />
@@ -838,7 +839,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           <div className="text-2xl font-black text-foreground">
-            {formatSensitive(stats.monthlyInflow)}
+            <AnimatedNumber value={stats.monthlyInflow} format={formatCurrency} hideSensitive={hideSensitive} />
           </div>
           <p className="text-[10px] mt-1.5 text-muted-foreground">
             Total Actual Income: <span className="font-semibold text-teal-500">{formatSensitive(stats.monthlyIncome)}</span>
@@ -857,7 +858,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           <div className="text-2xl font-black text-foreground">
-            {formatSensitive(stats.monthlyExpenses)}
+            <AnimatedNumber value={stats.monthlyExpenses} format={formatCurrency} hideSensitive={hideSensitive} />
           </div>
           <p className="text-[10px] text-muted-foreground mt-1.5">
             Active committed bills: <span className="font-semibold text-orange-500">{formatSensitive(stats.activeRecurringTotal)}</span>/mo
@@ -1478,6 +1479,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <label className="text-[11px] font-bold text-muted-foreground block">Target Remaining Balance</label>
                 <input
                   type="number"
+                  inputMode="decimal"
+                  enterKeyHint="done"
                   step="0.01"
                   required
                   placeholder="0.00"

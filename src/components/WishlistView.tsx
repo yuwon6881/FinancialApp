@@ -15,6 +15,7 @@ import {
   Target,
   Edit2
 } from 'lucide-react'
+import { useDialog } from '../lib/useDialog'
 
 interface WishlistViewProps {
   wishlist: WishlistItem[]
@@ -61,6 +62,8 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingItem, setEditingItem] = useState<WishlistItem | null>(null)
+  const addModalRef = useDialog<HTMLDivElement>(showAddModal, () => setShowAddModal(false))
+  const editModalRef = useDialog<HTMLDivElement>(showEditModal, () => setShowEditModal(false))
 
   // Form states
   const [nameInput, setNameInput] = useState('')
@@ -532,8 +535,12 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
           className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
         >
           <div
+            ref={addModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Add new wish goal"
             onClick={e => e.stopPropagation()}
-            className="sheet-panel w-full max-w-md bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+            className="sheet-panel w-full max-w-md bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto outline-none"
           >
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
               <h3 className="text-sm font-bold text-foreground">Add New Wish Goal</h3>
@@ -623,8 +630,12 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
           className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
         >
           <div
+            ref={editModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Edit wish goal"
             onClick={e => e.stopPropagation()}
-            className="sheet-panel w-full max-w-md bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+            className="sheet-panel w-full max-w-md bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto outline-none"
           >
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
               <h3 className="text-sm font-bold text-foreground">Edit Wish Goal</h3>

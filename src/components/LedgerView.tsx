@@ -20,6 +20,7 @@ import { SwipeableRow } from './ui/SwipeableRow'
 import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput, displayLedgerCategory } from '../lib/utils'
 import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } from '../lib/categoryColors'
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../lib/csvExport'
+import { useDialog } from '../lib/useDialog'
 
 interface LedgerViewProps {
   transactions: Transaction[]
@@ -623,7 +624,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setShowAddForm(false)
   }
 
-
+  // Dialog a11y: Esc-to-close, focus trap, return focus to the opener.
+  const addFormPanelRef = useDialog<HTMLDivElement>(showAddForm, handleCloseForm)
 
   const handleToggleCategory = (cat: 'Essentials' | 'Growth' | 'Rewards') => {
     setSelectedRedirectCategories(prev => {
@@ -1267,8 +1269,12 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
         >
           <div
+            ref={addFormPanelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={editingTxId ? 'Edit ledger entry' : 'Post new ledger entry'}
             onClick={e => e.stopPropagation()}
-            className="sheet-panel w-full max-w-xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+            className="sheet-panel w-full max-w-xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto outline-none"
           >
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
               <h3 className="text-md font-bold text-foreground flex items-center gap-2">
@@ -1330,6 +1336,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 ref={firstInputRef}
                 type="text"
                 required
+                enterKeyHint="next"
                 placeholder="e.g. Grocery Store, Paycheck"
                 value={description}
                 onChange={e => {
@@ -1408,6 +1415,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 <input
                   type="text"
                   inputMode="decimal"
+                  enterKeyHint="done"
                   required
                   placeholder="0.00"
                   value={amount}
