@@ -166,9 +166,62 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
         </div>
       </div>
 
-      {/* Visual Timeline Section */}
-      <div className="p-6 bg-muted/10 rounded-2xl border border-border/40 select-none">
-        
+      {/* Mobile: compact tappable vertical list (horizontal timeline is too cramped on small screens) */}
+      {timelineNodes.length > 0 && (
+        <div className="sm:hidden space-y-2">
+          {timelineNodes.map((node) => {
+            const allPaid = node.bills.every(b => b.status === 'Paid')
+            const anyPending = node.bills.some(b => b.status === 'Pending')
+            const allDiscarded = node.bills.every(b => b.status === 'Discarded')
+
+            let dotColor = 'bg-amber-500'
+            if (allPaid) dotColor = 'bg-green-500'
+            else if (allDiscarded) dotColor = 'bg-slate-400'
+            else if (!anyPending) dotColor = 'bg-green-500'
+
+            const d = new Date(node.dueDate)
+            const dateLabel = `${MONTH_NAMES[d.getMonth()]} ${d.getDate()}${getDaySuffix(d.getDate())}`
+            const nameLabel = node.bills.length === 1
+              ? node.bills[0].name
+              : node.bills.length === 2
+                ? `${node.bills[0].name} & ${node.bills[1].name}`
+                : `${node.bills.length} bills`
+            const total = node.bills.reduce((s, b) => s + Math.abs(b.amount), 0)
+            const statusLabel = anyPending ? 'Pending' : allDiscarded ? 'Discarded' : 'Paid'
+            const statusStyle = statusLabel === 'Paid'
+              ? 'text-green-500 bg-green-500/10'
+              : statusLabel === 'Discarded'
+                ? 'text-slate-400 bg-slate-500/10'
+                : 'text-amber-500 bg-amber-500/10'
+
+            return (
+              <button
+                key={node.dueDate}
+                onClick={() => handleNodeClick(node)}
+                className="w-full flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-card hover:bg-muted/30 active:scale-[0.99] transition text-left cursor-pointer"
+              >
+                <span className={`size-2.5 rounded-full shrink-0 ${dotColor}`} />
+                <div className="flex flex-col items-center justify-center shrink-0 w-10">
+                  <span className="text-[9px] text-muted-foreground font-bold uppercase leading-none">{MONTH_NAMES[d.getMonth()]}</span>
+                  <span className="text-lg font-black text-foreground leading-tight">{d.getDate()}</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className={`text-xs font-bold text-foreground truncate ${allDiscarded ? 'line-through opacity-60' : ''}`}>{nameLabel}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">Due {dateLabel}</div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-xs font-extrabold text-foreground">{formatSensitive(total)}</div>
+                  <span className={`inline-block mt-0.5 text-[8px] font-bold px-1.5 py-0.5 rounded ${statusStyle}`}>{statusLabel}</span>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Visual Timeline Section — horizontal graph (tablet and up) */}
+      <div className="hidden sm:block p-6 bg-muted/10 rounded-2xl border border-border/40 select-none">
+
         {/* The horizontal line container */}
         <div className="relative pt-12 pb-16 px-3.5">
           <div className="relative h-1.5 bg-muted rounded-full">
@@ -237,15 +290,17 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                   style={{ left: `${node.percent}%` }}
                   className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 group z-10"
                 >
-                  {/* Node trigger dot */}
+                  {/* Node trigger dot — small visual, large touch target via padding/negative margin */}
                   <button
                     onClick={() => handleNodeClick(node)}
-                    className={`size-3.5 rounded-full border border-card ${dotColor} hover:scale-125 focus:scale-125 focus:ring-4 active:scale-95 transition duration-150 shadow-md cursor-pointer flex items-center justify-center`}
+                    className="flex items-center justify-center p-2.5 -m-2.5 cursor-pointer group/dot focus:outline-none"
                     title={`${node.bills.length} item(s) due: ${node.dueDate}`}
                   >
-                    {node.bills.length > 1 && (
-                      <span className="text-[7px] text-white font-extrabold">{node.bills.length}</span>
-                    )}
+                    <span className={`size-4 rounded-full border-2 border-card ${dotColor} group-hover/dot:scale-125 group-focus/dot:scale-125 group-active/dot:scale-95 transition duration-150 shadow-md flex items-center justify-center`}>
+                      {node.bills.length > 1 && (
+                        <span className="text-[8px] text-white font-extrabold leading-none">{node.bills.length}</span>
+                      )}
+                    </span>
                   </button>
 
                   {/* Alternating & Staggered Labels */}
@@ -287,8 +342,14 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
 
       {/* Multiple Bills Selector Modal */}
       {selectedNode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="w-full max-w-sm bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+        <div
+          onClick={() => setSelectedNode(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="w-full max-w-sm bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+          >
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
               <div className="flex items-center gap-2">
                 <List className="size-4 text-blue-500" />
@@ -339,8 +400,14 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
 
       {/* Bill Detail / Quick Action Modal Overlay */}
       {selectedBill && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="w-full max-w-sm bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+        <div
+          onClick={() => setSelectedBill(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="w-full max-w-sm bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+          >
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
               <div className="flex items-center gap-2">
                 <span className={`p-1.5 rounded-lg ${

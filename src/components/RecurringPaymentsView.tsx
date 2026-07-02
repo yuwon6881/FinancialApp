@@ -521,11 +521,11 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                 </div>
               </div>
 
-              <div className="mt-6 flex items-center justify-between border-t border-border/30 pt-4">
-                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                  <Bell className="size-3 text-blue-500" /> Auto-notify active
+              <div className="mt-6 flex items-center justify-between border-t border-border/30 pt-4 gap-2">
+                <span className="text-[10px] text-muted-foreground flex items-center gap-1 shrink-0">
+                  <Bell className="size-3 text-blue-500" /> Auto-notify
                 </span>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
                       setName(rp.name)
@@ -537,17 +537,17 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                       setEditingPayment(rp)
                       setShowAddForm(true)
                     }}
-                    className="p-2 rounded-lg text-blue-500 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/20 cursor-pointer transition duration-150"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-blue-500 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/15 cursor-pointer transition duration-150 text-xs font-bold active:scale-95"
                     title="Edit subscription"
                   >
-                    <Edit className="size-3.5" />
+                    <Edit className="size-3.5" /> Edit
                   </button>
                   <button
                     onClick={() => onDeletePayment(rp.id)}
-                    className="p-2 rounded-lg text-orange-500 hover:bg-orange-500/10 border border-transparent hover:border-orange-500/20 cursor-pointer transition duration-150"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-orange-500 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/15 cursor-pointer transition duration-150 text-xs font-bold active:scale-95"
                     title="Delete subscription"
                   >
-                    <Trash2 className="size-3.5" />
+                    <Trash2 className="size-3.5" /> Delete
                   </button>
                 </div>
               </div>

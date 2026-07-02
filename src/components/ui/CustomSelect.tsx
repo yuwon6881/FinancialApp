@@ -41,7 +41,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between gap-1.5 sm:gap-2.5 px-2.5 sm:px-3.5 py-1.5 text-xs bg-background border border-border rounded-xl text-foreground font-semibold shadow-xs hover:bg-muted/30 transition duration-150 cursor-pointer text-left select-none"
+        className="w-full flex items-center justify-between gap-1.5 sm:gap-2.5 px-2.5 sm:px-3.5 py-2 text-xs bg-background border border-border rounded-xl text-foreground font-semibold shadow-xs hover:bg-muted/30 transition duration-150 cursor-pointer text-left select-none"
       >
         <span className="truncate">{selectedOption?.label || value}</span>
         <ChevronDown className={`size-3.5 text-muted-foreground/80 transition duration-200 ${isOpen ? 'rotate-180' : ''}`} />
@@ -57,7 +57,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
                 onChange(opt.value)
                 setIsOpen(false)
               }}
-              className={`w-full text-left px-3.5 py-1.5 text-xs rounded-lg transition duration-100 cursor-pointer ${
+              className={`w-full text-left px-3.5 py-2 text-xs rounded-lg transition duration-100 cursor-pointer ${
                 opt.value === value
                   ? 'bg-blue-600 text-white font-semibold'
                   : 'hover:bg-muted text-foreground'

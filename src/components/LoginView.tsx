@@ -152,7 +152,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             <div className="space-y-1 animate-in fade-in duration-200">
               <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Confirm Password</label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-3 size-4 text-muted-foreground" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
