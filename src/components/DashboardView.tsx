@@ -1183,6 +1183,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 setHoveredTrendPoint(safeIndex)
               }}
               onMouseLeave={() => setHoveredTrendPoint(null)}
+              onTouchStart={(e) => {
+                if (!svgRef.current || activeTrendPoints.length < 2) return
+                const rect = svgRef.current.getBoundingClientRect()
+                const x = e.touches[0].clientX - rect.left
+                const index = Math.round((x / rect.width) * (activeTrendPoints.length - 1))
+                setHoveredTrendPoint(Math.max(0, Math.min(activeTrendPoints.length - 1, index)))
+              }}
+              onTouchMove={(e) => {
+                if (!svgRef.current || activeTrendPoints.length < 2) return
+                const rect = svgRef.current.getBoundingClientRect()
+                const x = e.touches[0].clientX - rect.left
+                const index = Math.round((x / rect.width) * (activeTrendPoints.length - 1))
+                setHoveredTrendPoint(Math.max(0, Math.min(activeTrendPoints.length - 1, index)))
+              }}
               className={`h-40 flex flex-col justify-end w-full relative mt-2 transition-all duration-300 ${hideSensitive ? 'blur-xs select-none pointer-events-none' : ''}`}
             >
               {trendLinePoints ? (
@@ -1663,8 +1677,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Adjust Balance Modal */}
       {adjustingCategory && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="w-full max-w-sm bg-card border border-border/85 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+        <div
+          onClick={() => setAdjustingCategory(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="w-full max-w-sm bg-card border border-border/85 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+          >
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
               <h3 className="text-sm font-bold text-foreground">Adjust {adjustingCategory.name} Balance</h3>
               <button

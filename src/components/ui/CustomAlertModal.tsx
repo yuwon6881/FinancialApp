@@ -19,8 +19,14 @@ export const CustomAlertModal: React.FC<CustomAlertModalProps> = ({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="w-full max-w-sm bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        className="w-full max-w-sm bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+      >
         <div className="flex items-center gap-2 text-blue-500 pb-2 border-b border-border/40">
           <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
             <Info className="size-5" />

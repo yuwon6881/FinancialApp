@@ -1095,8 +1095,14 @@ function App() {
 
       {/* Modal Popup for Pending Subscriptions on Login */}
       {showLoginModal && optimisticDashboardData?.pendingNotifications && optimisticDashboardData.pendingNotifications.length > 0 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="w-full max-w-2xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+        <div
+          onClick={() => setShowLoginModal(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="w-full max-w-2xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+          >
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
@@ -1207,8 +1213,18 @@ function App() {
 
       {/* Password Gate Prompt Modal */}
       {showPasswordPrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="w-full max-w-sm bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+        <div
+          onClick={() => {
+            setShowPasswordPrompt(false)
+            setConfirmPassword('')
+            setPromptError(null)
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="w-full max-w-sm bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+          >
             <div className="flex items-center justify-between border-b border-border/40 pb-2">
               <h3 className="text-sm font-bold text-foreground">Verify Identity</h3>
               <button
