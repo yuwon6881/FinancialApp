@@ -349,13 +349,21 @@ html {
     overscroll-behavior-y: none;
 }
 
+.sheet-backdrop {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    min-height: 100vh;
+    min-height: 100dvh;
+    z-index: 100;
+}
+
 /* Bottom-sheet behaviour for centered modals on phones. Add .sheet-backdrop to the
    overlay and .sheet-panel to the dialog; desktop keeps the centered dialog. */
 @media (max-width: 639px) {
     .sheet-backdrop {
         align-items: flex-end;
         padding: 0;
-        inset: 0;
         height: 100dvh;
         overscroll-behavior: contain;
         touch-action: none;
