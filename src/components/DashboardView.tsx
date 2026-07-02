@@ -607,18 +607,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <span className="font-bold text-foreground text-xs truncate block">{noti.name}</span>
-                    <div className="flex items-center gap-1.5 mt-1">
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
                       <span className={`inline-block text-[9px] px-1.5 py-0.5 font-bold rounded border ${categoryColorMap[noti.category] || 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
                         {noti.category}
                       </span>
-                      <span className="text-[10px] text-muted-foreground">{noti.billingDate}</span>
+                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">{noti.billingDate}</span>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
                     <span className="text-orange-500 font-extrabold text-xs block">
                       -{formatSensitive(noti.amount)}
                     </span>
-                    <span className="text-[9px] text-muted-foreground">{noti.cycleLabel}</span>
+                    <span className="text-[9px] text-muted-foreground whitespace-nowrap">{noti.cycleLabel}</span>
                   </div>
                 </div>
               )
@@ -675,7 +675,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </>
               )
               return (
-                <div key={noti.id} className="p-3.5 rounded-xl bg-card border border-border/40 shadow-xs flex flex-col justify-between gap-3">
+                <div key={noti.id} className={isConfirming ? "p-3.5 rounded-xl bg-card border border-border/40 shadow-xs flex flex-col justify-between gap-3" : "rounded-xl"}>
                   {isConfirming ? (
                     <div className="flex flex-col gap-2 p-2 bg-muted/30 border border-border/40 rounded-lg animate-in slide-in-from-bottom-2 duration-200">
                       {notificationBody}
@@ -709,8 +709,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   ) : (
                     <SwipeableRow
                       className="rounded-xl border border-border/40 bg-card"
-                      contentClassName="p-0"
-                      actionsWidth={180}
+                      contentClassName="p-3.5"
+                      actionsWidth={168}
                       actions={dashboardActions}
                       desktopActions={dashboardDesktopActions}
                     >

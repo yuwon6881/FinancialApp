@@ -1279,8 +1279,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
       {/* Dashboard navigation filter banner */}
       {(incomingCategory || incomingDate || incomingTxType || showAllCycles) && (
-        <div className="flex items-start sm:items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-blue-500/8 border border-blue-500/20 text-xs animate-in fade-in duration-200">
-          <div className="flex min-w-0 items-start sm:items-center gap-2 text-blue-500 font-medium leading-relaxed">
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-blue-500/8 border border-blue-500/20 text-xs animate-in fade-in duration-200">
+          <div className="flex min-w-0 items-center gap-2 text-blue-500 font-medium leading-relaxed">
             <span className="size-1.5 rounded-full bg-blue-500 shrink-0 animate-pulse" />
             {(() => {
               const parts: string[] = []
@@ -1633,7 +1633,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           </button>
 
           {isFilterDropdownOpen && (
-            <div className="absolute left-0 right-0 top-11 w-full sm:left-auto sm:w-64 bg-card border border-border rounded-2xl shadow-xl p-4 z-40 animate-in fade-in slide-in-from-top-2 duration-150">
+            <div className="fixed left-4 right-4 top-[calc(8rem+env(safe-area-inset-top,0px))] max-h-[calc(100dvh-11rem-env(safe-area-inset-bottom,0px))] overflow-hidden bg-card border border-border rounded-2xl shadow-xl p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150 md:absolute md:left-auto md:right-0 md:top-11 md:w-64 md:max-h-none">
               
               {/* Header */}
               <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3">
@@ -1649,7 +1649,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               </div>
 
               {/* Scrollable sections */}
-              <div className="space-y-4 max-h-72 overflow-y-auto pr-1">
+              <div className="space-y-4 max-h-[calc(100dvh-18rem-env(safe-area-inset-bottom,0px))] md:max-h-72 overflow-y-auto pr-1">
                 
                 {/* Section 1: Ledger Allocation Buckets */}
                 <div className="space-y-2">

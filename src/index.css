@@ -246,12 +246,19 @@ html {
     .sheet-backdrop {
         align-items: flex-end;
         padding: 0;
+        inset: 0;
+        height: 100dvh;
+        overscroll-behavior: contain;
+        touch-action: none;
     }
     .sheet-panel {
         width: 100%;
         max-width: none;
+        max-height: 100dvh;
         border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
         padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+        overscroll-behavior: contain;
+        touch-action: pan-y;
         /* tailwindcss-animate enter vars: slide up instead of zoom on mobile */
         --tw-enter-translate-y: 100%;
         --tw-enter-scale: 1;
