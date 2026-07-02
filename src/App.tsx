@@ -160,9 +160,22 @@ function App() {
     const vv = window.visualViewport
     const root = document.documentElement
 
+    // The keyboard animates open/closed and visualViewport streams a new
+    // height every frame. We track it 1:1 (no CSS transition) so the sheet
+    // stays glued to the keyboard edge — smooth, not jittery. Updates are
+    // coalesced to one per frame and skipped when the height is unchanged,
+    // which also prevents a scroll->resize->scroll feedback loop.
+    let rafId = 0
+    let lastH = -1
     const applyViewport = () => {
-      const h = vv ? vv.height : window.innerHeight
-      root.style.setProperty('--app-vvh', `${Math.round(h)}px`)
+      if (rafId) return
+      rafId = requestAnimationFrame(() => {
+        rafId = 0
+        const h = Math.round(vv ? vv.height : window.innerHeight)
+        if (Math.abs(h - lastH) < 1) return
+        lastH = h
+        root.style.setProperty('--app-vvh', `${h}px`)
+      })
     }
 
     applyViewport()
@@ -178,11 +191,14 @@ function App() {
       const el = e.target as HTMLElement | null
       if (!el || !el.matches?.('input, textarea, select')) return
       if (!el.closest('.sheet-panel')) return
-      // Wait for the keyboard to open and --app-vvh to settle, then center it.
+      // Wait for the keyboard to open and --app-vvh to settle, then bring the
+      // field into view. Instant (not smooth) so it doesn't animate against the
+      // keyboard's own motion, and 'nearest' so an already-visible field
+      // doesn't move at all — only obscured ones scroll.
       window.clearTimeout(scrollTimer)
       scrollTimer = window.setTimeout(() => {
-        el.scrollIntoView({ block: 'center', behavior: 'smooth' })
-      }, 320)
+        el.scrollIntoView({ block: 'nearest', behavior: 'auto' })
+      }, 350)
     }
     document.addEventListener('focusin', handleFocusIn)
 
@@ -190,6 +206,7 @@ function App() {
       vv?.removeEventListener('resize', applyViewport)
       vv?.removeEventListener('scroll', applyViewport)
       document.removeEventListener('focusin', handleFocusIn)
+      if (rafId) cancelAnimationFrame(rafId)
       window.clearTimeout(scrollTimer)
     }
   }, [])

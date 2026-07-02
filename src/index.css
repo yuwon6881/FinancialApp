@@ -456,13 +456,15 @@ html {
         align-items: flex-end;
         padding: 0;
         /* Constrain to the visible viewport so the bottom-anchored sheet always
-           rests just above the on-screen keyboard instead of falling behind it. */
+           rests just above the on-screen keyboard instead of falling behind it.
+           No height transition here: visualViewport streams the keyboard's
+           animation frame-by-frame (see App.tsx), so the sheet already follows
+           it smoothly — a CSS transition on top would chase a moving target and
+           cause the jitter we're avoiding. */
         height: var(--app-vvh, 100dvh);
         min-height: 0;
         overscroll-behavior: contain;
         touch-action: none;
-        /* Smoothly follow the keyboard show/hide instead of snapping. */
-        transition: height 180ms ease-out;
     }
     .sheet-panel {
         width: 100%;
