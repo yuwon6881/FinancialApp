@@ -14,6 +14,8 @@ import { formatCurrencyVal } from './lib/utils'
 import { CustomAlertModal } from './components/ui/CustomAlertModal'
 import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 import { PullToRefresh } from './components/ui/PullToRefresh'
+import { ToastViewport, type ToastMessage, type ToastTone } from './components/ui/ToastViewport'
+import { CardSkeleton, Skeleton } from './components/ui/Skeleton'
 
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'))
@@ -140,9 +142,19 @@ function App() {
 
   const [customAlert, setCustomAlert] = useState<{ message: string; title: string } | null>(null)
   const [confirmModalData, setConfirmModalData] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null)
+  const [toasts, setToasts] = useState<ToastMessage[]>([])
+
+  const showToast = (message: string, title: string = 'Notification', tone: ToastTone = 'info') => {
+    const id = Date.now().toString(36) + Math.random().toString(36).substring(2, 7)
+    setToasts(prev => [...prev.slice(-3), { id, message, title, tone }])
+  }
+
+  const dismissToast = (id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id))
+  }
 
   const showAlert = (message: string, title: string = 'Notification') => {
-    setCustomAlert({ message, title })
+    showToast(message, title, title.toLowerCase().includes('error') ? 'error' : 'info')
   }
 
   // Shadow the global alert function
@@ -429,6 +441,7 @@ function App() {
 
     setDraftTransactions(prev => [...prev, draftTx]);
     triggerVibration(15);
+    showToast('Entry saved to the draft queue.', 'Draft saved', 'success')
     setActiveTab('drafts');
   }
 
@@ -458,6 +471,7 @@ function App() {
     setDraftTransactions([]);
     triggerVibration([25, 45, 25]);
     setPendingTransactions(prev => [...prev, ...finalPending]);
+    showToast(`${finalPending.length} transaction${finalPending.length > 1 ? 's' : ''} queued for sync.`, 'Sync queued', 'success')
   };
 
   const handleDeleteTransaction = async (id: string) => {
@@ -474,6 +488,7 @@ function App() {
       await api.deleteTransaction(id)
       triggerVibration(30)
       await loadAll(selectedMonth || undefined, selectedYear || undefined)
+      showToast('Transaction deleted.', 'Ledger updated', 'success')
     } catch (err) {
       console.error(err)
       alert('Error deleting transaction on the server.')
@@ -494,6 +509,7 @@ function App() {
       await api.updateTransaction(id, updatedTx)
       triggerVibration(15)
       await loadAll(selectedMonth || undefined, selectedYear || undefined)
+      showToast('Transaction updated.', 'Ledger updated', 'success')
     } catch (err) {
       console.error(err)
       alert('Error updating transaction on the server.')
@@ -513,6 +529,7 @@ function App() {
         ledgerCategory: noti.ledgerCategory
       })
       await loadAll(selectedMonth || undefined, selectedYear || undefined)
+      showToast('Subscription payment added to ledger.', 'Payment confirmed', 'success')
     } catch (err) {
       console.error(err)
       alert('Error confirming subscription payment.')
@@ -530,6 +547,7 @@ function App() {
         ledgerCategory: 'Discarded'
       })
       await loadAll(selectedMonth || undefined, selectedYear || undefined)
+      showToast('Subscription cycle skipped.', 'Payment skipped', 'info')
     } catch (err) {
       console.error(err)
       alert('Error discarding subscription payment.')
@@ -909,14 +927,28 @@ function App() {
 
   if (loading && !optimisticDashboardData) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-        <div className="flex flex-col items-center gap-4 text-center">
-          <div className="flex size-14 items-center justify-center rounded-2xl bg-radial from-blue-400 to-blue-600 shadow-xl shadow-blue-500/20 text-white font-extrabold text-2xl animate-pulse">
-            F
+      <div className="min-h-screen bg-background text-foreground p-4">
+        <div className="container mx-auto max-w-7xl py-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-radial from-blue-400 to-blue-600 text-white font-extrabold animate-pulse">F</div>
+              <div>
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="mt-2 h-2 w-20" />
+              </div>
+            </div>
+            <Loader2 className="animate-spin text-blue-500 size-5" />
           </div>
-          <div className="flex items-center gap-2 text-sm font-bold tracking-tight text-muted-foreground mt-2 animate-pulse">
-            <Loader2 className="animate-spin text-blue-500 size-4" />
-            Syncing financial ledgers...
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+          </div>
+          <div className="rounded-2xl border border-border/60 bg-card p-5">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="mt-5 h-28 w-full rounded-xl" />
+            <Skeleton className="mt-4 h-28 w-full rounded-xl" />
           </div>
         </div>
       </div>
@@ -926,6 +958,8 @@ function App() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col selection:bg-blue-500/20 selection:text-blue-500">
       
+      <ToastViewport toasts={toasts} onDismiss={dismissToast} />
+
       <TopNav 
         activeTab={activeTab} 
         onTabChange={setActiveTab} 
@@ -944,6 +978,17 @@ function App() {
         onMouseEnterWallet={() => setIsHoveringWallet(true)}
         onMouseLeaveWallet={() => setIsHoveringWallet(false)}
         isSyncing={isBackgroundSyncing || pendingTransactions.length > 0}
+        syncLabel={
+          syncBackoffUntil > Date.now()
+            ? `Retrying ${Math.ceil((syncBackoffUntil - Date.now()) / 1000)}s`
+            : activeSyncId
+              ? 'Syncing 1 item'
+              : pendingTransactions.length > 0
+                ? `${pendingTransactions.length} queued`
+                : isBackgroundSyncing
+                  ? 'Refreshing'
+                  : undefined
+        }
         onDiscardSubscription={handleDiscardSubscription}
         draftCount={draftTransactions.length}
       />

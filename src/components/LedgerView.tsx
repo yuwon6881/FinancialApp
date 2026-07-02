@@ -221,6 +221,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       .slice(0, 8) // Limit to 8 suggestions
   }, [description, suggestionEntries])
 
+  const quickSuggestionEntries = useMemo(() => {
+    return suggestionEntries.slice(0, 5)
+  }, [suggestionEntries])
+
   // Close suggestions when clicking outside
   useEffect(() => {
     if (!showSuggestions) return
@@ -1447,6 +1451,20 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       </button>
                     )
                   })}
+                </div>
+              )}
+              {!description.trim() && quickSuggestionEntries.length > 0 && (
+                <div className="flex gap-1.5 overflow-x-auto pt-1 pb-0.5">
+                  {quickSuggestionEntries.map(s => (
+                    <button
+                      key={s.description}
+                      type="button"
+                      onClick={() => handleSelectSuggestion(s)}
+                      className="shrink-0 rounded-full border border-border bg-muted/30 px-2.5 py-1 text-[10px] font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer"
+                    >
+                      {s.description}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>

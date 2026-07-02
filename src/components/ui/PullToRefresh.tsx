@@ -106,6 +106,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
 
   const visible = refreshing || pull > 4
   const progress = Math.min(1, pull / THRESHOLD)
+  const label = refreshing ? 'Refreshing' : progress >= 1 ? 'Release' : 'Pull'
 
   return (
     <>
@@ -120,11 +121,12 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
             transition: dragging && !refreshing ? 'none' : 'transform 200ms ease, opacity 200ms ease',
           }}
         >
-          <div className="flex items-center justify-center size-9 rounded-full bg-card border border-border shadow-lg text-blue-500">
+          <div className="flex items-center gap-2 rounded-full bg-card border border-border shadow-lg text-blue-500 px-3 py-2">
             <Loader2
               className={`size-4 ${refreshing ? 'animate-spin' : ''}`}
               style={refreshing ? undefined : { transform: `rotate(${progress * 270}deg)`, opacity: 0.4 + progress * 0.6 }}
             />
+            <span className="text-[10px] font-bold text-foreground">{label}</span>
           </div>
         </div>
       )}

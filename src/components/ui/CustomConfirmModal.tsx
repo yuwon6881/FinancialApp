@@ -1,5 +1,6 @@
 import React from 'react'
 import { AlertCircle } from 'lucide-react'
+import { BottomSheet } from './BottomSheet'
 
 interface CustomConfirmModalProps {
   isOpen: boolean
@@ -20,29 +21,21 @@ export const CustomConfirmModal: React.FC<CustomConfirmModalProps> = ({
   onConfirm,
   onCancel
 }) => {
-  if (!isOpen) return null
-
   return (
-    <div
-      onClick={onCancel}
-      className="sheet-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        className="sheet-panel w-full max-w-md bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
-      >
-        <div className="flex items-center gap-2 text-orange-500 pb-2 border-b border-border/40">
+    <BottomSheet
+      isOpen={isOpen}
+      onClose={onCancel}
+      maxWidthClassName="max-w-md"
+      title={
+        <div className="flex items-center gap-2 text-orange-500">
           <span className="p-1.5 rounded-lg bg-orange-500/10 text-orange-500">
             <AlertCircle className="size-5" />
           </span>
-          <h3 className="text-md font-bold text-foreground">{title}</h3>
+          <span>{title}</span>
         </div>
-
-        <div className="text-xs leading-relaxed text-muted-foreground">
-          <p>{message}</p>
-        </div>
-
-        <div className="flex justify-end gap-3 pt-2">
+      }
+      footer={
+        <div className="flex justify-end gap-3">
           <button
             type="button"
             onClick={onCancel}
@@ -58,7 +51,11 @@ export const CustomConfirmModal: React.FC<CustomConfirmModalProps> = ({
             {confirmText}
           </button>
         </div>
+      }
+    >
+      <div className="text-xs leading-relaxed text-muted-foreground">
+        <p>{message}</p>
       </div>
-    </div>
+    </BottomSheet>
   )
 }

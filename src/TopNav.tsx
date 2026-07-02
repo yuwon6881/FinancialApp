@@ -45,6 +45,7 @@ interface TopNavProps {
   onMouseEnterWallet?: () => void
   onMouseLeaveWallet?: () => void
   isSyncing?: boolean
+  syncLabel?: string
   onDiscardSubscription?: (noti: any) => void
   draftCount?: number
 }
@@ -67,6 +68,7 @@ const TopNav: React.FC<TopNavProps> = ({
   onMouseEnterWallet,
   onMouseLeaveWallet,
   isSyncing = false,
+  syncLabel,
   onDiscardSubscription,
   draftCount = 0
 }) => {
@@ -122,10 +124,10 @@ const TopNav: React.FC<TopNavProps> = ({
               FinancialApp
             </span>
           </div>
-          {isSyncing && (
+          {(isSyncing || syncLabel) && (
             <div className="ml-2.5 flex items-center gap-1.5 px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-md text-[10px] font-bold text-blue-500 animate-pulse select-none shrink-0">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-              Syncing...
+              {syncLabel || 'Syncing...'}
             </div>
           )}
           {draftCount > 0 && (
