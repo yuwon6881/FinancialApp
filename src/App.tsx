@@ -35,8 +35,6 @@ const createLocalId = (prefix: string, separator = '_') => {
 // Instant, flash-free placeholder while a lazily-loaded chunk is fetched.
 const ViewFallback = () => <div className="app-shell min-h-screen" />
 
-let launchCoverDismissed = false
-
 const nextPaint = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
 
 const hideNativeSplashAfterPaint = async () => {
@@ -47,11 +45,6 @@ const hideNativeSplashAfterPaint = async () => {
 
 const finishLaunchHandoff = async () => {
   await hideNativeSplashAfterPaint()
-
-  if (launchCoverDismissed) return
-  launchCoverDismissed = true
-
-  document.documentElement.classList.add('app-ready')
 }
 
 const LaunchReady = ({ children }: { children: ReactNode }) => {

@@ -453,15 +453,9 @@ html {
    overlay and .sheet-panel to the dialog; desktop keeps the centered dialog. */
 @media (max-width: 639px) {
     .sheet-backdrop {
-        top: auto;
-        bottom: 0;
         align-items: flex-end;
         padding: 0;
-        /* Constrain to the visible viewport so the bottom-anchored sheet always
-           rests just above the on-screen keyboard instead of falling behind it. */
-        height: var(--app-vvh, 100dvh);
-        min-height: 0;
-        max-height: var(--app-vvh, 100dvh);
+        min-height: 100%;
         overflow: hidden;
         overscroll-behavior: contain;
         touch-action: none;

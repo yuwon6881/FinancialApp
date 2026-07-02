@@ -46,7 +46,13 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
     if (!isMobile || disabled) return
 
     const onStart = (e: TouchEvent) => {
-      if (refreshingRef.current || e.touches.length !== 1 || window.scrollY > 0) {
+      const target = e.target as HTMLElement | null
+      if (
+        refreshingRef.current ||
+        e.touches.length !== 1 ||
+        window.scrollY > 0 ||
+        target?.closest('.sheet-backdrop, .sheet-panel')
+      ) {
         drag.current.active = false
         return
       }
