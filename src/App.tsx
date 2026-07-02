@@ -152,47 +152,11 @@ function App() {
     if (meta) meta.setAttribute('content', darkMode ? '#0a0d14' : '#f6f8fc')
   }, [darkMode])
 
-  // Keyboard avoidance for bottom-sheet modals.
-  //
-  // Preferred path: the `interactive-widget=resizes-content` viewport hint
-  // (index.html) lets the browser resize the viewport for the keyboard
-  // natively and smoothly — on those browsers the inset below computes to ~0
-  // and this does nothing. Fallback (e.g. iOS Safari, which ignores that
-  // hint): we measure the keyboard inset and expose it as --app-kb so the
-  // sheet lifts above the keyboard (index.css).
-  //
-  // Critically, --app-kb is written ONCE per keyboard open/close — debounced
-  // until the viewport stops changing — so the sheet moves in a single CSS
-  // transition rather than being dragged frame-by-frame (which jittered).
-  useEffect(() => {
-    const vv = window.visualViewport
-    if (!vv) return
-    const root = document.documentElement
-    let settleTimer: number | undefined
-    let lastKb = -1
-
-    const commit = () => {
-      const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))
-      if (kb === lastKb) return
-      lastKb = kb
-      root.style.setProperty('--app-kb', `${kb}px`)
-    }
-
-    const onChange = () => {
-      // Wait for the viewport to fully settle before setting the inset once.
-      // The window is wide enough to absorb the keyboard AND any autofill
-      // accessory row that slides in just after it, so the sheet lifts a
-      // single time rather than twice (which read as a stutter).
-      window.clearTimeout(settleTimer)
-      settleTimer = window.setTimeout(commit, 180)
-    }
-
-    vv.addEventListener('resize', onChange)
-    return () => {
-      vv.removeEventListener('resize', onChange)
-      window.clearTimeout(settleTimer)
-    }
-  }, [])
+  // Keyboard avoidance: none needed. Mobile modals are top-anchored (see
+  // index.css), so they sit above the on-screen keyboard and never move when
+  // it opens/closes — which removes the jitter/stutter that any keyboard-
+  // tracking approach produced. Tall forms scroll internally and the browser
+  // brings the focused field into view natively.
 
   // Inactivity Auto-Lock
   const LOCK_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
