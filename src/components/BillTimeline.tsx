@@ -277,11 +277,6 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                 alignClasses = 'left-auto right-0 items-end'
               }
 
-              // Set staggered spacing height margin
-              const spacingMargin = node.isTop 
-                ? (node.level === 'long' ? 'mb-9' : 'mb-2.5')
-                : (node.level === 'long' ? 'mt-9' : 'mt-2.5')
-
               const connectorHeight = node.level === 'long' ? '36px' : '10px'
 
               return (
@@ -306,7 +301,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                   {/* Alternating & Staggered Labels */}
                   <div 
                     className={`absolute flex flex-col pointer-events-none select-none ${alignClasses} ${
-                      node.isTop ? `bottom-full ${spacingMargin}` : `top-full ${spacingMargin}`
+                      node.isTop ? 'bottom-full' : 'top-full'
                     }`}
                   >
                     {/* Small line connector */}
