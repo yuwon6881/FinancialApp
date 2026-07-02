@@ -135,6 +135,48 @@ function App() {
     if (meta) meta.setAttribute('content', darkMode ? '#0a0d14' : '#f6f8fc')
   }, [darkMode])
 
+  // Keep --app-vvh in sync with the visual viewport so bottom-sheet modals
+  // rest above the on-screen keyboard instead of falling behind it. Also
+  // scroll whichever field gains focus into view inside its sheet, so the
+  // caret is never hidden by the keyboard as the sheet's height changes.
+  useEffect(() => {
+    const vv = window.visualViewport
+    const root = document.documentElement
+
+    const applyViewport = () => {
+      const h = vv ? vv.height : window.innerHeight
+      root.style.setProperty('--app-vvh', `${Math.round(h)}px`)
+    }
+
+    applyViewport()
+    vv?.addEventListener('resize', applyViewport)
+    vv?.addEventListener('scroll', applyViewport)
+
+    let scrollTimer: number | undefined
+    const isSheetLayout = () => window.matchMedia('(max-width: 639px)').matches
+    const handleFocusIn = (e: FocusEvent) => {
+      // Only relevant to the mobile bottom-sheet layout, where the keyboard
+      // overlays the sheet. Desktop dialogs are centered with no OS keyboard.
+      if (!isSheetLayout()) return
+      const el = e.target as HTMLElement | null
+      if (!el || !el.matches?.('input, textarea, select')) return
+      if (!el.closest('.sheet-panel')) return
+      // Wait for the keyboard to open and --app-vvh to settle, then center it.
+      window.clearTimeout(scrollTimer)
+      scrollTimer = window.setTimeout(() => {
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      }, 320)
+    }
+    document.addEventListener('focusin', handleFocusIn)
+
+    return () => {
+      vv?.removeEventListener('resize', applyViewport)
+      vv?.removeEventListener('scroll', applyViewport)
+      document.removeEventListener('focusin', handleFocusIn)
+      window.clearTimeout(scrollTimer)
+    }
+  }, [])
+
   // Inactivity Auto-Lock
   const LOCK_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
   const [isLocked, setIsLocked] = useState<boolean>(() => {
