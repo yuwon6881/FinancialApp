@@ -149,10 +149,11 @@
     --ledger-neutral-500: #5d6978;
     --ledger-neutral-600: #46515e;
     --app-grid: rgba(0, 114, 178, 0.07);
-    --app-surface-a: rgba(86, 180, 233, 0.18);
-    --app-surface-b: rgba(0, 158, 115, 0.1);
-    --app-surface-c: rgba(204, 121, 167, 0.11);
-    --app-shadow: 0 18px 50px rgba(20, 46, 69, 0.08);
+    --app-surface-a: rgba(86, 180, 233, 0.28);
+    --app-surface-b: rgba(0, 158, 115, 0.18);
+    --app-surface-c: rgba(204, 121, 167, 0.18);
+    --app-surface-d: rgba(230, 159, 0, 0.16);
+    --app-shadow: 0 18px 50px rgba(20, 46, 69, 0.1);
 }
 
 .dark {
@@ -219,9 +220,10 @@
     --ledger-neutral-500: #8794a3;
     --ledger-neutral-600: #6f7c8a;
     --app-grid: rgba(124, 205, 242, 0.08);
-    --app-surface-a: rgba(86, 180, 233, 0.12);
-    --app-surface-b: rgba(45, 190, 145, 0.08);
-    --app-surface-c: rgba(217, 143, 189, 0.08);
+    --app-surface-a: rgba(86, 180, 233, 0.18);
+    --app-surface-b: rgba(45, 190, 145, 0.13);
+    --app-surface-c: rgba(217, 143, 189, 0.14);
+    --app-surface-d: rgba(240, 184, 58, 0.12);
     --app-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
 }
 
@@ -242,8 +244,9 @@
     background:
         linear-gradient(90deg, transparent, var(--app-surface-a) 18%, transparent 44%),
         linear-gradient(115deg, transparent 36%, var(--app-surface-b) 58%, transparent 82%),
-        linear-gradient(180deg, var(--app-surface-c), transparent 26rem);
-    opacity: 0.42;
+        linear-gradient(155deg, transparent 18%, var(--app-surface-d) 52%, transparent 78%),
+        linear-gradient(180deg, var(--app-surface-c), transparent 28rem);
+    opacity: 0.58;
     mask-image: linear-gradient(to bottom, black 0, transparent 34rem);
 }
 
@@ -256,6 +259,48 @@
 
 .app-panel {
     box-shadow: var(--app-shadow);
+}
+
+.color-card-blue {
+    border-color: color-mix(in srgb, var(--ledger-blue-500) 24%, var(--border));
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--ledger-blue-500) 12%, transparent), transparent 46%),
+        linear-gradient(180deg, color-mix(in srgb, var(--card) 94%, transparent), color-mix(in srgb, var(--ledger-sky-500) 6%, var(--card)));
+}
+
+.color-card-teal {
+    border-color: color-mix(in srgb, var(--ledger-income-500) 24%, var(--border));
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--ledger-income-500) 13%, transparent), transparent 48%),
+        linear-gradient(180deg, color-mix(in srgb, var(--card) 94%, transparent), color-mix(in srgb, var(--ledger-income-400) 7%, var(--card)));
+}
+
+.color-card-amber {
+    border-color: color-mix(in srgb, var(--ledger-pending-500) 28%, var(--border));
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--ledger-pending-500) 14%, transparent), transparent 48%),
+        linear-gradient(180deg, color-mix(in srgb, var(--card) 94%, transparent), color-mix(in srgb, var(--ledger-expense-400) 8%, var(--card)));
+}
+
+.color-card-pink {
+    border-color: color-mix(in srgb, var(--ledger-wishlist-500) 28%, var(--border));
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--ledger-wishlist-500) 14%, transparent), transparent 48%),
+        linear-gradient(180deg, color-mix(in srgb, var(--card) 94%, transparent), color-mix(in srgb, var(--ledger-purple-500) 7%, var(--card)));
+}
+
+.color-panel-ribbon {
+    position: relative;
+    overflow: hidden;
+}
+
+.color-panel-ribbon::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0.35rem;
+    background: linear-gradient(180deg, var(--ledger-blue-500), var(--ledger-income-500), var(--ledger-pending-500), var(--ledger-wishlist-500));
+    pointer-events: none;
 }
 
 .interactive-card {

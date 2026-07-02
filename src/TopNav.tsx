@@ -242,19 +242,6 @@ const TopNav: React.FC<TopNavProps> = ({
             </span>
           </div>
 
-          {/* Quick Wish List Shortcut */}
-          <button
-            onClick={() => onTabChange('wishlist')}
-            className={`hidden md:flex p-1.5 border rounded-xl cursor-pointer transition duration-150 items-center justify-center ${
-              activeTab === 'wishlist'
-                ? 'bg-pink-500/15 border-pink-500/30 text-pink-500 shadow-xs scale-[1.02] font-bold'
-                : 'bg-pink-500/5 border-pink-500/10 text-pink-500/80 hover:bg-pink-500/10 hover:border-pink-500/20 hover:text-pink-500'
-            }`}
-            title="Wish List"
-          >
-            <PiggyBank className="size-4" />
-          </button>
-
           {/* Notification Bell Dropdown */}
           <div className="relative bell-container">
             <button
