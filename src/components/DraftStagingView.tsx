@@ -3,6 +3,7 @@ import type { Transaction } from '../types'
 import { FileText, Edit2, Trash2, ArrowLeft, Plus } from 'lucide-react'
 import { formatCurrencyVal } from '../lib/utils'
 import { SwipeableRow } from './ui/SwipeableRow'
+import { getCategoryBadgeClass } from '../lib/categoryColors'
 
 interface DraftStagingViewProps {
   draftTransactions: Transaction[]
@@ -200,8 +201,14 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="font-bold text-foreground text-sm truncate">{draft.description}</div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5">
-                    {draft.date} • <span className="font-semibold text-muted-foreground">{ledgerLabel}</span>
+                  <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground mt-1">
+                    <span>{draft.date}</span>
+                    <span className={`inline-block px-1.5 py-0.5 rounded-md border font-semibold ${getCategoryBadgeClass(draft.ledgerCategory)}`}>
+                      {ledgerLabel}
+                    </span>
+                    <span className={`inline-block px-1.5 py-0.5 rounded-md border font-semibold ${getCategoryBadgeClass(draft.category)}`}>
+                      {draft.category}
+                    </span>
                   </div>
                 </div>
                 <span className={`shrink-0 font-extrabold text-sm ${draft.amount < 0 ? 'text-orange-500' : 'text-blue-500'}`}>

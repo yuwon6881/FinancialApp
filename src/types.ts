@@ -1,3 +1,6 @@
+export const APP_TABS = ['dashboard', 'recurring', 'ledger', 'wishlist', 'drafts', 'settings'] as const
+export type AppTab = typeof APP_TABS[number]
+
 export interface Transaction {
   id: string
   date: string

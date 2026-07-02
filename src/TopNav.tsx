@@ -20,16 +20,18 @@ import {
   Moon,
   Sun,
   PiggyBank,
-  FileText
+  FileText,
+  Settings
 } from 'lucide-react'
 import { formatCurrencyVal } from './lib/utils'
 import { triggerHaptic } from './lib/haptics'
 import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 import { SwipeableRow } from './components/ui/SwipeableRow'
+import type { AppTab } from './types'
 
 interface TopNavProps {
-  activeTab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist' | 'drafts'
-  onTabChange: (tab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist' | 'drafts') => void
+  activeTab: AppTab
+  onTabChange: (tab: AppTab) => void
   totalBalance: number
   onQuickAction?: (action: 'transaction' | 'subscription' | 'wishlist') => void
   hideSensitive: boolean
@@ -174,6 +176,16 @@ const TopNav: React.FC<TopNavProps> = ({
               }`}
             >
               Ledger
+            </button>
+            <button
+              onClick={() => onTabChange('settings')}
+              className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer ${
+                activeTab === 'settings'
+                  ? 'bg-slate-500/10 text-slate-500 border border-slate-500/20 font-bold scale-[1.02]'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+              }`}
+            >
+              Settings
             </button>
           </nav>
         </div>
@@ -414,7 +426,14 @@ const TopNav: React.FC<TopNavProps> = ({
 
                   <MenubarSeparator className="my-1 border-t border-border/30" />
                   
-                  {/* Settings toggles in dropdown */}
+                  <MenubarItem
+                    onClick={() => onTabChange('settings')}
+                    className="flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground"
+                  >
+                    <Settings className="size-3.5 text-blue-500" />
+                    <span>Settings</span>
+                  </MenubarItem>
+
                   <MenubarItem 
                     onClick={onToggleHideSensitive}
                     className="flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground"
@@ -455,7 +474,7 @@ const TopNav: React.FC<TopNavProps> = ({
       className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/95 backdrop-blur-md select-none shadow-[0_-4px_12px_rgba(0,0,0,0.05)]"
       style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))', paddingTop: '10px' }}
     >
-      <div className="grid grid-cols-4 w-full max-w-md mx-auto justify-items-center">
+      <div className="grid grid-cols-5 w-full max-w-md mx-auto justify-items-center">
         <button
           onClick={() => { triggerHaptic(8); onTabChange('dashboard') }}
           className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
@@ -491,6 +510,15 @@ const TopNav: React.FC<TopNavProps> = ({
         >
           <PiggyBank className="size-4.5 mx-auto" />
           <span>Wishlist</span>
+        </button>
+        <button
+          onClick={() => { triggerHaptic(8); onTabChange('settings') }}
+          className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
+            activeTab === 'settings' ? 'text-slate-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Settings className="size-4.5 mx-auto" />
+          <span>Settings</span>
         </button>
       </div>
     </div>

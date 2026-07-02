@@ -1,5 +1,6 @@
 import type { PendingNotification } from '../types'
 import { formatCurrencyVal } from '../lib/utils'
+import { getCategoryBadgeClass } from '../lib/categoryColors'
 
 interface PendingSubscriptionsModalProps {
   isOpen: boolean
@@ -61,7 +62,7 @@ export function PendingSubscriptionsModal({
                 <div>
                   <span className="font-bold text-foreground text-xs block">{noti.name}</span>
                   <div className="flex items-center gap-1.5 mt-1">
-                    <span className="inline-block text-[9px] px-1.5 py-0.5 font-bold rounded border bg-slate-500/10 text-slate-500 border-slate-500/20">
+                    <span className={`inline-block text-[9px] px-1.5 py-0.5 font-bold rounded border ${getCategoryBadgeClass(noti.category)}`}>
                       {noti.category}
                     </span>
                     <span className="text-[10px] text-muted-foreground">{noti.billingDate}</span>

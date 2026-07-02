@@ -1,12 +1,11 @@
 import React, { useState, useMemo, useRef } from 'react'
-import type { Transaction, DashboardData, TransactionCategory, WishlistItem } from '../types'
+import type { Transaction, DashboardData, WishlistItem } from '../types'
 import { 
   Wallet, 
   ArrowUpRight, 
   ArrowDownLeft, 
   Calendar, 
   Settings,
-  Save,
   AlertCircle,
   TrendingUp as TrendLineIcon,
   PiggyBank,
@@ -16,26 +15,15 @@ import { CustomSelect } from './ui/CustomSelect'
 import { CustomConfirmModal } from './ui/CustomConfirmModal'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
+import { getCategoryBadgeClass, getCategoryChartColor, getCategoryDotClass } from '../lib/categoryColors'
 
 
 interface DashboardViewProps {
   dashboardData: DashboardData | null
   transactions: Transaction[]
   onSelectPeriod: (month: string, year: number) => void
-  onUpdateSettings: (settings: {
-    targetStabilityFund: number
-    essentialsAlloc: number
-    growthAlloc: number
-    stabilityAlloc: number
-    rewardsAlloc: number
-    cycleDay: number
-    currency?: string
-  }) => void
-  onNavigate: (tab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist') => void
+  onNavigate: (tab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist' | 'settings') => void
   hideSensitive: boolean
-  categoriesList: TransactionCategory[]
-  onAddCategory: (category: Omit<TransactionCategory, 'id'>) => void
-  onDeleteCategory: (id: string) => void
   onConfirmSubscription: (noti: any, paidDate: string) => void
   onDeletePayment: (id: string) => void
   onNavigateToLedger?: (options: { 
@@ -56,12 +44,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   dashboardData,
   transactions,
   onSelectPeriod,
-  onUpdateSettings,
   onNavigate,
   hideSensitive,
-  categoriesList,
-  onAddCategory,
-  onDeleteCategory,
   onConfirmSubscription,
   onDeletePayment,
   onNavigateToLedger,
@@ -70,8 +54,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onDiscardSubscription,
   onAddTransaction
 }) => {
-  const [showSettings, setShowSettings] = useState(false)
-  const [targetInput, setTargetInput] = useState('')
   const [isHoveringLiquidNetWorth, setIsHoveringLiquidNetWorth] = useState(false)
   const [notiToDelete, setNotiToDelete] = useState<any | null>(null)
 
@@ -81,17 +63,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
            wishlist.filter(w => !w.isPurchased).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
   }, [wishlist])
   
-  // Custom Allocations & Cycle setting states
-  const [essentialsAllocInput, setEssentialsAllocInput] = useState('')
-  const [growthAllocInput, setGrowthAllocInput] = useState('')
-  const [stabilityAllocInput, setStabilityAllocInput] = useState('')
-  const [rewardsAllocInput, setRewardsAllocInput] = useState('')
-  const [cycleDayInput, setCycleDayInput] = useState('28')
-  const [currencyInput, setCurrencyInput] = useState('USD')
-
-  // Custom Category Forms State
-  const [newCatName, setNewCatName] = useState('')
-
   // Balance adjustment modal state
   const [adjustingCategory, setAdjustingCategory] = useState<any | null>(null)
   const [newBalanceInput, setNewBalanceInput] = useState<string>('')
@@ -111,20 +82,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // Subscription Confirmation States
   const [activeConfirmId, setActiveConfirmId] = useState<string | null>(null)
   const [paidDateInput, setPaidDateInput] = useState('')
-
-  // Subcategory custom colors mapping
-  const categoryColorHex: Record<string, string> = {
-    'Salary': 'var(--color-blue-500, #0072b2)',
-    'Social': 'var(--color-pink-500, #cc79a7)',
-    'Food': 'var(--color-amber-500, #e69f00)',
-    'Hobbies': 'var(--color-teal-500, #009e73)',
-    'Software': 'var(--color-sky-500, #56b4e9)',
-    'Investment': 'var(--color-violet-500, #cc79a7)',
-    'Entertainment': 'var(--color-orange-500, #d55e00)',
-    'Transport': 'var(--color-purple-500, #7e6dc9)',
-    'Other': 'var(--color-slate-500, #5d6978)',
-  }
-  const getCategoryColor = (name: string) => categoryColorHex[name] || 'var(--color-slate-500, #5d6978)'
 
   const breakdownData = useMemo(() => {
     if (chartView === 'yearly') return dashboardData?.yearlyCategoryBreakdown || []
@@ -234,54 +191,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return sums
   }, [dashboardData?.activeRecurringPayments])
 
-  // Initialize input states when opening settings
-  const handleToggleSettings = () => {
-    if (!showSettings) {
-      setTargetInput(activeSettings.targetStabilityFund.toString())
-      setEssentialsAllocInput((activeSettings.essentialsAlloc * 100).toString())
-      setGrowthAllocInput((activeSettings.growthAlloc * 100).toString())
-      setStabilityAllocInput((activeSettings.stabilityAlloc * 100).toString())
-      setRewardsAllocInput((activeSettings.rewardsAlloc * 100).toString())
-      setCycleDayInput(activeSettings.cycleDay.toString())
-      setCurrencyInput(activeSettings.currency || 'USD')
-    }
-    setShowSettings(!showSettings)
-  }
-
-  // Calculate allocation sum to enforce 100% rule
-  const allocSum = useMemo(() => {
-    const e = parseFloat(essentialsAllocInput) || 0
-    const g = parseFloat(growthAllocInput) || 0
-    const s = parseFloat(stabilityAllocInput) || 0
-    const r = parseFloat(rewardsAllocInput) || 0
-    return e + g + s + r
-  }, [essentialsAllocInput, growthAllocInput, stabilityAllocInput, rewardsAllocInput])
-
-  const handleSaveSettings = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (allocSum !== 100) return
-
-    const target = parseFloat(targetInput)
-    const ess = (parseFloat(essentialsAllocInput) || 0) / 100
-    const gro = (parseFloat(growthAllocInput) || 0) / 100
-    const sta = (parseFloat(stabilityAllocInput) || 0) / 100
-    const rew = (parseFloat(rewardsAllocInput) || 0) / 100
-    const cycle = parseInt(cycleDayInput)
-
-    if (!isNaN(target) && !isNaN(cycle)) {
-      onUpdateSettings({
-        targetStabilityFund: target,
-        essentialsAlloc: ess,
-        growthAlloc: gro,
-        stabilityAlloc: sta,
-        rewardsAlloc: rew,
-        cycleDay: cycle,
-        currency: currencyInput
-      })
-      setShowSettings(false)
-    }
-  }
-
   // Format currency
   const formatCurrency = (val: number) => {
     return formatCurrencyVal(val, activeSettings.currency || 'USD')
@@ -333,23 +242,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     }).join(' ')
   }, [activeTrendPoints])
 
-  // Color map for categories
-  const categoryColorMap: Record<string, string> = {
-    'Salary': 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-    'Essentials': 'bg-sky-500/10 text-sky-500 border-sky-500/20',
-    'Social': 'bg-pink-500/10 text-pink-500 border-pink-500/20',
-    'Food': 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-    'Hobbies': 'bg-teal-500/10 text-teal-500 border-teal-500/20',
-    'Software': 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20',
-    'Growth': 'bg-violet-500/10 text-violet-500 border-violet-500/20',
-    'Investment': 'bg-violet-500/10 text-violet-500 border-violet-500/20',
-    'Stability': 'bg-teal-500/10 text-teal-500 border-teal-500/20',
-    'Entertainment': 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-    'Rewards': 'bg-pink-500/10 text-pink-500 border-pink-500/20',
-    'Transport': 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-    'Other': 'bg-slate-500/10 text-slate-500 border-slate-500/20',
-  }
-
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
       
@@ -390,206 +282,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           {/* Configure button */}
           <button 
-            onClick={handleToggleSettings}
+            onClick={() => onNavigate('settings')}
             className="p-2 border border-border rounded-xl bg-background hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition duration-150 shrink-0"
-            title="Configure Ledger Constraints"
+            title="Open settings"
           >
             <Settings className="size-4" />
           </button>
         </div>
       </div>
 
-      {/* Settings Form Drawer */}
-      {showSettings && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-4 sm:p-6 rounded-2xl bg-card border border-blue-500/20 shadow-md animate-in slide-in-from-top-4 duration-200">
-          
-          {/* Column 1: Financial Model settings */}
-          <form onSubmit={handleSaveSettings} className="space-y-4">
-            <div className="flex items-center gap-2 text-sm font-bold text-foreground border-b border-border pb-2">
-              <Settings className="size-4 text-blue-500" /> Financial Model Parameters
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Income setting has been hidden as target budgets are now based on actual monthly income */}
-              
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-muted-foreground">Target Stability Fund Limit</label>
-                <input 
-                  type="number"
-                  required
-                  value={targetInput}
-                  onChange={e => setTargetInput(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-muted-foreground">Dashboard Currency</label>
-                <CustomSelect
-                  value={currencyInput}
-                  onChange={val => setCurrencyInput(val)}
-                  options={[
-                    { value: 'USD', label: 'USD ($)' },
-                    { value: 'MYR', label: 'MYR (RM)' },
-                    { value: 'CNY', label: 'CNY (¥)' },
-                    { value: 'EUR', label: 'EUR (€)' },
-                    { value: 'GBP', label: 'GBP (£)' },
-                    { value: 'SGD', label: 'SGD (S$)' }
-                  ]}
-                  className="w-full"
-                />
-              </div>
-
-              <div className="space-y-1 md:col-span-2">
-                <label className="text-xs font-semibold text-muted-foreground">Cycle Start Date (Day of Month)</label>
-                <CustomSelect
-                  value={Number(cycleDayInput)}
-                  onChange={val => setCycleDayInput(val.toString())}
-                  options={Array.from({ length: 31 }, (_, i) => {
-                    const d = i + 1;
-                    return { value: d, label: `${d}${GetDayWithSuffix(d)}` };
-                  })}
-                  className="w-full"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2 border-t border-border/30 pt-4">
-              <div className="flex justify-between items-center text-xs font-semibold">
-                <span className="text-muted-foreground">Adjust Allocations (Must equal 100%)</span>
-                <span className={allocSum === 100 ? 'text-blue-500 font-bold' : 'text-orange-500 font-bold'}>
-                  Total: {allocSum}% {allocSum !== 100 && ' (Invalid)'}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-muted-foreground block">Essentials (%)</label>
-                  <input 
-                    type="number"
-                    required
-                    min="0"
-                    max="100"
-                    value={essentialsAllocInput}
-                    onChange={e => setEssentialsAllocInput(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-                
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-muted-foreground block">Growth (%)</label>
-                  <input 
-                    type="number"
-                    required
-                    min="0"
-                    max="100"
-                    value={growthAllocInput}
-                    onChange={e => setGrowthAllocInput(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-muted-foreground block">Stability (%)</label>
-                  <input 
-                    type="number"
-                    required
-                    min="0"
-                    max="100"
-                    value={stabilityAllocInput}
-                    onChange={e => setStabilityAllocInput(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-muted-foreground block">Rewards (%)</label>
-                  <input 
-                    type="number"
-                    required
-                    min="0"
-                    max="100"
-                    value={rewardsAllocInput}
-                    onChange={e => setRewardsAllocInput(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <button 
-              type="submit"
-              disabled={allocSum !== 100}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold cursor-pointer shadow-md transition duration-150 ${
-                allocSum === 100 
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                  : 'bg-muted text-muted-foreground cursor-not-allowed opacity-60'
-              }`}
-            >
-              <Save className="size-3.5" /> Save Configuration
-            </button>
-          </form>
-
-          {/* Column 2: Categories Manager */}
-          <div className="space-y-6 border-t lg:border-t-0 lg:border-l border-border/40 pt-6 lg:pt-0 lg:pl-6">
-            
-            {/* Category list & adding */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm font-bold text-foreground border-b border-border pb-2">
-                <span>Manage Categories</span>
-                <span className="text-[10px] text-muted-foreground font-normal">Active: {categoriesList.length}</span>
-              </div>
-              
-              {/* Category mini-list */}
-              <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1 select-none">
-                {categoriesList
-                  .filter(cat => cat.name.toLowerCase() !== 'transfer' && cat.name.toLowerCase() !== 'adjustment')
-                  .map(cat => (
-                    <div key={cat.id} className="flex items-center justify-between bg-muted/40 px-2.5 py-1.5 rounded-lg text-xs hover:bg-muted/60 transition">
-                      <span className="font-semibold">{cat.name}</span>
-                      <button 
-                        type="button"
-                        onClick={() => onDeleteCategory(cat.id)}
-                        className="text-orange-500 hover:text-orange-600 cursor-pointer font-bold"
-                        title="Delete category"
-                      >
-                        &times;
-                      </button>
-                    </div>
-                  ))}
-              </div>
-
-              {/* Add category inline form */}
-              <div className="flex gap-2 items-center pt-1.5">
-                <input 
-                  type="text" 
-                  placeholder="New category name"
-                  value={newCatName}
-                  onChange={e => setNewCatName(e.target.value)}
-                  className="flex-1 px-3 py-1.5 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const trimmed = newCatName.trim()
-                    if (!trimmed) return
-                    const lower = trimmed.toLowerCase()
-                    if (lower === 'transfer' || lower === 'adjustment') {
-                      alert('System reserved category name.')
-                      return
-                    }
-                    onAddCategory({ name: trimmed })
-                    setNewCatName('')
-                  }}
-                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition"
-                >
-                  + Add
-                </button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      )}
       {/* Pending Subscriptions Notifications Alert */}
       {dashboardData?.pendingNotifications && dashboardData.pendingNotifications.length > 0 && (
         <div className="p-5 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 animate-in slide-in-from-top-4 duration-300">
@@ -608,7 +309,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <div className="min-w-0">
                     <span className="font-bold text-foreground text-xs truncate block">{noti.name}</span>
                     <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                      <span className={`inline-block text-[9px] px-1.5 py-0.5 font-bold rounded border ${categoryColorMap[noti.category] || 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
+                      <span className={`inline-block text-[9px] px-1.5 py-0.5 font-bold rounded border ${getCategoryBadgeClass(noti.category)}`}>
                         {noti.category}
                       </span>
                       <span className="text-[10px] text-muted-foreground whitespace-nowrap">{noti.billingDate}</span>
@@ -787,7 +488,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   style={transitionStyles}
                 >
                   <div className="flex items-center gap-2 font-bold text-foreground">
-                    <span className={`size-2.5 rounded-full ${categoryColorMap[c.name]?.split(' ')[0] || 'bg-slate-500'}`} />
+                    <span className={`size-2.5 rounded-full ${getCategoryDotClass(c.name)}`} />
                     {c.name}
                   </div>
                   <div className="text-muted-foreground font-medium">{(c.allocation * 100).toFixed(0)}%</div>
@@ -864,7 +565,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-bold text-sm">
-                    <span className={`size-2.5 rounded-full ${categoryColorMap[c.name]?.split(' ')[0] || 'bg-slate-500'}`} />
+                    <span className={`size-2.5 rounded-full ${getCategoryDotClass(c.name)}`} />
                     {c.name}
                   </div>
                   <span className="text-[10px] font-semibold bg-muted px-2 py-0.5 rounded-md text-muted-foreground">
@@ -1393,7 +1094,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         <path
                           key={slice.category}
                           d={pathD}
-                          fill={getCategoryColor(slice.category)}
+                          fill={getCategoryChartColor(slice.category)}
                           className="transition-all duration-200 cursor-pointer stroke-card stroke-2 hover:opacity-90"
                           onMouseEnter={() => setHoveredSlice(index)}
                           onMouseLeave={() => setHoveredSlice(null)}
@@ -1447,7 +1148,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <div className="flex items-center gap-1.5 truncate mr-2">
                         <span
                           className="size-2 rounded-full shrink-0"
-                          style={{ backgroundColor: getCategoryColor(slice.category) }}
+                          style={{ backgroundColor: getCategoryChartColor(slice.category) }}
                         />
                         <span className="font-bold text-foreground truncate max-w-[85px]">
                           {slice.category}
@@ -1623,7 +1324,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <div className="truncate mr-2">
                       <span className={`font-bold text-foreground truncate block max-w-[120px] ${rp.isDiscarded ? 'line-through' : ''}`}>{rp.name}</span>
                       <div className="flex flex-wrap items-center gap-1 mt-0.5 select-none">
-                        <span className={`inline-block text-[10px] px-1.5 py-0.5 font-semibold rounded border ${categoryColorMap[rp.category] || 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
+                        <span className={`inline-block text-[10px] px-1.5 py-0.5 font-semibold rounded border ${getCategoryBadgeClass(rp.category)}`}>
                           {rp.category}
                         </span>
                         {rp.isDiscarded ? (
@@ -1697,7 +1398,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <div className={`text-sm font-bold ${isOutflow ? 'text-foreground' : 'text-blue-500'}`}>
                     {isOutflow ? '-' : '+'}{formatSensitive(Math.abs(t.amount))}
                   </div>
-                  <span className={`inline-block mt-0.5 text-[9px] px-1.5 py-0.25 font-bold rounded border ${categoryColorMap[t.category] || 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
+                  <span className={`inline-block mt-0.5 text-[9px] px-1.5 py-0.25 font-bold rounded border ${getCategoryBadgeClass(t.category)}`}>
                     {t.category}
                   </span>
                 </div>
@@ -1829,16 +1530,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       )}
     </div>
   )
-}
-
-function GetDayWithSuffix(day: number): string {
-  if (day >= 11 && day <= 13) return 'th'
-  switch (day % 10) {
-    case 1: return 'st'
-    case 2: return 'nd'
-    case 3: return 'rd'
-    default: return 'th'
-  }
 }
 
 function getCycleLabelForDropdown(month: string, year: number, cycleDay: number): string {
