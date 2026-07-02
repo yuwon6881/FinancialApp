@@ -262,6 +262,24 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
   }
 
+  const handleChangeTxType = (nextType: 'inflow' | 'outflow' | 'transfer') => {
+    if (nextType === txType) return
+    setTxType(nextType)
+    if (!editingTxId) {
+      setDescription('')
+      setShowSuggestions(false)
+      setSelectedSuggestionIndex(-1)
+      if (nextType === 'transfer') {
+        setCategory('Transfer')
+      } else if (categories.length > 0) {
+        const fallbackCategory = nextType === 'inflow' && categories.some(c => c.name === 'Salary')
+          ? 'Salary'
+          : categories[0].name
+        setCategory(fallbackCategory)
+      }
+    }
+  }
+
   const handleDescriptionKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!showSuggestions || filteredSuggestions.length === 0) return
 
@@ -1363,7 +1381,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setTxType('outflow')}
+                  onClick={() => handleChangeTxType('outflow')}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-semibold rounded-xl border transition cursor-pointer ${
                     txType === 'outflow' 
                       ? 'bg-orange-500/10 border-orange-500/30 text-orange-500' 
@@ -1374,7 +1392,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setTxType('inflow')}
+                  onClick={() => handleChangeTxType('inflow')}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-semibold rounded-xl border transition cursor-pointer ${
                     txType === 'inflow' 
                       ? 'bg-blue-500/10 border-blue-500/30 text-blue-500' 
@@ -1385,7 +1403,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setTxType('transfer')}
+                  onClick={() => handleChangeTxType('transfer')}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-semibold rounded-xl border transition cursor-pointer ${
                     txType === 'transfer' 
                       ? 'bg-blue-500/10 border-blue-500/30 text-blue-500' 

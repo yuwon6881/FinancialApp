@@ -32,7 +32,7 @@ const toneIcon: Record<ToastTone, React.ReactNode> = {
 export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss }) => {
   useEffect(() => {
     if (toasts.length === 0) return
-    const timers = toasts.map(toast => window.setTimeout(() => onDismiss(toast.id), 4200))
+    const timers = toasts.map(toast => window.setTimeout(() => onDismiss(toast.id), 2200))
     return () => timers.forEach(window.clearTimeout)
   }, [toasts, onDismiss])
 
