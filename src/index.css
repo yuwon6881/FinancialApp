@@ -229,9 +229,8 @@
     position: relative;
     isolation: isolate;
     background:
-        linear-gradient(135deg, var(--app-surface-a), transparent 34%),
-        linear-gradient(215deg, transparent 42%, var(--app-surface-b) 76%, transparent 100%),
-        linear-gradient(180deg, var(--background), var(--background));
+        linear-gradient(180deg, color-mix(in srgb, var(--card) 42%, var(--background)), var(--background) 34rem),
+        var(--background);
 }
 
 .app-shell::before {
@@ -240,12 +239,12 @@
     inset: 0;
     z-index: -1;
     pointer-events: none;
-    background-image:
-        linear-gradient(to right, var(--app-grid) 1px, transparent 1px),
-        linear-gradient(to bottom, var(--app-grid) 1px, transparent 1px),
-        linear-gradient(120deg, transparent 0 35%, var(--app-surface-c) 35% 36%, transparent 36% 100%);
-    background-size: 48px 48px, 48px 48px, 100% 100%;
-    mask-image: linear-gradient(to bottom, black 0, black 42%, transparent 92%);
+    background:
+        linear-gradient(90deg, transparent, var(--app-surface-a) 18%, transparent 44%),
+        linear-gradient(115deg, transparent 36%, var(--app-surface-b) 58%, transparent 82%),
+        linear-gradient(180deg, var(--app-surface-c), transparent 26rem);
+    opacity: 0.42;
+    mask-image: linear-gradient(to bottom, black 0, transparent 34rem);
 }
 
 .glass-nav {
