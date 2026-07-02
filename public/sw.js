@@ -10,7 +10,15 @@ const SHELL_ASSETS = [
 // Do NOT call skipWaiting() here. Forcing an immediate takeover while the
 // WebAPK standalone activity is still bootstrapping causes Android to kill
 // and restart the activity (the "flash-quit-reopen" behaviour).
-// The new SW will activate naturally the next time the user opens the app.
+// Instead the *client* asks us to activate (SKIP_WAITING message below) only
+// after the page has finished loading, then reloads once — safe, and it makes
+// new deploys actually reach installed PWAs instead of waiting forever.
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
