@@ -23,6 +23,7 @@ import {
   FileText
 } from 'lucide-react'
 import { formatCurrencyVal } from './lib/utils'
+import { triggerHaptic } from './lib/haptics'
 import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 
 interface TopNavProps {
@@ -103,7 +104,10 @@ const TopNav: React.FC<TopNavProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md">
+      <header
+        className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md"
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      >
         <div className="h-[2.5px] w-full bg-gradient-to-r from-blue-500 via-violet-500 to-pink-500" />
         <div className="container mx-auto flex h-16 items-center px-4">
         
@@ -215,7 +219,7 @@ const TopNav: React.FC<TopNavProps> = ({
             </button>
 
             {isBellOpen && (
-              <div className="fixed sm:absolute top-16 sm:top-auto left-4 right-4 sm:left-auto sm:right-0 mt-2 sm:w-80 bg-card border border-border rounded-2xl shadow-xl p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="fixed sm:absolute top-[calc(4rem+env(safe-area-inset-top,0px))] sm:top-auto left-4 right-4 sm:left-auto sm:right-0 mt-2 sm:w-80 bg-card border border-border rounded-2xl shadow-xl p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                 <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3 select-none">
                   <h4 className="text-xs font-bold text-foreground">Subscription Notifications</h4>
                   <span className="text-[9px] text-muted-foreground font-semibold">
@@ -413,7 +417,7 @@ const TopNav: React.FC<TopNavProps> = ({
     >
       <div className="grid grid-cols-4 w-full max-w-md mx-auto justify-items-center">
         <button
-          onClick={() => onTabChange('dashboard')}
+          onClick={() => { triggerHaptic(8); onTabChange('dashboard') }}
           className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
             activeTab === 'dashboard' ? 'text-blue-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
           }`}
@@ -422,7 +426,7 @@ const TopNav: React.FC<TopNavProps> = ({
           <span>Dashboard</span>
         </button>
         <button
-          onClick={() => onTabChange('recurring')}
+          onClick={() => { triggerHaptic(8); onTabChange('recurring') }}
           className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
             activeTab === 'recurring' ? 'text-violet-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
           }`}
@@ -431,7 +435,7 @@ const TopNav: React.FC<TopNavProps> = ({
           <span>Recurring</span>
         </button>
         <button
-          onClick={() => onTabChange('ledger')}
+          onClick={() => { triggerHaptic(8); onTabChange('ledger') }}
           className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
             activeTab === 'ledger' ? 'text-emerald-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
           }`}
@@ -440,7 +444,7 @@ const TopNav: React.FC<TopNavProps> = ({
           <span>Ledger</span>
         </button>
         <button
-          onClick={() => onTabChange('wishlist')}
+          onClick={() => { triggerHaptic(8); onTabChange('wishlist') }}
           className={`flex flex-col items-center gap-1 text-[10px] font-semibold cursor-pointer transition-all duration-200 w-full text-center ${
             activeTab === 'wishlist' ? 'text-pink-500 scale-105 font-bold' : 'text-muted-foreground hover:text-foreground'
           }`}

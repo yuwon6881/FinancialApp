@@ -35,7 +35,6 @@ export interface FinancialSetting {
   darkMode: boolean
   hideSensitive: boolean
   currency?: string
-  vibrationEnabled?: boolean
 }
 
 export interface CategorySummary {

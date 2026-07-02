@@ -13,6 +13,7 @@ import { DraftStagingView } from './components/DraftStagingView'
 import { formatCurrencyVal } from './lib/utils'
 import { CustomAlertModal } from './components/ui/CustomAlertModal'
 import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
+import { PullToRefresh } from './components/ui/PullToRefresh'
 
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'))
@@ -154,9 +155,12 @@ function App() {
   // Shadow the global alert function
   const alert = (message: string) => showAlert(message, 'Notification')
 
-  // Apply/remove the 'dark' class on <html> whenever darkMode changes
+  // Apply/remove the 'dark' class on <html> whenever darkMode changes,
+  // and keep the PWA/browser chrome (theme-color) in sync with the active theme.
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) meta.setAttribute('content', darkMode ? '#101418' : '#f7f8fa')
   }, [darkMode])
 
   // Inactivity Auto-Lock
@@ -960,6 +964,10 @@ function App() {
       )}
 
       {/* Main Content Area */}
+      <PullToRefresh
+        onRefresh={() => loadAll(selectedMonth || undefined, selectedYear || undefined, true)}
+        disabled={loading || actionLoading || isLocked}
+      >
       <main className="flex-1 container mx-auto px-4 py-8 pb-24 md:pb-8 max-w-7xl relative">
         {(loading || actionLoading) && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-[1.5px] transition-all duration-150">
@@ -1092,16 +1100,17 @@ function App() {
           />
         )}
       </main>
+      </PullToRefresh>
 
       {/* Modal Popup for Pending Subscriptions on Login */}
       {showLoginModal && optimisticDashboardData?.pendingNotifications && optimisticDashboardData.pendingNotifications.length > 0 && (
         <div
           onClick={() => setShowLoginModal(false)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+          className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
         >
           <div
             onClick={e => e.stopPropagation()}
-            className="w-full max-w-2xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+            className="sheet-panel w-full max-w-2xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
               <div className="flex items-center gap-2">
@@ -1219,11 +1228,11 @@ function App() {
             setConfirmPassword('')
             setPromptError(null)
           }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+          className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
         >
           <div
             onClick={e => e.stopPropagation()}
-            className="w-full max-w-sm bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+            className="sheet-panel w-full max-w-sm bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between border-b border-border/40 pb-2">
               <h3 className="text-sm font-bold text-foreground">Verify Identity</h3>
@@ -1414,7 +1423,10 @@ function App() {
           )}
 
           {/* Speed Dial Menu Items */}
-          <div className={`md:hidden fixed bottom-[148px] right-8 z-40 flex flex-col gap-3.5 items-end transition-all duration-300 ${isFabOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+          <div
+            style={{ bottom: 'calc(148px + env(safe-area-inset-bottom, 0px))' }}
+            className={`md:hidden fixed right-8 z-40 flex flex-col gap-3.5 items-end transition-all duration-300 ${isFabOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'}`}
+          >
             {/* Action 1: Add Wish Goal */}
             <button
               onClick={() => {
@@ -1475,13 +1487,14 @@ function App() {
                 setIsFabOpen(prev => !prev)
               }
             }}
-            className={`fixed bottom-[80px] right-6 flex items-center justify-center size-14 rounded-full text-white shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer ${
+            className={`fixed right-6 flex items-center justify-center size-14 rounded-full text-white shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer ${
               activeFormType || activeTab === 'drafts'
                 ? 'bg-gradient-to-tr from-emerald-600 to-green-500 shadow-emerald-500/20 z-[60]'
                 : 'bg-gradient-to-tr from-blue-600 to-sky-500 shadow-blue-500/10 z-40 md:hidden'
             }`}
-            style={{ 
-              transform: (!activeFormType && activeTab !== 'drafts' && isFabOpen) ? 'rotate(135deg)' : 'rotate(0deg)' 
+            style={{
+              bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))',
+              transform: (!activeFormType && activeTab !== 'drafts' && isFabOpen) ? 'rotate(135deg)' : 'rotate(0deg)'
             }}
             title={
               activeFormType 

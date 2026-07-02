@@ -271,9 +271,9 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
 
               // Dynamic label alignment to prevent clipping on the boundaries
               let alignClasses = 'left-1/2 -translate-x-1/2 items-center'
-              if (node.percent < 15) {
+              if (node.percent < 8) {
                 alignClasses = 'left-0 items-start'
-              } else if (node.percent > 85) {
+              } else if (node.percent > 92) {
                 alignClasses = 'left-auto right-0 items-end'
               }
 
@@ -314,7 +314,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                       className={`w-[1px] bg-border/80 ${
                         node.isTop ? 'order-last' : 'order-first'
                       } ${
-                        node.percent < 15 ? 'ml-1.5' : node.percent > 85 ? 'mr-1.5' : ''
+                        node.percent < 8 ? 'ml-1.5' : node.percent > 92 ? 'mr-1.5' : ''
                       }`}
                       style={{ height: connectorHeight }}
                     />
@@ -344,11 +344,11 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
       {selectedNode && (
         <div
           onClick={() => setSelectedNode(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+          className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
         >
           <div
             onClick={e => e.stopPropagation()}
-            className="w-full max-w-sm bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+            className="sheet-panel w-full max-w-sm bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
               <div className="flex items-center gap-2">
@@ -402,11 +402,11 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
       {selectedBill && (
         <div
           onClick={() => setSelectedBill(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+          className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
         >
           <div
             onClick={e => e.stopPropagation()}
-            className="w-full max-w-sm bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+            className="sheet-panel w-full max-w-sm bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
               <div className="flex items-center gap-2">

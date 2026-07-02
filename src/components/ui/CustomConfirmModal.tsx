@@ -25,11 +25,11 @@ export const CustomConfirmModal: React.FC<CustomConfirmModalProps> = ({
   return (
     <div
       onClick={onCancel}
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+      className="sheet-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
     >
       <div
         onClick={e => e.stopPropagation()}
-        className="w-full max-w-md bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+        className="sheet-panel w-full max-w-md bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center gap-2 text-orange-500 pb-2 border-b border-border/40">
           <span className="p-1.5 rounded-lg bg-orange-500/10 text-orange-500">
