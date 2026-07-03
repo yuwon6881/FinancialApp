@@ -209,9 +209,9 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
 
   if (!isExpanded) {
     return (
-      <div 
+      <div
         onClick={() => setIsExpanded(true)}
-        className="p-4 rounded-2xl bg-card border border-border/60 hover:border-blue-500/40 shadow-xs flex items-center justify-between transition duration-200 cursor-pointer hover:bg-muted/30 select-none"
+        className="p-4 rounded-2xl bg-card border border-border/60 shadow-xs flex items-center justify-between cursor-pointer hover:bg-muted/30 transition duration-200 select-none"
       >
         <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-foreground">
           <Calendar className="size-4 text-blue-500 shrink-0" />
@@ -230,10 +230,9 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
 
   return (
     <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-6 animate-in fade-in zoom-in-98 duration-150">
-      <div 
+      <div
         onClick={() => setIsExpanded(false)}
-        className="flex items-center justify-between border-b border-border/30 pb-3 gap-2 cursor-pointer hover:opacity-85 transition select-none"
-        title="Click to collapse timeline"
+        className="flex items-center justify-between border-b border-border/30 pb-3 gap-2 cursor-pointer hover:bg-muted/20 -mx-3 -mt-2 p-3 rounded-xl transition duration-150 select-none"
       >
         <div>
           <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
@@ -245,7 +244,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
             Cycle Range: {startLabel} – {endLabel}
           </p>
         </div>
-        <div className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition flex items-center gap-1 text-xs font-semibold shrink-0">
+        <div className="p-1.5 text-muted-foreground rounded-lg flex items-center gap-1 text-xs font-semibold shrink-0">
           <span className="text-[10px] hidden sm:inline">Collapse</span>
           <ChevronUp className="size-4" />
         </div>

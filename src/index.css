@@ -516,18 +516,7 @@ html {
         --tw-enter-scale: 1;
     }
 
-    /* Standard bottom-sheet affordance: a small grab handle centered at the
-       top of every sheet. Pure CSS so every .sheet-panel gets it for free. */
-    .sheet-panel::before {
-        content: "";
-        display: block;
-        width: 2.25rem;
-        height: 0.28rem;
-        border-radius: 9999px;
-        background: color-mix(in srgb, var(--muted-foreground) 32%, transparent);
-        margin: -0.75rem auto -0.5rem;
-        flex-shrink: 0;
-    }
+
 
     .sheet-keyboard-focus .sheet-backdrop,
     .sheet-keyboard-focus .sheet-panel {
