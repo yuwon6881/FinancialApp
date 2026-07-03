@@ -18,7 +18,7 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/95 backdrop-blur-md animate-in fade-in duration-300">
       <div className="w-full max-w-sm flex flex-col items-center gap-6">
-        <AppLogo className="size-16 rounded-2xl shadow-xl shadow-blue-500/20" imageClassName="size-[76%]" />
+        <AppLogo className="size-16 rounded-2xl shadow-xl shadow-blue-500/20" />
         <div className="text-center">
           <h2 className="text-xl font-bold text-foreground">Session Locked</h2>
           <p className="text-sm text-muted-foreground mt-1">You were inactive for 5 minutes. Please re-enter your password to continue.</p>
