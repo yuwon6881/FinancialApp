@@ -14,8 +14,6 @@ interface BillTimelineProps {
   cycleDay: number
   currency?: string
   hideSensitive: boolean
-  onConfirmSubscription?: (noti: any, paidDate: string) => void
-  onDiscardSubscription?: (noti: any) => void
   cycleOffset?: number
   title?: string
 }
@@ -58,8 +56,6 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
   cycleDay,
   currency = 'USD',
   hideSensitive,
-  onConfirmSubscription: _onConfirmSubscription,
-  onDiscardSubscription: _onDiscardSubscription,
   cycleOffset = 0,
   title
 }) => {

@@ -756,7 +756,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   }, [showStabilityCapModal])
 
   useEffect(() => {
-    if (!showAddForm) return
+    if (!showAddForm || editingTxId) return
     const isMobileSheet = window.matchMedia('(max-width: 639px), (pointer: coarse)').matches
     if (isMobileSheet) return
 
@@ -765,7 +765,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }, 90)
 
     return () => window.clearTimeout(focusTimer)
-  }, [showAddForm])
+  }, [showAddForm, editingTxId])
 
 
 

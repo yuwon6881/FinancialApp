@@ -1286,8 +1286,6 @@ function App() {
             currency={optimisticDashboardData?.setting?.currency || 'USD'}
             autoOpenAddForm={autoOpenSubscriptionAdd}
             onResetAutoOpen={() => setAutoOpenSubscriptionAdd(false)}
-            onConfirmSubscription={handleConfirmSubscription}
-            onDiscardSubscription={handleDiscardSubscription}
             isSwitchingCycle={isSwitchingCycle}
           />
         )}

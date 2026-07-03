@@ -34,8 +34,6 @@ interface RecurringPaymentsViewProps {
   currency?: string
   autoOpenAddForm?: boolean
   onResetAutoOpen?: () => void
-  onConfirmSubscription?: (noti: any, paidDate: string) => void
-  onDiscardSubscription?: (noti: any) => void
   isSwitchingCycle?: boolean
 }
 
@@ -55,8 +53,6 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   currency = 'USD',
   autoOpenAddForm,
   onResetAutoOpen,
-  onConfirmSubscription,
-  onDiscardSubscription,
   isSwitchingCycle = false
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
@@ -287,8 +283,6 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
           cycleDay={cycleDay}
           currency={currency}
           hideSensitive={hideSensitive}
-          onConfirmSubscription={onConfirmSubscription}
-          onDiscardSubscription={onDiscardSubscription}
         />
       </div>
 
