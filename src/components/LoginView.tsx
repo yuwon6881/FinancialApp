@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Lock, User, ShieldAlert, Sparkles, Eye, EyeOff } from 'lucide-react'
 import * as api from '../lib/api'
+import { AppLogo } from './ui/AppLogo'
 
 interface LoginViewProps {
   onLoginSuccess: (token: string, username: string) => void
@@ -83,9 +84,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         
         {/* Brand Header */}
         <div className="text-center space-y-2 select-none">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-radial from-emerald-400 to-emerald-600 shadow-xl shadow-emerald-500/20 text-white font-extrabold text-2xl animate-pulse">
-            F
-          </div>
+          <AppLogo className="mx-auto size-12 rounded-2xl shadow-xl shadow-emerald-500/15" imageClassName="size-[76%]" pulse />
           <h1 className="text-2xl font-black tracking-tight bg-linear-to-r from-foreground via-foreground to-emerald-500 bg-clip-text text-transparent">
             FinancialApp Ledger
           </h1>

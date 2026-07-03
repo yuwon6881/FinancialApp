@@ -27,6 +27,7 @@ import { formatCurrencyVal } from './lib/utils'
 import { triggerHaptic } from './lib/haptics'
 import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 import { SwipeableRow } from './components/ui/SwipeableRow'
+import { AppLogo } from './components/ui/AppLogo'
 import type { AppTab } from './types'
 
 interface TopNavProps {
@@ -175,9 +176,7 @@ const TopNav: React.FC<TopNavProps> = ({
         {/* Left Side (Logo and Brand) */}
         <div className="flex-1 flex items-center justify-start min-w-max">
           <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => onTabChange('dashboard')}>
-            <div className="flex size-9 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 via-sky-400 to-teal-500 shadow-md shadow-blue-500/20 text-white font-extrabold text-lg shrink-0 transition-transform duration-200 hover:scale-105">
-              F
-            </div>
+            <AppLogo className="size-9 rounded-xl transition-transform duration-200 hover:scale-105" />
             <span className="hidden sm:inline text-md sm:text-lg font-extrabold tracking-tight bg-linear-to-r from-foreground via-foreground to-blue-500 bg-clip-text text-transparent truncate">
               FinancialApp
             </span>

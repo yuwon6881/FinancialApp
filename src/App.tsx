@@ -27,6 +27,7 @@ import { CACHE_KEYS, getCachedJSON, setCachedJSON, hasCachedKey, getCachedDashbo
 import { PendingSubscriptionsModal } from './components/PendingSubscriptionsModal'
 import { PasswordPromptModal } from './components/PasswordPromptModal'
 import { LockScreen } from './components/LockScreen'
+import { AppLogo } from './components/ui/AppLogo'
 
 const createLocalId = (prefix: string, separator = '_') => {
   return `${prefix}${separator}${Date.now()}${separator}${Math.random().toString(36).substring(2, 9)}`
@@ -1067,7 +1068,7 @@ function App() {
           <div className="container mx-auto max-w-7xl py-6 space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 via-sky-400 to-teal-500 text-white font-extrabold animate-pulse shadow-lg shadow-blue-500/20">F</div>
+                <AppLogo className="size-10 rounded-xl" pulse />
                 <div>
                   <Skeleton className="h-4 w-32" />
                   <Skeleton className="mt-2 h-2 w-20" />

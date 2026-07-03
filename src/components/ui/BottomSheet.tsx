@@ -1,4 +1,5 @@
 import React, { useEffect, useId, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { useDialog } from '../../lib/useDialog'
 
@@ -27,10 +28,31 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 
   useEffect(() => {
     if (!isOpen) return
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+
+    const scrollY = window.scrollY
+    const { body } = document
+    const previousPosition = body.style.position
+    const previousTop = body.style.top
+    const previousLeft = body.style.left
+    const previousRight = body.style.right
+    const previousWidth = body.style.width
+    const previousOverflow = body.style.overflow
+
+    body.style.position = 'fixed'
+    body.style.top = `-${scrollY}px`
+    body.style.left = '0'
+    body.style.right = '0'
+    body.style.width = '100%'
+    body.style.overflow = 'hidden'
+
     return () => {
-      document.body.style.overflow = previous
+      body.style.position = previousPosition
+      body.style.top = previousTop
+      body.style.left = previousLeft
+      body.style.right = previousRight
+      body.style.width = previousWidth
+      body.style.overflow = previousOverflow
+      window.scrollTo(0, scrollY)
     }
   }, [isOpen])
 
@@ -38,7 +60,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 
   if (!isOpen) return null
 
-  return (
+  return createPortal(
     <div
       onClick={e => {
         if (e.target === e.currentTarget) onClose()
@@ -69,6 +91,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
         {children}
         {footer && <div className="border-t border-border/40 pt-4">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
