@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import type { ActiveRecurringPayment } from '../types'
+import type { ActiveRecurringPayment, RecurringPayment } from '../types'
 import { Calendar, CheckCircle2, AlertCircle, Ban, List, ChevronDown, ChevronUp } from 'lucide-react'
 import { formatCurrencyVal } from '../lib/utils'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
@@ -7,6 +7,7 @@ import { BottomSheet } from './ui/BottomSheet'
 
 interface BillTimelineProps {
   activeRecurringPayments: ActiveRecurringPayment[]
+  allPayments?: RecurringPayment[]
   selectedMonth: string
   selectedYear: number
   cycleDay: number
@@ -49,6 +50,7 @@ function getDaySuffix(d: number) {
 
 export const BillTimeline: React.FC<BillTimelineProps> = ({
   activeRecurringPayments,
+  allPayments,
   selectedMonth,
   selectedYear,
   cycleDay,
@@ -72,7 +74,6 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
   const totalMonths = baseMonthIndex + cycleOffset
   const monthIndex = (totalMonths % 12 + 12) % 12
   const year = baseYear + Math.floor(totalMonths / 12)
-  const effectiveMonthName = MONTH_NAMES[monthIndex]
 
   const displayTitle = title || (cycleOffset === 1 ? 'Upcoming Next Cycle Subscriptions' : 'Subscriptions Billing Timeline')
 
@@ -101,26 +102,59 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
     )
   }
 
-  // Calculate payments for this cycle (for cycleOffset > 0, project due dates into the target cycle range)
+  // Calculate payments for this cycle
   const processedPayments = React.useMemo(() => {
     if (cycleOffset === 0) return activeRecurringPayments
 
-    return activeRecurringPayments.map(p => {
-      const parts = p.dueDate.split('-')
-      const originalDay = parts.length === 3 ? parseInt(parts[2]) : (p.dueDay || 1)
+    const formatIso = (d: Date) => {
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      return `${y}-${m}-${day}`
+    }
+
+    const startIso = formatIso(cycleStart)
+    const endIso = formatIso(cycleEnd)
+
+    const sourcePayments = allPayments && allPayments.length > 0 
+      ? allPayments.filter(p => p.active !== false)
+      : activeRecurringPayments
+
+    const list: ActiveRecurringPayment[] = []
+
+    sourcePayments.forEach(p => {
+      const pStart = (p as any).startDate || ''
+      const pEnd = (p as any).endDate || ''
+
+      if (pStart && pStart > endIso) return
+      if (pEnd && pEnd < startIso) return
+
+      const rawDay = (p as any).dueDate !== undefined ? (p as any).dueDate : ((p as any).dueDay || 1)
+      const dayNum = typeof rawDay === 'number' ? rawDay : (parseInt(String(rawDay)) || 1)
       const daysInTargetMonth = new Date(year, monthIndex + 1, 0).getDate()
-      const clampedDay = Math.min(originalDay, daysInTargetMonth)
+      const clampedDay = Math.min(dayNum, daysInTargetMonth)
+
       const moStr = String(monthIndex + 1).padStart(2, '0')
       const dStr = String(clampedDay).padStart(2, '0')
       const upcomingDueDate = `${year}-${moStr}-${dStr}`
 
-      return {
-        ...p,
+      list.push({
+        id: `${p.id}-upcoming-${year}-${monthIndex}`,
+        recurringPaymentId: p.id,
+        name: p.name,
+        amount: p.amount,
+        category: p.category,
+        ledgerCategory: p.ledgerCategory,
         dueDate: upcomingDueDate,
-        status: 'Upcoming' as const
-      }
+        dueDay: clampedDay,
+        isPaid: false,
+        isDiscarded: false,
+        status: 'Pending' as const
+      })
     })
-  }, [activeRecurringPayments, cycleOffset, year, monthIndex])
+
+    return list
+  }, [activeRecurringPayments, allPayments, cycleOffset, year, monthIndex, cycleStart, cycleEnd])
 
   // Group bills by due date to prevent overlapping nodes on the timeline
   const uniqueDatesMap: { [dateStr: string]: ActiveRecurringPayment[] } = {}
@@ -187,8 +221,8 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
           </span>
           <ChevronDown className="size-4 text-muted-foreground shrink-0" />
         </button>
-        <div className="text-[10px] text-muted-foreground font-semibold bg-muted/50 px-2 py-1 rounded-lg whitespace-nowrap shrink-0 hidden sm:block">
-          Cycle: {effectiveMonthName} {year}
+        <div className="text-[10px] text-muted-foreground font-semibold bg-muted/50 px-2.5 py-1 rounded-lg whitespace-nowrap shrink-0 hidden sm:block">
+          {startLabel} – {endLabel}
         </div>
       </div>
     )
@@ -196,29 +230,25 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
 
   return (
     <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-6 animate-in fade-in zoom-in-98 duration-150">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border/30 pb-3 gap-2">
-        <div className="flex items-center justify-between sm:justify-start w-full sm:w-auto gap-2">
-          <div>
-            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-              <Calendar className="size-5 text-blue-500" />
-              <span>{displayTitle}</span>
-            </h3>
-            <p className="text-[10px] text-muted-foreground mt-0.5 font-semibold">
-              Cycle Range: {startLabel} – {endLabel}
-            </p>
-          </div>
-          <button
-            onClick={() => setIsExpanded(false)}
-            className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition cursor-pointer flex items-center gap-1 text-xs font-semibold"
-            title="Collapse Timeline"
-          >
-            <span className="text-[10px] hidden sm:inline">Collapse</span>
-            <ChevronUp className="size-4" />
-          </button>
+      <div className="flex items-center justify-between border-b border-border/30 pb-3 gap-2">
+        <div>
+          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+            <Calendar className="size-5 text-blue-500" />
+            <span>{displayTitle}</span>
+          </h3>
+          <p className="text-xs text-muted-foreground mt-2 font-semibold flex items-center gap-1.5">
+            <span className="size-1.5 rounded-full bg-blue-500 inline-block" />
+            Cycle Range: {startLabel} – {endLabel}
+          </p>
         </div>
-        <div className="text-[10px] text-muted-foreground font-semibold bg-muted/50 px-2 py-1 rounded-lg whitespace-nowrap shrink-0 self-start sm:self-center">
-          Cycle: {selectedMonth} {year}
-        </div>
+        <button
+          onClick={() => setIsExpanded(false)}
+          className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition cursor-pointer flex items-center gap-1 text-xs font-semibold shrink-0"
+          title="Collapse Timeline"
+        >
+          <span className="text-[10px] hidden sm:inline">Collapse</span>
+          <ChevronUp className="size-4" />
+        </button>
       </div>
 
       {/* Mobile: compact tappable vertical list (horizontal timeline is too cramped on small screens) */}
