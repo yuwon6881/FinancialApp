@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react'
+﻿import React, { useState, useMemo, useRef } from 'react'
 import type { Transaction, DashboardData, WishlistItem } from '../types'
 import { 
   Wallet, 
@@ -101,7 +101,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const activeTrendPoints = useMemo(() => {
     if (trendView === '3month') return dashboardData?.last3TrendPoints || []
     if (trendView === '6month') return dashboardData?.last6TrendPoints || []
-    // 'monthly' = just the current month point (single dot – show full year instead)
+    // 'monthly' = just the current month point (single dot â€“ show full year instead)
     return dashboardData?.trendPoints || []
   }, [trendView, dashboardData])
 
@@ -510,7 +510,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Categories Roll Table (Month Sheet Columns B-E) */}
       <div className="app-panel p-6 bg-card/92 border border-border/60 rounded-2xl">
-        <h3 className="text-md font-bold text-foreground mb-1">Carryover Rolling Ledgers</h3>
+        <h3 className="text-base font-bold text-foreground mb-1">Carryover Rolling Ledgers</h3>
         <p className="text-xs text-muted-foreground mb-4">Starting budget carries forward from previous month's remaining balance.</p>
         
         {/* Desktop View */}
@@ -691,9 +691,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Financial Plan Metric Cards */}
       <div className="app-panel p-6 bg-card/92 border border-border/60 rounded-2xl">
-        <h3 className="text-md font-bold text-foreground mb-1">Financial Plan Metrics</h3>
+        <h3 className="text-base font-bold text-foreground mb-1">Financial Plan Metrics</h3>
         <p className="text-xs text-muted-foreground mb-1">Cycle-wide constraint evaluation across allocation categories and targets.</p>
-        {/* Legend — protan-safe: blue (current) + orange (pending) */}
+        {/* Legend â€” protan-safe: blue (current) + orange (pending) */}
         <div className="flex items-center gap-4 mb-4">
           <div className="flex items-center gap-1.5">
             <span className="inline-block w-3 h-2 rounded-sm bg-blue-500" />
@@ -725,7 +725,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span className="text-foreground">
                     {(currentPct * 100).toFixed(1)}%
                     {pendingGrowth > 0 && (
-                      <span className="text-orange-500 ml-1">→ {((currentPct - atRiskPct) * 100).toFixed(1)}%</span>
+                      <span className="text-orange-500 ml-1">â†’ {((currentPct - atRiskPct) * 100).toFixed(1)}%</span>
                     )}
                   </span>
                 </div>
@@ -768,7 +768,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span className="text-foreground">
                     {(currentPct * 100).toFixed(1)}%
                     {pendingEss > 0 && (
-                      <span className="text-orange-500 ml-1">→ {(projectedPct * 100).toFixed(1)}%</span>
+                      <span className="text-orange-500 ml-1">â†’ {(projectedPct * 100).toFixed(1)}%</span>
                     )}
                   </span>
                 </div>
@@ -812,7 +812,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span className="text-foreground">
                     {(currentPct * 100).toFixed(1)}%
                     {pendingStab > 0 && (
-                      <span className="text-orange-500 ml-1">→ {(projectedPct * 100).toFixed(1)}%</span>
+                      <span className="text-orange-500 ml-1">â†’ {(projectedPct * 100).toFixed(1)}%</span>
                     )}
                   </span>
                 </div>
@@ -953,7 +953,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div>
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h3 className="text-md font-semibold text-foreground">Total Growth Deposited</h3>
+                <h3 className="text-base font-semibold text-foreground">Total Growth Deposited</h3>
                 <p className="text-[10px] text-muted-foreground">Cumulative Growth category investment balance</p>
               </div>
               <TrendLineIcon className="size-4 text-blue-500 shrink-0" />
@@ -1011,7 +1011,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       </linearGradient>
                     </defs>
                     
-                    {/* Fill Area — gradient drop beneath the line, fades in on load */}
+                    {/* Fill Area â€” gradient drop beneath the line, fades in on load */}
                     <path
                       key={`area-${trendView}`}
                       d={`M 15,105 L ${trendLinePoints} L 485,105 Z`}
@@ -1019,7 +1019,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       className="area-fade"
                     />
 
-                    {/* Stroke Line — soft glow + smooth path draw-in (re-draws on period switch) */}
+                    {/* Stroke Line â€” soft glow + smooth path draw-in (re-draws on period switch) */}
                     <polyline
                       key={`line-${trendView}`}
                       fill="none"
@@ -1089,7 +1089,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         >
                           <span className="text-[9px] font-bold text-foreground leading-none mb-1">{p.month}</span>
                           <span className="text-[10px] font-black text-blue-500 leading-none">
-                            {hideSensitive ? '•••••' : formatCurrency(p.balance)}
+                            {hideSensitive ? 'â€¢â€¢â€¢â€¢â€¢' : formatCurrency(p.balance)}
                           </span>
                         </div>
                       </>
@@ -1122,7 +1122,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div>
             <div className="flex items-center justify-between mb-4 gap-2">
               <div>
-                <h3 className="text-md font-semibold text-foreground">Outflow Categories</h3>
+                <h3 className="text-base font-semibold text-foreground">Outflow Categories</h3>
                 <p className="text-[10px] text-muted-foreground">Expense breakdown by category</p>
               </div>
               <div className="flex items-center bg-muted/40 rounded-lg p-0.5 border border-border/40 text-[9px] shrink-0">
@@ -1310,7 +1310,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             return (
               <div className="app-panel p-6 rounded-2xl bg-card/92 border border-border/60 h-full">
                 <div className="mb-4">
-                  <h3 className="text-md font-semibold text-foreground">Cycle Calendar</h3>
+                  <h3 className="text-base font-semibold text-foreground">Cycle Calendar</h3>
                   <p className="text-[10px] text-muted-foreground mt-0.5">{cycleLabel}</p>
                 </div>
                 <div className="grid grid-cols-7 gap-1.5 text-center">
@@ -1377,7 +1377,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="flex-1 flex flex-col min-h-0">
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <h3 className="text-md font-semibold text-foreground">Subscriptions</h3>
+                  <h3 className="text-base font-semibold text-foreground">Subscriptions</h3>
                   <p className="text-[10px] text-muted-foreground">Bills for this active cycle</p>
                 </div>
                 <Calendar className="size-4 text-blue-500 shrink-0" />
@@ -1454,7 +1454,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <div className="text-sm font-semibold text-foreground">{t.description}</div>
                     <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
                       <span>{t.date}</span>
-                      <span>•</span>
+                      <span>â€¢</span>
                       <span>{t.ledgerCategory.startsWith('Transfer:') ? 'Transfer' : t.ledgerCategory.startsWith('IncomeSplit:') ? 'Income' : t.ledgerCategory}</span>
                     </div>
                   </div>

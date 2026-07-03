@@ -1,4 +1,4 @@
-import type { PendingNotification } from '../types'
+﻿import type { PendingNotification } from '../types'
 import { formatCurrencyVal } from '../lib/utils'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { BottomSheet } from './ui/BottomSheet'
@@ -38,7 +38,7 @@ export function PendingSubscriptionsModal({
       title={
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
-          <span className="text-md font-bold text-foreground">Pending Subscription Payments</span>
+          <span className="text-base font-bold text-foreground">Pending Subscription Payments</span>
         </div>
       }
       footer={

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import type { RecurringPayment, TransactionCategory, ActiveRecurringPayment } from '../types'
 import { 
   Plus, 
@@ -406,7 +406,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                   : `${selectedCategories.length} category filter${selectedCategories.length > 1 ? 's' : ''} active`}
               </span>
             </span>
-            <span className="text-[9px] text-muted-foreground">▼</span>
+            <span className="text-[9px] text-muted-foreground">â–¼</span>
           </button>
 
           {isFilterDropdownOpen && (
@@ -477,7 +477,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
               <div>
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="text-md font-bold text-foreground flex items-center gap-1.5">
+                    <h3 className="text-base font-bold text-foreground flex items-center gap-1.5">
                       {rp.name}
                       {!rp.active && (
                         <span className="text-[9px] font-semibold bg-muted px-1.5 py-0.5 rounded text-muted-foreground">Paused</span>

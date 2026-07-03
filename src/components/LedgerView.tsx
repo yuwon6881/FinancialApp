@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+﻿import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import type { Transaction, TransactionCategory } from '../types'
 import type { PagedTransactionResult } from '../lib/api'
@@ -420,10 +420,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const isInitialFetchDone = useRef(false)
   const [showExportModal, setShowExportModal] = useState(false)
   const [exportIsFetching, setExportIsFetching] = useState(false)
-  // Pending (uncommitted) states — only applied on Search/Apply button click
+  // Pending (uncommitted) states â€” only applied on Search/Apply button click
   const [pendingSearchTerm, setPendingSearchTerm] = useState('')
   const [pendingFilters, setPendingFilters] = useState<string[]>([])
-  // Applied (committed) states — what the backend has actually received
+  // Applied (committed) states â€” what the backend has actually received
   const [appliedSearch, setAppliedSearch] = useState('')
   const [appliedFilters, setAppliedFilters] = useState<string[]>([])
   const [appliedTxTypeFilter, setAppliedTxTypeFilter] = useState<'inflow' | 'outflow' | null>(null)
@@ -498,7 +498,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       setAppliedFilters(initialFilters)
       setAppliedTxTypeFilter(initialTxType)
       setCurrentPage(1)
-      setPageSize(100)  // Default 100 for server mode — covers most users' full history on page 1
+      setPageSize(100)  // Default 100 for server mode â€” covers most users' full history on page 1
       isInitialFetchDone.current = false
       runServerFetch({ page: 1, search: '', filters: initialFilters, txType: initialTxType, pSize: 100 })
         .finally(() => {
@@ -1309,7 +1309,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           <button
             onClick={() => {
               if (showAddForm) {
-                // Closing the form — reset everything
+                // Closing the form â€” reset everything
                 setDescription('')
                 setAmount('')
                 setLedgerCategory('Essentials')
@@ -1320,7 +1320,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 }
                 setEditingTxId(null)
               } else {
-                // Opening the form fresh — reset to defaults
+                // Opening the form fresh â€” reset to defaults
                 setDescription('')
                 setAmount('')
                 setTxType('outflow')
@@ -1376,7 +1376,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               }
 
               if (filterDetails.length > 0) {
-                return `Showing ${parts.join(', ')} — filtered by ${filterDetails.join(' and ')}`
+                return `Showing ${parts.join(', ')} â€” filtered by ${filterDetails.join(' and ')}`
               }
               return `Showing ${parts.join(', ')}`
             })()}
@@ -1418,7 +1418,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             className="sheet-panel w-full max-w-xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto focus:outline-none"
           >
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
-              <h3 id="ledger-form-title" className="text-md font-bold text-foreground flex items-center gap-2">
+              <h3 id="ledger-form-title" className="text-base font-bold text-foreground flex items-center gap-2">
                 <PlusCircle className="size-4 text-blue-500" /> {editingTxId ? 'Edit Ledger Entry' : 'Post New Ledger Entry'}
               </h3>
               <button
@@ -1520,7 +1520,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       >
                         <span className="truncate">{rendered}</span>
                         <span className="inline-block text-[9px] px-1.5 py-0.5 font-semibold rounded border bg-slate-500/10 text-muted-foreground border-border/30 shrink-0">
-                          {s.ledgerCategory} · {s.category}
+                          {s.ledgerCategory} Â· {s.category}
                         </span>
                       </button>
                     )
@@ -1720,7 +1720,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   : (selectedFilters.length === 0 ? 'All Ledger & Subcategories' : `${selectedFilters.length} filter${selectedFilters.length > 1 ? 's' : ''} active`)}
               </span>
             </span>
-            <span className="hidden md:inline text-[9px] text-muted-foreground">▼</span>
+            <span className="hidden md:inline text-[9px] text-muted-foreground">â–¼</span>
             {(showAllCycles ? appliedFilters.length : selectedFilters.length) > 0 && (
               <span className="md:hidden absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 flex items-center justify-center rounded-full bg-blue-600 text-white text-[9px] font-bold">
                 {showAllCycles ? appliedFilters.length : selectedFilters.length}
@@ -1798,7 +1798,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 </div>
               </div>
 
-              {/* Apply button — only in server mode */}
+              {/* Apply button â€” only in server mode */}
               {showAllCycles && (
                 <div className="pt-3 mt-3 border-t border-border/40">
                   <button
@@ -2201,7 +2201,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
                 <Download className="size-5" />
               </span>
-              <h3 className="text-md font-bold text-foreground">Export Ledger CSV</h3>
+              <h3 className="text-base font-bold text-foreground">Export Ledger CSV</h3>
             </div>
 
             <div className="space-y-2 text-xs leading-relaxed text-muted-foreground">
@@ -2278,7 +2278,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
                     <PlusCircle className="size-5" />
                   </span>
-                  <h3 className="text-md font-bold text-foreground">
+                  <h3 className="text-base font-bold text-foreground">
                     {isCapReached ? 'Stability Cap Threshold Reached' : 'Stability Fund Overflow Detected'}
                   </h3>
                 </div>

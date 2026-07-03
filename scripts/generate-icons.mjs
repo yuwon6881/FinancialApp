@@ -11,21 +11,21 @@ const tile = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" widt
   <path d="${F_PATH}" fill="#60a5fa" />
 </svg>`
 
-// Full-bleed square, F enlarged but inside the 80% maskable safe zone — for
-// purpose:"maskable" icons (Android splash) and the iOS apple-touch-icon.
-const square = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="1024" height="1024">
-  <rect width="100" height="100" fill="#1a1f2e" />
-  <g transform="translate(50 50) scale(1.25) translate(-50 -52)">
-    <path d="${F_PATH}" fill="#60a5fa" />
-  </g>
+// Maskable icon: full-bleed required so any adaptive-icon shape mask works.
+// Uses a very slightly darker outer band so the rounded tile shape reads even
+// on launchers that display icons without applying their own shape clip.
+const maskable = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="1024" height="1024">
+  <rect width="100" height="100" fill="#131820" />
+  <rect width="100" height="100" rx="22" fill="#1a1f2e" />
+  <path d="${F_PATH}" fill="#60a5fa" />
 </svg>`
 
 const jobs = [
   [tile, 192, 'public/icon-192.png'],
   [tile, 512, 'public/icon-512.png'],
-  [square, 192, 'public/icon-192-maskable.png'],
-  [square, 512, 'public/icon-512-maskable.png'],
-  [square, 180, 'public/apple-touch-icon.png'],
+  [maskable, 192, 'public/icon-192-maskable.png'],
+  [maskable, 512, 'public/icon-512-maskable.png'],
+  [maskable, 180, 'public/apple-touch-icon.png'],
 ]
 
 for (const [svg, size, out] of jobs) {
