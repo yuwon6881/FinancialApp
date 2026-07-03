@@ -322,6 +322,7 @@ function App() {
 
   // Inactivity Auto-Lock
   const LOCK_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
+  const lastUnlockedTimeRef = useRef<number>(0)
   const [isLocked, setIsLocked] = useState<boolean>(() => {
     return sessionStorage.getItem('session_locked') === 'true'
   })
@@ -457,8 +458,10 @@ function App() {
       if (err.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
         handleLogout()
       } else if (err.message && err.message.includes('423')) {
-        setIsLocked(true)
-        sessionStorage.setItem('session_locked', 'true')
+        if (Date.now() - lastUnlockedTimeRef.current > 15000) {
+          setIsLocked(true)
+          sessionStorage.setItem('session_locked', 'true')
+        }
       } else {
         setError('Could not connect to the database API server. Running in offline view mode.')
         isServerAwakeRef.current = false
@@ -1401,9 +1404,13 @@ function App() {
       <LockScreen
         isOpen={isLocked && !!token}
         onUnlocked={() => {
+          lastUnlockedTimeRef.current = Date.now()
           localStorage.setItem('last_active_time', Date.now().toString())
           sessionStorage.setItem('session_locked', 'false')
           setIsLocked(false)
+          const hasCache = hasCachedKey(CACHE_KEYS.dashboardData);
+          const { month: cachedMonth, year: cachedYear } = getCachedDashboardPeriod();
+          loadAll(cachedMonth, cachedYear, hasCache);
         }}
         onSignOut={handleLogout}
       />

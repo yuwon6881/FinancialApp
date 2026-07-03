@@ -37,7 +37,7 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
                 setLockError(res.message || 'Incorrect password.')
               }
             } catch {
-              setLockError('Failed to verify. Please try again.')
+              setLockError('Could not connect to server (backend waking up?). Please wait a moment and try again.')
             } finally {
               setLockVerifying(false)
             }
