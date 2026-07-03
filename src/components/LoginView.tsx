@@ -85,8 +85,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         {/* Brand Header */}
         <div className="text-center space-y-2 select-none">
           <AppLogo className="mx-auto size-12 rounded-2xl shadow-xl shadow-emerald-500/15" imageClassName="size-[76%]" pulse />
-          <h1 className="text-2xl font-black tracking-tight bg-linear-to-r from-foreground via-foreground to-emerald-500 bg-clip-text text-transparent">
-            FinancialApp Ledger
+          <h1 className="text-2xl font-black tracking-tight text-foreground">
+            FinancialApp <span className="text-emerald-500">Ledger</span>
           </h1>
           <p className="text-xs text-muted-foreground">
             {!isRegistered 
