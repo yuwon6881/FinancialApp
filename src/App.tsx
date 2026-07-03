@@ -38,9 +38,19 @@ const ViewFallback = () => <div className="app-shell min-h-screen" />
 
 const nextPaint = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
 
+// On a warm reopen (cached data already in localStorage) the app skips the
+// lightweight skeleton and mounts the full dashboard tree on its very first
+// render, on a cold JS engine. Two RAF ticks can elapse before the WebView's
+// compositor has actually presented a frame to the screen in that case, so
+// hiding the native splash then briefly reveals whatever is behind the
+// WebView (the launcher) until the real frame lands. A couple of extra RAFs
+// plus a short floor give the compositor room to catch up; this adds
+// negligible, imperceptible delay on the already-fast cold-launch path.
 const hideNativeSplashAfterPaint = async () => {
   await nextPaint()
   await nextPaint()
+  await nextPaint()
+  await new Promise<void>(resolve => window.setTimeout(resolve, 60))
   await SplashScreen.hide().catch(() => undefined)
 }
 

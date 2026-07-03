@@ -9,6 +9,11 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(',')
 
+const isMobileLayout = () =>
+  typeof window !== 'undefined' && window.matchMedia('(max-width: 639px), (pointer: coarse)').matches
+
+const isTextEntryElement = (el: Element) => el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'
+
 interface UseDialogOptions {
   isOpen: boolean
   onClose: () => void
@@ -54,7 +59,14 @@ export function useDialog({ isOpen, onClose, ref, canClose, autoFocus = true }: 
       // Respect an element that already grabbed focus (e.g. autoFocus input).
       if (panel.contains(document.activeElement) && document.activeElement !== panel) return
       const focusables = panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
-      ;(focusables[0] ?? panel).focus()
+      const target = focusables[0] ?? panel
+      // On mobile, focusing a text field pops the on-screen keyboard immediately,
+      // while the sheet is still mid-entrance-animation and the body scroll-lock
+      // is still settling. The viewport resize this triggers races the CSS
+      // transition, producing a brief flash where the backdrop/panel disappear.
+      // Buttons don't open a keyboard, so they're safe to auto-focus everywhere.
+      if (isMobileLayout() && isTextEntryElement(target)) return
+      target.focus()
     }, 40)
 
     const handleKeyDown = (e: KeyboardEvent) => {
