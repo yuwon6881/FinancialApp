@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Eye, EyeOff, Moon, Plus, Save, Settings, Sun, Trash2 } from 'lucide-react'
+import { Eye, EyeOff, Moon, Plus, Save, Settings, Sun, Trash2, AlertCircle, CheckCircle2 } from 'lucide-react'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
@@ -117,10 +117,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
     const lower = trimmed.toLowerCase()
     if (lower === 'transfer' || lower === 'adjustment') return
+    if (categoriesList.some(c => c.name.trim().toLowerCase() === lower)) return
 
     onAddCategory({ name: trimmed })
     setNewCatName('')
   }
+
+  const trimmedCatName = newCatName.trim()
+  const isCatEmpty = trimmedCatName.length === 0
+  const isCatDuplicate = useMemo(() => {
+    if (isCatEmpty) return false
+    return categoriesList.some(c => c.name.trim().toLowerCase() === trimmedCatName.toLowerCase())
+  }, [categoriesList, trimmedCatName, isCatEmpty])
+
+  const isCatReserved = useMemo(() => {
+    const lower = trimmedCatName.toLowerCase()
+    return lower === 'transfer' || lower === 'adjustment'
+  }, [trimmedCatName])
+
+  const isCatValid = !isCatEmpty && !isCatDuplicate && !isCatReserved
 
   const visibleCategories = categoriesList.filter(cat => {
     const lower = cat.name.toLowerCase()
@@ -300,28 +315,60 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               ))}
             </div>
 
-            <div className="flex gap-2 items-center pt-1">
-              <input
-                type="text"
-                placeholder="New category name"
-                value={newCatName}
-                onChange={e => setNewCatName(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    handleAddCategory()
-                  }
-                }}
-                className="flex-1 min-w-0 px-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-              <button
-                type="button"
-                onClick={handleAddCategory}
-                className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition"
-              >
-                <Plus className="size-3.5" />
-                Add
-              </button>
+            <div className="space-y-1.5 pt-1">
+              <div className="flex gap-2 items-center">
+                <input
+                  type="text"
+                  placeholder="New category name"
+                  value={newCatName}
+                  onChange={e => setNewCatName(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      if (isCatValid) handleAddCategory()
+                    }
+                  }}
+                  className={`flex-1 min-w-0 px-3 py-2 text-xs bg-background border rounded-lg focus:outline-none focus:ring-1 transition duration-150 ${
+                    !isCatEmpty && (isCatDuplicate || isCatReserved)
+                      ? 'border-orange-500/60 focus:ring-orange-500'
+                      : !isCatEmpty && isCatValid
+                      ? 'border-emerald-500/60 focus:ring-emerald-500'
+                      : 'border-border focus:ring-blue-500'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={handleAddCategory}
+                  disabled={!isCatValid}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition duration-200 select-none
+                    bg-blue-600 hover:bg-blue-700 text-white shadow-sm
+                    disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-600 disabled:shadow-none"
+                >
+                  <Plus className="size-3.5" />
+                  Add
+                </button>
+              </div>
+
+              {!isCatEmpty && isCatDuplicate && (
+                <p className="text-[10px] font-semibold text-orange-500 flex items-center gap-1 animate-in fade-in duration-150">
+                  <AlertCircle className="size-3 shrink-0" />
+                  Category "{trimmedCatName}" already exists.
+                </p>
+              )}
+
+              {!isCatEmpty && isCatReserved && (
+                <p className="text-[10px] font-semibold text-orange-500 flex items-center gap-1 animate-in fade-in duration-150">
+                  <AlertCircle className="size-3 shrink-0" />
+                  "Transfer" and "Adjustment" are reserved system categories.
+                </p>
+              )}
+
+              {!isCatEmpty && isCatValid && (
+                <p className="text-[10px] font-semibold text-emerald-500 flex items-center gap-1 animate-in fade-in duration-150">
+                  <CheckCircle2 className="size-3 shrink-0" />
+                  Category name is available.
+                </p>
+              )}
             </div>
           </section>
         </div>
