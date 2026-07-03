@@ -37,6 +37,14 @@ const createLocalId = (prefix: string, separator = '_') => {
 const ViewFallback = () => <div className="app-shell min-h-screen" />
 
 const nextPaint = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+const wait = (ms: number) => new Promise<void>(resolve => window.setTimeout(resolve, ms))
+
+const hideLaunchVeil = () => {
+  const veil = document.getElementById('launch-veil')
+  if (!veil) return
+  veil.setAttribute('data-hide', 'true')
+  window.setTimeout(() => veil.remove(), 220)
+}
 
 // On a warm reopen (cached data already in localStorage) the app skips the
 // lightweight skeleton and mounts the full dashboard tree on its very first
@@ -50,8 +58,10 @@ const hideNativeSplashAfterPaint = async () => {
   await nextPaint()
   await nextPaint()
   await nextPaint()
-  await new Promise<void>(resolve => window.setTimeout(resolve, 60))
+  await wait(180)
   await SplashScreen.hide().catch(() => undefined)
+  await nextPaint()
+  hideLaunchVeil()
 }
 
 const finishLaunchHandoff = async () => {

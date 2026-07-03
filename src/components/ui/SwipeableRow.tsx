@@ -53,6 +53,12 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
 
   const close = useCallback(() => setOpen(false), [])
 
+  const closeForAction = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement | null
+    if (!target?.closest?.('button, a, [role="button"], [data-swipe-action]')) return
+    setOpen(false)
+  }, [])
+
   // Keep only one row open at a time across the whole app.
   useEffect(() => {
     if (open) {
@@ -157,6 +163,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         className="absolute inset-y-0 right-0 flex items-stretch"
         style={{ width: actionsWidth }}
         aria-hidden={!open}
+        onClickCapture={closeForAction}
       >
         {actions}
       </div>
