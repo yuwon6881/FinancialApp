@@ -406,7 +406,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                   : `${selectedCategories.length} category filter${selectedCategories.length > 1 ? 's' : ''} active`}
               </span>
             </span>
-            <span className="text-[9px] text-muted-foreground">â–¼</span>
+            <span className="text-[9px] text-muted-foreground">{'▼'}</span>
           </button>
 
           {isFilterDropdownOpen && (
