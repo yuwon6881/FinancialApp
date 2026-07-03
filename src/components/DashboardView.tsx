@@ -84,9 +84,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // Trend line tooltip state
   const [hoveredTrendPoint, setHoveredTrendPoint] = useState<number | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
-  // On touch, the first tap of a pie slice reveals its detail rather than navigating.
-  const sliceTouchedRef = useRef(false)
-
   // Subscription Confirmation States
   const [activeConfirmId, setActiveConfirmId] = useState<string | null>(null)
   const [paidDateInput, setPaidDateInput] = useState('')
@@ -1163,11 +1160,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           className="transition-all duration-200 cursor-pointer stroke-card stroke-2 hover:opacity-90"
                           onMouseEnter={() => setHoveredSlice(index)}
                           onMouseLeave={() => setHoveredSlice(null)}
-                          onTouchStart={() => { sliceTouchedRef.current = true; setHoveredSlice(index) }}
                           onClick={() => {
-                            // Touch: first tap just reveals the slice detail (navigate via the legend below)
-                            if (sliceTouchedRef.current) { sliceTouchedRef.current = false; return }
-                            onNavigateToLedger?.({ category: slice.category, range: chartView })
+                            if (hoveredSlice === index) {
+                              onNavigateToLedger?.({ category: slice.category, range: chartView })
+                            } else {
+                              setHoveredSlice(index)
+                            }
                           }}
                         />
                       )
