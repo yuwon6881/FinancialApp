@@ -32,7 +32,11 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   const isHeaderTouchRef = useRef(false)
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) {
+      setDragOffsetY(0)
+      setIsDragging(false)
+      return
+    }
 
     const scrollY = window.scrollY
     const { body } = document
@@ -117,18 +121,18 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     const deltaY = touch.clientY - touchStartYRef.current
 
     if (deltaY > 0) {
+      if (e.cancelable) {
+        e.preventDefault()
+      }
       setIsDragging(true)
       setDragOffsetY(deltaY)
     }
   }
 
   const handleTouchEnd = () => {
-    if (!isDragging) {
-      isHeaderTouchRef.current = false
-      return
-    }
+    if (!isHeaderTouchRef.current && !isDragging) return
 
-    if (dragOffsetY > 90) {
+    if (dragOffsetY > 65) {
       onClose()
     } else {
       setDragOffsetY(0)
@@ -171,11 +175,17 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
         className={`sheet-panel w-full ${maxWidthClassName} bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto focus:outline-none select-none`}
       >
         {/* Touch Drag Pill Handle */}
-        <div className="sheet-drag-area w-full py-1 -mt-2 -mb-1 flex justify-center cursor-grab active:cursor-grabbing">
-          <div className="w-12 h-1.5 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/50 transition" />
+        <div 
+          style={{ touchAction: 'none' }}
+          className="sheet-drag-area w-full py-2 -mt-3 -mb-1 flex justify-center cursor-grab active:cursor-grabbing"
+        >
+          <div className="w-12 h-1.5 rounded-full bg-muted-foreground/40 hover:bg-muted-foreground/60 transition" />
         </div>
 
-        <div className="sheet-drag-area flex items-center justify-between border-b border-border/40 pb-3">
+        <div 
+          style={{ touchAction: 'none' }}
+          className="sheet-drag-area flex items-center justify-between border-b border-border/40 pb-3"
+        >
           <div id={titleId} className="min-w-0 text-base font-bold text-foreground">{title}</div>
           <button
             type="button"
