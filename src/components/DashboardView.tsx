@@ -60,46 +60,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [isHoveringLiquidNetWorth, setIsHoveringLiquidNetWorth] = useState(false)
   const [notiToDelete, setNotiToDelete] = useState<any | null>(null)
 
-  if (isSwitchingCycle) {
-    return (
-      <div className="space-y-6 soft-rise">
-        <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="space-y-2 w-full md:w-auto">
-            <div className="h-6 w-48 rounded-lg bg-muted/60 animate-pulse" />
-            <div className="h-3 w-72 rounded-lg bg-muted/40 animate-pulse" />
-          </div>
-          <div className="h-9 w-60 rounded-xl bg-muted/50 animate-pulse" />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="p-5 rounded-2xl bg-card border border-border/60 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="h-3 w-24 rounded bg-muted/50 animate-pulse" />
-                <div className="size-8 rounded-xl bg-muted/60 animate-pulse" />
-              </div>
-              <div className="h-7 w-32 rounded-lg bg-muted/70 animate-pulse" />
-              <div className="h-2 w-full rounded-full bg-muted/40 animate-pulse" />
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="p-6 rounded-2xl bg-card border border-border/60 space-y-4">
-            <div className="h-5 w-40 rounded bg-muted/60 animate-pulse" />
-            <div className="h-48 w-full rounded-xl bg-muted/40 animate-pulse" />
-          </div>
-          <div className="p-6 rounded-2xl bg-card border border-border/60 space-y-4">
-            <div className="h-5 w-40 rounded bg-muted/60 animate-pulse" />
-            <div className="flex justify-center py-4">
-              <div className="size-36 rounded-full border-8 border-muted/50 animate-pulse" />
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   // Active wishlist item for dashboard progress display
   const activeWishlistItem = useMemo(() => {
     return wishlist.find(w => w.isActive && !w.isPurchased) || 
@@ -330,6 +290,46 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       return `${x},${y}`
     }).join(' ')
   }, [activeTrendPoints])
+
+  if (isSwitchingCycle) {
+    return (
+      <div className="space-y-6 soft-rise">
+        <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="space-y-2 w-full md:w-auto">
+            <div className="h-6 w-48 rounded-lg bg-muted/60 animate-pulse" />
+            <div className="h-3 w-72 rounded-lg bg-muted/40 animate-pulse" />
+          </div>
+          <div className="h-9 w-60 rounded-xl bg-muted/50 animate-pulse" />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="p-5 rounded-2xl bg-card border border-border/60 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="h-3 w-24 rounded bg-muted/50 animate-pulse" />
+                <div className="size-8 rounded-xl bg-muted/60 animate-pulse" />
+              </div>
+              <div className="h-7 w-32 rounded-lg bg-muted/70 animate-pulse" />
+              <div className="h-2 w-full rounded-full bg-muted/40 animate-pulse" />
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="p-6 rounded-2xl bg-card border border-border/60 space-y-4">
+            <div className="h-5 w-40 rounded bg-muted/60 animate-pulse" />
+            <div className="h-48 w-full rounded-xl bg-muted/40 animate-pulse" />
+          </div>
+          <div className="p-6 rounded-2xl bg-card border border-border/60 space-y-4">
+            <div className="h-5 w-40 rounded bg-muted/60 animate-pulse" />
+            <div className="flex justify-center py-4">
+              <div className="size-36 rounded-full border-8 border-muted/50 animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6 soft-rise">

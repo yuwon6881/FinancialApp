@@ -59,33 +59,6 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingPayment, setEditingPayment] = useState<RecurringPayment | null>(null)
-
-  if (isSwitchingCycle) {
-    return (
-      <div className="space-y-6 soft-rise">
-        <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="space-y-2 w-full md:w-auto">
-            <div className="h-6 w-48 rounded-lg bg-muted/60 animate-pulse" />
-            <div className="h-3 w-64 rounded-lg bg-muted/40 animate-pulse" />
-          </div>
-          <div className="h-9 w-40 rounded-xl bg-muted/50 animate-pulse" />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <div key={i} className="p-5 rounded-2xl bg-card border border-border/60 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="h-5 w-28 rounded bg-muted/60 animate-pulse" />
-                <div className="h-5 w-16 rounded-full bg-muted/50 animate-pulse" />
-              </div>
-              <div className="h-8 w-32 rounded-lg bg-muted/70 animate-pulse" />
-              <div className="h-4 w-full rounded bg-muted/40 animate-pulse" />
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-  }
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('')
@@ -235,6 +208,33 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   }
 
 
+
+  if (isSwitchingCycle) {
+    return (
+      <div className="space-y-6 soft-rise">
+        <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="space-y-2 w-full md:w-auto">
+            <div className="h-6 w-48 rounded-lg bg-muted/60 animate-pulse" />
+            <div className="h-3 w-64 rounded-lg bg-muted/40 animate-pulse" />
+          </div>
+          <div className="h-9 w-40 rounded-xl bg-muted/50 animate-pulse" />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="p-5 rounded-2xl bg-card border border-border/60 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="h-5 w-28 rounded bg-muted/60 animate-pulse" />
+                <div className="h-5 w-16 rounded-full bg-muted/50 animate-pulse" />
+              </div>
+              <div className="h-8 w-32 rounded-lg bg-muted/70 animate-pulse" />
+              <div className="h-4 w-full rounded bg-muted/40 animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6 soft-rise">
