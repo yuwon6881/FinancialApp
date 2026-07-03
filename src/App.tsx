@@ -39,13 +39,6 @@ const ViewFallback = () => <div className="app-shell min-h-screen" />
 const nextPaint = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
 const wait = (ms: number) => new Promise<void>(resolve => window.setTimeout(resolve, ms))
 
-const hideLaunchVeil = () => {
-  const veil = document.getElementById('launch-veil')
-  if (!veil) return
-  veil.setAttribute('data-hide', 'true')
-  window.setTimeout(() => veil.remove(), 220)
-}
-
 // On a warm reopen (cached data already in localStorage) the app skips the
 // lightweight skeleton and mounts the full dashboard tree on its very first
 // render, on a cold JS engine. Two RAF ticks can elapse before the WebView's
@@ -60,8 +53,6 @@ const hideNativeSplashAfterPaint = async () => {
   await nextPaint()
   await wait(180)
   await SplashScreen.hide().catch(() => undefined)
-  await nextPaint()
-  hideLaunchVeil()
 }
 
 const finishLaunchHandoff = async () => {
