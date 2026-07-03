@@ -58,15 +58,14 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
   cycleDay,
   currency = 'USD',
   hideSensitive,
-  onConfirmSubscription,
-  onDiscardSubscription,
+  onConfirmSubscription: _onConfirmSubscription,
+  onDiscardSubscription: _onDiscardSubscription,
   cycleOffset = 0,
   title
 }) => {
   const [isExpanded, setIsExpanded] = useState(false)
   const [selectedBill, setSelectedBill] = useState<ActiveRecurringPayment | null>(null)
   const [selectedNode, setSelectedNode] = useState<TimelineNode | null>(null)
-  const [payDateInput, setPayDateInput] = useState('')
 
   // Determine base month index (0-11)
   const baseMonthIndex = MONTH_NAMES.indexOf(selectedMonth) !== -1 ? MONTH_NAMES.indexOf(selectedMonth) : new Date().getMonth()
@@ -116,48 +115,51 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
     const startIso = formatIso(cycleStart)
     const endIso = formatIso(cycleEnd)
 
-    if (cycleOffset === 0) {
-      return activeRecurringPayments.map(p => {
-        const matchingTx = (transactions || []).find(t => {
-          if (!t.date || t.date < startIso || t.date > endIso) return false
-          const descLower = t.description.toLowerCase().trim()
-          const pNameLower = p.name.toLowerCase().trim()
-          return descLower === pNameLower || descLower.includes(pNameLower) || pNameLower.includes(descLower)
-        })
+    const rawList: ActiveRecurringPayment[] = cycleOffset === 0 
+      ? activeRecurringPayments 
+      : (() => {
+          const sourcePayments = allPayments && allPayments.length > 0 
+            ? allPayments.filter(p => p.active !== false)
+            : activeRecurringPayments
 
-        if (matchingTx) {
-          return {
-            ...p,
-            isPaid: true,
-            status: 'Paid' as const,
-            paidDate: matchingTx.date
-          }
-        }
-        return p
-      })
-    }
+          const list: ActiveRecurringPayment[] = []
 
-    const sourcePayments = allPayments && allPayments.length > 0 
-      ? allPayments.filter(p => p.active !== false)
-      : activeRecurringPayments
+          sourcePayments.forEach(p => {
+            const pStart = (p as any).startDate || ''
+            const pEnd = (p as any).endDate || ''
 
-    const list: ActiveRecurringPayment[] = []
+            if (pStart && pStart > endIso) return
+            if (pEnd && pEnd < startIso) return
 
-    sourcePayments.forEach(p => {
-      const pStart = (p as any).startDate || ''
-      const pEnd = (p as any).endDate || ''
+            const rawDay = (p as any).dueDate !== undefined ? (p as any).dueDate : ((p as any).dueDay || 1)
+            const dayNum = typeof rawDay === 'number' ? rawDay : (parseInt(String(rawDay)) || 1)
+            const daysInTargetMonth = new Date(year, monthIndex + 1, 0).getDate()
+            const clampedDay = Math.min(dayNum, daysInTargetMonth)
 
-      if (pStart && pStart > endIso) return
-      if (pEnd && pEnd < startIso) return
+            const moStr = String(monthIndex + 1).padStart(2, '0')
+            const dStr = String(clampedDay).padStart(2, '0')
+            const upcomingDueDate = `${year}-${moStr}-${dStr}`
 
-      const rawDay = (p as any).dueDate !== undefined ? (p as any).dueDate : ((p as any).dueDay || 1)
-      const dayNum = typeof rawDay === 'number' ? rawDay : (parseInt(String(rawDay)) || 1)
-      const daysInTargetMonth = new Date(year, monthIndex + 1, 0).getDate()
-      const clampedDay = Math.min(dayNum, daysInTargetMonth)
+            list.push({
+              id: `${p.id}-upcoming-${year}-${monthIndex}`,
+              recurringPaymentId: p.id,
+              name: p.name,
+              amount: p.amount,
+              category: p.category,
+              ledgerCategory: p.ledgerCategory,
+              dueDate: upcomingDueDate,
+              dueDay: clampedDay,
+              isPaid: false,
+              isDiscarded: false,
+              status: 'Pending' as const
+            })
+          })
 
-      const moStr = String(monthIndex + 1).padStart(2, '0')
-      const dStr = String(clampedDay).padStart(2, '0')
-      const upcomingDueDate = `${year}-${moStr}-${dStr}`
+          return list
+        })()
+
+    return rawList.map(p => {
+      const isServerPaid = p.isPaid || p.status === 'Paid'
 
       const matchingTx = (transactions || []).find(t => {
         if (!t.date || t.date < startIso || t.date > endIso) return false
@@ -166,26 +168,17 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
         return descLower === pNameLower || descLower.includes(pNameLower) || pNameLower.includes(descLower)
       })
 
-      const isPaid = !!matchingTx
-      const status = isPaid ? ('Paid' as const) : ('Pending' as const)
+      if (isServerPaid || matchingTx) {
+        return {
+          ...p,
+          isPaid: true,
+          status: 'Paid' as const,
+          paidDate: p.paidDate || (matchingTx ? matchingTx.date : null)
+        }
+      }
 
-      list.push({
-        id: `${p.id}-upcoming-${year}-${monthIndex}`,
-        recurringPaymentId: p.id,
-        name: p.name,
-        amount: p.amount,
-        category: p.category,
-        ledgerCategory: p.ledgerCategory,
-        dueDate: upcomingDueDate,
-        dueDay: clampedDay,
-        isPaid,
-        isDiscarded: false,
-        status,
-        paidDate: matchingTx ? matchingTx.date : null
-      })
+      return p
     })
-
-    return list
   }, [activeRecurringPayments, allPayments, transactions, cycleOffset, year, monthIndex, cycleStart, cycleEnd])
 
   // Group bills by due date to prevent overlapping nodes on the timeline
@@ -233,7 +226,6 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
   const handleNodeClick = (node: any) => {
     if (node.bills.length === 1) {
       setSelectedBill(node.bills[0])
-      setPayDateInput(node.bills[0].dueDate)
     } else {
       setSelectedNode(node)
     }
@@ -357,7 +349,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
             })()}
 
             {/* Render grouped timeline nodes */}
-            {timelineNodes.map((node) => {
+            {timelineNodes.map((node, idx) => {
               // Determine status based on all bills in the node
               const allPaid = node.bills.every(b => b.status === 'Paid')
               const anyPending = node.bills.some(b => b.status === 'Pending')
@@ -395,8 +387,8 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
               return (
                 <div
                   key={node.dueDate}
-                  style={{ left: `${node.percent}%` }}
-                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 group z-10"
+                  style={{ left: `${node.percent}%`, zIndex: 100 - idx }}
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 group"
                 >
                   {/* Node trigger dot — small visual, large touch target via padding/negative margin */}
                   <button
@@ -413,7 +405,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
 
                   {/* Alternating & Staggered Labels */}
                   <div 
-                    className={`absolute flex flex-col pointer-events-none select-none ${alignClasses} ${
+                    className={`absolute flex flex-col ${alignClasses} ${
                       node.isTop ? 'bottom-full' : 'top-full'
                     }`}
                   >
@@ -427,13 +419,16 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                       style={{ height: connectorHeight }}
                     />
                     
-                    {/* Info Badge */}
-                    <span className={`px-2 py-0.75 rounded-md text-[9px] font-bold text-foreground border border-border bg-card whitespace-nowrap shadow-xs flex items-center gap-1 ${
-                      allDiscarded ? 'line-through opacity-60 text-muted-foreground' : ''
-                    }`}>
+                    {/* Info Badge - clickable directly */}
+                    <button
+                      onClick={() => handleNodeClick(node)}
+                      className={`px-2 py-0.75 rounded-md text-[9px] font-bold text-foreground border border-border bg-card whitespace-nowrap shadow-xs flex items-center gap-1 hover:bg-muted/80 cursor-pointer pointer-events-auto transition ${
+                        allDiscarded ? 'line-through opacity-60 text-muted-foreground' : ''
+                      }`}
+                    >
                       <span className="truncate max-w-[120px]">{labelText}</span>
                       <span className="text-muted-foreground font-semibold">({formattedDueDay})</span>
-                    </span>
+                    </button>
                   </div>
                 </div>
               )
@@ -475,7 +470,6 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                   key={bill.id}
                   onClick={() => {
                     setSelectedBill(bill)
-                    setPayDateInput(bill.dueDate)
                     setSelectedNode(null)
                   }}
                   className="w-full p-3 rounded-xl border border-border/60 bg-muted/10 hover:bg-muted/30 transition flex items-center justify-between text-left cursor-pointer"
@@ -502,7 +496,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
         </BottomSheet>
       )}
 
-      {/* Bill Detail / Quick Action Modal Overlay */}
+      {/* Bill Detail Read-Only Modal Overlay */}
       {selectedBill && (
         <BottomSheet
           isOpen={!!selectedBill}
@@ -532,7 +526,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
           <div className="text-xs space-y-3 font-semibold text-foreground">
             <div className="grid grid-cols-2 gap-3.5 bg-muted/30 p-3 rounded-xl">
               <div>
-                <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-0.5">Amount Due</span>
+                <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-0.5">Amount</span>
                 <span className="text-base font-extrabold text-foreground">{formatSensitive(Math.abs(selectedBill.amount))}</span>
               </div>
               <div>
@@ -565,62 +559,21 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
               </div>
             </div>
 
-            {selectedBill.status === 'Pending' && (
-              <div className="border-t border-border/30 pt-3 mt-3 space-y-3">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider shrink-0">Paid Date:</span>
-                  <input
-                    type="date"
-                    value={payDateInput}
-                    onChange={e => setPayDateInput(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="flex gap-2 w-full pt-1.5">
-                  {onDiscardSubscription && (
-                    <button
-                      onClick={() => {
-                        onDiscardSubscription({
-                          id: selectedBill.id,
-                          recurringPaymentId: selectedBill.recurringPaymentId,
-                          name: selectedBill.name,
-                          amount: selectedBill.amount,
-                          category: selectedBill.category,
-                          ledgerCategory: selectedBill.ledgerCategory,
-                          billingDate: selectedBill.dueDate
-                        })
-                        setSelectedBill(null)
-                      }}
-                      className="px-3.5 py-2 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-xs rounded-xl transition duration-150 cursor-pointer"
-                      title="Mark this month's bill as discarded"
-                    >
-                      Discard Month
-                    </button>
-                  )}
-                  
-                  {onConfirmSubscription && (
-                    <button
-                      onClick={() => {
-                        onConfirmSubscription({
-                          id: selectedBill.id,
-                          recurringPaymentId: selectedBill.recurringPaymentId,
-                          name: selectedBill.name,
-                          amount: selectedBill.amount,
-                          category: selectedBill.category,
-                          ledgerCategory: selectedBill.ledgerCategory,
-                          billingDate: selectedBill.dueDate
-                        }, payDateInput)
-                        setSelectedBill(null)
-                      }}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition duration-150 cursor-pointer shadow-md shadow-blue-600/10"
-                    >
-                      Confirm Paid
-                    </button>
-                  )}
-                </div>
+            {selectedBill.paidDate && (
+              <div className="bg-green-500/10 border border-green-500/20 p-2.5 rounded-xl text-green-600 dark:text-green-400 text-xs flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider">Paid On</span>
+                <span className="font-extrabold">{selectedBill.paidDate}</span>
               </div>
             )}
+
+            <div className="pt-2">
+              <button
+                onClick={() => setSelectedBill(null)}
+                className="w-full py-2 bg-muted hover:bg-muted/80 text-foreground font-bold rounded-xl transition text-xs cursor-pointer border border-border"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </BottomSheet>
       )}
