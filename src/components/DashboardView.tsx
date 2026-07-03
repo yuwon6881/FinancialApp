@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useRef } from 'react'
+import React, { useState, useMemo, useRef } from 'react'
 import type { Transaction, DashboardData, WishlistItem } from '../types'
 import { 
   Wallet, 
@@ -570,7 +570,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       </div>
                     )}
                   </div>
-                  <div className="flex items-start justify-end gap-1.5 text-right">
+                  <div className="flex items-center justify-end gap-1.5 text-right">
                     <div className="flex min-w-[96px] flex-col items-end gap-1">
                       <div className={`font-bold ${isNeg ? 'text-orange-500' : 'text-foreground'}`}>
                         {formatSensitive(c.remaining)}

@@ -941,15 +941,21 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
 
     if (editingTxId) {
-      await onUpdateTransaction?.(editingTxId, {
+      const targetId = editingTxId
+      resetFormFields()
+      const updatePromise = onUpdateTransaction?.(targetId, {
         description,
         amount: finalAmount,
         category: txType === 'transfer' ? 'Transfer' : category,
         ledgerCategory: finalLedgerCategory,
         date
       })
-      if (showAllCycles && onFetchPagedTransactions) {
-        runServerFetch({ page: currentPage, search: appliedSearch, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
+      if (updatePromise && typeof (updatePromise as any).then === 'function') {
+        (updatePromise as any).then(() => {
+          if (showAllCycles && onFetchPagedTransactions) {
+            runServerFetch({ page: currentPage, search: appliedSearch, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
+          }
+        })
       }
     } else {
       await onAddTransaction({
@@ -959,9 +965,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         ledgerCategory: finalLedgerCategory,
         date
       })
+      resetFormFields()
     }
-
-    resetFormFields()
   }
 
   const sourceTransactions = useMemo(() => transactions, [transactions])
@@ -1735,9 +1740,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             )}
           </button>
 
+          {/* Desktop Filter Popover */}
           {isFilterDropdownOpen && (
-            <div className="fixed left-4 right-4 top-[calc(8rem+env(safe-area-inset-top,0px))] max-h-[calc(100dvh-11rem-env(safe-area-inset-bottom,0px))] overflow-hidden bg-card border border-border rounded-2xl shadow-xl p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150 md:absolute md:left-auto md:right-0 md:top-full md:mt-1.5 md:w-64 md:max-h-none">
-              
+            <div className="hidden md:block absolute right-0 top-full mt-1.5 w-64 bg-card border border-border rounded-2xl shadow-xl p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
               {/* Header */}
               <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3">
                 <span className="text-xs font-bold text-foreground">Filter Ledger Entries</span>
@@ -1752,8 +1757,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               </div>
 
               {/* Scrollable sections */}
-              <div className="space-y-4 max-h-[calc(100dvh-18rem-env(safe-area-inset-bottom,0px))] md:max-h-72 overflow-y-auto pr-1">
-                
+              <div className="space-y-4 max-h-72 overflow-y-auto pr-1">
                 {/* Section 1: Ledger Allocation Buckets */}
                 <div className="space-y-2">
                   <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Ledger Buckets</span>
@@ -1824,6 +1828,95 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               )}
             </div>
           )}
+
+          {/* Mobile BottomSheet Filter */}
+          <div className="md:hidden">
+            <BottomSheet
+              isOpen={isFilterDropdownOpen}
+              title="Filter Ledger Entries"
+              onClose={() => setIsFilterDropdownOpen(false)}
+              footer={showAllCycles ? (
+                <button
+                  onClick={() => {
+                    handleApplyFilters()
+                    setIsFilterDropdownOpen(false)
+                  }}
+                  disabled={serverIsFetching}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-xs cursor-pointer transition duration-200 disabled:opacity-50
+                    bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600
+                    text-white shadow-md shadow-blue-600/20 hover:shadow-blue-600/30"
+                >
+                  {serverIsFetching
+                    ? <Loader2 className="size-3.5 animate-spin" />
+                    : <Filter className="size-3.5" />}
+                  Apply Filters
+                </button>
+              ) : undefined}
+            >
+              <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+                {(showAllCycles ? pendingFilters : selectedFilters).length > 0 && (
+                  <div className="flex justify-end">
+                    <button
+                      onClick={handleClearFilters}
+                      className="text-xs font-bold text-orange-500 hover:underline cursor-pointer"
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                )}
+
+                {/* Section 1: Ledger Allocation Buckets */}
+                <div className="space-y-2">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Ledger Buckets</span>
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {['Essentials', 'Growth', 'Stability', 'Rewards', 'Income'].map(bucket => {
+                      const isChecked = (showAllCycles ? pendingFilters : selectedFilters).includes(bucket)
+                      return (
+                        <label 
+                          key={bucket} 
+                          className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs cursor-pointer select-none transition ${getCategoryFilterClass(bucket, isChecked)}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleToggleFilter(bucket)}
+                            className="rounded border-border text-blue-500 focus:ring-blue-500 size-3.5"
+                          />
+                          <span className={`size-2.5 rounded-full ${getCategoryDotClass(bucket)}`} />
+                          <span className="font-semibold">{bucket}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Section 2: Transaction Subcategories */}
+                <div className="space-y-2">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Subcategories</span>
+                  <div className="grid grid-cols-1 gap-1.5 max-h-52 overflow-y-auto pr-0.5">
+                    {categories.map(c => {
+                      const isChecked = (showAllCycles ? pendingFilters : selectedFilters).includes(c.name)
+                      return (
+                        <label 
+                          key={c.id} 
+                          className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs cursor-pointer select-none transition ${getCategoryFilterClass(c.name, isChecked)}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleToggleFilter(c.name)}
+                            className="rounded border-border text-blue-500 focus:ring-blue-500 size-3.5"
+                          />
+                          <span className={`size-2.5 rounded-full ${getCategoryDotClass(c.name)}`} />
+                          <span className="font-semibold truncate">{c.name}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            </BottomSheet>
+          </div>
         </div>
       </div>
 

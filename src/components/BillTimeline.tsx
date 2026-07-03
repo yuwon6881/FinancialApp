@@ -14,6 +14,8 @@ interface BillTimelineProps {
   hideSensitive: boolean
   onConfirmSubscription?: (noti: any, paidDate: string) => void
   onDiscardSubscription?: (noti: any) => void
+  cycleOffset?: number
+  title?: string
 }
 
 interface TimelineNode {
@@ -53,16 +55,26 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
   currency = 'USD',
   hideSensitive,
   onConfirmSubscription,
-  onDiscardSubscription
+  onDiscardSubscription,
+  cycleOffset = 0,
+  title
 }) => {
   const [isExpanded, setIsExpanded] = useState(false)
   const [selectedBill, setSelectedBill] = useState<ActiveRecurringPayment | null>(null)
   const [selectedNode, setSelectedNode] = useState<TimelineNode | null>(null)
   const [payDateInput, setPayDateInput] = useState('')
 
-  // Determine current month index (0-11)
-  const monthIndex = MONTH_NAMES.indexOf(selectedMonth) !== -1 ? MONTH_NAMES.indexOf(selectedMonth) : new Date().getMonth()
-  const year = selectedYear > 0 ? selectedYear : new Date().getFullYear()
+  // Determine base month index (0-11)
+  const baseMonthIndex = MONTH_NAMES.indexOf(selectedMonth) !== -1 ? MONTH_NAMES.indexOf(selectedMonth) : new Date().getMonth()
+  const baseYear = selectedYear > 0 ? selectedYear : new Date().getFullYear()
+
+  // Calculate effective month & year based on cycleOffset (e.g. +1 for next cycle)
+  const totalMonths = baseMonthIndex + cycleOffset
+  const monthIndex = (totalMonths % 12 + 12) % 12
+  const year = baseYear + Math.floor(totalMonths / 12)
+  const effectiveMonthName = MONTH_NAMES[monthIndex]
+
+  const displayTitle = title || (cycleOffset === 1 ? 'Upcoming Next Cycle Subscriptions' : 'Subscriptions Billing Timeline')
 
   // Cycle range dates
   const { start: cycleStart, end: cycleEnd } = getCycleRangeDates(year, monthIndex + 1, cycleDay)
@@ -89,9 +101,30 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
     )
   }
 
+  // Calculate payments for this cycle (for cycleOffset > 0, project due dates into the target cycle range)
+  const processedPayments = React.useMemo(() => {
+    if (cycleOffset === 0) return activeRecurringPayments
+
+    return activeRecurringPayments.map(p => {
+      const parts = p.dueDate.split('-')
+      const originalDay = parts.length === 3 ? parseInt(parts[2]) : (p.dueDay || 1)
+      const daysInTargetMonth = new Date(year, monthIndex + 1, 0).getDate()
+      const clampedDay = Math.min(originalDay, daysInTargetMonth)
+      const moStr = String(monthIndex + 1).padStart(2, '0')
+      const dStr = String(clampedDay).padStart(2, '0')
+      const upcomingDueDate = `${year}-${moStr}-${dStr}`
+
+      return {
+        ...p,
+        dueDate: upcomingDueDate,
+        status: 'Upcoming' as const
+      }
+    })
+  }, [activeRecurringPayments, cycleOffset, year, monthIndex])
+
   // Group bills by due date to prevent overlapping nodes on the timeline
   const uniqueDatesMap: { [dateStr: string]: ActiveRecurringPayment[] } = {}
-  activeRecurringPayments.forEach(p => {
+  processedPayments.forEach(p => {
     if (!uniqueDatesMap[p.dueDate]) {
       uniqueDatesMap[p.dueDate] = []
     }
@@ -148,14 +181,14 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
           className="flex items-center gap-2 text-xs sm:text-sm font-bold text-foreground hover:text-blue-500 cursor-pointer transition select-none text-left"
         >
           <Calendar className="size-4 text-blue-500 shrink-0" />
-          <span>Subscriptions Billing Timeline</span>
+          <span>{displayTitle}</span>
           <span className="text-[10px] text-muted-foreground bg-muted/70 px-2 py-0.5 rounded-md font-semibold shrink-0">
-            {activeRecurringPayments.length} active
+            {processedPayments.length} active
           </span>
           <ChevronDown className="size-4 text-muted-foreground shrink-0" />
         </button>
         <div className="text-[10px] text-muted-foreground font-semibold bg-muted/50 px-2 py-1 rounded-lg whitespace-nowrap shrink-0 hidden sm:block">
-          Cycle: {selectedMonth} {year}
+          Cycle: {effectiveMonthName} {year}
         </div>
       </div>
     )
@@ -168,7 +201,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
           <div>
             <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
               <Calendar className="size-5 text-blue-500" />
-              <span>Subscriptions Billing Timeline</span>
+              <span>{displayTitle}</span>
             </h3>
             <p className="text-[10px] text-muted-foreground mt-0.5 font-semibold">
               Cycle Range: {startLabel} – {endLabel}

@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react'
+import React, { useState } from 'react'
 import type { RecurringPayment, TransactionCategory, ActiveRecurringPayment } from '../types'
 import { 
   Plus, 
@@ -9,8 +9,7 @@ import {
   Calendar, 
   Bell, 
   X,
-  Edit,
-  ChevronDown
+  Edit
 } from 'lucide-react'
 import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput } from '../lib/utils'
 import { triggerHaptic } from '../lib/haptics'
@@ -58,7 +57,6 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingPayment, setEditingPayment] = useState<RecurringPayment | null>(null)
-  const [showTimeline, setShowTimeline] = useState(false)
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('')
@@ -245,38 +243,32 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         </div>
       </div>
 
-      {/* Visual Bill Timeline */}
-      <div className="rounded-2xl bg-card border border-border/60 shadow-xs overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setShowTimeline(prev => !prev)}
-          className="w-full flex items-center justify-between gap-3 p-4 text-left cursor-pointer hover:bg-muted/20 transition select-none"
-        >
-          <div className="min-w-0">
-            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-              <Calendar className="size-4 text-blue-500 shrink-0" />
-              <span className="truncate">Billing Timeline</span>
-            </h3>
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              {showTimeline ? 'Visible for this session.' : 'Tap to view scheduled billing dates.'}
-            </p>
-          </div>
-          <ChevronDown className={`size-4 text-muted-foreground shrink-0 transition-transform duration-200 ${showTimeline ? 'rotate-180' : ''}`} />
-        </button>
-        {showTimeline && (
-          <div className="border-t border-border/40 p-4">
-            <BillTimeline
-              activeRecurringPayments={activeRecurringPayments}
-              selectedMonth={selectedMonth}
-              selectedYear={selectedYear}
-              cycleDay={cycleDay}
-              currency={currency}
-              hideSensitive={hideSensitive}
-              onConfirmSubscription={onConfirmSubscription}
-              onDiscardSubscription={onDiscardSubscription}
-            />
-          </div>
-        )}
+      {/* Visual Bill Timelines (Current Cycle & Upcoming Next Cycle) */}
+      <div className="space-y-4">
+        <BillTimeline
+          title="Current Cycle Subscriptions Timeline"
+          cycleOffset={0}
+          activeRecurringPayments={activeRecurringPayments}
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+          cycleDay={cycleDay}
+          currency={currency}
+          hideSensitive={hideSensitive}
+          onConfirmSubscription={onConfirmSubscription}
+          onDiscardSubscription={onDiscardSubscription}
+        />
+        <BillTimeline
+          title="Upcoming Next Cycle Subscriptions Timeline"
+          cycleOffset={1}
+          activeRecurringPayments={activeRecurringPayments}
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+          cycleDay={cycleDay}
+          currency={currency}
+          hideSensitive={hideSensitive}
+          onConfirmSubscription={onConfirmSubscription}
+          onDiscardSubscription={onDiscardSubscription}
+        />
       </div>
 
       {/* Add / Edit Subscription Modal (bottom sheet on mobile) */}
@@ -409,8 +401,9 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
             <span className="text-[9px] text-muted-foreground">{'▼'}</span>
           </button>
 
+          {/* Desktop Filter Popover */}
           {isFilterDropdownOpen && (
-            <div className="absolute left-0 mt-2 w-60 bg-card border border-border rounded-2xl shadow-xl p-4 z-40 animate-in fade-in slide-in-from-top-2 duration-150">
+            <div className="hidden sm:block absolute left-0 mt-2 w-60 bg-card border border-border rounded-2xl shadow-xl p-4 z-40 animate-in fade-in slide-in-from-top-2 duration-150">
               <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3">
                 <span className="text-xs font-bold text-foreground">Filter Categories</span>
                 {selectedCategories.length > 0 && (
@@ -444,6 +437,48 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
               </div>
             </div>
           )}
+
+          {/* Mobile BottomSheet Filter */}
+          <div className="sm:hidden">
+            <BottomSheet
+              isOpen={isFilterDropdownOpen}
+              title="Filter Categories"
+              onClose={() => setIsFilterDropdownOpen(false)}
+            >
+              <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+                {selectedCategories.length > 0 && (
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => setSelectedCategories([])}
+                      className="text-xs font-bold text-orange-500 hover:underline cursor-pointer"
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 gap-2">
+                  {['Essentials', 'Growth', 'Stability', 'Rewards'].map(bucket => {
+                    const isChecked = selectedCategories.includes(bucket)
+                    return (
+                      <label 
+                        key={bucket} 
+                        className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-xs cursor-pointer select-none transition ${getCategoryFilterClass(bucket, isChecked)}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleToggleCategoryFilter(bucket)}
+                          className="rounded border-border text-blue-500 focus:ring-blue-500 size-3.5"
+                        />
+                        <span className={`size-2.5 rounded-full ${getCategoryDotClass(bucket)}`} />
+                        <span className="font-semibold">{bucket}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+            </BottomSheet>
+          </div>
         </div>
 
         {/* Sort Select */}

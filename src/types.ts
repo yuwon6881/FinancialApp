@@ -70,9 +70,10 @@ export interface ActiveRecurringPayment {
   category: string
   ledgerCategory: string
   dueDate: string
+  dueDay?: number
   isPaid: boolean
   isDiscarded: boolean
-  status: "Pending" | "Paid" | "Discarded"
+  status: "Pending" | "Paid" | "Discarded" | "Upcoming"
   paidDate?: string | null
 }
 
