@@ -1273,6 +1273,7 @@ function App() {
           <RecurringPaymentsView 
             payments={recurringPayments}
             activeRecurringPayments={optimisticDashboardData?.activeRecurringPayments || []}
+            transactions={allTransactions}
             selectedMonth={selectedMonth}
             selectedYear={selectedYear}
             cycleDay={optimisticDashboardData?.setting?.cycleDay || 28}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import type { RecurringPayment, TransactionCategory, ActiveRecurringPayment } from '../types'
+import type { RecurringPayment, TransactionCategory, ActiveRecurringPayment, Transaction } from '../types'
 import { 
   Plus, 
   Trash2, 
@@ -21,6 +21,7 @@ import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } fr
 interface RecurringPaymentsViewProps {
   payments: RecurringPayment[]
   activeRecurringPayments: ActiveRecurringPayment[]
+  transactions?: Transaction[]
   selectedMonth: string
   selectedYear: number
   cycleDay: number
@@ -41,6 +42,7 @@ interface RecurringPaymentsViewProps {
 export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   payments,
   activeRecurringPayments,
+  transactions = [],
   selectedMonth,
   selectedYear,
   cycleDay,
@@ -279,6 +281,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
           cycleOffset={0}
           activeRecurringPayments={activeRecurringPayments}
           allPayments={payments}
+          transactions={transactions}
           selectedMonth={selectedMonth}
           selectedYear={selectedYear}
           cycleDay={cycleDay}
@@ -292,6 +295,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
           cycleOffset={1}
           activeRecurringPayments={activeRecurringPayments}
           allPayments={payments}
+          transactions={transactions}
           selectedMonth={selectedMonth}
           selectedYear={selectedYear}
           cycleDay={cycleDay}

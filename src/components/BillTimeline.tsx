@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import type { ActiveRecurringPayment, RecurringPayment } from '../types'
+import type { ActiveRecurringPayment, RecurringPayment, Transaction } from '../types'
 import { Calendar, CheckCircle2, AlertCircle, Ban, List, ChevronDown, ChevronUp } from 'lucide-react'
 import { formatCurrencyVal } from '../lib/utils'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
@@ -8,6 +8,7 @@ import { BottomSheet } from './ui/BottomSheet'
 interface BillTimelineProps {
   activeRecurringPayments: ActiveRecurringPayment[]
   allPayments?: RecurringPayment[]
+  transactions?: Transaction[]
   selectedMonth: string
   selectedYear: number
   cycleDay: number
@@ -51,6 +52,7 @@ function getDaySuffix(d: number) {
 export const BillTimeline: React.FC<BillTimelineProps> = ({
   activeRecurringPayments,
   allPayments,
+  transactions = [],
   selectedMonth,
   selectedYear,
   cycleDay,
@@ -104,8 +106,6 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
 
   // Calculate payments for this cycle
   const processedPayments = React.useMemo(() => {
-    if (cycleOffset === 0) return activeRecurringPayments
-
     const formatIso = (d: Date) => {
       const y = d.getFullYear()
       const m = String(d.getMonth() + 1).padStart(2, '0')
@@ -115,6 +115,27 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
 
     const startIso = formatIso(cycleStart)
     const endIso = formatIso(cycleEnd)
+
+    if (cycleOffset === 0) {
+      return activeRecurringPayments.map(p => {
+        const matchingTx = (transactions || []).find(t => {
+          if (!t.date || t.date < startIso || t.date > endIso) return false
+          const descLower = t.description.toLowerCase().trim()
+          const pNameLower = p.name.toLowerCase().trim()
+          return descLower === pNameLower || descLower.includes(pNameLower) || pNameLower.includes(descLower)
+        })
+
+        if (matchingTx) {
+          return {
+            ...p,
+            isPaid: true,
+            status: 'Paid' as const,
+            paidDate: matchingTx.date
+          }
+        }
+        return p
+      })
+    }
 
     const sourcePayments = allPayments && allPayments.length > 0 
       ? allPayments.filter(p => p.active !== false)
@@ -138,6 +159,16 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
       const dStr = String(clampedDay).padStart(2, '0')
       const upcomingDueDate = `${year}-${moStr}-${dStr}`
 
+      const matchingTx = (transactions || []).find(t => {
+        if (!t.date || t.date < startIso || t.date > endIso) return false
+        const descLower = t.description.toLowerCase().trim()
+        const pNameLower = p.name.toLowerCase().trim()
+        return descLower === pNameLower || descLower.includes(pNameLower) || pNameLower.includes(descLower)
+      })
+
+      const isPaid = !!matchingTx
+      const status = isPaid ? ('Paid' as const) : ('Pending' as const)
+
       list.push({
         id: `${p.id}-upcoming-${year}-${monthIndex}`,
         recurringPaymentId: p.id,
@@ -147,14 +178,15 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
         ledgerCategory: p.ledgerCategory,
         dueDate: upcomingDueDate,
         dueDay: clampedDay,
-        isPaid: false,
+        isPaid,
         isDiscarded: false,
-        status: 'Pending' as const
+        status,
+        paidDate: matchingTx ? matchingTx.date : null
       })
     })
 
     return list
-  }, [activeRecurringPayments, allPayments, cycleOffset, year, monthIndex, cycleStart, cycleEnd])
+  }, [activeRecurringPayments, allPayments, transactions, cycleOffset, year, monthIndex, cycleStart, cycleEnd])
 
   // Group bills by due date to prevent overlapping nodes on the timeline
   const uniqueDatesMap: { [dateStr: string]: ActiveRecurringPayment[] } = {}
