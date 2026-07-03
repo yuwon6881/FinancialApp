@@ -678,6 +678,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
   }, [showAddForm, showExportModal, showStabilityCapModal])
 
+  const handleCloseFormRef = useRef(handleCloseForm)
+  handleCloseFormRef.current = handleCloseForm
+
+  const handleCancelStabilityCapModalRef = useRef<() => void>(() => {})
+
   useEffect(() => {
     if (!showAddForm) return
 
@@ -685,7 +690,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     window.history.pushState({ modalId: 'ledger-add-form' }, '')
 
     const handlePopState = () => {
-      handleCloseForm()
+      handleCloseFormRef.current()
     }
 
     window.addEventListener('popstate', handlePopState)
@@ -727,7 +732,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     window.history.pushState({ modalId: 'ledger-stability-cap' }, '')
 
     const handlePopState = () => {
-      handleCancelStabilityCapModal()
+      handleCancelStabilityCapModalRef.current()
     }
 
     window.addEventListener('popstate', handlePopState)
@@ -864,6 +869,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setShowStabilityCapModal(false)
     setPendingTxData(null)
   }
+  handleCancelStabilityCapModalRef.current = handleCancelStabilityCapModal
 
   const handleDeleteClick = (t: Transaction) => {
     setTxToDelete(t)

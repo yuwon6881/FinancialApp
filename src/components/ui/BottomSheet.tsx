@@ -62,14 +62,18 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     }
   }, [isOpen])
 
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
   useEffect(() => {
     if (!isOpen) return
 
+    const modalId = `modal-${titleId}`
     // Push a dummy history state so back button pops it instead of exiting the PWA
-    window.history.pushState({ modalId: titleId }, '')
+    window.history.pushState({ modalId }, '')
 
     const handlePopState = () => {
-      onClose()
+      onCloseRef.current()
     }
 
     window.addEventListener('popstate', handlePopState)
@@ -77,11 +81,11 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     return () => {
       window.removeEventListener('popstate', handlePopState)
       // If closed programmatically (not via back button popstate), remove the dummy state
-      if (window.history.state?.modalId === titleId) {
+      if (window.history.state?.modalId === modalId) {
         window.history.back()
       }
     }
-  }, [isOpen, onClose, titleId])
+  }, [isOpen])
 
   useDialog({ isOpen, onClose, ref: panelRef })
 
