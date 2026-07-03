@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import type { Transaction, TransactionCategory } from '../types'
 import type { PagedTransactionResult } from '../lib/api'
@@ -586,9 +586,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     runServerFetch({ page: 1, search: pendingSearchTerm, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
   }
 
-  // Toggle dropdown on click out
+  // Toggle dropdown on click out & lock body scrolling while filter dropdown is open
   useEffect(() => {
-    if (!isFilterDropdownOpen) return
+    if (!isFilterDropdownOpen) {
+      document.body.style.overflow = ''
+      return
+    }
+    document.body.style.overflow = 'hidden'
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement
       if (!target.closest('.ledger-filter-dropdown')) {
@@ -596,7 +600,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       }
     }
     document.addEventListener('click', handleClick)
-    return () => document.removeEventListener('click', handleClick)
+    return () => {
+      document.body.style.overflow = ''
+      document.removeEventListener('click', handleClick)
+    }
   }, [isFilterDropdownOpen])
 
   const resetFormFields = () => {
@@ -1729,7 +1736,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           </button>
 
           {isFilterDropdownOpen && (
-            <div className="fixed left-4 right-4 top-[calc(8rem+env(safe-area-inset-top,0px))] max-h-[calc(100dvh-11rem-env(safe-area-inset-bottom,0px))] overflow-hidden bg-card border border-border rounded-2xl shadow-xl p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150 md:absolute md:left-auto md:right-0 md:top-11 md:w-64 md:max-h-none">
+            <div className="fixed left-4 right-4 top-[calc(8rem+env(safe-area-inset-top,0px))] max-h-[calc(100dvh-11rem-env(safe-area-inset-bottom,0px))] overflow-hidden bg-card border border-border rounded-2xl shadow-xl p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150 md:absolute md:left-auto md:right-0 md:top-full md:mt-1.5 md:w-64 md:max-h-none">
               
               {/* Header */}
               <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3">
@@ -1843,15 +1850,15 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     <td className="p-4 font-medium text-muted-foreground">{t.date}</td>
                     <td className="p-4 font-semibold text-foreground flex items-center gap-2">
                       <span>{t.description}</span>
-                      {(t as any).isPendingSync && (
+                      {(t.id === activeSyncId || (t as any).isPendingSync) && (
                         <span 
-                          title={t.id === activeSyncId ? "Syncing to database..." : "Pending sync (offline)"} 
-                          className="inline-flex items-center text-[9px] px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 shrink-0 select-none"
+                          title={t.id === activeSyncId ? "Updating transaction..." : "Pending sync (offline)"} 
+                          className="inline-flex items-center text-[9px] px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 shrink-0 select-none animate-pulse"
                         >
                           {t.id === activeSyncId ? (
                             <>
-                              <Loader2 className="size-2 animate-spin shrink-0 mr-1" />
-                              Syncing
+                              <Loader2 className="size-2.5 animate-spin shrink-0 mr-1" />
+                              Syncing...
                             </>
                           ) : (
                             "Pending"
@@ -2043,13 +2050,16 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 flex items-center gap-1.5 min-w-0">
                     <h4 className="text-sm font-bold text-foreground leading-snug truncate">{t.description}</h4>
-                    {(t as any).isPendingSync && (
-                      <span
-                        title={isSyncing ? "Syncing to database..." : "Pending sync (offline)"}
-                        className="inline-flex items-center text-[9px] px-1 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 shrink-0 select-none"
+                    {(t.id === activeSyncId || (t as any).isPendingSync) && (
+                      <span 
+                        title={t.id === activeSyncId ? "Updating transaction..." : "Pending sync (offline)"} 
+                        className="inline-flex items-center text-[9px] px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 shrink-0 select-none animate-pulse"
                       >
-                        {isSyncing ? (
-                          <Loader2 className="size-2 animate-spin text-amber-500" />
+                        {t.id === activeSyncId ? (
+                          <>
+                            <Loader2 className="size-2.5 animate-spin text-amber-500 shrink-0 mr-1" />
+                            Syncing...
+                          </>
                         ) : (
                           "Pending"
                         )}

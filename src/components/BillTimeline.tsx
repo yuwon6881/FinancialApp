@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import type { ActiveRecurringPayment } from '../types'
-import { Calendar, CheckCircle2, AlertCircle, Ban, List } from 'lucide-react'
+import { Calendar, CheckCircle2, AlertCircle, Ban, List, ChevronDown, ChevronUp } from 'lucide-react'
 import { formatCurrencyVal } from '../lib/utils'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { BottomSheet } from './ui/BottomSheet'
@@ -55,6 +55,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
   onConfirmSubscription,
   onDiscardSubscription
 }) => {
+  const [isExpanded, setIsExpanded] = useState(false)
   const [selectedBill, setSelectedBill] = useState<ActiveRecurringPayment | null>(null)
   const [selectedNode, setSelectedNode] = useState<TimelineNode | null>(null)
   const [payDateInput, setPayDateInput] = useState('')
@@ -139,17 +140,48 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
     }
   }
 
+  if (!isExpanded) {
+    return (
+      <div className="p-4 rounded-2xl bg-card border border-border/60 shadow-xs flex items-center justify-between transition duration-200">
+        <button
+          onClick={() => setIsExpanded(true)}
+          className="flex items-center gap-2 text-xs sm:text-sm font-bold text-foreground hover:text-blue-500 cursor-pointer transition select-none text-left"
+        >
+          <Calendar className="size-4 text-blue-500 shrink-0" />
+          <span>Subscriptions Billing Timeline</span>
+          <span className="text-[10px] text-muted-foreground bg-muted/70 px-2 py-0.5 rounded-md font-semibold shrink-0">
+            {activeRecurringPayments.length} active
+          </span>
+          <ChevronDown className="size-4 text-muted-foreground shrink-0" />
+        </button>
+        <div className="text-[10px] text-muted-foreground font-semibold bg-muted/50 px-2 py-1 rounded-lg whitespace-nowrap shrink-0 hidden sm:block">
+          Cycle: {selectedMonth} {year}
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-6">
+    <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-6 animate-in fade-in zoom-in-98 duration-150">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border/30 pb-3 gap-2">
-        <div>
-          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-            <Calendar className="size-5 text-blue-500" />
-            <span>Subscriptions Billing Timeline</span>
-          </h3>
-          <p className="text-[10px] text-muted-foreground mt-0.5 font-semibold">
-            Cycle Range: {startLabel} – {endLabel}
-          </p>
+        <div className="flex items-center justify-between sm:justify-start w-full sm:w-auto gap-2">
+          <div>
+            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+              <Calendar className="size-5 text-blue-500" />
+              <span>Subscriptions Billing Timeline</span>
+            </h3>
+            <p className="text-[10px] text-muted-foreground mt-0.5 font-semibold">
+              Cycle Range: {startLabel} – {endLabel}
+            </p>
+          </div>
+          <button
+            onClick={() => setIsExpanded(false)}
+            className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition cursor-pointer flex items-center gap-1 text-xs font-semibold"
+            title="Collapse Timeline"
+          >
+            <span className="text-[10px] hidden sm:inline">Collapse</span>
+            <ChevronUp className="size-4" />
+          </button>
         </div>
         <div className="text-[10px] text-muted-foreground font-semibold bg-muted/50 px-2 py-1 rounded-lg whitespace-nowrap shrink-0 self-start sm:self-center">
           Cycle: {selectedMonth} {year}

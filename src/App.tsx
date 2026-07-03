@@ -88,9 +88,9 @@ function App() {
     // WebView if the activity was re-created.  Wait for the WebView to paint
     // a frame then dismiss it.  The window is now guaranteed opaque (via
     // styles.xml + MainActivity) so the homescreen can never bleed through.
-    void CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+    void CapacitorApp.addListener('appStateChange', ({ isActive }: { isActive: boolean }) => {
       if (isActive) void hideNativeSplashAfterPaint()
-    }).then(handle => {
+    }).then((handle: { remove: () => Promise<void> | void }) => {
       cleanup = () => { void handle.remove() }
     })
 
@@ -646,6 +646,7 @@ function App() {
   };
 
   const handleDeleteTransaction = async (id: string) => {
+    triggerVibration(30)
     if (id.startsWith('temp_')) {
       handleDeletePendingTransaction(id);
       if (id === editingPendingId) {
@@ -654,37 +655,40 @@ function App() {
       return;
     }
 
+    setActiveSyncId(id)
     setActionLoading(true)
     try {
       await api.deleteTransaction(id)
-      triggerVibration(30)
       await loadAll(selectedMonth || undefined, selectedYear || undefined)
       showToast('Transaction deleted.', 'Ledger updated', 'success')
     } catch (err) {
       console.error(err)
       alert('Error deleting transaction on the server.')
     } finally {
+      setActiveSyncId(null)
       setActionLoading(false)
     }
   }
 
   const handleUpdateTransaction = async (id: string, updatedTx: Omit<Transaction, 'id'>) => {
+    triggerVibration(15)
     if (id.startsWith('temp_')) {
       handleEditPendingTransaction(id, updatedTx);
       setEditingPendingId(null);
       return;
     }
 
+    setActiveSyncId(id)
     setActionLoading(true)
     try {
       await api.updateTransaction(id, updatedTx)
-      triggerVibration(15)
       await loadAll(selectedMonth || undefined, selectedYear || undefined)
       showToast('Transaction updated.', 'Ledger updated', 'success')
     } catch (err) {
       console.error(err)
       alert('Error updating transaction on the server.')
     } finally {
+      setActiveSyncId(null)
       setActionLoading(false)
     }
   }
