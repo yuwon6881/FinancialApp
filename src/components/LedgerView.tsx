@@ -700,6 +700,48 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   }, [showAddForm])
 
   useEffect(() => {
+    if (!showExportModal) return
+
+    // Push a dummy history state so back button pops it instead of exiting the PWA
+    window.history.pushState({ modalId: 'ledger-export' }, '')
+
+    const handlePopState = () => {
+      setShowExportModal(false)
+    }
+
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+      // If closed programmatically, pop the history state
+      if (window.history.state?.modalId === 'ledger-export') {
+        window.history.back()
+      }
+    }
+  }, [showExportModal])
+
+  useEffect(() => {
+    if (!showStabilityCapModal) return
+
+    // Push a dummy history state so back button pops it instead of exiting the PWA
+    window.history.pushState({ modalId: 'ledger-stability-cap' }, '')
+
+    const handlePopState = () => {
+      handleCancelStabilityCapModal()
+    }
+
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+      // If closed programmatically, pop the history state
+      if (window.history.state?.modalId === 'ledger-stability-cap') {
+        window.history.back()
+      }
+    }
+  }, [showStabilityCapModal])
+
+  useEffect(() => {
     if (!showAddForm) return
     const isMobileSheet = window.matchMedia('(max-width: 639px), (pointer: coarse)').matches
     if (isMobileSheet) return
