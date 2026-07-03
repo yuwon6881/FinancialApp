@@ -195,9 +195,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
 
           <div className="space-y-3 border-t border-border/30 pt-4">
-            <div>
-              <h4 className="text-xs font-bold text-foreground">Allocation Split</h4>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Percentages must add up to 100.</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-xs font-bold text-foreground">Allocation Split</h4>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Percentages must add up to 100.</p>
+              </div>
+              <span className={`text-xs font-bold ${allocSum === 100 ? 'text-green-500 bg-green-500/10 px-2.5 py-1 rounded-lg border border-green-500/20' : 'text-orange-500 bg-orange-500/10 px-2.5 py-1 rounded-lg border border-orange-500/20 animate-pulse'}`}>
+                {allocSum === 100 ? '✓ Ready (100%)' : `Total: ${allocSum}% (${allocSum < 100 ? `Needs +${100 - allocSum}%` : `Over by -${allocSum - 100}%`})`}
+              </span>
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

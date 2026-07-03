@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import type { ActiveRecurringPayment } from '../types'
-import { Calendar, CheckCircle2, AlertCircle, X, Ban, List } from 'lucide-react'
+import { Calendar, CheckCircle2, AlertCircle, Ban, List } from 'lucide-react'
 import { formatCurrencyVal } from '../lib/utils'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
+import { BottomSheet } from './ui/BottomSheet'
 
 interface BillTimelineProps {
   activeRecurringPayments: ActiveRecurringPayment[]
@@ -323,207 +324,179 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
 
       {/* Multiple Bills Selector Modal */}
       {selectedNode && (
-        <div
-          onClick={e => {
-            if (e.target === e.currentTarget) setSelectedNode(null)
-          }}
-          className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+        <BottomSheet
+          isOpen={!!selectedNode}
+          onClose={() => setSelectedNode(null)}
+          maxWidthClassName="max-w-sm"
+          title={
+            <div className="flex items-center gap-2">
+              <List className="size-4 text-blue-500" />
+              <span className="text-sm font-bold">Bills Due on {selectedNode.dueDate}</span>
+            </div>
+          }
         >
-          <div
-            onClick={e => e.stopPropagation()}
-            className="sheet-panel w-full max-w-sm bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex items-center justify-between border-b border-border/40 pb-3">
-              <div className="flex items-center gap-2">
-                <List className="size-4 text-blue-500" />
-                <h3 className="text-sm font-bold text-foreground">Bills Due on {selectedNode.dueDate}</h3>
-              </div>
-              <button
-                onClick={() => setSelectedNode(null)}
-                className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition cursor-pointer"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {selectedNode.bills.map(bill => {
+              const isPaid = bill.status === 'Paid'
+              const isDiscarded = bill.status === 'Discarded'
+              
+              let statusStyle = 'text-amber-500 bg-amber-500/10'
+              if (isPaid) statusStyle = 'text-green-500 bg-green-500/10'
+              if (isDiscarded) statusStyle = 'text-slate-400 bg-slate-500/10 line-through'
 
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {selectedNode.bills.map(bill => {
-                const isPaid = bill.status === 'Paid'
-                const isDiscarded = bill.status === 'Discarded'
-                
-                let statusStyle = 'text-amber-500 bg-amber-500/10'
-                if (isPaid) statusStyle = 'text-green-500 bg-green-500/10'
-                if (isDiscarded) statusStyle = 'text-slate-400 bg-slate-500/10 line-through'
-
-                return (
-                  <button
-                    key={bill.id}
-                    onClick={() => {
-                      setSelectedBill(bill)
-                      setPayDateInput(bill.dueDate)
-                      setSelectedNode(null)
-                    }}
-                    className="w-full p-3 rounded-xl border border-border/60 bg-muted/10 hover:bg-muted/30 transition flex items-center justify-between text-left cursor-pointer"
-                  >
-                    <div>
-                      <div className="text-xs font-bold text-foreground">{bill.name}</div>
-                      <div className="flex flex-wrap items-center gap-1 mt-1">
-                        <span className={`inline-block px-1.5 py-0.5 rounded border font-semibold text-[9px] ${getCategoryBadgeClass(bill.ledgerCategory)}`}>
-                          {bill.ledgerCategory}
-                        </span>
-                        <span className={`inline-block px-1.5 py-0.5 rounded border font-semibold text-[9px] ${getCategoryBadgeClass(bill.category)}`}>
-                          {bill.category}
-                        </span>
-                      </div>
+              return (
+                <button
+                  key={bill.id}
+                  onClick={() => {
+                    setSelectedBill(bill)
+                    setPayDateInput(bill.dueDate)
+                    setSelectedNode(null)
+                  }}
+                  className="w-full p-3 rounded-xl border border-border/60 bg-muted/10 hover:bg-muted/30 transition flex items-center justify-between text-left cursor-pointer"
+                >
+                  <div>
+                    <div className="text-xs font-bold text-foreground">{bill.name}</div>
+                    <div className="flex flex-wrap items-center gap-1 mt-1">
+                      <span className={`inline-block px-1.5 py-0.5 rounded border font-semibold text-[9px] ${getCategoryBadgeClass(bill.ledgerCategory)}`}>
+                        {bill.ledgerCategory}
+                      </span>
+                      <span className={`inline-block px-1.5 py-0.5 rounded border font-semibold text-[9px] ${getCategoryBadgeClass(bill.category)}`}>
+                        {bill.category}
+                      </span>
                     </div>
-                    <div className="text-right flex flex-col items-end gap-1 font-semibold">
-                      <span className="text-xs font-extrabold text-foreground">{formatSensitive(Math.abs(bill.amount))}</span>
-                      <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${statusStyle}`}>{bill.status}</span>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
+                  </div>
+                  <div className="text-right flex flex-col items-end gap-1 font-semibold">
+                    <span className="text-xs font-extrabold text-foreground">{formatSensitive(Math.abs(bill.amount))}</span>
+                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${statusStyle}`}>{bill.status}</span>
+                  </div>
+                </button>
+              )
+            })}
           </div>
-        </div>
+        </BottomSheet>
       )}
 
       {/* Bill Detail / Quick Action Modal Overlay */}
       {selectedBill && (
-        <div
-          onClick={e => {
-            if (e.target === e.currentTarget) setSelectedBill(null)
-          }}
-          className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+        <BottomSheet
+          isOpen={!!selectedBill}
+          onClose={() => setSelectedBill(null)}
+          maxWidthClassName="max-w-sm"
+          title={
+            <div className="flex items-center gap-2">
+              <span className={`p-1.5 rounded-lg ${
+                selectedBill.status === 'Paid' 
+                  ? 'bg-green-500/10 text-green-500' 
+                  : selectedBill.status === 'Discarded' 
+                    ? 'bg-slate-500/10 text-slate-400' 
+                    : 'bg-amber-500/10 text-amber-500'
+              }`}>
+                {selectedBill.status === 'Paid' ? (
+                  <CheckCircle2 className="size-4" />
+                ) : selectedBill.status === 'Discarded' ? (
+                  <Ban className="size-4" />
+                ) : (
+                  <AlertCircle className="size-4" />
+                )}
+              </span>
+              <span className="text-sm font-bold">{selectedBill.name}</span>
+            </div>
+          }
         >
-          <div
-            onClick={e => e.stopPropagation()}
-            className="sheet-panel w-full max-w-sm bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex items-center justify-between border-b border-border/40 pb-3">
-              <div className="flex items-center gap-2">
-                <span className={`p-1.5 rounded-lg ${
+          <div className="text-xs space-y-3 font-semibold text-foreground">
+            <div className="grid grid-cols-2 gap-3.5 bg-muted/30 p-3 rounded-xl">
+              <div>
+                <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-0.5">Amount Due</span>
+                <span className="text-base font-extrabold text-foreground">{formatSensitive(Math.abs(selectedBill.amount))}</span>
+              </div>
+              <div>
+                <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-0.5">Status</span>
+                <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold mt-1 ${
                   selectedBill.status === 'Paid' 
                     ? 'bg-green-500/10 text-green-500' 
                     : selectedBill.status === 'Discarded' 
-                      ? 'bg-slate-500/10 text-slate-400' 
+                      ? 'bg-slate-500/10 text-slate-400 line-through' 
                       : 'bg-amber-500/10 text-amber-500'
-                }`}>
-                  {selectedBill.status === 'Paid' ? (
-                    <CheckCircle2 className="size-4" />
-                  ) : selectedBill.status === 'Discarded' ? (
-                    <Ban className="size-4" />
-                  ) : (
-                    <AlertCircle className="size-4" />
-                  )}
-                </span>
-                <h3 className="text-sm font-bold text-foreground">{selectedBill.name}</h3>
+                }`}>{selectedBill.status}</span>
               </div>
-              <button
-                onClick={() => setSelectedBill(null)}
-                className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition cursor-pointer"
-              >
-                <X className="size-4" />
-              </button>
             </div>
 
-            <div className="text-xs space-y-3 font-semibold text-foreground">
-              <div className="grid grid-cols-2 gap-3.5 bg-muted/30 p-3 rounded-xl">
-                <div>
-                  <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-0.5">Amount Due</span>
-                  <span className="text-base font-extrabold text-foreground">{formatSensitive(Math.abs(selectedBill.amount))}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-0.5">Status</span>
-                  <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold mt-1 ${
-                    selectedBill.status === 'Paid' 
-                      ? 'bg-green-500/10 text-green-500' 
-                      : selectedBill.status === 'Discarded' 
-                        ? 'bg-slate-500/10 text-slate-400 line-through' 
-                        : 'bg-amber-500/10 text-amber-500'
-                  }`}>{selectedBill.status}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-0.5">Due Date</span>
-                  <span className="text-xs text-foreground font-bold">{selectedBill.dueDate}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-0.5">Main Category</span>
-                  <span className={`inline-block px-1.5 py-0.5 rounded border font-semibold text-[10px] ${getCategoryBadgeClass(selectedBill.ledgerCategory)}`}>
+            <div className="grid grid-cols-2 gap-3 pb-1">
+              <div>
+                <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-0.5">Due Date</span>
+                <span className="text-foreground">{selectedBill.dueDate}</span>
+              </div>
+              <div>
+                <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-0.5">Categories</span>
+                <div className="flex flex-wrap gap-1 mt-0.5">
+                  <span className={`px-1.5 py-0.5 rounded border text-[9px] ${getCategoryBadgeClass(selectedBill.ledgerCategory)}`}>
                     {selectedBill.ledgerCategory}
                   </span>
-                  <span className={`inline-block ml-1 px-1.5 py-0.5 rounded border font-semibold text-[10px] ${getCategoryBadgeClass(selectedBill.category)}`}>
+                  <span className={`px-1.5 py-0.5 rounded border text-[9px] ${getCategoryBadgeClass(selectedBill.category)}`}>
                     {selectedBill.category}
                   </span>
                 </div>
               </div>
-
-              {selectedBill.status === 'Paid' && selectedBill.paidDate && (
-                <div className="p-3 bg-green-500/5 border border-green-500/10 rounded-xl text-[10px] text-green-500 font-normal">
-                  Paid on: <span className="font-bold">{selectedBill.paidDate}</span>
-                </div>
-              )}
-
-              {/* Action Form inside details modal */}
-              {selectedBill.status === 'Pending' && (
-                <div className="space-y-3.5 pt-2 border-t border-border/20">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Payment Confirmation Date</label>
-                    <input
-                      type="date"
-                      value={payDateInput}
-                      onChange={e => setPayDateInput(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="flex gap-2 justify-end pt-1">
-                    {onDiscardSubscription && (
-                      <button
-                        onClick={() => {
-                          onDiscardSubscription({
-                            id: selectedBill.id,
-                            recurringPaymentId: selectedBill.recurringPaymentId,
-                            name: selectedBill.name,
-                            amount: selectedBill.amount,
-                            category: selectedBill.category,
-                            ledgerCategory: selectedBill.ledgerCategory,
-                            billingDate: selectedBill.dueDate
-                          })
-                          setSelectedBill(null)
-                        }}
-                        className="px-3.5 py-2 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-xs rounded-xl transition duration-150 cursor-pointer"
-                        title="Mark this month's bill as discarded"
-                      >
-                        Discard Month
-                      </button>
-                    )}
-                    
-                    {onConfirmSubscription && (
-                      <button
-                        onClick={() => {
-                          onConfirmSubscription({
-                            id: selectedBill.id,
-                            recurringPaymentId: selectedBill.recurringPaymentId,
-                            name: selectedBill.name,
-                            amount: selectedBill.amount,
-                            category: selectedBill.category,
-                            ledgerCategory: selectedBill.ledgerCategory,
-                            billingDate: selectedBill.dueDate
-                          }, payDateInput)
-                          setSelectedBill(null)
-                        }}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition duration-150 cursor-pointer shadow-md shadow-blue-600/10"
-                      >
-                        Confirm Paid
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
+
+            {selectedBill.status === 'Pending' && (
+              <div className="border-t border-border/30 pt-3 mt-3 space-y-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider shrink-0">Paid Date:</span>
+                  <input
+                    type="date"
+                    value={payDateInput}
+                    onChange={e => setPayDateInput(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="flex gap-2 w-full pt-1.5">
+                  {onDiscardSubscription && (
+                    <button
+                      onClick={() => {
+                        onDiscardSubscription({
+                          id: selectedBill.id,
+                          recurringPaymentId: selectedBill.recurringPaymentId,
+                          name: selectedBill.name,
+                          amount: selectedBill.amount,
+                          category: selectedBill.category,
+                          ledgerCategory: selectedBill.ledgerCategory,
+                          billingDate: selectedBill.dueDate
+                        })
+                        setSelectedBill(null)
+                      }}
+                      className="px-3.5 py-2 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-xs rounded-xl transition duration-150 cursor-pointer"
+                      title="Mark this month's bill as discarded"
+                    >
+                      Discard Month
+                    </button>
+                  )}
+                  
+                  {onConfirmSubscription && (
+                    <button
+                      onClick={() => {
+                        onConfirmSubscription({
+                          id: selectedBill.id,
+                          recurringPaymentId: selectedBill.recurringPaymentId,
+                          name: selectedBill.name,
+                          amount: selectedBill.amount,
+                          category: selectedBill.category,
+                          ledgerCategory: selectedBill.ledgerCategory,
+                          billingDate: selectedBill.dueDate
+                        }, payDateInput)
+                        setSelectedBill(null)
+                      }}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition duration-150 cursor-pointer shadow-md shadow-blue-600/10"
+                    >
+                      Confirm Paid
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
-        </div>
+        </BottomSheet>
       )}
     </div>
   )

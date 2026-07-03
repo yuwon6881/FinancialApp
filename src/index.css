@@ -540,6 +540,16 @@ html {
         font-variant-numeric: tabular-nums lining-nums;
         font-feature-settings: "tnum" 1, "lnum" 1, "cv11", "ss01";
     }
+    /* Hide number input spinners (arrows) */
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    input[type="number"] {
+        -moz-appearance: textfield;
+        appearance: textfield;
+    }
     h1, h2, h3, h4 {
         letter-spacing: -0.02em;
     }

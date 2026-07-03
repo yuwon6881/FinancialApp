@@ -196,6 +196,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1)
   const suggestionsRef = useRef<HTMLDivElement>(null)
   const addFormPanelRef = useRef<HTMLDivElement>(null)
+  const addFormBackdropMouseDownRef = useRef(false)
+  const exportBackdropMouseDownRef = useRef(false)
+  const stabilityBackdropMouseDownRef = useRef(false)
 
   // Build unique suggestion entries from past transactions (most recent first, deduped by description)
   const suggestionEntries = useMemo(() => {
@@ -639,7 +642,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   })
 
   useEffect(() => {
-    if (!showAddForm) return
+    const isAnyModalOpen = showAddForm || showExportModal || showStabilityCapModal
+    if (!isAnyModalOpen) return
 
     const scrollY = window.scrollY
     const { body } = document
@@ -671,6 +675,27 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       body.style.overflow = previousOverflow
       body.style.paddingRight = previousPaddingRight
       window.scrollTo(0, scrollY)
+    }
+  }, [showAddForm, showExportModal, showStabilityCapModal])
+
+  useEffect(() => {
+    if (!showAddForm) return
+
+    // Push a dummy history state so back button pops it instead of exiting the PWA
+    window.history.pushState({ modalId: 'ledger-add-form' }, '')
+
+    const handlePopState = () => {
+      handleCloseForm()
+    }
+
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+      // If closed programmatically, pop the history state
+      if (window.history.state?.modalId === 'ledger-add-form') {
+        window.history.back()
+      }
     }
   }, [showAddForm])
 
@@ -1326,8 +1351,12 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       {/* Post Transaction Modal (bottom sheet on mobile) */}
       {showAddForm && createPortal(
         <div
+          onMouseDown={e => {
+            addFormBackdropMouseDownRef.current = e.target === e.currentTarget
+          }}
           onClick={e => {
-            if (e.target === e.currentTarget) handleCloseForm()
+            if (e.target === e.currentTarget && addFormBackdropMouseDownRef.current) handleCloseForm()
+            addFormBackdropMouseDownRef.current = false
           }}
           className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
         >
@@ -2105,8 +2134,14 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
       {showExportModal && (
         <div
+          onMouseDown={e => {
+            exportBackdropMouseDownRef.current = e.target === e.currentTarget
+          }}
           onClick={e => {
-            if (e.target === e.currentTarget && !exportIsFetching) setShowExportModal(false)
+            if (e.target === e.currentTarget && !exportIsFetching && exportBackdropMouseDownRef.current) {
+              setShowExportModal(false)
+            }
+            exportBackdropMouseDownRef.current = false
           }}
           className="sheet-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
         >
@@ -2175,8 +2210,14 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
         return (
           <div
+            onMouseDown={e => {
+              stabilityBackdropMouseDownRef.current = e.target === e.currentTarget
+            }}
             onClick={e => {
-              if (e.target === e.currentTarget) handleCancelStabilityCapModal()
+              if (e.target === e.currentTarget && stabilityBackdropMouseDownRef.current) {
+                handleCancelStabilityCapModal()
+              }
+              stabilityBackdropMouseDownRef.current = false
             }}
             className="sheet-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
           >

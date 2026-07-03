@@ -62,14 +62,43 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     }
   }, [isOpen])
 
+  useEffect(() => {
+    if (!isOpen) return
+
+    // Push a dummy history state so back button pops it instead of exiting the PWA
+    window.history.pushState({ modalId: titleId }, '')
+
+    const handlePopState = () => {
+      onClose()
+    }
+
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+      // If closed programmatically (not via back button popstate), remove the dummy state
+      if (window.history.state?.modalId === titleId) {
+        window.history.back()
+      }
+    }
+  }, [isOpen, onClose, titleId])
+
   useDialog({ isOpen, onClose, ref: panelRef })
+
+  const backdropMouseDownRef = useRef(false)
 
   if (!isOpen) return null
 
   return createPortal(
     <div
+      onMouseDown={e => {
+        backdropMouseDownRef.current = e.target === e.currentTarget
+      }}
       onClick={e => {
-        if (e.target === e.currentTarget) onClose()
+        if (e.target === e.currentTarget && backdropMouseDownRef.current) {
+          onClose()
+        }
+        backdropMouseDownRef.current = false
       }}
       className="sheet-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
     >

@@ -15,6 +15,7 @@ import {
 import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput } from '../lib/utils'
 import { triggerHaptic } from '../lib/haptics'
 import { CustomSelect } from './ui/CustomSelect'
+import { BottomSheet } from './ui/BottomSheet'
 import { BillTimeline } from './BillTimeline'
 import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } from '../lib/categoryColors'
 
@@ -280,30 +281,17 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
 
       {/* Add / Edit Subscription Modal (bottom sheet on mobile) */}
       {showAddForm && (
-        <div
-          onClick={e => {
-            if (e.target === e.currentTarget) handleCancelForm()
-          }}
-          className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+        <BottomSheet
+          isOpen={showAddForm}
+          onClose={handleCancelForm}
+          maxWidthClassName="max-w-xl"
+          title={
+            <span className="flex items-center gap-2">
+              {editingPayment ? <Edit className="size-4 text-blue-500" /> : <Plus className="size-4 text-blue-500" />}
+              {editingPayment ? 'Edit Subscription' : 'Add New Recurring Payment'}
+            </span>
+          }
         >
-          <div
-            onClick={e => e.stopPropagation()}
-            className="sheet-panel w-full max-w-xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex items-center justify-between border-b border-border/40 pb-3">
-              <h3 className="text-md font-bold text-foreground flex items-center gap-2">
-                {editingPayment ? <Edit className="size-4 text-blue-500" /> : <Plus className="size-4 text-blue-500" />}
-                {editingPayment ? 'Edit Subscription' : 'Add New Recurring Payment'}
-              </h3>
-              <button
-                type="button"
-                onClick={handleCancelForm}
-                className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition cursor-pointer"
-                title="Close"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-xs font-semibold text-muted-foreground">Subscription Name</label>
@@ -400,8 +388,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
               </button>
             </div>
           </form>
-          </div>
-        </div>
+        </BottomSheet>
       )}
 
       {/* Filter and Sort controls */}
