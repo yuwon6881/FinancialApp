@@ -40,7 +40,7 @@ window.fetch = async (...args) => {
   const response = await originalFetch(...args)
   const url = typeof args[0] === 'string' ? args[0] : (args[0] as any).url || ''
   if (!response.ok) {
-    if (response.status === 401 && !url.includes('/auth/login') && !url.includes('/auth/status')) {
+    if (response.status === 401 && !url.includes('/auth/login') && !url.includes('/auth/status') && !url.includes('/auth/biometric')) {
       throw new Error('401 Unauthorized')
     }
     if (response.status === 423) {
@@ -750,16 +750,28 @@ export async function registerBiometricOnServer(credentialId: string, publicKey?
 }
 
 export async function verifyBiometricOnServer(credentialId?: string): Promise<{ verified: boolean; token?: string; username?: string }> {
+  const token = localStorage.getItem('auth_token')
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json'
+  }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
   const res = await fetch(`${API_BASE_URL}/auth/biometric/verify`, {
     method: 'POST',
-    headers: getHeaders({ 'Content-Type': 'application/json' }),
+    headers,
     body: JSON.stringify({ credentialId })
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
     throw new Error(err.message || 'Biometric server verification failed.')
   }
-  return res.json()
+  const data = await res.json()
+  if (data.token) {
+    localStorage.setItem('auth_token', data.token)
+    queryCache.invalidateAll()
+  }
+  return data
 }
 
 export async function removeBiometricOnServer(): Promise<{ message: string; enrolled: boolean }> {

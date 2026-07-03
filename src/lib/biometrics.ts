@@ -177,6 +177,7 @@ export async function verifyBiometricPrompt(_promptReason?: string): Promise<Bio
     if (serverRes && serverRes.token) {
       record.token = serverRes.token
       record.username = serverRes.username || record.username
+      localStorage.setItem('auth_token', serverRes.token)
       localStorage.setItem(BIOMETRIC_STORAGE_KEY, JSON.stringify(record))
     }
   } catch (e) {

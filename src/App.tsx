@@ -485,6 +485,7 @@ function App() {
   }, [token])
 
   const handleLoginSuccess = (newToken: string, newUsername: string) => {
+    localStorage.setItem('auth_token', newToken)
     setToken(newToken)
     setUsername(newUsername)
     localStorage.setItem('auth_username', newUsername)
