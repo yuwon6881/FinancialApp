@@ -28,6 +28,7 @@ import { PendingSubscriptionsModal } from './components/PendingSubscriptionsModa
 import { PasswordPromptModal } from './components/PasswordPromptModal'
 import { LockScreen } from './components/LockScreen'
 import { AppLogo } from './components/ui/AppLogo'
+import { triggerHaptic } from './lib/haptics'
 
 const createLocalId = (prefix: string, separator = '_') => {
   return `${prefix}${separator}${Date.now()}${separator}${Math.random().toString(36).substring(2, 9)}`
@@ -1111,14 +1112,11 @@ function App() {
     api.updateDarkMode(newDark).catch(err => console.warn('Dark mode sync failed:', err))
   }
 
+  // Delegate to the shared haptics helper which tries the Capacitor native
+  // Haptics plugin first (works on Firefox mobile and all Capacitor targets)
+  // then falls back to navigator.vibrate() for plain browser contexts.
   const triggerVibration = (pattern: number | number[] = 15) => {
-    if (navigator.vibrate) {
-      try {
-        navigator.vibrate(pattern)
-      } catch {
-        // Some browsers reject vibrate() calls outside a user gesture; safe to ignore.
-      }
-    }
+    void triggerHaptic(pattern)
   }
 
   if (!token) {
