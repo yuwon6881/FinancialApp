@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { Lock, User, ShieldAlert, Sparkles, Eye, EyeOff } from 'lucide-react'
+import { Lock, User, ShieldAlert, Sparkles, Eye, EyeOff, Fingerprint } from 'lucide-react'
 import * as api from '../lib/api'
 import { AppLogo } from './ui/AppLogo'
+import { isBiometricEnrolled, verifyBiometricPrompt } from '../lib/biometrics'
 
 interface LoginViewProps {
   onLoginSuccess: (token: string, username: string) => void
@@ -56,6 +57,24 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     } catch (err: any) {
       console.error(err)
       setError(err.message || 'Authentication failed. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleBiometricLogin = async () => {
+    setError(null)
+    setLoading(true)
+    try {
+      const record = await verifyBiometricPrompt('Authenticate to log into FinancialApp')
+      if (record && record.token && record.username) {
+        onLoginSuccess(record.token, record.username)
+      } else {
+        setError('Biometric authentication failed.')
+      }
+    } catch (err: any) {
+      console.error(err)
+      setError(err.message || 'Biometric authentication failed.')
     } finally {
       setLoading(false)
     }
@@ -185,6 +204,20 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             )}
           </button>
         </form>
+
+        {isRegistered && isBiometricEnrolled() && (
+          <div className="pt-2 border-t border-border/40 space-y-3">
+            <button
+              type="button"
+              onClick={handleBiometricLogin}
+              disabled={loading}
+              className="press-scale w-full py-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold text-sm rounded-xl transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Fingerprint className="size-5 text-emerald-400 animate-pulse" />
+              Unlock with Fingerprint / Touch ID
+            </button>
+          </div>
+        )}
 
         <div className="text-center text-[10px] text-muted-foreground select-none">
           Secure Personal Financial Ledger

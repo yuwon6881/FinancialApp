@@ -724,3 +724,54 @@ export async function pingServer(): Promise<{ status: string }> {
   }
 }
 
+export async function fetchBiometricStatus(): Promise<{ enrolled: boolean; username?: string; enrolledAt?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/biometric/status`, {
+      headers: getHeaders()
+    })
+    if (!res.ok) return { enrolled: false }
+    return res.json()
+  } catch {
+    return { enrolled: false }
+  }
+}
+
+export async function registerBiometricOnServer(credentialId: string, publicKey?: string): Promise<{ message: string; enrolled: boolean }> {
+  const res = await fetch(`${API_BASE_URL}/auth/biometric/register`, {
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ credentialId, publicKey })
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message || 'Failed to register biometric credential on server.')
+  }
+  return res.json()
+}
+
+export async function verifyBiometricOnServer(credentialId?: string): Promise<{ verified: boolean; token?: string; username?: string }> {
+  const res = await fetch(`${API_BASE_URL}/auth/biometric/verify`, {
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ credentialId })
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message || 'Biometric server verification failed.')
+  }
+  return res.json()
+}
+
+export async function removeBiometricOnServer(): Promise<{ message: string; enrolled: boolean }> {
+  const res = await fetch(`${API_BASE_URL}/auth/biometric/remove`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message || 'Failed to remove biometric credential from server.')
+  }
+  return res.json()
+}
+
+

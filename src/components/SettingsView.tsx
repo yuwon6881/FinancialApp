@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Fingerprint, ShieldCheck } from 'lucide-react'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
+import { isBiometricEnrolled, enrollBiometrics, removeBiometrics } from '../lib/biometrics'
 
 interface SettingsViewProps {
   dashboardData: DashboardData | null
@@ -63,6 +64,37 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [cycleDayInput, setCycleDayInput] = useState('28')
   const [currencyInput, setCurrencyInput] = useState('USD')
   const [newCatName, setNewCatName] = useState('')
+
+  // Biometric state
+  const [biometricEnabled, setBiometricEnabled] = useState<boolean>(() => isBiometricEnrolled())
+  const [biometricLoading, setBiometricLoading] = useState(false)
+  const [biometricMsg, setBiometricMsg] = useState<string | null>(null)
+  const [biometricError, setBiometricError] = useState<string | null>(null)
+
+  const handleToggleBiometric = async () => {
+    setBiometricError(null)
+    setBiometricMsg(null)
+    setBiometricLoading(true)
+
+    try {
+      if (biometricEnabled) {
+        await removeBiometrics()
+        setBiometricEnabled(false)
+        setBiometricMsg('Fingerprint / Touch ID unlock disabled.')
+      } else {
+        const username = localStorage.getItem('auth_username') || 'User'
+        const token = localStorage.getItem('auth_token') || ''
+        await enrollBiometrics(username, token)
+        setBiometricEnabled(true)
+        setBiometricMsg('Fingerprint / Touch ID setup successful!')
+      }
+    } catch (err: any) {
+      console.error(err)
+      setBiometricError(err.message || 'Failed to update biometric settings.')
+    } finally {
+      setBiometricLoading(false)
+    }
+  }
 
   useEffect(() => {
     setTargetInput(activeSettings.targetStabilityFund.toString())
@@ -338,6 +370,66 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </p>
               )}
             </div>
+          </section>
+
+          {/* Security & Biometrics Section */}
+          <section className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5 shadow-sm space-y-4">
+            <div className="flex items-center gap-2.5 pb-3 border-b border-border/40">
+              <ShieldCheck className="size-5 text-emerald-500 shrink-0" />
+              <div>
+                <h3 className="text-sm font-bold text-foreground">Security & Biometrics</h3>
+                <p className="text-[11px] text-muted-foreground">Unlock app, relogin session, and reveal sensitive numbers with fingerprint / Touch ID.</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-3.5 bg-muted/20 border border-border/40 rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className="size-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                  <Fingerprint className="size-5" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-foreground">Fingerprint / Touch ID Unlock</div>
+                  <div className="text-[10px] font-medium text-muted-foreground">
+                    {biometricEnabled ? 'Enrolled on this device' : 'Touch fingerprint to authenticate instantly'}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleToggleBiometric}
+                disabled={biometricLoading}
+                className={`press-scale px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
+                  biometricEnabled
+                    ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20'
+                }`}
+              >
+                {biometricLoading ? (
+                  <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                ) : biometricEnabled ? (
+                  'Disable'
+                ) : (
+                  <>
+                    <Fingerprint className="size-3.5" /> Enable
+                  </>
+                )}
+              </button>
+            </div>
+
+            {biometricMsg && (
+              <p className="text-xs font-semibold text-emerald-500 flex items-center gap-1.5 animate-in fade-in duration-150">
+                <CheckCircle2 className="size-4 shrink-0" />
+                {biometricMsg}
+              </p>
+            )}
+
+            {biometricError && (
+              <p className="text-xs font-semibold text-orange-500 flex items-center gap-1.5 animate-in fade-in duration-150">
+                <AlertCircle className="size-4 shrink-0" />
+                {biometricError}
+              </p>
+            )}
           </section>
         </div>
       </div>

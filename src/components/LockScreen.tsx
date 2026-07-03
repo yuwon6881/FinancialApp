@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { Fingerprint } from 'lucide-react'
 import * as api from '../lib/api'
 import { AppLogo } from './ui/AppLogo'
+import { isBiometricEnrolled, verifyBiometricPrompt } from '../lib/biometrics'
 
 interface LockScreenProps {
   isOpen: boolean
@@ -12,6 +14,35 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
   const [lockPassword, setLockPassword] = useState('')
   const [lockError, setLockError] = useState<string | null>(null)
   const [lockVerifying, setLockVerifying] = useState(false)
+  const [biometricAvailable, setBiometricAvailable] = useState(false)
+
+  useEffect(() => {
+    if (!isOpen) return
+    const enrolled = isBiometricEnrolled()
+    setBiometricAvailable(enrolled)
+
+    if (enrolled) {
+      // Auto-trigger biometric unlock on screen lock open
+      handleBiometricUnlock()
+    }
+  }, [isOpen])
+
+  const handleBiometricUnlock = async () => {
+    setLockVerifying(true)
+    setLockError(null)
+    try {
+      await verifyBiometricPrompt('Authenticate to unlock your FinancialApp session')
+      setLockPassword('')
+      onUnlocked()
+    } catch (err: any) {
+      console.error(err)
+      if (err.message && !err.message.includes('cancelled')) {
+        setLockError(err.message)
+      }
+    } finally {
+      setLockVerifying(false)
+    }
+  }
 
   if (!isOpen) return null
 
@@ -21,8 +52,21 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
         <AppLogo className="size-16 rounded-2xl shadow-xl shadow-blue-500/20" />
         <div className="text-center">
           <h2 className="text-xl font-bold text-foreground">Session Locked</h2>
-          <p className="text-sm text-muted-foreground mt-1">You were inactive for 5 minutes. Please re-enter your password to continue.</p>
+          <p className="text-sm text-muted-foreground mt-1">You were inactive for 5 minutes. Touch fingerprint or enter password to continue.</p>
         </div>
+
+        {biometricAvailable && (
+          <button
+            type="button"
+            onClick={handleBiometricUnlock}
+            disabled={lockVerifying}
+            className="press-scale w-full py-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold text-sm rounded-xl transition duration-200 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/10"
+          >
+            <Fingerprint className="size-5 text-emerald-400 animate-pulse" />
+            {lockVerifying ? 'Verifying Fingerprint...' : 'Unlock with Fingerprint'}
+          </button>
+        )}
+
         <form
           onSubmit={async (e) => {
             e.preventDefault()
@@ -50,7 +94,7 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
             placeholder="Enter your password"
             value={lockPassword}
             onChange={e => setLockPassword(e.target.value)}
-            autoFocus
+            autoFocus={!biometricAvailable}
             className="w-full px-4 py-3 text-sm bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
           />
           {lockError && (
@@ -61,7 +105,7 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
             disabled={lockVerifying}
             className="press-scale w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-xl shadow-lg shadow-blue-600/20 transition cursor-pointer"
           >
-            {lockVerifying ? 'Unlocking...' : 'Unlock'}
+            {lockVerifying ? 'Unlocking...' : 'Unlock with Password'}
           </button>
         </form>
         <button
