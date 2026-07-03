@@ -91,6 +91,9 @@
        Kept in sync by the visualViewport listener in App.tsx; falls back to the
        full dynamic viewport before JS runs or on desktop. */
     --app-vvh: 100dvh;
+    --app-vvw: 100vw;
+    --app-vv-top: 0px;
+    --app-vv-left: 0px;
     /* Crisp, spacious light mode — layered off-whites, slate ink */
     --background: #f6f8fc;
     --foreground: #0f1729;
@@ -453,12 +456,20 @@ html {
    overlay and .sheet-panel to the dialog; desktop keeps the centered dialog. */
 @media (max-width: 639px) {
     .sheet-backdrop {
+        top: var(--app-vv-top, 0px);
+        left: var(--app-vv-left, 0px);
+        right: auto;
+        bottom: auto;
+        width: var(--app-vvw, 100vw);
+        height: var(--app-vvh, 100dvh);
         align-items: flex-end;
         padding: 0;
-        min-height: 100%;
+        min-height: 0;
+        max-height: var(--app-vvh, 100dvh);
         overflow: hidden;
         overscroll-behavior: contain;
         touch-action: none;
+        transform: translateZ(0);
     }
     .sheet-panel {
         width: 100%;

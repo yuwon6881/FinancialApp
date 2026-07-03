@@ -176,8 +176,9 @@ function App() {
     if (meta) meta.setAttribute('content', darkMode ? '#0a0d14' : '#f6f8fc')
   }, [darkMode])
 
-  // Keep --app-vvh in sync with the visual viewport so bottom-sheet modals
-  // track the keyboard using one throttled style write per frame.
+  // Keep visual viewport CSS vars in sync so fixed bottom-sheet modals stay
+  // pinned to the visible area while the mobile keyboard opens, closes, or
+  // pans the layout viewport.
   useEffect(() => {
     const vv = window.visualViewport
     const root = document.documentElement
@@ -186,7 +187,13 @@ function App() {
 
     const applyViewport = () => {
       const h = vv ? vv.height : window.innerHeight
+      const w = vv ? vv.width : window.innerWidth
+      const top = vv ? vv.offsetTop : 0
+      const left = vv ? vv.offsetLeft : 0
       root.style.setProperty('--app-vvh', `${Math.round(h)}px`)
+      root.style.setProperty('--app-vvw', `${Math.round(w)}px`)
+      root.style.setProperty('--app-vv-top', `${Math.round(top)}px`)
+      root.style.setProperty('--app-vv-left', `${Math.round(left)}px`)
     }
 
     const scheduleViewport = () => {
@@ -213,7 +220,8 @@ function App() {
     const scheduleFocusCheck = (el: HTMLElement, panel: HTMLElement, delay: number) => {
       const timer = window.setTimeout(() => {
         focusTimers.delete(timer)
-        ensureFocusedFieldVisible(el, panel)
+        if (document.activeElement !== el || !panel.contains(el)) return
+        window.requestAnimationFrame(() => ensureFocusedFieldVisible(el, panel))
       }, delay)
       focusTimers.add(timer)
     }
@@ -226,8 +234,10 @@ function App() {
       const panel = el.closest('.sheet-panel') as HTMLElement | null
       if (!panel) return
 
-      scheduleFocusCheck(el, panel, 120)
-      scheduleFocusCheck(el, panel, 280)
+      scheduleFocusCheck(el, panel, 60)
+      scheduleFocusCheck(el, panel, 180)
+      scheduleFocusCheck(el, panel, 360)
+      scheduleFocusCheck(el, panel, 600)
     }
 
     applyViewport()
