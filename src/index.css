@@ -483,12 +483,20 @@ html {
         touch-action: pan-y;
         transform: translate3d(0, 0, 0);
         will-change: transform;
+        overflow-anchor: none;
         /* Give the last field breathing room so it clears the keyboard edge
            and remains reachable when scrolling within the sheet. */
         scroll-padding-bottom: 5rem;
         /* tailwindcss-animate enter vars: slide up instead of zoom on mobile */
         --tw-enter-translate-y: 100%;
         --tw-enter-scale: 1;
+    }
+
+    .sheet-keyboard-focus .sheet-backdrop,
+    .sheet-keyboard-focus .sheet-panel {
+        transition: none !important;
+        animation-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }
 

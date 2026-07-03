@@ -194,7 +194,10 @@ function App() {
     const vv = window.visualViewport
     const root = document.documentElement
     let viewportRaf = 0
-    const focusTimers = new Set<number>()
+    let activeFocusEl: HTMLElement | null = null
+    let activeFocusPanel: HTMLElement | null = null
+    let focusSettleTimer = 0
+    let focusMaxTimer = 0
     const viewportVars = new Map<string, string>()
 
     const setViewportVar = (name: string, value: number) => {
@@ -224,10 +227,11 @@ function App() {
     }
 
     const ensureFocusedFieldVisible = (el: HTMLElement, panel: HTMLElement) => {
+      if (document.activeElement !== el || !panel.contains(el)) return
       const panelRect = panel.getBoundingClientRect()
       const elRect = el.getBoundingClientRect()
       const topPadding = 18
-      const bottomPadding = 24
+      const bottomPadding = 40
 
       if (elRect.bottom > panelRect.bottom - bottomPadding) {
         panel.scrollTop += elRect.bottom - panelRect.bottom + bottomPadding
@@ -236,13 +240,28 @@ function App() {
       }
     }
 
-    const scheduleFocusCheck = (el: HTMLElement, panel: HTMLElement, delay: number) => {
-      const timer = window.setTimeout(() => {
-        focusTimers.delete(timer)
-        if (document.activeElement !== el || !panel.contains(el)) return
-        window.requestAnimationFrame(() => ensureFocusedFieldVisible(el, panel))
-      }, delay)
-      focusTimers.add(timer)
+    const clearFocusCorrection = () => {
+      if (focusSettleTimer) window.clearTimeout(focusSettleTimer)
+      if (focusMaxTimer) window.clearTimeout(focusMaxTimer)
+      focusSettleTimer = 0
+      focusMaxTimer = 0
+    }
+
+    const runFocusCorrection = () => {
+      clearFocusCorrection()
+      const el = activeFocusEl
+      const panel = activeFocusPanel
+      if (!el || !panel || document.activeElement !== el || !panel.contains(el)) return
+      window.requestAnimationFrame(() => ensureFocusedFieldVisible(el, panel))
+    }
+
+    const scheduleFocusCorrection = (delay: number, withMaxTimer = false) => {
+      if (!activeFocusEl || !activeFocusPanel) return
+      if (focusSettleTimer) window.clearTimeout(focusSettleTimer)
+      focusSettleTimer = window.setTimeout(runFocusCorrection, delay)
+      if (withMaxTimer && !focusMaxTimer) {
+        focusMaxTimer = window.setTimeout(runFocusCorrection, 720)
+      }
     }
 
     const isSheetLayout = () => window.matchMedia('(max-width: 639px)').matches
@@ -253,25 +272,46 @@ function App() {
       const panel = el.closest('.sheet-panel') as HTMLElement | null
       if (!panel) return
 
-      scheduleFocusCheck(el, panel, 60)
-      scheduleFocusCheck(el, panel, 180)
-      scheduleFocusCheck(el, panel, 360)
-      scheduleFocusCheck(el, panel, 600)
+      activeFocusEl = el
+      activeFocusPanel = panel
+      root.classList.add('sheet-keyboard-focus')
+      scheduleFocusCorrection(260, true)
+    }
+
+    const handleFocusOut = () => {
+      window.setTimeout(() => {
+        const active = document.activeElement as HTMLElement | null
+        if (active?.closest?.('.sheet-panel')) return
+        activeFocusEl = null
+        activeFocusPanel = null
+        clearFocusCorrection()
+        root.classList.remove('sheet-keyboard-focus')
+      }, 0)
+    }
+
+    const handleViewportChange = () => {
+      scheduleViewport()
+      if (activeFocusEl && activeFocusPanel) {
+        scheduleFocusCorrection(140)
+      }
     }
 
     applyViewport()
-    vv?.addEventListener('resize', scheduleViewport)
-    vv?.addEventListener('scroll', scheduleViewport)
-    window.addEventListener('resize', scheduleViewport)
+    vv?.addEventListener('resize', handleViewportChange)
+    vv?.addEventListener('scroll', handleViewportChange)
+    window.addEventListener('resize', handleViewportChange)
     document.addEventListener('focusin', handleFocusIn)
+    document.addEventListener('focusout', handleFocusOut)
 
     return () => {
-      vv?.removeEventListener('resize', scheduleViewport)
-      vv?.removeEventListener('scroll', scheduleViewport)
-      window.removeEventListener('resize', scheduleViewport)
+      vv?.removeEventListener('resize', handleViewportChange)
+      vv?.removeEventListener('scroll', handleViewportChange)
+      window.removeEventListener('resize', handleViewportChange)
       document.removeEventListener('focusin', handleFocusIn)
+      document.removeEventListener('focusout', handleFocusOut)
       if (viewportRaf) window.cancelAnimationFrame(viewportRaf)
-      focusTimers.forEach(timer => window.clearTimeout(timer))
+      clearFocusCorrection()
+      root.classList.remove('sheet-keyboard-focus')
     }
   }, [])
 
