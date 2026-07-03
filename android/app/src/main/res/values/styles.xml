@@ -13,6 +13,10 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- Opaque window background so the homescreen never bleeds through
+             during the gap between the splash being dismissed and the WebView
+             painting its first frame (the "warm-relaunch flash" fix). -->
+        <item name="android:windowBackground">#0a0d14</item>
     </style>
 
 
