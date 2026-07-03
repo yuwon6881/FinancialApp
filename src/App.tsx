@@ -184,16 +184,24 @@ function App() {
     const root = document.documentElement
     let viewportRaf = 0
     const focusTimers = new Set<number>()
+    const viewportVars = new Map<string, string>()
+
+    const setViewportVar = (name: string, value: number) => {
+      const next = `${value.toFixed(2)}px`
+      if (viewportVars.get(name) === next) return
+      viewportVars.set(name, next)
+      root.style.setProperty(name, next)
+    }
 
     const applyViewport = () => {
       const h = vv ? vv.height : window.innerHeight
       const w = vv ? vv.width : window.innerWidth
       const top = vv ? vv.offsetTop : 0
       const left = vv ? vv.offsetLeft : 0
-      root.style.setProperty('--app-vvh', `${Math.round(h)}px`)
-      root.style.setProperty('--app-vvw', `${Math.round(w)}px`)
-      root.style.setProperty('--app-vv-top', `${Math.round(top)}px`)
-      root.style.setProperty('--app-vv-left', `${Math.round(left)}px`)
+      setViewportVar('--app-vvh', h)
+      setViewportVar('--app-vvw', w)
+      setViewportVar('--app-vv-top', top)
+      setViewportVar('--app-vv-left', left)
     }
 
     const scheduleViewport = () => {

@@ -456,8 +456,8 @@ html {
    overlay and .sheet-panel to the dialog; desktop keeps the centered dialog. */
 @media (max-width: 639px) {
     .sheet-backdrop {
-        top: var(--app-vv-top, 0px);
-        left: var(--app-vv-left, 0px);
+        top: 0;
+        left: 0;
         right: auto;
         bottom: auto;
         width: var(--app-vvw, 100vw);
@@ -469,7 +469,9 @@ html {
         overflow: hidden;
         overscroll-behavior: contain;
         touch-action: none;
-        transform: translateZ(0);
+        transform: translate3d(var(--app-vv-left, 0px), var(--app-vv-top, 0px), 0);
+        will-change: transform, height;
+        backface-visibility: hidden;
     }
     .sheet-panel {
         width: 100%;
