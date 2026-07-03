@@ -177,7 +177,7 @@ const TopNav: React.FC<TopNavProps> = ({
         <div className="flex-1 flex items-center justify-start min-w-max">
           <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => onTabChange('dashboard')}>
             <AppLogo className="size-9 rounded-xl transition-transform duration-200 hover:scale-105" />
-            <span className="hidden sm:inline text-md sm:text-lg font-extrabold tracking-tight bg-linear-to-r from-foreground via-foreground to-blue-500 bg-clip-text text-transparent truncate">
+            <span className="hidden sm:inline text-base sm:text-lg font-extrabold tracking-tight bg-linear-to-r from-foreground via-foreground to-blue-500 bg-clip-text text-transparent truncate">
               FinancialApp
             </span>
           </div>
@@ -495,7 +495,7 @@ const TopNav: React.FC<TopNavProps> = ({
       className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/88 backdrop-blur-xl select-none shadow-[0_-12px_30px_rgba(0,0,0,0.08)]"
       style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))', paddingTop: '10px' }}
     >
-      <div className="grid grid-cols-5 w-full max-w-md mx-auto justify-items-center">
+      <nav aria-label="Primary" className="grid grid-cols-5 w-full max-w-md mx-auto justify-items-center">
         {navItems.map(({ tab, mobileLabel, Icon, activeClass, iconClass, dotClass }) => {
           const isActive = activeTab === tab
           return (
@@ -517,7 +517,7 @@ const TopNav: React.FC<TopNavProps> = ({
             </button>
           )
         })}
-      </div>
+      </nav>
     </div>
     <CustomConfirmModal
       isOpen={!!notiToDelete}

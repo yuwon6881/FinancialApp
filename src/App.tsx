@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense, type ReactNode } from 'react'
 import { App as CapacitorApp } from '@capacitor/app'
 import { SplashScreen } from '@capacitor/splash-screen'
-import './App.css'
 import TopNav from "./TopNav.tsx"
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { APP_TABS, type AppTab, type Transaction, type RecurringPayment, type DashboardData, type TransactionCategory, type WishlistItem } from './types'
@@ -1223,6 +1222,9 @@ function App() {
         <ErrorBoundary variant="inline" resetKey={activeTab}>
         <Suspense fallback={<ViewFallback />}>
         <LaunchReady>
+        {/* Keyed on the active tab so every view change replays the gentle
+            fade-and-rise entrance instead of hard-swapping content. */}
+        <div key={activeTab} className="view-enter">
         {activeTab === 'dashboard' && (
           <DashboardView
             dashboardData={optimisticDashboardData}
@@ -1353,6 +1355,7 @@ function App() {
             }}
           />
         )}
+        </div>
         </LaunchReady>
         </Suspense>
         </ErrorBoundary>
@@ -1440,58 +1443,38 @@ function App() {
             />
           )}
 
-          {/* Speed Dial Menu Items */}
+          {/* Speed Dial Menu Items — staggered so they cascade out from the
+              FAB (nearest first) and collapse back together instantly. */}
           <div
             style={{ bottom: 'calc(148px + env(safe-area-inset-bottom, 0px))' }}
-            className={`md:hidden fixed right-8 z-40 flex flex-col gap-3.5 items-end transition-all duration-300 ${isFabOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'}`}
+            className={`md:hidden fixed right-8 z-40 flex flex-col gap-3.5 items-end ${isFabOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
           >
-            {/* Action 1: Add Wish Goal */}
-            <button
-              onClick={() => {
-                handleQuickAction('wishlist')
-                setIsFabOpen(false)
-              }}
-              className="flex items-center gap-2.5 group cursor-pointer focus:outline-none"
-            >
-              <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-foreground shadow-xs select-none group-hover:bg-muted transition duration-150">
-                Add Wish Goal
-              </span>
-              <div className="size-11 rounded-full bg-pink-500 group-hover:bg-pink-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition">
-                <PiggyBank className="size-5" />
-              </div>
-            </button>
-
-            {/* Action 2: New Subscription */}
-            <button
-              onClick={() => {
-                handleQuickAction('subscription')
-                setIsFabOpen(false)
-              }}
-              className="flex items-center gap-2.5 group cursor-pointer focus:outline-none"
-            >
-              <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-foreground shadow-xs select-none group-hover:bg-muted transition duration-150">
-                New Subscription
-              </span>
-              <div className="size-11 rounded-full bg-violet-500 group-hover:bg-violet-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition">
-                <CreditCard className="size-5" />
-              </div>
-            </button>
-
-            {/* Action 3: Post Transaction */}
-            <button
-              onClick={() => {
-                handleQuickAction('transaction')
-                setIsFabOpen(false)
-              }}
-              className="flex items-center gap-2.5 group cursor-pointer focus:outline-none"
-            >
-              <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-foreground shadow-xs select-none group-hover:bg-muted transition duration-150">
-                Post Transaction
-              </span>
-              <div className="size-11 rounded-full bg-emerald-500 group-hover:bg-emerald-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition">
-                <Wallet className="size-5" />
-              </div>
-            </button>
+            {([
+              { key: 'wishlist' as const, label: 'Add Wish Goal', Icon: PiggyBank, circleClass: 'bg-pink-500 group-hover:bg-pink-600' },
+              { key: 'subscription' as const, label: 'New Subscription', Icon: CreditCard, circleClass: 'bg-violet-500 group-hover:bg-violet-600' },
+              { key: 'transaction' as const, label: 'Post Transaction', Icon: Wallet, circleClass: 'bg-emerald-500 group-hover:bg-emerald-600' },
+            ]).map(({ key, label, Icon, circleClass }, i, arr) => (
+              <button
+                key={key}
+                onClick={() => {
+                  handleQuickAction(key)
+                  setIsFabOpen(false)
+                }}
+                tabIndex={isFabOpen ? 0 : -1}
+                aria-hidden={!isFabOpen}
+                style={{ transitionDelay: isFabOpen ? `${(arr.length - 1 - i) * 45}ms` : '0ms' }}
+                className={`flex items-center gap-2.5 group cursor-pointer focus:outline-none transition-all duration-200 ease-out ${
+                  isFabOpen ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-3 scale-95'
+                }`}
+              >
+                <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-foreground shadow-xs select-none group-hover:bg-muted transition duration-150">
+                  {label}
+                </span>
+                <div className={`size-11 rounded-full ${circleClass} text-white flex items-center justify-center shadow-lg active:scale-95 transition`}>
+                  <Icon className="size-5" />
+                </div>
+              </button>
+            ))}
           </div>
 
           {/* Main FAB Toggle Button */}

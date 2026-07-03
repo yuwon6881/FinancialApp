@@ -117,7 +117,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
         className={`sheet-panel w-full ${maxWidthClassName} bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto focus:outline-none`}
       >
         <div className="flex items-center justify-between border-b border-border/40 pb-3">
-          <div id={titleId} className="min-w-0 text-md font-bold text-foreground">{title}</div>
+          <div id={titleId} className="min-w-0 text-base font-bold text-foreground">{title}</div>
           <button
             type="button"
             onClick={onClose}

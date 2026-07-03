@@ -29,10 +29,20 @@ const toneIcon: Record<ToastTone, React.ReactNode> = {
   error: <AlertCircle className="size-4 text-orange-500" />,
 }
 
+// Confirmations can be brief; warnings and errors stay long enough to read.
+const toneDuration: Record<ToastTone, number> = {
+  success: 2200,
+  info: 2800,
+  warning: 5000,
+  error: 5000,
+}
+
 export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss }) => {
   useEffect(() => {
     if (toasts.length === 0) return
-    const timers = toasts.map(toast => window.setTimeout(() => onDismiss(toast.id), 2200))
+    const timers = toasts.map(toast =>
+      window.setTimeout(() => onDismiss(toast.id), toneDuration[toast.tone || 'info'])
+    )
     return () => timers.forEach(window.clearTimeout)
   }, [toasts, onDismiss])
 

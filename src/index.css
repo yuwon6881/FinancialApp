@@ -288,9 +288,13 @@
         transform 150ms ease-in-out, background-color 150ms ease-in-out;
 }
 
-.interactive-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--app-shadow);
+/* Hover lift only on devices with a real pointer — on touch screens the
+   effect "sticks" after a tap, so it is gated off entirely. */
+@media (hover: hover) {
+    .interactive-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--app-shadow);
+    }
 }
 
 .interactive-card:active {
@@ -320,8 +324,10 @@
     transform: translateX(-110%);
 }
 
-.metric-card:hover::after {
-    animation: card-sheen 900ms ease;
+@media (hover: hover) {
+    .metric-card:hover::after {
+        animation: card-sheen 900ms ease;
+    }
 }
 
 .status-chip {
@@ -347,6 +353,23 @@
 
 .soft-rise {
     animation: soft-rise 420ms ease backwards;
+}
+
+/* Tab-switch transition: the incoming view fades in with a gentle rise so
+   navigation feels continuous instead of a hard content swap. */
+@keyframes view-enter {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.view-enter {
+    animation: view-enter 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* Elegant shimmering skeleton loaders (replaces jarring spinners) */
@@ -400,6 +423,7 @@
     .interactive-card,
     .metric-card::after,
     .soft-rise,
+    .view-enter,
     .skeleton-shimmer,
     .trend-draw,
     .area-fade,
@@ -492,6 +516,19 @@ html {
         --tw-enter-scale: 1;
     }
 
+    /* Standard bottom-sheet affordance: a small grab handle centered at the
+       top of every sheet. Pure CSS so every .sheet-panel gets it for free. */
+    .sheet-panel::before {
+        content: "";
+        display: block;
+        width: 2.25rem;
+        height: 0.28rem;
+        border-radius: 9999px;
+        background: color-mix(in srgb, var(--muted-foreground) 32%, transparent);
+        margin: -0.75rem auto -0.5rem;
+        flex-shrink: 0;
+    }
+
     .sheet-keyboard-focus .sheet-backdrop,
     .sheet-keyboard-focus .sheet-panel {
         transition: none !important;
@@ -552,6 +589,22 @@ html {
     }
     h1, h2, h3, h4 {
         letter-spacing: -0.02em;
+        text-wrap: balance;
+    }
+
+    /* Instant taps: opt interactive elements out of double-tap-to-zoom so
+       mobile browsers dispatch clicks without the disambiguation delay. */
+    button, a, input, select, textarea, [role="button"] {
+        touch-action: manipulation;
+    }
+
+    /* Keyboard accessibility: many controls suppress the default outline in
+       favour of hover styling, which leaves keyboard users with no focus cue.
+       Restore a visible ring for keyboard (focus-visible) navigation only —
+       !important so it wins over focus:outline-none utilities. */
+    :is(button, [role="button"], a, summary):focus-visible {
+        outline: 2px solid var(--ring) !important;
+        outline-offset: 2px;
     }
     
     /* Chrome, Edge, Safari scrollbar customizations */

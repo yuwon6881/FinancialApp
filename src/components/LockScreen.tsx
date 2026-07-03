@@ -59,7 +59,7 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
           <button
             type="submit"
             disabled={lockVerifying}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-xl shadow-lg shadow-blue-600/20 transition cursor-pointer"
+            className="press-scale w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-xl shadow-lg shadow-blue-600/20 transition cursor-pointer"
           >
             {lockVerifying ? 'Unlocking...' : 'Unlock'}
           </button>
