@@ -38,6 +38,7 @@ interface DashboardViewProps {
   isHoveringWallet: boolean
   onDiscardSubscription?: (noti: any) => void
   onAddTransaction?: (newTx: Omit<Transaction, 'id'>) => Promise<void>
+  onAddBalanceAdjustment?: (newTx: Omit<Transaction, 'id'>) => Promise<void>
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ 
@@ -52,7 +53,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   wishlist = [],
   isHoveringWallet,
   onDiscardSubscription,
-  onAddTransaction
+  onAddBalanceAdjustment
 }) => {
   const [isHoveringLiquidNetWorth, setIsHoveringLiquidNetWorth] = useState(false)
   const [notiToDelete, setNotiToDelete] = useState<any | null>(null)
@@ -67,6 +68,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [adjustingCategory, setAdjustingCategory] = useState<any | null>(null)
   const [newBalanceInput, setNewBalanceInput] = useState<string>('')
   const [adjustmentDescription, setAdjustmentDescription] = useState<string>('Balance Adjustment')
+  const [pendingBalanceAdjustment, setPendingBalanceAdjustment] = useState<{
+    transaction: Omit<Transaction, 'id'>
+    categoryName: string
+    currentBalance: number
+    targetBalance: number
+    diff: number
+  } | null>(null)
 
   // Subcategory Pie Chart States
   const [chartView, setChartView] = useState<'monthly' | '3month' | '6month' | 'yearly'>('monthly')
@@ -228,6 +236,42 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     setAdjustingCategory(category)
     setNewBalanceInput(category.remaining.toFixed(2))
     setAdjustmentDescription('Balance Adjustment')
+  }
+
+  const prepareBalanceAdjustment = () => {
+    if (!adjustingCategory) return
+    const targetVal = parseFloat(newBalanceInput)
+    if (isNaN(targetVal)) {
+      alert('Please enter a valid balance amount.')
+      return
+    }
+
+    const diff = targetVal - adjustingCategory.remaining
+    if (Math.abs(diff) < 0.005) {
+      setAdjustingCategory(null)
+      return
+    }
+
+    const now = new Date()
+    const y = now.getFullYear()
+    const mo = String(now.getMonth() + 1).padStart(2, '0')
+    const d = String(now.getDate()).padStart(2, '0')
+    const dateStr = `${y}-${mo}-${d}`
+
+    setPendingBalanceAdjustment({
+      transaction: {
+        description: adjustmentDescription.trim() || 'Balance Adjustment',
+        amount: diff,
+        category: 'Adjustment',
+        ledgerCategory: adjustingCategory.name,
+        date: dateStr
+      },
+      categoryName: adjustingCategory.name,
+      currentBalance: adjustingCategory.remaining,
+      targetBalance: targetVal,
+      diff
+    })
+    setAdjustingCategory(null)
   }
 
   // Generate SVG path for trend line
@@ -1457,36 +1501,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  const targetVal = parseFloat(newBalanceInput)
-                  if (isNaN(targetVal)) {
-                    alert('Please enter a valid balance amount.')
-                    return
-                  }
-                  const diff = targetVal - adjustingCategory.remaining
-                  if (Math.abs(diff) < 0.005) {
-                    setAdjustingCategory(null)
-                    return
-                  }
-                  
-                  const now = new Date()
-                  const y = now.getFullYear()
-                  const mo = String(now.getMonth() + 1).padStart(2, '0')
-                  const d = String(now.getDate()).padStart(2, '0')
-                  const dateStr = `${y}-${mo}-${d}`
-
-                  onAddTransaction?.({
-                    description: adjustmentDescription.trim() || 'Balance Adjustment',
-                    amount: diff,
-                    category: 'Adjustment',
-                    ledgerCategory: adjustingCategory.name,
-                    date: dateStr
-                  })
-                  setAdjustingCategory(null)
-                }}
+                onClick={prepareBalanceAdjustment}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition duration-150 cursor-pointer shadow-md"
               >
-                Save Adjustment
+                Review Adjustment
               </button>
             </div>
           }
@@ -1537,6 +1555,46 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </BottomSheet>
       )}
+
+      <CustomConfirmModal
+        isOpen={!!pendingBalanceAdjustment}
+        title="Confirm Balance Adjustment"
+        confirmText="Record Adjustment"
+        cancelText="Cancel"
+        message={pendingBalanceAdjustment && (
+          <div className="space-y-3">
+            <p>
+              This will immediately record a ledger adjustment for <span className="font-semibold text-foreground">{pendingBalanceAdjustment.categoryName}</span>.
+            </p>
+            <div className="rounded-xl border border-border/60 bg-muted/30 p-3 space-y-1.5">
+              <div className="flex items-center justify-between gap-3">
+                <span>Current balance</span>
+                <span className="font-bold text-foreground">{formatSensitive(pendingBalanceAdjustment.currentBalance)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span>Target balance</span>
+                <span className="font-bold text-foreground">{formatSensitive(pendingBalanceAdjustment.targetBalance)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3 border-t border-border/50 pt-1.5">
+                <span>{pendingBalanceAdjustment.diff > 0 ? 'Addition' : 'Subtraction'}</span>
+                <span className={`font-extrabold ${pendingBalanceAdjustment.diff > 0 ? 'text-blue-500' : 'text-orange-500'}`}>
+                  {pendingBalanceAdjustment.diff > 0 ? '+' : ''}{formatSensitive(pendingBalanceAdjustment.diff)}
+                </span>
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground/80">
+              This will be pushed to the server immediately and will not be added to the ledger draft queue.
+            </p>
+          </div>
+        )}
+        onCancel={() => setPendingBalanceAdjustment(null)}
+        onConfirm={() => {
+          if (!pendingBalanceAdjustment) return
+          const tx = pendingBalanceAdjustment.transaction
+          setPendingBalanceAdjustment(null)
+          void onAddBalanceAdjustment?.(tx)
+        }}
+      />
     </div>
   )
 }

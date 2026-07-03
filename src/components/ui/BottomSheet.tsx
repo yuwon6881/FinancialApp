@@ -37,6 +37,8 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     const previousRight = body.style.right
     const previousWidth = body.style.width
     const previousOverflow = body.style.overflow
+    const previousPaddingRight = body.style.paddingRight
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
 
     body.style.position = 'fixed'
     body.style.top = `-${scrollY}px`
@@ -44,6 +46,9 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     body.style.right = '0'
     body.style.width = '100%'
     body.style.overflow = 'hidden'
+    if (scrollbarWidth > 0) {
+      body.style.paddingRight = `${scrollbarWidth}px`
+    }
 
     return () => {
       body.style.position = previousPosition
@@ -52,6 +57,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       body.style.right = previousRight
       body.style.width = previousWidth
       body.style.overflow = previousOverflow
+      body.style.paddingRight = previousPaddingRight
       window.scrollTo(0, scrollY)
     }
   }, [isOpen])

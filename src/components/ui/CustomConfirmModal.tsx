@@ -5,7 +5,7 @@ import { BottomSheet } from './BottomSheet'
 interface CustomConfirmModalProps {
   isOpen: boolean
   title: string
-  message: string
+  message: React.ReactNode
   confirmText?: string
   cancelText?: string
   onConfirm: () => void
@@ -54,7 +54,7 @@ export const CustomConfirmModal: React.FC<CustomConfirmModalProps> = ({
       }
     >
       <div className="text-xs leading-relaxed text-muted-foreground">
-        <p>{message}</p>
+        {typeof message === 'string' ? <p>{message}</p> : message}
       </div>
     </BottomSheet>
   )

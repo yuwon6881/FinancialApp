@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
 import { SwipeableRow } from './ui/SwipeableRow'
+import { BottomSheet } from './ui/BottomSheet'
 import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput, displayLedgerCategory } from '../lib/utils'
 import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } from '../lib/categoryColors'
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../lib/csvExport'
@@ -2360,23 +2361,37 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       })()}
 
       {showDeleteModal && txToDelete && (
-        <div
-          onClick={e => {
-            if (e.target === e.currentTarget) handleCancelDelete()
-          }}
-          className="sheet-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            className="sheet-panel w-full max-w-md bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex items-center gap-2 text-orange-500 pb-2 border-b border-border/40">
+        <BottomSheet
+          isOpen={showDeleteModal}
+          onClose={handleCancelDelete}
+          maxWidthClassName="max-w-md"
+          title={
+            <div className="flex items-center gap-2 text-orange-500">
               <span className="p-1.5 rounded-lg bg-orange-500/10 text-orange-500">
                 <AlertCircle className="size-5" />
               </span>
-              <h3 className="text-md font-bold text-foreground">Confirm Deletion</h3>
+              <span>Confirm Deletion</span>
             </div>
-
+          }
+          footer={
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={handleCancelDelete}
+                className="px-4 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-muted text-foreground transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="px-5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-md transition cursor-pointer"
+              >
+                Confirm Delete
+              </button>
+            </div>
+          }
+        >
             <div className="space-y-3 text-xs leading-relaxed text-muted-foreground">
               {txToDelete.id.includes('-split-') ? (
                 <p>
@@ -2395,55 +2410,24 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 Warning: This action is permanent and cannot be undone.
               </p>
             </div>
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={handleCancelDelete}
-                className="px-4 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-muted text-foreground transition cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDelete}
-                className="px-5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-md transition cursor-pointer"
-              >
-                Confirm Delete
-              </button>
-            </div>
-          </div>
-        </div>
+        </BottomSheet>
       )}
 
       {showEditDisabledModal && (
-        <div
-          onClick={e => {
-            if (e.target === e.currentTarget) setShowEditDisabledModal(false)
-          }}
-          className="sheet-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            className="sheet-panel w-full max-w-md bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex items-center gap-2 text-blue-500 pb-2 border-b border-border/40">
+        <BottomSheet
+          isOpen={showEditDisabledModal}
+          onClose={() => setShowEditDisabledModal(false)}
+          maxWidthClassName="max-w-md"
+          title={
+            <div className="flex items-center gap-2 text-blue-500">
               <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
                 <AlertCircle className="size-5" />
               </span>
-              <h3 className="text-md font-bold text-foreground">Editing Disabled</h3>
+              <span>Editing Disabled</span>
             </div>
-
-            <div className="space-y-3 text-xs leading-relaxed text-muted-foreground">
-              <p>
-                This transaction is a <span className="font-semibold text-foreground">split transfer sub-record</span> generated automatically from an Income Auto-Split.
-              </p>
-              <p>
-                To edit this transaction's amount, description, or split allocations, please find and edit the main <span className="font-semibold text-foreground">Income (Auto-Split)</span> record.
-              </p>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-2">
+          }
+          footer={
+            <div className="flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setShowEditDisabledModal(false)}
@@ -2452,8 +2436,17 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 Close
               </button>
             </div>
-          </div>
-        </div>
+          }
+        >
+            <div className="space-y-3 text-xs leading-relaxed text-muted-foreground">
+              <p>
+                This transaction is a <span className="font-semibold text-foreground">split transfer sub-record</span> generated automatically from an Income Auto-Split.
+              </p>
+              <p>
+                To edit this transaction's amount, description, or split allocations, please find and edit the main <span className="font-semibold text-foreground">Income (Auto-Split)</span> record.
+              </p>
+            </div>
+        </BottomSheet>
       )}
     </div>
   )

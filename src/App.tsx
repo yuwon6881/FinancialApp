@@ -536,6 +536,21 @@ function App() {
     setActiveTab('drafts');
   }
 
+  const handleAddBalanceAdjustment = async (newTx: Omit<Transaction, 'id'>) => {
+    setActionLoading(true)
+    try {
+      await api.addTransaction(newTx)
+      triggerVibration(20)
+      await loadAll(selectedMonth || undefined, selectedYear || undefined)
+      showToast('Balance adjustment recorded in ledger.', 'Ledger updated', 'success')
+    } catch (err) {
+      console.error(err)
+      alert('Error adding balance adjustment on the server.')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   const handleUpdateDraftTransaction = (id: string, updated: Transaction) => {
     setDraftTransactions(prev => prev.map(t => t.id === id ? updated : t));
     triggerVibration(15);
@@ -1169,6 +1184,7 @@ function App() {
             isHoveringWallet={isHoveringWallet}
             onDiscardSubscription={handleDiscardSubscription}
             onAddTransaction={handleAddTransaction}
+            onAddBalanceAdjustment={handleAddBalanceAdjustment}
           />
         )}
 
