@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 import type { Transaction, DashboardData, WishlistItem } from '../types'
 import { 
   Wallet, 
@@ -15,6 +15,7 @@ import { CustomConfirmModal } from './ui/CustomConfirmModal'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
 import { getCategoryBadgeClass, getCategoryChartColor, getCategoryDotClass } from '../lib/categoryColors'
+import { useDialog } from '../lib/useDialog'
 
 
 interface DashboardViewProps {
@@ -66,6 +67,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [adjustingCategory, setAdjustingCategory] = useState<any | null>(null)
   const [newBalanceInput, setNewBalanceInput] = useState<string>('')
   const [adjustmentDescription, setAdjustmentDescription] = useState<string>('Balance Adjustment')
+  const adjustmentPanelRef = useRef<HTMLDivElement>(null)
 
   // Subcategory Pie Chart States
   const [chartView, setChartView] = useState<'monthly' | '3month' | '6month' | 'yearly'>('monthly')
@@ -222,6 +224,43 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </span>
     )
   }
+
+  useDialog({
+    isOpen: !!adjustingCategory,
+    onClose: () => setAdjustingCategory(null),
+    ref: adjustmentPanelRef,
+    autoFocus: false
+  })
+
+  useEffect(() => {
+    if (!adjustingCategory) return
+
+    const scrollY = window.scrollY
+    const { body } = document
+    const previousPosition = body.style.position
+    const previousTop = body.style.top
+    const previousLeft = body.style.left
+    const previousRight = body.style.right
+    const previousWidth = body.style.width
+    const previousOverflow = body.style.overflow
+
+    body.style.position = 'fixed'
+    body.style.top = `-${scrollY}px`
+    body.style.left = '0'
+    body.style.right = '0'
+    body.style.width = '100%'
+    body.style.overflow = 'hidden'
+
+    return () => {
+      body.style.position = previousPosition
+      body.style.top = previousTop
+      body.style.left = previousLeft
+      body.style.right = previousRight
+      body.style.width = previousWidth
+      body.style.overflow = previousOverflow
+      window.scrollTo(0, scrollY)
+    }
+  }, [adjustingCategory])
 
   // Generate SVG path for trend line
   const trendLinePoints = useMemo(() => {
@@ -1447,11 +1486,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
         >
           <div
+            ref={adjustmentPanelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="balance-adjustment-title"
+            tabIndex={-1}
             onClick={e => e.stopPropagation()}
-            className="sheet-panel w-full max-w-sm bg-card border border-border/85 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+            className="sheet-panel w-full max-w-sm bg-card border border-border/85 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto focus:outline-none"
           >
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
-              <h3 className="text-sm font-bold text-foreground">Adjust {adjustingCategory.name} Balance</h3>
+              <h3 id="balance-adjustment-title" className="text-sm font-bold text-foreground">Adjust {adjustingCategory.name} Balance</h3>
               <button
                 onClick={() => setAdjustingCategory(null)}
                 className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition cursor-pointer font-bold text-sm"

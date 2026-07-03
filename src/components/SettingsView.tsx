@@ -128,7 +128,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   })
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+    <div className="space-y-6 soft-rise">
       <div className="flex flex-col gap-2 p-4 sm:p-6 bg-card rounded-2xl border border-border/60">
         <div className="flex items-center gap-2">
           <Settings className="size-5 text-blue-500" />
