@@ -9,18 +9,30 @@
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
+    <!-- Runtime theme applied by Capacitor's BridgeActivity.onCreate().
+         Every window-level attribute is explicitly set to prevent any
+         transparency/translucency that could let the homescreen bleed
+         through during the splash → WebView handoff ("warm-relaunch flash"). -->
     <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
-        <!-- Opaque window background so the homescreen never bleeds through
-             during the gap between the splash being dismissed and the WebView
-             painting its first frame (the "warm-relaunch flash" fix). -->
         <item name="android:windowBackground">#0a0d14</item>
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:windowDisablePreview">false</item>
+        <item name="android:navigationBarColor">#0a0d14</item>
+        <item name="android:statusBarColor">#0a0d14</item>
     </style>
 
-
+    <!-- Launch/splash theme.  Also forces the window fully opaque — on
+         Android the windowIsTranslucent flag is baked in at window creation
+         time and cannot reliably be changed later by a setTheme() call. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
+        <item name="android:windowBackground">@drawable/splash</item>
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:windowDisablePreview">false</item>
+        <item name="android:navigationBarColor">#0a0d14</item>
+        <item name="android:statusBarColor">#0a0d14</item>
     </style>
 </resources>

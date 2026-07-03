@@ -84,21 +84,12 @@ function App() {
   useEffect(() => {
     let cleanup: (() => void) | undefined
 
-    // When the app is sent to the background, re-show the native splash so
-    // it is already covering the WebView surface when Android brings the
-    // activity back.  The existing LaunchReady / finishLaunchHandoff logic
-    // hides the splash once the WebView has actually painted a frame, which
-    // eliminates the "homescreen flash" on warm relaunches.
+    // On resume (warm relaunch) the native splash may still be covering the
+    // WebView if the activity was re-created.  Wait for the WebView to paint
+    // a frame then dismiss it.  The window is now guaranteed opaque (via
+    // styles.xml + MainActivity) so the homescreen can never bleed through.
     void CapacitorApp.addListener('appStateChange', ({ isActive }) => {
-      if (!isActive) {
-        void SplashScreen.show({
-          autoHide: false,
-          fadeInDuration: 0,
-          showDuration: 0,
-        }).catch(() => undefined)
-      } else {
-        void hideNativeSplashAfterPaint()
-      }
+      if (isActive) void hideNativeSplashAfterPaint()
     }).then(handle => {
       cleanup = () => { void handle.remove() }
     })
