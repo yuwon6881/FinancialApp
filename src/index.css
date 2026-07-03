@@ -341,12 +341,12 @@
     }
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: none;
     }
 }
 
 .soft-rise {
-    animation: soft-rise 420ms ease both;
+    animation: soft-rise 420ms ease backwards;
 }
 
 /* Elegant shimmering skeleton loaders (replaces jarring spinners) */

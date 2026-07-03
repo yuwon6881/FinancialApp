@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react'
 import type { WishlistItem } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { SwipeableRow } from './ui/SwipeableRow'
+import { BottomSheet } from './ui/BottomSheet'
 import { formatCurrencyVal, maskCurrencyInput } from '../lib/utils'
 import {
   Gift, 
@@ -11,7 +12,6 @@ import {
   Sparkles, 
   Clock, 
   CheckCircle2,
-  X,
   Target,
   Edit2
 } from 'lucide-react'
@@ -527,23 +527,12 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
 
       {/* Add Item Modal */}
       {showAddModal && (
-        <div
-          onClick={e => {
-            if (e.target === e.currentTarget) setShowAddModal(false)
-          }}
-          className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+        <BottomSheet
+          isOpen={showAddModal}
+          title="Add New Wish Goal"
+          onClose={() => setShowAddModal(false)}
+          maxWidthClassName="max-w-md"
         >
-          <div
-            onClick={e => e.stopPropagation()}
-            className="sheet-panel w-full max-w-md bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex items-center justify-between border-b border-border/40 pb-3">
-              <h3 className="text-sm font-bold text-foreground">Add New Wish Goal</h3>
-              <button onClick={() => setShowAddModal(false)} className="text-muted-foreground hover:text-foreground transition cursor-pointer">
-                <X className="size-4" />
-              </button>
-            </div>
-            
             <form onSubmit={handleSaveAdd} className="space-y-4 text-xs font-semibold">
               <div>
                 <label className="text-muted-foreground block mb-1">Goal Name *</label>
@@ -614,29 +603,17 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </BottomSheet>
       )}
 
       {/* Edit Item Modal */}
       {showEditModal && editingItem && (
-        <div
-          onClick={e => {
-            if (e.target === e.currentTarget) setShowEditModal(false)
-          }}
-          className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+        <BottomSheet
+          isOpen={showEditModal}
+          title="Edit Wish Goal"
+          onClose={() => setShowEditModal(false)}
+          maxWidthClassName="max-w-md"
         >
-          <div
-            onClick={e => e.stopPropagation()}
-            className="sheet-panel w-full max-w-md bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex items-center justify-between border-b border-border/40 pb-3">
-              <h3 className="text-sm font-bold text-foreground">Edit Wish Goal</h3>
-              <button onClick={() => setShowEditModal(false)} className="text-muted-foreground hover:text-foreground transition cursor-pointer">
-                <X className="size-4" />
-              </button>
-            </div>
-            
             <form onSubmit={handleSaveEdit} className="space-y-4 text-xs font-semibold">
               <div>
                 <label className="text-muted-foreground block mb-1">Goal Name *</label>
@@ -705,8 +682,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </BottomSheet>
       )}
     </div>
   )
