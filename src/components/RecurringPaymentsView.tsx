@@ -274,25 +274,11 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         </div>
       </div>
 
-      {/* Visual Bill Timelines (Current Cycle & Upcoming Next Cycle) */}
+      {/* Visual Bill Timeline */}
       <div className="space-y-4">
         <BillTimeline
-          title="Current Cycle Subscriptions Timeline"
+          title="Subscriptions Billing Timeline"
           cycleOffset={0}
-          activeRecurringPayments={activeRecurringPayments}
-          allPayments={payments}
-          transactions={transactions}
-          selectedMonth={selectedMonth}
-          selectedYear={selectedYear}
-          cycleDay={cycleDay}
-          currency={currency}
-          hideSensitive={hideSensitive}
-          onConfirmSubscription={onConfirmSubscription}
-          onDiscardSubscription={onDiscardSubscription}
-        />
-        <BillTimeline
-          title="Upcoming Next Cycle Subscriptions Timeline"
-          cycleOffset={1}
           activeRecurringPayments={activeRecurringPayments}
           allPayments={payments}
           transactions={transactions}
