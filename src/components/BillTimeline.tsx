@@ -209,18 +209,18 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
 
   if (!isExpanded) {
     return (
-      <div className="p-4 rounded-2xl bg-card border border-border/60 shadow-xs flex items-center justify-between transition duration-200">
-        <button
-          onClick={() => setIsExpanded(true)}
-          className="flex items-center gap-2 text-xs sm:text-sm font-bold text-foreground hover:text-blue-500 cursor-pointer transition select-none text-left"
-        >
+      <div 
+        onClick={() => setIsExpanded(true)}
+        className="p-4 rounded-2xl bg-card border border-border/60 hover:border-blue-500/40 shadow-xs flex items-center justify-between transition duration-200 cursor-pointer hover:bg-muted/30 select-none"
+      >
+        <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-foreground">
           <Calendar className="size-4 text-blue-500 shrink-0" />
           <span>{displayTitle}</span>
           <span className="text-[10px] text-muted-foreground bg-muted/70 px-2 py-0.5 rounded-md font-semibold shrink-0">
             {processedPayments.length} active
           </span>
           <ChevronDown className="size-4 text-muted-foreground shrink-0" />
-        </button>
+        </div>
         <div className="text-[10px] text-muted-foreground font-semibold bg-muted/50 px-2.5 py-1 rounded-lg whitespace-nowrap shrink-0 hidden sm:block">
           {startLabel} – {endLabel}
         </div>
@@ -230,7 +230,11 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
 
   return (
     <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-6 animate-in fade-in zoom-in-98 duration-150">
-      <div className="flex items-center justify-between border-b border-border/30 pb-3 gap-2">
+      <div 
+        onClick={() => setIsExpanded(false)}
+        className="flex items-center justify-between border-b border-border/30 pb-3 gap-2 cursor-pointer hover:opacity-85 transition select-none"
+        title="Click to collapse timeline"
+      >
         <div>
           <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
             <Calendar className="size-5 text-blue-500" />
@@ -241,14 +245,10 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
             Cycle Range: {startLabel} – {endLabel}
           </p>
         </div>
-        <button
-          onClick={() => setIsExpanded(false)}
-          className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition cursor-pointer flex items-center gap-1 text-xs font-semibold shrink-0"
-          title="Collapse Timeline"
-        >
+        <div className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition flex items-center gap-1 text-xs font-semibold shrink-0">
           <span className="text-[10px] hidden sm:inline">Collapse</span>
           <ChevronUp className="size-4" />
-        </button>
+        </div>
       </div>
 
       {/* Mobile: compact tappable vertical list (horizontal timeline is too cramped on small screens) */}

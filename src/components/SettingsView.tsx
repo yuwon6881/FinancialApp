@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Eye, EyeOff, Moon, Plus, Save, Settings, Sun, Trash2, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2 } from 'lucide-react'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
@@ -9,8 +9,8 @@ interface SettingsViewProps {
   categoriesList: TransactionCategory[]
   darkMode: boolean
   hideSensitive: boolean
-  onToggleDarkMode: () => void
-  onToggleHideSensitive: () => void
+  onToggleDarkMode?: () => void
+  onToggleHideSensitive?: () => void
   onUpdateSettings: (settings: {
     targetStabilityFund: number
     essentialsAlloc: number
@@ -37,8 +37,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   categoriesList,
   darkMode,
   hideSensitive,
-  onToggleDarkMode,
-  onToggleHideSensitive,
   onUpdateSettings,
   onAddCategory,
   onDeleteCategory
@@ -258,36 +256,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </form>
 
         <div className="space-y-6">
-          <section className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
-            <div>
-              <h3 className="text-sm font-bold text-foreground">App Preferences</h3>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Privacy and appearance shortcuts.</p>
-            </div>
-
-            <button
-              type="button"
-              onClick={onToggleHideSensitive}
-              className="w-full flex items-center justify-between gap-3 p-3 rounded-xl bg-background border border-border hover:bg-muted/40 transition cursor-pointer"
-            >
-              <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
-                {hideSensitive ? <Eye className="size-4 text-blue-500" /> : <EyeOff className="size-4 text-blue-500" />}
-                Sensitive values
-              </span>
-              <span className="text-[10px] font-bold text-muted-foreground">{hideSensitive ? 'Hidden' : 'Visible'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={onToggleDarkMode}
-              className="w-full flex items-center justify-between gap-3 p-3 rounded-xl bg-background border border-border hover:bg-muted/40 transition cursor-pointer"
-            >
-              <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
-                {darkMode ? <Sun className="size-4 text-blue-500" /> : <Moon className="size-4 text-blue-500" />}
-                Theme
-              </span>
-              <span className="text-[10px] font-bold text-muted-foreground">{darkMode ? 'Dark' : 'Light'}</span>
-            </button>
-          </section>
 
           <section className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
             <div className="flex items-center justify-between gap-3">
