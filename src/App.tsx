@@ -682,17 +682,15 @@ function App() {
     }
 
     setActiveSyncId(id)
-    setActionLoading(true)
     try {
       await api.updateTransaction(id, updatedTx)
-      await loadAll(selectedMonth || undefined, selectedYear || undefined)
+      await loadAll(selectedMonth || undefined, selectedYear || undefined, true)
       showToast('Transaction updated.', 'Ledger updated', 'success')
     } catch (err) {
       console.error(err)
       alert('Error updating transaction on the server.')
     } finally {
       setActiveSyncId(null)
-      setActionLoading(false)
     }
   }
 
