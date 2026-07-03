@@ -74,6 +74,7 @@ interface LedgerViewProps {
   onShowAlert?: (message: string, title?: string) => void
   activeSyncId?: string | null
   onStartEditPending?: (id: string | null) => void
+  isSwitchingCycle?: boolean
 }
 
 function formatDateToString(d: Date): string {
@@ -152,8 +153,37 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   onExportTransactions,
   onShowAlert,
   activeSyncId = null,
-  onStartEditPending
+  onStartEditPending,
+  isSwitchingCycle = false
 }) => {
+  if (isSwitchingCycle) {
+    return (
+      <div className="space-y-6 soft-rise">
+        <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="space-y-2 w-full md:w-auto">
+            <div className="h-6 w-44 rounded-lg bg-muted/60 animate-pulse" />
+            <div className="h-3 w-64 rounded-lg bg-muted/40 animate-pulse" />
+          </div>
+          <div className="h-9 w-52 rounded-xl bg-muted/50 animate-pulse" />
+        </div>
+
+        <div className="p-4 rounded-2xl bg-card border border-border/60 space-y-3">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="flex items-center justify-between py-3 px-4 rounded-xl border border-border/30 bg-background/50">
+              <div className="flex items-center gap-3">
+                <div className="h-4 w-20 rounded bg-muted/60 animate-pulse" />
+                <div className="h-4 w-36 rounded bg-muted/50 animate-pulse" />
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="h-5 w-20 rounded-full bg-muted/60 animate-pulse" />
+                <div className="h-5 w-24 rounded bg-muted/70 animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
   const [showAddForm, setShowAddForm] = useState(false)
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')

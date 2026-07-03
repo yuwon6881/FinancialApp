@@ -365,6 +365,9 @@ function App() {
   // Password Prompt for revealing sensitive information
   const [showPasswordPrompt, setShowPasswordPrompt] = useState<boolean>(false)
 
+  // Cycle switching state for skeleton loader
+  const [isSwitchingCycle, setIsSwitchingCycle] = useState<boolean>(false)
+
   // Login Notification Modal States
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false)
   const [hasShownModalThisSession, setHasShownModalThisSession] = useState<boolean>(false)
@@ -506,12 +509,15 @@ function App() {
 
   // Period / Settings changes
   const handleSelectPeriod = async (month: string, year: number) => {
+    setIsSwitchingCycle(true)
     try {
       await api.selectPeriod(month, year)
-      await loadAll(month, year)
+      await loadAll(month, year, true)
     } catch (err) {
       console.error(err)
       alert('Error updating active month.')
+    } finally {
+      setIsSwitchingCycle(false)
     }
   }
 
@@ -1245,6 +1251,7 @@ function App() {
             onDiscardSubscription={handleDiscardSubscription}
             onAddTransaction={handleAddTransaction}
             onAddBalanceAdjustment={handleAddBalanceAdjustment}
+            isSwitchingCycle={isSwitchingCycle}
           />
         )}
 
@@ -1280,6 +1287,7 @@ function App() {
             onResetAutoOpen={() => setAutoOpenSubscriptionAdd(false)}
             onConfirmSubscription={handleConfirmSubscription}
             onDiscardSubscription={handleDiscardSubscription}
+            isSwitchingCycle={isSwitchingCycle}
           />
         )}
 
@@ -1313,6 +1321,7 @@ function App() {
             autoOpenAddForm={autoOpenLedgerAdd}
             onResetAutoOpen={() => setAutoOpenLedgerAdd(false)}
             stabilityBalance={optimisticDashboardData?.categories?.find(c => c.name === 'Stability')?.remaining ?? 0}
+            isSwitchingCycle={isSwitchingCycle}
             stabilityTarget={optimisticDashboardData?.setting?.targetStabilityFund ?? 10000}
             essentialsAlloc={optimisticDashboardData?.setting?.essentialsAlloc ?? 0.5}
             growthAlloc={optimisticDashboardData?.setting?.growthAlloc ?? 0.25}
