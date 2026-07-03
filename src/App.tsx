@@ -416,7 +416,7 @@ function App() {
     try {
       const dbData = await api.fetchDashboard(month, year)
       const [txs, recs, cats, wishes] = await Promise.all([
-        api.fetchTransactions(dbData.setting.selectedMonth, dbData.setting.selectedYear),
+        api.fetchTransactions(undefined, undefined, true),
         api.fetchRecurringPayments(),
         api.fetchCategories(),
         api.fetchWishlist().catch(() => [])

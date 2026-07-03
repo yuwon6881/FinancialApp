@@ -163,9 +163,15 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
 
       const matchingTx = (transactions || []).find(t => {
         if (!t.date || t.date < startIso || t.date > endIso) return false
-        const descLower = t.description.toLowerCase().trim()
+        const descLower = (t.description || '').toLowerCase().trim()
+        const catLower = (t.category || '').toLowerCase().trim()
         const pNameLower = p.name.toLowerCase().trim()
-        return descLower === pNameLower || descLower.includes(pNameLower) || pNameLower.includes(descLower)
+        const pCatLower = (p.category || '').toLowerCase().trim()
+
+        const nameMatch = descLower === pNameLower || (pNameLower.length > 2 && descLower.includes(pNameLower)) || (descLower.length > 2 && pNameLower.includes(descLower))
+        const categoryMatch = catLower !== '' && (catLower === pNameLower || catLower === pCatLower)
+
+        return nameMatch || categoryMatch
       })
 
       if (isServerPaid || matchingTx) {
@@ -349,7 +355,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
             })()}
 
             {/* Render grouped timeline nodes */}
-            {timelineNodes.map((node, idx) => {
+            {timelineNodes.map((node) => {
               // Determine status based on all bills in the node
               const allPaid = node.bills.every(b => b.status === 'Paid')
               const anyPending = node.bills.some(b => b.status === 'Pending')
@@ -387,8 +393,8 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
               return (
                 <div
                   key={node.dueDate}
-                  style={{ left: `${node.percent}%`, zIndex: 100 - idx }}
-                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 group"
+                  style={{ left: `${node.percent}%` }}
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 group z-10 hover:z-50 focus-within:z-50"
                 >
                   {/* Node trigger dot — small visual, large touch target via padding/negative margin */}
                   <button
