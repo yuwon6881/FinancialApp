@@ -21,6 +21,30 @@ export function isFingerprintSupported(): boolean {
   return typeof window !== 'undefined' && !!window.PublicKeyCredential
 }
 
+// Android/Chrome's User-Agent Reduction strips real device model info from
+// navigator.userAgent (e.g. "Linux; Android 10; K"), so we derive a short
+// "Browser on OS" label instead of parsing the raw platform token.
+export function getFriendlyDeviceLabel(): string {
+  if (typeof navigator === 'undefined') return 'This device'
+  const ua = navigator.userAgent
+
+  let os = 'Unknown device'
+  if (/Android/i.test(ua)) os = 'Android'
+  else if (/iPhone|iPad|iPod/i.test(ua)) os = 'iOS'
+  else if (/Windows/i.test(ua)) os = 'Windows'
+  else if (/Macintosh|Mac OS X/i.test(ua)) os = 'macOS'
+  else if (/Linux/i.test(ua)) os = 'Linux'
+
+  let browser = 'Browser'
+  if (/Edg\//i.test(ua)) browser = 'Edge'
+  else if (/OPR\//i.test(ua) || /Opera/i.test(ua)) browser = 'Opera'
+  else if (/Chrome\//i.test(ua)) browser = 'Chrome'
+  else if (/Firefox\//i.test(ua)) browser = 'Firefox'
+  else if (/Safari\//i.test(ua)) browser = 'Safari'
+
+  return `${browser} on ${os}`
+}
+
 export async function isPlatformAuthenticatorAvailable(): Promise<boolean> {
   if (!isFingerprintSupported()) return false
   try {

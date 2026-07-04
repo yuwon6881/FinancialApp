@@ -5,7 +5,9 @@ import { CustomSelect } from './ui/CustomSelect'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import * as api from '../lib/api'
 import type { FingerprintCredentialSummary } from '../lib/api'
-import { isFingerprintSupported, createFingerprintCredential } from '../lib/webauthn'
+import { isFingerprintSupported, createFingerprintCredential, getFriendlyDeviceLabel } from '../lib/webauthn'
+
+const DEVICE_ENROLLED_KEY = 'fingerprint_enrolled_on_this_device'
 
 interface SettingsViewProps {
   dashboardData: DashboardData | null
@@ -85,6 +87,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     loadFingerprintCredentials()
   }, [])
 
+  const [enrolledOnThisDevice, setEnrolledOnThisDevice] = useState(
+    () => localStorage.getItem(DEVICE_ENROLLED_KEY) === '1'
+  )
+
   const handleEnrollFingerprint = async () => {
     setFingerprintError(null)
     setFingerprintMsg(null)
@@ -92,13 +98,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     try {
       const { challengeId, options } = await api.getFingerprintRegisterOptions()
       const credential = await createFingerprintCredential(options)
-      const deviceLabel = typeof navigator !== 'undefined' ? navigator.userAgent.split(') ')[0].split(' (').pop() || 'This device' : 'This device'
-      await api.verifyFingerprintRegistration(challengeId, credential, deviceLabel)
+      await api.verifyFingerprintRegistration(challengeId, credential, getFriendlyDeviceLabel())
       await loadFingerprintCredentials()
+      localStorage.setItem(DEVICE_ENROLLED_KEY, '1')
+      setEnrolledOnThisDevice(true)
       setFingerprintMsg('Fingerprint enrolled on this device!')
     } catch (err: any) {
       console.error(err)
-      if (err?.name !== 'NotAllowedError') {
+      if (err?.name === 'InvalidStateError') {
+        // The authenticator already holds a credential for this account (excludeCredentials matched) -
+        // this device is already enrolled, nothing went wrong.
+        localStorage.setItem(DEVICE_ENROLLED_KEY, '1')
+        setEnrolledOnThisDevice(true)
+        setFingerprintMsg('This device is already enrolled.')
+        await loadFingerprintCredentials()
+      } else if (err?.name !== 'NotAllowedError') {
         setFingerprintError(err.message || 'Failed to register fingerprint on this device.')
       }
     } finally {
@@ -111,7 +125,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setFingerprintMsg(null)
     try {
       await api.deleteFingerprintCredential(id)
-      await loadFingerprintCredentials()
+      const remaining = await api.listFingerprintCredentials()
+      setFingerprintCredentials(remaining)
+      if (remaining.length === 0) {
+        localStorage.removeItem(DEVICE_ENROLLED_KEY)
+        setEnrolledOnThisDevice(false)
+      }
       setFingerprintMsg('Fingerprint credential removed.')
     } catch (err: any) {
       console.error(err)
@@ -427,19 +446,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
               )}
 
-              <button
-                type="button"
-                onClick={handleEnrollFingerprint}
-                disabled={fingerprintBusy}
-                className="press-scale w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white shadow-md shadow-emerald-600/20"
-              >
-                {fingerprintBusy ? (
-                  <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                ) : (
-                  <Fingerprint className="size-3.5" />
-                )}
-                Enable on this device
-              </button>
+              {enrolledOnThisDevice ? (
+                <div className="flex items-center justify-center gap-1.5 px-3.5 py-2 text-[11px] font-semibold text-emerald-500">
+                  <CheckCircle2 className="size-3.5 shrink-0" />
+                  Enabled on this device
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleEnrollFingerprint}
+                  disabled={fingerprintBusy}
+                  className="press-scale w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white shadow-md shadow-emerald-600/20"
+                >
+                  {fingerprintBusy ? (
+                    <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                  ) : (
+                    <Fingerprint className="size-3.5" />
+                  )}
+                  {fingerprintCredentials.length > 0 ? 'Add another device' : 'Enable on this device'}
+                </button>
+              )}
 
               {fingerprintMsg && (
                 <p className="text-xs font-semibold text-emerald-500 flex items-center gap-1.5 animate-in fade-in duration-150">
