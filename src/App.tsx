@@ -857,9 +857,10 @@ function App() {
 
     let processedAny = false;
 
+    const completedOpIds: string[] = [];
     try {
       while (true) {
-        const queue = pendingOpsRef.current;
+        const queue = pendingOpsRef.current.filter(op => !completedOpIds.includes(op.id));
         const nextOp = queue[0];
         if (!nextOp) break;
 
@@ -878,19 +879,16 @@ function App() {
           const dispatchFn = DISPATCH[key];
           if (!dispatchFn) {
             console.error(`No dispatch handler for ${key}`);
-            const remaining = queue.slice(1);
-            pendingOpsRef.current = remaining;
-            setPendingOps(remaining);
+            completedOpIds.push(nextOp.id);
             continue;
           }
 
           const result = await dispatchFn(nextOp);
-
-          let updatedQueue = pendingOpsRef.current.filter(item => item.id !== nextOp.id);
+          completedOpIds.push(nextOp.id);
 
           if (nextOp.entity === 'wishlistItem' && nextOp.type === 'add' && result && result.id) {
             const realIdStr = String(result.id);
-            updatedQueue = updatedQueue.map(op => {
+            pendingOpsRef.current = pendingOpsRef.current.map(op => {
               if (op.entity === 'wishlistItem' && op.targetId === nextOp.targetId) {
                 return { ...op, targetId: realIdStr };
               }
@@ -898,8 +896,6 @@ function App() {
             });
           }
 
-          pendingOpsRef.current = updatedQueue;
-          setPendingOps(updatedQueue);
           setError(null);
           processedAny = true;
         } catch (err: any) {
@@ -913,9 +909,7 @@ function App() {
               const opDesc = nextOp.payload?.description || nextOp.payload?.name || nextOp.entity;
               showToast(`Couldn't sync '${opDesc}' — removed from queue`, 'Sync Failed', 'error');
 
-              const remainingQueue = pendingOpsRef.current.filter(item => item.id !== nextOp.id);
-              pendingOpsRef.current = remainingQueue;
-              setPendingOps(remainingQueue);
+              completedOpIds.push(nextOp.id);
               setFailedOps(prev => [...prev, { ...nextOp, retryCount: updatedRetryCount }]);
               continue;
             } else {
@@ -943,7 +937,13 @@ function App() {
         }
       }
     } finally {
+      if (completedOpIds.length > 0) {
+        const remainingOps = pendingOpsRef.current.filter(op => !completedOpIds.includes(op.id));
+        pendingOpsRef.current = remainingOps;
+        setPendingOps(remainingOps);
+      }
       setActiveSyncId(null);
+      setDeletingTxId(null);
       setIsBackgroundSyncing(false);
       isSyncingRef.current = false;
     }
