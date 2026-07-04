@@ -304,21 +304,21 @@ const TopNav: React.FC<TopNavProps> = ({
                       <>
                         <button
                           onClick={startConfirm}
-                          className="flex-1 flex items-center justify-center bg-blue-600 text-white text-[10px] font-bold active:bg-blue-700 transition"
+                          className="flex-1 min-h-[44px] min-w-[44px] px-2 flex items-center justify-center bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-[10px] font-extrabold transition cursor-pointer"
                         >
                           Pay
                         </button>
                         {onDiscardSubscription && (
                           <button
                             onClick={discardNotification}
-                            className="flex-1 flex items-center justify-center bg-slate-600 text-white text-[10px] font-bold active:bg-slate-700 transition"
+                            className="flex-1 min-h-[44px] min-w-[44px] px-2 flex items-center justify-center bg-slate-700 hover:bg-slate-800 active:bg-slate-900 text-white text-[10px] font-extrabold transition cursor-pointer"
                           >
                             Skip
                           </button>
                         )}
                         <button
                           onClick={() => setNotiToDelete(noti)}
-                          className="flex-1 flex items-center justify-center bg-orange-600 text-white text-[10px] font-bold active:bg-orange-700 transition"
+                          className="flex-1 min-h-[44px] min-w-[44px] px-2 flex items-center justify-center bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-[10px] font-extrabold transition cursor-pointer"
                         >
                           Remove
                         </button>
