@@ -160,6 +160,10 @@ export async function logout(): Promise<void> {
   }
 }
 
+export function invalidateCache(): void {
+  queryCache.invalidateAll()
+}
+
 // Dashboard
 export function fetchDashboard(month?: string, year?: number): Promise<DashboardData> {
   const cacheKey = `dashboard:${month || ''}:${year || ''}`
