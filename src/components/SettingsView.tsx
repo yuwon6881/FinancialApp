@@ -27,6 +27,8 @@ interface SettingsViewProps {
   }) => void
   onAddCategory: (category: Omit<TransactionCategory, 'id'>) => void
   onDeleteCategory: (id: string) => void
+  activeSyncId?: string | null
+  deletingId?: string | null
 }
 
 const getDayWithSuffix = (day: number) => {
@@ -44,8 +46,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   hideSensitive,
   onUpdateSettings,
   onAddCategory,
-  onDeleteCategory
+  onDeleteCategory,
+  activeSyncId = null,
+  deletingId = null
 }) => {
+  const isCatSyncing = (catId: string) => {
+    return activeSyncId !== null && activeSyncId !== undefined && String(activeSyncId) === String(catId)
+  }
+
+  const isCatDeleting = (catId: string) => {
+    if (deletingId && String(deletingId) === String(catId)) return true
+    const found = categoriesList.find(c => String(c.id) === String(catId))
+    return Boolean(found && (found as any).isPendingDelete)
+  }
+
   const activeSettings = dashboardData?.setting || {
     targetStabilityFund: 10000,
     selectedMonth: 'Jun',
@@ -340,34 +354,46 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
 
             <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1 select-none">
-              {visibleCategories.map(cat => (
+              {visibleCategories.map(cat => {
+                const isBusy = isCatDeleting(cat.id) || isCatSyncing(cat.id) || cat.isPendingSync
+                return (
                 <div key={cat.id} className="flex items-center justify-between gap-2 bg-background border border-border/50 px-2.5 py-2 rounded-lg text-xs">
                   <span className="flex items-center gap-1.5">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded border font-semibold ${getCategoryBadgeClass(cat.name)}`}>
                       {cat.name}
                     </span>
-                    {(cat as any).isPendingDelete ? (
-                      <span className="inline-flex items-center text-[9px] font-bold text-red-500 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none" title="Deleting category...">
+                    {isCatDeleting(cat.id) ? (
+                      <span className="inline-flex items-center text-[9px] font-bold text-red-500 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none shrink-0" title="Deleting category...">
                         <Loader2 className="size-2.5 animate-spin text-red-500 shrink-0 mr-1" />
                         Deleting...
                       </span>
-                    ) : cat.isPendingSync ? (
-                      <span className="inline-flex items-center text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none" title="Pending sync">
-                        <Clock className="size-2.5 shrink-0 mr-1 text-amber-500" />
-                        Pending
+                    ) : (isCatSyncing(cat.id) || cat.isPendingSync) ? (
+                      <span className="inline-flex items-center text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none shrink-0" title={isCatSyncing(cat.id) ? "Updating category..." : "Pending sync (offline)"}>
+                        {isCatSyncing(cat.id) ? (
+                          <>
+                            <Loader2 className="size-2.5 animate-spin text-amber-500 shrink-0 mr-1" />
+                            Syncing...
+                          </>
+                        ) : (
+                          <>
+                            <Clock className="size-2.5 shrink-0 mr-1 text-amber-500" />
+                            Pending
+                          </>
+                        )}
                       </span>
                     ) : null}
                   </span>
                   <button
                     type="button"
                     onClick={() => onDeleteCategory(cat.id)}
-                    className="p-1.5 text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10 rounded-lg cursor-pointer transition"
+                    disabled={isBusy}
+                    className="p-1.5 text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10 rounded-lg cursor-pointer transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
                     title="Delete category"
                   >
                     <Trash2 className="size-3.5" />
                   </button>
                 </div>
-              ))}
+              )})}
             </div>
 
             <div className="space-y-1.5 pt-1">

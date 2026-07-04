@@ -40,6 +40,8 @@ interface WishlistViewProps {
     highlightedTxId?: string | null
     showAllCycles?: boolean
   }) => void
+  activeSyncId?: string | null
+  deletingId?: string | null
 }
 
 export const WishlistView: React.FC<WishlistViewProps> = ({
@@ -57,8 +59,20 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   formatSensitive,
   autoOpenAddModal,
   onResetAutoOpen,
-  onNavigateToLedger
+  onNavigateToLedger,
+  activeSyncId = null,
+  deletingId = null
 }) => {
+  const isItemSyncing = (itemId: string | number) => {
+    return activeSyncId !== null && activeSyncId !== undefined && String(activeSyncId) === String(itemId)
+  }
+
+  const isItemDeleting = (itemId: string | number) => {
+    if (deletingId && String(deletingId) === String(itemId)) return true
+    const found = wishlist.find(i => String(i.id) === String(itemId))
+    return Boolean(found && (found as any).isPendingDelete)
+  }
+
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingItem, setEditingItem] = useState<WishlistItem | null>(null)
@@ -284,11 +298,26 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                     <div>
                       <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2 flex-wrap">
                         {activeItem.name}
-                        {activeItem.isPendingSync && (
-                          <span className="text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded animate-pulse select-none" title="Changes pending server sync">
-                            Pending Sync
+                        {isItemDeleting(activeItem.id) ? (
+                          <span className="inline-flex items-center text-[9px] font-bold text-red-500 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none shrink-0" title="Deleting item...">
+                            <Loader2 className="size-2.5 animate-spin text-red-500 shrink-0 mr-1" />
+                            Deleting...
                           </span>
-                        )}
+                        ) : (isItemSyncing(activeItem.id) || activeItem.isPendingSync) ? (
+                          <span className="inline-flex items-center text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none shrink-0" title={isItemSyncing(activeItem.id) ? "Updating item..." : "Pending sync (offline)"}>
+                            {isItemSyncing(activeItem.id) ? (
+                              <>
+                                <Loader2 className="size-2.5 animate-spin text-amber-500 shrink-0 mr-1" />
+                                Syncing...
+                              </>
+                            ) : (
+                              <>
+                                <Clock className="size-2.5 shrink-0 mr-1 text-amber-500" />
+                                Pending
+                              </>
+                            )}
+                          </span>
+                        ) : null}
                       </h2>
                       <div className="text-3xl font-black text-foreground mt-2">
                         {formatSensitive(activeItem.price)}
@@ -420,11 +449,13 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               queuedItems.map((item, idx) => {
                 const pct = Math.max(0, Math.min(100, (rewardsBalance / item.price) * 100))
                 const canAfford = rewardsBalance >= item.price
+                const isBusy = isItemDeleting(item.id) || isItemSyncing(item.id) || item.isPendingSync
 
                 return (
                   <SwipeableRow
                     key={item.id}
                     hint={idx === 0}
+                    disabled={isBusy}
                     className={`rounded-xl border shadow-xs transition duration-200 group ${
                       canAfford ? 'border-green-500/30' : 'border-border/60 hover:border-blue-500/20'
                     }`}
@@ -434,14 +465,15 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                       <>
                         <button
                           onClick={() => handleToggleActive(item)}
-                          className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-500 text-white text-[10px] font-bold active:bg-blue-600 transition"
+                          disabled={isBusy}
+                          className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-500 text-white text-[10px] font-bold active:bg-blue-600 transition disabled:opacity-40 disabled:pointer-events-none"
                         >
-                          <Sparkles className="size-3.5" />
+                          <Target className="size-3.5" />
                           Focus
                         </button>
                         <button
                           onClick={() => handleOpenEditModal(item)}
-                          disabled={hideSensitive}
+                          disabled={hideSensitive || isBusy}
                           className="flex-1 flex flex-col items-center justify-center gap-1 bg-slate-500 text-white text-[10px] font-bold active:bg-slate-600 transition disabled:opacity-40 disabled:pointer-events-none"
                         >
                           <Edit2 className="size-3.5" />
@@ -449,7 +481,8 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                         </button>
                         <button
                           onClick={() => onDeleteItem(item.id)}
-                          className="flex-1 flex flex-col items-center justify-center gap-1 bg-red-500 text-white text-[10px] font-bold active:bg-red-600 transition"
+                          disabled={isBusy}
+                          className="flex-1 flex flex-col items-center justify-center gap-1 bg-red-500 text-white text-[10px] font-bold active:bg-red-600 transition disabled:opacity-40 disabled:pointer-events-none"
                         >
                           <Trash2 className="size-3.5" />
                           Delete
@@ -460,13 +493,14 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                       <>
                         <button
                           onClick={() => handleToggleActive(item)}
-                          className="px-2.5 py-1.5 bg-blue-500/10 text-blue-500 hover:bg-blue-500 text-xs font-bold rounded-lg border border-blue-500/10 hover:text-white transition cursor-pointer"
+                          disabled={isBusy}
+                          className="px-2.5 py-1.5 bg-blue-500/10 text-blue-500 hover:bg-blue-500 text-xs font-bold rounded-lg border border-blue-500/10 hover:text-white transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-500/10 disabled:hover:text-blue-500"
                         >
                           Focus
                         </button>
                         <button
                           onClick={() => handleOpenEditModal(item)}
-                          disabled={hideSensitive}
+                          disabled={hideSensitive || isBusy}
                           title={hideSensitive ? 'Unhide balances to edit' : undefined}
                           className="p-1.5 hover:bg-muted text-muted-foreground rounded-lg border border-transparent hover:border-border/40 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                         >
@@ -474,7 +508,8 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                         </button>
                         <button
                           onClick={() => onDeleteItem(item.id)}
-                          className="p-1.5 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 rounded-lg border border-transparent hover:border-red-500/10 transition cursor-pointer"
+                          disabled={isBusy}
+                          className="p-1.5 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 rounded-lg border border-transparent hover:border-red-500/10 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
                         >
                           <Trash2 className="size-3.5" />
                         </button>
@@ -485,15 +520,24 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                       <div className="flex items-center gap-2">
                         <h4 className="font-bold text-foreground text-xs truncate flex items-center gap-1.5">
                           <span>{item.name}</span>
-                          {(item as any).isPendingDelete ? (
+                          {isItemDeleting(item.id) ? (
                             <span className="inline-flex items-center text-[9px] font-bold text-red-500 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none shrink-0" title="Deleting item...">
                               <Loader2 className="size-2.5 animate-spin text-red-500 shrink-0 mr-1" />
                               Deleting...
                             </span>
-                          ) : item.isPendingSync ? (
-                            <span className="inline-flex items-center text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none shrink-0" title="Changes pending server sync">
-                              <Clock className="size-2.5 shrink-0 mr-1 text-amber-500" />
-                              Pending
+                          ) : (isItemSyncing(item.id) || item.isPendingSync) ? (
+                            <span className="inline-flex items-center text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none shrink-0" title={isItemSyncing(item.id) ? "Updating item..." : "Pending sync (offline)"}>
+                              {isItemSyncing(item.id) ? (
+                                <>
+                                  <Loader2 className="size-2.5 animate-spin text-amber-500 shrink-0 mr-1" />
+                                  Syncing...
+                                </>
+                              ) : (
+                                <>
+                                  <Clock className="size-2.5 shrink-0 mr-1 text-amber-500" />
+                                  Pending
+                                </>
+                              )}
                             </span>
                           ) : null}
                         </h4>

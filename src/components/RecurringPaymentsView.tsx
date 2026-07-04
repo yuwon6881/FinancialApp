@@ -37,6 +37,8 @@ interface RecurringPaymentsViewProps {
   autoOpenAddForm?: boolean
   onResetAutoOpen?: () => void
   isSwitchingCycle?: boolean
+  activeSyncId?: string | null
+  deletingId?: string | null
 }
 
 export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
@@ -55,8 +57,19 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   currency = 'USD',
   autoOpenAddForm,
   onResetAutoOpen,
-  isSwitchingCycle = false
+  isSwitchingCycle = false,
+  activeSyncId = null,
+  deletingId = null
 }) => {
+  const isPaymentSyncing = (rpId: string) => {
+    return activeSyncId !== null && activeSyncId !== undefined && String(activeSyncId) === String(rpId)
+  }
+
+  const isPaymentDeleting = (rpId: string) => {
+    if (deletingId && String(deletingId) === String(rpId)) return true
+    const found = payments.find(p => String(p.id) === String(rpId))
+    return Boolean(found && (found as any).isPendingDelete)
+  }
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingPayment, setEditingPayment] = useState<RecurringPayment | null>(null)
   const [name, setName] = useState('')
@@ -517,6 +530,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
       {/* Subscriptions Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredAndSortedPayments.map(rp => {
+          const isBusy = isPaymentDeleting(rp.id) || isPaymentSyncing(rp.id) || rp.isPendingSync
           return (
             <div 
               key={rp.id} 
@@ -534,15 +548,24 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                       {!rp.active && (
                         <span className="text-[9px] font-semibold bg-muted px-1.5 py-0.5 rounded text-muted-foreground">Paused</span>
                       )}
-                      {(rp as any).isPendingDelete ? (
-                        <span className="inline-flex items-center text-[9px] font-bold text-red-500 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none" title="Deleting subscription...">
+                      {isPaymentDeleting(rp.id) ? (
+                        <span className="inline-flex items-center text-[9px] font-bold text-red-500 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none shrink-0" title="Deleting subscription...">
                           <Loader2 className="size-2.5 animate-spin text-red-500 shrink-0 mr-1" />
                           Deleting...
                         </span>
-                      ) : rp.isPendingSync ? (
-                        <span className="inline-flex items-center text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none" title="Changes pending server sync">
-                          <Clock className="size-2.5 shrink-0 mr-1 text-amber-500" />
-                          Pending
+                      ) : (isPaymentSyncing(rp.id) || rp.isPendingSync) ? (
+                        <span className="inline-flex items-center text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none shrink-0" title={isPaymentSyncing(rp.id) ? "Updating subscription..." : "Pending sync (offline)"}>
+                          {isPaymentSyncing(rp.id) ? (
+                            <>
+                              <Loader2 className="size-2.5 animate-spin text-amber-500 shrink-0 mr-1" />
+                              Syncing...
+                            </>
+                          ) : (
+                            <>
+                              <Clock className="size-2.5 shrink-0 mr-1 text-amber-500" />
+                              Pending
+                            </>
+                          )}
                         </span>
                       ) : null}
                     </h3>
@@ -554,7 +577,8 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                   {/* Status Toggle Button */}
                   <button
                     onClick={() => { triggerHaptic(10); onToggleActive(rp.id) }}
-                    className="text-muted-foreground hover:text-foreground cursor-pointer transition duration-150"
+                    disabled={isBusy}
+                    className="text-muted-foreground hover:text-foreground cursor-pointer transition duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {rp.active ? (
                       <ToggleRight className="size-8 text-blue-500" />
@@ -613,14 +637,16 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                       setEditingPayment(rp)
                       setShowAddForm(true)
                     }}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-blue-500 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/15 cursor-pointer transition duration-150 text-xs font-bold active:scale-95"
+                    disabled={isBusy}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-blue-500 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/15 cursor-pointer transition duration-150 text-xs font-bold active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none"
                     title="Edit subscription"
                   >
                     <Edit className="size-3.5" /> Edit
                   </button>
                   <button
                     onClick={() => onDeletePayment(rp.id)}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-orange-500 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/15 cursor-pointer transition duration-150 text-xs font-bold active:scale-95"
+                    disabled={isBusy}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-orange-500 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/15 cursor-pointer transition duration-150 text-xs font-bold active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none"
                     title="Delete subscription"
                   >
                     <Trash2 className="size-3.5" /> Delete

@@ -1360,10 +1360,8 @@ function App() {
             onAddBalanceAdjustment={handleAddBalanceAdjustment}
             isSwitchingCycle={isSwitchingCycle}
           />
-        )}
-
-        {activeTab === 'settings' && (
-          <SettingsView
+        )}        {activeTab === 'settings' && (
+          <SettingsView 
             dashboardData={optimisticDashboardData}
             categoriesList={allCategories}
             darkMode={darkMode}
@@ -1373,6 +1371,8 @@ function App() {
             onUpdateSettings={handleUpdateSettings}
             onAddCategory={handleAddCategory}
             onDeleteCategory={requestDeleteCategory}
+            activeSyncId={activeSyncId}
+            deletingId={deletingTxId}
           />
         )}
 
@@ -1394,6 +1394,8 @@ function App() {
             autoOpenAddForm={autoOpenSubscriptionAdd}
             onResetAutoOpen={() => setAutoOpenSubscriptionAdd(false)}
             isSwitchingCycle={isSwitchingCycle}
+            activeSyncId={activeSyncId}
+            deletingId={deletingTxId}
           />
         )}
 
@@ -1459,6 +1461,8 @@ function App() {
             autoOpenAddModal={autoOpenWishlistAdd}
             onResetAutoOpen={() => setAutoOpenWishlistAdd(false)}
             onNavigateToLedger={handleNavigateToLedger}
+            activeSyncId={activeSyncId}
+            deletingId={deletingTxId}
           />
         )}
 
