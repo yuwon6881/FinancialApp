@@ -459,8 +459,13 @@ function App() {
       }
     } catch (err: any) {
       console.error(err)
+      const isJustLoggedIn = Date.now() - lastUnlockedTimeRef.current < 10000
       if (err.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
-        handleLogout()
+        if (!isJustLoggedIn) {
+          handleLogout()
+        } else {
+          setError('Authenticating with server...')
+        }
       } else if (err.message && err.message.includes('423')) {
         if (Date.now() - lastUnlockedTimeRef.current > 15000) {
           setIsLocked(true)
@@ -486,12 +491,13 @@ function App() {
 
   const handleLoginSuccess = (newToken: string, newUsername: string) => {
     localStorage.setItem('auth_token', newToken)
-    setToken(newToken)
-    setUsername(newUsername)
     localStorage.setItem('auth_username', newUsername)
     sessionStorage.setItem('session_locked', 'false')
     localStorage.setItem('last_active_time', Date.now().toString())
+    lastUnlockedTimeRef.current = Date.now()
     setIsLocked(false)
+    setToken(newToken)
+    setUsername(newUsername)
 
     // Restore any backed up pending transactions
     const cachedBackup = localStorage.getItem('pending_transactions_backup');
