@@ -146,8 +146,8 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
     }
   }, [isMobile, disabled, open, actionsWidth])
 
-  // Desktop (or disabled): keep actions inline at the trailing edge.
-  if (!isMobile || disabled) {
+  // Desktop: keep actions inline at the trailing edge.
+  if (!isMobile) {
     return (
       <div id={id} className={cn('bg-card', className)}>
         <div className={cn('flex items-center gap-3', contentClassName)}>

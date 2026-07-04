@@ -36,6 +36,16 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   componentDidCatch(error: Error, info: ErrorInfo) {
     // Keep a breadcrumb for debugging without crashing the app.
     console.error('[ErrorBoundary]', error, info.componentStack)
+
+    // Automatically recover from Vite chunk load errors when a new version is deployed.
+    if (
+      error.message &&
+      (error.message.includes('Failed to fetch dynamically imported module') ||
+       error.message.includes('Importing a module script failed'))
+    ) {
+      console.warn('Chunk load error detected, triggering hard reload...')
+      window.location.reload()
+    }
   }
 
   reset = () => this.setState({ error: null })
