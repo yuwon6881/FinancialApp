@@ -836,6 +836,7 @@ function App() {
     setIsBackgroundSyncing(true);
 
     let processedAny = false;
+    const successfulOps: QueuedOp[] = [];
 
     try {
       while (true) {
@@ -888,6 +889,7 @@ function App() {
 
           setError(null);
           processedAny = true;
+          successfulOps.push(nextOp);
         } catch (err: any) {
           console.error(`Failed to sync ${nextOp.entity}:${nextOp.type}:`, err);
           if (err.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
@@ -922,14 +924,36 @@ function App() {
       }
 
       if (processedAny) {
-        if (pendingOpsRef.current.length === 0) {
-          showToast('All pending changes synced successfully', 'Sync completed', 'success');
-        }
         try {
           await loadAll(selectedMonth || undefined, selectedYear || undefined, true);
         } catch (refreshErr) {
           console.error('Post-sync dashboard refresh failed:', refreshErr);
         }
+        
+        // Show toasts only after UI is refreshed so they are fully "final"
+        successfulOps.forEach(op => {
+          const entityMap: Record<string, string> = {
+            settings: 'Settings',
+            category: 'Category',
+            transaction: 'Transaction',
+            subscription: 'Subscription',
+            wishlistItem: 'Wishlist item',
+            balance: 'Balance adjustment',
+            recurringPayment: 'Recurring payment'
+          }
+          const typeMap: Record<string, string> = {
+            add: 'added',
+            update: 'updated',
+            delete: 'deleted',
+            pay: 'paid',
+            skip: 'skipped',
+            toggle: 'toggled',
+            purchase: 'purchased'
+          }
+          const entityName = entityMap[op.entity] || 'Item'
+          const typeName = typeMap[op.type] || 'processed'
+          showToast(`${entityName} ${typeName} successfully`, 'Sync successful', 'success')
+        })
       }
     } finally {
       setActiveSyncId(null);
