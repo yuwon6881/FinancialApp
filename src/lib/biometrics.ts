@@ -172,7 +172,7 @@ export async function verifyBiometricPrompt(_promptReason?: string): Promise<Bio
     }
   }
 
-  // Verify assertion with backend server to generate an active session token
+  // Verify assertion with backend server
   try {
     const serverRes = await verifyBiometricOnServer(record.rawId)
     if (serverRes && serverRes.token) {
@@ -183,12 +183,11 @@ export async function verifyBiometricPrompt(_promptReason?: string): Promise<Bio
     }
   } catch (e: any) {
     console.warn('Biometric backend verification warning:', e)
-    // If backend connection is offline or unreachable, use local session token if present
     if (record.token && (e.message?.includes('connect') || e.message?.includes('network') || e.message?.includes('fetch'))) {
       localStorage.setItem('auth_token', record.token)
       return record
     }
-    throw new Error(e.message || 'Biometric authentication failed on server. Please log in with password.')
+    throw new Error(e.message || 'Biometric authentication failed on server.')
   }
 
   return record

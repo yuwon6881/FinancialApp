@@ -2,7 +2,7 @@ import type { Transaction, RecurringPayment, DashboardData, TransactionCategory,
 
 const API_BASE_URL = import.meta.env.DEV 
   ? 'http://localhost:5000/api' 
-  : (import.meta.env.VITE_API_URL || '/api')
+  : (import.meta.env.VITE_API_URL || 'http://localhost:5000/api')
 
 interface CacheEntry {
   promise: Promise<any>
