@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Lock, User, ShieldAlert, Sparkles, Eye, EyeOff, Fingerprint } from 'lucide-react'
 import * as api from '../lib/api'
 import { AppLogo } from './ui/AppLogo'
-import { verifyBiometricPrompt } from '../lib/biometrics'
+import { isFingerprintSupported, getFingerprintAssertion } from '../lib/webauthn'
 
 interface LoginViewProps {
   onLoginSuccess: (token: string, username: string) => void
@@ -10,17 +10,20 @@ interface LoginViewProps {
 
 export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [isRegistered, setIsRegistered] = useState<boolean | null>(null)
+  const [hasFingerprint, setHasFingerprint] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [fingerprintLoading, setFingerprintLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
   async function checkStatus() {
     try {
       const res = await api.fetchAuthStatus()
       setIsRegistered(res.isRegistered)
+      setHasFingerprint(res.hasFingerprint)
     } catch (err) {
       console.error(err)
       setError('Could not connect to the backend server. Please make sure the API is running.')
@@ -62,21 +65,23 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     }
   }
 
-  const handleBiometricLogin = async () => {
+  const handleFingerprintLogin = async () => {
     setError(null)
-    setLoading(true)
+    setFingerprintLoading(true)
     try {
-      const record = await verifyBiometricPrompt('Authenticate to log into FinancialApp')
-      if (record && record.token && record.username) {
-        onLoginSuccess(record.token, record.username)
-      } else {
-        setError('Biometric authentication failed.')
-      }
+      const { challengeId, options } = await api.getFingerprintLoginOptions()
+      const credential = await getFingerprintAssertion(options)
+      const res = await api.verifyFingerprintLogin(challengeId, credential)
+      onLoginSuccess(res.token, res.username)
     } catch (err: any) {
       console.error(err)
-      setError(err.message || 'Biometric authentication failed.')
+      if (err?.name === 'NotAllowedError') {
+        // User cancelled the prompt or it timed out - not worth alarming them.
+      } else {
+        setError(err.message || 'Fingerprint login failed. Please use your password instead.')
+      }
     } finally {
-      setLoading(false)
+      setFingerprintLoading(false)
     }
   }
 
@@ -205,18 +210,20 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           </button>
         </form>
 
-        {isRegistered && (
-          <div className="pt-2 border-t border-border/40 space-y-3">
-            <button
-              type="button"
-              onClick={handleBiometricLogin}
-              disabled={loading}
-              className="press-scale w-full py-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold text-sm rounded-xl transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Fingerprint className="size-5 text-emerald-400 animate-pulse" />
-              Unlock with Fingerprint / Touch ID
-            </button>
-          </div>
+        {isRegistered && hasFingerprint && isFingerprintSupported() && (
+          <button
+            type="button"
+            onClick={handleFingerprintLogin}
+            disabled={fingerprintLoading}
+            className="press-scale w-full py-2.5 border border-border hover:bg-muted/50 disabled:opacity-50 text-foreground font-semibold text-sm rounded-xl transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
+          >
+            {fingerprintLoading ? (
+              <div className="w-4 h-4 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+            ) : (
+              <Fingerprint className="size-4 text-blue-500" />
+            )}
+            Unlock with Fingerprint
+          </button>
         )}
 
         <div className="text-center text-[10px] text-muted-foreground select-none">

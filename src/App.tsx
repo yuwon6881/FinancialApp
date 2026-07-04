@@ -28,7 +28,7 @@ import { PasswordPromptModal } from './components/PasswordPromptModal'
 import { LockScreen } from './components/LockScreen'
 import { AppLogo } from './components/ui/AppLogo'
 import { triggerHaptic } from './lib/haptics'
-import { isBiometricEnrolled, verifyBiometricPrompt } from './lib/biometrics'
+import { isFingerprintSupported, getFingerprintAssertion } from './lib/webauthn'
 
 const createLocalId = (prefix: string, separator = '_') => {
   return `${prefix}${separator}${Date.now()}${separator}${Math.random().toString(36).substring(2, 9)}`
@@ -1115,15 +1115,20 @@ function App() {
 
   const handleToggleHideSensitive = async () => {
     if (hideSensitive) {
-      if (isBiometricEnrolled()) {
+      if (isFingerprintSupported()) {
         try {
-          await verifyBiometricPrompt('Authenticate to reveal sensitive numbers')
-          setHideSensitive(false)
-          localStorage.setItem('hide_sensitive', 'false')
-          api.updateHideSensitive(false).catch(err => console.warn('Hide sensitive sync failed:', err))
-          return
+          const status = await api.fetchAuthStatus()
+          if (status.hasFingerprint) {
+            const { challengeId, options } = await api.getFingerprintLoginOptions()
+            const credential = await getFingerprintAssertion(options)
+            await api.verifyFingerprintLogin(challengeId, credential)
+            setHideSensitive(false)
+            localStorage.setItem('hide_sensitive', 'false')
+            api.updateHideSensitive(false).catch(err => console.warn('Hide sensitive sync failed:', err))
+            return
+          }
         } catch (err) {
-          console.warn('Biometric prompt failed/cancelled:', err)
+          console.warn('Fingerprint prompt failed/cancelled:', err)
         }
       }
       setShowPasswordPrompt(true)

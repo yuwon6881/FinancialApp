@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useIsMobile } from '../../lib/useIsMobile'
+import { isSwipeLocked } from '../../lib/swipeLock'
 
 interface PullToRefreshProps {
   /** Called when the user pulls past the threshold. May return a promise; the spinner shows until it settles. */
@@ -62,6 +63,12 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
     const onMove = (e: TouchEvent) => {
       const s = drag.current
       if (!s.active || refreshingRef.current) return
+      if (isSwipeLocked()) {
+        s.active = false
+        s.pulling = false
+        if (pullRef.current) resetPullState()
+        return
+      }
       const dy = e.touches[0].clientY - s.startY
       if (dy <= 0) {
         if (s.pulling) resetPullState()

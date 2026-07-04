@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Fingerprint } from 'lucide-react'
 import * as api from '../lib/api'
 import { AppLogo } from './ui/AppLogo'
-import { isBiometricEnrolled, verifyBiometricPrompt } from '../lib/biometrics'
+import { isFingerprintSupported, getFingerprintAssertion } from '../lib/webauthn'
 
 interface LockScreenProps {
   isOpen: boolean
@@ -14,30 +14,41 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
   const [lockPassword, setLockPassword] = useState('')
   const [lockError, setLockError] = useState<string | null>(null)
   const [lockVerifying, setLockVerifying] = useState(false)
-  const [biometricAvailable, setBiometricAvailable] = useState(false)
+  const [fingerprintAvailable, setFingerprintAvailable] = useState(false)
 
   useEffect(() => {
     if (!isOpen) return
-    const enrolled = isBiometricEnrolled()
-    setBiometricAvailable(enrolled)
 
-    if (enrolled) {
-      // Auto-trigger biometric unlock on screen lock open
-      handleBiometricUnlock()
-    }
+    let cancelled = false
+    ;(async () => {
+      if (!isFingerprintSupported()) return
+      try {
+        const status = await api.fetchAuthStatus()
+        if (cancelled || !status.hasFingerprint) return
+        setFingerprintAvailable(true)
+        // Auto-trigger fingerprint unlock on screen lock open
+        handleFingerprintUnlock()
+      } catch {
+        // Backend unreachable - fall through to password unlock only.
+      }
+    })()
+
+    return () => { cancelled = true }
   }, [isOpen])
 
-  const handleBiometricUnlock = async () => {
+  const handleFingerprintUnlock = async () => {
     setLockVerifying(true)
     setLockError(null)
     try {
-      await verifyBiometricPrompt('Authenticate to unlock your FinancialApp session')
+      const { challengeId, options } = await api.getFingerprintLoginOptions()
+      const credential = await getFingerprintAssertion(options)
+      await api.verifyFingerprintLogin(challengeId, credential)
       setLockPassword('')
       onUnlocked()
     } catch (err: any) {
       console.error(err)
-      if (err.message && !err.message.includes('cancelled')) {
-        setLockError(err.message)
+      if (err?.name !== 'NotAllowedError') {
+        setLockError(err.message || 'Fingerprint unlock failed. Please use your password.')
       }
     } finally {
       setLockVerifying(false)
@@ -55,10 +66,10 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
           <p className="text-sm text-muted-foreground mt-1">You were inactive for 5 minutes. Touch fingerprint or enter password to continue.</p>
         </div>
 
-        {biometricAvailable && (
+        {fingerprintAvailable && (
           <button
             type="button"
-            onClick={handleBiometricUnlock}
+            onClick={handleFingerprintUnlock}
             disabled={lockVerifying}
             className="press-scale w-full py-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold text-sm rounded-xl transition duration-200 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/10"
           >
@@ -94,7 +105,7 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
             placeholder="Enter your password"
             value={lockPassword}
             onChange={e => setLockPassword(e.target.value)}
-            autoFocus={!biometricAvailable}
+            autoFocus={!fingerprintAvailable}
             className="w-full px-4 py-3 text-sm bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
           />
           {lockError && (

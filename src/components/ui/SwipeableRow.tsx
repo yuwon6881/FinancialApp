@@ -3,6 +3,7 @@ import { ChevronsLeft } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useIsMobile } from '../../lib/useIsMobile'
 import { triggerHaptic } from '../../lib/haptics'
+import { setSwipeLocked } from '../../lib/swipeLock'
 
 // Module-level registry so only a single row is ever open at a time.
 let closeActiveRow: (() => void) | null = null
@@ -102,6 +103,9 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
           s.active = false
           return
         }
+        // Horizontal gesture claimed -> tell PullToRefresh to ignore any
+        // vertical drift for the rest of this touch.
+        setSwipeLocked(true)
       }
       if (s.dir !== 'h') return
 
@@ -115,6 +119,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
 
     const onEnd = () => {
       const s = drag.current
+      setSwipeLocked(false)
       if (!s.active) {
         setDragOffset(null)
         return

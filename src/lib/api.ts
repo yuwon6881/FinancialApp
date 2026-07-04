@@ -1,4 +1,5 @@
 import type { Transaction, RecurringPayment, DashboardData, TransactionCategory, WishlistItem } from '../types'
+import type { CreateOptionsJson, AssertionOptionsJson } from './webauthn'
 
 const getApiBaseUrl = (): string => {
   if (import.meta.env.VITE_API_URL) {
@@ -49,7 +50,7 @@ window.fetch = async (...args) => {
   const response = await originalFetch(...args)
   const url = typeof args[0] === 'string' ? args[0] : (args[0] as any).url || ''
   if (!response.ok) {
-    if (response.status === 401 && !url.includes('/auth/login') && !url.includes('/auth/status') && !url.includes('/auth/biometric')) {
+    if (response.status === 401 && !url.includes('/auth/login') && !url.includes('/auth/status') && !url.includes('/auth/webauthn')) {
       throw new Error('401 Unauthorized')
     }
     if (response.status === 423) {
@@ -115,7 +116,7 @@ function deobfuscateRecurringPayment(rp: any): RecurringPayment {
 }
 
 // Authentication
-export async function fetchAuthStatus(): Promise<{ isRegistered: boolean }> {
+export async function fetchAuthStatus(): Promise<{ isRegistered: boolean; hasFingerprint: boolean }> {
   const response = await fetch(`${API_BASE_URL}/auth/status`)
   if (!response.ok) {
     throw new Error('Failed to fetch auth status')
@@ -737,73 +738,84 @@ export async function pingServer(): Promise<{ status: string }> {
   }
 }
 
-export async function fetchBiometricStatus(): Promise<{ enrolled: boolean; username?: string; enrolledAt?: string }> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/auth/biometric/status`, {
-      headers: getHeaders()
-    })
-    if (!res.ok) return { enrolled: false }
-    return res.json()
-  } catch {
-    return { enrolled: false }
+// WebAuthn (fingerprint) enrollment - requires an existing password-authenticated session
+export async function getFingerprintRegisterOptions(): Promise<{ challengeId: string; options: CreateOptionsJson }> {
+  const response = await fetch(`${API_BASE_URL}/auth/webauthn/register/options`, {
+    method: 'POST',
+    headers: getHeaders(),
+  })
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Failed to start fingerprint registration')
   }
+  return response.json()
 }
 
-export async function registerBiometricOnServer(credentialId: string, publicKey?: string): Promise<{ message: string; enrolled: boolean }> {
-  const res = await fetch(`${API_BASE_URL}/auth/biometric/register`, {
+export async function verifyFingerprintRegistration(challengeId: string, credential: unknown, deviceLabel?: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/auth/webauthn/register/verify`, {
     method: 'POST',
     headers: getHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ credentialId, publicKey })
+    body: JSON.stringify({ challengeId, credential, deviceLabel }),
   })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.message || 'Failed to register biometric credential on server.')
-  }
-  return res.json()
-}
-
-export async function verifyBiometricOnServer(credentialId?: string): Promise<{ verified: boolean; token?: string; username?: string; message?: string }> {
-  try {
-    const token = localStorage.getItem('auth_token')
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json'
-    }
-    if (token && token !== 'null' && token !== 'undefined' && token.trim().length > 0) {
-      headers['Authorization'] = `Bearer ${token}`
-    }
-    const res = await fetch(`${getApiBaseUrl()}/auth/biometric/verify`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ credentialId })
-    })
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}))
-      throw new Error(err.message || 'Biometric server verification failed.')
-    }
-    const data = await res.json()
-    if (data.token) {
-      localStorage.setItem('auth_token', data.token)
-      queryCache.invalidateAll()
-    }
-    return data
-  } catch (err: any) {
-    if (err.message === 'Failed to fetch' || err.name === 'TypeError' || err.message?.includes('NetworkError')) {
-      throw new Error('Could not connect to database API server. Please check network or backend server status.')
-    }
-    throw err
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Failed to register fingerprint')
   }
 }
 
-export async function removeBiometricOnServer(): Promise<{ message: string; enrolled: boolean }> {
-  const res = await fetch(`${API_BASE_URL}/auth/biometric/remove`, {
+export interface FingerprintCredentialSummary {
+  id: string
+  deviceLabel: string | null
+  createdAt: string
+}
+
+export async function listFingerprintCredentials(): Promise<FingerprintCredentialSummary[]> {
+  const response = await fetch(`${API_BASE_URL}/auth/webauthn/credentials`, {
+    headers: getHeaders(),
+  })
+  if (!response.ok) {
+    throw new Error('Failed to load fingerprint credentials')
+  }
+  return response.json()
+}
+
+export async function deleteFingerprintCredential(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/auth/webauthn/credentials/${id}`, {
     method: 'DELETE',
-    headers: getHeaders()
+    headers: getHeaders(),
   })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.message || 'Failed to remove biometric credential from server.')
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Failed to remove fingerprint credential')
   }
-  return res.json()
+}
+
+// WebAuthn (fingerprint) login - unauthenticated, this is how a session is obtained
+export async function getFingerprintLoginOptions(): Promise<{ challengeId: string; options: AssertionOptionsJson }> {
+  const response = await fetch(`${API_BASE_URL}/auth/webauthn/login/options`, {
+    method: 'POST',
+  })
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Fingerprint login is not available')
+  }
+  return response.json()
+}
+
+export async function verifyFingerprintLogin(challengeId: string, credential: unknown): Promise<{ token: string; username: string }> {
+  const response = await fetch(`${API_BASE_URL}/auth/webauthn/login/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ challengeId, credential }),
+  })
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Fingerprint login failed')
+  }
+  const data = await response.json()
+  localStorage.setItem('auth_token', data.token)
+  queryCache.invalidateAll()
+  return data
 }
 
 
