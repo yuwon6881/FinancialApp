@@ -182,13 +182,13 @@ export async function verifyBiometricPrompt(_promptReason?: string): Promise<Bio
       localStorage.setItem(BIOMETRIC_STORAGE_KEY, JSON.stringify(record))
     }
   } catch (e: any) {
-    console.warn('Biometric backend verification warning:', e)
-    // If backend connection is offline or network fails, fallback to local record token for offline view
-    if (record.token && (e.message?.includes('connect') || e.message?.includes('network') || e.message?.includes('fetch') || e.message?.includes('server'))) {
+    console.warn('Biometric backend verification error:', e)
+    // Only fallback to local stored token if device browser is strictly offline (network disconnected)
+    if (typeof navigator !== 'undefined' && !navigator.onLine && record.token) {
       localStorage.setItem('auth_token', record.token)
       return record
     }
-    throw e
+    throw new Error(e.message || 'Biometric authentication failed on server.')
   }
 
   return record
