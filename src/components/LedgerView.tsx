@@ -73,6 +73,8 @@ interface LedgerViewProps {
   }) => Promise<{ blob: Blob; filename: string }>
   onShowAlert?: (message: string, title?: string) => void
   activeSyncId?: string | null
+  deletingTxId?: string | null
+  clearActiveSync?: () => void
   onStartEditPending?: (id: string | null) => void
   isSwitchingCycle?: boolean
 }
@@ -153,6 +155,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   onExportTransactions,
   onShowAlert,
   activeSyncId = null,
+  deletingTxId = null,
+  clearActiveSync,
   onStartEditPending,
   isSwitchingCycle = false
 }) => {
@@ -888,30 +892,36 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       splitSpec = `IncomeSplit:${(ess * 100).toFixed(4)},${(gro * 100).toFixed(4)},${(sta * 100).toFixed(4)},${(rew * 100).toFixed(4)}`
     }
 
-    if (pendingTxData.isEdit && pendingTxData.id) {
-      await onUpdateTransaction?.(pendingTxData.id, {
-        description: pendingTxData.description,
-        amount: pendingTxData.amount,
-        category: pendingTxData.category,
-        ledgerCategory: splitSpec,
-        date: pendingTxData.date
-      })
-      if (showAllCycles && onFetchPagedTransactions) {
-        runServerFetch({ page: currentPage, search: appliedSearch, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
+    try {
+      if (pendingTxData.isEdit && pendingTxData.id) {
+        await onUpdateTransaction?.(pendingTxData.id, {
+          description: pendingTxData.description,
+          amount: pendingTxData.amount,
+          category: pendingTxData.category,
+          ledgerCategory: splitSpec,
+          date: pendingTxData.date
+        })
+        if (showAllCycles && onFetchPagedTransactions) {
+          await runServerFetch({ page: currentPage, search: appliedSearch, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
+        }
+      } else {
+        await onAddTransaction({
+          description: pendingTxData.description,
+          amount: pendingTxData.amount,
+          category: pendingTxData.category,
+          ledgerCategory: splitSpec,
+          date: pendingTxData.date
+        })
+        if (showAllCycles && onFetchPagedTransactions) {
+          await runServerFetch({ page: currentPage, search: appliedSearch, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
+        }
       }
-    } else {
-      await onAddTransaction({
-        description: pendingTxData.description,
-        amount: pendingTxData.amount,
-        category: pendingTxData.category,
-        ledgerCategory: splitSpec,
-        date: pendingTxData.date
-      })
+    } finally {
+      if (clearActiveSync) clearActiveSync()
+      setShowStabilityCapModal(false)
+      setPendingTxData(null)
+      resetFormFields()
     }
-
-    setShowStabilityCapModal(false)
-    setPendingTxData(null)
-    resetFormFields()
   }
 
   const handleCancelStabilityCapModal = () => {
@@ -936,9 +946,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setShowDeleteModal(false)
     setTxToDelete(null)
 
-    await onDeleteTransaction(deleteId)
-    if (showAllCycles && onFetchPagedTransactions) {
-      runServerFetch({ page: currentPage, search: appliedSearch, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
+    try {
+      await onDeleteTransaction(deleteId)
+      if (showAllCycles && onFetchPagedTransactions) {
+        await runServerFetch({ page: currentPage, search: appliedSearch, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
+      }
+    } finally {
+      if (clearActiveSync) clearActiveSync()
     }
   }
 
@@ -985,19 +999,19 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     if (editingTxId) {
       const targetId = editingTxId
       resetFormFields()
-      const updatePromise = onUpdateTransaction?.(targetId, {
-        description,
-        amount: finalAmount,
-        category: txType === 'transfer' ? 'Transfer' : category,
-        ledgerCategory: finalLedgerCategory,
-        date
-      })
-      if (updatePromise && typeof (updatePromise as any).then === 'function') {
-        (updatePromise as any).then(() => {
-          if (showAllCycles && onFetchPagedTransactions) {
-            runServerFetch({ page: currentPage, search: appliedSearch, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
-          }
+      try {
+        await onUpdateTransaction?.(targetId, {
+          description,
+          amount: finalAmount,
+          category: txType === 'transfer' ? 'Transfer' : category,
+          ledgerCategory: finalLedgerCategory,
+          date
         })
+        if (showAllCycles && onFetchPagedTransactions) {
+          await runServerFetch({ page: currentPage, search: appliedSearch, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
+        }
+      } finally {
+        if (clearActiveSync) clearActiveSync()
       }
     } else {
       await onAddTransaction({
@@ -1010,6 +1024,24 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       resetFormFields()
     }
   }
+
+  const isTxDeleting = useCallback((txId: string) => {
+    const txObj = transactions.find(t => t.id === txId)
+    if (txObj && (txObj as any).isPendingDelete) return true
+    if (!deletingTxId) return false
+    if (txId === deletingTxId) return true
+    if (txId.startsWith(`${deletingTxId}-split-`)) return true
+    if (txId.includes('-split-') && txId.split('-split-')[0] === deletingTxId) return true
+    return false
+  }, [deletingTxId, transactions])
+
+  const isTxSyncing = useCallback((txId: string) => {
+    if (!activeSyncId) return false
+    if (txId === activeSyncId) return true
+    if (txId.startsWith(`${activeSyncId}-split-`)) return true
+    if (txId.includes('-split-') && txId.split('-split-')[0] === activeSyncId) return true
+    return false
+  }, [activeSyncId])
 
   const sourceTransactions = useMemo(() => transactions, [transactions])
 
@@ -2026,12 +2058,20 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     <td className="p-4 font-medium text-muted-foreground">{t.date}</td>
                     <td className="p-4 font-semibold text-foreground flex items-center gap-2">
                       <span>{t.description}</span>
-                      {(t.id === activeSyncId || (t as any).isPendingSync) && (
+                      {isTxDeleting(t.id) ? (
                         <span 
-                          title={t.id === activeSyncId ? "Updating transaction..." : "Pending sync (offline)"} 
+                          title="Deleting transaction..." 
+                          className="inline-flex items-center text-[9px] px-1.5 py-0.5 rounded-md bg-red-500/10 text-red-500 border border-red-500/20 shrink-0 select-none animate-pulse"
+                        >
+                          <Loader2 className="size-2.5 animate-spin shrink-0 mr-1 text-red-500" />
+                          Deleting...
+                        </span>
+                      ) : (isTxSyncing(t.id) || (t as any).isPendingSync) ? (
+                        <span 
+                          title={isTxSyncing(t.id) ? "Updating transaction..." : "Pending sync (offline)"} 
                           className="inline-flex items-center text-[9px] px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 shrink-0 select-none animate-pulse"
                         >
-                          {t.id === activeSyncId ? (
+                          {isTxSyncing(t.id) ? (
                             <>
                               <Loader2 className="size-2.5 animate-spin shrink-0 mr-1" />
                               Syncing...
@@ -2040,7 +2080,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                             "Pending"
                           )}
                         </span>
-                      )}
+                      ) : null}
                     </td>
                     <td className="p-4">
                       <span className={`inline-block text-[10px] px-2 py-0.5 font-semibold rounded-md border ${
@@ -2122,7 +2162,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       ) : (
                         <button
                           onClick={() => handleStartEdit(t)}
-                          disabled={t.id === activeSyncId}
+                          disabled={isTxDeleting(t.id) || isTxSyncing(t.id)}
                           className="text-xs text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           Edit
@@ -2130,7 +2170,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       )}
                       <button
                         onClick={() => handleDeleteClick(t)}
-                        disabled={t.id === activeSyncId}
+                        disabled={isTxDeleting(t.id) || isTxSyncing(t.id)}
                         className="text-xs text-orange-500 hover:text-orange-600 bg-orange-500/5 hover:bg-orange-500/10 border border-orange-500/10 hover:border-orange-500/20 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         Delete
@@ -2159,13 +2199,15 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           const isTransfer = (t.ledgerCategory || '').startsWith('Transfer:')
           const isSplit = t.id.includes('-split-')
           const ledgerLabel = displayLedgerCategory(t.ledgerCategory)
-          const isSyncing = t.id === activeSyncId
+          const isDeleting = isTxDeleting(t.id)
+          const isSyncing = isTxSyncing(t.id)
 
           return (
             <SwipeableRow
               id={`tx-row-${t.id}`}
               key={t.id}
               hint={idx === 0}
+              disabled={isDeleting || isSyncing}
               className="rounded-2xl border border-border shadow-xs"
               actionsWidth={128}
               actions={
@@ -2181,7 +2223,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   ) : (
                     <button
                       onClick={() => handleStartEdit(t)}
-                      disabled={isSyncing}
+                      disabled={isDeleting || isSyncing}
                       className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-500 text-white text-[11px] font-bold active:bg-blue-600 transition disabled:opacity-50 disabled:pointer-events-none"
                     >
                       <Edit2 className="size-4" />
@@ -2190,7 +2232,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   )}
                   <button
                     onClick={() => handleDeleteClick(t)}
-                    disabled={isSyncing}
+                    disabled={isDeleting || isSyncing}
                     className="flex-1 flex flex-col items-center justify-center gap-1 bg-red-500 text-white text-[11px] font-bold active:bg-red-600 transition disabled:opacity-50 disabled:pointer-events-none"
                   >
                     <Trash2 className="size-4" />
@@ -2219,12 +2261,20 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 flex items-center gap-1.5 min-w-0">
                     <h4 className="text-sm font-bold text-foreground leading-snug truncate">{t.description}</h4>
-                    {(t.id === activeSyncId || (t as any).isPendingSync) && (
+                    {isDeleting ? (
                       <span 
-                        title={t.id === activeSyncId ? "Updating transaction..." : "Pending sync (offline)"} 
+                        title="Deleting transaction..." 
+                        className="inline-flex items-center text-[9px] px-1.5 py-0.5 rounded-md bg-red-500/10 text-red-500 border border-red-500/20 shrink-0 select-none animate-pulse"
+                      >
+                        <Loader2 className="size-2.5 animate-spin text-red-500 shrink-0 mr-1" />
+                        Deleting...
+                      </span>
+                    ) : (isSyncing || (t as any).isPendingSync) ? (
+                      <span 
+                        title={isSyncing ? "Updating transaction..." : "Pending sync (offline)"} 
                         className="inline-flex items-center text-[9px] px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 shrink-0 select-none animate-pulse"
                       >
-                        {t.id === activeSyncId ? (
+                        {isSyncing ? (
                           <>
                             <Loader2 className="size-2.5 animate-spin text-amber-500 shrink-0 mr-1" />
                             Syncing...
@@ -2233,7 +2283,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                           "Pending"
                         )}
                       </span>
-                    )}
+                    ) : null}
                   </div>
                   <div className="shrink-0">
                     {isTransfer ? (
@@ -2258,11 +2308,15 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       {ledgerLabel}
                     </span>
                   </span>
-                  {isSyncing && (
+                  {isDeleting ? (
+                    <span className="text-[9px] text-red-500/80 flex items-center gap-1 select-none font-medium">
+                      <Loader2 className="size-2.5 animate-spin text-red-500" /> Deleting
+                    </span>
+                  ) : isSyncing ? (
                     <span className="text-[9px] text-muted-foreground/60 flex items-center gap-1 select-none">
                       <Loader2 className="size-2.5 animate-spin" /> Syncing
                     </span>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </SwipeableRow>

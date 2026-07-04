@@ -114,11 +114,17 @@ function App() {
   const [isBackgroundSyncing, setIsBackgroundSyncing] = useState<boolean>(false)
   const [actionLoading] = useState<boolean>(false)
   const [activeSyncId, setActiveSyncId] = useState<string | null>(null)
+  const [deletingTxId, setDeletingTxId] = useState<string | null>(null)
   const [syncBackoffUntil, setSyncBackoffUntil] = useState<number>(0)
   const [syncCountdownMs, setSyncCountdownMs] = useState<number>(0)
   const [editingPendingId, setEditingPendingId] = useState<string | null>(null)
   const isSyncingRef = useRef<boolean>(false)
   const isServerAwakeRef = useRef<boolean>(false)
+
+  const clearActiveSync = useCallback(() => {
+    setActiveSyncId(null)
+    setDeletingTxId(null)
+  }, [])
 
 
   const [selectedMonth, setSelectedMonth] = useState<string>(() => getCachedDashboardPeriod().month || '')
@@ -678,8 +684,13 @@ function App() {
 
   const handleDeleteTransaction = (id: string) => {
     triggerVibration(30)
-    setPendingOps(prev => enqueue(prev, 'transaction', 'delete', id))
-    if (id === editingPendingId) setEditingPendingId(null)
+    let deleteId = id
+    if (id.includes('-split-')) {
+      deleteId = id.split('-split-')[0]
+    }
+    setDeletingTxId(deleteId)
+    setPendingOps(prev => enqueue(prev, 'transaction', 'delete', deleteId))
+    if (deleteId === editingPendingId) setEditingPendingId(null)
     showToast('Transaction deletion queued.', 'Ledger updated', 'success')
   }
 
@@ -1405,6 +1416,8 @@ function App() {
             onExportTransactions={api.exportTransactionsCsv}
             onShowAlert={showAlert}
             activeSyncId={activeSyncId}
+            deletingTxId={deletingTxId}
+            clearActiveSync={clearActiveSync}
             onStartEditPending={setEditingPendingId}
           />
         )}

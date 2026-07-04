@@ -145,7 +145,17 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         }
       }
     } else if (op.type === 'delete') {
-      result = result.filter(item => String(item.id) !== targetStr)
+      result = result.map(item => {
+        const itemStr = String(item.id)
+        if (itemStr === targetStr || itemStr.startsWith(`${targetStr}-split-`) || (itemStr.includes('-split-') && itemStr.split('-split-')[0] === targetStr)) {
+          return {
+            ...item,
+            isPendingDelete: true,
+            isPendingSync: true
+          }
+        }
+        return item
+      })
     } else if (op.type === 'toggle') {
       const existingIndex = result.findIndex(item => String(item.id) === targetStr)
       if (existingIndex >= 0) {
