@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Lock, User, ShieldAlert, Sparkles, Eye, EyeOff, Fingerprint } from 'lucide-react'
 import * as api from '../lib/api'
 import { AppLogo } from './ui/AppLogo'
-import { isBiometricEnrolled, verifyBiometricPrompt } from '../lib/biometrics'
+import { verifyBiometricPrompt } from '../lib/biometrics'
 
 interface LoginViewProps {
   onLoginSuccess: (token: string, username: string) => void
@@ -205,7 +205,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           </button>
         </form>
 
-        {isRegistered && isBiometricEnrolled() && (
+        {isRegistered && (
           <div className="pt-2 border-t border-border/40 space-y-3">
             <button
               type="button"
