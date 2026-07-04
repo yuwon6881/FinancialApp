@@ -152,7 +152,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
             )
           }
 
-          const ledgerLabel = draft.ledgerCategory.startsWith('Transfer:') ? 'Transfer' : draft.ledgerCategory
+          const ledgerLabel = (draft.ledgerCategory || '').startsWith('Transfer:') ? 'Transfer' : (draft.ledgerCategory || '')
 
           return (
             <SwipeableRow

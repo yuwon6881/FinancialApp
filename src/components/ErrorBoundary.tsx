@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
-import { AlertTriangle, RotateCcw } from 'lucide-react'
+import { AlertTriangle, RotateCcw, Trash2 } from 'lucide-react'
+import { CACHE_KEYS } from '../lib/cache'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -38,6 +39,18 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   reset = () => this.setState({ error: null })
+
+  // Last-resort recovery: the crash is often caused by a stale/malformed
+  // cached record (e.g. a pending or draft transaction persisted before a
+  // schema change) that gets reloaded from localStorage on every render, so
+  // "Try again" and "Reload app" alone can loop forever on the same crash.
+  // Clearing just the cached data caches (not auth) forces a fresh fetch.
+  clearCacheAndReload = () => {
+    Object.values(CACHE_KEYS).forEach(key => localStorage.removeItem(key))
+    localStorage.removeItem('draft_transactions')
+    localStorage.removeItem('pending_transactions_backup')
+    window.location.reload()
+  }
 
   render() {
     const { error } = this.state
@@ -85,6 +98,15 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               </button>
             )}
           </div>
+          {!inline && (
+            <button
+              type="button"
+              onClick={this.clearCacheAndReload}
+              className="press-scale inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/70 hover:text-orange-500 transition cursor-pointer"
+            >
+              <Trash2 className="size-3" /> Still stuck? Clear local data and reload
+            </button>
+          )}
         </div>
       </div>
     )

@@ -1,3 +1,5 @@
+import type { Transaction } from '../types'
+
 export const CACHE_KEYS = {
   dashboardData: 'cached_dashboard_data',
   transactions: 'cached_transactions',
@@ -14,6 +16,32 @@ export function getCachedJSON<T>(key: string, fallback: T): T {
   } catch {
     return fallback
   }
+}
+
+// Legacy/corrupted cache entries (e.g. from a pre-schema-change app version) can
+// have transactions missing required string fields, which crashes any render
+// path that calls .toLowerCase()/.startsWith() on them without a guard. Drop
+// those entries instead of letting them poison every future render.
+function isWellFormedTransaction(t: unknown): t is Transaction {
+  if (!t || typeof t !== 'object') return false
+  const tx = t as Record<string, unknown>
+  return (
+    typeof tx.id === 'string' &&
+    typeof tx.date === 'string' &&
+    typeof tx.description === 'string' &&
+    typeof tx.category === 'string' &&
+    typeof tx.ledgerCategory === 'string' &&
+    typeof tx.amount === 'number'
+  )
+}
+
+export function sanitizeTransactions(value: unknown): Transaction[] {
+  if (!Array.isArray(value)) return []
+  return value.filter(isWellFormedTransaction)
+}
+
+export function getCachedTransactions(key: string): Transaction[] {
+  return sanitizeTransactions(getCachedJSON<unknown>(key, []))
 }
 
 export function setCachedJSON(key: string, value: unknown): void {

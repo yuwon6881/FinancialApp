@@ -207,16 +207,16 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     const seen = new Map<string, { description: string; category: string; ledgerCategory: string; date: string; txType: 'inflow' | 'outflow' }>()
     // Sort by date descending so we keep the most recent category mapping
     const sorted = [...transactions]
-      .filter(t => !t.ledgerCategory.startsWith('Transfer:') && t.ledgerCategory !== 'Discarded' && !t.description.startsWith('[Split:') && !t.description.startsWith('[Discarded]'))
+      .filter(t => !(t.ledgerCategory || '').startsWith('Transfer:') && t.ledgerCategory !== 'Discarded' && !(t.description || '').startsWith('[Split:') && !(t.description || '').startsWith('[Discarded]'))
       .sort((a, b) => b.date.localeCompare(a.date))
     for (const t of sorted) {
-      const entryType = t.amount >= 0 || t.ledgerCategory.startsWith('IncomeSplit:') ? 'inflow' : 'outflow'
-      const key = `${entryType}:${t.description.toLowerCase().trim()}`
+      const entryType = t.amount >= 0 || (t.ledgerCategory || '').startsWith('IncomeSplit:') ? 'inflow' : 'outflow'
+      const key = `${entryType}:${(t.description || '').toLowerCase().trim()}`
       if (!seen.has(key) && key.length > 0) {
         seen.set(key, {
-          description: t.description,
-          category: t.category,
-          ledgerCategory: t.ledgerCategory.startsWith('IncomeSplit:') ? 'Income' : t.ledgerCategory,
+          description: t.description || '',
+          category: t.category || '',
+          ledgerCategory: (t.ledgerCategory || '').startsWith('IncomeSplit:') ? 'Income' : (t.ledgerCategory || ''),
           date: t.date,
           txType: entryType
         })
@@ -350,7 +350,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     if (onStartEditPending) {
       onStartEditPending(t.id.startsWith('temp_') ? t.id : null)
     }
-    if (t.ledgerCategory.startsWith('Transfer:')) {
+    if ((t.ledgerCategory || '').startsWith('Transfer:')) {
       setTxType('transfer')
       const parts = t.ledgerCategory.substring(9).split('->')
       if (parts.length === 2) {
@@ -364,7 +364,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         setTxType('inflow')
       }
       setCategory(t.category)
-      if (t.ledgerCategory.startsWith('IncomeSplit:')) {
+      if ((t.ledgerCategory || '').startsWith('IncomeSplit:')) {
         setLedgerCategory('Income')
       } else {
         setLedgerCategory(t.ledgerCategory as any)
@@ -998,9 +998,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
       // Search term filter
       if (appliedSearch) {
-        const matchesSearch = t.description.toLowerCase().includes(appliedSearch.toLowerCase()) ||
-                              t.ledgerCategory.toLowerCase().includes(appliedSearch.toLowerCase()) ||
-                              t.category.toLowerCase().includes(appliedSearch.toLowerCase())
+        const matchesSearch = (t.description || '').toLowerCase().includes(appliedSearch.toLowerCase()) ||
+                              (t.ledgerCategory || '').toLowerCase().includes(appliedSearch.toLowerCase()) ||
+                              (t.category || '').toLowerCase().includes(appliedSearch.toLowerCase())
         if (!matchesSearch) return false
       }
 
@@ -1008,9 +1008,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       if (selectedBuckets.length > 0) {
         const matchesBucket = selectedBuckets.some(bucket => {
           if (bucket === 'Income') {
-            return t.ledgerCategory === 'Income' || t.ledgerCategory.startsWith('IncomeSplit:')
+            return t.ledgerCategory === 'Income' || (t.ledgerCategory || '').startsWith('IncomeSplit:')
           }
-          return t.ledgerCategory === bucket || t.ledgerCategory.includes(bucket)
+          return t.ledgerCategory === bucket || (t.ledgerCategory || '').includes(bucket)
         })
         if (!matchesBucket) return false
       }
@@ -1044,17 +1044,17 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
     return sourceTransactions.filter(t => {
       if (t.ledgerCategory === 'Discarded') return false
-      const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            t.ledgerCategory.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            t.category.toLowerCase().includes(searchTerm.toLowerCase())
-      
+      const matchesSearch = (t.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (t.ledgerCategory || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (t.category || '').toLowerCase().includes(searchTerm.toLowerCase())
+
       let matchesBucket = true
       if (selectedBuckets.length > 0) {
         matchesBucket = selectedBuckets.some(bucket => {
           if (bucket === 'Income') {
-            return t.ledgerCategory === 'Income' || t.ledgerCategory.startsWith('IncomeSplit:')
+            return t.ledgerCategory === 'Income' || (t.ledgerCategory || '').startsWith('IncomeSplit:')
           }
-          return t.ledgerCategory === bucket || t.ledgerCategory.includes(bucket)
+          return t.ledgerCategory === bucket || (t.ledgerCategory || '').includes(bucket)
         })
       }
 
@@ -2004,7 +2004,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     </td>
                     <td className="p-4 text-right font-medium">
                       {(() => {
-                        const isIncomeRecord = t.ledgerCategory === 'Income' || t.ledgerCategory.startsWith('IncomeSplit:')
+                        const isIncomeRecord = t.ledgerCategory === 'Income' || (t.ledgerCategory || '').startsWith('IncomeSplit:')
                         const isSplitSub = t.id.includes('-split-')
                         if (isIncomeRecord) {
                           return (
@@ -2016,7 +2016,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                         if (isSplitSub) {
                           return <span className="text-muted-foreground/30">-</span>
                         }
-                        if (t.ledgerCategory.startsWith('Transfer:')) {
+                        if ((t.ledgerCategory || '').startsWith('Transfer:')) {
                           return (
                             <span className="inline-block px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-500 font-bold text-xs">
                               {formatSensitive(t.amount)}
@@ -2034,7 +2034,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     </td>
                     <td className="p-4 text-right font-medium">
                       {(() => {
-                        const isIncomeRecord = t.ledgerCategory === 'Income' || t.ledgerCategory.startsWith('IncomeSplit:')
+                        const isIncomeRecord = t.ledgerCategory === 'Income' || (t.ledgerCategory || '').startsWith('IncomeSplit:')
                         const isSplitSub = t.id.includes('-split-')
                         if (isIncomeRecord) {
                           return (
@@ -2050,7 +2050,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                             </span>
                           )
                         }
-                        if (t.ledgerCategory.startsWith('Transfer:')) {
+                        if ((t.ledgerCategory || '').startsWith('Transfer:')) {
                           return (
                             <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-xs">
                               {formatSensitive(t.amount)}
@@ -2111,7 +2111,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       <div className="block md:hidden space-y-3">
         {displayTransactions.map((t, idx) => {
           const isOutflow = t.amount < 0
-          const isTransfer = t.ledgerCategory.startsWith('Transfer:')
+          const isTransfer = (t.ledgerCategory || '').startsWith('Transfer:')
           const isSplit = t.id.includes('-split-')
           const ledgerLabel = displayLedgerCategory(t.ledgerCategory)
           const isSyncing = t.id === activeSyncId
@@ -2628,7 +2628,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 <p>
                   This transaction is a <span className="font-semibold text-foreground">split transfer sub-record</span> of an Income Auto-Split. Deleting it will delete the main Income record and all other category splits associated with it.
                 </p>
-              ) : (txToDelete.ledgerCategory === 'Income' || txToDelete.ledgerCategory.startsWith('IncomeSplit:')) ? (
+              ) : (txToDelete.ledgerCategory === 'Income' || (txToDelete.ledgerCategory || '').startsWith('IncomeSplit:')) ? (
                 <p>
                   This is the <span className="font-semibold text-foreground">main Income Auto-Split record</span>. Deleting it will delete all its associated category sub-split records as well.
                 </p>

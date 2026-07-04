@@ -22,7 +22,7 @@ import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 import { PullToRefresh } from './components/ui/PullToRefresh'
 import { ToastViewport, type ToastMessage, type ToastTone } from './components/ui/ToastViewport'
 import { CardSkeleton, Skeleton } from './components/ui/Skeleton'
-import { CACHE_KEYS, getCachedJSON, setCachedJSON, hasCachedKey, getCachedDashboardPeriod } from './lib/cache'
+import { CACHE_KEYS, getCachedJSON, getCachedTransactions, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod } from './lib/cache'
 import { PendingSubscriptionsModal } from './components/PendingSubscriptionsModal'
 import { PasswordPromptModal } from './components/PasswordPromptModal'
 import { LockScreen } from './components/LockScreen'
@@ -98,7 +98,7 @@ function App() {
     return () => cleanup?.()
   }, [])
   
-  const [transactions, setTransactions] = useState<Transaction[]>(() => getCachedJSON(CACHE_KEYS.transactions, []))
+  const [transactions, setTransactions] = useState<Transaction[]>(() => getCachedTransactions(CACHE_KEYS.transactions))
   const [recurringPayments, setRecurringPayments] = useState<RecurringPayment[]>(() => getCachedJSON(CACHE_KEYS.recurringPayments, []))
   const [categoriesList, setCategoriesList] = useState<TransactionCategory[]>(() => getCachedJSON(CACHE_KEYS.categories, []))
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(() => getCachedJSON(CACHE_KEYS.dashboardData, null))
@@ -108,7 +108,7 @@ function App() {
   const [loading, setLoading] = useState<boolean>(() => !hasCachedKey(CACHE_KEYS.dashboardData))
 
   // Sync Queue States
-  const [pendingTransactions, setPendingTransactions] = useState<Transaction[]>(() => getCachedJSON(CACHE_KEYS.pendingTransactions, []))
+  const [pendingTransactions, setPendingTransactions] = useState<Transaction[]>(() => getCachedTransactions(CACHE_KEYS.pendingTransactions))
   const [isBackgroundSyncing, setIsBackgroundSyncing] = useState<boolean>(false)
   const [actionLoading, setActionLoading] = useState<boolean>(false)
   const [activeSyncId, setActiveSyncId] = useState<string | null>(null)
@@ -142,7 +142,7 @@ function App() {
   const [draftTransactions, setDraftTransactions] = useState<Transaction[]>(() => {
     try {
       const stored = localStorage.getItem('draft_transactions')
-      return stored ? JSON.parse(stored) : []
+      return sanitizeTransactions(stored ? JSON.parse(stored) : [])
     } catch {
       return []
     }
@@ -510,10 +510,10 @@ function App() {
     const cachedBackup = localStorage.getItem('pending_transactions_backup');
     if (cachedBackup) {
       try {
-        const backedUpTxs = JSON.parse(cachedBackup);
-        if (Array.isArray(backedUpTxs) && backedUpTxs.length > 0) {
+        const backedUpTxs = sanitizeTransactions(JSON.parse(cachedBackup));
+        if (backedUpTxs.length > 0) {
           setPendingTransactions(backedUpTxs);
-          localStorage.setItem(CACHE_KEYS.pendingTransactions, cachedBackup);
+          localStorage.setItem(CACHE_KEYS.pendingTransactions, JSON.stringify(backedUpTxs));
         }
       } catch (e) {
         console.error('Failed to parse backed up pending transactions:', e);
@@ -1037,16 +1037,16 @@ function App() {
         data.recentTransactions = [t, ...data.recentTransactions];
       }
 
-      const catName = t.category || t.ledgerCategory;
+      const catName = t.category || t.ledgerCategory || '';
       const cat = data.categories.find(c => c.name.toLowerCase() === catName.toLowerCase());
       if (cat) {
         cat.netChange += t.amount;
         cat.remaining += t.amount;
       }
-      
+
       if (t.amount > 0) {
         data.stats.monthlyInflow += t.amount;
-        if (t.ledgerCategory.startsWith('IncomeSplit:')) {
+        if ((t.ledgerCategory || '').startsWith('IncomeSplit:')) {
           data.stats.monthlyIncome += t.amount;
         }
       } else {
