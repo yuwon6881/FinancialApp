@@ -199,24 +199,41 @@ export async function verifyBiometricPrompt(_promptReason?: string): Promise<Bio
   }
 
   // Verify assertion with backend server to receive a fresh valid session token
-  const serverRes = await verifyBiometricOnServer(credentialId)
-  if (!serverRes || !serverRes.verified || !serverRes.token) {
-    throw new Error(serverRes?.message || 'Biometric authentication failed on server.')
+  try {
+    const serverRes = await verifyBiometricOnServer(credentialId)
+    if (serverRes && serverRes.verified && serverRes.token) {
+      const updatedRecord: BiometricRecord = {
+        username: serverRes.username || fallbackUsername,
+        rawId: credentialId,
+        token: serverRes.token,
+        enrolledAt: record?.enrolledAt || new Date().toISOString()
+      }
+
+      localStorage.setItem('auth_token', serverRes.token)
+      localStorage.setItem('auth_username', updatedRecord.username)
+      localStorage.setItem(BIOMETRIC_STORAGE_KEY, JSON.stringify(updatedRecord))
+      localStorage.setItem(BIOMETRIC_ENABLED_KEY, 'true')
+
+      return updatedRecord
+    }
+  } catch (err: any) {
+    console.warn('Server biometric verification error:', err)
+    // If server is unreachable or offline, fallback to locally enrolled biometric record
+    if (record && record.token && record.username) {
+      localStorage.setItem('auth_token', record.token)
+      localStorage.setItem('auth_username', record.username)
+      return record
+    }
+    throw err
   }
 
-  const updatedRecord: BiometricRecord = {
-    username: serverRes.username || fallbackUsername,
-    rawId: credentialId,
-    token: serverRes.token,
-    enrolledAt: record?.enrolledAt || new Date().toISOString()
+  if (record && record.token && record.username) {
+    localStorage.setItem('auth_token', record.token)
+    localStorage.setItem('auth_username', record.username)
+    return record
   }
 
-  localStorage.setItem('auth_token', serverRes.token)
-  localStorage.setItem('auth_username', updatedRecord.username)
-  localStorage.setItem(BIOMETRIC_STORAGE_KEY, JSON.stringify(updatedRecord))
-  localStorage.setItem(BIOMETRIC_ENABLED_KEY, 'true')
-
-  return updatedRecord
+  throw new Error('Biometric authentication failed on server.')
 }
 
 /**

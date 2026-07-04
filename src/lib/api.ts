@@ -1,8 +1,17 @@
 import type { Transaction, RecurringPayment, DashboardData, TransactionCategory, WishlistItem } from '../types'
 
-const API_BASE_URL = import.meta.env.DEV 
-  ? 'http://localhost:5000/api' 
-  : (import.meta.env.VITE_API_URL || '/api')
+const getApiBaseUrl = (): string => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL
+  }
+  if (import.meta.env.DEV) {
+    const host = (typeof window !== 'undefined' && window.location.hostname) ? window.location.hostname : 'localhost'
+    return `http://${host}:5000/api`
+  }
+  return '/api'
+}
+
+const API_BASE_URL = getApiBaseUrl()
 
 interface CacheEntry {
   promise: Promise<any>
@@ -759,10 +768,10 @@ export async function verifyBiometricOnServer(credentialId?: string): Promise<{ 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json'
     }
-    if (token) {
+    if (token && token !== 'null' && token !== 'undefined' && token.trim().length > 0) {
       headers['Authorization'] = `Bearer ${token}`
     }
-    const res = await fetch(`${API_BASE_URL}/auth/biometric/verify`, {
+    const res = await fetch(`${getApiBaseUrl()}/auth/biometric/verify`, {
       method: 'POST',
       headers,
       body: JSON.stringify({ credentialId })
@@ -778,7 +787,7 @@ export async function verifyBiometricOnServer(credentialId?: string): Promise<{ 
     }
     return data
   } catch (err: any) {
-    if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
+    if (err.message === 'Failed to fetch' || err.name === 'TypeError' || err.message?.includes('NetworkError')) {
       throw new Error('Could not connect to database API server. Please check network or backend server status.')
     }
     throw err
