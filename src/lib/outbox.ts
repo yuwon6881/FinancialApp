@@ -11,6 +11,7 @@ export interface QueuedOp {
   payload?: any
   createdAt: number
   retryCount: number
+  isCompleted?: boolean
 }
 
 export function createFinalId(entity: EntityKind): string {
@@ -126,7 +127,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
       const newItem = {
         ...op.payload,
         id: parsedId,
-        isPendingSync: true
+        isPendingSync: !op.isCompleted
       } as T
 
       const existingIndex = result.findIndex(item => String(item.id) === targetStr)
@@ -141,7 +142,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         result[existingIndex] = {
           ...result[existingIndex],
           ...op.payload,
-          isPendingSync: true
+          isPendingSync: !op.isCompleted
         }
       }
     } else if (op.type === 'delete') {
@@ -151,7 +152,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
           return {
             ...item,
             isPendingDelete: true,
-            isPendingSync: true
+            isPendingSync: !op.isCompleted
           }
         }
         return item
@@ -163,7 +164,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         result[existingIndex] = {
           ...item,
           active: !item.active,
-          isPendingSync: true
+          isPendingSync: !op.isCompleted
         }
       }
     } else if (op.type === 'purchase') {
@@ -174,7 +175,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
           ...item,
           isPurchased: true,
           purchasedAt: op.payload?.purchasedAt || new Date().toISOString(),
-          isPendingSync: true
+          isPendingSync: !op.isCompleted
         }
       }
     }

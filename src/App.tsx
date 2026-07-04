@@ -360,9 +360,12 @@ function App() {
     const interval = setInterval(() => {
       const lastActive = Number(localStorage.getItem('last_active_time') || Date.now())
       if (Date.now() - lastActive > LOCK_TIMEOUT_MS) {
-        setIsLocked(true)
-        sessionStorage.setItem('session_locked', 'true')
-        api.lockSession().catch(err => console.warn('Failed to lock session on server:', err))
+        api.lockSession()
+          .then(() => {
+            setIsLocked(true)
+            sessionStorage.setItem('session_locked', 'true')
+          })
+          .catch(err => console.warn('Failed to lock session on server, bypassing local lock to prevent fake lock state:', err))
       }
     }, 15000)
     return () => clearInterval(interval)
@@ -460,6 +463,8 @@ function App() {
       setWishlist(wishes)
       setError(null)
       isServerAwakeRef.current = true
+      setIsLocked(false)
+      sessionStorage.setItem('session_locked', 'false')
 
       // Save to localStorage cache
       setCachedJSON(CACHE_KEYS.dashboardData, dbData)
@@ -882,7 +887,7 @@ function App() {
           pendingOpsRef.current = updatedQueue;
           setPendingOps(updatedQueue);
           
-          setRecentlyCompletedOps(prev => [...prev, nextOp]);
+          setRecentlyCompletedOps(prev => [...prev, { ...nextOp, isCompleted: true }]);
           setTimeout(() => {
             setRecentlyCompletedOps(prev => prev.filter(op => op.id !== nextOp.id));
           }, 3000);
