@@ -9,8 +9,7 @@ import {
   Calendar, 
   Bell, 
   X,
-  Edit,
-  Loader2
+  Edit
 } from 'lucide-react'
 import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput } from '../lib/utils'
 import { triggerHaptic } from '../lib/haptics'
@@ -533,17 +532,11 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                       {!rp.active && (
                         <span className="text-[9px] font-semibold bg-muted px-1.5 py-0.5 rounded text-muted-foreground">Paused</span>
                       )}
-                      {(rp as any).isPendingDelete ? (
-                        <span className="text-[9px] font-bold text-red-500 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded animate-pulse select-none flex items-center gap-1" title="Deleting subscription...">
-                          <Loader2 className="size-2.5 animate-spin text-red-500 shrink-0" />
-                          Deleting...
+                      {rp.isPendingSync && (
+                        <span className="text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded animate-pulse select-none" title="Changes pending server sync">
+                          Pending Sync
                         </span>
-                      ) : rp.isPendingSync ? (
-                        <span className="text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded animate-pulse select-none flex items-center gap-1" title="Changes pending server sync">
-                          <Loader2 className="size-2.5 animate-spin text-amber-500 shrink-0" />
-                          Syncing...
-                        </span>
-                      ) : null}
+                      )}
                     </h3>
                     <span className={`inline-block mt-1 text-[10px] px-1.5 py-0.5 font-semibold rounded border ${getCategoryBadgeClass(rp.category)}`}>
                       {rp.category}

@@ -74,7 +74,6 @@ interface LedgerViewProps {
   onShowAlert?: (message: string, title?: string) => void
   activeSyncId?: string | null
   deletingTxId?: string | null
-  clearActiveSync?: () => void
   onStartEditPending?: (id: string | null) => void
   isSwitchingCycle?: boolean
 }
@@ -156,7 +155,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   onShowAlert,
   activeSyncId = null,
   deletingTxId = null,
-  clearActiveSync,
   onStartEditPending,
   isSwitchingCycle = false
 }) => {
@@ -901,9 +899,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           ledgerCategory: splitSpec,
           date: pendingTxData.date
         })
-        if (showAllCycles && onFetchPagedTransactions) {
-          await runServerFetch({ page: currentPage, search: appliedSearch, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
-        }
       } else {
         await onAddTransaction({
           description: pendingTxData.description,
@@ -912,12 +907,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           ledgerCategory: splitSpec,
           date: pendingTxData.date
         })
-        if (showAllCycles && onFetchPagedTransactions) {
-          await runServerFetch({ page: currentPage, search: appliedSearch, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
-        }
       }
     } finally {
-      if (clearActiveSync) clearActiveSync()
       setShowStabilityCapModal(false)
       setPendingTxData(null)
       resetFormFields()
@@ -946,14 +937,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setShowDeleteModal(false)
     setTxToDelete(null)
 
-    try {
-      await onDeleteTransaction(deleteId)
-      if (showAllCycles && onFetchPagedTransactions) {
-        await runServerFetch({ page: currentPage, search: appliedSearch, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
-      }
-    } finally {
-      if (clearActiveSync) clearActiveSync()
-    }
+    await onDeleteTransaction(deleteId)
   }
 
   const handleCancelDelete = () => {
@@ -998,21 +982,15 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
     if (editingTxId) {
       const targetId = editingTxId
+      setEditingTxId(null)
       resetFormFields()
-      try {
-        await onUpdateTransaction?.(targetId, {
-          description,
-          amount: finalAmount,
-          category: txType === 'transfer' ? 'Transfer' : category,
-          ledgerCategory: finalLedgerCategory,
-          date
-        })
-        if (showAllCycles && onFetchPagedTransactions) {
-          await runServerFetch({ page: currentPage, search: appliedSearch, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
-        }
-      } finally {
-        if (clearActiveSync) clearActiveSync()
-      }
+      await onUpdateTransaction?.(targetId, {
+        description,
+        amount: finalAmount,
+        category: txType === 'transfer' ? 'Transfer' : category,
+        ledgerCategory: finalLedgerCategory,
+        date
+      })
     } else {
       await onAddTransaction({
         description,

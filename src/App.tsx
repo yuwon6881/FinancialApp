@@ -118,13 +118,10 @@ function App() {
   const [syncBackoffUntil, setSyncBackoffUntil] = useState<number>(0)
   const [syncCountdownMs, setSyncCountdownMs] = useState<number>(0)
   const [editingPendingId, setEditingPendingId] = useState<string | null>(null)
+  const [recentlyCompletedOps, setRecentlyCompletedOps] = useState<QueuedOp[]>([])
   const isSyncingRef = useRef<boolean>(false)
   const isServerAwakeRef = useRef<boolean>(false)
 
-  const clearActiveSync = useCallback(() => {
-    setActiveSyncId(null)
-    setDeletingTxId(null)
-  }, [])
 
 
   const [selectedMonth, setSelectedMonth] = useState<string>(() => getCachedDashboardPeriod().month || '')
@@ -857,10 +854,9 @@ function App() {
 
     let processedAny = false;
 
-    const completedOpIds: string[] = [];
     try {
       while (true) {
-        const queue = pendingOpsRef.current.filter(op => !completedOpIds.includes(op.id));
+        const queue = pendingOpsRef.current;
         const nextOp = queue[0];
         if (!nextOp) break;
 
@@ -879,22 +875,33 @@ function App() {
           const dispatchFn = DISPATCH[key];
           if (!dispatchFn) {
             console.error(`No dispatch handler for ${key}`);
-            completedOpIds.push(nextOp.id);
+            const remaining = queue.slice(1);
+            pendingOpsRef.current = remaining;
+            setPendingOps(remaining);
             continue;
           }
 
           const result = await dispatchFn(nextOp);
-          completedOpIds.push(nextOp.id);
+
+          let updatedQueue = pendingOpsRef.current.filter(item => item.id !== nextOp.id);
 
           if (nextOp.entity === 'wishlistItem' && nextOp.type === 'add' && result && result.id) {
             const realIdStr = String(result.id);
-            pendingOpsRef.current = pendingOpsRef.current.map(op => {
+            updatedQueue = updatedQueue.map(op => {
               if (op.entity === 'wishlistItem' && op.targetId === nextOp.targetId) {
                 return { ...op, targetId: realIdStr };
               }
               return op;
             });
           }
+
+          pendingOpsRef.current = updatedQueue;
+          setPendingOps(updatedQueue);
+          
+          setRecentlyCompletedOps(prev => [...prev, nextOp]);
+          setTimeout(() => {
+            setRecentlyCompletedOps(prev => prev.filter(op => op.id !== nextOp.id));
+          }, 3000);
 
           setError(null);
           processedAny = true;
@@ -909,7 +916,9 @@ function App() {
               const opDesc = nextOp.payload?.description || nextOp.payload?.name || nextOp.entity;
               showToast(`Couldn't sync '${opDesc}' — removed from queue`, 'Sync Failed', 'error');
 
-              completedOpIds.push(nextOp.id);
+              const remainingQueue = pendingOpsRef.current.filter(item => item.id !== nextOp.id);
+              pendingOpsRef.current = remainingQueue;
+              setPendingOps(remainingQueue);
               setFailedOps(prev => [...prev, { ...nextOp, retryCount: updatedRetryCount }]);
               continue;
             } else {
@@ -937,11 +946,6 @@ function App() {
         }
       }
     } finally {
-      if (completedOpIds.length > 0) {
-        const remainingOps = pendingOpsRef.current.filter(op => !completedOpIds.includes(op.id));
-        pendingOpsRef.current = remainingOps;
-        setPendingOps(remainingOps);
-      }
       setActiveSyncId(null);
       setDeletingTxId(null);
       setIsBackgroundSyncing(false);
@@ -1015,21 +1019,23 @@ function App() {
   }, [token, wakeUpAndSync])
 
   // Combine synced and pending items for each entity
+  const activeOps = useMemo(() => [...pendingOps, ...recentlyCompletedOps], [pendingOps, recentlyCompletedOps]);
+
   const allTransactions = useMemo(() => {
-    return applyOpsToList(transactions, pendingOps, 'transaction');
-  }, [pendingOps, transactions]);
+    return applyOpsToList(transactions, activeOps, 'transaction');
+  }, [activeOps, transactions]);
 
   const allRecurringPayments = useMemo(() => {
-    return applyOpsToList(recurringPayments, pendingOps, 'recurringPayment');
-  }, [pendingOps, recurringPayments]);
+    return applyOpsToList(recurringPayments, activeOps, 'recurringPayment');
+  }, [activeOps, recurringPayments]);
 
   const allWishlist = useMemo(() => {
-    return applyOpsToList(wishlist, pendingOps, 'wishlistItem');
-  }, [pendingOps, wishlist]);
+    return applyOpsToList(wishlist, activeOps, 'wishlistItem');
+  }, [activeOps, wishlist]);
 
   const allCategories = useMemo(() => {
-    return applyOpsToList(categoriesList, pendingOps, 'category');
-  }, [pendingOps, categoriesList]);
+    return applyOpsToList(categoriesList, activeOps, 'category');
+  }, [activeOps, categoriesList]);
 
   // Create optimistic dashboardData from server data + pending queue
   const optimisticDashboardData = useMemo(() => {
@@ -1417,7 +1423,6 @@ function App() {
             onShowAlert={showAlert}
             activeSyncId={activeSyncId}
             deletingTxId={deletingTxId}
-            clearActiveSync={clearActiveSync}
             onStartEditPending={setEditingPendingId}
           />
         )}
