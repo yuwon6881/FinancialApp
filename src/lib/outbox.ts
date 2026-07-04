@@ -111,7 +111,7 @@ export function enqueue(
   return [...queue, newOp]
 }
 
-export function applyOpsToList<T extends { id: string | number; isPendingSync?: boolean }>(
+export function applyOpsToList<T extends { id: string | number; isPendingSync?: boolean; isPendingDelete?: boolean }>(
   baseList: T[],
   ops: QueuedOp[],
   entity: EntityKind

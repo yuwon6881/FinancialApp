@@ -68,7 +68,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   const isPaymentDeleting = (rpId: string) => {
     if (deletingId && String(deletingId) === String(rpId)) return true
     const found = payments.find(p => String(p.id) === String(rpId))
-    return Boolean(found && (found as any).isPendingDelete)
+    return Boolean(found?.isPendingDelete)
   }
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingPayment, setEditingPayment] = useState<RecurringPayment | null>(null)

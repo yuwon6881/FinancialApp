@@ -57,7 +57,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const isCatDeleting = (catId: string) => {
     if (deletingId && String(deletingId) === String(catId)) return true
     const found = categoriesList.find(c => String(c.id) === String(catId))
-    return Boolean(found && (found as any).isPendingDelete)
+    return Boolean(found?.isPendingDelete)
   }
 
   const activeSettings = dashboardData?.setting || {

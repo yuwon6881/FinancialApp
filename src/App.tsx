@@ -704,7 +704,8 @@ function App() {
       description: noti.name,
       amount: -Math.abs(noti.amount),
       category: noti.category,
-      ledgerCategory: noti.ledgerCategory
+      ledgerCategory: noti.ledgerCategory,
+      recurringPaymentId: noti.recurringPaymentId
     }))
   }
 
@@ -716,7 +717,8 @@ function App() {
       description: `[Discarded] ${noti.name}`,
       amount: 0,
       category: noti.category,
-      ledgerCategory: 'Discarded'
+      ledgerCategory: 'Discarded',
+      recurringPaymentId: noti.recurringPaymentId
     }))
   }
 

@@ -70,7 +70,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   const isItemDeleting = (itemId: string | number) => {
     if (deletingId && String(deletingId) === String(itemId)) return true
     const found = wishlist.find(i => String(i.id) === String(itemId))
-    return Boolean(found && (found as any).isPendingDelete)
+    return Boolean(found?.isPendingDelete)
   }
 
   const [showAddModal, setShowAddModal] = useState(false)

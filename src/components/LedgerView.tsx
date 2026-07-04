@@ -1002,7 +1002,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   const isTxDeleting = useCallback((txId: string) => {
     const txObj = transactions.find(t => t.id === txId)
-    if (txObj && (txObj as any).isPendingDelete) return true
+    if (txObj && txObj.isPendingDelete) return true
     if (!deletingTxId) return false
     if (txId === deletingTxId) return true
     if (txId.startsWith(`${deletingTxId}-split-`)) return true
@@ -1021,7 +1021,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const sourceTransactions = useMemo(() => transactions, [transactions])
 
   const pendingTransactions = useMemo(() => {
-    return transactions.filter(t => (t as any).isPendingSync)
+    return transactions.filter(t => t.isPendingSync)
   }, [transactions])
 
   const filteredPendingTransactions = useMemo(() => {
@@ -1129,8 +1129,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       const dateDiff = b.date.localeCompare(a.date)
       if (dateDiff !== 0) return dateDiff
       
-      const aPending = (a as any).isPendingSync ? 1 : 0
-      const bPending = (b as any).isPendingSync ? 1 : 0
+      const aPending = a.isPendingSync ? 1 : 0
+      const bPending = b.isPendingSync ? 1 : 0
       if (bPending !== aPending) {
         return bPending - aPending
       }
@@ -2041,7 +2041,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                           <Loader2 className="size-2.5 animate-spin shrink-0 mr-1 text-red-500" />
                           Deleting...
                         </span>
-                      ) : (isTxSyncing(t.id) || (t as any).isPendingSync) ? (
+                      ) : (isTxSyncing(t.id) || t.isPendingSync) ? (
                         <span 
                           title={isTxSyncing(t.id) ? "Updating transaction..." : "Pending sync (offline)"} 
                           className="inline-flex items-center text-[9px] px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 shrink-0 select-none animate-pulse"
@@ -2247,7 +2247,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                         <Loader2 className="size-2.5 animate-spin text-red-500 shrink-0 mr-1" />
                         Deleting...
                       </span>
-                    ) : (isSyncing || (t as any).isPendingSync) ? (
+                    ) : (isSyncing || t.isPendingSync) ? (
                       <span 
                         title={isSyncing ? "Updating transaction..." : "Pending sync (offline)"} 
                         className="inline-flex items-center text-[9px] px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 shrink-0 select-none animate-pulse"
