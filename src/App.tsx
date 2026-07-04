@@ -383,8 +383,29 @@ function App() {
   )
 
   const handleLogout = async () => {
-    if (pendingTransactions.length > 0) {
-      localStorage.setItem('pending_transactions_backup', JSON.stringify(pendingTransactions));
+    // Read from refs, not the pendingTransactions/username/draftTransactions
+    // state directly -- this function is also invoked from processQueue,
+    // a useCallback memoized on [token, selectedMonth, selectedYear], so a
+    // stale closure of handleLogout can otherwise still be in scope there
+    // and would back up an outdated (smaller) queue right before wiping the
+    // real, current one, permanently losing whatever was queued since.
+    const currentPending = pendingTxRef.current;
+    const currentDrafts = draftTxRef.current;
+    const currentOwner = usernameRef.current;
+
+    if (currentPending.length > 0) {
+      // Tag the backup with its owner so a different account logging in next
+      // (shared/kiosk device, or a fresh login after this one never resynced)
+      // can't have this session's unsynced transactions silently replayed
+      // into its ledger.
+      localStorage.setItem('pending_transactions_backup', JSON.stringify({ owner: currentOwner, transactions: currentPending }));
+    }
+
+    if (currentDrafts.length > 0) {
+      // Drafts (added but not yet queued for sync) get the same
+      // owner-tagged backup/restore treatment as the pending queue --
+      // otherwise they were silently deleted below with no way back.
+      localStorage.setItem('draft_transactions_backup', JSON.stringify({ owner: currentOwner, transactions: currentDrafts }));
     }
 
     await api.logout()
@@ -398,7 +419,7 @@ function App() {
     setHasShownModalThisSession(false)
     setShowLoginModal(false)
     setHideSensitive(true)
-    
+
     // Clear LocalStorage cache
     localStorage.removeItem('auth_username')
     sessionStorage.removeItem('session_locked')
@@ -506,19 +527,42 @@ function App() {
     setToken(newToken)
     setUsername(newUsername)
 
-    // Restore any backed up pending transactions
+    // Restore any backed up pending transactions -- only if this backup
+    // belongs to the account that's actually logging in now, otherwise a
+    // different account's unsynced queue could get silently replayed here.
     const cachedBackup = localStorage.getItem('pending_transactions_backup');
     if (cachedBackup) {
       try {
-        const backedUpTxs = sanitizeTransactions(JSON.parse(cachedBackup));
-        if (backedUpTxs.length > 0) {
-          setPendingTransactions(backedUpTxs);
-          localStorage.setItem(CACHE_KEYS.pendingTransactions, JSON.stringify(backedUpTxs));
+        const parsed = JSON.parse(cachedBackup);
+        if (parsed && parsed.owner === newUsername) {
+          const backedUpTxs = sanitizeTransactions(parsed.transactions);
+          if (backedUpTxs.length > 0) {
+            setPendingTransactions(backedUpTxs);
+            localStorage.setItem(CACHE_KEYS.pendingTransactions, JSON.stringify(backedUpTxs));
+          }
         }
       } catch (e) {
         console.error('Failed to parse backed up pending transactions:', e);
       }
       localStorage.removeItem('pending_transactions_backup');
+    }
+
+    // Restore any backed up drafts the same way, gated on the same owner check.
+    const cachedDraftBackup = localStorage.getItem('draft_transactions_backup');
+    if (cachedDraftBackup) {
+      try {
+        const parsed = JSON.parse(cachedDraftBackup);
+        if (parsed && parsed.owner === newUsername) {
+          const backedUpDrafts = sanitizeTransactions(parsed.transactions);
+          if (backedUpDrafts.length > 0) {
+            setDraftTransactions(backedUpDrafts);
+            localStorage.setItem('draft_transactions', JSON.stringify(backedUpDrafts));
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse backed up draft transactions:', e);
+      }
+      localStorage.removeItem('draft_transactions_backup');
     }
   }
 
@@ -863,12 +907,22 @@ function App() {
 
   // Background Sync Queue Worker Refs
   const pendingTxRef = useRef(pendingTransactions);
+  const draftTxRef = useRef(draftTransactions);
+  const usernameRef = useRef(username);
   const editingPendingIdRef = useRef(editingPendingId);
   const syncBackoffUntilRef = useRef(syncBackoffUntil);
 
   useEffect(() => {
     pendingTxRef.current = pendingTransactions;
   }, [pendingTransactions]);
+
+  useEffect(() => {
+    draftTxRef.current = draftTransactions;
+  }, [draftTransactions]);
+
+  useEffect(() => {
+    usernameRef.current = username;
+  }, [username]);
 
   useEffect(() => {
     editingPendingIdRef.current = editingPendingId;
