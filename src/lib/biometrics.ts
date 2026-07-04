@@ -168,10 +168,11 @@ export async function verifyBiometricPrompt(_promptReason?: string): Promise<Bio
       if (err.name === 'NotAllowedError') {
         throw new Error('Biometric prompt was cancelled.')
       }
+      throw new Error(err.message || 'Biometric hardware verification failed.')
     }
   }
 
-  // Verify assertion with backend server
+  // Verify assertion with backend server to generate an active session token
   try {
     const serverRes = await verifyBiometricOnServer(record.rawId)
     if (serverRes && serverRes.token) {
@@ -180,8 +181,10 @@ export async function verifyBiometricPrompt(_promptReason?: string): Promise<Bio
       localStorage.setItem('auth_token', serverRes.token)
       localStorage.setItem(BIOMETRIC_STORAGE_KEY, JSON.stringify(record))
     }
-  } catch (e) {
-    console.warn('Biometric backend verification warning (using local session token):', e)
+  } catch (e: any) {
+    console.error('Biometric backend verification error:', e)
+    // If we don't have an active valid token, throw server error so user isn't stuck in a 401 loop
+    throw new Error(e.message || 'Biometric authentication failed on server. Please log in with password.')
   }
 
   return record
