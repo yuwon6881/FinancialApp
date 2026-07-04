@@ -194,6 +194,10 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
     })
   }, [activeRecurringPayments, allPayments, transactions, cycleOffset, year, monthIndex, cycleStart, cycleEnd])
 
+  const cycleTotal = React.useMemo(() => {
+    return processedPayments.reduce((acc, p) => acc + Math.abs(p.amount), 0)
+  }, [processedPayments])
+
   // Group bills by due date to prevent overlapping nodes on the timeline
   const uniqueDatesMap: { [dateStr: string]: ActiveRecurringPayment[] } = {}
   processedPayments.forEach(p => {
@@ -203,40 +207,25 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
     uniqueDatesMap[p.dueDate].push(p)
   })
 
-  // Map groups to timeline nodes and sort chronologically
-  const rawNodes = Object.entries(uniqueDatesMap)
-    .map(([dueDate, bills]) => {
-      const dueTime = new Date(dueDate).getTime()
-      let percent = durationMs > 0 ? ((dueTime - startTime) / durationMs) * 100 : 0
-      percent = Math.max(0, Math.min(100, percent))
-      return {
-        dueDate,
-        percent,
-        bills
-      }
-    })
-    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+  const sortedDates = Object.keys(uniqueDatesMap).sort()
 
-  // Dynamic vertical staggering leader offsets to prevent label collision
-  const timelineNodes = rawNodes.reduce<{
-    nodes: (TimelineNode & { isTop: boolean; level: 'short' | 'long' })[]
-    lastTopPct: number
-    lastBottomPct: number
-  }>((acc, node, idx) => {
-    const isTop = idx % 2 === 0
-    const referencePct = isTop ? acc.lastTopPct : acc.lastBottomPct
-    const isCrowded = node.percent - referencePct < 15
-    const level: 'short' | 'long' = isCrowded ? 'long' : 'short'
-    const nextPct = isCrowded ? node.percent + 15 : node.percent
-
-    return {
-      nodes: [...acc.nodes, { ...node, isTop, level }],
-      lastTopPct: isTop ? nextPct : acc.lastTopPct,
-      lastBottomPct: isTop ? acc.lastBottomPct : nextPct
+  const timelineNodes: (TimelineNode & { isTop: boolean; level: 'short' | 'long' })[] = sortedDates.map((dueDateStr, idx) => {
+    const d = new Date(dueDateStr)
+    const t = d.getTime()
+    let percent = 0
+    if (durationMs > 0) {
+      percent = Math.max(0, Math.min(100, ((t - startTime) / durationMs) * 100))
     }
-  }, { nodes: [], lastTopPct: -100, lastBottomPct: -100 }).nodes
+    return {
+      dueDate: dueDateStr,
+      percent,
+      bills: uniqueDatesMap[dueDateStr],
+      isTop: idx % 2 === 0,
+      level: 'short'
+    }
+  })
 
-  const handleNodeClick = (node: any) => {
+  const handleNodeClick = (node: TimelineNode) => {
     if (node.bills.length === 1) {
       setSelectedBill(node.bills[0])
     } else {
@@ -248,13 +237,16 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
     return (
       <div
         onClick={() => setIsExpanded(true)}
-        className="p-4 rounded-2xl bg-card border border-border/60 shadow-xs flex items-center justify-between cursor-pointer hover:bg-muted/30 transition duration-200 select-none"
+        className="p-4 rounded-2xl bg-card border border-border/60 shadow-xs flex items-center justify-between cursor-pointer hover:bg-muted/30 transition duration-200 select-none flex-wrap gap-2"
       >
-        <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-foreground">
+        <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-foreground flex-wrap">
           <Calendar className="size-4 text-blue-500 shrink-0" />
           <span>{displayTitle}</span>
           <span className="text-[10px] text-muted-foreground bg-muted/70 px-2 py-0.5 rounded-md font-semibold shrink-0">
-            {processedPayments.length} active
+            {processedPayments.length} bills
+          </span>
+          <span className="text-[10px] font-extrabold text-blue-500 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-md shrink-0">
+            Cycle Total: {formatSensitive(cycleTotal)}
           </span>
           <ChevronDown className="size-4 text-muted-foreground shrink-0" />
         </div>
@@ -276,10 +268,16 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
             <Calendar className="size-5 text-blue-500" />
             <span>{displayTitle}</span>
           </h3>
-          <p className="text-xs text-muted-foreground mt-2 font-semibold flex items-center gap-1.5">
-            <span className="size-1.5 rounded-full bg-blue-500 inline-block" />
-            Cycle Range: {startLabel} – {endLabel}
-          </p>
+          <div className="text-xs text-muted-foreground mt-2 font-semibold flex items-center gap-2 flex-wrap">
+            <span className="flex items-center gap-1.5">
+              <span className="size-1.5 rounded-full bg-blue-500 inline-block" />
+              Cycle Range: {startLabel} – {endLabel}
+            </span>
+            <span>•</span>
+            <span className="text-xs font-extrabold text-blue-500 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-md">
+              Cycle Total: {formatSensitive(cycleTotal)} ({processedPayments.length} bills)
+            </span>
+          </div>
         </div>
         <div className="p-1.5 text-muted-foreground rounded-lg flex items-center gap-1 text-xs font-semibold shrink-0">
           <span className="text-[10px] hidden sm:inline">Collapse</span>
