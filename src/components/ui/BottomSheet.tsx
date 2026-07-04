@@ -65,10 +65,19 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
 
+  // useId() is stable for a given component instance, including across
+  // React StrictMode's dev-only synchronous mount->cleanup->remount
+  // double-invoke -- so it can't distinguish "my own pushed entry is still
+  // on top" from "a different (remounted) effect run pushed an
+  // identically-named entry". Suffix with a counter that increments on
+  // every actual effect invocation instead, so each run gets a genuinely
+  // unique id even when produced by the same component instance.
+  const instanceCounterRef = useRef(0)
+
   useEffect(() => {
     if (!isOpen) return
 
-    const modalId = `modal-${titleId}`
+    const modalId = `modal-${titleId}-${++instanceCounterRef.current}`
     // Push a dummy history state so back button pops it instead of exiting the PWA
     window.history.pushState({ modalId }, '')
 
@@ -80,10 +89,18 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 
     return () => {
       window.removeEventListener('popstate', handlePopState)
-      // If closed programmatically (not via back button popstate), remove the dummy state
-      if (window.history.state?.modalId === modalId) {
-        window.history.back()
-      }
+      // Deferred to the next tick: under StrictMode's synchronous
+      // mount->cleanup->remount double-invoke, calling history.back()
+      // immediately here would race the *new* instance's pushState
+      // (already issued by the time this runs). history.back() only
+      // resolves asynchronously, so its popstate event could otherwise end
+      // up delivered to the new instance's freshly-attached listener,
+      // immediately closing a modal that just opened.
+      setTimeout(() => {
+        if (window.history.state?.modalId === modalId) {
+          window.history.back()
+        }
+      }, 0)
     }
   }, [isOpen])
 

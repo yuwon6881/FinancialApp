@@ -154,12 +154,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     activeSettings.currency
   ])
 
+  // Rounded to avoid IEEE-754 float noise (e.g. 0 + 0.01 + 64.04 + 35.95 =
+  // 100.00000000000001) permanently blocking a legitimately-100% split.
   const allocSum = useMemo(() => {
     const e = parseFloat(essentialsAllocInput) || 0
     const g = parseFloat(growthAllocInput) || 0
     const s = parseFloat(stabilityAllocInput) || 0
     const r = parseFloat(rewardsAllocInput) || 0
-    return e + g + s + r
+    return Math.round((e + g + s + r) * 100) / 100
   }, [essentialsAllocInput, growthAllocInput, stabilityAllocInput, rewardsAllocInput])
 
   const handleSaveSettings = (e: React.FormEvent) => {
@@ -340,8 +342,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1 select-none">
               {visibleCategories.map(cat => (
                 <div key={cat.id} className="flex items-center justify-between gap-2 bg-background border border-border/50 px-2.5 py-2 rounded-lg text-xs">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded border font-semibold ${getCategoryBadgeClass(cat.name)}`}>
-                    {cat.name}
+                  <span className="flex items-center gap-1.5">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded border font-semibold ${getCategoryBadgeClass(cat.name)}`}>
+                      {cat.name}
+                    </span>
+                    {cat.isPendingSync && (
+                      <span className="text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded animate-pulse select-none" title="Pending sync">
+                        Pending Sync
+                      </span>
+                    )}
                   </span>
                   <button
                     type="button"

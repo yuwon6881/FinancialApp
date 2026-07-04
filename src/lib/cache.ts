@@ -1,4 +1,5 @@
 import type { Transaction } from '../types'
+import { sanitizeQueuedOps, type QueuedOp } from './outbox'
 
 export const CACHE_KEYS = {
   dashboardData: 'cached_dashboard_data',
@@ -7,6 +8,7 @@ export const CACHE_KEYS = {
   categories: 'cached_categories',
   wishlist: 'cached_wishlist',
   pendingTransactions: 'pending_transactions',
+  pendingOperations: 'pending_operations',
 } as const
 
 export function getCachedJSON<T>(key: string, fallback: T): T {
@@ -31,7 +33,7 @@ function isWellFormedTransaction(t: unknown): t is Transaction {
     typeof tx.description === 'string' &&
     typeof tx.category === 'string' &&
     typeof tx.ledgerCategory === 'string' &&
-    typeof tx.amount === 'number'
+    typeof tx.amount === 'number' && Number.isFinite(tx.amount)
   )
 }
 
@@ -63,4 +65,37 @@ export function getCachedDashboardPeriod(): { month?: string; year?: number } {
     month: cached?.setting?.selectedMonth || undefined,
     year: cached?.setting?.selectedYear || undefined
   }
+}
+
+export function getCachedOps(): QueuedOp[] {
+  const rawOps = localStorage.getItem(CACHE_KEYS.pendingOperations)
+  if (rawOps !== null) {
+    return sanitizeQueuedOps(getCachedJSON<unknown>(CACHE_KEYS.pendingOperations, []))
+  }
+
+  // Migration path for legacy pending_transactions key
+  const rawPendingTx = localStorage.getItem(CACHE_KEYS.pendingTransactions)
+  if (rawPendingTx !== null) {
+    const legacyTxs = getCachedTransactions(CACHE_KEYS.pendingTransactions)
+    const convertedOps: QueuedOp[] = legacyTxs.map(tx => {
+      const finalId = (tx as any).serverTxId || tx.id
+      const payload = { ...tx, id: finalId }
+      delete (payload as any).serverTxId
+      delete payload.isPendingSync
+      return {
+        id: `op-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        entity: 'transaction' as const,
+        type: 'add' as const,
+        targetId: finalId,
+        payload,
+        createdAt: Date.now(),
+        retryCount: 0
+      }
+    })
+    setCachedJSON(CACHE_KEYS.pendingOperations, convertedOps)
+    localStorage.removeItem(CACHE_KEYS.pendingTransactions)
+    return convertedOps
+  }
+
+  return []
 }

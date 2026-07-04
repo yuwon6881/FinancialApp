@@ -10,6 +10,15 @@ export function escapeCsvField(val: string | number): string {
   return str
 }
 
+// User-editable text fields (description, category names) can start with a
+// formula-trigger character; spreadsheet apps (Excel/Sheets/LibreOffice)
+// evaluate a leading =, +, -, or @ as a formula (CSV injection). Prefix with
+// an apostrophe to force it to render as literal text.
+const FORMULA_TRIGGER = /^[=+\-@\t\r]/
+export function escapeCsvTextField(val: string): string {
+  return escapeCsvField(FORMULA_TRIGGER.test(val) ? `'${val}` : val)
+}
+
 export function toFilename(value: string): string {
   return value
     .replace(/[<>:"/\\|?*]+/g, '')
@@ -23,12 +32,12 @@ export function buildCsvContent(rows: Transaction[]): string {
   const headers = ['Date', 'Description', 'Category', 'Ledger Category', 'Debit (Outflow)', 'Credit (Inflow)']
   const dataRows = rows.map(t => {
     const isOutflow = t.amount < 0
-    const isTransfer = t.ledgerCategory.startsWith('Transfer:')
+    const isTransfer = (t.ledgerCategory || '').startsWith('Transfer:')
     return [
       escapeCsvField(t.date),
-      escapeCsvField(t.description),
-      escapeCsvField(t.category),
-      displayLedgerCategory(t.ledgerCategory),
+      escapeCsvTextField(t.description),
+      escapeCsvTextField(t.category),
+      escapeCsvField(displayLedgerCategory(t.ledgerCategory)),
       isTransfer ? escapeCsvField(t.amount.toFixed(2)) : (isOutflow ? escapeCsvField(Math.abs(t.amount).toFixed(2)) : ''),
       isTransfer ? escapeCsvField(t.amount.toFixed(2)) : (!isOutflow ? escapeCsvField(t.amount.toFixed(2)) : '')
     ]

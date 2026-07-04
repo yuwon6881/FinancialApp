@@ -37,8 +37,8 @@ interface DashboardViewProps {
   wishlist?: WishlistItem[]
   isHoveringWallet: boolean
   onDiscardSubscription?: (noti: any) => void
-  onAddTransaction?: (newTx: Omit<Transaction, 'id'>) => Promise<void>
-  onAddBalanceAdjustment?: (newTx: Omit<Transaction, 'id'>) => Promise<void>
+  onAddTransaction?: (newTx: Omit<Transaction, 'id'>) => Promise<void> | void
+  onAddBalanceAdjustment?: (newTx: Omit<Transaction, 'id'>) => Promise<void> | void
   isSwitchingCycle?: boolean
 }
 
@@ -242,6 +242,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   }
 
   const openBalanceAdjustment = (category: any) => {
+    if (hideSensitive) return
     setAdjustingCategory(category)
     setNewBalanceInput(category.remaining.toFixed(2))
     setAdjustmentDescription('Balance Adjustment')
@@ -633,8 +634,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <button
                       type="button"
                       onClick={() => openBalanceAdjustment(c)}
-                      className="inline-flex size-6 shrink-0 items-center justify-center rounded-lg text-muted-foreground/65 hover:bg-muted hover:text-foreground cursor-pointer transition select-none"
-                      title="Adjust balance"
+                      disabled={hideSensitive}
+                      className="inline-flex size-6 shrink-0 items-center justify-center rounded-lg text-muted-foreground/65 hover:bg-muted hover:text-foreground cursor-pointer transition select-none disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                      title={hideSensitive ? 'Unhide balances to edit' : 'Adjust balance'}
                       aria-label={`Adjust ${c.name} balance`}
                     >
                       <Edit2 className="size-3" />
@@ -718,8 +720,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <button
                         type="button"
                         onClick={() => openBalanceAdjustment(c)}
-                        className="inline-flex size-6 shrink-0 items-center justify-center rounded-lg text-muted-foreground/65 hover:bg-muted hover:text-foreground cursor-pointer transition select-none"
-                        title="Adjust balance"
+                        disabled={hideSensitive}
+                        className="inline-flex size-6 shrink-0 items-center justify-center rounded-lg text-muted-foreground/65 hover:bg-muted hover:text-foreground cursor-pointer transition select-none disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                        title={hideSensitive ? 'Unhide balances to edit' : 'Adjust balance'}
                         aria-label={`Adjust ${c.name} balance`}
                       >
                         <Edit2 className="size-3" />
@@ -808,7 +811,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             const currentPct = Math.max(0, Math.min(1, (essentialsCat?.remaining ?? 0) / essTarget))
             const pendingEss = pendingDeductionsByCategory['Essentials'] || 0
             const projectedRemaining = Math.max(0, (essentialsCat?.remaining ?? 0) - pendingEss)
-            const projectedPct = pendingEss > 0 ? Math.max(0, projectedRemaining / essTarget) : currentPct
+            const projectedPct = pendingEss > 0 ? Math.max(0, Math.min(1, projectedRemaining / essTarget)) : currentPct
             const atRiskPct = pendingEss > 0 ? Math.max(0, currentPct - projectedPct) : 0
             return (
               <div 
@@ -961,7 +964,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {activeWishlistItem && (() => {
           const rewardsCategory = categories.find(c => c.name === 'Rewards')
           const rewardsBalance = rewardsCategory?.remaining ?? 0
-          const pct = Math.min(100, (rewardsBalance / activeWishlistItem.price) * 100)
+          const pct = Math.max(0, Math.min(100, (rewardsBalance / activeWishlistItem.price) * 100))
           const canAfford = rewardsBalance >= activeWishlistItem.price
 
           return (

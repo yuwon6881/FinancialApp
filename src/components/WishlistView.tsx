@@ -3,7 +3,7 @@ import type { WishlistItem } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { BottomSheet } from './ui/BottomSheet'
-import { formatCurrencyVal, maskCurrencyInput } from '../lib/utils'
+import { formatCurrencyVal, maskCurrencyInput, sanitizeDecimalInput } from '../lib/utils'
 import {
   Gift, 
   Plus, 
@@ -24,10 +24,10 @@ interface WishlistViewProps {
   hasRewardsHistory: boolean
   currency: string
   hideSensitive: boolean
-  onAddItem: (item: Partial<WishlistItem>) => Promise<void>
-  onUpdateItem: (id: number, item: WishlistItem) => Promise<void>
-  onDeleteItem: (id: number) => Promise<void>
-  onPurchaseItem: (id: number) => Promise<void>
+  onAddItem: (item: Partial<WishlistItem>) => Promise<void> | void
+  onUpdateItem: (id: number, item: WishlistItem) => Promise<void> | void
+  onDeleteItem: (id: number) => Promise<void> | void
+  onPurchaseItem: (id: number) => Promise<void> | void
   formatSensitive: (val: number) => React.ReactNode
   autoOpenAddModal?: boolean
   onResetAutoOpen?: () => void
@@ -67,7 +67,10 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   const [priceInput, setPriceInput] = useState('')
 
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPriceInput(maskCurrencyInput(e.target.value, priceInput));
+    // The Edit form pre-fills priceInput with an already-formatted value
+    // ("199.99"); maskCurrencyInput's cent-buffer reinterpretation corrupts
+    // that on any backspace/retype, so use plain decimal editing there.
+    setPriceInput(showEditModal ? sanitizeDecimalInput(e.target.value) : maskCurrencyInput(e.target.value, priceInput));
   };
   const [priorityInput, setPriorityInput] = useState('Medium')
   const [isActiveInput, setIsActiveInput] = useState(false)
@@ -136,6 +139,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   }, [autoOpenAddModal, onResetAutoOpen, wishlist])
 
   const handleOpenEditModal = (item: WishlistItem) => {
+    if (hideSensitive) return
     setEditingItem(item)
     setNameInput(item.name)
     setPriceInput(item.price.toFixed(2))
@@ -245,7 +249,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
 
           {activeItem ? (
             (() => {
-              const pct = Math.min(100, (rewardsBalance / activeItem.price) * 100)
+              const pct = Math.max(0, Math.min(100, (rewardsBalance / activeItem.price) * 100))
               const canAfford = rewardsBalance >= activeItem.price
 
               return (
@@ -279,8 +283,13 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                     </div>
 
                     <div>
-                      <h2 className="text-xl font-extrabold text-foreground">
+                      <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2 flex-wrap">
                         {activeItem.name}
+                        {activeItem.isPendingSync && (
+                          <span className="text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded animate-pulse select-none" title="Changes pending server sync">
+                            Pending Sync
+                          </span>
+                        )}
                       </h2>
                       <div className="text-3xl font-black text-foreground mt-2">
                         {formatSensitive(activeItem.price)}
@@ -369,7 +378,9 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                     
                     <button
                       onClick={() => handleOpenEditModal(activeItem)}
-                      className="p-3 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded-xl border border-border/40 transition cursor-pointer"
+                      disabled={hideSensitive}
+                      title={hideSensitive ? 'Unhide balances to edit' : undefined}
+                      className="p-3 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded-xl border border-border/40 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-muted disabled:hover:text-muted-foreground"
                     >
                       <Edit2 className="size-4" />
                     </button>
@@ -408,7 +419,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
           <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1">
             {queuedItems.length > 0 ? (
               queuedItems.map((item, idx) => {
-                const pct = Math.min(100, (rewardsBalance / item.price) * 100)
+                const pct = Math.max(0, Math.min(100, (rewardsBalance / item.price) * 100))
                 const canAfford = rewardsBalance >= item.price
 
                 return (
@@ -431,7 +442,8 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                         </button>
                         <button
                           onClick={() => handleOpenEditModal(item)}
-                          className="flex-1 flex flex-col items-center justify-center gap-1 bg-slate-500 text-white text-[10px] font-bold active:bg-slate-600 transition"
+                          disabled={hideSensitive}
+                          className="flex-1 flex flex-col items-center justify-center gap-1 bg-slate-500 text-white text-[10px] font-bold active:bg-slate-600 transition disabled:opacity-40 disabled:pointer-events-none"
                         >
                           <Edit2 className="size-3.5" />
                           Edit
@@ -455,7 +467,9 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                         </button>
                         <button
                           onClick={() => handleOpenEditModal(item)}
-                          className="p-1.5 hover:bg-muted text-muted-foreground rounded-lg border border-transparent hover:border-border/40 transition cursor-pointer"
+                          disabled={hideSensitive}
+                          title={hideSensitive ? 'Unhide balances to edit' : undefined}
+                          className="p-1.5 hover:bg-muted text-muted-foreground rounded-lg border border-transparent hover:border-border/40 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                         >
                           <Edit2 className="size-3.5" />
                         </button>
@@ -470,7 +484,14 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                   >
                     <div className="space-y-1.5 min-w-0">
                       <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-foreground text-xs truncate">{item.name}</h4>
+                        <h4 className="font-bold text-foreground text-xs truncate flex items-center gap-1.5">
+                          <span>{item.name}</span>
+                          {item.isPendingSync && (
+                            <span className="text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded animate-pulse select-none shrink-0" title="Changes pending server sync">
+                              Pending Sync
+                            </span>
+                          )}
+                        </h4>
                         {canAfford && (
                           <span className="size-1.5 rounded-full bg-green-500 animate-pulse shrink-0" title="Ready to claim" />
                         )}

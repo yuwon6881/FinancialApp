@@ -53,7 +53,7 @@ window.fetch = async (...args) => {
     if (response.status === 401 && !url.includes('/auth/login') && !url.includes('/auth/status') && !url.includes('/auth/webauthn')) {
       throw new Error('401 Unauthorized')
     }
-    if (response.status === 423) {
+    if (response.status === 423 && !url.includes('/auth/login') && !url.includes('/auth/status') && !url.includes('/auth/webauthn')) {
       throw new Error('423 Locked')
     }
   }
@@ -516,7 +516,7 @@ export function fetchRecurringPayments(): Promise<RecurringPayment[]> {
   return promise
 }
 
-export async function addRecurringPayment(payment: Omit<RecurringPayment, 'id'>): Promise<RecurringPayment> {
+export async function addRecurringPayment(payment: Omit<RecurringPayment, 'id'> & { id?: string }): Promise<RecurringPayment> {
   const payload = {
     ...payment,
     amount: obfuscateAmount(payment.amount)
@@ -600,7 +600,7 @@ export function fetchCategories(): Promise<TransactionCategory[]> {
   return promise
 }
 
-export async function addCategory(category: Omit<TransactionCategory, 'id'>): Promise<TransactionCategory> {
+export async function addCategory(category: Omit<TransactionCategory, 'id'> & { id?: string }): Promise<TransactionCategory> {
   const response = await fetch(`${API_BASE_URL}/categories`, {
     method: 'POST',
     headers: getHeaders({
@@ -725,7 +725,8 @@ export async function purchaseWishlistItem(id: number): Promise<{ item: Wishlist
     throw new Error(errorBody.message || 'Failed to purchase wishlist item')
   }
   queryCache.invalidateAll()
-  return response.json()
+  const data = await response.json()
+  return { ...data, transaction: deobfuscateTransaction(data.transaction) }
 }
 
 export async function pingServer(): Promise<{ status: string }> {

@@ -45,6 +45,26 @@ export const maskCurrencyInput = (rawVal: string, currentValue: string): string 
   return (parsed / 100).toFixed(2)
 }
 
+// Sanitizes in-place decimal editing (keeps digits + at most one decimal
+// point, max 2 decimal places) without reinterpreting the digits as a cent
+// buffer. Use this — not maskCurrencyInput — for fields pre-filled with an
+// already-formatted value (e.g. an Edit form): maskCurrencyInput always
+// re-derives the amount from every digit currently in the field, so editing
+// (backspacing, selecting-and-retyping) a pre-filled "1234.56" produces a
+// wildly different number than what the edit visually looks like.
+export const sanitizeDecimalInput = (rawVal: string): string => {
+  let cleaned = rawVal.replace(/[^0-9.]/g, '')
+  const firstDot = cleaned.indexOf('.')
+  if (firstDot !== -1) {
+    cleaned = cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, '')
+  }
+  const [whole, frac] = cleaned.split('.')
+  if (frac !== undefined && frac.length > 2) {
+    cleaned = `${whole}.${frac.slice(0, 2)}`
+  }
+  return cleaned
+}
+
 export const getCurrencySymbol = (currencyCode: string = 'USD') => {
   const code = currencyCode.toUpperCase()
   if (code === 'RM' || code === 'MYR') return 'RM'

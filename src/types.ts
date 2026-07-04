@@ -8,7 +8,6 @@ export interface Transaction {
   category: string
   ledgerCategory: string
   amount: number // Positive for inflow, negative for outflow
-  serverTxId?: string
   isPendingSync?: boolean
 }
 
@@ -24,6 +23,7 @@ export interface RecurringPayment {
   startDate: string // Date (yyyy-MM-dd)
   active: boolean
   endDate?: string
+  isPendingSync?: boolean
 }
 
 export interface FinancialSetting {
@@ -121,6 +121,7 @@ export interface DashboardData {
 export interface TransactionCategory {
   id: string
   name: string
+  isPendingSync?: boolean
 }
 
 export interface WishlistItem {
@@ -132,4 +133,5 @@ export interface WishlistItem {
   purchasedAt?: string
   createdAt: string
   isActive: boolean
+  isPendingSync?: boolean
 }

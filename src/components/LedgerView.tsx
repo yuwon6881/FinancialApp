@@ -19,7 +19,7 @@ import {
 import { CustomSelect } from './ui/CustomSelect'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { BottomSheet } from './ui/BottomSheet'
-import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput, displayLedgerCategory } from '../lib/utils'
+import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput, sanitizeDecimalInput, displayLedgerCategory } from '../lib/utils'
 import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } from '../lib/categoryColors'
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../lib/csvExport'
 import { useDialog } from '../lib/useDialog'
@@ -290,14 +290,18 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       setDescription('')
       setShowSuggestions(false)
       setSelectedSuggestionIndex(-1)
-      if (nextType === 'transfer') {
-        setCategory('Transfer')
-      } else if (categories.length > 0) {
-        const fallbackCategory = nextType === 'inflow' && categories.some(c => c.name === 'Salary')
-          ? 'Salary'
-          : categories[0].name
-        setCategory(fallbackCategory)
-      }
+    }
+    // Always re-derive category/ledgerCategory for the new type, even while
+    // editing — otherwise a stale value left over from whatever type the
+    // transaction started as (or from a previous form session, for transfers
+    // which never set these fields at all) gets silently submitted.
+    if (nextType === 'transfer') {
+      setCategory('Transfer')
+    } else if (categories.length > 0) {
+      const fallbackCategory = nextType === 'inflow' && categories.some(c => c.name === 'Salary')
+        ? 'Salary'
+        : categories[0].name
+      setCategory(fallbackCategory)
     }
   }
 
@@ -338,7 +342,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setAmount(maskCurrencyInput(e.target.value, amount));
+    // The edit form pre-fills amount with an already-formatted value
+    // ("1234.56"); maskCurrencyInput's cent-buffer reinterpretation corrupts
+    // that on any backspace/retype, so use plain decimal editing there.
+    setAmount(editingTxId ? sanitizeDecimalInput(e.target.value) : maskCurrencyInput(e.target.value, amount));
   };
 
   const handleStartEdit = (t: Transaction) => {
@@ -352,6 +359,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
     if ((t.ledgerCategory || '').startsWith('Transfer:')) {
       setTxType('transfer')
+      // Transfers don't use category/ledgerCategory directly, but these must
+      // still hold a well-defined value in case the user switches the type
+      // away from Transfer mid-edit (see the type-change effect below).
+      setCategory(t.category || 'Transfer')
+      setLedgerCategory('Essentials')
       const parts = t.ledgerCategory.substring(9).split('->')
       if (parts.length === 2) {
         setTransferSource(parts[0].trim() as any)
@@ -373,20 +385,28 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setShowAddForm(true)
   }
 
-  // Reset Ledger Category and Category defaults on transaction type changes (adding mode only)
+  // Reset Ledger Category defaults on transaction type changes. The
+  // ledgerCategory fix-up runs in both add and edit mode — otherwise
+  // switching a transaction's type mid-edit (e.g. Income inflow -> outflow,
+  // or away from Transfer) can leave a stale/incompatible ledgerCategory
+  // (like "Income" or "Transfer:X->Y") on a transaction of a different type.
+  // The Category fallback (Salary/first category) only applies in add mode,
+  // since overwriting it mid-edit would clobber the transaction's real
+  // category whenever an unrelated re-render (e.g. background category sync)
+  // fires this effect.
   useEffect(() => {
-    if (editingTxId) return
-
     if (txType === 'inflow') {
       setLedgerCategory('Income')
-      const hasSalary = categories.some(c => c.name === 'Salary')
-      if (hasSalary) {
-        setCategory('Salary')
-      } else if (categories.length > 0) {
-        setCategory(categories[0].name)
+      if (!editingTxId) {
+        const hasSalary = categories.some(c => c.name === 'Salary')
+        if (hasSalary) {
+          setCategory('Salary')
+        } else if (categories.length > 0) {
+          setCategory(categories[0].name)
+        }
       }
     } else if (txType === 'outflow') {
-      if (ledgerCategory === 'Income') {
+      if (ledgerCategory === 'Income' || (ledgerCategory || '').startsWith('IncomeSplit:') || (ledgerCategory || '').startsWith('Transfer:')) {
         setLedgerCategory('Essentials')
       }
     }
@@ -692,11 +712,19 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   const handleCancelStabilityCapModalRef = useRef<() => void>(() => {})
 
+  // A fixed string modalId can't tell "my own pushed entry is still on top"
+  // apart from "a different mount of this same effect (StrictMode's dev-only
+  // synchronous mount->cleanup->remount, or a fast close+reopen) pushed an
+  // identically-named entry". Suffixing with a counter that increments on
+  // every actual push gives each one a genuinely unique id.
+  const modalPushCounterRef = useRef(0)
+
   useEffect(() => {
     if (!showAddForm) return
 
     // Push a dummy history state so back button pops it instead of exiting the PWA
-    window.history.pushState({ modalId: 'ledger-add-form' }, '')
+    const modalId = `ledger-add-form-${++modalPushCounterRef.current}`
+    window.history.pushState({ modalId }, '')
 
     const handlePopState = () => {
       handleCloseFormRef.current()
@@ -706,10 +734,14 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
     return () => {
       window.removeEventListener('popstate', handlePopState)
-      // If closed programmatically, pop the history state
-      if (window.history.state?.modalId === 'ledger-add-form') {
-        window.history.back()
-      }
+      // Deferred: see BottomSheet.tsx's popstate effect for why this can't
+      // call history.back() synchronously here (the race can misdeliver the
+      // resulting popstate to a just-remounted instance, closing it).
+      setTimeout(() => {
+        if (window.history.state?.modalId === modalId) {
+          window.history.back()
+        }
+      }, 0)
     }
   }, [showAddForm])
 
@@ -717,7 +749,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     if (!showExportModal) return
 
     // Push a dummy history state so back button pops it instead of exiting the PWA
-    window.history.pushState({ modalId: 'ledger-export' }, '')
+    const modalId = `ledger-export-${++modalPushCounterRef.current}`
+    window.history.pushState({ modalId }, '')
 
     const handlePopState = () => {
       setShowExportModal(false)
@@ -727,10 +760,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
     return () => {
       window.removeEventListener('popstate', handlePopState)
-      // If closed programmatically, pop the history state
-      if (window.history.state?.modalId === 'ledger-export') {
-        window.history.back()
-      }
+      // Deferred: see BottomSheet.tsx's popstate effect for why this can't
+      // call history.back() synchronously here.
+      setTimeout(() => {
+        if (window.history.state?.modalId === modalId) {
+          window.history.back()
+        }
+      }, 0)
     }
   }, [showExportModal])
 
@@ -738,7 +774,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     if (!showStabilityCapModal) return
 
     // Push a dummy history state so back button pops it instead of exiting the PWA
-    window.history.pushState({ modalId: 'ledger-stability-cap' }, '')
+    const modalId = `ledger-stability-cap-${++modalPushCounterRef.current}`
+    window.history.pushState({ modalId }, '')
 
     const handlePopState = () => {
       handleCancelStabilityCapModalRef.current()
@@ -748,10 +785,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
     return () => {
       window.removeEventListener('popstate', handlePopState)
-      // If closed programmatically, pop the history state
-      if (window.history.state?.modalId === 'ledger-stability-cap') {
-        window.history.back()
-      }
+      // Deferred: see BottomSheet.tsx's popstate effect for why this can't
+      // call history.back() synchronously here.
+      setTimeout(() => {
+        if (window.history.state?.modalId === modalId) {
+          window.history.back()
+        }
+      }, 0)
     }
   }, [showStabilityCapModal])
 
@@ -1107,6 +1147,16 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   const totalPages = Math.ceil(filteredTransactions.length / pageSize) || 1
 
+  // Clamp currentPage whenever the underlying data set shrinks or changes out
+  // from under it (switching to a cycle with fewer pages, deleting the last
+  // items on the final page) — otherwise the pager gets stuck on an
+  // out-of-range page showing "No transactions" until manually navigated.
+  useEffect(() => {
+    if (!showAllCycles && currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [totalPages, showAllCycles, currentPage])
+
   // Handle highlighted transaction scroll into view and page calculation
   useEffect(() => {
     if (highlightedTxId) {
@@ -1202,7 +1252,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   const handleExportPage = () => {
     if (hideSensitive) return
-    const rows = isServerMode ? (serverResult?.items || []) : paginatedTransactions
+    // Match what's actually rendered on the page (displayTransactions),
+    // which prepends pending/unsynced rows in server mode.
+    const rows = isServerMode ? [...filteredPendingTransactions, ...(serverResult?.items || [])] : paginatedTransactions
     downloadCsvRows(rows, getPageExportFilename(rows))
     setShowExportModal(false)
   }
@@ -2006,14 +2058,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       {(() => {
                         const isIncomeRecord = t.ledgerCategory === 'Income' || (t.ledgerCategory || '').startsWith('IncomeSplit:')
                         const isSplitSub = t.id.includes('-split-')
-                        if (isIncomeRecord) {
-                          return (
-                            <span className="inline-block px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-500 font-bold text-xs">
-                              {formatSensitive(t.amount)}
-                            </span>
-                          )
-                        }
-                        if (isSplitSub) {
+                        if (isIncomeRecord || isSplitSub) {
                           return <span className="text-muted-foreground/30">-</span>
                         }
                         if ((t.ledgerCategory || '').startsWith('Transfer:')) {

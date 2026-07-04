@@ -527,10 +527,15 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
               <div>
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="text-base font-bold text-foreground flex items-center gap-1.5">
+                    <h3 className="text-base font-bold text-foreground flex items-center gap-1.5 flex-wrap">
                       {rp.name}
                       {!rp.active && (
                         <span className="text-[9px] font-semibold bg-muted px-1.5 py-0.5 rounded text-muted-foreground">Paused</span>
+                      )}
+                      {rp.isPendingSync && (
+                        <span className="text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded animate-pulse select-none" title="Changes pending server sync">
+                          Pending Sync
+                        </span>
                       )}
                     </h3>
                     <span className={`inline-block mt-1 text-[10px] px-1.5 py-0.5 font-semibold rounded border ${getCategoryBadgeClass(rp.category)}`}>

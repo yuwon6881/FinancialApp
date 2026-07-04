@@ -22,7 +22,8 @@ import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 import { PullToRefresh } from './components/ui/PullToRefresh'
 import { ToastViewport, type ToastMessage, type ToastTone } from './components/ui/ToastViewport'
 import { CardSkeleton, Skeleton } from './components/ui/Skeleton'
-import { CACHE_KEYS, getCachedJSON, getCachedTransactions, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod } from './lib/cache'
+import { CACHE_KEYS, getCachedJSON, getCachedTransactions, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod, getCachedOps } from './lib/cache'
+import { enqueue, applyOpsToList, createFinalId, createLocalWishlistId, DISPATCH, sanitizeQueuedOps, type QueuedOp } from './lib/outbox'
 import { PendingSubscriptionsModal } from './components/PendingSubscriptionsModal'
 import { PasswordPromptModal } from './components/PasswordPromptModal'
 import { LockScreen } from './components/LockScreen'
@@ -108,9 +109,10 @@ function App() {
   const [loading, setLoading] = useState<boolean>(() => !hasCachedKey(CACHE_KEYS.dashboardData))
 
   // Sync Queue States
-  const [pendingTransactions, setPendingTransactions] = useState<Transaction[]>(() => getCachedTransactions(CACHE_KEYS.pendingTransactions))
+  const [pendingOps, setPendingOps] = useState<QueuedOp[]>(() => getCachedOps())
+  const [failedOps, setFailedOps] = useState<QueuedOp[]>(() => getCachedJSON<QueuedOp[]>('failed_operations', []))
   const [isBackgroundSyncing, setIsBackgroundSyncing] = useState<boolean>(false)
-  const [actionLoading, setActionLoading] = useState<boolean>(false)
+  const [actionLoading] = useState<boolean>(false)
   const [activeSyncId, setActiveSyncId] = useState<string | null>(null)
   const [syncBackoffUntil, setSyncBackoffUntil] = useState<number>(0)
   const [syncCountdownMs, setSyncCountdownMs] = useState<number>(0)
@@ -174,9 +176,9 @@ function App() {
     setToasts(prev => [...prev.slice(-3), { id, message, title, tone }])
   }
 
-  const dismissToast = (id: string) => {
+  const dismissToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(toast => toast.id !== id))
-  }
+  }, [])
 
   const showAlert = (message: string, title: string = 'Notification') => {
     showToast(message, title, title.toLowerCase().includes('error') ? 'error' : 'info')
@@ -383,28 +385,15 @@ function App() {
   )
 
   const handleLogout = async () => {
-    // Read from refs, not the pendingTransactions/username/draftTransactions
-    // state directly -- this function is also invoked from processQueue,
-    // a useCallback memoized on [token, selectedMonth, selectedYear], so a
-    // stale closure of handleLogout can otherwise still be in scope there
-    // and would back up an outdated (smaller) queue right before wiping the
-    // real, current one, permanently losing whatever was queued since.
-    const currentPending = pendingTxRef.current;
+    const currentPending = pendingOpsRef.current;
     const currentDrafts = draftTxRef.current;
     const currentOwner = usernameRef.current;
 
     if (currentPending.length > 0) {
-      // Tag the backup with its owner so a different account logging in next
-      // (shared/kiosk device, or a fresh login after this one never resynced)
-      // can't have this session's unsynced transactions silently replayed
-      // into its ledger.
-      localStorage.setItem('pending_transactions_backup', JSON.stringify({ owner: currentOwner, transactions: currentPending }));
+      localStorage.setItem('pending_operations_backup', JSON.stringify({ owner: currentOwner, ops: currentPending }));
     }
 
     if (currentDrafts.length > 0) {
-      // Drafts (added but not yet queued for sync) get the same
-      // owner-tagged backup/restore treatment as the pending queue --
-      // otherwise they were silently deleted below with no way back.
       localStorage.setItem('draft_transactions_backup', JSON.stringify({ owner: currentOwner, transactions: currentDrafts }));
     }
 
@@ -414,7 +403,14 @@ function App() {
     setDashboardData(null)
     setTransactions([])
     setRecurringPayments([])
-    setPendingTransactions([])
+    setPendingOps([])
+    setFailedOps([])
+    setDraftTransactions([])
+    setCategoriesList([])
+    setWishlist([])
+    setSelectedMonth('')
+    setSelectedYear(0)
+    setLoading(true)
     setEditingPendingId(null)
     setHasShownModalThisSession(false)
     setShowLoginModal(false)
@@ -430,6 +426,9 @@ function App() {
     localStorage.removeItem(CACHE_KEYS.categories)
     localStorage.removeItem(CACHE_KEYS.wishlist)
     localStorage.removeItem(CACHE_KEYS.pendingTransactions)
+    localStorage.removeItem(CACHE_KEYS.pendingOperations)
+    localStorage.removeItem('failed_operations')
+    localStorage.removeItem('draft_transactions')
     setIsLocked(false)
   }
 
@@ -527,23 +526,23 @@ function App() {
     setToken(newToken)
     setUsername(newUsername)
 
-    // Restore any backed up pending transactions -- only if this backup
-    // belongs to the account that's actually logging in now, otherwise a
-    // different account's unsynced queue could get silently replayed here.
-    const cachedBackup = localStorage.getItem('pending_transactions_backup');
-    if (cachedBackup) {
+    // Restore any backed up pending operations -- only if this backup
+    // belongs to the account that's actually logging in now.
+    const cachedOpsBackup = localStorage.getItem('pending_operations_backup') || localStorage.getItem('pending_transactions_backup');
+    if (cachedOpsBackup) {
       try {
-        const parsed = JSON.parse(cachedBackup);
+        const parsed = JSON.parse(cachedOpsBackup);
         if (parsed && parsed.owner === newUsername) {
-          const backedUpTxs = sanitizeTransactions(parsed.transactions);
-          if (backedUpTxs.length > 0) {
-            setPendingTransactions(backedUpTxs);
-            localStorage.setItem(CACHE_KEYS.pendingTransactions, JSON.stringify(backedUpTxs));
+          const backedUpOps = sanitizeQueuedOps(parsed.ops || parsed.transactions);
+          if (backedUpOps.length > 0) {
+            setPendingOps(backedUpOps);
+            setCachedJSON(CACHE_KEYS.pendingOperations, backedUpOps);
           }
         }
       } catch (e) {
-        console.error('Failed to parse backed up pending transactions:', e);
+        console.error('Failed to parse backed up pending operations:', e);
       }
+      localStorage.removeItem('pending_operations_backup');
       localStorage.removeItem('pending_transactions_backup');
     }
 
@@ -580,7 +579,7 @@ function App() {
     }
   }
 
-  const handleUpdateSettings = async (settings: {
+  const handleUpdateSettings = (settings: {
     targetStabilityFund: number
     essentialsAlloc: number
     growthAlloc: number
@@ -589,34 +588,21 @@ function App() {
     cycleDay: number
     currency?: string
   }) => {
-    try {
-      await api.updateSettings({ ...settings, darkMode, hideSensitive })
-      await loadAll(selectedMonth || undefined, selectedYear || undefined)
-    } catch (err) {
-      console.error(err)
-      alert('Error updating configuration on server.')
-    }
+    const payload = { ...settings, darkMode, hideSensitive }
+    setPendingOps(prev => enqueue(prev, 'settings', 'update', 'settings', payload))
+    showToast('Settings update queued.', 'Settings updated', 'success')
   }
 
   // Custom Categories & Accounts modifiers
-  const handleAddCategory = async (newCat: Omit<TransactionCategory, 'id'>) => {
-    try {
-      await api.addCategory(newCat)
-      await loadAll(selectedMonth || undefined, selectedYear || undefined)
-    } catch (err: any) {
-      console.error(err)
-      alert(err.message || 'Error adding category.')
-    }
+  const handleAddCategory = (newCat: Omit<TransactionCategory, 'id'>) => {
+    const finalId = createFinalId('category')
+    setPendingOps(prev => enqueue(prev, 'category', 'add', finalId, { ...newCat, id: finalId }))
+    showToast('Category creation queued.', 'Settings updated', 'success')
   }
 
-  const handleDeleteCategory = async (id: string) => {
-    try {
-      await api.deleteCategory(id)
-      await loadAll(selectedMonth || undefined, selectedYear || undefined)
-    } catch (err: any) {
-      console.error(err)
-      alert(err.message || 'Error deleting category.')
-    }
+  const handleDeleteCategory = (id: string) => {
+    setPendingOps(prev => enqueue(prev, 'category', 'delete', id))
+    showToast('Category deletion queued.', 'Settings updated', 'success')
   }
 
   const requestDeleteCategory = (id: string) => {
@@ -625,28 +611,12 @@ function App() {
       title: 'Delete Category',
       message: `Delete "${category?.name || 'this category'}"? Existing transactions that use it may keep the old category name, but it will no longer be available for new entries.`,
       confirmText: 'Delete',
-      onConfirm: () => { void handleDeleteCategory(id) }
+      onConfirm: () => { handleDeleteCategory(id) }
     })
   }
 
-
   // Transaction modifiers
-  const handleEditPendingTransaction = (id: string, updatedTx: Omit<Transaction, 'id'>) => {
-    if (id === activeSyncId) return;
-    setPendingTransactions(prev => prev.map(t => {
-      if (t.id === id) {
-        return { ...t, ...updatedTx } as Transaction;
-      }
-      return t;
-    }));
-  };
-
-  const handleDeletePendingTransaction = (id: string) => {
-    if (id === activeSyncId) return;
-    setPendingTransactions(prev => prev.filter(t => t.id !== id));
-  };
-
-  const handleAddTransaction = async (newTx: Omit<Transaction, 'id'>) => {
+  const handleAddTransaction = (newTx: Omit<Transaction, 'id'>) => {
     const draftId = createLocalId('draft');
     const draftTx: Transaction = {
       ...newTx,
@@ -659,19 +629,11 @@ function App() {
     setActiveTab('drafts');
   }
 
-  const handleAddBalanceAdjustment = async (newTx: Omit<Transaction, 'id'>) => {
-    setActionLoading(true)
-    try {
-      await api.addTransaction(newTx)
-      triggerVibration(20)
-      await loadAll(selectedMonth || undefined, selectedYear || undefined)
-      showToast('Balance adjustment recorded in ledger.', 'Ledger updated', 'success')
-    } catch (err) {
-      console.error(err)
-      alert('Error adding balance adjustment on the server.')
-    } finally {
-      setActionLoading(false)
-    }
+  const handleAddBalanceAdjustment = (newTx: Omit<Transaction, 'id'>) => {
+    const finalId = createFinalId('transaction')
+    triggerVibration(20)
+    setPendingOps(prev => enqueue(prev, 'transaction', 'add', finalId, { ...newTx, id: finalId }))
+    showToast('Balance adjustment queued.', 'Ledger updated', 'success')
   }
 
   const handleUpdateDraftTransaction = (id: string, updated: Transaction) => {
@@ -697,144 +659,83 @@ function App() {
   const handleSyncDraftBatch = () => {
     if (draftTransactions.length === 0) return;
 
-    const finalPending = draftTransactions.map(d => {
-      const tempId = createLocalId('temp');
-      const serverTxId = createLocalId('tx', '-');
-      return {
+    let nextQueue = pendingOps;
+    draftTransactions.forEach(d => {
+      const finalId = createFinalId('transaction');
+      const payload = {
         ...d,
-        id: tempId,
-        serverTxId
+        id: finalId
       };
+      delete payload.isPendingSync;
+      nextQueue = enqueue(nextQueue, 'transaction', 'add', finalId, payload);
     });
 
     setDraftTransactions([]);
     triggerVibration([25, 45, 25]);
-    setPendingTransactions(prev => [...prev, ...finalPending]);
-    showToast(`${finalPending.length} transaction${finalPending.length > 1 ? 's' : ''} queued for sync.`, 'Sync queued', 'success')
+    setPendingOps(nextQueue);
+    showToast(`${draftTransactions.length} transaction${draftTransactions.length > 1 ? 's' : ''} queued for sync.`, 'Sync queued', 'success')
   };
 
-  const handleDeleteTransaction = async (id: string) => {
+  const handleDeleteTransaction = (id: string) => {
     triggerVibration(30)
-    if (id.startsWith('temp_')) {
-      handleDeletePendingTransaction(id);
-      if (id === editingPendingId) {
-        setEditingPendingId(null);
-      }
-      return;
-    }
-
-    setActiveSyncId(id)
-    setActionLoading(true)
-    try {
-      await api.deleteTransaction(id)
-      await loadAll(selectedMonth || undefined, selectedYear || undefined)
-      showToast('Transaction deleted.', 'Ledger updated', 'success')
-    } catch (err) {
-      console.error(err)
-      alert('Error deleting transaction on the server.')
-    } finally {
-      setActiveSyncId(null)
-      setActionLoading(false)
-    }
+    setPendingOps(prev => enqueue(prev, 'transaction', 'delete', id))
+    if (id === editingPendingId) setEditingPendingId(null)
+    showToast('Transaction deletion queued.', 'Ledger updated', 'success')
   }
 
-  const handleUpdateTransaction = async (id: string, updatedTx: Omit<Transaction, 'id'>) => {
+  const handleUpdateTransaction = (id: string, updatedTx: Omit<Transaction, 'id'>) => {
     triggerVibration(15)
-    if (id.startsWith('temp_')) {
-      handleEditPendingTransaction(id, updatedTx);
-      setEditingPendingId(null);
-      return;
-    }
-
-    setActiveSyncId(id)
-    try {
-      await api.updateTransaction(id, updatedTx)
-      await loadAll(selectedMonth || undefined, selectedYear || undefined, true)
-      showToast('Transaction updated.', 'Ledger updated', 'success')
-    } catch (err) {
-      console.error(err)
-      alert('Error updating transaction on the server.')
-    } finally {
-      setActiveSyncId(null)
-    }
+    setPendingOps(prev => enqueue(prev, 'transaction', 'update', id, updatedTx))
+    if (id === editingPendingId) setEditingPendingId(null)
+    showToast('Transaction update queued.', 'Ledger updated', 'success')
   }
 
-  const handleConfirmSubscription = async (noti: any, paidDate: string) => {
-    try {
-      await api.addTransaction({
-        id: noti.id,
-        date: paidDate,
-        description: noti.name,
-        amount: -Math.abs(noti.amount),
-        category: noti.category,
-        ledgerCategory: noti.ledgerCategory
-      })
-      await loadAll(selectedMonth || undefined, selectedYear || undefined)
-      showToast('Subscription payment added to ledger.', 'Payment confirmed', 'success')
-    } catch (err) {
-      console.error(err)
-      alert('Error confirming subscription payment.')
-    }
+  const handleConfirmSubscription = (noti: any, paidDate: string) => {
+    const finalId = createFinalId('transaction')
+    setPendingOps(prev => enqueue(prev, 'transaction', 'add', finalId, {
+      id: finalId,
+      date: paidDate,
+      description: noti.name,
+      amount: -Math.abs(noti.amount),
+      category: noti.category,
+      ledgerCategory: noti.ledgerCategory
+    }))
+    showToast('Subscription payment queued.', 'Payment confirmed', 'success')
   }
 
-  const handleDiscardSubscription = async (noti: any) => {
-    try {
-      await api.addTransaction({
-        id: noti.id,
-        date: noti.billingDate,
-        description: `[Discarded] ${noti.name}`,
-        amount: 0,
-        category: noti.category,
-        ledgerCategory: 'Discarded'
-      })
-      await loadAll(selectedMonth || undefined, selectedYear || undefined)
-      showToast('Subscription cycle skipped.', 'Payment skipped', 'info')
-    } catch (err) {
-      console.error(err)
-      alert('Error discarding subscription payment.')
-    }
+  const handleDiscardSubscription = (noti: any) => {
+    const finalId = createFinalId('transaction')
+    setPendingOps(prev => enqueue(prev, 'transaction', 'add', finalId, {
+      id: finalId,
+      date: noti.billingDate,
+      description: `[Discarded] ${noti.name}`,
+      amount: 0,
+      category: noti.category,
+      ledgerCategory: 'Discarded'
+    }))
+    showToast('Subscription cycle skip queued.', 'Payment skipped', 'info')
   }
-
 
   // Recurring payment modifiers
-  const handleAddPayment = async (newPay: Omit<RecurringPayment, 'id'>) => {
-    try {
-      await api.addRecurringPayment(newPay)
-      await loadAll(selectedMonth || undefined, selectedYear || undefined)
-    } catch (err) {
-      console.error(err)
-      alert('Error adding recurring payment on the server.')
-    }
+  const handleAddPayment = (newPay: Omit<RecurringPayment, 'id'>) => {
+    const finalId = createFinalId('recurringPayment')
+    setPendingOps(prev => enqueue(prev, 'recurringPayment', 'add', finalId, { ...newPay, id: finalId, active: true }))
+    showToast('Recurring payment queued.', 'Subscriptions updated', 'success')
   }
 
-  const handleToggleActive = async (id: string) => {
-    try {
-      await api.toggleRecurringPayment(id)
-      await loadAll(selectedMonth || undefined, selectedYear || undefined)
-    } catch (err) {
-      console.error(err)
-      alert('Error toggling payment status on the server.')
-    }
+  const handleToggleActive = (id: string) => {
+    setPendingOps(prev => enqueue(prev, 'recurringPayment', 'toggle', id))
+    showToast('Subscription status toggle queued.', 'Subscriptions updated', 'success')
   }
 
-  const handleUpdatePayment = async (id: string, payment: RecurringPayment) => {
-    try {
-      await api.updateRecurringPayment(id, payment)
-      await loadAll(selectedMonth || undefined, selectedYear || undefined)
-    } catch (err) {
-      console.error(err)
-      alert('Error updating recurring payment on the server.')
-    }
+  const handleUpdatePayment = (id: string, payment: RecurringPayment) => {
+    setPendingOps(prev => enqueue(prev, 'recurringPayment', 'update', id, payment))
+    showToast('Subscription update queued.', 'Subscriptions updated', 'success')
   }
 
-  const handleDeletePayment = async (id: string) => {
-    try {
-      await api.deleteRecurringPayment(id)
-      await loadAll(selectedMonth || undefined, selectedYear || undefined)
-    } catch (err) {
-      console.error(err)
-      alert('Error deleting recurring payment on the server.')
-    }
+  const handleDeletePayment = (id: string) => {
+    setPendingOps(prev => enqueue(prev, 'recurringPayment', 'delete', id))
+    showToast('Subscription deletion queued.', 'Subscriptions updated', 'success')
   }
 
   const requestDeletePayment = (id: string) => {
@@ -843,78 +744,69 @@ function App() {
       title: 'Delete Subscription',
       message: `Delete "${payment?.name || 'this recurring subscription'}"? This will cancel all future notifications for this subscription.`,
       confirmText: 'Delete',
-      onConfirm: () => { void handleDeletePayment(id) }
+      onConfirm: () => { handleDeletePayment(id) }
     })
   }
 
   // Wish List modifiers
-  const handleAddWishlistItem = async (newWish: Partial<WishlistItem>) => {
-    try {
-      await api.addWishlistItem(newWish)
-      await loadAll(selectedMonth || undefined, selectedYear || undefined)
-    } catch (err: any) {
-      console.error(err)
-      alert(err.message || 'Error adding wishlist item.')
+  const handleAddWishlistItem = (newWish: Partial<WishlistItem>) => {
+    const placeholderId = String(createLocalWishlistId())
+    const payload = {
+      name: newWish.name || '',
+      price: newWish.price || 0,
+      priority: newWish.priority || 'Medium',
+      isPurchased: false,
+      createdAt: new Date().toISOString(),
+      isActive: newWish.isActive ?? false
     }
+    setPendingOps(prev => enqueue(prev, 'wishlistItem', 'add', placeholderId, payload))
+    showToast('Wishlist item queued.', 'Wishlist updated', 'success')
   }
 
-  const handleUpdateWishlistItem = async (id: number, updatedWish: WishlistItem) => {
-    try {
-      await api.updateWishlistItem(id, updatedWish)
-      await loadAll(selectedMonth || undefined, selectedYear || undefined)
-    } catch (err: any) {
-      console.error(err)
-      alert(err.message || 'Error updating wishlist item.')
-    }
+  const handleUpdateWishlistItem = (id: number, updatedWish: WishlistItem) => {
+    setPendingOps(prev => enqueue(prev, 'wishlistItem', 'update', String(id), updatedWish))
+    showToast('Wishlist item update queued.', 'Wishlist updated', 'success')
   }
 
-  const handleDeleteWishlistItem = async (id: number) => {
-    try {
-      await api.deleteWishlistItem(id)
-      await loadAll(selectedMonth || undefined, selectedYear || undefined)
-    } catch (err: any) {
-      console.error(err)
-      alert(err.message || 'Error deleting wishlist item.')
-    }
+  const handleDeleteWishlistItem = (id: number) => {
+    setPendingOps(prev => enqueue(prev, 'wishlistItem', 'delete', String(id)))
+    showToast('Wishlist item deletion queued.', 'Wishlist updated', 'success')
   }
 
-  const requestDeleteWishlistItem = async (id: number): Promise<void> => {
+  const requestDeleteWishlistItem = (id: number) => {
     const item = wishlist.find(w => w.id === id)
     setConfirmModalData({
       title: 'Delete Wishlist Item',
       message: `Delete "${item?.name || 'this wishlist item'}"? This removes the savings goal from your wishlist.`,
       confirmText: 'Delete',
-      onConfirm: () => { void handleDeleteWishlistItem(id) }
+      onConfirm: () => { handleDeleteWishlistItem(id) }
     })
   }
 
-  const handlePurchaseWishlistItem = async (id: number) => {
-    try {
-      await api.purchaseWishlistItem(id)
-      await loadAll(selectedMonth || undefined, selectedYear || undefined)
-    } catch (err: any) {
-      console.error(err)
-      alert(err.message || 'Error purchasing wishlist item.')
-    }
+  const handlePurchaseWishlistItem = (id: number) => {
+    setPendingOps(prev => enqueue(prev, 'wishlistItem', 'purchase', String(id)))
+    showToast('Wishlist purchase queued.', 'Wishlist updated', 'success')
   }
 
-  // Save pending transactions to localStorage whenever they change
+  // Save pending operations to localStorage whenever they change
   useEffect(() => {
-    setCachedJSON(CACHE_KEYS.pendingTransactions, pendingTransactions)
-  }, [pendingTransactions])
+    setCachedJSON(CACHE_KEYS.pendingOperations, pendingOps)
+  }, [pendingOps])
 
-  // Warming ping and background sync are managed by wakeUpAndSync below
+  useEffect(() => {
+    setCachedJSON('failed_operations', failedOps)
+  }, [failedOps])
 
   // Background Sync Queue Worker Refs
-  const pendingTxRef = useRef(pendingTransactions);
+  const pendingOpsRef = useRef(pendingOps);
   const draftTxRef = useRef(draftTransactions);
   const usernameRef = useRef(username);
   const editingPendingIdRef = useRef(editingPendingId);
   const syncBackoffUntilRef = useRef(syncBackoffUntil);
 
   useEffect(() => {
-    pendingTxRef.current = pendingTransactions;
-  }, [pendingTransactions]);
+    pendingOpsRef.current = pendingOps;
+  }, [pendingOps]);
 
   useEffect(() => {
     draftTxRef.current = draftTransactions;
@@ -952,13 +844,15 @@ function App() {
     isSyncingRef.current = true;
     setIsBackgroundSyncing(true);
 
+    let processedAny = false;
+
     try {
       while (true) {
-        const queue = pendingTxRef.current;
-        const nextTx = queue[0];
-        if (!nextTx) break;
+        const queue = pendingOpsRef.current;
+        const nextOp = queue[0];
+        if (!nextOp) break;
 
-        if (nextTx.id === editingPendingIdRef.current) {
+        if (nextOp.targetId === editingPendingIdRef.current || nextOp.id === editingPendingIdRef.current) {
           break;
         }
 
@@ -966,36 +860,75 @@ function App() {
           break;
         }
 
-        setActiveSyncId(nextTx.id);
+        setActiveSyncId(nextOp.targetId);
 
         try {
-          const { id, serverTxId, ...txPayload } = nextTx as any;
-          delete txPayload.isPendingSync;
-          const payloadToSend = {
-            ...txPayload,
-            id: serverTxId || id
-          };
-          await api.addTransaction(payloadToSend);
+          const key = `${nextOp.entity}:${nextOp.type}`;
+          const dispatchFn = DISPATCH[key];
+          if (!dispatchFn) {
+            console.error(`No dispatch handler for ${key}`);
+            const remaining = queue.slice(1);
+            pendingOpsRef.current = remaining;
+            setPendingOps(remaining);
+            continue;
+          }
 
-          // Keep the optimistic row visible until the refreshed server row is loaded.
-          await loadAll(selectedMonth || undefined, selectedYear || undefined, true);
+          const result = await dispatchFn(nextOp);
 
-          const updatedQueue = pendingTxRef.current.filter(item => item.id !== nextTx.id);
-          pendingTxRef.current = updatedQueue;
-          setPendingTransactions(updatedQueue);
+          let updatedQueue = pendingOpsRef.current.filter(item => item.id !== nextOp.id);
+
+          if (nextOp.entity === 'wishlistItem' && nextOp.type === 'add' && result && result.id) {
+            const realIdStr = String(result.id);
+            updatedQueue = updatedQueue.map(op => {
+              if (op.entity === 'wishlistItem' && op.targetId === nextOp.targetId) {
+                return { ...op, targetId: realIdStr };
+              }
+              return op;
+            });
+          }
+
+          pendingOpsRef.current = updatedQueue;
+          setPendingOps(updatedQueue);
           setError(null);
+          processedAny = true;
         } catch (err: any) {
-          console.error('Failed to sync transaction:', err);
+          console.error(`Failed to sync ${nextOp.entity}:${nextOp.type}:`, err);
           if (err.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
             handleLogout();
             break;
           } else {
-            setError('Sync pending: Server is offline or waking up...');
-            const backoff = Date.now() + 15000;
-            syncBackoffUntilRef.current = backoff;
-            setSyncBackoffUntil(backoff);
-            break;
+            const updatedRetryCount = (nextOp.retryCount || 0) + 1;
+            if (updatedRetryCount >= 5) {
+              const opDesc = nextOp.payload?.description || nextOp.payload?.name || nextOp.entity;
+              showToast(`Couldn't sync '${opDesc}' — removed from queue`, 'Sync Failed', 'error');
+
+              const remainingQueue = pendingOpsRef.current.filter(item => item.id !== nextOp.id);
+              pendingOpsRef.current = remainingQueue;
+              setPendingOps(remainingQueue);
+              setFailedOps(prev => [...prev, { ...nextOp, retryCount: updatedRetryCount }]);
+              continue;
+            } else {
+              const updatedQueue = pendingOpsRef.current.map((item, idx) =>
+                idx === 0 ? { ...item, retryCount: updatedRetryCount } : item
+              );
+              pendingOpsRef.current = updatedQueue;
+              setPendingOps(updatedQueue);
+
+              setError('Sync pending: Server is offline or waking up...');
+              const backoff = Date.now() + 15000;
+              syncBackoffUntilRef.current = backoff;
+              setSyncBackoffUntil(backoff);
+              break;
+            }
           }
+        }
+      }
+
+      if (processedAny) {
+        try {
+          await loadAll(selectedMonth || undefined, selectedYear || undefined, true);
+        } catch (refreshErr) {
+          console.error('Post-sync dashboard refresh failed:', refreshErr);
         }
       }
     } finally {
@@ -1006,7 +939,7 @@ function App() {
   }, [token, selectedMonth, selectedYear]);
 
   useEffect(() => {
-    if (!token || pendingTransactions.length === 0) return;
+    if (!token || pendingOps.length === 0) return;
 
     if (Date.now() < syncBackoffUntil) {
       const remaining = syncBackoffUntil - Date.now();
@@ -1018,7 +951,7 @@ function App() {
     }
 
     processQueue();
-  }, [token, pendingTransactions, syncBackoffUntil, processQueue]);
+  }, [token, pendingOps, syncBackoffUntil, processQueue]);
 
   // Server wake-up and background sync task
   const wakeUpAndSync = useCallback(async () => {
@@ -1070,46 +1003,97 @@ function App() {
     }
   }, [token, wakeUpAndSync])
 
-  // Combine synced and pending transactions
+  // Combine synced and pending items for each entity
   const allTransactions = useMemo(() => {
-    return [...pendingTransactions, ...transactions];
-  }, [pendingTransactions, transactions]);
+    return applyOpsToList(transactions, pendingOps, 'transaction');
+  }, [pendingOps, transactions]);
+
+  const allRecurringPayments = useMemo(() => {
+    return applyOpsToList(recurringPayments, pendingOps, 'recurringPayment');
+  }, [pendingOps, recurringPayments]);
+
+  const allWishlist = useMemo(() => {
+    return applyOpsToList(wishlist, pendingOps, 'wishlistItem');
+  }, [pendingOps, wishlist]);
+
+  const allCategories = useMemo(() => {
+    return applyOpsToList(categoriesList, pendingOps, 'category');
+  }, [pendingOps, categoriesList]);
 
   // Create optimistic dashboardData from server data + pending queue
   const optimisticDashboardData = useMemo(() => {
     if (!dashboardData) return null;
     
     const data = { ...dashboardData };
+    data.setting = { ...data.setting };
     data.stats = { ...data.stats };
     data.categories = data.categories.map(c => ({ ...c }));
-    data.recentTransactions = [...data.recentTransactions];
+    data.recentTransactions = [...allTransactions];
 
-    pendingTransactions.forEach(t => {
-      data.stats.totalBalance += t.amount;
-      
-      if (!data.recentTransactions.some(rt => rt.id === t.id)) {
-        data.recentTransactions = [t, ...data.recentTransactions];
+    // Check if settings op queued
+    const settingsOps = pendingOps.filter(o => o.entity === 'settings' && o.type === 'update');
+    settingsOps.forEach(op => {
+      if (op.payload) {
+        data.setting = { ...data.setting, ...op.payload };
       }
+    });
 
-      const catName = t.category || t.ledgerCategory || '';
-      const cat = data.categories.find(c => c.name.toLowerCase() === catName.toLowerCase());
-      if (cat) {
-        cat.netChange += t.amount;
-        cat.remaining += t.amount;
-      }
-
-      if (t.amount > 0) {
-        data.stats.monthlyInflow += t.amount;
-        if ((t.ledgerCategory || '').startsWith('IncomeSplit:')) {
-          data.stats.monthlyIncome += t.amount;
+    const txOps = pendingOps.filter(o => o.entity === 'transaction');
+    txOps.forEach(op => {
+      if (op.type === 'add' && op.payload) {
+        const amount = op.payload.amount || 0;
+        data.stats.totalBalance += amount;
+        const catName = op.payload.category || op.payload.ledgerCategory || '';
+        const cat = data.categories.find(c => c.name.toLowerCase() === catName.toLowerCase());
+        if (cat) {
+          cat.netChange += amount;
+          cat.remaining += amount;
         }
-      } else {
-        data.stats.monthlyExpenses += Math.abs(t.amount);
+        if (amount > 0) {
+          data.stats.monthlyInflow += amount;
+          if ((op.payload.ledgerCategory || '').startsWith('IncomeSplit:')) {
+            data.stats.monthlyIncome += amount;
+          }
+        } else {
+          data.stats.monthlyExpenses += Math.abs(amount);
+        }
+      } else if (op.type === 'update' && op.payload) {
+        const orig = transactions.find(t => String(t.id) === String(op.targetId));
+        const oldAmount = orig ? orig.amount : 0;
+        const newAmount = op.payload.amount !== undefined ? op.payload.amount : oldAmount;
+        const diff = newAmount - oldAmount;
+        data.stats.totalBalance += diff;
+        const catName = op.payload.category || op.payload.ledgerCategory || (orig ? (orig.category || orig.ledgerCategory) : '');
+        const cat = data.categories.find(c => c.name.toLowerCase() === catName.toLowerCase());
+        if (cat) {
+          cat.netChange += diff;
+          cat.remaining += diff;
+        }
+        if (diff > 0) {
+          data.stats.monthlyInflow += diff;
+        } else if (diff < 0) {
+          data.stats.monthlyExpenses += Math.abs(diff);
+        }
+      } else if (op.type === 'delete') {
+        const orig = transactions.find(t => String(t.id) === String(op.targetId));
+        const oldAmount = orig ? orig.amount : 0;
+        data.stats.totalBalance -= oldAmount;
+        const catName = orig ? (orig.category || orig.ledgerCategory) : '';
+        const cat = data.categories.find(c => c.name.toLowerCase() === catName.toLowerCase());
+        if (cat) {
+          cat.netChange -= oldAmount;
+          cat.remaining -= oldAmount;
+        }
+        if (oldAmount > 0) {
+          data.stats.monthlyInflow -= oldAmount;
+        } else {
+          data.stats.monthlyExpenses -= Math.abs(oldAmount);
+        }
       }
     });
 
     return data;
-  }, [dashboardData, pendingTransactions]);
+  }, [dashboardData, pendingOps, transactions, allTransactions]);
 
   const formatSensitive = (val: number) => {
     const formatted = formatCurrencyVal(val, optimisticDashboardData?.setting?.currency || 'USD')
@@ -1283,18 +1267,19 @@ function App() {
         currency={optimisticDashboardData?.setting?.currency || 'USD'}
         onMouseEnterWallet={() => setIsHoveringWallet(true)}
         onMouseLeaveWallet={() => setIsHoveringWallet(false)}
-        isSyncing={isBackgroundSyncing || pendingTransactions.length > 0}
+        isSyncing={isBackgroundSyncing || pendingOps.length > 0}
         syncLabel={
           syncCountdownMs > 0
             ? `Retrying ${Math.ceil(syncCountdownMs / 1000)}s`
             : activeSyncId
               ? 'Syncing 1 item'
-              : pendingTransactions.length > 0
-                ? `${pendingTransactions.length} queued`
+              : pendingOps.length > 0
+                ? `${pendingOps.length} queued`
                 : isBackgroundSyncing
                   ? 'Refreshing'
                   : undefined
         }
+        failedOpsCount={failedOps.length}
         onDiscardSubscription={handleDiscardSubscription}
         draftCount={draftTransactions.length}
       />
@@ -1336,7 +1321,7 @@ function App() {
             onConfirmSubscription={handleConfirmSubscription}
             onDeletePayment={handleDeletePayment}
             onNavigateToLedger={handleNavigateToLedger}
-            wishlist={wishlist}
+            wishlist={allWishlist}
             isHoveringWallet={isHoveringWallet}
             onDiscardSubscription={handleDiscardSubscription}
             onAddTransaction={handleAddTransaction}
@@ -1348,7 +1333,7 @@ function App() {
         {activeTab === 'settings' && (
           <SettingsView
             dashboardData={optimisticDashboardData}
-            categoriesList={categoriesList}
+            categoriesList={allCategories}
             darkMode={darkMode}
             hideSensitive={hideSensitive}
             onToggleDarkMode={handleToggleDarkMode}
@@ -1361,7 +1346,7 @@ function App() {
 
         {activeTab === 'recurring' && (
           <RecurringPaymentsView 
-            payments={recurringPayments}
+            payments={allRecurringPayments}
             activeRecurringPayments={optimisticDashboardData?.activeRecurringPayments || []}
             transactions={allTransactions}
             selectedMonth={selectedMonth}
@@ -1372,7 +1357,7 @@ function App() {
             onDeletePayment={requestDeletePayment}
             onUpdatePayment={handleUpdatePayment}
             hideSensitive={hideSensitive}
-            categories={categoriesList}
+            categories={allCategories}
             currency={optimisticDashboardData?.setting?.currency || 'USD'}
             autoOpenAddForm={autoOpenSubscriptionAdd}
             onResetAutoOpen={() => setAutoOpenSubscriptionAdd(false)}
@@ -1387,7 +1372,7 @@ function App() {
             onDeleteTransaction={handleDeleteTransaction}
             onUpdateTransaction={handleUpdateTransaction}
             hideSensitive={hideSensitive}
-            categories={categoriesList}
+            categories={allCategories}
             selectedMonth={selectedMonth}
             selectedYear={selectedYear}
             availableYears={optimisticDashboardData?.availableYears || [selectedYear || new Date().getFullYear()]}
@@ -1426,7 +1411,7 @@ function App() {
 
         {activeTab === 'wishlist' && (
           <WishlistView 
-            wishlist={wishlist}
+            wishlist={allWishlist}
             rewardsBalance={optimisticDashboardData?.categories?.find(c => c.name === 'Rewards')?.remaining ?? 0}
             rewardsTarget={optimisticDashboardData?.categories?.find(c => c.name === 'Rewards')?.target ?? 400}
             pastThreeMonthsRewardsAverage={optimisticDashboardData?.stats?.pastThreeMonthsRewardsAverage ?? 0}
