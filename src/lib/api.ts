@@ -753,7 +753,7 @@ export async function registerBiometricOnServer(credentialId: string, publicKey?
   return res.json()
 }
 
-export async function verifyBiometricOnServer(credentialId?: string): Promise<{ verified: boolean; token?: string; username?: string }> {
+export async function verifyBiometricOnServer(credentialId?: string): Promise<{ verified: boolean; token?: string; username?: string; message?: string }> {
   try {
     const token = localStorage.getItem('auth_token')
     const headers: Record<string, string> = {

@@ -15,6 +15,28 @@ export interface BiometricRecord {
   enrolledAt: string
 }
 
+function bufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i])
+  }
+  return btoa(binary)
+}
+
+function base64ToBuffer(base64: string): Uint8Array | null {
+  try {
+    const binary = atob(base64)
+    const bytes = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i)
+    }
+    return bytes
+  } catch {
+    return null
+  }
+}
+
 /**
  * Checks if the browser and device hardware support WebAuthn platform authenticators (fingerprint, Touch ID, Face ID).
  */
@@ -93,23 +115,29 @@ export async function enrollBiometrics(username: string, authToken: string): Pro
     timeout: 60000
   }
 
-  let credentialId = 'local_fallback_id'
+  let credentialId = ''
 
   try {
     const credential = (await navigator.credentials.create({
       publicKey: publicKeyCredentialCreationOptions
     })) as PublicKeyCredential | null
 
-    if (credential) {
-      const rawIdArray = new Uint8Array(credential.rawId)
-      credentialId = btoa(String.fromCharCode(...rawIdArray))
+    if (credential && credential.rawId) {
+      credentialId = bufferToBase64(credential.rawId)
     }
   } catch (err: any) {
     if (err.name === 'NotAllowedError') {
       throw new Error('Biometric setup was cancelled or timed out.')
     }
-    credentialId = `credential_${Date.now()}`
+    credentialId = `fallback_${Date.now()}`
   }
+
+  if (!credentialId) {
+    credentialId = `fallback_${Date.now()}`
+  }
+
+  // Register on server FIRST to confirm database persistence
+  await registerBiometricOnServer(credentialId)
 
   const record: BiometricRecord = {
     username,
@@ -120,13 +148,6 @@ export async function enrollBiometrics(username: string, authToken: string): Pro
 
   localStorage.setItem(BIOMETRIC_STORAGE_KEY, JSON.stringify(record))
   localStorage.setItem(BIOMETRIC_ENABLED_KEY, 'true')
-
-  // Sync to C# backend API
-  try {
-    await registerBiometricOnServer(credentialId)
-  } catch (e) {
-    console.warn('Biometric backend registration warning:', e)
-  }
 
   return true
 }
@@ -141,18 +162,20 @@ export async function verifyBiometricPrompt(_promptReason?: string): Promise<Bio
     throw new Error('Biometric authentication is not enrolled on this device.')
   }
 
-  if (record.rawId !== 'local_fallback_id' && window.PublicKeyCredential) {
+  const rawIdBytes = record.rawId && !record.rawId.startsWith('fallback_') && !record.rawId.startsWith('local_fallback_id')
+    ? base64ToBuffer(record.rawId)
+    : null
+
+  if (rawIdBytes && window.PublicKeyCredential) {
     const challenge = new Uint8Array(32)
     window.crypto.getRandomValues(challenge)
 
     try {
-      const rawIdBytes = Uint8Array.from(atob(record.rawId), c => c.charCodeAt(0))
-
       const publicKeyCredentialRequestOptions: PublicKeyCredentialRequestOptions = {
         challenge,
         allowCredentials: [
           {
-            id: rawIdBytes,
+            id: rawIdBytes as unknown as BufferSource,
             type: 'public-key',
             transports: ['internal']
           }
@@ -168,28 +191,20 @@ export async function verifyBiometricPrompt(_promptReason?: string): Promise<Bio
       if (err.name === 'NotAllowedError') {
         throw new Error('Biometric prompt was cancelled.')
       }
-      throw new Error(err.message || 'Biometric hardware verification failed.')
+      console.warn('Hardware WebAuthn prompt warning:', err)
     }
   }
 
-  // Verify assertion with backend server
-  try {
-    const serverRes = await verifyBiometricOnServer(record.rawId)
-    if (serverRes && serverRes.token) {
-      record.token = serverRes.token
-      record.username = serverRes.username || record.username
-      localStorage.setItem('auth_token', serverRes.token)
-      localStorage.setItem(BIOMETRIC_STORAGE_KEY, JSON.stringify(record))
-    }
-  } catch (e: any) {
-    console.warn('Biometric backend verification error:', e)
-    // Only fallback to local stored token if device browser is strictly offline (network disconnected)
-    if (typeof navigator !== 'undefined' && !navigator.onLine && record.token) {
-      localStorage.setItem('auth_token', record.token)
-      return record
-    }
-    throw new Error(e.message || 'Biometric authentication failed on server.')
+  // Verify assertion with backend server to receive a fresh valid session token
+  const serverRes = await verifyBiometricOnServer(record.rawId)
+  if (!serverRes || !serverRes.verified || !serverRes.token) {
+    throw new Error(serverRes?.message || 'Biometric authentication failed on server.')
   }
+
+  record.token = serverRes.token
+  record.username = serverRes.username || record.username
+  localStorage.setItem('auth_token', serverRes.token)
+  localStorage.setItem(BIOMETRIC_STORAGE_KEY, JSON.stringify(record))
 
   return record
 }
