@@ -232,13 +232,26 @@ const TopNav: React.FC<TopNavProps> = ({
             onMouseEnter={onMouseEnterWallet}
             onMouseLeave={onMouseLeaveWallet}
             onClick={() => onTabChange('dashboard')}
-            className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/20 hover:border-blue-500/40 rounded-xl select-none shrink-0 cursor-pointer transition-colors duration-150" 
-            title="Net Balance (Hover to highlight categories)"
+            className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/20 hover:border-blue-500/40 rounded-xl select-none shrink-0 cursor-pointer transition-all duration-150" 
+            title={hideSensitive ? "Sensitive balance hidden (Click to view dashboard)" : "Net Balance (Hover to highlight categories)"}
           >
             <Wallet className="size-3.5 text-blue-500" />
-            <span className={`text-xs font-extrabold text-blue-600 dark:text-blue-400 transition-all duration-300 ${hideSensitive ? 'blur-sm select-none pointer-events-none' : ''}`}>
-              {formatCurrency(totalBalance)}
-            </span>
+            {hideSensitive ? (
+              <span 
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onToggleHideSensitive()
+                }}
+                title="Tap to toggle privacy mode"
+                className="animate-pulse bg-blue-500/20 hover:bg-blue-500/30 text-transparent blur-[3px] hover:blur-0 rounded px-1.5 py-0.5 text-xs font-mono select-none cursor-pointer transition-all duration-300"
+              >
+                {formatCurrency(totalBalance)}
+              </span>
+            ) : (
+              <span className="text-xs font-extrabold text-blue-600 dark:text-blue-400 transition-all duration-300">
+                {formatCurrency(totalBalance)}
+              </span>
+            )}
           </div>
 
           {/* Notification Bell Dropdown */}

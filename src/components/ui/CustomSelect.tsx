@@ -48,7 +48,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
       </button>
 
       {isOpen && (
-        <div className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-1.5 min-w-[180px] w-max max-w-[calc(100vw-32px)] sm:max-w-[280px] bg-card border border-border rounded-xl shadow-lg p-1 z-[120] max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-100 flex flex-col gap-0.5`}>
+        <div className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-1.5 min-w-[180px] w-max max-w-[calc(100vw-32px)] sm:max-w-[280px] bg-card dark:bg-slate-900 border border-border rounded-xl shadow-xl p-1 z-[120] max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-100 flex flex-col gap-0.5`}>
           {options.map((opt) => (
             <button
               key={opt.value}
@@ -59,8 +59,8 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
               }}
               className={`w-full text-left px-3.5 py-2 text-xs rounded-lg transition duration-100 cursor-pointer ${
                 opt.value === value
-                  ? 'bg-blue-600 text-white font-semibold'
-                  : 'hover:bg-muted text-foreground'
+                  ? 'bg-blue-600 text-white font-bold shadow-xs'
+                  : 'hover:bg-muted/80 text-foreground font-medium'
               }`}
             >
               {opt.label}

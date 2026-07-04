@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import type { ActiveRecurringPayment, RecurringPayment, Transaction } from '../types'
 import { Calendar, CheckCircle2, AlertCircle, Ban, List, ChevronDown, ChevronUp } from 'lucide-react'
 import { formatCurrencyVal } from '../lib/utils'
-import { getCategoryBadgeClass } from '../lib/categoryColors'
+import { getCategoryBadgeClass, getCategoryDotClass } from '../lib/categoryColors'
 import { BottomSheet } from './ui/BottomSheet'
 
 interface BillTimelineProps {
@@ -479,10 +479,12 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                   <div>
                     <div className="text-xs font-bold text-foreground">{bill.name}</div>
                     <div className="flex flex-wrap items-center gap-1 mt-1">
-                      <span className={`inline-block px-1.5 py-0.5 rounded border font-semibold text-[9px] ${getCategoryBadgeClass(bill.ledgerCategory)}`}>
+                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border font-semibold text-[9px] ${getCategoryBadgeClass(bill.ledgerCategory)}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${getCategoryDotClass(bill.ledgerCategory)}`} />
                         {bill.ledgerCategory}
                       </span>
-                      <span className={`inline-block px-1.5 py-0.5 rounded border font-semibold text-[9px] ${getCategoryBadgeClass(bill.category)}`}>
+                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border font-semibold text-[9px] ${getCategoryBadgeClass(bill.category)}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${getCategoryDotClass(bill.category)}`} />
                         {bill.category}
                       </span>
                     </div>
@@ -551,10 +553,12 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
               <div>
                 <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-0.5">Categories</span>
                 <div className="flex flex-wrap gap-1 mt-0.5">
-                  <span className={`px-1.5 py-0.5 rounded border text-[9px] ${getCategoryBadgeClass(selectedBill.ledgerCategory)}`}>
+                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[9px] font-semibold ${getCategoryBadgeClass(selectedBill.ledgerCategory)}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${getCategoryDotClass(selectedBill.ledgerCategory)}`} />
                     {selectedBill.ledgerCategory}
                   </span>
-                  <span className={`px-1.5 py-0.5 rounded border text-[9px] ${getCategoryBadgeClass(selectedBill.category)}`}>
+                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[9px] font-semibold ${getCategoryBadgeClass(selectedBill.category)}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${getCategoryDotClass(selectedBill.category)}`} />
                     {selectedBill.category}
                   </span>
                 </div>

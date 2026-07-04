@@ -160,7 +160,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
     <div id={id} className={cn('relative overflow-hidden', className)}>
       {/* Action drawer sitting behind the content */}
       <div
-        className="absolute inset-y-0 right-0 flex items-stretch"
+        className="absolute inset-y-0 right-0 flex items-stretch [&_button]:min-w-[44px] [&_button]:min-h-[44px] [&_a]:min-w-[44px] [&_a]:min-h-[44px]"
         style={{ width: actionsWidth }}
         aria-hidden={!open}
         onClickCapture={closeForAction}

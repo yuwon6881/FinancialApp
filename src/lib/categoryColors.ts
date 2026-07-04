@@ -49,13 +49,34 @@ const categoryChartColorMap: Record<string, string> = {
   Other: CATEGORY_CHART_FALLBACK,
 }
 
+const categoryDotClassMap: Record<string, string> = {
+  Salary: 'bg-blue-500',
+  Income: 'bg-blue-500',
+  Transfer: 'bg-blue-500',
+  Essentials: 'bg-sky-500',
+  Social: 'bg-pink-500',
+  Food: 'bg-amber-500',
+  Hobbies: 'bg-teal-500',
+  Software: 'bg-indigo-500',
+  Growth: 'bg-violet-500',
+  Investment: 'bg-violet-500',
+  Stability: 'bg-emerald-500',
+  Entertainment: 'bg-orange-500',
+  Rewards: 'bg-pink-500',
+  Transport: 'bg-purple-500',
+  Adjustment: 'bg-amber-500',
+  Discarded: 'bg-slate-500',
+  Other: CATEGORY_DOT_FALLBACK,
+}
+
 export function getCategoryBadgeClass(category: string | null | undefined): string {
   if (!category) return CATEGORY_BADGE_FALLBACK
   return categoryBadgeClassMap[normalizeCategoryName(category)] || CATEGORY_BADGE_FALLBACK
 }
 
 export function getCategoryDotClass(category: string | null | undefined): string {
-  return getCategoryBadgeClass(category).split(' ')[0] || CATEGORY_DOT_FALLBACK
+  if (!category) return CATEGORY_DOT_FALLBACK
+  return categoryDotClassMap[normalizeCategoryName(category)] || CATEGORY_DOT_FALLBACK
 }
 
 export function getCategoryChartColor(category: string | null | undefined): string {

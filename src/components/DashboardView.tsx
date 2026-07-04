@@ -204,10 +204,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   }
 
   const formatSensitive = (val: number) => {
-    return (
-      <span className={hideSensitive ? 'blur-sm select-none pointer-events-none inline-block transition-[filter] duration-200' : 'transition-[filter] duration-200'}>
+    return hideSensitive ? (
+      <span
+        title="Sensitive data masked (Privacy Mode active)"
+        className="animate-pulse bg-primary/10 hover:bg-primary/20 text-transparent blur-[3px] hover:blur-0 rounded px-1 select-none cursor-pointer transition-all duration-300 inline-block font-mono"
+      >
         {formatCurrency(val)}
       </span>
+    ) : (
+      <span className="transition-[filter] duration-200">{formatCurrency(val)}</span>
     )
   }
 
@@ -224,10 +229,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   }
 
   const formatCompactSensitive = (val: number) => {
-    return (
-      <span className={hideSensitive ? 'blur-sm select-none pointer-events-none inline-block transition-[filter] duration-200' : 'transition-[filter] duration-200'}>
+    return hideSensitive ? (
+      <span
+        title="Sensitive data masked (Privacy Mode active)"
+        className="animate-pulse bg-primary/10 hover:bg-primary/20 text-transparent blur-[3px] hover:blur-0 rounded px-1 select-none cursor-pointer transition-all duration-300 inline-block font-mono"
+      >
         {formatCompactNetValue(val)}
       </span>
+    ) : (
+      <span className="transition-[filter] duration-200">{formatCompactNetValue(val)}</span>
     )
   }
 
@@ -757,10 +767,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             return (
               <div 
                 onClick={() => onNavigateToLedger?.({ category: 'Growth', showAllCycles: true })}
-                className="interactive-card space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border/40 hover:border-blue-500/20 cursor-pointer transition-all duration-200"
+                className="interactive-card space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-violet-500/40 shadow-xs hover:shadow-lg hover:shadow-violet-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
               >
                 <div className="flex justify-between text-xs font-semibold">
-                  <span className="text-muted-foreground">Growth Achieved</span>
+                  <span className="text-muted-foreground flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-violet-500 inline-block" />
+                    Growth Achieved
+                  </span>
                   <span className="text-foreground">
                     {(currentPct * 100).toFixed(1)}%
                     {pendingGrowth > 0 && (
@@ -768,14 +781,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     )}
                   </span>
                 </div>
-                <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden flex">
+                <div className="w-full bg-muted/80 rounded-full h-2.5 overflow-hidden flex">
                   <div
-                    className="bg-blue-500 h-full transition-all duration-500"
+                    className="bg-violet-500 h-full transition-all duration-700 ease-out"
                     style={{ width: `${safePct * 100}%` }}
                   />
                   {pendingGrowth > 0 && atRiskPct > 0 && (
                     <div
-                      className="bg-orange-500 h-full transition-all duration-500"
+                      className="bg-orange-500 h-full transition-all duration-700 ease-out"
                       style={{ width: `${atRiskPct * 100}%` }}
                     />
                   )}
@@ -800,10 +813,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             return (
               <div 
                 onClick={() => onNavigateToLedger?.({ category: 'Essentials', showAllCycles: false })}
-                className="interactive-card space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border/40 hover:border-blue-500/20 cursor-pointer transition-all duration-200"
+                className="interactive-card space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-sky-500/40 shadow-xs hover:shadow-lg hover:shadow-sky-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
               >
                 <div className="flex justify-between text-xs font-semibold">
-                  <span className="text-muted-foreground">Essentials Remaining</span>
+                  <span className="text-muted-foreground flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-sky-500 inline-block" />
+                    Essentials Remaining
+                  </span>
                   <span className="text-foreground">
                     {(currentPct * 100).toFixed(1)}%
                     {pendingEss > 0 && (
@@ -811,14 +827,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     )}
                   </span>
                 </div>
-                <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden flex">
+                <div className="w-full bg-muted/80 rounded-full h-2.5 overflow-hidden flex">
                   <div
-                    className="bg-blue-500 h-full transition-all duration-500"
+                    className="bg-sky-500 h-full transition-all duration-700 ease-out"
                     style={{ width: `${projectedPct * 100}%` }}
                   />
                   {pendingEss > 0 && atRiskPct > 0 && (
                     <div
-                      className="bg-orange-500 h-full transition-all duration-500"
+                      className="bg-orange-500 h-full transition-all duration-700 ease-out"
                       style={{ width: `${atRiskPct * 100}%` }}
                     />
                   )}
@@ -844,10 +860,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             return (
               <div 
                 onClick={() => onNavigateToLedger?.({ category: 'Stability', showAllCycles: true })}
-                className="interactive-card space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 border border-border/40 hover:border-blue-500/20 cursor-pointer transition-all duration-200"
+                className="interactive-card space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-emerald-500/40 shadow-xs hover:shadow-lg hover:shadow-emerald-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
               >
                 <div className="flex justify-between text-xs font-semibold">
-                  <span className="text-muted-foreground">Stability Cap Reached</span>
+                  <span className="text-muted-foreground flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                    Stability Cap Reached
+                  </span>
                   <span className="text-foreground">
                     {(currentPct * 100).toFixed(1)}%
                     {pendingStab > 0 && (
@@ -855,14 +874,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     )}
                   </span>
                 </div>
-                <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden flex">
+                <div className="w-full bg-muted/80 rounded-full h-2.5 overflow-hidden flex">
                   <div
-                    className="bg-blue-500 h-full transition-all duration-500"
+                    className="bg-emerald-500 h-full transition-all duration-700 ease-out"
                     style={{ width: `${projectedPct * 100}%` }}
                   />
                   {pendingStab > 0 && atRiskPct > 0 && (
                     <div
-                      className="bg-orange-500 h-full transition-all duration-500"
+                      className="bg-orange-500 h-full transition-all duration-700 ease-out"
                       style={{ width: `${atRiskPct * 100}%` }}
                     />
                   )}
