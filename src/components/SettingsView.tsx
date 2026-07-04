@@ -102,7 +102,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       await loadFingerprintCredentials()
       localStorage.setItem(DEVICE_ENROLLED_KEY, '1')
       setEnrolledOnThisDevice(true)
-      setFingerprintMsg('Fingerprint enrolled on this device!')
     } catch (err: any) {
       console.error(err)
       if (err?.name === 'InvalidStateError') {
@@ -110,7 +109,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         // this device is already enrolled, nothing went wrong.
         localStorage.setItem(DEVICE_ENROLLED_KEY, '1')
         setEnrolledOnThisDevice(true)
-        setFingerprintMsg('This device is already enrolled.')
         await loadFingerprintCredentials()
       } else if (err?.name !== 'NotAllowedError') {
         setFingerprintError(err.message || 'Failed to register fingerprint on this device.')

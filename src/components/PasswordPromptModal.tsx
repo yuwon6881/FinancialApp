@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Fingerprint } from 'lucide-react'
 import * as api from '../lib/api'
 import { BottomSheet } from './ui/BottomSheet'
 
@@ -6,17 +7,37 @@ interface PasswordPromptModalProps {
   isOpen: boolean
   onClose: () => void
   onVerified: () => void
+  /** When provided, shows a "Try Fingerprint Instead" button. Should return true on success. */
+  onTryFingerprint?: () => Promise<boolean>
 }
 
-export function PasswordPromptModal({ isOpen, onClose, onVerified }: PasswordPromptModalProps) {
+export function PasswordPromptModal({ isOpen, onClose, onVerified, onTryFingerprint }: PasswordPromptModalProps) {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [promptError, setPromptError] = useState<string | null>(null)
   const [promptVerifying, setPromptVerifying] = useState(false)
+  const [fingerprintBusy, setFingerprintBusy] = useState(false)
 
   const handleClose = () => {
     onClose()
     setConfirmPassword('')
     setPromptError(null)
+  }
+
+  const handleTryFingerprint = async () => {
+    if (!onTryFingerprint) return
+    setPromptError(null)
+    setFingerprintBusy(true)
+    try {
+      const success = await onTryFingerprint()
+      if (success) {
+        setConfirmPassword('')
+        onClose()
+      } else {
+        setPromptError('Fingerprint verification failed or was cancelled.')
+      }
+    } finally {
+      setFingerprintBusy(false)
+    }
   }
 
   return (
@@ -29,6 +50,23 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified }: PasswordPro
       <p className="text-xs text-muted-foreground">
         Please enter your password to confirm you are the owner before revealing sensitive financial figures.
       </p>
+
+      {onTryFingerprint && (
+        <button
+          type="button"
+          onClick={handleTryFingerprint}
+          disabled={fingerprintBusy}
+          className="press-scale w-full py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 disabled:opacity-50 text-emerald-500 border border-emerald-500/30 font-bold text-xs rounded-xl transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
+        >
+          {fingerprintBusy ? (
+            <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+          ) : (
+            <Fingerprint className="size-3.5" />
+          )}
+          {fingerprintBusy ? 'Verifying...' : 'Try Fingerprint Instead'}
+        </button>
+      )}
+
       <form
         onSubmit={async (e) => {
           e.preventDefault()

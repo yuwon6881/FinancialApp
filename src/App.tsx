@@ -365,6 +365,12 @@ function App() {
 
   // Password Prompt for revealing sensitive information
   const [showPasswordPrompt, setShowPasswordPrompt] = useState<boolean>(false)
+  const [hasFingerprintSetup, setHasFingerprintSetup] = useState<boolean>(false)
+
+  useEffect(() => {
+    if (!token || !isFingerprintSupported()) return
+    api.fetchAuthStatus().then(res => setHasFingerprintSetup(res.hasFingerprint)).catch(() => undefined)
+  }, [token])
 
   // Cycle switching state for skeleton loader
   const [isSwitchingCycle, setIsSwitchingCycle] = useState<boolean>(false)
@@ -1113,25 +1119,30 @@ function App() {
     setActiveTab('ledger')
   }
 
+  const revealSensitiveWithFingerprint = async (): Promise<boolean> => {
+    if (!isFingerprintSupported()) return false
+    try {
+      const status = await api.fetchAuthStatus()
+      if (!status.hasFingerprint) return false
+      const { challengeId, options } = await api.getFingerprintLoginOptions()
+      const credential = await getFingerprintAssertion(options)
+      await api.verifyFingerprintLogin(challengeId, credential)
+      setHideSensitive(false)
+      localStorage.setItem('hide_sensitive', 'false')
+      api.updateHideSensitive(false).catch(err => console.warn('Hide sensitive sync failed:', err))
+      return true
+    } catch (err) {
+      console.warn('Fingerprint prompt failed/cancelled:', err)
+      return false
+    }
+  }
+
   const handleToggleHideSensitive = async () => {
     if (hideSensitive) {
-      if (isFingerprintSupported()) {
-        try {
-          const status = await api.fetchAuthStatus()
-          if (status.hasFingerprint) {
-            const { challengeId, options } = await api.getFingerprintLoginOptions()
-            const credential = await getFingerprintAssertion(options)
-            await api.verifyFingerprintLogin(challengeId, credential)
-            setHideSensitive(false)
-            localStorage.setItem('hide_sensitive', 'false')
-            api.updateHideSensitive(false).catch(err => console.warn('Hide sensitive sync failed:', err))
-            return
-          }
-        } catch (err) {
-          console.warn('Fingerprint prompt failed/cancelled:', err)
-        }
+      const revealed = await revealSensitiveWithFingerprint()
+      if (!revealed) {
+        setShowPasswordPrompt(true)
       }
-      setShowPasswordPrompt(true)
     } else {
       setHideSensitive(true)
       localStorage.setItem('hide_sensitive', 'true')
@@ -1430,6 +1441,7 @@ function App() {
           setShowPasswordPrompt(false)
           api.updateHideSensitive(false).catch(err => console.warn('Hide sensitive sync failed:', err))
         }}
+        onTryFingerprint={hasFingerprintSetup ? revealSensitiveWithFingerprint : undefined}
       />
 
       <LockScreen
