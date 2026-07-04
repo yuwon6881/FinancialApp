@@ -3,7 +3,7 @@ import type { WishlistItem } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { BottomSheet } from './ui/BottomSheet'
-import { formatCurrencyVal, maskCurrencyInput, sanitizeDecimalInput } from '../lib/utils'
+import { formatCurrencyVal, maskCurrencyInput } from '../lib/utils'
 import {
   Gift, 
   Plus, 
@@ -68,10 +68,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   const [priceInput, setPriceInput] = useState('')
 
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // The Edit form pre-fills priceInput with an already-formatted value
-    // ("199.99"); maskCurrencyInput's cent-buffer reinterpretation corrupts
-    // that on any backspace/retype, so use plain decimal editing there.
-    setPriceInput(showEditModal ? sanitizeDecimalInput(e.target.value) : maskCurrencyInput(e.target.value, priceInput));
+    setPriceInput(maskCurrencyInput(e.target.value, priceInput));
   };
   const [priorityInput, setPriorityInput] = useState('Medium')
   const [isActiveInput, setIsActiveInput] = useState(false)
@@ -170,8 +167,9 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     const price = parseFloat(priceInput)
     if (!nameInput.trim() || isNaN(price) || price <= 0) return
 
+    const { isPendingSync, ...cleanItem } = editingItem as any
     const updatedGoal = {
-      ...editingItem,
+      ...cleanItem,
       name: nameInput,
       price,
       priority: priorityInput,

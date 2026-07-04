@@ -20,7 +20,7 @@ import {
 import { CustomSelect } from './ui/CustomSelect'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { BottomSheet } from './ui/BottomSheet'
-import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput, sanitizeDecimalInput, displayLedgerCategory } from '../lib/utils'
+import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput, displayLedgerCategory } from '../lib/utils'
 import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } from '../lib/categoryColors'
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../lib/csvExport'
 import { useDialog } from '../lib/useDialog'
@@ -343,12 +343,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
   }, [autoOpenAddForm, onResetAutoOpen])
 
-
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // The edit form pre-fills amount with an already-formatted value
-    // ("1234.56"); maskCurrencyInput's cent-buffer reinterpretation corrupts
-    // that on any backspace/retype, so use plain decimal editing there.
-    setAmount(editingTxId ? sanitizeDecimalInput(e.target.value) : maskCurrencyInput(e.target.value, amount));
+    setAmount(maskCurrencyInput(e.target.value, amount));
   };
 
   const handleStartEdit = (t: Transaction) => {

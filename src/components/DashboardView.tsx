@@ -14,7 +14,7 @@ import { CustomSelect } from './ui/CustomSelect'
 import { CustomConfirmModal } from './ui/CustomConfirmModal'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { BottomSheet } from './ui/BottomSheet'
-import { formatCurrencyVal, getCurrencySymbol } from '../lib/utils'
+import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput } from '../lib/utils'
 import { getCategoryBadgeClass, getCategoryChartColor, getCategoryDotClass } from '../lib/categoryColors'
 
 
@@ -174,7 +174,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     stabilityPercentReached: 0.2436
   }
 
-  const recentTransactions = dashboardData?.recentTransactions || []
+
   const activeRecurring = dashboardData?.activeRecurringPayments || []
 
   const pendingDeductionsByCategory = useMemo(() => {
@@ -1491,60 +1491,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* Month Transactions List */}
-      <div className="app-panel p-6 rounded-2xl bg-card/92 border border-border/60">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-foreground">Manual Inflows & Outflows</h3>
-          <p className="text-xs text-muted-foreground">Manual postings logged in this active cycle range</p>
-        </div>
-
-        <div className="divide-y divide-border/40">
-          {recentTransactions.map((t: any) => {
-            const isOutflow = t.amount < 0
-            return (
-                <div 
-                  key={t.id} 
-                  onClick={() => onNavigateToLedger?.({ highlightedTxId: t.id })}
-                  className="py-3 flex items-center justify-between hover:bg-muted/30 px-2 rounded-lg transition duration-150 cursor-pointer"
-                >
-                <div className="flex items-center gap-3">
-                  {/* Corrected arrows: isOutflow gets ArrowDownLeft (red), isInflow gets ArrowUpRight (green) */}
-                  <div className={`p-2 rounded-lg ${isOutflow ? 'bg-orange-500/10 text-orange-500' : 'bg-blue-500/10 text-blue-500'}`}>
-                    {isOutflow ? <ArrowDownLeft className="size-4" /> : <ArrowUpRight className="size-4" />}
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-foreground">{t.description}</div>
-                    <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                      <span>{t.date}</span>
-                      <span>{'•'}</span>
-                      <span>{(t.ledgerCategory || '').startsWith('Transfer:') ? 'Transfer' : (t.ledgerCategory || '').startsWith('IncomeSplit:') ? 'Income' : t.ledgerCategory}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className={`text-sm font-bold ${isOutflow ? 'text-foreground' : 'text-blue-500'}`}>
-                    {isOutflow ? '-' : '+'}{formatSensitive(Math.abs(t.amount))}
-                  </div>
-                  <span className={`inline-block mt-0.5 text-[9px] px-1.5 py-0.25 font-bold rounded border ${getCategoryBadgeClass(t.category)}`}>
-                    {t.category}
-                  </span>
-                </div>
-              </div>
-            )
-          })}
-          {recentTransactions.length === 0 && (
-            <div className="text-xs text-muted-foreground py-12 text-center">No manual ledger entries found for this cycle.</div>
-          )}
-        </div>
-
-        <button
-          onClick={() => onNavigate('ledger')}
-          className="w-full py-2 mt-4 text-center text-xs font-semibold text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 rounded-xl transition duration-200 cursor-pointer"
-        >
-          View Full Ledger
-        </button>
-      </div>
-
       {/* Adjust Balance Modal */}
       {adjustingCategory && (
         <BottomSheet
@@ -1585,7 +1531,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 required
                 placeholder="0.00"
                 value={newBalanceInput}
-                onChange={e => setNewBalanceInput(e.target.value)}
+                onChange={e => setNewBalanceInput(maskCurrencyInput(e.target.value, newBalanceInput))}
                 className="w-full px-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>

@@ -886,29 +886,6 @@ function App() {
             setRecentlyCompletedOps(prev => prev.filter(op => op.id !== nextOp.id));
           }, 3000);
 
-          // Build a friendly success message based on the entity and operation type
-          const entityMap: Record<string, string> = {
-            settings: 'Settings',
-            category: 'Category',
-            transaction: 'Transaction',
-            subscription: 'Subscription',
-            wishlistItem: 'Wishlist item',
-            balance: 'Balance adjustment',
-            recurringPayment: 'Recurring payment'
-          }
-          const typeMap: Record<string, string> = {
-            add: 'added',
-            update: 'updated',
-            delete: 'deleted',
-            pay: 'paid',
-            skip: 'skipped',
-            toggle: 'toggled',
-            purchase: 'purchased'
-          }
-          const entityName = entityMap[nextOp.entity] || 'Item'
-          const typeName = typeMap[nextOp.type] || 'processed'
-          showToast(`${entityName} ${typeName} successfully`, 'Sync successful', 'success')
-
           setError(null);
           processedAny = true;
         } catch (err: any) {
@@ -945,6 +922,9 @@ function App() {
       }
 
       if (processedAny) {
+        if (pendingOpsRef.current.length === 0) {
+          showToast('All pending changes synced successfully', 'Sync completed', 'success');
+        }
         try {
           await loadAll(selectedMonth || undefined, selectedYear || undefined, true);
         } catch (refreshErr) {
