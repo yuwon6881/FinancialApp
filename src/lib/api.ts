@@ -750,28 +750,35 @@ export async function registerBiometricOnServer(credentialId: string, publicKey?
 }
 
 export async function verifyBiometricOnServer(credentialId?: string): Promise<{ verified: boolean; token?: string; username?: string }> {
-  const token = localStorage.getItem('auth_token')
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json'
+  try {
+    const token = localStorage.getItem('auth_token')
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    }
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+    const res = await fetch(`${API_BASE_URL}/auth/biometric/verify`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ credentialId })
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.message || 'Biometric server verification failed.')
+    }
+    const data = await res.json()
+    if (data.token) {
+      localStorage.setItem('auth_token', data.token)
+      queryCache.invalidateAll()
+    }
+    return data
+  } catch (err: any) {
+    if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
+      throw new Error('Could not connect to database API server. Please check network or backend server status.')
+    }
+    throw err
   }
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
-  }
-  const res = await fetch(`${API_BASE_URL}/auth/biometric/verify`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ credentialId })
-  })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.message || 'Biometric server verification failed.')
-  }
-  const data = await res.json()
-  if (data.token) {
-    localStorage.setItem('auth_token', data.token)
-    queryCache.invalidateAll()
-  }
-  return data
 }
 
 export async function removeBiometricOnServer(): Promise<{ message: string; enrolled: boolean }> {
