@@ -593,19 +593,16 @@ function App() {
   }) => {
     const payload = { ...settings, darkMode, hideSensitive }
     setPendingOps(prev => enqueue(prev, 'settings', 'update', 'settings', payload))
-    showToast('Settings update queued.', 'Settings updated', 'success')
   }
 
   // Custom Categories & Accounts modifiers
   const handleAddCategory = (newCat: Omit<TransactionCategory, 'id'>) => {
     const finalId = createFinalId('category')
     setPendingOps(prev => enqueue(prev, 'category', 'add', finalId, { ...newCat, id: finalId }))
-    showToast('Category creation queued.', 'Settings updated', 'success')
   }
 
   const handleDeleteCategory = (id: string) => {
     setPendingOps(prev => enqueue(prev, 'category', 'delete', id))
-    showToast('Category deletion queued.', 'Settings updated', 'success')
   }
 
   const requestDeleteCategory = (id: string) => {
@@ -636,7 +633,6 @@ function App() {
     const finalId = createFinalId('transaction')
     triggerVibration(20)
     setPendingOps(prev => enqueue(prev, 'transaction', 'add', finalId, { ...newTx, id: finalId }))
-    showToast('Balance adjustment queued.', 'Ledger updated', 'success')
   }
 
   const handleUpdateDraftTransaction = (id: string, updated: Transaction) => {
@@ -676,7 +672,6 @@ function App() {
     setDraftTransactions([]);
     triggerVibration([25, 45, 25]);
     setPendingOps(nextQueue);
-    showToast(`${draftTransactions.length} transaction${draftTransactions.length > 1 ? 's' : ''} queued for sync.`, 'Sync queued', 'success')
   };
 
   const handleDeleteTransaction = (id: string) => {
@@ -688,14 +683,12 @@ function App() {
     setDeletingTxId(deleteId)
     setPendingOps(prev => enqueue(prev, 'transaction', 'delete', deleteId))
     if (deleteId === editingPendingId) setEditingPendingId(null)
-    showToast('Transaction deletion queued.', 'Ledger updated', 'success')
   }
 
   const handleUpdateTransaction = (id: string, updatedTx: Omit<Transaction, 'id'>) => {
     triggerVibration(15)
     setPendingOps(prev => enqueue(prev, 'transaction', 'update', id, updatedTx))
     if (id === editingPendingId) setEditingPendingId(null)
-    showToast('Transaction update queued.', 'Ledger updated', 'success')
   }
 
   const handleConfirmSubscription = (noti: any, paidDate: string) => {
@@ -708,7 +701,6 @@ function App() {
       category: noti.category,
       ledgerCategory: noti.ledgerCategory
     }))
-    showToast('Subscription payment queued.', 'Payment confirmed', 'success')
   }
 
   const handleDiscardSubscription = (noti: any) => {
@@ -721,29 +713,24 @@ function App() {
       category: noti.category,
       ledgerCategory: 'Discarded'
     }))
-    showToast('Subscription cycle skip queued.', 'Payment skipped', 'info')
   }
 
   // Recurring payment modifiers
   const handleAddPayment = (newPay: Omit<RecurringPayment, 'id'>) => {
     const finalId = createFinalId('recurringPayment')
     setPendingOps(prev => enqueue(prev, 'recurringPayment', 'add', finalId, { ...newPay, id: finalId, active: true }))
-    showToast('Recurring payment queued.', 'Subscriptions updated', 'success')
   }
 
   const handleToggleActive = (id: string) => {
     setPendingOps(prev => enqueue(prev, 'recurringPayment', 'toggle', id))
-    showToast('Subscription status toggle queued.', 'Subscriptions updated', 'success')
   }
 
   const handleUpdatePayment = (id: string, payment: RecurringPayment) => {
     setPendingOps(prev => enqueue(prev, 'recurringPayment', 'update', id, payment))
-    showToast('Subscription update queued.', 'Subscriptions updated', 'success')
   }
 
   const handleDeletePayment = (id: string) => {
     setPendingOps(prev => enqueue(prev, 'recurringPayment', 'delete', id))
-    showToast('Subscription deletion queued.', 'Subscriptions updated', 'success')
   }
 
   const requestDeletePayment = (id: string) => {
@@ -768,17 +755,14 @@ function App() {
       isActive: newWish.isActive ?? false
     }
     setPendingOps(prev => enqueue(prev, 'wishlistItem', 'add', placeholderId, payload))
-    showToast('Wishlist item queued.', 'Wishlist updated', 'success')
   }
 
   const handleUpdateWishlistItem = (id: number, updatedWish: WishlistItem) => {
     setPendingOps(prev => enqueue(prev, 'wishlistItem', 'update', String(id), updatedWish))
-    showToast('Wishlist item update queued.', 'Wishlist updated', 'success')
   }
 
   const handleDeleteWishlistItem = (id: number) => {
     setPendingOps(prev => enqueue(prev, 'wishlistItem', 'delete', String(id)))
-    showToast('Wishlist item deletion queued.', 'Wishlist updated', 'success')
   }
 
   const requestDeleteWishlistItem = (id: number) => {
@@ -793,7 +777,6 @@ function App() {
 
   const handlePurchaseWishlistItem = (id: number) => {
     setPendingOps(prev => enqueue(prev, 'wishlistItem', 'purchase', String(id)))
-    showToast('Wishlist purchase queued.', 'Wishlist updated', 'success')
   }
 
   // Save pending operations to localStorage whenever they change
@@ -902,6 +885,29 @@ function App() {
           setTimeout(() => {
             setRecentlyCompletedOps(prev => prev.filter(op => op.id !== nextOp.id));
           }, 3000);
+
+          // Build a friendly success message based on the entity and operation type
+          const entityMap: Record<string, string> = {
+            settings: 'Settings',
+            category: 'Category',
+            transaction: 'Transaction',
+            subscription: 'Subscription',
+            wishlistItem: 'Wishlist item',
+            balance: 'Balance adjustment',
+            recurringPayment: 'Recurring payment'
+          }
+          const typeMap: Record<string, string> = {
+            add: 'added',
+            update: 'updated',
+            delete: 'deleted',
+            pay: 'paid',
+            skip: 'skipped',
+            toggle: 'toggled',
+            purchase: 'purchased'
+          }
+          const entityName = entityMap[nextOp.entity] || 'Item'
+          const typeName = typeMap[nextOp.type] || 'processed'
+          showToast(`${entityName} ${typeName} successfully`, 'Sync successful', 'success')
 
           setError(null);
           processedAny = true;
