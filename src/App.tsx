@@ -464,7 +464,11 @@ function App() {
         if (!isJustLoggedIn) {
           handleLogout()
         } else {
-          setError('Authenticating with server...')
+          setError(null)
+          // Retry loading after a brief 400ms tick for session sync
+          window.setTimeout(() => {
+            void loadAll(month, year, isBackground)
+          }, 400)
         }
       } else if (err.message && err.message.includes('423')) {
         if (Date.now() - lastUnlockedTimeRef.current > 15000) {

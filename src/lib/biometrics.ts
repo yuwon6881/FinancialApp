@@ -173,21 +173,12 @@ export async function verifyBiometricPrompt(_promptReason?: string): Promise<Bio
   }
 
   // Verify assertion with backend server
-  try {
-    const serverRes = await verifyBiometricOnServer(record.rawId)
-    if (serverRes && serverRes.token) {
-      record.token = serverRes.token
-      record.username = serverRes.username || record.username
-      localStorage.setItem('auth_token', serverRes.token)
-      localStorage.setItem(BIOMETRIC_STORAGE_KEY, JSON.stringify(record))
-    }
-  } catch (e: any) {
-    console.warn('Biometric backend verification warning:', e)
-    if (record.token && (e.message?.includes('connect') || e.message?.includes('network') || e.message?.includes('fetch'))) {
-      localStorage.setItem('auth_token', record.token)
-      return record
-    }
-    throw new Error(e.message || 'Biometric authentication failed on server.')
+  const serverRes = await verifyBiometricOnServer(record.rawId)
+  if (serverRes && serverRes.token) {
+    record.token = serverRes.token
+    record.username = serverRes.username || record.username
+    localStorage.setItem('auth_token', serverRes.token)
+    localStorage.setItem(BIOMETRIC_STORAGE_KEY, JSON.stringify(record))
   }
 
   return record
