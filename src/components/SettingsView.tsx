@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Fingerprint, ShieldCheck } from 'lucide-react'
+import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Fingerprint, ShieldCheck, Clock, Loader2 } from 'lucide-react'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
@@ -346,11 +346,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <span className={`inline-flex items-center px-2 py-0.5 rounded border font-semibold ${getCategoryBadgeClass(cat.name)}`}>
                       {cat.name}
                     </span>
-                    {cat.isPendingSync && (
-                      <span className="text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded animate-pulse select-none" title="Pending sync">
-                        Pending Sync
+                    {(cat as any).isPendingDelete ? (
+                      <span className="inline-flex items-center text-[9px] font-bold text-red-500 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none" title="Deleting category...">
+                        <Loader2 className="size-2.5 animate-spin text-red-500 shrink-0 mr-1" />
+                        Deleting...
                       </span>
-                    )}
+                    ) : cat.isPendingSync ? (
+                      <span className="inline-flex items-center text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none" title="Pending sync">
+                        <Clock className="size-2.5 shrink-0 mr-1 text-amber-500" />
+                        Pending
+                      </span>
+                    ) : null}
                   </span>
                   <button
                     type="button"

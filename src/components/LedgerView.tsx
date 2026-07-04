@@ -13,6 +13,7 @@ import {
   RefreshCw,
   AlertCircle,
   Loader2,
+  Clock,
   Edit2,
   Trash2
 } from 'lucide-react'
@@ -2055,7 +2056,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                               Syncing...
                             </>
                           ) : (
-                            "Pending"
+                            <>
+                              <Clock className="size-2.5 shrink-0 mr-1 text-amber-500" />
+                              Pending
+                            </>
                           )}
                         </span>
                       ) : null}
@@ -2258,7 +2262,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                             Syncing...
                           </>
                         ) : (
-                          "Pending"
+                          <>
+                            <Clock className="size-2.5 shrink-0 mr-1 text-amber-500" />
+                            Pending
+                          </>
                         )}
                       </span>
                     ) : null}
@@ -2278,7 +2285,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   </div>
                 </div>
 
-                {/* Row 3: Ledger category (Edit / Delete moved to swipe drawer) */}
+                {/* Row 3: Ledger category */}
                 <div className="flex items-center justify-between pt-2 border-t border-border/30">
                   <span className="text-[10px] text-muted-foreground flex items-center gap-1.5">
                     Ledger:
@@ -2286,15 +2293,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       {ledgerLabel}
                     </span>
                   </span>
-                  {isDeleting ? (
-                    <span className="text-[9px] text-red-500/80 flex items-center gap-1 select-none font-medium">
-                      <Loader2 className="size-2.5 animate-spin text-red-500" /> Deleting
-                    </span>
-                  ) : isSyncing ? (
-                    <span className="text-[9px] text-muted-foreground/60 flex items-center gap-1 select-none">
-                      <Loader2 className="size-2.5 animate-spin" /> Syncing
-                    </span>
-                  ) : null}
                 </div>
               </div>
             </SwipeableRow>

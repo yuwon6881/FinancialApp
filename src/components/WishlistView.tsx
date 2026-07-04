@@ -13,7 +13,8 @@ import {
   Clock, 
   CheckCircle2,
   Target,
-  Edit2
+  Edit2,
+  Loader2
 } from 'lucide-react'
 
 interface WishlistViewProps {
@@ -486,11 +487,17 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                       <div className="flex items-center gap-2">
                         <h4 className="font-bold text-foreground text-xs truncate flex items-center gap-1.5">
                           <span>{item.name}</span>
-                          {item.isPendingSync && (
-                            <span className="text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded animate-pulse select-none shrink-0" title="Changes pending server sync">
-                              Pending Sync
+                          {(item as any).isPendingDelete ? (
+                            <span className="inline-flex items-center text-[9px] font-bold text-red-500 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none shrink-0" title="Deleting item...">
+                              <Loader2 className="size-2.5 animate-spin text-red-500 shrink-0 mr-1" />
+                              Deleting...
                             </span>
-                          )}
+                          ) : item.isPendingSync ? (
+                            <span className="inline-flex items-center text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none shrink-0" title="Changes pending server sync">
+                              <Clock className="size-2.5 shrink-0 mr-1 text-amber-500" />
+                              Pending
+                            </span>
+                          ) : null}
                         </h4>
                         {canAfford && (
                           <span className="size-1.5 rounded-full bg-green-500 animate-pulse shrink-0" title="Ready to claim" />
