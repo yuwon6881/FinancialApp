@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense, type ReactNode } from 'react'
 import { App as CapacitorApp } from '@capacitor/app'
+import { AnimatePresence, motion } from 'framer-motion'
 import { SplashScreen } from '@capacitor/splash-screen'
 import TopNav from "./TopNav.tsx"
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -1525,7 +1526,15 @@ function App() {
         <LaunchReady>
         {/* Keyed on the active tab so every view change replays the gentle
             fade-and-rise entrance instead of hard-swapping content. */}
-        <div key={activeTab} className="view-enter">
+        <AnimatePresence mode="wait">
+        <motion.div 
+          key={activeTab} 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
+          className="w-full"
+        >
         {activeTab === 'dashboard' && (
           <DashboardView
             dashboardData={optimisticDashboardData}
@@ -1671,7 +1680,8 @@ function App() {
             }}
           />
         )}
-        </div>
+        </motion.div>
+        </AnimatePresence>
         </LaunchReady>
         </Suspense>
         </ErrorBoundary>

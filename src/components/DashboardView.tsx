@@ -8,7 +8,8 @@ import {
   AlertCircle,
   TrendingUp as TrendLineIcon,
   PiggyBank,
-  Edit2
+  Edit2,
+  Clock
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
 import { CustomConfirmModal } from './ui/CustomConfirmModal'
@@ -583,8 +584,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <div className={`text-right font-medium ${c.netChange < 0 ? 'text-orange-500' : c.netChange > 0 ? 'text-blue-500' : ''}`}>
                     <div>{c.netChange > 0 ? '+' : ''}{formatSensitive(c.netChange)}</div>
                     {pendingDeductionsByCategory[c.name] > 0 && (
-                      <div className="text-[10px] text-yellow-500 font-normal">
-                        (-{formatSensitive(pendingDeductionsByCategory[c.name])})
+                      <div className="text-[10px] text-yellow-500 font-normal flex items-center justify-end gap-1 mt-0.5">
+                        <Clock className="size-3" />
+                        Pending: -{formatSensitive(pendingDeductionsByCategory[c.name])}
                       </div>
                     )}
                   </div>
@@ -594,8 +596,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         {formatSensitive(c.remaining)}
                       </div>
                       {pendingDeductionsByCategory[c.name] > 0 && (
-                        <div className={`text-[10px] font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
-                          ({formatSensitive(c.remaining - pendingDeductionsByCategory[c.name])})
+                        <div className={`text-[10px] font-semibold flex items-center justify-end gap-1 mt-0.5 ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
+                          Projected: {formatSensitive(c.remaining - pendingDeductionsByCategory[c.name])}
                         </div>
                       )}
                     </div>
@@ -674,8 +676,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       {c.netChange > 0 ? '+' : ''}{formatSensitive(c.netChange)}
                     </span>
                     {pendingDeductionsByCategory[c.name] > 0 && (
-                      <span className="text-[10px] text-yellow-500 block font-normal">
-                        (-{formatSensitive(pendingDeductionsByCategory[c.name])})
+                      <span className="text-[10px] text-yellow-500 flex items-center gap-1 font-normal mt-0.5">
+                        <Clock className="size-3" />
+                        Pending: -{formatSensitive(pendingDeductionsByCategory[c.name])}
                       </span>
                     )}
                   </div>
@@ -697,8 +700,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       </button>
                     </div>
                     {pendingDeductionsByCategory[c.name] > 0 && (
-                      <span className={`text-[10px] block font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
-                        ({formatSensitive(c.remaining - pendingDeductionsByCategory[c.name])})
+                      <span className={`text-[10px] flex items-center gap-1 mt-0.5 font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
+                        Projected: {formatSensitive(c.remaining - pendingDeductionsByCategory[c.name])}
                       </span>
                     )}
                   </div>

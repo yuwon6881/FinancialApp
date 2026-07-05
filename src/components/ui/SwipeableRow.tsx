@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { ChevronsLeft } from 'lucide-react'
+import { motion, useMotionValue, useAnimation, type PanInfo } from 'framer-motion'
 import { cn } from '../../lib/utils'
 import { useIsMobile } from '../../lib/useIsMobile'
 import { triggerHaptic } from '../../lib/haptics'
@@ -9,32 +10,17 @@ import { setSwipeLocked } from '../../lib/swipeLock'
 let closeActiveRow: (() => void) | null = null
 
 interface SwipeableRowProps {
-  /** Main record content (the part that slides). */
   children: React.ReactNode
-  /** Action buttons revealed by swiping (styled for the full-height drawer). */
   actions: React.ReactNode
-  /** Actions rendered inline on desktop / when disabled. Falls back to `actions` if omitted. */
   desktopActions?: React.ReactNode
-  /** Total px width of the action drawer revealed on swipe. */
   actionsWidth?: number
-  /** Classes for the outer card container (border, rounded, shadow). */
   className?: string
-  /** Classes applied to the sliding content surface (padding / inner layout). */
   contentClassName?: string
-  /** When true, swipe is disabled and actions are shown inline (e.g. row is syncing/editing). */
   disabled?: boolean
-  /** Show the animated swipe affordance (default true). Set false on all but the first row of a list. */
   hint?: boolean
   id?: string
 }
 
-/**
- * Swipe-to-reveal row for the mobile PWA.
- *
- * On touch/mobile viewports the action buttons are hidden behind the record and
- * only revealed when the user swipes left. On desktop (>= md) the actions are
- * rendered inline at the trailing edge, preserving the original layout.
- */
 export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   children,
   actions,
@@ -48,17 +34,19 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
 }) => {
   const isMobile = useIsMobile()
   const [open, setOpen] = useState(false)
-  const [dragOffset, setDragOffset] = useState<number | null>(null)
-  const contentRef = useRef<HTMLDivElement>(null)
-  const drag = useRef({ startX: 0, startY: 0, dir: null as null | 'h' | 'v', active: false, baseOpen: false })
+  const x = useMotionValue(0)
+  const controls = useAnimation()
 
-  const close = useCallback(() => setOpen(false), [])
+  const close = useCallback(() => {
+    setOpen(false)
+    controls.start({ x: 0, transition: { type: 'spring', stiffness: 400, damping: 30 } })
+  }, [controls])
 
   const closeForAction = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement | null
     if (!target?.closest?.('button, a, [role="button"], [data-swipe-action]')) return
-    setOpen(false)
-  }, [])
+    close()
+  }, [close])
 
   // Keep only one row open at a time across the whole app.
   useEffect(() => {
@@ -75,76 +63,27 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
 
   // Collapse if the row becomes disabled or we leave mobile.
   useEffect(() => {
-    if ((disabled || !isMobile) && open) setOpen(false)
-  }, [disabled, isMobile, open])
+    if ((disabled || !isMobile) && open) close()
+  }, [disabled, isMobile, open, close])
 
-  useEffect(() => {
-    const el = contentRef.current
-    if (!el || !isMobile || disabled) return
+  const handleDragStart = () => {
+    setSwipeLocked(true)
+  }
 
-    const onStart = (e: TouchEvent) => {
-      if (e.touches.length !== 1) return
-      const t = e.touches[0]
-      drag.current = { startX: t.clientX, startY: t.clientY, dir: null, active: true, baseOpen: open }
+  const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    setSwipeLocked(false)
+    const currentX = x.get()
+    const shouldOpen = currentX < -actionsWidth / 2 || info.velocity.x < -200
+
+    if (shouldOpen) {
+      if (!open) triggerHaptic(10)
+      setOpen(true)
+      controls.start({ x: -actionsWidth, transition: { type: 'spring', stiffness: 400, damping: 30 } })
+    } else {
+      setOpen(false)
+      controls.start({ x: 0, transition: { type: 'spring', stiffness: 400, damping: 30 } })
     }
-
-    const onMove = (e: TouchEvent) => {
-      const s = drag.current
-      if (!s.active) return
-      const t = e.touches[0]
-      const dx = t.clientX - s.startX
-      const dy = t.clientY - s.startY
-
-      if (!s.dir) {
-        if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return
-        s.dir = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
-        // Vertical gesture -> let the page scroll, bail out of this drag.
-        if (s.dir === 'v') {
-          s.active = false
-          return
-        }
-        // Horizontal gesture claimed -> tell PullToRefresh to ignore any
-        // vertical drift for the rest of this touch.
-        setSwipeLocked(true)
-      }
-      if (s.dir !== 'h') return
-
-      e.preventDefault()
-      const base = s.baseOpen ? -actionsWidth : 0
-      let next = base + dx
-      if (next > 0) next = 0
-      if (next < -actionsWidth) next = -actionsWidth
-      setDragOffset(next)
-    }
-
-    const onEnd = () => {
-      const s = drag.current
-      setSwipeLocked(false)
-      if (!s.active) {
-        setDragOffset(null)
-        return
-      }
-      s.active = false
-      setDragOffset(prev => {
-        if (prev === null) return null
-        const shouldOpen = prev < -actionsWidth / 2
-        if (shouldOpen && !open) triggerHaptic(10)
-        setOpen(shouldOpen)
-        return null
-      })
-    }
-
-    el.addEventListener('touchstart', onStart, { passive: true })
-    el.addEventListener('touchmove', onMove, { passive: false })
-    el.addEventListener('touchend', onEnd, { passive: true })
-    el.addEventListener('touchcancel', onEnd, { passive: true })
-    return () => {
-      el.removeEventListener('touchstart', onStart)
-      el.removeEventListener('touchmove', onMove)
-      el.removeEventListener('touchend', onEnd)
-      el.removeEventListener('touchcancel', onEnd)
-    }
-  }, [isMobile, disabled, open, actionsWidth])
+  }
 
   // Desktop: keep actions inline at the trailing edge.
   if (!isMobile) {
@@ -157,9 +96,6 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
       </div>
     )
   }
-
-  const translate = dragOffset !== null ? dragOffset : open ? -actionsWidth : 0
-  const dragging = dragOffset !== null
 
   return (
     <div id={id} className={cn('relative overflow-hidden', className)}>
@@ -174,27 +110,29 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
       </div>
 
       {/* Sliding content surface */}
-      <div
-        ref={contentRef}
+      <motion.div
+        drag={disabled ? false : 'x'}
+        dragConstraints={{ left: -actionsWidth, right: 0 }}
+        dragElastic={0.1}
+        dragDirectionLock
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        animate={controls}
+        style={{ x }}
         onClick={() => {
-          if (open) setOpen(false)
+          if (open) close()
         }}
-        className={cn(
-          'relative bg-card touch-pan-y',
-          !dragging && 'transition-transform duration-300 ease-out',
-          contentClassName,
-        )}
-        style={{ transform: `translateX(${translate}px)` }}
+        className={cn('relative bg-card touch-pan-y', contentClassName)}
       >
         {children}
 
         {/* Subtle swipe affordance shown only when closed */}
-        {hint && !open && !dragging && (
+        {hint && !open && (
           <div className="pointer-events-none absolute bottom-1 right-1 text-muted-foreground/30 swipe-hint">
             <ChevronsLeft className="size-3.5" />
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   )
 }
