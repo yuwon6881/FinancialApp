@@ -780,11 +780,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Essentials Remaining */}
           {(() => {
             const essentialsCat = categories.find(c => c.name === 'Essentials')
-            const essTarget = essentialsCat?.target ?? 0
-            const currentPct = essTarget > 0 ? Math.max(0, Math.min(1, (essentialsCat?.remaining ?? 0) / essTarget)) : 0
+            const essBudget = essentialsCat?.budget ?? 0
+            const currentPct = essBudget > 0 ? Math.max(0, Math.min(1, (essentialsCat?.remaining ?? 0) / essBudget)) : 0
             const pendingEss = pendingDeductionsByCategory['Essentials'] || 0
             const projectedRemaining = Math.max(0, (essentialsCat?.remaining ?? 0) - pendingEss)
-            const projectedPct = (pendingEss > 0 && essTarget > 0) ? Math.max(0, Math.min(1, projectedRemaining / essTarget)) : currentPct
+            const projectedPct = (pendingEss > 0 && essBudget > 0) ? Math.max(0, Math.min(1, projectedRemaining / essBudget)) : currentPct
             const atRiskPct = pendingEss > 0 ? Math.max(0, currentPct - projectedPct) : 0
             return (
               <div 
@@ -816,7 +816,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   )}
                 </div>
                 <span className="text-[10px] text-muted-foreground block leading-relaxed">
-                  Starts at 100% of cycle target ({formatSensitive(essTarget)}). Decreases with each essentials spend.
+                  Based on total available budget ({formatSensitive(essBudget)}), including cycle income and leftover balance. Decreases with each spend.
                   {pendingEss > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(projectedRemaining)}</span>}
                 </span>
               </div>
