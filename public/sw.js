@@ -1,4 +1,4 @@
-const CACHE_NAME = 'financial-app-v5';
+const CACHE_NAME = 'financial-app-v6';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -47,31 +47,24 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigation requests (root / index.html) → Cache-First (stale-while-
-  // revalidate).  On a warm relaunch the cached index.html — which contains
-  // the inline splash overlay — is served instantly from Cache Storage so the
-  // WebView has an opaque surface before any network round-trip.  A background
-  // fetch keeps the cache fresh for the next launch.
+  // Navigation requests (root / index.html) → Network-First, falling back to cache.
+  // This prevents the "stuck on splash screen" issue where an old cached index.html
+  // requests outdated JS chunks that have been deleted from the server during a new deployment.
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      caches.match(event.request).then((cached) => {
-        // Revalidate in the background regardless
-        const networkFetch = fetch(event.request)
-          .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              const clone = networkResponse.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-            }
-            return networkResponse;
-          })
-          .catch(() => null);
-
-        // Serve from cache immediately if available; otherwise wait for network
-        if (cached) return cached;
-        return networkFetch.then((r) =>
-          r || caches.match('/index.html').then((f) => f || caches.match('/'))
-        );
-      })
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const clone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match(event.request).then((cached) => {
+            return cached || caches.match('/index.html').then((f) => f || caches.match('/'));
+          });
+        })
     );
     return;
   }
