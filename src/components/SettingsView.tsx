@@ -271,28 +271,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const categoryUsage = useMemo(() => {
     if (!usageTransactions) return null
 
-    const activeMonthIdx = MONTH_NAMES.indexOf(activeSettings.selectedMonth) + 1
-    if (activeMonthIdx <= 0) return null
-    const rangeStart = getStartOfNCyclesAgo(activeSettings.selectedYear, activeMonthIdx, activeSettings.cycleDay, USAGE_LOOKBACK_CYCLES)
-    const rangeEnd = getCycleRangeDates(activeSettings.selectedYear, activeMonthIdx, activeSettings.cycleDay).end
-
-    const statsByName = new Map<string, { count: number; lastUsed: string | null }>()
+    // usageTransactions is already fetched bounded to the lookback window, so every
+    // entry here counts toward that window's usage -- no per-tx date check needed.
+    const countByName = new Map<string, number>()
     for (const cat of visibleCategories) {
-      statsByName.set(cat.name.trim().toLowerCase(), { count: 0, lastUsed: null })
+      countByName.set(cat.name.trim().toLowerCase(), 0)
     }
 
     for (const tx of usageTransactions) {
-      const stat = statsByName.get(tx.category.trim().toLowerCase())
-      if (!stat) continue
-      const txDate = new Date(tx.date)
-      if (txDate >= rangeStart && txDate <= rangeEnd) stat.count++
-      if (!stat.lastUsed || txDate > new Date(stat.lastUsed)) stat.lastUsed = tx.date
+      const key = tx.category.trim().toLowerCase()
+      if (countByName.has(key)) countByName.set(key, countByName.get(key)! + 1)
     }
 
     return visibleCategories
-      .map(cat => ({ category: cat, ...statsByName.get(cat.name.trim().toLowerCase())! }))
+      .map(cat => ({ category: cat, count: countByName.get(cat.name.trim().toLowerCase())! }))
       .sort((a, b) => a.count - b.count)
-  }, [usageTransactions, visibleCategories, activeSettings.selectedMonth, activeSettings.selectedYear, activeSettings.cycleDay])
+  }, [usageTransactions, visibleCategories])
 
   const unusedCategoryCount = categoryUsage ? categoryUsage.filter(c => c.count === 0).length : 0
 
@@ -451,7 +445,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <p className="text-[10px] text-muted-foreground">
                   Usage over the last {USAGE_LOOKBACK_CYCLES} cycles, least used first. Categories with no recent activity are good candidates to remove.
                 </p>
-                {categoryUsage.map(({ category, count, lastUsed }) => (
+                {categoryUsage.map(({ category, count }) => (
                   <div
                     key={category.id}
                     className={`flex items-center justify-between gap-2 border px-2.5 py-1.5 rounded-lg text-[11px] ${
@@ -462,9 +456,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       {category.name}
                     </span>
                     {count === 0 ? (
-                      <span className="text-orange-500 font-semibold text-right">
-                        {lastUsed ? `Unused since ${new Date(lastUsed).toLocaleDateString()}` : 'Never used'}
-                      </span>
+                      <span className="text-orange-500 font-semibold text-right">No activity in last {USAGE_LOOKBACK_CYCLES} cycles</span>
                     ) : (
                       <span className="text-muted-foreground font-semibold">{count}&times; in {USAGE_LOOKBACK_CYCLES} cycles</span>
                     )}
