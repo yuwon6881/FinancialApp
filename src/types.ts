@@ -81,7 +81,7 @@ export interface ActiveRecurringPayment {
   dueDay?: number
   isPaid: boolean
   isDiscarded: boolean
-  status: "Pending" | "Paid" | "Discarded" | "Upcoming"
+  status: "Pending" | "Paid" | "Discarded"
   paidDate?: string | null
 }
 

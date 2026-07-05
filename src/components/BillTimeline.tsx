@@ -119,8 +119,23 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
       return `${y}-${m}-${day}`
     }
 
+    // Transaction dates are compared as plain strings below. That only works if every date is
+    // in the exact yyyy-MM-dd shape the app itself writes -- a hand-inserted or imported row in
+    // any other shape (e.g. a datetime with a time part, or a different date order) silently
+    // fails the comparison instead of erroring, so normalize defensively before comparing.
+    const toIsoDate = (raw: string | null | undefined): string => {
+      if (!raw) return ''
+      if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10)
+      const parsed = new Date(raw)
+      return Number.isNaN(parsed.getTime()) ? raw : formatIso(parsed)
+    }
+
     const startIso = formatIso(cycleStart)
     const endIso = formatIso(cycleEnd)
+    const isInCycle = (rawDate: string | null | undefined) => {
+      const iso = toIsoDate(rawDate)
+      return Boolean(iso) && iso >= startIso && iso <= endIso
+    }
 
     const rawList: ActiveRecurringPayment[] = cycleOffset === 0 
       ? activeRecurringPayments 
@@ -171,17 +186,22 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
           return list
         })()
 
+    const isDiscardedTx = (t: Transaction) => String(t.ledgerCategory || '').toLowerCase() === 'discarded'
+
     // Transactions confirmed as recurring bills carry a real recurringPaymentId link (set at
     // confirmation time and never cleared even if the RecurringPayment is later deleted) --
     // that's the authoritative match. Fuzzy name/category matching is kept only as a fallback
     // for transactions recorded before that link existed.
     const matchedTxIds = new Set<string>()
+    // recurringPaymentIds already represented by a rawList entry this cycle -- the historical
+    // fallback below must never add a second entry for one of these, regardless of whether its
+    // own transaction lookup happens to find a match (a manually-entered or oddly-formatted
+    // transaction date can silently fail that string comparison and produce a false duplicate).
+    const rawListRpIds = new Set(rawList.map(p => p.recurringPaymentId).filter(Boolean))
 
     const mappedList = rawList.map(p => {
-      const isServerPaid = p.isPaid || p.status === 'Paid'
-
       const matchingTx = (transactions || []).find(t => {
-        if (!t.date || t.date < startIso || t.date > endIso) return false
+        if (!isInCycle(t.date)) return false
         if (t.recurringPaymentId) return t.recurringPaymentId === p.recurringPaymentId
 
         const descLower = (t.description || '').toLowerCase().trim()
@@ -197,6 +217,16 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
 
       if (matchingTx) matchedTxIds.add(String(matchingTx.id))
 
+      // A matching transaction (server-reported or found here) only means "this cycle's bill was
+      // actioned" -- it can be a real payment or a discard marker, and those must not collapse
+      // into the same "Paid" status.
+      const isServerDiscarded = p.isDiscarded || p.status === 'Discarded'
+      const matchedIsDiscarded = matchingTx ? isDiscardedTx(matchingTx) : false
+      if (isServerDiscarded || matchedIsDiscarded) {
+        return { ...p, isPaid: false, isDiscarded: true, status: 'Discarded' as const }
+      }
+
+      const isServerPaid = p.status === 'Paid'
       if (isServerPaid || matchingTx) {
         return {
           ...p,
@@ -209,15 +239,19 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
       return p
     })
 
-    // Historical synthesis fallback: a subscription deleted after being paid no longer appears
-    // in activeRecurringPayments for that past cycle, so recover it here from the Ledger via the
-    // recurringPaymentId link on the transaction itself.
+    // Historical synthesis fallback: a subscription deleted after being paid/discarded no longer
+    // appears in activeRecurringPayments for that past cycle, so recover it here from the Ledger
+    // via the recurringPaymentId link on the transaction itself. Gated on the recurringPaymentId
+    // not already being present in rawList (rather than on the per-transaction match above
+    // succeeding) so a still-active subscription can never get a duplicate entry here.
     const historicalExtraList: ActiveRecurringPayment[] = []
     ;(transactions || []).forEach(t => {
-      if (!t.date || t.date < startIso || t.date > endIso) return
+      if (!isInCycle(t.date)) return
       if (matchedTxIds.has(String(t.id))) return
       if (!t.recurringPaymentId) return
+      if (rawListRpIds.has(t.recurringPaymentId)) return
 
+      const isDiscarded = isDiscardedTx(t)
       const parts = t.date.split('-')
       const txDay = parts.length === 3 ? (parseInt(parts[2], 10) || 1) : 1
       historicalExtraList.push({
@@ -229,10 +263,10 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
         ledgerCategory: t.ledgerCategory || t.category || 'Subscriptions',
         dueDate: t.date,
         dueDay: txDay,
-        isPaid: true,
-        isDiscarded: false,
-        paidDate: t.date,
-        status: 'Paid' as const
+        isPaid: !isDiscarded,
+        isDiscarded,
+        paidDate: isDiscarded ? null : t.date,
+        status: isDiscarded ? 'Discarded' as const : 'Paid' as const
       })
     })
 
