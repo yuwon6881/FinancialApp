@@ -49,6 +49,7 @@ interface TopNavProps {
   onMouseLeaveWallet?: () => void
   isSyncing?: boolean
   syncLabel?: string
+  isOffline?: boolean
   onDiscardSubscription?: (noti: any) => void
   draftCount?: number
   failedOpsCount?: number
@@ -73,6 +74,7 @@ const TopNav: React.FC<TopNavProps> = ({
   onMouseLeaveWallet,
   isSyncing = false,
   syncLabel,
+  isOffline = false,
   onDiscardSubscription,
   draftCount = 0,
   failedOpsCount = 0
@@ -183,7 +185,15 @@ const TopNav: React.FC<TopNavProps> = ({
               FinancialApp
             </span>
           </div>
-          {(isSyncing || syncLabel) && (
+          {isOffline ? (
+            <div
+              className="ml-2.5 flex items-center gap-1.5 px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-md text-[10px] font-bold text-amber-500 select-none shrink-0"
+              title="No network connection — showing cached data, changes will sync once you're back online"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+              Offline
+            </div>
+          ) : (isSyncing || syncLabel) && (
             <div className="ml-2.5 flex items-center gap-1.5 px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-md text-[10px] font-bold text-blue-500 animate-pulse select-none shrink-0">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
               {syncLabel || 'Syncing...'}

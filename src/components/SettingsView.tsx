@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Fingerprint, ShieldCheck, Clock, Loader2 } from 'lucide-react'
+import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Fingerprint, ShieldCheck, Bell } from 'lucide-react'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
+import { RowSyncBadge } from './ui/RowSyncBadge'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import * as api from '../lib/api'
 import type { FingerprintCredentialSummary } from '../lib/api'
@@ -27,6 +28,8 @@ interface SettingsViewProps {
   }) => void
   onAddCategory: (category: Omit<TransactionCategory, 'id'>) => void
   onDeleteCategory: (id: string) => void
+  notifyOnLoginEnabled?: boolean
+  onToggleNotifyOnLogin?: (checked: boolean) => void
   activeSyncId?: string | null
   deletingId?: string | null
 }
@@ -47,6 +50,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onUpdateSettings,
   onAddCategory,
   onDeleteCategory,
+  notifyOnLoginEnabled = true,
+  onToggleNotifyOnLogin,
   activeSyncId = null,
   deletingId = null
 }) => {
@@ -363,24 +368,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       {cat.name}
                     </span>
                     {isCatDeleting(cat.id) ? (
-                      <span className="inline-flex items-center text-[9px] font-bold text-red-500 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none shrink-0" title="Deleting category...">
-                        <Loader2 className="size-2.5 animate-spin text-red-500 shrink-0 mr-1" />
-                        Deleting...
-                      </span>
+                      <RowSyncBadge state="deleting" entityLabel="category" />
                     ) : (isCatSyncing(cat.id) || cat.isPendingSync) ? (
-                      <span className="inline-flex items-center text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none shrink-0" title={isCatSyncing(cat.id) ? "Updating category..." : "Pending sync (offline)"}>
-                        {isCatSyncing(cat.id) ? (
-                          <>
-                            <Loader2 className="size-2.5 animate-spin text-amber-500 shrink-0 mr-1" />
-                            Syncing...
-                          </>
-                        ) : (
-                          <>
-                            <Clock className="size-2.5 shrink-0 mr-1 text-amber-500" />
-                            Pending
-                          </>
-                        )}
-                      </span>
+                      <RowSyncBadge state={isCatSyncing(cat.id) ? 'syncing' : 'pending'} entityLabel="category" />
                     ) : null}
                   </span>
                   <button
@@ -451,6 +441,27 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </p>
               )}
             </div>
+          </section>
+
+          {/* Notifications Section */}
+          <section className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5 shadow-sm space-y-3">
+            <div className="flex items-center gap-2.5 pb-3 border-b border-border/40">
+              <Bell className="size-5 text-blue-500 shrink-0" />
+              <div>
+                <h3 className="text-sm font-bold text-foreground">Notifications</h3>
+                <p className="text-[11px] text-muted-foreground">Controls the pending subscription reminder popup shown on login.</p>
+              </div>
+            </div>
+
+            <label className="flex items-center justify-between gap-3 cursor-pointer">
+              <span className="text-xs font-medium text-foreground">Show subscription reminders automatically on login</span>
+              <input
+                type="checkbox"
+                checked={notifyOnLoginEnabled}
+                onChange={(e) => onToggleNotifyOnLogin?.(e.target.checked)}
+                className="rounded border-border text-blue-500 focus:ring-blue-500 shrink-0"
+              />
+            </label>
           </section>
 
           {/* Security & Fingerprint Section */}

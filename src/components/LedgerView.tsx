@@ -13,11 +13,12 @@ import {
   RefreshCw,
   AlertCircle,
   Loader2,
-  Clock,
   Edit2,
   Trash2
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
+import { CycleSkeleton } from './ui/Skeleton'
+import { RowSyncBadge } from './ui/RowSyncBadge'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { BottomSheet } from './ui/BottomSheet'
 import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput, displayLedgerCategory } from '../lib/utils'
@@ -1358,32 +1359,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   }
 
   if (isSwitchingCycle) {
-    return (
-      <div className="space-y-6 soft-rise">
-        <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="space-y-2 w-full md:w-auto">
-            <div className="h-6 w-44 rounded-lg bg-muted/60 animate-pulse" />
-            <div className="h-3 w-64 rounded-lg bg-muted/40 animate-pulse" />
-          </div>
-          <div className="h-9 w-52 rounded-xl bg-muted/50 animate-pulse" />
-        </div>
-
-        <div className="p-4 rounded-2xl bg-card border border-border/60 space-y-3">
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <div key={i} className="flex items-center justify-between py-3 px-4 rounded-xl border border-border/30 bg-background/50">
-              <div className="flex items-center gap-3">
-                <div className="h-4 w-20 rounded bg-muted/60 animate-pulse" />
-                <div className="h-4 w-36 rounded bg-muted/50 animate-pulse" />
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="h-5 w-20 rounded-full bg-muted/60 animate-pulse" />
-                <div className="h-5 w-24 rounded bg-muted/70 animate-pulse" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    )
+    return <CycleSkeleton variant="ledger" />
   }
 
   return (
@@ -2060,30 +2036,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     <td className="p-4 font-semibold text-foreground flex items-center gap-2">
                       <span>{t.description}</span>
                       {isTxDeleting(t.id) ? (
-                        <span 
-                          title="Deleting transaction..." 
-                          className="inline-flex items-center text-[9px] px-1.5 py-0.5 rounded-md bg-red-500/10 text-red-500 border border-red-500/20 shrink-0 select-none animate-pulse"
-                        >
-                          <Loader2 className="size-2.5 animate-spin shrink-0 mr-1 text-red-500" />
-                          Deleting...
-                        </span>
+                        <RowSyncBadge state="deleting" entityLabel="transaction" />
                       ) : (isTxSyncing(t.id) || t.isPendingSync) ? (
-                        <span 
-                          title={isTxSyncing(t.id) ? "Updating transaction..." : "Pending sync (offline)"} 
-                          className="inline-flex items-center text-[9px] px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 shrink-0 select-none animate-pulse"
-                        >
-                          {isTxSyncing(t.id) ? (
-                            <>
-                              <Loader2 className="size-2.5 animate-spin shrink-0 mr-1" />
-                              Syncing...
-                            </>
-                          ) : (
-                            <>
-                              <Clock className="size-2.5 shrink-0 mr-1 text-amber-500" />
-                              Pending
-                            </>
-                          )}
-                        </span>
+                        <RowSyncBadge state={isTxSyncing(t.id) ? 'syncing' : 'pending'} entityLabel="transaction" />
                       ) : null}
                     </td>
                     <td className="p-4">
@@ -2266,30 +2221,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   <div className="flex-1 flex items-center gap-1.5 min-w-0">
                     <h4 className="text-sm font-bold text-foreground leading-snug truncate">{t.description}</h4>
                     {isDeleting ? (
-                      <span 
-                        title="Deleting transaction..." 
-                        className="inline-flex items-center text-[9px] px-1.5 py-0.5 rounded-md bg-red-500/10 text-red-500 border border-red-500/20 shrink-0 select-none animate-pulse"
-                      >
-                        <Loader2 className="size-2.5 animate-spin text-red-500 shrink-0 mr-1" />
-                        Deleting...
-                      </span>
+                      <RowSyncBadge state="deleting" entityLabel="transaction" />
                     ) : (isSyncing || t.isPendingSync) ? (
-                      <span 
-                        title={isSyncing ? "Updating transaction..." : "Pending sync (offline)"} 
-                        className="inline-flex items-center text-[9px] px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 shrink-0 select-none animate-pulse"
-                      >
-                        {isSyncing ? (
-                          <>
-                            <Loader2 className="size-2.5 animate-spin text-amber-500 shrink-0 mr-1" />
-                            Syncing...
-                          </>
-                        ) : (
-                          <>
-                            <Clock className="size-2.5 shrink-0 mr-1 text-amber-500" />
-                            Pending
-                          </>
-                        )}
-                      </span>
+                      <RowSyncBadge state={isSyncing ? 'syncing' : 'pending'} entityLabel="transaction" />
                     ) : null}
                   </div>
                   <div className="shrink-0">

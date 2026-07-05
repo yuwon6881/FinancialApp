@@ -22,7 +22,7 @@ import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 import { PullToRefresh } from './components/ui/PullToRefresh'
 import { ToastViewport, type ToastMessage, type ToastTone } from './components/ui/ToastViewport'
 import { CardSkeleton, Skeleton } from './components/ui/Skeleton'
-import { CACHE_KEYS, getCachedJSON, getCachedTransactions, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod, getCachedOps } from './lib/cache'
+import { CACHE_KEYS, getCachedJSON, getCachedTransactions, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod, getCachedOps, getCachedCycleSnapshot, setCachedCycleSnapshot } from './lib/cache'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from './lib/modalDrafts'
 import { enqueue, applyOpsToList, createFinalId, createLocalWishlistId, DISPATCH, sanitizeQueuedOps, type QueuedOp } from './lib/outbox'
 import { PendingSubscriptionsModal } from './components/PendingSubscriptionsModal'
@@ -108,12 +108,12 @@ function App() {
 
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState<boolean>(() => !hasCachedKey(CACHE_KEYS.dashboardData))
+  const [isOffline, setIsOffline] = useState<boolean>(() => typeof navigator !== 'undefined' ? !navigator.onLine : false)
 
   // Sync Queue States
   const [pendingOps, setPendingOps] = useState<QueuedOp[]>(() => getCachedOps())
   const [failedOps, setFailedOps] = useState<QueuedOp[]>(() => getCachedJSON<QueuedOp[]>('failed_operations', []))
   const [isBackgroundSyncing, setIsBackgroundSyncing] = useState<boolean>(false)
-  const [actionLoading] = useState<boolean>(false)
   const [activeSyncId, setActiveSyncId] = useState<string | null>(null)
   const [deletingTxId, setDeletingTxId] = useState<string | null>(null)
   const [syncBackoffUntil, setSyncBackoffUntil] = useState<number>(0)
@@ -487,6 +487,7 @@ function App() {
       setCachedJSON(CACHE_KEYS.recurringPayments, recs)
       setCachedJSON(CACHE_KEYS.categories, cats)
       setCachedJSON(CACHE_KEYS.wishlist, wishes)
+      setCachedCycleSnapshot(dbData.setting.selectedMonth, dbData.setting.selectedYear, dbData, txs)
 
       // Sync dark mode from server preference (server wins over localStorage)
       const serverDark = dbData.setting.darkMode ?? false
@@ -619,7 +620,17 @@ function App() {
 
   // Period / Settings changes
   const handleSelectPeriod = async (month: string, year: number) => {
-    setIsSwitchingCycle(true)
+    // If we've visited this cycle before, show its last-known data immediately
+    // (stale-while-revalidate) instead of a skeleton, then refresh quietly.
+    const cachedSnapshot = getCachedCycleSnapshot(month, year)
+    if (cachedSnapshot) {
+      setDashboardData(cachedSnapshot.dashboardData)
+      setTransactions(cachedSnapshot.transactions)
+      setSelectedMonth(month)
+      setSelectedYear(year)
+    } else {
+      setIsSwitchingCycle(true)
+    }
     try {
       await api.selectPeriod(month, year)
       await loadAll(month, year, true)
@@ -1087,6 +1098,19 @@ function App() {
     runPing()
   }, [token, processQueue])
 
+  // Proactively reflect browser connectivity instead of only inferring it
+  // from failed fetches after the fact.
+  useEffect(() => {
+    const handleConnectivityOnline = () => setIsOffline(false)
+    const handleConnectivityOffline = () => setIsOffline(true)
+    window.addEventListener('online', handleConnectivityOnline)
+    window.addEventListener('offline', handleConnectivityOffline)
+    return () => {
+      window.removeEventListener('online', handleConnectivityOnline)
+      window.removeEventListener('offline', handleConnectivityOffline)
+    }
+  }, [])
+
   // Trigger wakeUpAndSync on mount or online status change
   useEffect(() => {
     if (token) {
@@ -1370,6 +1394,7 @@ function App() {
         onMouseEnterWallet={() => setIsHoveringWallet(true)}
         onMouseLeaveWallet={() => setIsHoveringWallet(false)}
         isSyncing={isBackgroundSyncing || pendingOps.length > 0}
+        isOffline={isOffline}
         syncLabel={
           syncCountdownMs > 0
             ? `Retrying ${Math.ceil(syncCountdownMs / 1000)}s`
@@ -1387,26 +1412,26 @@ function App() {
       />
 
       {error && (
-        <div className="bg-destructive/15 border-b border-destructive/30 text-destructive px-4 py-2 text-xs flex items-center justify-center gap-2 select-none">
-          <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
-          <span>{error}</span>
+        <div className="bg-destructive/15 border-b border-destructive/30 text-destructive px-4 py-2 text-xs flex items-center justify-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-destructive animate-pulse select-none" />
+          <span className="select-none">{error}</span>
+          <button
+            type="button"
+            onClick={() => loadAll(selectedMonth || undefined, selectedYear || undefined, true)}
+            disabled={isBackgroundSyncing}
+            className="ml-1 font-bold underline underline-offset-2 hover:text-destructive/80 disabled:opacity-60 disabled:cursor-default cursor-pointer"
+          >
+            {isBackgroundSyncing ? 'Retrying…' : 'Retry'}
+          </button>
         </div>
       )}
 
       {/* Main Content Area */}
       <PullToRefresh
         onRefresh={() => loadAll(selectedMonth || undefined, selectedYear || undefined, true)}
-        disabled={loading || actionLoading || isLocked}
+        disabled={loading || isLocked}
       >
       <main className="flex-1 container mx-auto px-4 py-6 sm:py-8 pb-24 md:pb-8 max-w-7xl relative">
-        {(loading || actionLoading) && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-[1.5px] transition-all duration-150">
-            <div className="app-panel flex items-center gap-2.5 px-4 py-3 rounded-xl bg-card/95 border border-border/80 shadow-xl text-sm font-bold text-foreground select-none pointer-events-none animate-in zoom-in-95 duration-150">
-              <Loader2 className="animate-spin text-blue-500 size-4" />
-              Syncing changes...
-            </div>
-          </div>
-        )}
         <ErrorBoundary variant="inline" resetKey={activeTab}>
         <Suspense fallback={<ViewFallback />}>
         <LaunchReady>
@@ -1441,6 +1466,11 @@ function App() {
             onUpdateSettings={handleUpdateSettings}
             onAddCategory={handleAddCategory}
             onDeleteCategory={requestDeleteCategory}
+            notifyOnLoginEnabled={modalCheckbox}
+            onToggleNotifyOnLogin={(checked) => {
+              setModalCheckbox(checked)
+              localStorage.setItem('show_notifications_on_login', checked ? 'true' : 'false')
+            }}
             activeSyncId={activeSyncId}
             deletingId={deletingTxId}
           />
@@ -1533,6 +1563,7 @@ function App() {
             onNavigateToLedger={handleNavigateToLedger}
             activeSyncId={activeSyncId}
             deletingId={deletingTxId}
+            isSwitchingCycle={isSwitchingCycle}
           />
         )}
 

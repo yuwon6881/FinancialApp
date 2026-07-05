@@ -3,6 +3,8 @@ import type { WishlistItem } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { BottomSheet } from './ui/BottomSheet'
+import { CycleSkeleton } from './ui/Skeleton'
+import { RowSyncBadge } from './ui/RowSyncBadge'
 import { formatCurrencyVal, maskCurrencyInput } from '../lib/utils'
 import { useFormDraft } from '../lib/useFormDraft'
 import {
@@ -11,11 +13,10 @@ import {
   Trash2, 
   ExternalLink, 
   Sparkles, 
-  Clock, 
+  Clock,
   CheckCircle2,
   Target,
-  Edit2,
-  Loader2
+  Edit2
 } from 'lucide-react'
 
 interface WishlistViewProps {
@@ -43,6 +44,7 @@ interface WishlistViewProps {
   }) => void
   activeSyncId?: string | null
   deletingId?: string | null
+  isSwitchingCycle?: boolean
 }
 
 export const WishlistView: React.FC<WishlistViewProps> = ({
@@ -62,7 +64,8 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   onResetAutoOpen,
   onNavigateToLedger,
   activeSyncId = null,
-  deletingId = null
+  deletingId = null,
+  isSwitchingCycle = false
 }) => {
   const isItemSyncing = (itemId: string | number) => {
     return activeSyncId !== null && activeSyncId !== undefined && String(activeSyncId) === String(itemId)
@@ -250,9 +253,14 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
 
   return (
     <div className="space-y-6 soft-rise">
-      {/* Top Banner Ribbon */}
+      {/* Top Banner Ribbon — rewardsBalance/rewardsTarget are cycle-scoped, so
+          show a skeleton while a new cycle's dashboard data is loading rather
+          than briefly flashing the previous cycle's numbers. */}
+      {isSwitchingCycle ? (
+        <CycleSkeleton variant="wishlist" />
+      ) : (
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div 
+        <div
           onClick={() => onNavigateToLedger?.({ category: 'Rewards', showAllCycles: true })}
           className="p-5 rounded-2xl bg-card border border-border/60 shadow-xs hover:border-pink-500/30 transition-all duration-300 group cursor-pointer flex items-center justify-between"
         >
@@ -288,6 +296,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
           </div>
         </div>
       </div>
+      )}
 
       {/* Hero Card & Queue Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -346,24 +355,9 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                       <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2 flex-wrap">
                         {activeItem.name}
                         {isItemDeleting(activeItem.id) ? (
-                          <span className="inline-flex items-center text-[9px] font-bold text-red-500 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none shrink-0" title="Deleting item...">
-                            <Loader2 className="size-2.5 animate-spin text-red-500 shrink-0 mr-1" />
-                            Deleting...
-                          </span>
+                          <RowSyncBadge state="deleting" entityLabel="item" />
                         ) : (isItemSyncing(activeItem.id) || activeItem.isPendingSync) ? (
-                          <span className="inline-flex items-center text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none shrink-0" title={isItemSyncing(activeItem.id) ? "Updating item..." : "Pending sync (offline)"}>
-                            {isItemSyncing(activeItem.id) ? (
-                              <>
-                                <Loader2 className="size-2.5 animate-spin text-amber-500 shrink-0 mr-1" />
-                                Syncing...
-                              </>
-                            ) : (
-                              <>
-                                <Clock className="size-2.5 shrink-0 mr-1 text-amber-500" />
-                                Pending
-                              </>
-                            )}
-                          </span>
+                          <RowSyncBadge state={isItemSyncing(activeItem.id) ? 'syncing' : 'pending'} entityLabel="item" />
                         ) : null}
                       </h2>
                       <div className="text-3xl font-black text-foreground mt-2">
@@ -568,24 +562,9 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                         <h4 className="font-bold text-foreground text-xs truncate flex items-center gap-1.5">
                           <span>{item.name}</span>
                           {isItemDeleting(item.id) ? (
-                            <span className="inline-flex items-center text-[9px] font-bold text-red-500 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none shrink-0" title="Deleting item...">
-                              <Loader2 className="size-2.5 animate-spin text-red-500 shrink-0 mr-1" />
-                              Deleting...
-                            </span>
+                            <RowSyncBadge state="deleting" entityLabel="item" />
                           ) : (isItemSyncing(item.id) || item.isPendingSync) ? (
-                            <span className="inline-flex items-center text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none shrink-0" title={isItemSyncing(item.id) ? "Updating item..." : "Pending sync (offline)"}>
-                              {isItemSyncing(item.id) ? (
-                                <>
-                                  <Loader2 className="size-2.5 animate-spin text-amber-500 shrink-0 mr-1" />
-                                  Syncing...
-                                </>
-                              ) : (
-                                <>
-                                  <Clock className="size-2.5 shrink-0 mr-1 text-amber-500" />
-                                  Pending
-                                </>
-                              )}
-                            </span>
+                            <RowSyncBadge state={isItemSyncing(item.id) ? 'syncing' : 'pending'} entityLabel="item" />
                           ) : null}
                         </h4>
                         {canAfford && (

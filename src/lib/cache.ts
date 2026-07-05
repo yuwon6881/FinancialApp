@@ -1,4 +1,4 @@
-import type { Transaction } from '../types'
+import type { Transaction, DashboardData } from '../types'
 import { sanitizeQueuedOps, type QueuedOp } from './outbox'
 
 export const CACHE_KEYS = {
@@ -65,6 +65,42 @@ export function getCachedDashboardPeriod(): { month?: string; year?: number } {
     month: cached?.setting?.selectedMonth || undefined,
     year: cached?.setting?.selectedYear || undefined
   }
+}
+
+// Per-cycle snapshots let switching to a previously-visited month/year render
+// instantly with the last-seen data (stale-while-revalidate) instead of
+// always showing a skeleton while loadAll() re-fetches. Capped at
+// MAX_CYCLE_SNAPSHOTS, evicting the least-recently-cached entry, so this
+// can't grow unbounded across a long-lived session.
+const CYCLE_SNAPSHOTS_KEY = 'cached_cycle_snapshots'
+const MAX_CYCLE_SNAPSHOTS = 6
+
+interface CycleSnapshot {
+  dashboardData: DashboardData
+  transactions: Transaction[]
+  cachedAt: number
+}
+
+function cycleSnapshotKey(month: string, year: number): string {
+  return `${year}-${month}`
+}
+
+export function getCachedCycleSnapshot(month: string, year: number): CycleSnapshot | null {
+  const all = getCachedJSON<Record<string, CycleSnapshot>>(CYCLE_SNAPSHOTS_KEY, {})
+  return all[cycleSnapshotKey(month, year)] || null
+}
+
+export function setCachedCycleSnapshot(month: string, year: number, dashboardData: DashboardData, transactions: Transaction[]): void {
+  const all = getCachedJSON<Record<string, CycleSnapshot>>(CYCLE_SNAPSHOTS_KEY, {})
+  all[cycleSnapshotKey(month, year)] = { dashboardData, transactions, cachedAt: Date.now() }
+
+  const entries = Object.entries(all)
+  if (entries.length > MAX_CYCLE_SNAPSHOTS) {
+    entries.sort((a, b) => a[1].cachedAt - b[1].cachedAt)
+    for (let i = 0; i < entries.length - MAX_CYCLE_SNAPSHOTS; i++) delete all[entries[i][0]]
+  }
+
+  setCachedJSON(CYCLE_SNAPSHOTS_KEY, all)
 }
 
 export function getCachedOps(): QueuedOp[] {

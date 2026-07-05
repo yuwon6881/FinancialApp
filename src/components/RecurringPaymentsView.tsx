@@ -9,14 +9,14 @@ import {
   Calendar, 
   Bell, 
   X,
-  Edit,
-  Clock,
-  Loader2
+  Edit
 } from 'lucide-react'
 import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput } from '../lib/utils'
 import { triggerHaptic } from '../lib/haptics'
 import { CustomSelect } from './ui/CustomSelect'
 import { BottomSheet } from './ui/BottomSheet'
+import { CycleSkeleton } from './ui/Skeleton'
+import { RowSyncBadge } from './ui/RowSyncBadge'
 import { BillTimeline } from './BillTimeline'
 import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } from '../lib/categoryColors'
 
@@ -223,30 +223,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
 
 
   if (isSwitchingCycle) {
-    return (
-      <div className="space-y-6 soft-rise">
-        <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="space-y-2 w-full md:w-auto">
-            <div className="h-6 w-48 rounded-lg bg-muted/60 animate-pulse" />
-            <div className="h-3 w-64 rounded-lg bg-muted/40 animate-pulse" />
-          </div>
-          <div className="h-9 w-40 rounded-xl bg-muted/50 animate-pulse" />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <div key={i} className="p-5 rounded-2xl bg-card border border-border/60 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="h-5 w-28 rounded bg-muted/60 animate-pulse" />
-                <div className="h-5 w-16 rounded-full bg-muted/50 animate-pulse" />
-              </div>
-              <div className="h-8 w-32 rounded-lg bg-muted/70 animate-pulse" />
-              <div className="h-4 w-full rounded bg-muted/40 animate-pulse" />
-            </div>
-          ))}
-        </div>
-      </div>
-    )
+    return <CycleSkeleton variant="recurring" />
   }
 
   return (
@@ -549,24 +526,9 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                         <span className="text-[9px] font-semibold bg-muted px-1.5 py-0.5 rounded text-muted-foreground">Paused</span>
                       )}
                       {isPaymentDeleting(rp.id) ? (
-                        <span className="inline-flex items-center text-[9px] font-bold text-red-500 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none shrink-0" title="Deleting subscription...">
-                          <Loader2 className="size-2.5 animate-spin text-red-500 shrink-0 mr-1" />
-                          Deleting...
-                        </span>
+                        <RowSyncBadge state="deleting" entityLabel="subscription" />
                       ) : (isPaymentSyncing(rp.id) || rp.isPendingSync) ? (
-                        <span className="inline-flex items-center text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md animate-pulse select-none shrink-0" title={isPaymentSyncing(rp.id) ? "Updating subscription..." : "Pending sync (offline)"}>
-                          {isPaymentSyncing(rp.id) ? (
-                            <>
-                              <Loader2 className="size-2.5 animate-spin text-amber-500 shrink-0 mr-1" />
-                              Syncing...
-                            </>
-                          ) : (
-                            <>
-                              <Clock className="size-2.5 shrink-0 mr-1 text-amber-500" />
-                              Pending
-                            </>
-                          )}
-                        </span>
+                        <RowSyncBadge state={isPaymentSyncing(rp.id) ? 'syncing' : 'pending'} entityLabel="subscription" />
                       ) : null}
                     </h3>
                     <span className={`inline-block mt-1 text-[10px] px-1.5 py-0.5 font-semibold rounded border ${getCategoryBadgeClass(rp.category)}`}>
