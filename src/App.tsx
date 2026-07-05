@@ -24,7 +24,7 @@ import { ToastViewport, type ToastMessage, type ToastTone } from './components/u
 import { CardSkeleton, Skeleton } from './components/ui/Skeleton'
 import { CACHE_KEYS, getCachedJSON, getCachedTransactions, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod, getCachedOps, getCachedCycleSnapshot, setCachedCycleSnapshot } from './lib/cache'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from './lib/modalDrafts'
-import { enqueue, applyOpsToList, createFinalId, createLocalWishlistId, DISPATCH, sanitizeQueuedOps, type QueuedOp } from './lib/outbox'
+import { enqueue, applyOpsToList, createFinalId, createLocalWishlistId, DISPATCH, sanitizeQueuedOps, getSyncSuccessToast, type QueuedOp } from './lib/outbox'
 import { PendingSubscriptionsModal } from './components/PendingSubscriptionsModal'
 import { PasswordPromptModal } from './components/PasswordPromptModal'
 import { LockScreen } from './components/LockScreen'
@@ -1016,30 +1016,12 @@ function App() {
           console.error('Post-sync dashboard refresh failed:', refreshErr);
         }
         
-        // Show toasts only after UI is refreshed so they are fully "final"
+        // Show toasts only after UI is refreshed so they are fully "final". Copy (and any
+        // opt-out) lives in one place — lib/outbox.ts — so new op types need no changes here.
         successfulOps.forEach(op => {
-          if (op.entity === 'settings' && op.type === 'update' && (op.targetId === 'darkMode' || op.targetId === 'hideSensitive')) return
-          const entityMap: Record<string, string> = {
-            settings: 'Settings',
-            category: 'Category',
-            transaction: 'Transaction',
-            subscription: 'Subscription',
-            wishlistItem: 'Wishlist item',
-            balance: 'Balance adjustment',
-            recurringPayment: 'Recurring payment'
-          }
-          const typeMap: Record<string, string> = {
-            add: 'added',
-            update: 'updated',
-            delete: 'deleted',
-            pay: 'paid',
-            skip: 'skipped',
-            toggle: 'toggled',
-            purchase: 'purchased'
-          }
-          const entityName = entityMap[op.entity] || 'Item'
-          const typeName = typeMap[op.type] || 'processed'
-          showToast(`${entityName} ${typeName} successfully`, 'Sync successful', 'success')
+          const toast = getSyncSuccessToast(op)
+          if (!toast) return
+          showToast(toast.message, toast.title, toast.tone)
         })
       }
     } finally {

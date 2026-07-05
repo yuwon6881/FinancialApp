@@ -14,6 +14,62 @@ export interface QueuedOp {
   isCompleted?: boolean
 }
 
+export type ToastTone = 'info' | 'success' | 'warning' | 'error'
+
+export interface ToastCopy {
+  title: string
+  message: string
+  tone: ToastTone
+}
+
+const ENTITY_LABELS: Record<EntityKind, string> = {
+  transaction: 'Transaction',
+  recurringPayment: 'Recurring payment',
+  wishlistItem: 'Wishlist item',
+  category: 'Category',
+  settings: 'Settings'
+}
+
+const TYPE_VERBS: Record<OpType, string> = {
+  add: 'added',
+  update: 'updated',
+  delete: 'deleted',
+  toggle: 'toggled',
+  purchase: 'purchased'
+}
+
+function defaultSyncSuccessToast(op: QueuedOp): ToastCopy {
+  const entityName = ENTITY_LABELS[op.entity] || 'Item'
+  const typeName = TYPE_VERBS[op.type] || 'processed'
+  return { title: 'Sync successful', message: `${entityName} ${typeName} successfully`, tone: 'success' }
+}
+
+// Override copy per "entity:type" key only where the default "<Entity> <verb> successfully"
+// sentence isn't right (e.g. a setting keyed by targetId rather than a named record) or to
+// silence a specific op by returning null. Anything not listed here — including any new
+// entity/op type added later — automatically gets the default copy above with zero changes
+// required here.
+const SUCCESS_TOAST_OVERRIDES: Partial<Record<string, (op: QueuedOp) => ToastCopy | null>> = {
+  'settings:update': (op) => {
+    if (op.targetId === 'darkMode') {
+      return { title: 'Theme synced', message: `Dark mode ${op.payload?.darkMode ? 'enabled' : 'disabled'} — synced to server`, tone: 'success' }
+    }
+    if (op.targetId === 'hideSensitive') {
+      return { title: 'Settings synced', message: `Hide sensitive data ${op.payload?.hideSensitive ? 'enabled' : 'disabled'} — synced to server`, tone: 'success' }
+    }
+    return defaultSyncSuccessToast(op)
+  }
+}
+
+// Single source of truth for "queued op finished syncing" toast copy, used by the outbox
+// drain loop. Keeping this here (next to DISPATCH) means a new entity/op type gets a working
+// toast automatically, and custom wording for a specific op is a one-line addition above.
+export function getSyncSuccessToast(op: QueuedOp): ToastCopy | null {
+  const key = `${op.entity}:${op.type}`
+  const override = SUCCESS_TOAST_OVERRIDES[key]
+  return override ? override(op) : defaultSyncSuccessToast(op)
+}
+
 export function createFinalId(entity: EntityKind): string {
   const prefix = entity === 'transaction' ? 'tx' : entity === 'recurringPayment' ? 'rec' : entity === 'category' ? 'cat' : 'op'
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
