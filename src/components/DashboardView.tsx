@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react'
+import { motion } from 'framer-motion'
 import type { Transaction, DashboardData, WishlistItem } from '../types'
 import { 
   Wallet, 
@@ -18,6 +19,7 @@ import { BottomSheet } from './ui/BottomSheet'
 import { CycleSkeleton } from './ui/Skeleton'
 import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput } from '../lib/utils'
 import { getCategoryBadgeClass, getCategoryChartColor, getCategoryDotClass } from '../lib/categoryColors'
+import { AnimatedNumber } from './ui/AnimatedNumber'
 
 
 interface DashboardViewProps {
@@ -732,11 +734,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Growth Achieved */}
           {(() => {
             const growthCat = categories.find(c => c.name === 'Growth')
-            const growthTarget = growthCat?.target || 1
-            const currentPct = Math.max(0, Math.min(1, stats.growthPercentAchieved))
+            const growthTarget = growthCat?.target ?? 0
+            const currentPct = growthTarget > 0 ? Math.max(0, Math.min(1, stats.growthPercentAchieved)) : 0
             const pendingGrowth = pendingDeductionsByCategory['Growth'] || 0
             const projectedRemaining = Math.max(0, (growthCat?.remaining ?? 0) - pendingGrowth)
-            const atRiskPct = pendingGrowth > 0 ? Math.max(0, Math.min(currentPct, pendingGrowth / growthTarget)) : 0
+            const atRiskPct = (pendingGrowth > 0 && growthTarget > 0) ? Math.max(0, Math.min(currentPct, pendingGrowth / growthTarget)) : 0
             const safePct = currentPct - atRiskPct
             return (
               <div 
@@ -778,11 +780,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Essentials Remaining */}
           {(() => {
             const essentialsCat = categories.find(c => c.name === 'Essentials')
-            const essTarget = essentialsCat?.target || 1
-            const currentPct = Math.max(0, Math.min(1, (essentialsCat?.remaining ?? 0) / essTarget))
+            const essTarget = essentialsCat?.target ?? 0
+            const currentPct = essTarget > 0 ? Math.max(0, Math.min(1, (essentialsCat?.remaining ?? 0) / essTarget)) : 0
             const pendingEss = pendingDeductionsByCategory['Essentials'] || 0
             const projectedRemaining = Math.max(0, (essentialsCat?.remaining ?? 0) - pendingEss)
-            const projectedPct = pendingEss > 0 ? Math.max(0, Math.min(1, projectedRemaining / essTarget)) : currentPct
+            const projectedPct = (pendingEss > 0 && essTarget > 0) ? Math.max(0, Math.min(1, projectedRemaining / essTarget)) : currentPct
             const atRiskPct = pendingEss > 0 ? Math.max(0, currentPct - projectedPct) : 0
             return (
               <div 
@@ -885,7 +887,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           <div className="text-2xl font-black text-foreground">
-            {formatSensitive(stats.totalBalance)}
+            {hideSensitive ? '••••••' : <AnimatedNumber value={stats.totalBalance} formatFn={formatCurrency} />}
           </div>
           <p className="text-[10px] text-muted-foreground mt-1.5 flex items-start gap-1">
             <AlertCircle className="size-3 text-blue-500 shrink-0 mt-0.5" />
@@ -905,7 +907,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           <div className="text-2xl font-black text-foreground">
-            {formatSensitive(stats.monthlyInflow)}
+            {hideSensitive ? '••••••' : <AnimatedNumber value={stats.monthlyInflow} formatFn={formatCurrency} />}
           </div>
           <p className="text-[10px] mt-1.5 text-muted-foreground">
             Total Actual Income: <span className="font-semibold text-teal-500">{formatSensitive(stats.monthlyIncome)}</span>
@@ -924,7 +926,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           <div className="text-2xl font-black text-foreground">
-            {formatSensitive(stats.monthlyExpenses)}
+            {hideSensitive ? '••••••' : <AnimatedNumber value={stats.monthlyExpenses} formatFn={formatCurrency} />}
           </div>
           <p className="text-[10px] text-muted-foreground mt-1.5">
             Active committed bills: <span className="font-semibold text-orange-500">{formatSensitive(stats.activeRecurringTotal)}</span>/mo
@@ -1040,24 +1042,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     </defs>
                     
                     {/* Fill Area -- gradient drop beneath the line, fades in on load */}
-                    <path
+                    <motion.path
                       key={`area-${trendView}`}
                       d={`M 15,105 L ${trendLinePoints} L 485,105 Z`}
                       fill="url(#chartGradient)"
-                      className="area-fade"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 1 }}
                     />
 
                     {/* Stroke Line -- soft glow + smooth path draw-in (re-draws on period switch) */}
-                    <polyline
+                    <motion.polyline
                       key={`line-${trendView}`}
                       fill="none"
                       stroke="var(--color-chart-line, #4f46e5)"
                       strokeWidth="2.5"
                       points={trendLinePoints}
-                      pathLength={1}
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      className="chart-glow trend-draw"
+                      className="chart-glow"
+                      initial={{ pathLength: 0, opacity: 0 }}
+                      animate={{ pathLength: 1, opacity: 1 }}
+                      transition={{ duration: 1.2, ease: "easeInOut" }}
                     />
                   </svg>
 
@@ -1184,11 +1190,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         slice.endAngle
                       )
                       return (
-                        <path
+                        <motion.path
                           key={slice.category}
                           d={pathD}
                           fill={getCategoryChartColor(slice.category)}
                           className="transition-all duration-200 cursor-pointer stroke-card stroke-2 hover:opacity-90"
+                          initial={{ scale: 0.8, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ duration: 0.5, delay: index * 0.1, type: "spring" }}
+                          style={{ transformOrigin: '100px 100px' }}
                           onMouseEnter={() => setHoveredSlice(index)}
                           onMouseLeave={() => setHoveredSlice(null)}
                           onClick={() => {

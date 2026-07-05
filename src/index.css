@@ -273,13 +273,10 @@
 }
 
 .app-panel {
-    box-shadow: var(--app-shadow);
-    /* Hairline top highlight for the premium "lit glass" edge */
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     background-clip: padding-box;
-}
-
-.app-panel::after {
-    /* handled per-component; reserved */
 }
 
 .interactive-card {
@@ -315,30 +312,13 @@
     overflow: hidden;
 }
 
-.metric-card::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.26), transparent);
-    transform: translateX(-110%);
-}
-
-@media (hover: hover) {
-    .metric-card:hover::after {
-        animation: card-sheen 900ms ease;
-    }
-}
-
 .status-chip {
     border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
     background: color-mix(in srgb, var(--card) 82%, transparent);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
-@keyframes card-sheen {
-    to { transform: translateX(110%); }
-}
+
 
 @keyframes soft-rise {
     from {

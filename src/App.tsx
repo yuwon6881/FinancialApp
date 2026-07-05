@@ -1768,48 +1768,67 @@ function App() {
         <>
           {/* Backdrop Blur Overlay when speed dial is open */}
           {isFabOpen && (
-            <div 
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               onClick={() => setIsFabOpen(false)}
-              className="md:hidden fixed inset-0 z-30 bg-background/60 backdrop-blur-xs animate-in fade-in duration-200"
+              className="md:hidden fixed inset-0 z-30 bg-background/60 backdrop-blur-xs"
             />
           )}
 
           {/* Speed Dial Menu Items — staggered so they cascade out from the
               FAB (nearest first) and collapse back together instantly. */}
-          <div
+          <AnimatePresence>
+          {isFabOpen && (
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            variants={{
+              visible: { opacity: 1, transition: { staggerChildren: 0.05, staggerDirection: -1 } },
+              hidden: { opacity: 0, transition: { staggerChildren: 0.05, staggerDirection: 1, delayChildren: 0.1 } }
+            }}
             style={{ bottom: 'calc(148px + env(safe-area-inset-bottom, 0px))' }}
-            className={`md:hidden fixed right-8 z-40 flex flex-col gap-3.5 items-end ${isFabOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
+            className="md:hidden fixed right-8 z-40 flex flex-col gap-3.5 items-end pointer-events-auto"
           >
             {([
               { key: 'wishlist' as const, label: 'Add Wish Goal', Icon: PiggyBank, circleClass: 'bg-pink-500 group-hover:bg-pink-600' },
               { key: 'subscription' as const, label: 'New Subscription', Icon: CreditCard, circleClass: 'bg-violet-500 group-hover:bg-violet-600' },
               { key: 'transaction' as const, label: 'Post Transaction', Icon: Wallet, circleClass: 'bg-emerald-500 group-hover:bg-emerald-600' },
-            ]).map(({ key, label, Icon, circleClass }, i, arr) => (
-              <button
+            ]).map(({ key, label, Icon, circleClass }) => (
+              <motion.button
                 key={key}
+                variants={{
+                  visible: { opacity: 1, y: 0, scale: 1 },
+                  hidden: { opacity: 0, y: 15, scale: 0.9 }
+                }}
+                whileTap={{ scale: 0.92 }}
                 onClick={() => {
                   handleQuickAction(key)
                   setIsFabOpen(false)
                 }}
-                tabIndex={isFabOpen ? 0 : -1}
-                aria-hidden={!isFabOpen}
-                style={{ transitionDelay: isFabOpen ? `${(arr.length - 1 - i) * 45}ms` : '0ms' }}
-                className={`flex items-center gap-2.5 group cursor-pointer focus:outline-none transition-all duration-200 ease-out ${
-                  isFabOpen ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-3 scale-95'
-                }`}
+                className="flex items-center gap-2.5 group cursor-pointer focus:outline-none"
               >
                 <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-foreground shadow-xs select-none group-hover:bg-muted transition duration-150">
                   {label}
                 </span>
-                <div className={`size-11 rounded-full ${circleClass} text-white flex items-center justify-center shadow-lg active:scale-95 transition`}>
+                <div className={`size-11 rounded-full ${circleClass} text-white flex items-center justify-center shadow-lg transition`}>
                   <Icon className="size-5" />
                 </div>
-              </button>
+              </motion.button>
             ))}
-          </div>
+          </motion.div>
+          )}
+          </AnimatePresence>
 
           {/* Main FAB Toggle Button */}
-          <button
+          <motion.button
+            whileTap={{ scale: 0.92 }}
+            animate={{
+              rotate: (activeTab !== 'drafts' && isFabOpen) ? 135 : 0
+            }}
+            transition={{ type: "spring", stiffness: 260, damping: 20 }}
             onClick={() => {
               if (activeTab === 'drafts') {
                 handleSyncDraftBatch()
@@ -1817,23 +1836,22 @@ function App() {
                 setIsFabOpen(prev => !prev)
               }
             }}
-            className={`fixed right-6 flex items-center justify-center size-14 rounded-full text-white shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer ${
+            className={`fixed right-6 flex items-center justify-center size-14 rounded-full text-white shadow-xl cursor-pointer ${
               activeTab === 'drafts'
                 ? 'bg-gradient-to-tr from-emerald-600 to-green-500 shadow-emerald-500/20 z-40'
                 : 'bg-gradient-to-tr from-blue-600 to-sky-500 shadow-blue-500/10 z-40 md:hidden'
             }`}
             style={{
-              bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))',
-              transform: (activeTab !== 'drafts' && isFabOpen) ? 'rotate(135deg)' : 'rotate(0deg)'
+              bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))'
             }}
             title={activeTab === 'drafts' ? 'Sync Batch to Server' : 'Open Menu'}
           >
             {activeTab === 'drafts' ? (
               <Upload className="size-6" />
             ) : (
-              <Plus className="size-7" />
+              <Plus className="size-6" />
             )}
-          </button>
+          </motion.button>
         </>
       )}
     </div>
