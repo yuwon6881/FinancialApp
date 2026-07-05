@@ -780,11 +780,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Essentials Remaining */}
           {(() => {
             const essentialsCat = categories.find(c => c.name === 'Essentials')
-            const essBudget = essentialsCat?.budget ?? 0
-            const currentPct = essBudget > 0 ? Math.max(0, Math.min(1, (essentialsCat?.remaining ?? 0) / essBudget)) : 0
+            const essTotalAvailable = (essentialsCat?.budget ?? 0) + (essentialsCat?.target ?? 0)
+            const currentPct = essTotalAvailable > 0 ? Math.max(0, Math.min(1, (essentialsCat?.remaining ?? 0) / essTotalAvailable)) : 0
             const pendingEss = pendingDeductionsByCategory['Essentials'] || 0
             const projectedRemaining = Math.max(0, (essentialsCat?.remaining ?? 0) - pendingEss)
-            const projectedPct = (pendingEss > 0 && essBudget > 0) ? Math.max(0, Math.min(1, projectedRemaining / essBudget)) : currentPct
+            const projectedPct = (pendingEss > 0 && essTotalAvailable > 0) ? Math.max(0, Math.min(1, projectedRemaining / essTotalAvailable)) : currentPct
             const atRiskPct = pendingEss > 0 ? Math.max(0, currentPct - projectedPct) : 0
             return (
               <div 
@@ -816,7 +816,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   )}
                 </div>
                 <span className="text-[10px] text-muted-foreground block leading-relaxed">
-                  Based on total available budget ({formatSensitive(essBudget)}), including cycle income and leftover balance. Decreases with each spend.
+                  Based on total available budget ({formatSensitive(essTotalAvailable)}), including cycle income and leftover balance. Decreases with each spend.
                   {pendingEss > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(projectedRemaining)}</span>}
                 </span>
               </div>
@@ -1352,7 +1352,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <h3 className="text-base font-semibold text-foreground">Cycle Calendar</h3>
                   <p className="text-[10px] text-muted-foreground mt-0.5">{cycleLabel}</p>
                 </div>
-                <div className="overflow-x-auto pb-4 -mx-6 px-6 sm:mx-0 sm:px-0 sm:overflow-visible [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] touch-pan-x">
+                <div className="overflow-x-auto pb-4 -mx-6 px-6 sm:mx-0 sm:px-0 sm:overflow-visible [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   <div className="grid grid-cols-7 gap-1.5 sm:gap-2 text-center min-w-[420px] sm:min-w-0">
                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
                       <div key={d} className="text-[10px] md:text-xs text-muted-foreground font-bold pb-2">{d}</div>
