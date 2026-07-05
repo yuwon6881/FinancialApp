@@ -8,11 +8,11 @@ import { RowSyncBadge } from './ui/RowSyncBadge'
 import { formatCurrencyVal, maskCurrencyInput } from '../lib/utils'
 import { useFormDraft } from '../lib/useFormDraft'
 import {
-  Gift, 
+  Wallet,
+  PiggyBank,
   Plus, 
   Trash2, 
   ExternalLink, 
-  Sparkles, 
   Clock,
   CheckCircle2,
   Target,
@@ -245,6 +245,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   }
 
   const handleToggleActive = async (item: WishlistItem) => {
+    if (hideSensitive) return
     await onUpdateItem(item.id, {
       ...item,
       isActive: true
@@ -262,17 +263,17 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div
           onClick={() => onNavigateToLedger?.({ category: 'Rewards', showAllCycles: true })}
-          className="p-5 rounded-2xl bg-card border border-border/60 shadow-xs hover:border-pink-500/30 transition-all duration-300 group cursor-pointer flex items-center justify-between"
+          className="p-5 rounded-2xl bg-card border border-border/60 shadow-xs hover:border-blue-500/30 transition-all duration-300 group cursor-pointer flex items-center justify-between"
         >
           <div>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Rewards Balance</span>
-            <span className="text-xl font-black text-pink-500 mt-1 block">{formatSensitive(rewardsBalance)}</span>
-            <span className="text-[9px] text-pink-500 font-semibold mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-0.5">
+            <span className="text-xl font-black text-foreground mt-1 block">{formatSensitive(rewardsBalance)}</span>
+            <span className="text-[9px] text-blue-500 font-semibold mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-0.5">
               View History in Ledger <ExternalLink className="size-2.5" />
             </span>
           </div>
-          <div className="p-2.5 rounded-xl bg-pink-500/10 text-pink-500 group-hover:scale-110 transition-transform duration-300">
-            <Gift className="size-5" />
+          <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform duration-300">
+            <Wallet className="size-5" />
           </div>
         </div>
         
@@ -281,7 +282,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Total Goals Cost</span>
             <span className="text-xl font-black text-foreground mt-1 block">{formatSensitive(totalCost)}</span>
           </div>
-          <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500">
+          <div className="p-2.5 rounded-xl bg-slate-500/10 text-slate-500">
             <Target className="size-5" />
           </div>
         </div>
@@ -289,10 +290,10 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
         <div className="p-5 rounded-2xl bg-card border border-border/60 shadow-xs flex items-center justify-between">
           <div>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Claimable Goals</span>
-            <span className="text-xl font-black text-green-500 mt-1 block">{affordableCount} Items</span>
+            <span className="text-xl font-black text-foreground mt-1 block">{affordableCount} Items</span>
           </div>
-          <div className="p-2.5 rounded-xl bg-green-500/10 text-green-500">
-            <Sparkles className="size-5" />
+          <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500">
+            <PiggyBank className="size-5" />
           </div>
         </div>
       </div>
@@ -305,7 +306,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
         <div className="lg:col-span-7 space-y-4">
           <div className="flex justify-between items-center px-1">
             <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-              <Sparkles className="size-4 text-pink-500" />
+              <Target className="size-4 text-blue-500" />
               Active Goal Focus
             </h3>
             <button 
@@ -325,7 +326,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                 <div 
                   className={`p-6 rounded-2xl bg-card border transition-all duration-300 flex flex-col justify-between ${
                     canAfford 
-                      ? 'border-green-500/50 shadow-md shadow-green-500/5 ring-1 ring-green-500/10' 
+                      ? 'border-blue-500/50 shadow-md shadow-blue-500/5 ring-1 ring-blue-500/10' 
                       : 'border-border/60 shadow-xs'
                   }`}
                 >
@@ -341,8 +342,8 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                         {activeItem.priority} Priority
                       </span>
                       {canAfford ? (
-                        <span className="text-[10px] font-bold text-green-500 flex items-center gap-1">
-                          <Sparkles className="size-3.5 animate-spin" /> Ready to Claim
+                        <span className="text-[10px] font-bold text-blue-500 flex items-center gap-1">
+                          <PiggyBank className="size-3.5" /> Ready to Claim
                         </span>
                       ) : (
                         <span className="text-[10px] font-semibold text-muted-foreground flex items-center gap-1">
@@ -369,17 +370,13 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                     <div className="space-y-2 pt-2">
                       <div className="flex justify-between text-xs font-bold text-muted-foreground">
                         <span>Funded</span>
-                        <span className={canAfford ? 'text-green-500' : 'text-pink-500'}>
+                        <span className={canAfford ? 'text-blue-500' : 'text-foreground'}>
                           {pct.toFixed(0)}%
                         </span>
                       </div>
                       <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
                         <div 
-                          className={`h-full transition-all duration-500 rounded-full ${
-                            canAfford 
-                              ? 'bg-gradient-to-r from-green-400 to-green-500' 
-                              : 'bg-gradient-to-r from-pink-500 to-purple-500'
-                          }`}
+                          className="h-full bg-blue-500 transition-all duration-500 rounded-full"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -438,7 +435,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                       disabled={!canAfford}
                       className={`flex-1 py-3 text-xs font-extrabold rounded-xl transition duration-200 cursor-pointer text-center ${
                         canAfford
-                          ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-md shadow-green-600/10'
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/10'
                           : 'bg-muted text-muted-foreground cursor-not-allowed'
                       }`}
                     >
@@ -455,7 +452,9 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                     </button>
                     <button
                       onClick={() => onDeleteItem(activeItem.id)}
-                      className="p-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl border border-red-500/20 transition cursor-pointer"
+                      disabled={hideSensitive}
+                      title={hideSensitive ? 'Unhide balances to edit' : undefined}
+                      className="p-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl border border-red-500/20 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <Trash2 className="size-4" />
                     </button>
@@ -465,7 +464,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
             })()
           ) : (
             <div className="p-8 rounded-2xl bg-card border border-border/60 border-dashed text-center flex flex-col items-center justify-center min-h-[300px]">
-              <Gift className="size-10 text-muted-foreground/60 mb-2 animate-bounce" />
+              <Target className="size-10 text-muted-foreground/60 mb-2" />
               <h4 className="font-bold text-foreground text-sm">No Active Focus Item</h4>
               <p className="text-xs text-muted-foreground max-w-xs mt-1">Set a goal from your wishlist queue below or create a new target to track savings progress.</p>
               <button 
@@ -498,7 +497,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                     hint={idx === 0}
                     disabled={isBusy}
                     className={`rounded-xl border shadow-xs transition duration-200 group ${
-                      canAfford ? 'border-green-500/30' : 'border-border/60 hover:border-blue-500/20'
+                      canAfford ? 'border-blue-500/30' : 'border-border/60 hover:border-blue-500/20'
                     }`}
                     contentClassName="p-4"
                     actionsWidth={174}
@@ -568,13 +567,13 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                           ) : null}
                         </h4>
                         {canAfford && (
-                          <span className="size-1.5 rounded-full bg-green-500 animate-pulse shrink-0" title="Ready to claim" />
+                          <span className="size-1.5 rounded-full bg-blue-500 shrink-0" title="Ready to claim" />
                         )}
                       </div>
                       <div className="text-sm font-extrabold text-foreground">{formatSensitive(item.price)}</div>
                       <div className="w-full bg-muted rounded-full h-1 overflow-hidden">
                         <div
-                          className={`h-full ${canAfford ? 'bg-green-500' : 'bg-pink-500'}`}
+                          className="h-full bg-blue-500"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -595,14 +594,14 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
       {purchasedItems.length > 0 && (
         <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs">
           <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5 mb-4">
-            <CheckCircle2 className="size-4 text-green-500" />
+            <CheckCircle2 className="size-4 text-blue-500" />
             Purchased Rewards History ({purchasedItems.length})
           </h3>
           <div className="divide-y divide-border/30 text-xs font-semibold">
             {purchasedItems.map(item => (
               <div key={item.id} className="py-3 flex items-center justify-between text-foreground">
                 <div className="flex items-center gap-2">
-                  <span className="p-1.5 rounded-lg bg-green-500/10 text-green-500">
+                  <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
                     <CheckCircle2 className="size-3.5" />
                   </span>
                   <div>

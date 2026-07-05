@@ -940,13 +940,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               onClick={() => onNavigate('wishlist')}
               className={`metric-card interactive-card app-panel p-6 rounded-2xl bg-card/92 border transition-all duration-300 group cursor-pointer ${
                 canAfford 
-                  ? 'border-green-500/50 hover:border-green-500/70 shadow-md shadow-green-500/5 ring-1 ring-green-500/10' 
-                  : 'border-border/60 hover:border-pink-500/30'
+                  ? 'border-blue-500/50 hover:border-blue-500/70 shadow-md shadow-blue-500/5 ring-1 ring-blue-500/10' 
+                  : 'border-border/60 hover:border-blue-500/30'
               }`}
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-semibold text-muted-foreground truncate max-w-[70%]">Goal: {activeWishlistItem.name}</span>
-                <div className={`p-2 rounded-lg ${canAfford ? 'bg-green-500/10 text-green-500' : 'bg-pink-500/10 text-pink-500'} group-hover:scale-110 transition-transform duration-300`}>
+                <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform duration-300">
                   <PiggyBank className="size-4" />
                 </div>
               </div>
@@ -956,11 +956,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               
               <div className="w-full bg-muted rounded-full h-2.5 mt-2 overflow-hidden flex">
                 <div 
-                  className={`h-full transition-all duration-500 rounded-full ${
-                    canAfford 
-                      ? 'bg-green-500' 
-                      : 'bg-gradient-to-r from-pink-500 to-purple-500'
-                  }`}
+                  className="h-full bg-blue-500 transition-all duration-500 rounded-full"
                   style={{ width: `${pct}%` }}
                 />
               </div>
