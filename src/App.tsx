@@ -777,7 +777,9 @@ function App() {
   }
 
   const handleToggleActive = (id: string) => {
-    setPendingOps(prev => enqueue(prev, 'recurringPayment', 'toggle', id))
+    const current = allRecurringPayments.find(p => String(p.id) === String(id))
+    const payload = current ? { active: !current.active } : undefined
+    setPendingOps(prev => enqueue(prev, 'recurringPayment', 'toggle', id, payload))
   }
 
   const handleUpdatePayment = (id: string, payment: RecurringPayment) => {

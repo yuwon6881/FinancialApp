@@ -86,22 +86,27 @@ export function enqueue(
   }
 
   if (type === 'toggle') {
+    // payload carries the desired absolute { active } state (mirrors 'update'),
+    // so replaying this op against a stale or freshly-refetched base list is idempotent.
     if (hasQueuedAdd) {
-      // Toggle against an unsent add: flip active in place on add payload
+      // Toggle against an unsent add: set active in place on add payload
       return queue.map(op => {
         if (op.entity === entity && op.targetId === targetIdStr && op.type === 'add') {
+          const nextActive = payload && typeof payload.active === 'boolean' ? payload.active : !op.payload.active
           return {
             ...op,
-            payload: { ...op.payload, active: !op.payload.active }
+            payload: { ...op.payload, active: nextActive }
           }
         }
         return op
       })
     } else {
-      // Toggle against an already-queued toggle cancels out (remove existing toggle)
+      // Toggle against an existing entity: replace existing queued toggle payload or append
       const existingToggleIndex = queue.findIndex(op => op.entity === entity && op.targetId === targetIdStr && op.type === 'toggle')
       if (existingToggleIndex >= 0) {
-        return queue.filter((_, idx) => idx !== existingToggleIndex)
+        const next = [...queue]
+        next[existingToggleIndex] = { ...next[existingToggleIndex], payload }
+        return next
       }
       return [...queue, newOp]
     }
@@ -161,9 +166,14 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
       const existingIndex = result.findIndex(item => String(item.id) === targetStr)
       if (existingIndex >= 0) {
         const item = result[existingIndex] as any
+        // Prefer the absolute desired state captured at click time; only fall back to a
+        // relative flip for legacy queued ops (e.g. persisted from before this fix) that
+        // have no payload. A relative flip here would double-apply against a refreshed
+        // base list and flicker the toggle back to the old state.
+        const nextActive = op.payload && typeof op.payload.active === 'boolean' ? op.payload.active : !item.active
         result[existingIndex] = {
           ...item,
-          active: !item.active,
+          active: nextActive,
           isPendingSync: !op.isCompleted
         }
       }
