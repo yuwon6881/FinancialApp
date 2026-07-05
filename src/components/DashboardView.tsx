@@ -584,7 +584,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <div className="text-right font-medium text-foreground">{formatSensitive(c.target)}</div>
                   <div className="text-right text-muted-foreground font-medium">{formatSensitive(c.budget)}</div>
                   <div className={`text-right font-medium ${c.netChange < 0 ? 'text-orange-500' : c.netChange > 0 ? 'text-blue-500' : ''}`}>
-                    <div>{c.netChange > 0 ? '+' : ''}{formatSensitive(c.netChange)}</div>
+                    <div>{c.netChange > 0 ? '+' : ''}{hideSensitive ? '••••••' : <AnimatedNumber value={c.netChange} formatFn={formatCurrency} />}</div>
                     {pendingDeductionsByCategory[c.name] > 0 && (
                       <div className="text-[10px] text-yellow-500 font-normal flex items-center justify-end gap-1 mt-0.5">
                         <Clock className="size-3" />
@@ -595,7 +595,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <div className="flex items-center justify-end gap-1.5 text-right">
                     <div className="flex min-w-[96px] flex-col items-end gap-1">
                       <div className={`font-bold ${isNeg ? 'text-orange-500' : 'text-foreground'}`}>
-                        {formatSensitive(c.remaining)}
+                        {hideSensitive ? '••••••' : <AnimatedNumber value={c.remaining} formatFn={formatCurrency} />}
                       </div>
                       {pendingDeductionsByCategory[c.name] > 0 && (
                         <div className={`text-[10px] font-semibold flex items-center justify-end gap-1 mt-0.5 ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
@@ -675,7 +675,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <div>
                     <span className="text-muted-foreground text-[10px] block mb-0.5">Net Change (This Cycle)</span>
                     <span className={`font-semibold ${c.netChange < 0 ? 'text-orange-500' : c.netChange > 0 ? 'text-blue-500' : 'text-foreground'}`}>
-                      {c.netChange > 0 ? '+' : ''}{formatSensitive(c.netChange)}
+                      {c.netChange > 0 ? '+' : ''}{hideSensitive ? '••••••' : <AnimatedNumber value={c.netChange} formatFn={formatCurrency} />}
                     </span>
                     {pendingDeductionsByCategory[c.name] > 0 && (
                       <span className="text-[10px] text-yellow-500 flex items-center gap-1 font-normal mt-0.5">
@@ -688,7 +688,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <span className="text-muted-foreground text-[10px] block mb-0.5">Remaining Balance</span>
                     <div className="flex items-center gap-1.5">
                       <span className={`font-bold ${isNeg ? 'text-orange-500' : 'text-foreground'}`}>
-                        {formatSensitive(c.remaining)}
+                        {hideSensitive ? '••••••' : <AnimatedNumber value={c.remaining} formatFn={formatCurrency} />}
                       </span>
                       <button
                         type="button"
@@ -956,7 +956,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
               </div>
               <div className="text-2xl font-black text-foreground">
-                {pct.toFixed(0)}%
+                <AnimatedNumber value={pct} formatFn={(val) => val.toFixed(0) + '%'} />
               </div>
               
               <div className="w-full bg-muted rounded-full h-2.5 mt-2 overflow-hidden flex">
@@ -967,7 +967,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
 
               <p className="text-[10px] text-muted-foreground mt-2 flex justify-between">
-                <span>{formatSensitive(rewardsBalance)} saved</span>
+                <span>{hideSensitive ? '••••••' : <AnimatedNumber value={rewardsBalance} formatFn={formatCurrency} />} saved</span>
                 <span className="font-semibold text-foreground">{formatSensitive(activeWishlistItem.price)}</span>
               </p>
             </div>
@@ -1352,58 +1352,64 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <h3 className="text-base font-semibold text-foreground">Cycle Calendar</h3>
                   <p className="text-[10px] text-muted-foreground mt-0.5">{cycleLabel}</p>
                 </div>
-                <div className="grid grid-cols-7 gap-1.5 text-center">
-                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-                    <div key={d} className="text-[10px] md:text-xs text-muted-foreground font-bold pb-2">{d}</div>
-                  ))}
-                  {/* Empty cells before start */}
-                  {Array.from({ length: startDow }).map((_, i) => (
-                    <div key={`empty-${i}`} />
-                  ))}
-                  {days.map((day) => {
-                    const ds = formatDate(day)
-                    const net = netByDay[ds]
-                    const recs = recurringByDay[ds] || []
-                    const hasNet = net !== undefined
-                    const isPositive = hasNet && net >= 0
-                    const isToday = ds === todayStr
+                <div className="overflow-x-auto pb-4 -mx-6 px-6 sm:mx-0 sm:px-0 sm:overflow-visible [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] touch-pan-x">
+                  <div className="grid grid-cols-7 gap-1.5 sm:gap-2 text-center min-w-[420px] sm:min-w-0">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                      <div key={d} className="text-[10px] md:text-xs text-muted-foreground font-bold pb-2">{d}</div>
+                    ))}
+                    {/* Empty cells before start */}
+                    {Array.from({ length: startDow }).map((_, i) => (
+                      <div key={`empty-${i}`} />
+                    ))}
+                    {days.map((day, idx) => {
+                      const ds = formatDate(day)
+                      const net = netByDay[ds]
+                      const recs = recurringByDay[ds] || []
+                      const hasNet = net !== undefined
+                      const isPositive = hasNet && net >= 0
+                      const isToday = ds === todayStr
 
-                    let cellClass = "relative h-12 xs:h-14 md:h-16 w-full rounded-xl flex flex-col items-center justify-center gap-0.5 md:gap-1 transition-all duration-200 border text-[10px] md:text-xs cursor-pointer"
-                    if (isToday) {
-                      cellClass += " ring-2 ring-blue-500 ring-offset-2 ring-offset-card bg-blue-500/10 border-blue-500/30"
-                    } else if (hasNet) {
-                      if (isPositive) {
-                        cellClass += " bg-blue-500/8 dark:bg-blue-950/20 border-blue-500/20 hover:border-blue-500/40 hover:bg-blue-500/12"
+                      let cellClass = "relative h-12 xs:h-14 md:h-16 w-full rounded-xl flex flex-col items-center justify-center gap-0.5 md:gap-1 transition-all duration-200 border text-[10px] md:text-xs cursor-pointer"
+                      if (isToday) {
+                        cellClass += " ring-2 ring-blue-500 ring-offset-2 ring-offset-card bg-blue-500/10 border-blue-500/30"
+                      } else if (hasNet) {
+                        if (isPositive) {
+                          cellClass += " bg-blue-500/8 dark:bg-blue-950/20 border-blue-500/20 hover:border-blue-500/40 hover:bg-blue-500/12 hover:shadow-lg hover:shadow-blue-500/10"
+                        } else {
+                          cellClass += " bg-orange-500/8 dark:bg-orange-950/20 border-orange-500/20 hover:border-orange-500/40 hover:bg-orange-500/12 hover:shadow-lg hover:shadow-orange-500/10"
+                        }
                       } else {
-                        cellClass += " bg-orange-500/8 dark:bg-orange-950/20 border-orange-500/20 hover:border-orange-500/40 hover:bg-orange-500/12"
+                        cellClass += " bg-muted/5 dark:bg-muted/10 border-border/40 hover:bg-muted/20"
                       }
-                    } else {
-                      cellClass += " bg-muted/5 dark:bg-muted/10 border-border/40 hover:bg-muted/20"
-                    }
 
-                    return (
-                      <div
-                        key={ds}
-                        title={hasNet
-                          ? `${formatDisplayDate(day)}: ${net >= 0 ? '+' : ''}${net.toFixed(2)}${recs.length ? '\nBills: ' + recs.join(', ') : ''}`
-                          : recs.length ? `${formatDisplayDate(day)}\nBills: ${recs.join(', ')}` : formatDisplayDate(day)}
-                        className={cellClass}
-                        onClick={() => onNavigateToLedger?.({ date: ds })}
-                      >
-                        <span className={`leading-none text-xs md:text-sm font-bold ${isToday ? 'text-blue-500' : 'text-foreground/90'}`}>
-                          {day.getDate()}
-                        </span>
-                        {hasNet && (
-                          <span className={`text-[8px] xs:text-[9px] sm:text-[10px] md:text-xs font-black leading-none mt-0.5 ${isPositive ? 'text-blue-500 dark:text-blue-400' : 'text-orange-500 dark:text-orange-400'}`}>
-                            {formatCompactSensitive(net)}
+                      return (
+                        <motion.div
+                          key={ds}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.3, delay: idx * 0.01 }}
+                          whileTap={{ scale: 0.95 }}
+                          title={hasNet
+                            ? `${formatDisplayDate(day)}: ${net >= 0 ? '+' : ''}${net.toFixed(2)}${recs.length ? '\nBills: ' + recs.join(', ') : ''}`
+                            : recs.length ? `${formatDisplayDate(day)}\nBills: ${recs.join(', ')}` : formatDisplayDate(day)}
+                          className={cellClass}
+                          onClick={() => onNavigateToLedger?.({ date: ds })}
+                        >
+                          <span className={`leading-none text-xs md:text-sm font-bold ${isToday ? 'text-blue-500' : 'text-foreground/90'}`}>
+                            {day.getDate()}
                           </span>
-                        )}
-                        {recs.length > 0 && (
-                          <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                        )}
-                      </div>
-                    )
-                  })}
+                          {hasNet && (
+                            <span className={`text-[8px] xs:text-[9px] sm:text-[10px] md:text-xs font-black leading-none mt-0.5 ${isPositive ? 'text-blue-500 dark:text-blue-400' : 'text-orange-500 dark:text-orange-400'}`}>
+                              {formatCompactSensitive(net)}
+                            </span>
+                          )}
+                          {recs.length > 0 && (
+                            <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                          )}
+                        </motion.div>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
             )
