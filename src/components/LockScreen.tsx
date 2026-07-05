@@ -13,7 +13,8 @@ interface LockScreenProps {
 export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
   const [lockPassword, setLockPassword] = useState('')
   const [lockError, setLockError] = useState<string | null>(null)
-  const [lockVerifying, setLockVerifying] = useState(false)
+  const [passwordVerifying, setPasswordVerifying] = useState(false)
+  const [fingerprintVerifying, setFingerprintVerifying] = useState(false)
   const [fingerprintAvailable, setFingerprintAvailable] = useState(false)
 
   useEffect(() => {
@@ -26,8 +27,6 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
         const status = await api.fetchAuthStatus()
         if (cancelled || !status.hasFingerprint) return
         setFingerprintAvailable(true)
-        // Auto-trigger fingerprint unlock on screen lock open
-        handleFingerprintUnlock()
       } catch {
         // Backend unreachable - fall through to password unlock only.
       }
@@ -37,7 +36,7 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
   }, [isOpen])
 
   const handleFingerprintUnlock = async () => {
-    setLockVerifying(true)
+    setFingerprintVerifying(true)
     setLockError(null)
     try {
       const { challengeId, options } = await api.getFingerprintAssertOptions()
@@ -51,7 +50,7 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
         setLockError(err.message || 'Fingerprint unlock failed. Please use your password.')
       }
     } finally {
-      setLockVerifying(false)
+      setFingerprintVerifying(false)
     }
   }
 
@@ -70,18 +69,18 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
           <button
             type="button"
             onClick={handleFingerprintUnlock}
-            disabled={lockVerifying}
+            disabled={fingerprintVerifying || passwordVerifying}
             className="press-scale w-full py-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold text-sm rounded-xl transition duration-200 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/10"
           >
             <Fingerprint className="size-5 text-emerald-400 animate-pulse" />
-            {lockVerifying ? 'Verifying Fingerprint...' : 'Unlock with Fingerprint'}
+            {fingerprintVerifying ? 'Verifying Fingerprint...' : 'Unlock with Fingerprint'}
           </button>
         )}
 
         <form
           onSubmit={async (e) => {
             e.preventDefault()
-            setLockVerifying(true)
+            setPasswordVerifying(true)
             setLockError(null)
             try {
               const res = await api.verifyPassword(lockPassword)
@@ -94,7 +93,7 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
             } catch {
               setLockError('Could not connect to server (backend waking up?). Please wait a moment and try again.')
             } finally {
-              setLockVerifying(false)
+              setPasswordVerifying(false)
             }
           }}
           className="w-full space-y-3"
@@ -113,10 +112,10 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
           )}
           <button
             type="submit"
-            disabled={lockVerifying}
+            disabled={passwordVerifying || fingerprintVerifying}
             className="press-scale w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-xl shadow-lg shadow-blue-600/20 transition cursor-pointer"
           >
-            {lockVerifying ? 'Unlocking...' : 'Unlock with Password'}
+            {passwordVerifying ? 'Unlocking...' : 'Unlock with Password'}
           </button>
         </form>
         <button
@@ -129,3 +128,4 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
     </div>
   )
 }
+

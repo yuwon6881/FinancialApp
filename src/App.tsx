@@ -1486,7 +1486,7 @@ function App() {
           syncCountdownMs > 0
             ? `Retrying ${Math.ceil(syncCountdownMs / 1000)}s`
             : activeSyncId
-              ? 'Syncing 1 item'
+              ? 'Syncing...'
               : pendingOps.length > 0
                 ? `${pendingOps.length} queued`
                 : isBackgroundSyncing
