@@ -40,9 +40,9 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
     setLockVerifying(true)
     setLockError(null)
     try {
-      const { challengeId, options } = await api.getFingerprintLoginOptions()
+      const { challengeId, options } = await api.getFingerprintAssertOptions()
       const credential = await getFingerprintAssertion(options)
-      await api.verifyFingerprintLogin(challengeId, credential)
+      await api.verifyFingerprintAssert(challengeId, credential)
       setLockPassword('')
       onUnlocked()
     } catch (err: any) {

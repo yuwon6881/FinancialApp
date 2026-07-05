@@ -1263,9 +1263,9 @@ function App() {
     try {
       const status = await api.fetchAuthStatus()
       if (!status.hasFingerprint) return false
-      const { challengeId, options } = await api.getFingerprintLoginOptions()
+      const { challengeId, options } = await api.getFingerprintAssertOptions()
       const credential = await getFingerprintAssertion(options)
-      await api.verifyFingerprintLogin(challengeId, credential)
+      await api.verifyFingerprintAssert(challengeId, credential)
       setHideSensitive(false)
       localStorage.setItem('hide_sensitive', 'false')
       setPendingOps(prev => enqueue(prev, 'settings', 'update', 'hideSensitive', { hideSensitive: false }))

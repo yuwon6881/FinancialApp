@@ -819,4 +819,33 @@ export async function verifyFingerprintLogin(challengeId: string, credential: un
   return data
 }
 
+// WebAuthn (fingerprint) re-verification against the CALLER'S EXISTING
+// session -- unlocking the lock screen or proving identity to reveal
+// sensitive figures. Unlike verifyFingerprintLogin, this never issues a new
+// session token (mirrors verifyPassword's "reuse the current session" shape).
+export async function getFingerprintAssertOptions(): Promise<{ challengeId: string; options: AssertionOptionsJson }> {
+  const response = await fetch(`${API_BASE_URL}/auth/webauthn/assert/options`, {
+    method: 'POST',
+    headers: getHeaders(),
+  })
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Fingerprint verification is not available')
+  }
+  return response.json()
+}
+
+export async function verifyFingerprintAssert(challengeId: string, credential: unknown): Promise<{ verified: boolean }> {
+  const response = await fetch(`${API_BASE_URL}/auth/webauthn/assert/verify`, {
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ challengeId, credential }),
+  })
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Fingerprint verification failed')
+  }
+  return response.json()
+}
+
 
