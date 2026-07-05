@@ -20,11 +20,11 @@ import { formatCurrencyVal } from './lib/utils'
 import { CustomAlertModal } from './components/ui/CustomAlertModal'
 import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 import { PullToRefresh } from './components/ui/PullToRefresh'
-import { ToastViewport, type ToastMessage, type ToastTone } from './components/ui/ToastViewport'
+import { ToastViewport, type ToastMessage, type ToastTone, type ToastAction } from './components/ui/ToastViewport'
 import { CardSkeleton, Skeleton } from './components/ui/Skeleton'
 import { CACHE_KEYS, getCachedJSON, getCachedTransactions, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod, getCachedOps, getCachedCycleSnapshot, setCachedCycleSnapshot } from './lib/cache'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from './lib/modalDrafts'
-import { enqueue, applyOpsToList, createFinalId, createLocalWishlistId, DISPATCH, sanitizeQueuedOps, getSyncSuccessToast, type QueuedOp } from './lib/outbox'
+import { enqueue, applyOpsToList, createFinalId, createLocalWishlistId, DISPATCH, sanitizeQueuedOps, getSyncSuccessToast, type QueuedOp, type EntityKind } from './lib/outbox'
 import { PendingSubscriptionsModal } from './components/PendingSubscriptionsModal'
 import { PasswordPromptModal } from './components/PasswordPromptModal'
 import { LockScreen } from './components/LockScreen'
@@ -175,9 +175,91 @@ function App() {
   } | null>(null)
   const [toasts, setToasts] = useState<ToastMessage[]>([])
 
-  const showToast = (message: string, title: string = 'Notification', tone: ToastTone = 'info') => {
+  const showToast = (message: string, title: string = 'Notification', tone: ToastTone = 'info', action?: ToastAction) => {
     const id = Date.now().toString(36) + Math.random().toString(36).substring(2, 7)
-    setToasts(prev => [...prev.slice(-3), { id, message, title, tone }])
+    setToasts(prev => [...prev.slice(-3), { id, message, title, tone, action }])
+  }
+
+  // "Before" snapshots for undo, keyed by `${entity}:${targetId}`. Captured at the moment
+  // of a reversible update/delete so the drain loop can build a compensating op once the
+  // change has synced. First-write-wins per key: if several edits to the same record are
+  // coalesced into one queued op (and one toast), undo reverts to the earliest known state.
+  const undoSnapshotsRef = useRef<Map<string, any>>(new Map())
+  const snapshotForUndo = (entity: EntityKind, targetId: string, obj: any) => {
+    if (!obj) return
+    const key = `${entity}:${targetId}`
+    if (undoSnapshotsRef.current.has(key)) return
+    // Drop local-only flags so the restored record looks like a clean server payload.
+    const clean = { ...obj }
+    delete clean.isPendingSync
+    delete clean.isPendingDelete
+    undoSnapshotsRef.current.set(key, clean)
+  }
+
+  // Build the "Undo" action for a just-synced op by enqueuing a compensating op. Runs
+  // after sync (that's when the success toast fires), so undo is a real reverse mutation,
+  // not a queue cancellation. Returns undefined for ops that can't be cleanly reversed
+  // (wishlist purchase, settings) or when the needed "before" snapshot is missing.
+  const buildUndoAction = (op: QueuedOp, result: any): ToastAction | undefined => {
+    const key = `${op.entity}:${op.targetId}`
+    const before = undoSnapshotsRef.current.get(key)
+    undoSnapshotsRef.current.delete(key) // snapshots are single-use
+
+    switch (`${op.entity}:${op.type}`) {
+      // Adds -> delete the record that was just created.
+      case 'transaction:add':
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'transaction', 'delete', String(op.targetId))) }
+      case 'recurringPayment:add':
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'recurringPayment', 'delete', String(op.targetId))) }
+      case 'category:add':
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'category', 'delete', String(op.targetId))) }
+      case 'wishlistItem:add': {
+        // The server-assigned id only exists post-sync; use it, not the local placeholder.
+        const realId = result && result.id != null ? String(result.id) : String(op.targetId)
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'wishlistItem', 'delete', realId)) }
+      }
+
+      // Deletes -> re-add the captured record (reusing its id where the API accepts one).
+      case 'transaction:delete':
+        if (!before) return undefined
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'transaction', 'add', String(before.id), { ...before })) }
+      case 'recurringPayment:delete':
+        if (!before) return undefined
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'recurringPayment', 'add', String(before.id), { ...before })) }
+      case 'category:delete':
+        if (!before) return undefined
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'category', 'add', String(before.id), { ...before })) }
+      case 'wishlistItem:delete': {
+        if (!before) return undefined
+        // Wishlist ids are server-generated, so a re-add takes a fresh local placeholder id.
+        const placeholderId = String(createLocalWishlistId())
+        const payload = { ...before }
+        delete payload.id
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'wishlistItem', 'add', placeholderId, payload)) }
+      }
+
+      // Updates -> restore the captured prior values.
+      case 'transaction:update':
+        if (!before) return undefined
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'transaction', 'update', String(op.targetId), { ...before })) }
+      case 'recurringPayment:update':
+        if (!before) return undefined
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'recurringPayment', 'update', String(op.targetId), { ...before })) }
+      case 'wishlistItem:update':
+        if (!before) return undefined
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'wishlistItem', 'update', String(op.targetId), { ...before })) }
+
+      // Toggle -> flip back to the prior active state.
+      case 'recurringPayment:toggle': {
+        if (!op.payload || typeof op.payload.active !== 'boolean') return undefined
+        const priorActive = !op.payload.active
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'recurringPayment', 'toggle', String(op.targetId), { active: priorActive })) }
+      }
+
+      // wishlistItem:purchase and settings:update have no clean reverse — no undo.
+      default:
+        return undefined
+    }
   }
 
   const dismissToast = useCallback((id: string) => {
@@ -666,6 +748,7 @@ function App() {
   }
 
   const handleDeleteCategory = (id: string) => {
+    snapshotForUndo('category', String(id), allCategories.find(cat => String(cat.id) === String(id)))
     setPendingOps(prev => enqueue(prev, 'category', 'delete', id))
   }
 
@@ -745,12 +828,14 @@ function App() {
       deleteId = id.split('-split-')[0]
     }
     setDeletingTxId(deleteId)
+    snapshotForUndo('transaction', deleteId, allTransactions.find(t => String(t.id) === deleteId))
     setPendingOps(prev => enqueue(prev, 'transaction', 'delete', deleteId))
     if (deleteId === editingPendingId) setEditingPendingId(null)
   }
 
   const handleUpdateTransaction = (id: string, updatedTx: Omit<Transaction, 'id'>) => {
     triggerVibration(15)
+    snapshotForUndo('transaction', String(id), allTransactions.find(t => String(t.id) === String(id)))
     setPendingOps(prev => enqueue(prev, 'transaction', 'update', id, updatedTx))
     if (id === editingPendingId) setEditingPendingId(null)
   }
@@ -794,10 +879,12 @@ function App() {
   }
 
   const handleUpdatePayment = (id: string, payment: RecurringPayment) => {
+    snapshotForUndo('recurringPayment', String(id), allRecurringPayments.find(p => String(p.id) === String(id)))
     setPendingOps(prev => enqueue(prev, 'recurringPayment', 'update', id, payment))
   }
 
   const handleDeletePayment = (id: string) => {
+    snapshotForUndo('recurringPayment', String(id), allRecurringPayments.find(p => String(p.id) === String(id)))
     setPendingOps(prev => enqueue(prev, 'recurringPayment', 'delete', id))
   }
 
@@ -826,10 +913,12 @@ function App() {
   }
 
   const handleUpdateWishlistItem = (id: number, updatedWish: WishlistItem) => {
+    snapshotForUndo('wishlistItem', String(id), allWishlist.find(w => String(w.id) === String(id)))
     setPendingOps(prev => enqueue(prev, 'wishlistItem', 'update', String(id), updatedWish))
   }
 
   const handleDeleteWishlistItem = (id: number) => {
+    snapshotForUndo('wishlistItem', String(id), allWishlist.find(w => String(w.id) === String(id)))
     setPendingOps(prev => enqueue(prev, 'wishlistItem', 'delete', String(id)))
   }
 
@@ -909,7 +998,7 @@ function App() {
     setIsBackgroundSyncing(true);
 
     let processedAny = false;
-    const successfulOps: QueuedOp[] = [];
+    const successfulOps: Array<{ op: QueuedOp; result: any }> = [];
 
     try {
       while (true) {
@@ -962,7 +1051,7 @@ function App() {
 
           setError(null);
           processedAny = true;
-          successfulOps.push(nextOp);
+          successfulOps.push({ op: nextOp, result });
         } catch (err: any) {
           console.error(`Failed to sync ${nextOp.entity}:${nextOp.type}:`, err);
           const isAuthError = err.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'));
@@ -1018,10 +1107,10 @@ function App() {
         
         // Show toasts only after UI is refreshed so they are fully "final". Copy (and any
         // opt-out) lives in one place — lib/outbox.ts — so new op types need no changes here.
-        successfulOps.forEach(op => {
+        successfulOps.forEach(({ op, result }) => {
           const toast = getSyncSuccessToast(op)
           if (!toast) return
-          showToast(toast.message, toast.title, toast.tone)
+          showToast(toast.message, toast.title, toast.tone, buildUndoAction(op, result))
         })
       }
     } finally {
