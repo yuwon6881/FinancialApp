@@ -187,7 +187,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const rpList = dashboardData?.activeRecurringPayments
     if (rpList) {
       rpList.forEach((rp: any) => {
-        if (!rp.isPaid) {
+        // Only a bill still awaiting action should be projected as an upcoming deduction --
+        // isPaid alone is false for both "not yet paid" and "discarded", and a discarded bill
+        // isn't coming out of the budget, so status is the only field that distinguishes them.
+        if (rp.status === 'Pending') {
           const cat = rp.ledgerCategory || rp.category
           if (cat && sums[cat] !== undefined) {
             sums[cat] += Math.abs(rp.amount)
