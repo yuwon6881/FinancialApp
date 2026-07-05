@@ -24,6 +24,7 @@ import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput, displayLedgerC
 import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } from '../lib/categoryColors'
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../lib/csvExport'
 import { useDialog } from '../lib/useDialog'
+import { useFormDraft } from '../lib/useFormDraft'
 
 interface LedgerViewProps {
   transactions: Transaction[]
@@ -176,6 +177,29 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   })
 
   const [editingTxId, setEditingTxId] = useState<string | null>(null)
+
+  // Keep the in-progress add/edit form across an interrupted session (see
+  // useFormDraft) -- reopens with exactly what the user had typed.
+  const { clearDraft: clearFormDraft } = useFormDraft(
+    'ledger-tx-form',
+    showAddForm,
+    { editingTxId, description, amount, txType, category, ledgerCategory, transferSource, transferTarget, date },
+    (draft) => {
+      setEditingTxId(draft.editingTxId)
+      setDescription(draft.description)
+      setAmount(draft.amount)
+      setTxType(draft.txType)
+      setCategory(draft.category)
+      setLedgerCategory(draft.ledgerCategory)
+      setTransferSource(draft.transferSource)
+      setTransferTarget(draft.transferTarget)
+      setDate(draft.date)
+      if (draft.editingTxId && onStartEditPending) {
+        onStartEditPending(draft.editingTxId.startsWith('temp_') ? draft.editingTxId : null)
+      }
+      setShowAddForm(true)
+    }
+  )
 
   const firstInputRef = React.useRef<HTMLInputElement>(null)
 
@@ -641,6 +665,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
     setEditingTxId(null)
     setShowAddForm(false)
+    clearFormDraft()
   }
 
   // Fully reset and close the transaction modal (used by Cancel / close / backdrop)
@@ -656,6 +681,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
     setEditingTxId(null)
     setShowAddForm(false)
+    clearFormDraft()
   }
 
   // Modal a11y: focus trap + Escape. The first Escape is consumed by the open
@@ -1776,7 +1802,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               <Search className="size-4 text-muted-foreground ml-3 shrink-0" />
               <input
                 type="text"
-                placeholder=""
+                placeholder="Search description, category..."
                 value={pendingSearchTerm}
                 onChange={e => setPendingSearchTerm(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') handleServerSearch() }}
@@ -1800,7 +1826,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder=""
+              placeholder="Search description, category..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-4 py-2 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"

@@ -4,6 +4,7 @@ import { CustomSelect } from './ui/CustomSelect'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { BottomSheet } from './ui/BottomSheet'
 import { formatCurrencyVal, maskCurrencyInput } from '../lib/utils'
+import { useFormDraft } from '../lib/useFormDraft'
 import {
   Gift, 
   Plus, 
@@ -87,6 +88,41 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   const [priorityInput, setPriorityInput] = useState('Medium')
   const [isActiveInput, setIsActiveInput] = useState(false)
 
+  // Keep in-progress modal fields across an interrupted session (see
+  // useFormDraft) -- reopens the right modal with what the user had typed.
+  const { clearDraft: clearAddDraft } = useFormDraft(
+    'wishlist-add',
+    showAddModal,
+    { nameInput, priceInput, priorityInput, isActiveInput },
+    (draft) => {
+      setNameInput(draft.nameInput)
+      setPriceInput(draft.priceInput)
+      setPriorityInput(draft.priorityInput)
+      setIsActiveInput(draft.isActiveInput)
+      setShowAddModal(true)
+    }
+  )
+
+  const { clearDraft: clearEditDraft } = useFormDraft(
+    'wishlist-edit',
+    showEditModal,
+    { editingItemId: editingItem?.id ?? null, nameInput, priceInput, priorityInput, isActiveInput },
+    (draft) => {
+      if (draft.editingItemId == null) return
+      // If the item was deleted elsewhere while this device was logged out,
+      // just skip reopening -- the stale entry is harmless and gets
+      // overwritten the next time this modal opens for any item.
+      const found = wishlist.find(w => String(w.id) === String(draft.editingItemId))
+      if (!found) return
+      setEditingItem(found)
+      setNameInput(draft.nameInput)
+      setPriceInput(draft.priceInput)
+      setPriorityInput(draft.priorityInput)
+      setIsActiveInput(draft.isActiveInput)
+      setShowEditModal(true)
+    }
+  )
+
   // Separate active (hero) item and queued items
   const activeItem = useMemo(() => {
     return wishlist.find(w => w.isActive && !w.isPurchased) || 
@@ -160,6 +196,17 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     setShowEditModal(true)
   }
 
+  const closeAddModal = () => {
+    setShowAddModal(false)
+    clearAddDraft()
+  }
+
+  const closeEditModal = () => {
+    setShowEditModal(false)
+    setEditingItem(null)
+    clearEditDraft()
+  }
+
   const handleSaveAdd = async (e: React.FormEvent) => {
     e.preventDefault()
     const price = parseFloat(priceInput)
@@ -171,7 +218,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
       priority: priorityInput,
       isActive: isActiveInput
     }
-    setShowAddModal(false)
+    closeAddModal()
     await onAddItem(newGoal)
   }
 
@@ -189,9 +236,9 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
       priority: priorityInput,
       isActive: isActiveInput
     }
-    setShowEditModal(false)
-    setEditingItem(null)
-    await onUpdateItem(editingItem.id, updatedGoal)
+    const targetId = editingItem.id
+    closeEditModal()
+    await onUpdateItem(targetId, updatedGoal)
   }
 
   const handleToggleActive = async (item: WishlistItem) => {
@@ -600,7 +647,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
         <BottomSheet
           isOpen={showAddModal}
           title="Add New Wish Goal"
-          onClose={() => setShowAddModal(false)}
+          onClose={closeAddModal}
           maxWidthClassName="max-w-md"
         >
             <form onSubmit={handleSaveAdd} className="space-y-4 text-xs font-semibold">
@@ -660,7 +707,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               <div className="flex items-center gap-3 border-t border-border/30 pt-4 mt-6">
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
+                  onClick={closeAddModal}
                   className="flex-1 py-2.5 bg-muted hover:bg-muted/80 text-muted-foreground rounded-xl font-bold transition cursor-pointer"
                 >
                   Cancel
@@ -681,7 +728,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
         <BottomSheet
           isOpen={showEditModal}
           title="Edit Wish Goal"
-          onClose={() => setShowEditModal(false)}
+          onClose={closeEditModal}
           maxWidthClassName="max-w-md"
         >
             <form onSubmit={handleSaveEdit} className="space-y-4 text-xs font-semibold">
@@ -739,7 +786,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               <div className="flex items-center gap-3 border-t border-border/30 pt-4 mt-6">
                 <button
                   type="button"
-                  onClick={() => setShowEditModal(false)}
+                  onClick={closeEditModal}
                   className="flex-1 py-2.5 bg-muted hover:bg-muted/80 text-muted-foreground rounded-xl font-bold transition cursor-pointer"
                 >
                   Cancel

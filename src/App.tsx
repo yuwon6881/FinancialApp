@@ -23,6 +23,7 @@ import { PullToRefresh } from './components/ui/PullToRefresh'
 import { ToastViewport, type ToastMessage, type ToastTone } from './components/ui/ToastViewport'
 import { CardSkeleton, Skeleton } from './components/ui/Skeleton'
 import { CACHE_KEYS, getCachedJSON, getCachedTransactions, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod, getCachedOps } from './lib/cache'
+import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from './lib/modalDrafts'
 import { enqueue, applyOpsToList, createFinalId, createLocalWishlistId, DISPATCH, sanitizeQueuedOps, type QueuedOp } from './lib/outbox'
 import { PendingSubscriptionsModal } from './components/PendingSubscriptionsModal'
 import { PasswordPromptModal } from './components/PasswordPromptModal'
@@ -365,7 +366,13 @@ function App() {
             setIsLocked(true)
             sessionStorage.setItem('session_locked', 'true')
           })
-          .catch(err => console.warn('Failed to lock session on server, bypassing local lock to prevent fake lock state:', err))
+          .catch(err => {
+            if (err?.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
+              handleLogout()
+            } else {
+              console.warn('Failed to lock session on server, bypassing local lock to prevent fake lock state:', err)
+            }
+          })
       }
     }, 15000)
     return () => clearInterval(interval)
@@ -393,6 +400,7 @@ function App() {
   const handleLogout = async () => {
     const currentPending = pendingOpsRef.current;
     const currentDrafts = draftTxRef.current;
+    const currentFailed = failedOpsRef.current;
     const currentOwner = usernameRef.current;
 
     if (currentPending.length > 0) {
@@ -402,6 +410,12 @@ function App() {
     if (currentDrafts.length > 0) {
       localStorage.setItem('draft_transactions_backup', JSON.stringify({ owner: currentOwner, transactions: currentDrafts }));
     }
+
+    if (currentFailed.length > 0) {
+      localStorage.setItem('failed_operations_backup', JSON.stringify({ owner: currentOwner, ops: currentFailed }));
+    }
+
+    backupModalDraftsOnLogout(currentOwner);
 
     await api.logout()
     setToken(null)
@@ -435,6 +449,7 @@ function App() {
     localStorage.removeItem(CACHE_KEYS.pendingOperations)
     localStorage.removeItem('failed_operations')
     localStorage.removeItem('draft_transactions')
+    clearAllModalDrafts()
     setIsLocked(false)
   }
 
@@ -571,6 +586,35 @@ function App() {
       }
       localStorage.removeItem('draft_transactions_backup');
     }
+
+    // Ops that had already exhausted their retries before the logout get
+    // folded back into the live queue (with a clean retry count) instead of
+    // staying stranded in "failed" -- the session/network that caused them
+    // to fail is presumably fixed now that the user has logged back in.
+    const cachedFailedBackup = localStorage.getItem('failed_operations_backup');
+    if (cachedFailedBackup) {
+      try {
+        const parsed = JSON.parse(cachedFailedBackup);
+        if (parsed && parsed.owner === newUsername) {
+          const backedUpFailed = sanitizeQueuedOps(parsed.ops).map(op => ({ ...op, retryCount: 0 }));
+          if (backedUpFailed.length > 0) {
+            setPendingOps(prev => {
+              const merged = [...prev, ...backedUpFailed];
+              setCachedJSON(CACHE_KEYS.pendingOperations, merged);
+              return merged;
+            });
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse backed up failed operations:', e);
+      }
+      localStorage.removeItem('failed_operations_backup');
+    }
+
+    // Restore any modal that was mid-edit when the session was interrupted --
+    // the owning view reopens it and repopulates its fields once mounted
+    // (see useFormDraft). Gated on the same owner check as everything else.
+    restoreModalDraftsOnLogin(newUsername);
   }
 
   // Period / Settings changes
@@ -579,9 +623,13 @@ function App() {
     try {
       await api.selectPeriod(month, year)
       await loadAll(month, year, true)
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      alert('Error updating active month.')
+      if (err.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
+        handleLogout()
+      } else {
+        alert('Error updating active month.')
+      }
     } finally {
       setIsSwitchingCycle(false)
     }
@@ -798,6 +846,7 @@ function App() {
   // Background Sync Queue Worker Refs
   const pendingOpsRef = useRef(pendingOps);
   const draftTxRef = useRef(draftTransactions);
+  const failedOpsRef = useRef(failedOps);
   const usernameRef = useRef(username);
   const editingPendingIdRef = useRef(editingPendingId);
   const syncBackoffUntilRef = useRef(syncBackoffUntil);
@@ -809,6 +858,10 @@ function App() {
   useEffect(() => {
     draftTxRef.current = draftTransactions;
   }, [draftTransactions]);
+
+  useEffect(() => {
+    failedOpsRef.current = failedOps;
+  }, [failedOps]);
 
   useEffect(() => {
     usernameRef.current = username;
@@ -899,8 +952,21 @@ function App() {
           successfulOps.push(nextOp);
         } catch (err: any) {
           console.error(`Failed to sync ${nextOp.entity}:${nextOp.type}:`, err);
-          if (err.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
+          const isAuthError = err.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'));
+          const isLockError = err.message && err.message.includes('423');
+          const isJustLoggedIn = Date.now() - lastUnlockedTimeRef.current < 10000;
+
+          if (isAuthError && !isJustLoggedIn) {
             handleLogout();
+            break;
+          } else if (isAuthError || isLockError) {
+            // Either a spurious 401 racing a fresh login, or the session is
+            // momentarily locked (423) -- wait it out without burning a
+            // retry or ever moving the op to failedOps.
+            setError(isLockError ? 'Sync pending: session is locked...' : 'Sync pending: reconnecting...');
+            const backoff = Date.now() + (isLockError ? 15000 : 3000);
+            syncBackoffUntilRef.current = backoff;
+            setSyncBackoffUntil(backoff);
             break;
           } else {
             const updatedRetryCount = (nextOp.retryCount || 0) + 1;
@@ -939,6 +1005,7 @@ function App() {
         
         // Show toasts only after UI is refreshed so they are fully "final"
         successfulOps.forEach(op => {
+          if (op.entity === 'settings' && op.type === 'update' && (op.targetId === 'darkMode' || op.targetId === 'hideSensitive')) return
           const entityMap: Record<string, string> = {
             settings: 'Settings',
             category: 'Category',
@@ -1201,7 +1268,7 @@ function App() {
       await api.verifyFingerprintLogin(challengeId, credential)
       setHideSensitive(false)
       localStorage.setItem('hide_sensitive', 'false')
-      api.updateHideSensitive(false).catch(err => console.warn('Hide sensitive sync failed:', err))
+      setPendingOps(prev => enqueue(prev, 'settings', 'update', 'hideSensitive', { hideSensitive: false }))
       return true
     } catch (err) {
       console.warn('Fingerprint prompt failed/cancelled:', err)
@@ -1218,16 +1285,15 @@ function App() {
     } else {
       setHideSensitive(true)
       localStorage.setItem('hide_sensitive', 'true')
-      api.updateHideSensitive(true).catch(err => console.warn('Hide sensitive sync failed:', err))
+      setPendingOps(prev => enqueue(prev, 'settings', 'update', 'hideSensitive', { hideSensitive: true }))
     }
   }
 
-  const handleToggleDarkMode = async () => {
+  const handleToggleDarkMode = () => {
     const newDark = !darkMode
     setDarkMode(newDark)
     localStorage.setItem('dark_mode', newDark.toString())
-    // Persist to server (non-blocking, non-fatal)
-    api.updateDarkMode(newDark).catch(err => console.warn('Dark mode sync failed:', err))
+    setPendingOps(prev => enqueue(prev, 'settings', 'update', 'darkMode', { darkMode: newDark }))
   }
 
   // Delegate to the shared haptics helper which tries the Capacitor native
@@ -1517,7 +1583,7 @@ function App() {
           setHideSensitive(false)
           localStorage.setItem('hide_sensitive', 'false')
           setShowPasswordPrompt(false)
-          api.updateHideSensitive(false).catch(err => console.warn('Hide sensitive sync failed:', err))
+          setPendingOps(prev => enqueue(prev, 'settings', 'update', 'hideSensitive', { hideSensitive: false }))
         }}
         onTryFingerprint={hasFingerprintSetup ? revealSensitiveWithFingerprint : undefined}
       />

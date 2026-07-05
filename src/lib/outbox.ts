@@ -202,7 +202,11 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<any>> = {
   'category:add': (op) => api.addCategory({ ...op.payload, id: op.targetId }),
   'category:delete': (op) => api.deleteCategory(op.targetId),
 
-  'settings:update': (op) => api.updateSettings(op.payload)
+  'settings:update': (op) => {
+    if (op.targetId === 'darkMode') return api.updateDarkMode(op.payload.darkMode)
+    if (op.targetId === 'hideSensitive') return api.updateHideSensitive(op.payload.hideSensitive)
+    return api.updateSettings(op.payload)
+  }
 }
 
 function isWellFormedOp(op: unknown): op is QueuedOp {
