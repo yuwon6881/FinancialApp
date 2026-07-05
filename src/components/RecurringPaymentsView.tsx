@@ -1,22 +1,20 @@
 import React, { useState } from 'react'
 import type { RecurringPayment, TransactionCategory, ActiveRecurringPayment, Transaction } from '../types'
-import { 
-  Plus, 
-  Trash2, 
-  ToggleLeft, 
-  ToggleRight, 
-  CreditCard, 
-  Calendar, 
-  Bell, 
+import {
+  Plus,
+  Trash2,
+  CreditCard,
+  Calendar,
+  Bell,
   X,
   Edit
 } from 'lucide-react'
 import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput } from '../lib/utils'
-import { triggerHaptic } from '../lib/haptics'
 import { CustomSelect } from './ui/CustomSelect'
 import { BottomSheet } from './ui/BottomSheet'
 import { CycleSkeleton } from './ui/Skeleton'
 import { RowSyncBadge } from './ui/RowSyncBadge'
+import { ToggleButton } from './ui/ToggleButton'
 import { BillTimeline } from './BillTimeline'
 import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } from '../lib/categoryColors'
 
@@ -156,6 +154,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (hideSensitive && editingPayment) return
     if (!name || !amount || !startDateInput) return
     
     // Parse the start date to extract the day of the month as DueDate
@@ -537,17 +536,11 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                   </div>
                   
                   {/* Status Toggle Button */}
-                  <button
-                    onClick={() => { triggerHaptic(10); onToggleActive(rp.id) }}
-                    disabled={isBusy}
-                    className="text-muted-foreground hover:text-foreground cursor-pointer transition duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {rp.active ? (
-                      <ToggleRight className="size-8 text-blue-500" />
-                    ) : (
-                      <ToggleLeft className="size-8" />
-                    )}
-                  </button>
+                  <ToggleButton
+                    active={rp.active}
+                    onClick={() => onToggleActive(rp.id)}
+                    disabled={isBusy || hideSensitive}
+                  />
                 </div>
 
                 <div className="mt-4 flex items-baseline gap-1">
@@ -590,6 +583,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
+                      if (hideSensitive) return
                       setName(rp.name)
                       setAmount(Math.abs(rp.amount).toFixed(2))
                       setCategory(rp.category)
@@ -599,17 +593,17 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                       setEditingPayment(rp)
                       setShowAddForm(true)
                     }}
-                    disabled={isBusy}
+                    disabled={isBusy || hideSensitive}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-blue-500 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/15 cursor-pointer transition duration-150 text-xs font-bold active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none"
-                    title="Edit subscription"
+                    title={hideSensitive ? 'Unhide balances to edit' : 'Edit subscription'}
                   >
                     <Edit className="size-3.5" /> Edit
                   </button>
                   <button
-                    onClick={() => onDeletePayment(rp.id)}
-                    disabled={isBusy}
+                    onClick={() => { if (!hideSensitive) onDeletePayment(rp.id) }}
+                    disabled={isBusy || hideSensitive}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-orange-500 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/15 cursor-pointer transition duration-150 text-xs font-bold active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none"
-                    title="Delete subscription"
+                    title={hideSensitive ? 'Unhide balances to edit' : 'Delete subscription'}
                   >
                     <Trash2 className="size-3.5" /> Delete
                   </button>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Fingerprint } from 'lucide-react'
 import * as api from '../lib/api'
 import { AppLogo } from './ui/AppLogo'
-import { isFingerprintSupported, getFingerprintAssertion } from '../lib/webauthn'
+import { isPlatformAuthenticatorAvailable, getFingerprintAssertion } from '../lib/webauthn'
 
 interface LockScreenProps {
   isOpen: boolean
@@ -21,7 +21,7 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
 
     let cancelled = false
     ;(async () => {
-      if (!isFingerprintSupported()) return
+      if (!(await isPlatformAuthenticatorAvailable())) return
       try {
         const status = await api.fetchAuthStatus()
         if (cancelled || !status.hasFingerprint) return

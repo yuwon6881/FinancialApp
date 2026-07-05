@@ -44,6 +44,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
   }
 
   const handleStartEdit = (draft: Transaction) => {
+    if (hideSensitive) return
     setEditingDraftId(draft.id)
     setDescription(draft.description)
     setAmount(Math.abs(draft.amount).toString())
@@ -165,14 +166,16 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                 <>
                   <button
                     onClick={() => handleStartEdit(draft)}
-                    className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-500 text-white text-[11px] font-bold active:bg-blue-600 transition"
+                    disabled={hideSensitive}
+                    className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-500 text-white text-[11px] font-bold active:bg-blue-600 transition disabled:opacity-50 disabled:pointer-events-none"
                   >
                     <Edit2 className="size-4" />
                     Edit
                   </button>
                   <button
-                    onClick={() => onDeleteDraftTransaction(draft.id)}
-                    className="flex-1 flex flex-col items-center justify-center gap-1 bg-red-500 text-white text-[11px] font-bold active:bg-red-600 transition"
+                    onClick={() => { if (!hideSensitive) onDeleteDraftTransaction(draft.id) }}
+                    disabled={hideSensitive}
+                    className="flex-1 flex flex-col items-center justify-center gap-1 bg-red-500 text-white text-[11px] font-bold active:bg-red-600 transition disabled:opacity-50 disabled:pointer-events-none"
                   >
                     <Trash2 className="size-4" />
                     Delete
@@ -183,15 +186,17 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                 <>
                   <button
                     onClick={() => handleStartEdit(draft)}
-                    className="p-2 hover:bg-muted rounded-xl text-muted-foreground hover:text-foreground cursor-pointer transition select-none"
-                    title="Edit draft item"
+                    disabled={hideSensitive}
+                    className="p-2 hover:bg-muted rounded-xl text-muted-foreground hover:text-foreground cursor-pointer transition select-none disabled:opacity-40 disabled:cursor-not-allowed"
+                    title={hideSensitive ? 'Unhide balances to edit' : 'Edit draft item'}
                   >
                     <Edit2 className="size-4" />
                   </button>
                   <button
-                    onClick={() => onDeleteDraftTransaction(draft.id)}
-                    className="p-2 hover:bg-red-500/10 rounded-xl text-muted-foreground hover:text-red-500 cursor-pointer transition select-none"
-                    title="Remove from batch list"
+                    onClick={() => { if (!hideSensitive) onDeleteDraftTransaction(draft.id) }}
+                    disabled={hideSensitive}
+                    className="p-2 hover:bg-red-500/10 rounded-xl text-muted-foreground hover:text-red-500 cursor-pointer transition select-none disabled:opacity-40 disabled:cursor-not-allowed"
+                    title={hideSensitive ? 'Unhide balances to edit' : 'Remove from batch list'}
                   >
                     <Trash2 className="size-4" />
                   </button>

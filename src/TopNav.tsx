@@ -314,32 +314,41 @@ const TopNav: React.FC<TopNavProps> = ({
                       </div>
                     )
                     const startConfirm = () => {
+                      if (hideSensitive) return
                       setConfirmNotiId(noti.id)
                       setPaidDate(noti.billingDate)
                     }
                     const discardNotification = () => {
+                      if (hideSensitive) return
                       onDiscardSubscription?.(noti)
                       setIsBellOpen(false)
+                    }
+                    const requestDelete = () => {
+                      if (hideSensitive) return
+                      setNotiToDelete(noti)
                     }
                     const notificationActions = (
                       <>
                         <button
                           onClick={startConfirm}
-                          className="flex-1 min-h-[44px] min-w-[44px] px-2 flex items-center justify-center bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-[10px] font-extrabold transition cursor-pointer"
+                          disabled={hideSensitive}
+                          className="flex-1 min-h-[44px] min-w-[44px] px-2 flex items-center justify-center bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-[10px] font-extrabold transition cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                         >
                           Pay
                         </button>
                         {onDiscardSubscription && (
                           <button
                             onClick={discardNotification}
-                            className="flex-1 min-h-[44px] min-w-[44px] px-2 flex items-center justify-center bg-slate-700 hover:bg-slate-800 active:bg-slate-900 text-white text-[10px] font-extrabold transition cursor-pointer"
+                            disabled={hideSensitive}
+                            className="flex-1 min-h-[44px] min-w-[44px] px-2 flex items-center justify-center bg-slate-700 hover:bg-slate-800 active:bg-slate-900 text-white text-[10px] font-extrabold transition cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                           >
                             Skip
                           </button>
                         )}
                         <button
-                          onClick={() => setNotiToDelete(noti)}
-                          className="flex-1 min-h-[44px] min-w-[44px] px-2 flex items-center justify-center bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-[10px] font-extrabold transition cursor-pointer"
+                          onClick={requestDelete}
+                          disabled={hideSensitive}
+                          className="flex-1 min-h-[44px] min-w-[44px] px-2 flex items-center justify-center bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-[10px] font-extrabold transition cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                         >
                           Remove
                         </button>
@@ -349,23 +358,27 @@ const TopNav: React.FC<TopNavProps> = ({
                       <>
                         <button
                           onClick={startConfirm}
-                          className="px-2 py-1 bg-blue-500/15 hover:bg-blue-500/25 text-blue-500 font-bold text-[9px] rounded transition cursor-pointer text-center whitespace-nowrap"
+                          disabled={hideSensitive}
+                          title={hideSensitive ? 'Unhide balances to edit' : undefined}
+                          className="px-2 py-1 bg-blue-500/15 hover:bg-blue-500/25 text-blue-500 font-bold text-[9px] rounded transition cursor-pointer text-center whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           Pay
                         </button>
                         {onDiscardSubscription && (
                           <button
                             onClick={discardNotification}
-                            className="px-2 py-1 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-[9px] rounded transition cursor-pointer text-center whitespace-nowrap"
-                            title="Discard this cycle's payment"
+                            disabled={hideSensitive}
+                            title={hideSensitive ? 'Unhide balances to edit' : "Discard this cycle's payment"}
+                            className="px-2 py-1 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-[9px] rounded transition cursor-pointer text-center whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
                           >
                             Skip
                           </button>
                         )}
                         <button
-                          onClick={() => setNotiToDelete(noti)}
-                          className="px-2 py-1 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-[9px] rounded border border-orange-500/10 transition cursor-pointer text-center whitespace-nowrap"
-                          title="Delete subscription definition entirely"
+                          onClick={requestDelete}
+                          disabled={hideSensitive}
+                          title={hideSensitive ? 'Unhide balances to edit' : 'Delete subscription definition entirely'}
+                          className="px-2 py-1 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-[9px] rounded border border-orange-500/10 transition cursor-pointer text-center whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           Remove
                         </button>

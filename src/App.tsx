@@ -30,7 +30,7 @@ import { PasswordPromptModal } from './components/PasswordPromptModal'
 import { LockScreen } from './components/LockScreen'
 import { AppLogo } from './components/ui/AppLogo'
 import { triggerHaptic } from './lib/haptics'
-import { isFingerprintSupported, getFingerprintAssertion } from './lib/webauthn'
+import { isPlatformAuthenticatorAvailable, getFingerprintAssertion } from './lib/webauthn'
 
 const createLocalId = (prefix: string, separator = '_') => {
   return `${prefix}${separator}${Date.now()}${separator}${Math.random().toString(36).substring(2, 9)}`
@@ -465,8 +465,11 @@ function App() {
   const [hasFingerprintSetup, setHasFingerprintSetup] = useState<boolean>(false)
 
   useEffect(() => {
-    if (!token || !isFingerprintSupported()) return
-    api.fetchAuthStatus().then(res => setHasFingerprintSetup(res.hasFingerprint)).catch(() => undefined)
+    if (!token) return
+    isPlatformAuthenticatorAvailable().then(available => {
+      if (!available) return
+      api.fetchAuthStatus().then(res => setHasFingerprintSetup(res.hasFingerprint)).catch(() => undefined)
+    })
   }, [token])
 
   // Cycle switching state for skeleton loader
@@ -743,6 +746,7 @@ function App() {
 
   // Custom Categories & Accounts modifiers
   const handleAddCategory = (newCat: Omit<TransactionCategory, 'id'>) => {
+    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     const finalId = createFinalId('category')
     setPendingOps(prev => enqueue(prev, 'category', 'add', finalId, { ...newCat, id: finalId }))
   }
@@ -753,6 +757,7 @@ function App() {
   }
 
   const requestDeleteCategory = (id: string) => {
+    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     const category = categoriesList.find(cat => cat.id === id)
     setConfirmModalData({
       title: 'Delete Category',
@@ -783,6 +788,7 @@ function App() {
   }
 
   const handleUpdateDraftTransaction = (id: string, updated: Transaction) => {
+    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     setDraftTransactions(prev => prev.map(t => t.id === id ? updated : t));
     triggerVibration(15);
   };
@@ -793,6 +799,7 @@ function App() {
   };
 
   const requestDeleteDraftTransaction = (id: string) => {
+    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     const draft = draftTransactions.find(t => t.id === id)
     setConfirmModalData({
       title: 'Delete Draft',
@@ -822,6 +829,7 @@ function App() {
   };
 
   const handleDeleteTransaction = (id: string) => {
+    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     triggerVibration(30)
     let deleteId = id
     if (id.includes('-split-')) {
@@ -834,6 +842,7 @@ function App() {
   }
 
   const handleUpdateTransaction = (id: string, updatedTx: Omit<Transaction, 'id'>) => {
+    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     triggerVibration(15)
     snapshotForUndo('transaction', String(id), allTransactions.find(t => String(t.id) === String(id)))
     setPendingOps(prev => enqueue(prev, 'transaction', 'update', id, updatedTx))
@@ -841,6 +850,7 @@ function App() {
   }
 
   const handleConfirmSubscription = (noti: any, paidDate: string) => {
+    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     const finalId = createFinalId('transaction')
     setPendingOps(prev => enqueue(prev, 'transaction', 'add', finalId, {
       id: finalId,
@@ -854,6 +864,7 @@ function App() {
   }
 
   const handleDiscardSubscription = (noti: any) => {
+    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     const finalId = createFinalId('transaction')
     setPendingOps(prev => enqueue(prev, 'transaction', 'add', finalId, {
       id: finalId,
@@ -873,12 +884,14 @@ function App() {
   }
 
   const handleToggleActive = (id: string) => {
+    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     const current = allRecurringPayments.find(p => String(p.id) === String(id))
     const payload = current ? { active: !current.active } : undefined
     setPendingOps(prev => enqueue(prev, 'recurringPayment', 'toggle', id, payload))
   }
 
   const handleUpdatePayment = (id: string, payment: RecurringPayment) => {
+    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     snapshotForUndo('recurringPayment', String(id), allRecurringPayments.find(p => String(p.id) === String(id)))
     setPendingOps(prev => enqueue(prev, 'recurringPayment', 'update', id, payment))
   }
@@ -889,6 +902,7 @@ function App() {
   }
 
   const requestDeletePayment = (id: string) => {
+    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     const payment = recurringPayments.find(p => p.id === id)
     setConfirmModalData({
       title: 'Delete Subscription',
@@ -913,6 +927,7 @@ function App() {
   }
 
   const handleUpdateWishlistItem = (id: number, updatedWish: WishlistItem) => {
+    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     snapshotForUndo('wishlistItem', String(id), allWishlist.find(w => String(w.id) === String(id)))
     setPendingOps(prev => enqueue(prev, 'wishlistItem', 'update', String(id), updatedWish))
   }
@@ -923,6 +938,7 @@ function App() {
   }
 
   const requestDeleteWishlistItem = (id: number) => {
+    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     const item = wishlist.find(w => w.id === id)
     setConfirmModalData({
       title: 'Delete Wishlist Item',
@@ -1356,7 +1372,7 @@ function App() {
   }
 
   const revealSensitiveWithFingerprint = async (): Promise<boolean> => {
-    if (!isFingerprintSupported()) return false
+    if (!(await isPlatformAuthenticatorAvailable())) return false
     try {
       const status = await api.fetchAuthStatus()
       if (!status.hasFingerprint) return false
@@ -1544,6 +1560,7 @@ function App() {
             }}
             activeSyncId={activeSyncId}
             deletingId={deletingTxId}
+            onToast={showToast}
           />
         )}
 
