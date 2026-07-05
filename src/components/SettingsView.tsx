@@ -422,14 +422,43 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </p>
               </div>
               {categoryUsage && visibleCategories.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setShowUsageDetails(v => !v)}
-                  className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-muted-foreground bg-background border border-border/60 hover:text-foreground hover:bg-muted transition cursor-pointer"
-                >
-                  Usage
-                  {showUsageDetails ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
-                </button>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowUsageDetails(v => !v)}
+                    className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-muted-foreground bg-background border border-border/60 hover:text-foreground hover:bg-muted transition cursor-pointer"
+                  >
+                    Usage
+                    {showUsageDetails ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+                  </button>
+
+                  {showUsageDetails && (
+                    <div className="absolute right-0 top-full mt-2 w-72 md:w-80 z-50 bg-card border border-border/80 shadow-lg rounded-xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-150">
+                      <p className="text-[10px] text-muted-foreground leading-relaxed">
+                        Usage over the last {USAGE_LOOKBACK_CYCLES} cycles, least used first. Categories with no recent activity are good candidates to remove.
+                      </p>
+                      <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                        {categoryUsage.map(({ category, count }) => (
+                          <div
+                            key={category.id}
+                            className={`flex items-center justify-between gap-2 border px-2.5 py-1.5 rounded-lg text-[11px] ${
+                              count === 0 ? 'bg-orange-500/5 border-orange-500/25' : 'bg-background border-border/50'
+                            }`}
+                          >
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded border font-semibold ${getCategoryBadgeClass(category.name)}`}>
+                              {category.name}
+                            </span>
+                            {count === 0 ? (
+                              <span className="text-orange-500 font-semibold text-right text-[10px]">No activity in last {USAGE_LOOKBACK_CYCLES} cycles</span>
+                            ) : (
+                              <span className="text-muted-foreground font-semibold text-[10px]">{count}&times; in {USAGE_LOOKBACK_CYCLES} cycles</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
@@ -438,31 +467,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <AlertCircle className="size-3 shrink-0" />
                 {usageError}
               </p>
-            )}
-
-            {showUsageDetails && categoryUsage && (
-              <div className="space-y-1.5 pr-1 max-h-56 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150">
-                <p className="text-[10px] text-muted-foreground">
-                  Usage over the last {USAGE_LOOKBACK_CYCLES} cycles, least used first. Categories with no recent activity are good candidates to remove.
-                </p>
-                {categoryUsage.map(({ category, count }) => (
-                  <div
-                    key={category.id}
-                    className={`flex items-center justify-between gap-2 border px-2.5 py-1.5 rounded-lg text-[11px] ${
-                      count === 0 ? 'bg-orange-500/5 border-orange-500/25' : 'bg-background border-border/50'
-                    }`}
-                  >
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded border font-semibold ${getCategoryBadgeClass(category.name)}`}>
-                      {category.name}
-                    </span>
-                    {count === 0 ? (
-                      <span className="text-orange-500 font-semibold text-right">No activity in last {USAGE_LOOKBACK_CYCLES} cycles</span>
-                    ) : (
-                      <span className="text-muted-foreground font-semibold">{count}&times; in {USAGE_LOOKBACK_CYCLES} cycles</span>
-                    )}
-                  </div>
-                ))}
-              </div>
             )}
 
             <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1 select-none">
