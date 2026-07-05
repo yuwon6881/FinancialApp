@@ -1,14 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Fingerprint, ShieldCheck, Bell } from 'lucide-react'
+import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Fingerprint, ShieldCheck, Bell, ChevronDown, ChevronUp } from 'lucide-react'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { RowSyncBadge } from './ui/RowSyncBadge'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
+import { MONTH_NAMES, getCycleRangeDates, getStartOfNCyclesAgo } from '../lib/cycle'
 import * as api from '../lib/api'
 import type { FingerprintCredentialSummary } from '../lib/api'
 import { isFingerprintSupported, createFingerprintCredential, getFriendlyDeviceLabel } from '../lib/webauthn'
 
 const DEVICE_ENROLLED_KEY = 'fingerprint_enrolled_on_this_device'
+
+// How far back to look when flagging a category as unused/rarely used. Long enough that
+// categories only touched a couple times a year (insurance, annual renewals) aren't
+// mislabeled after one quiet cycle, short enough to reflect current habits.
+const USAGE_LOOKBACK_CYCLES = 6
 
 interface SettingsViewProps {
   dashboardData: DashboardData | null
@@ -87,6 +93,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [cycleDayInput, setCycleDayInput] = useState('28')
   const [currencyInput, setCurrencyInput] = useState('USD')
   const [newCatName, setNewCatName] = useState('')
+  const [showUsageDetails, setShowUsageDetails] = useState(false)
+  const [usageTransactions, setUsageTransactions] = useState<{ category: string; date: string }[] | null>(null)
+  const [usageError, setUsageError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    api.fetchTransactions(undefined, undefined, true)
+      .then(txs => {
+        if (!cancelled) setUsageTransactions(txs.filter(t => !t.isPendingDelete))
+      })
+      .catch(() => {
+        if (!cancelled) setUsageError('Could not load category usage.')
+      })
+    return () => { cancelled = true }
+  }, [])
 
   // Fingerprint (WebAuthn) state
   const [fingerprintCredentials, setFingerprintCredentials] = useState<FingerprintCredentialSummary[]>([])
@@ -233,6 +254,34 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     return lower !== 'transfer' && lower !== 'adjustment'
   })
 
+  const categoryUsage = useMemo(() => {
+    if (!usageTransactions) return null
+
+    const activeMonthIdx = MONTH_NAMES.indexOf(activeSettings.selectedMonth) + 1
+    if (activeMonthIdx <= 0) return null
+    const rangeStart = getStartOfNCyclesAgo(activeSettings.selectedYear, activeMonthIdx, activeSettings.cycleDay, USAGE_LOOKBACK_CYCLES)
+    const rangeEnd = getCycleRangeDates(activeSettings.selectedYear, activeMonthIdx, activeSettings.cycleDay).end
+
+    const statsByName = new Map<string, { count: number; lastUsed: string | null }>()
+    for (const cat of visibleCategories) {
+      statsByName.set(cat.name.trim().toLowerCase(), { count: 0, lastUsed: null })
+    }
+
+    for (const tx of usageTransactions) {
+      const stat = statsByName.get(tx.category.trim().toLowerCase())
+      if (!stat) continue
+      const txDate = new Date(tx.date)
+      if (txDate >= rangeStart && txDate <= rangeEnd) stat.count++
+      if (!stat.lastUsed || txDate > new Date(stat.lastUsed)) stat.lastUsed = tx.date
+    }
+
+    return visibleCategories
+      .map(cat => ({ category: cat, ...statsByName.get(cat.name.trim().toLowerCase())! }))
+      .sort((a, b) => a.count - b.count)
+  }, [usageTransactions, visibleCategories, activeSettings.selectedMonth, activeSettings.selectedYear, activeSettings.cycleDay])
+
+  const unusedCategoryCount = categoryUsage ? categoryUsage.filter(c => c.count === 0).length : 0
+
   return (
     <div className="space-y-6 soft-rise">
       <div className="flex flex-col gap-2 p-4 sm:p-6 bg-card rounded-2xl border border-border/60">
@@ -354,9 +403,61 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-bold text-foreground">Transaction Categories</h3>
-                <p className="text-[11px] text-muted-foreground mt-0.5">{visibleCategories.length} active categories.</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {visibleCategories.length} active categories.
+                  {categoryUsage && unusedCategoryCount > 0 && (
+                    <> · <span className="text-orange-500 font-semibold">{unusedCategoryCount} unused in last {USAGE_LOOKBACK_CYCLES} cycles</span></>
+                  )}
+                  {categoryUsage && unusedCategoryCount === 0 && visibleCategories.length > 0 && (
+                    <> · <span className="text-emerald-500 font-semibold">all used recently</span></>
+                  )}
+                </p>
               </div>
+              {categoryUsage && visibleCategories.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowUsageDetails(v => !v)}
+                  className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-muted-foreground bg-background border border-border/60 hover:text-foreground hover:bg-muted transition cursor-pointer"
+                >
+                  Usage
+                  {showUsageDetails ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+                </button>
+              )}
             </div>
+
+            {usageError && (
+              <p className="text-[10px] font-semibold text-orange-500 flex items-center gap-1">
+                <AlertCircle className="size-3 shrink-0" />
+                {usageError}
+              </p>
+            )}
+
+            {showUsageDetails && categoryUsage && (
+              <div className="space-y-1.5 pr-1 max-h-56 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150">
+                <p className="text-[10px] text-muted-foreground">
+                  Usage over the last {USAGE_LOOKBACK_CYCLES} cycles, least used first. Categories with no recent activity are good candidates to remove.
+                </p>
+                {categoryUsage.map(({ category, count, lastUsed }) => (
+                  <div
+                    key={category.id}
+                    className={`flex items-center justify-between gap-2 border px-2.5 py-1.5 rounded-lg text-[11px] ${
+                      count === 0 ? 'bg-orange-500/5 border-orange-500/25' : 'bg-background border-border/50'
+                    }`}
+                  >
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded border font-semibold ${getCategoryBadgeClass(category.name)}`}>
+                      {category.name}
+                    </span>
+                    {count === 0 ? (
+                      <span className="text-orange-500 font-semibold text-right">
+                        {lastUsed ? `Unused since ${new Date(lastUsed).toLocaleDateString()}` : 'Never used'}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground font-semibold">{count}&times; in {USAGE_LOOKBACK_CYCLES} cycles</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1 select-none">
               {visibleCategories.map(cat => {
