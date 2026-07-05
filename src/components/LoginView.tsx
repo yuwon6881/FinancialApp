@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Lock, User, ShieldAlert, Sparkles, Eye, EyeOff, Fingerprint } from 'lucide-react'
 import * as api from '../lib/api'
 import { AppLogo } from './ui/AppLogo'
-import { isFingerprintSupported, getFingerprintAssertion } from '../lib/webauthn'
+import { isPlatformAuthenticatorAvailable, getFingerprintAssertion } from '../lib/webauthn'
 
 interface LoginViewProps {
   onLoginSuccess: (token: string, username: string) => void
@@ -11,6 +11,7 @@ interface LoginViewProps {
 export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [isRegistered, setIsRegistered] = useState<boolean | null>(null)
   const [hasFingerprint, setHasFingerprint] = useState(false)
+  const [platformAuthAvailable, setPlatformAuthAvailable] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -32,6 +33,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
   useEffect(() => {
     checkStatus()
+    isPlatformAuthenticatorAvailable().then(setPlatformAuthAvailable)
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -210,7 +212,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           </button>
         </form>
 
-        {isRegistered && hasFingerprint && isFingerprintSupported() && (
+        {isRegistered && hasFingerprint && platformAuthAvailable && (
           <button
             type="button"
             onClick={handleFingerprintLogin}

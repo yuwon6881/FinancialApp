@@ -26,7 +26,7 @@ import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } fr
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../lib/csvExport'
 import { useDialog } from '../lib/useDialog'
 import { useFormDraft } from '../lib/useFormDraft'
-import { getCycleRangeDates, getStartOfNCyclesAgo } from '../lib/cycle'
+import { getCycleRangeDates, getStartOfNCyclesAgo, formatDateForApi } from '../lib/cycle'
 
 interface LedgerViewProps {
   transactions: Transaction[]
@@ -80,13 +80,6 @@ interface LedgerViewProps {
   deletingTxId?: string | null
   onStartEditPending?: (id: string | null) => void
   isSwitchingCycle?: boolean
-}
-
-function formatDateToString(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${dd}`
 }
 
 export const LedgerView: React.FC<LedgerViewProps> = ({
@@ -184,7 +177,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [txToDelete, setTxToDelete] = useState<Transaction | null>(null)
   const [showEditDisabledModal, setShowEditDisabledModal] = useState(false)
-  const [amountRevealed, setAmountRevealed] = useState(false) // For sensitive mode: blur amount until focused
 
   // Autocomplete suggestion state
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -338,10 +330,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   };
 
   const handleStartEdit = (t: Transaction) => {
+    if (hideSensitive) return
     setEditingTxId(t.id)
     setDescription(t.description)
     setAmount(Math.abs(t.amount).toFixed(2))
-    setAmountRevealed(false) // Start blurred in sensitive mode
     setDate(t.date)
     if (onStartEditPending) {
       onStartEditPending(t.id.startsWith('temp_') ? t.id : null)
@@ -464,8 +456,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
     if (!startDate || !endDate) return null
     return {
-      startDate: formatDateToString(startDate),
-      endDate: formatDateToString(endDate)
+      startDate: formatDateForApi(startDate),
+      endDate: formatDateForApi(endDate)
     }
   }, [showAllCycles, cyclesRange, selectedMonth, selectedYear, cycleDay])
 
@@ -641,7 +633,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setLedgerCategory('Essentials')
     setTxType('outflow')
     setCategory(categories.length > 0 ? categories[0].name : '')
-    setAmountRevealed(false)
     if (editingTxId && editingTxId.startsWith('temp_') && onStartEditPending) {
       onStartEditPending(null)
     }
@@ -911,6 +902,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   handleCancelStabilityCapModalRef.current = handleCancelStabilityCapModal
 
   const handleDeleteClick = (t: Transaction) => {
+    if (hideSensitive) return
     setTxToDelete(t)
     setShowDeleteModal(true)
   }
@@ -1395,7 +1387,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 setTxType('outflow')
                 setLedgerCategory('Essentials')
                 setCategory(categories.length > 0 ? categories[0].name : '')
-                setAmountRevealed(false)
                 setEditingTxId(null)
                 const now = new Date()
                 const y = now.getFullYear()
@@ -1628,11 +1619,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   placeholder="0.00"
                   value={amount}
                   onChange={handleAmountChange}
-                  onFocus={() => setAmountRevealed(true)}
-                  onBlur={() => setAmountRevealed(false)}
                   className={`w-full pr-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200 ${
                     getCurrencySymbol(currency).length > 2 ? 'pl-11' : getCurrencySymbol(currency).length > 1 ? 'pl-9' : 'pl-7'
-                  } ${hideSensitive && editingTxId && !amountRevealed ? 'blur-sm' : ''}`}
+                  }`}
                 />
               </div>
             </div>
@@ -2086,7 +2075,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       ) : (
                         <button
                           onClick={() => handleStartEdit(t)}
-                          disabled={isTxDeleting(t.id) || isTxSyncing(t.id)}
+                          disabled={isTxDeleting(t.id) || isTxSyncing(t.id) || hideSensitive}
+                          title={hideSensitive ? 'Unhide balances to edit' : undefined}
                           className="text-xs text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           Edit
@@ -2094,7 +2084,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       )}
                       <button
                         onClick={() => handleDeleteClick(t)}
-                        disabled={isTxDeleting(t.id) || isTxSyncing(t.id)}
+                        disabled={isTxDeleting(t.id) || isTxSyncing(t.id) || hideSensitive}
+                        title={hideSensitive ? 'Unhide balances to edit' : undefined}
                         className="text-xs text-orange-500 hover:text-orange-600 bg-orange-500/5 hover:bg-orange-500/10 border border-orange-500/10 hover:border-orange-500/20 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         Delete
@@ -2147,7 +2138,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   ) : (
                     <button
                       onClick={() => handleStartEdit(t)}
-                      disabled={isDeleting || isSyncing}
+                      disabled={isDeleting || isSyncing || hideSensitive}
                       className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-500 text-white text-[11px] font-bold active:bg-blue-600 transition disabled:opacity-50 disabled:pointer-events-none"
                     >
                       <Edit2 className="size-4" />
@@ -2156,7 +2147,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   )}
                   <button
                     onClick={() => handleDeleteClick(t)}
-                    disabled={isDeleting || isSyncing}
+                    disabled={isDeleting || isSyncing || hideSensitive}
                     className="flex-1 flex flex-col items-center justify-center gap-1 bg-red-500 text-white text-[11px] font-bold active:bg-red-600 transition disabled:opacity-50 disabled:pointer-events-none"
                   >
                     <Trash2 className="size-4" />

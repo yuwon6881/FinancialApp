@@ -4,12 +4,14 @@ import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { RowSyncBadge } from './ui/RowSyncBadge'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
-import { MONTH_NAMES, getCycleRangeDates, getStartOfNCyclesAgo } from '../lib/cycle'
+import { MONTH_NAMES, getCycleRangeDates, getStartOfNCyclesAgo, formatDateForApi } from '../lib/cycle'
 import * as api from '../lib/api'
 import type { FingerprintCredentialSummary } from '../lib/api'
-import { isFingerprintSupported, createFingerprintCredential, getFriendlyDeviceLabel } from '../lib/webauthn'
+import { isPlatformAuthenticatorAvailable, createFingerprintCredential, getFriendlyDeviceLabel } from '../lib/webauthn'
+import type { ToastTone } from './ui/ToastViewport'
+import { ToggleButton } from './ui/ToggleButton'
 
-const DEVICE_ENROLLED_KEY = 'fingerprint_enrolled_on_this_device'
+const DEVICE_CREDENTIAL_ID_KEY = 'fingerprint_credential_id_on_this_device'
 
 // How far back to look when flagging a category as unused/rarely used. Long enough that
 // categories only touched a couple times a year (insurance, annual renewals) aren't
@@ -38,6 +40,7 @@ interface SettingsViewProps {
   onToggleNotifyOnLogin?: (checked: boolean) => void
   activeSyncId?: string | null
   deletingId?: string | null
+  onToast?: (message: string, title?: string, tone?: ToastTone) => void
 }
 
 const getDayWithSuffix = (day: number) => {
@@ -59,7 +62,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   notifyOnLoginEnabled = true,
   onToggleNotifyOnLogin,
   activeSyncId = null,
-  deletingId = null
+  deletingId = null,
+  onToast
 }) => {
   const isCatSyncing = (catId: string) => {
     return activeSyncId !== null && activeSyncId !== undefined && String(activeSyncId) === String(catId)
@@ -94,26 +98,37 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [currencyInput, setCurrencyInput] = useState('USD')
   const [newCatName, setNewCatName] = useState('')
   const [showUsageDetails, setShowUsageDetails] = useState(false)
-  const [usageTransactions, setUsageTransactions] = useState<{ category: string; date: string }[] | null>(null)
+  const [usageTransactions, setUsageTransactions] = useState<{ category: string }[] | null>(null)
   const [usageError, setUsageError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    api.fetchTransactions(undefined, undefined, true)
-      .then(txs => {
-        if (!cancelled) setUsageTransactions(txs.filter(t => !t.isPendingDelete))
+    const activeMonthIdx = MONTH_NAMES.indexOf(activeSettings.selectedMonth) + 1
+    if (activeMonthIdx <= 0) return
+
+    const startDate = getStartOfNCyclesAgo(activeSettings.selectedYear, activeMonthIdx, activeSettings.cycleDay, USAGE_LOOKBACK_CYCLES)
+    const endDate = getCycleRangeDates(activeSettings.selectedYear, activeMonthIdx, activeSettings.cycleDay).end
+
+    // pageSize is clamped to 500 server-side; comfortably covers 6 cycles for normal usage volumes.
+    api.fetchPagedTransactions({
+      page: 1,
+      pageSize: 500,
+      startDate: formatDateForApi(startDate),
+      endDate: formatDateForApi(endDate)
+    })
+      .then(result => {
+        if (!cancelled) setUsageTransactions(result.items.filter(t => !t.isPendingDelete))
       })
       .catch(() => {
         if (!cancelled) setUsageError('Could not load category usage.')
       })
     return () => { cancelled = true }
-  }, [])
+  }, [activeSettings.selectedMonth, activeSettings.selectedYear, activeSettings.cycleDay])
 
   // Fingerprint (WebAuthn) state
   const [fingerprintCredentials, setFingerprintCredentials] = useState<FingerprintCredentialSummary[]>([])
   const [fingerprintBusy, setFingerprintBusy] = useState(false)
-  const [fingerprintMsg, setFingerprintMsg] = useState<string | null>(null)
-  const [fingerprintError, setFingerprintError] = useState<string | null>(null)
+  const [platformAuthAvailable, setPlatformAuthAvailable] = useState(false)
 
   const loadFingerprintCredentials = async () => {
     try {
@@ -125,33 +140,32 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   useEffect(() => {
     loadFingerprintCredentials()
+    isPlatformAuthenticatorAvailable().then(setPlatformAuthAvailable)
   }, [])
 
-  const [enrolledOnThisDevice, setEnrolledOnThisDevice] = useState(
-    () => localStorage.getItem(DEVICE_ENROLLED_KEY) === '1'
-  )
+  const enrolledOnThisDevice = useMemo(() => {
+    const storedId = localStorage.getItem(DEVICE_CREDENTIAL_ID_KEY)
+    return !!storedId && fingerprintCredentials.some(c => c.id === storedId)
+  }, [fingerprintCredentials])
 
   const handleEnrollFingerprint = async () => {
-    setFingerprintError(null)
-    setFingerprintMsg(null)
+    if (hideSensitive) return
     setFingerprintBusy(true)
     try {
       const { challengeId, options } = await api.getFingerprintRegisterOptions()
       const credential = await createFingerprintCredential(options)
       await api.verifyFingerprintRegistration(challengeId, credential, getFriendlyDeviceLabel())
+      localStorage.setItem(DEVICE_CREDENTIAL_ID_KEY, credential.id)
       await loadFingerprintCredentials()
-      localStorage.setItem(DEVICE_ENROLLED_KEY, '1')
-      setEnrolledOnThisDevice(true)
+      onToast?.('Fingerprint enabled on this device.', 'Fingerprint enabled', 'success')
     } catch (err: any) {
       console.error(err)
       if (err?.name === 'InvalidStateError') {
         // The authenticator already holds a credential for this account (excludeCredentials matched) -
         // this device is already enrolled, nothing went wrong.
-        localStorage.setItem(DEVICE_ENROLLED_KEY, '1')
-        setEnrolledOnThisDevice(true)
         await loadFingerprintCredentials()
       } else if (err?.name !== 'NotAllowedError') {
-        setFingerprintError(err.message || 'Failed to register fingerprint on this device.')
+        onToast?.(err.message || 'Failed to register fingerprint on this device.', 'Fingerprint error', 'error')
       }
     } finally {
       setFingerprintBusy(false)
@@ -159,20 +173,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   }
 
   const handleRemoveFingerprint = async (id: string) => {
-    setFingerprintError(null)
-    setFingerprintMsg(null)
+    if (hideSensitive) return
     try {
       await api.deleteFingerprintCredential(id)
-      const remaining = await api.listFingerprintCredentials()
-      setFingerprintCredentials(remaining)
-      if (remaining.length === 0) {
-        localStorage.removeItem(DEVICE_ENROLLED_KEY)
-        setEnrolledOnThisDevice(false)
-      }
-      setFingerprintMsg('Fingerprint credential removed.')
+      await loadFingerprintCredentials()
+      onToast?.('Fingerprint credential removed.', 'Fingerprint removed', 'success')
     } catch (err: any) {
       console.error(err)
-      setFingerprintError(err.message || 'Failed to remove fingerprint credential.')
+      onToast?.(err.message || 'Failed to remove fingerprint credential.', 'Fingerprint error', 'error')
     }
   }
 
@@ -224,6 +232,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   }
 
   const handleAddCategory = () => {
+    if (hideSensitive) return
     const trimmed = newCatName.trim()
     if (!trimmed) return
 
@@ -247,7 +256,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     return lower === 'transfer' || lower === 'adjustment'
   }, [trimmedCatName])
 
-  const isCatValid = !isCatEmpty && !isCatDuplicate && !isCatReserved
+  const isCatValid = !isCatEmpty && !isCatDuplicate && !isCatReserved && !hideSensitive
+
+  const handleDeleteCategory = (id: string) => {
+    if (hideSensitive) return
+    onDeleteCategory(id)
+  }
 
   const visibleCategories = categoriesList.filter(cat => {
     const lower = cat.name.toLowerCase()
@@ -476,10 +490,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </span>
                   <button
                     type="button"
-                    onClick={() => onDeleteCategory(cat.id)}
-                    disabled={isBusy}
+                    onClick={() => handleDeleteCategory(cat.id)}
+                    disabled={isBusy || hideSensitive}
                     className="p-1.5 text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10 rounded-lg cursor-pointer transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
-                    title="Delete category"
+                    title={hideSensitive ? 'Unhide balances to edit' : 'Delete category'}
                   >
                     <Trash2 className="size-3.5" />
                   </button>
@@ -512,6 +526,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   type="button"
                   onClick={handleAddCategory}
                   disabled={!isCatValid}
+                  title={hideSensitive ? 'Unhide balances to edit' : undefined}
                   className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition duration-200 select-none
                     bg-blue-600 hover:bg-blue-700 text-white shadow-sm
                     disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-600 disabled:shadow-none"
@@ -554,19 +569,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             </div>
 
-            <label className="flex items-center justify-between gap-3 cursor-pointer">
+            <div className="flex items-center justify-between gap-3">
               <span className="text-xs font-medium text-foreground">Show subscription reminders automatically on login</span>
-              <input
-                type="checkbox"
-                checked={notifyOnLoginEnabled}
-                onChange={(e) => onToggleNotifyOnLogin?.(e.target.checked)}
-                className="rounded border-border text-blue-500 focus:ring-blue-500 shrink-0"
+              <ToggleButton
+                active={notifyOnLoginEnabled}
+                onClick={() => onToggleNotifyOnLogin?.(!notifyOnLoginEnabled)}
+                className="size-6 shrink-0"
               />
-            </label>
+            </div>
           </section>
 
           {/* Security & Fingerprint Section */}
-          {isFingerprintSupported() && (
+          {platformAuthAvailable && (
             <section className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5 shadow-sm space-y-4">
               <div className="flex items-center gap-2.5 pb-3 border-b border-border/40">
                 <ShieldCheck className="size-5 text-emerald-500 shrink-0" />
@@ -587,8 +601,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <button
                         type="button"
                         onClick={() => handleRemoveFingerprint(cred.id)}
-                        className="p-1.5 text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10 rounded-lg cursor-pointer transition shrink-0"
-                        title="Remove this fingerprint credential"
+                        disabled={hideSensitive}
+                        className="p-1.5 text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10 rounded-lg cursor-pointer transition shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+                        title={hideSensitive ? 'Unhide balances to edit' : 'Remove this fingerprint credential'}
                       >
                         <Trash2 className="size-3.5" />
                       </button>
@@ -606,7 +621,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <button
                   type="button"
                   onClick={handleEnrollFingerprint}
-                  disabled={fingerprintBusy}
+                  disabled={fingerprintBusy || hideSensitive}
+                  title={hideSensitive ? 'Unhide balances to edit' : undefined}
                   className="press-scale w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white shadow-md shadow-emerald-600/20"
                 >
                   {fingerprintBusy ? (
@@ -616,20 +632,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   )}
                   {fingerprintCredentials.length > 0 ? 'Add another device' : 'Enable on this device'}
                 </button>
-              )}
-
-              {fingerprintMsg && (
-                <p className="text-xs font-semibold text-emerald-500 flex items-center gap-1.5 animate-in fade-in duration-150">
-                  <CheckCircle2 className="size-4 shrink-0" />
-                  {fingerprintMsg}
-                </p>
-              )}
-
-              {fingerprintError && (
-                <p className="text-xs font-semibold text-orange-500 flex items-center gap-1.5 animate-in fade-in duration-150">
-                  <AlertCircle className="size-4 shrink-0" />
-                  {fingerprintError}
-                </p>
               )}
             </section>
           )}

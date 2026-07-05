@@ -521,7 +521,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                         </button>
                         <button
                           onClick={() => onDeleteItem(item.id)}
-                          disabled={isBusy}
+                          disabled={isBusy || hideSensitive}
                           className="flex-1 flex flex-col items-center justify-center gap-1 bg-red-500 text-white text-[10px] font-bold active:bg-red-600 transition disabled:opacity-40 disabled:pointer-events-none"
                         >
                           <Trash2 className="size-3.5" />
@@ -533,7 +533,8 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                       <>
                         <button
                           onClick={() => handleToggleActive(item)}
-                          disabled={isBusy}
+                          disabled={isBusy || hideSensitive}
+                          title={hideSensitive ? 'Unhide balances to edit' : undefined}
                           className="px-2.5 py-1.5 bg-blue-500/10 text-blue-500 hover:bg-blue-500 text-xs font-bold rounded-lg border border-blue-500/10 hover:text-white transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-500/10 disabled:hover:text-blue-500"
                         >
                           Focus
@@ -548,7 +549,8 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                         </button>
                         <button
                           onClick={() => onDeleteItem(item.id)}
-                          disabled={isBusy}
+                          disabled={isBusy || hideSensitive}
+                          title={hideSensitive ? 'Unhide balances to edit' : undefined}
                           className="p-1.5 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 rounded-lg border border-transparent hover:border-red-500/10 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
                         >
                           <Trash2 className="size-3.5" />
