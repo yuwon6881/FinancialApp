@@ -66,6 +66,11 @@ const SUCCESS_TOAST_OVERRIDES: Partial<Record<string, (op: QueuedOp) => ToastCop
 // drain loop. Keeping this here (next to DISPATCH) means a new entity/op type gets a working
 // toast automatically, and custom wording for a specific op is a one-line addition above.
 export function getSyncSuccessToast(op: QueuedOp): ToastCopy | null {
+  if (op.isUndo) {
+    const entityName = ENTITY_LABELS[op.entity] || 'Item'
+    return { title: 'Undo successful', message: `Previous action on ${entityName.toLowerCase()} has been undone`, tone: 'success' }
+  }
+
   const key = `${op.entity}:${op.type}`
   const override = SUCCESS_TOAST_OVERRIDES[key]
   return override ? override(op) : defaultSyncSuccessToast(op)
