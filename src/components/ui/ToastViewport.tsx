@@ -1,13 +1,21 @@
 import React, { useEffect } from 'react'
-import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Info, Undo2, X } from 'lucide-react'
 
 export type ToastTone = 'info' | 'success' | 'warning' | 'error'
+
+export interface ToastAction {
+  label: string
+  onAction: () => void
+}
 
 export interface ToastMessage {
   id: string
   title?: string
   message: string
   tone?: ToastTone
+  // Optional inline action (e.g. "Undo"). Toasts carrying an action linger
+  // longer so there is comfortable time to click it before auto-dismiss.
+  action?: ToastAction
 }
 
 interface ToastViewportProps {
@@ -23,25 +31,33 @@ const toneClass: Record<ToastTone, string> = {
 }
 
 const toneIcon: Record<ToastTone, React.ReactNode> = {
-  info: <Info className="size-4 text-blue-500" />,
-  success: <CheckCircle2 className="size-4 text-emerald-500" />,
-  warning: <AlertCircle className="size-4 text-amber-500" />,
-  error: <AlertCircle className="size-4 text-orange-500" />,
+  info: <Info className="size-5 text-blue-500" />,
+  success: <CheckCircle2 className="size-5 text-emerald-500" />,
+  warning: <AlertCircle className="size-5 text-amber-500" />,
+  error: <AlertCircle className="size-5 text-orange-500" />,
 }
 
 // Confirmations can be brief; warnings and errors stay long enough to read.
 const toneDuration: Record<ToastTone, number> = {
-  success: 2200,
-  info: 2800,
-  warning: 5000,
-  error: 5000,
+  success: 3500,
+  info: 4000,
+  warning: 6000,
+  error: 6000,
+}
+
+// Toasts with an action need extra dwell time so the user can react to them.
+const ACTION_DURATION = 7000
+
+const durationFor = (toast: ToastMessage): number => {
+  const base = toneDuration[toast.tone || 'info']
+  return toast.action ? Math.max(base, ACTION_DURATION) : base
 }
 
 export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss }) => {
   useEffect(() => {
     if (toasts.length === 0) return
     const timers = toasts.map(toast =>
-      window.setTimeout(() => onDismiss(toast.id), toneDuration[toast.tone || 'info'])
+      window.setTimeout(() => onDismiss(toast.id), durationFor(toast))
     )
     return () => timers.forEach(window.clearTimeout)
   }, [toasts, onDismiss])
@@ -54,7 +70,7 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
       aria-label="Notifications"
       aria-live="polite"
       aria-atomic="false"
-      className="fixed left-3 right-3 top-[calc(4.75rem+env(safe-area-inset-top,0px))] z-[120] flex flex-col gap-2 pointer-events-none sm:left-auto sm:right-4 sm:w-80"
+      className="fixed left-3 right-3 top-[calc(4.75rem+env(safe-area-inset-top,0px))] z-[120] flex flex-col gap-2 pointer-events-none sm:left-auto sm:right-4 sm:w-96"
     >
       {toasts.map(toast => {
         const tone = toast.tone || 'info'
@@ -62,12 +78,25 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
           <div
             key={toast.id}
             role={tone === 'error' || tone === 'warning' ? 'alert' : 'status'}
-            className={`pointer-events-auto flex items-start gap-3 rounded-xl border p-3 shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200 ${toneClass[tone]}`}
+            className={`pointer-events-auto flex items-start gap-3 rounded-xl border p-4 shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200 ${toneClass[tone]}`}
           >
             <div className="mt-0.5 shrink-0">{toneIcon[tone]}</div>
             <div className="min-w-0 flex-1">
-              {toast.title && <div className="text-xs font-bold text-foreground">{toast.title}</div>}
-              <div className="text-[11px] leading-relaxed text-muted-foreground">{toast.message}</div>
+              {toast.title && <div className="text-sm font-bold text-foreground">{toast.title}</div>}
+              <div className="text-[13px] leading-relaxed text-muted-foreground">{toast.message}</div>
+              {toast.action && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    toast.action?.onAction()
+                    onDismiss(toast.id)
+                  }}
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/60 px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-muted transition cursor-pointer"
+                >
+                  <Undo2 className="size-3.5" />
+                  {toast.action.label}
+                </button>
+              )}
             </div>
             <button
               type="button"
@@ -75,7 +104,7 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
               className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer"
               aria-label="Dismiss notification"
             >
-              <X className="size-3.5" />
+              <X className="size-4" />
             </button>
           </div>
         )
