@@ -651,10 +651,9 @@ export async function lockSession(): Promise<void> {
     headers: getHeaders(),
   })
   if (!response.ok) {
-    console.warn('Failed to lock session on server')
-  } else {
-    queryCache.invalidateAll()
+    throw new Error(`Failed to lock session on server: ${response.status} ${response.statusText}`)
   }
+  queryCache.invalidateAll()
 }
 
 export async function fetchWishlist(): Promise<WishlistItem[]> {

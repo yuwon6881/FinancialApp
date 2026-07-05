@@ -1557,6 +1557,7 @@ function App() {
             onToggleNotifyOnLogin={(checked) => {
               setModalCheckbox(checked)
               localStorage.setItem('show_notifications_on_login', checked ? 'true' : 'false')
+              showToast('Notification preference updated.', 'Settings Saved', 'success')
             }}
             activeSyncId={activeSyncId}
             deletingId={deletingTxId}
