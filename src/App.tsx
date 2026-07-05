@@ -208,52 +208,52 @@ function App() {
     switch (`${op.entity}:${op.type}`) {
       // Adds -> delete the record that was just created.
       case 'transaction:add':
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'transaction', 'delete', String(op.targetId))) }
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'transaction', 'delete', String(op.targetId), undefined, true)) }
       case 'recurringPayment:add':
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'recurringPayment', 'delete', String(op.targetId))) }
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'recurringPayment', 'delete', String(op.targetId), undefined, true)) }
       case 'category:add':
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'category', 'delete', String(op.targetId))) }
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'category', 'delete', String(op.targetId), undefined, true)) }
       case 'wishlistItem:add': {
         // The server-assigned id only exists post-sync; use it, not the local placeholder.
         const realId = result && result.id != null ? String(result.id) : String(op.targetId)
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'wishlistItem', 'delete', realId)) }
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'wishlistItem', 'delete', realId, undefined, true)) }
       }
 
       // Deletes -> re-add the captured record (reusing its id where the API accepts one).
       case 'transaction:delete':
         if (!before) return undefined
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'transaction', 'add', String(before.id), { ...before })) }
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'transaction', 'add', String(before.id), { ...before }, true)) }
       case 'recurringPayment:delete':
         if (!before) return undefined
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'recurringPayment', 'add', String(before.id), { ...before })) }
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'recurringPayment', 'add', String(before.id), { ...before }, true)) }
       case 'category:delete':
         if (!before) return undefined
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'category', 'add', String(before.id), { ...before })) }
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'category', 'add', String(before.id), { ...before }, true)) }
       case 'wishlistItem:delete': {
         if (!before) return undefined
         // Wishlist ids are server-generated, so a re-add takes a fresh local placeholder id.
         const placeholderId = String(createLocalWishlistId())
         const payload = { ...before }
         delete payload.id
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'wishlistItem', 'add', placeholderId, payload)) }
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'wishlistItem', 'add', placeholderId, payload, true)) }
       }
 
       // Updates -> restore the captured prior values.
       case 'transaction:update':
         if (!before) return undefined
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'transaction', 'update', String(op.targetId), { ...before })) }
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'transaction', 'update', String(op.targetId), { ...before }, true)) }
       case 'recurringPayment:update':
         if (!before) return undefined
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'recurringPayment', 'update', String(op.targetId), { ...before })) }
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'recurringPayment', 'update', String(op.targetId), { ...before }, true)) }
       case 'wishlistItem:update':
         if (!before) return undefined
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'wishlistItem', 'update', String(op.targetId), { ...before })) }
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'wishlistItem', 'update', String(op.targetId), { ...before }, true)) }
 
       // Toggle -> flip back to the prior active state.
       case 'recurringPayment:toggle': {
         if (!op.payload || typeof op.payload.active !== 'boolean') return undefined
         const priorActive = !op.payload.active
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'recurringPayment', 'toggle', String(op.targetId), { active: priorActive })) }
+        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'recurringPayment', 'toggle', String(op.targetId), { active: priorActive }, true)) }
       }
 
       // wishlistItem:purchase and settings:update have no clean reverse — no undo.
@@ -1125,8 +1125,9 @@ function App() {
         // opt-out) lives in one place — lib/outbox.ts — so new op types need no changes here.
         successfulOps.forEach(({ op, result }) => {
           const toast = getSyncSuccessToast(op)
-          if (!toast) return
-          showToast(toast.message, toast.title, toast.tone, buildUndoAction(op, result))
+          if (toast) {
+            showToast(toast.message, toast.title, toast.tone, op.isUndo ? undefined : buildUndoAction(op, result))
+          }
         })
       }
     } finally {

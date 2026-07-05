@@ -12,6 +12,7 @@ export interface QueuedOp {
   createdAt: number
   retryCount: number
   isCompleted?: boolean
+  isUndo?: boolean
 }
 
 export type ToastTone = 'info' | 'success' | 'warning' | 'error'
@@ -88,7 +89,8 @@ export function enqueue(
   entity: EntityKind,
   type: OpType,
   targetId: string,
-  payload?: any
+  payload?: any,
+  isUndo?: boolean
 ): QueuedOp[] {
   const targetIdStr = String(targetId)
   const newOp: QueuedOp = {
@@ -98,7 +100,8 @@ export function enqueue(
     targetId: targetIdStr,
     payload,
     createdAt: Date.now(),
-    retryCount: 0
+    retryCount: 0,
+    isUndo
   }
 
   const hasQueuedAdd = queue.some(op => op.entity === entity && op.targetId === targetIdStr && op.type === 'add')
