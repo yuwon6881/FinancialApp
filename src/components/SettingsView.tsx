@@ -145,8 +145,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   }, [])
 
   const enrolledOnThisDevice = useMemo(() => {
+    if (fingerprintCredentials.length === 0) return false
     const storedId = localStorage.getItem(DEVICE_CREDENTIAL_ID_KEY)
-    return !!storedId && fingerprintCredentials.some(c => c.id === storedId)
+    if (!storedId) return false
+    if (storedId === 'already_enrolled') return true
+    return fingerprintCredentials.some(c => c.id === storedId)
   }, [fingerprintCredentials])
 
   const handleEnrollFingerprint = async () => {
@@ -164,7 +167,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       if (err?.name === 'InvalidStateError') {
         // The authenticator already holds a credential for this account (excludeCredentials matched) -
         // this device is already enrolled, nothing went wrong.
+        localStorage.setItem(DEVICE_CREDENTIAL_ID_KEY, 'already_enrolled')
         await loadFingerprintCredentials()
+        onToast?.('Fingerprint is already enabled on this device.', 'Fingerprint enabled', 'success')
       } else if (err?.name !== 'NotAllowedError') {
         onToast?.(err.message || 'Failed to register fingerprint on this device.', 'Fingerprint error', 'error')
       }
