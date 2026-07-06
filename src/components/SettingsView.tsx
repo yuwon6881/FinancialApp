@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Fingerprint, ShieldCheck, Bell, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Fingerprint, ShieldCheck, Bell, ChevronDown, ChevronUp, Lock, Unlock } from 'lucide-react'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { SmartAmountInput } from './ui/SmartAmountInput'
@@ -102,6 +102,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [cycleDayInput, setCycleDayInput] = useState('28')
   const [currencyInput, setCurrencyInput] = useState('USD')
   const [newCatName, setNewCatName] = useState('')
+  const [lockedAllocations, setLockedAllocations] = useState<string[]>([])
+
+  const toggleLock = (key: string) => {
+    setLockedAllocations(prev => {
+      if (prev.includes(key)) return prev.filter(k => k !== key)
+      if (prev.length >= 2) return prev
+      return [...prev, key]
+    })
+  }
   const [showUsageDetails, setShowUsageDetails] = useState(false)
   const [usageTransactions, setUsageTransactions] = useState<{ category: string }[] | null>(null)
   const [usageError, setUsageError] = useState<string | null>(null)
@@ -229,17 +238,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     activeSettings.currency
   ])
 
-  // Rounded to avoid IEEE-754 float noise (e.g. 0 + 0.01 + 64.04 + 35.95 =
-  // 100.00000000000001) permanently blocking a legitimately-100% split.
+  // Rounded to avoid IEEE-754 float noise
   const allocSum = useMemo(() => {
     const e = parseFloat(essentialsAllocInput) || 0
     const g = parseFloat(growthAllocInput) || 0
     const s = parseFloat(stabilityAllocInput) || 0
     const r = parseFloat(rewardsAllocInput) || 0
-    return Math.round((e + g + s + r) * 100) / 100
+    return Math.round(e + g + s + r)
   }, [essentialsAllocInput, growthAllocInput, stabilityAllocInput, rewardsAllocInput])
 
   const handleAllocationChange = (changedKey: 'essentials' | 'growth' | 'stability' | 'rewards', newValue: number) => {
+    if (lockedAllocations.includes(changedKey)) return
+
     const current = {
       essentials: parseFloat(essentialsAllocInput) || 0,
       growth: parseFloat(growthAllocInput) || 0,
@@ -247,39 +257,46 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       rewards: parseFloat(rewardsAllocInput) || 0
     }
     
-    newValue = Math.max(0, Math.min(100, newValue))
+    newValue = Math.round(Math.max(0, Math.min(100, newValue)) / 5) * 5
     let diff = newValue - current[changedKey]
     if (diff === 0) return
 
-    const otherKeys = (['essentials', 'growth', 'stability', 'rewards'] as const).filter(k => k !== changedKey)
-    const otherSum = otherKeys.reduce((sum, k) => sum + current[k], 0)
+    const otherKeys = (['essentials', 'growth', 'stability', 'rewards'] as const).filter(k => k !== changedKey && !lockedAllocations.includes(k))
+
+    if (otherKeys.length === 0) return
 
     let newAlloc = { ...current, [changedKey]: newValue }
 
-    if (otherSum === 0) {
-      const split = -diff / otherKeys.length
-      otherKeys.forEach(k => newAlloc[k] = Math.max(0, newAlloc[k] + split))
-    } else {
-      otherKeys.forEach(k => {
-        const proportion = current[k] / otherSum
-        newAlloc[k] = Math.max(0, current[k] - (diff * proportion))
-      })
+    let remainingDiff = diff
+    let startIdx = 0
+    while (remainingDiff !== 0) {
+      let adjusted = false
+      for (let i = 0; i < otherKeys.length; i++) {
+        const k = otherKeys[(startIdx + i) % otherKeys.length]
+        if (remainingDiff > 0 && newAlloc[k] >= 5) {
+          newAlloc[k] -= 5
+          remainingDiff -= 5
+          adjusted = true
+          startIdx = (startIdx + i + 1) % otherKeys.length
+          break
+        } else if (remainingDiff < 0 && newAlloc[k] <= 95) {
+          newAlloc[k] += 5
+          remainingDiff += 5
+          adjusted = true
+          startIdx = (startIdx + i + 1) % otherKeys.length
+          break
+        }
+      }
+      if (!adjusted) {
+        newAlloc[changedKey] -= remainingDiff
+        break
+      }
     }
 
-    // Fix rounding errors
-    const sum = newAlloc.essentials + newAlloc.growth + newAlloc.stability + newAlloc.rewards
-    if (sum !== 100) {
-      let maxKey = otherKeys[0]
-      otherKeys.forEach(k => {
-        if (newAlloc[k] > newAlloc[maxKey]) maxKey = k
-      })
-      newAlloc[maxKey] += (100 - sum)
-    }
-
-    setEssentialsAllocInput(newAlloc.essentials.toFixed(1))
-    setGrowthAllocInput(newAlloc.growth.toFixed(1))
-    setStabilityAllocInput(newAlloc.stability.toFixed(1))
-    setRewardsAllocInput(newAlloc.rewards.toFixed(1))
+    setEssentialsAllocInput(newAlloc.essentials.toString())
+    setGrowthAllocInput(newAlloc.growth.toString())
+    setStabilityAllocInput(newAlloc.stability.toString())
+    setRewardsAllocInput(newAlloc.rewards.toString())
   }
 
   const handleSaveSettings = (e: React.FormEvent) => {
@@ -401,9 +418,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <h3 className="text-sm font-bold text-foreground">Financial Model</h3>
               <p className="text-[11px] text-muted-foreground mt-0.5">Controls budget targets and cycle calculations.</p>
             </div>
-            <span className={allocSum === 100 ? 'text-blue-500 text-xs font-bold' : 'text-orange-500 text-xs font-bold'}>
-              Total: {allocSum}%
-            </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -485,17 +499,28 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               ].map(([label, value, key, accentClass]) => (
                 <label key={label as string} className="space-y-2 block">
                   <div className="flex justify-between items-center text-[11px] font-bold">
-                    <span className="text-muted-foreground uppercase tracking-wider">{label as string}</span>
-                    <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md">{Number(value).toFixed(1)}%</span>
+                    <span className="text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                      {label as string}
+                      <button 
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); toggleLock(key as string); }}
+                        className={`p-1 rounded-md transition ${lockedAllocations.includes(key as string) ? 'text-blue-500 bg-blue-500/10' : 'text-muted-foreground hover:bg-muted'}`}
+                        title={lockedAllocations.includes(key as string) ? 'Unlock' : lockedAllocations.length >= 2 ? 'Max 2 locks reached' : 'Lock'}
+                      >
+                        {lockedAllocations.includes(key as string) ? <Lock className="size-3" /> : <Unlock className="size-3" />}
+                      </button>
+                    </span>
+                    <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md">{Number(value).toFixed(0)}%</span>
                   </div>
                   <input
                     type="range"
                     min="0"
                     max="100"
-                    step="0.1"
+                    step="5"
+                    disabled={lockedAllocations.includes(key as string)}
                     value={value as string}
                     onChange={e => handleAllocationChange(key as any, parseFloat(e.target.value))}
-                    className={`w-full h-2 rounded-full cursor-pointer ${accentClass as string} bg-border`}
+                    className={`w-full h-2 rounded-full cursor-pointer ${accentClass as string} bg-border disabled:opacity-50 disabled:cursor-not-allowed`}
                   />
                 </label>
               ))}
@@ -512,17 +537,29 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <h4 className="text-xs font-bold text-foreground">Stability Overflow Redirection</h4>
               <p className="text-[11px] text-muted-foreground mt-0.5">When Stability limit is reached, overflow goes here.</p>
             </div>
-            <CustomSelect
-              value={stabilityOverflowRedirectInput}
-              onChange={val => setStabilityOverflowRedirectInput(val)}
-              options={[
-                { value: 'Growth 100%', label: '100% to Growth' },
-                { value: 'Rewards 100%', label: '100% to Rewards' },
-                { value: 'Split: Growth 50%, Rewards 50%', label: 'Split 50/50 (Growth/Rewards)' },
-                { value: 'Essentials 100%', label: '100% to Essentials' }
-              ]}
-              className="w-full"
-            />
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mt-2">
+              {[
+                { value: 'Essentials 100%', label: '100% Essential' },
+                { value: 'Growth 100%', label: '100% Growth' },
+                { value: 'Rewards 100%', label: '100% Reward' },
+                { value: 'Split: Essentials 50%, Growth 50%', label: '50% Essential / 50% Growth' },
+                { value: 'Split: Essentials 50%, Rewards 50%', label: '50% Essential / 50% Reward' },
+                { value: 'Split: Growth 50%, Rewards 50%', label: '50% Growth / 50% Reward' }
+              ].map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setStabilityOverflowRedirectInput(opt.value)}
+                  className={`px-3 py-2 text-xs font-semibold rounded-xl border transition-all duration-200 ${
+                    stabilityOverflowRedirectInput === opt.value
+                      ? 'border-blue-500 bg-blue-500/10 text-blue-600 shadow-sm shadow-blue-500/10 ring-1 ring-blue-500/20'
+                      : 'border-border bg-background hover:border-border/80 text-muted-foreground hover:bg-muted/50'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <motion.button

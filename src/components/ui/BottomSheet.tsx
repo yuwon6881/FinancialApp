@@ -302,7 +302,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
               style={{ touchAction: 'none' }}
               className="pb-3 shrink-0"
             >
-              <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto mb-2 shrink-0" />
+              {isMobile && <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto mb-2 shrink-0" />}
               <div className="flex items-center justify-between border-b border-border/40 pb-3">
                 <div id={titleId} className="min-w-0 text-base font-bold text-foreground">{title}</div>
               </div>
