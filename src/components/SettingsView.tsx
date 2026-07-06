@@ -103,6 +103,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [currencyInput, setCurrencyInput] = useState('USD')
   const [newCatName, setNewCatName] = useState('')
   const [lockedAllocations, setLockedAllocations] = useState<string[]>([])
+  const [globalAllocLock, setGlobalAllocLock] = useState(true)
 
   const toggleLock = (key: string) => {
     setLockedAllocations(prev => {
@@ -485,9 +486,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <h4 className="text-xs font-bold text-foreground">Allocation Split</h4>
                 <p className="text-[11px] text-muted-foreground mt-0.5">Interact with sliders to auto-balance (total 100%).</p>
               </div>
-              <span className={`text-xs font-bold ${allocSum === 100 ? 'text-green-500 bg-green-500/10 px-2.5 py-1 rounded-lg border border-green-500/20' : 'text-orange-500 bg-orange-500/10 px-2.5 py-1 rounded-lg border border-orange-500/20 animate-pulse'}`}>
-                {allocSum === 100 ? '✓ Balanced (100%)' : `Total: ${allocSum}%`}
-              </span>
+              <button
+                type="button"
+                onClick={() => setGlobalAllocLock(prev => !prev)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  globalAllocLock 
+                    ? 'text-blue-500 bg-blue-500/10 border border-blue-500/20' 
+                    : 'text-muted-foreground hover:bg-muted border border-border/40'
+                }`}
+              >
+                {globalAllocLock ? <Lock className="size-3.5" /> : <Unlock className="size-3.5" />}
+                {globalAllocLock ? 'Locked' : 'Unlocked'}
+              </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
@@ -517,7 +527,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     min="0"
                     max="100"
                     step="5"
-                    disabled={lockedAllocations.includes(key as string)}
+                    disabled={globalAllocLock || lockedAllocations.includes(key as string)}
                     value={value as string}
                     onChange={e => handleAllocationChange(key as any, parseFloat(e.target.value))}
                     className={`w-full h-2 rounded-full cursor-pointer ${accentClass as string} bg-border disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -550,7 +560,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   key={opt.value}
                   type="button"
                   onClick={() => setStabilityOverflowRedirectInput(opt.value)}
-                  className={`px-3 py-2 text-xs font-semibold rounded-xl border transition-all duration-200 ${
+                  className={`flex items-center justify-center text-center w-full h-full min-h-[48px] px-3 py-2 text-xs font-semibold rounded-xl border transition-all duration-200 ${
                     stabilityOverflowRedirectInput === opt.value
                       ? 'border-blue-500 bg-blue-500/10 text-blue-600 shadow-sm shadow-blue-500/10 ring-1 ring-blue-500/20'
                       : 'border-border bg-background hover:border-border/80 text-muted-foreground hover:bg-muted/50'
@@ -733,12 +743,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <Bell className="size-5 text-blue-500 shrink-0" />
               <div>
                 <h3 className="text-sm font-bold text-foreground">Notifications</h3>
-                <p className="text-[11px] text-muted-foreground">Controls the pending subscription reminder popup shown on login.</p>
+                <p className="text-[11px] text-muted-foreground">Automatically show subscription reminders upon launching the application.</p>
               </div>
             </div>
 
             <div className="flex items-center justify-between gap-3">
-              <span className="text-xs font-medium text-foreground">Show subscription reminders automatically on login</span>
+              <span className="text-xs font-medium text-foreground">Show subscription reminders automatically on startup</span>
               <ToggleButton
                 active={notifyOnLoginEnabled}
                 onClick={() => onToggleNotifyOnLogin?.(!notifyOnLoginEnabled)}

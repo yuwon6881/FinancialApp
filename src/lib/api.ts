@@ -274,6 +274,7 @@ export async function updateSettings(settings: {
   darkMode?: boolean
   hideSensitive?: boolean
   currency?: string
+  stabilityOverflowRedirect?: string
 }): Promise<void> {
   const payload = {
     ...settings,

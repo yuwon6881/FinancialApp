@@ -750,6 +750,7 @@ function App() {
     rewardsAlloc: number
     cycleDay: number
     currency?: string
+    stabilityOverflowRedirect?: string
   }) => {
     const payload = { ...settings, darkMode, hideSensitive }
     mutateQueue(prev => enqueue(prev, 'settings', 'update', 'settings', payload))
