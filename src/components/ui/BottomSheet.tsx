@@ -82,16 +82,13 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   const backdropMouseDownRef = useRef(false)
   const dragControls = useDragControls()
 
-  // Instagram-style swipe-to-dismiss from anywhere on the sheet (including over
-  // an unfocused text input) while still letting inner scroll regions scroll. A
-  // downward drag only becomes a dismiss when the scroll container under the
-  // finger is already at its top; otherwise the gesture is left to native
-  // scrolling. Interactive controls (buttons, links, selects, sliders) and any
-  // region explicitly opting out with `data-no-drag` keep their own gestures.
-  // Note text inputs are deliberately NOT excluded so the sheet can still be
-  // dismissed with a finger resting on a field that hasn't been focused yet.
-  const NO_DRAG_SELECTOR =
-    'button, a, select, input[type="range"], [role="button"], [role="slider"], [data-no-drag="true"], [data-no-sheet-drag]'
+  // Instagram-style swipe-to-dismiss from *anywhere* on the sheet -- buttons,
+  // inputs, dropdowns, all of it. Nothing is excluded: a tap still works (a
+  // drag only engages once the finger actually moves), and a short downward
+  // pull dismisses. The only nuance is scrolling: a downward pull only becomes
+  // a dismiss when the scroll container under the finger is already at its top;
+  // otherwise the gesture scrolls, and a clearly horizontal gesture is left to
+  // whatever it's on (e.g. a swipeable row).
   const gestureRef = useRef<{ startX: number; startY: number; decided: 'none' | 'scroll' | 'drag' } | null>(null)
   const dragActiveRef = useRef(false)
 
@@ -113,13 +110,8 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 
   const handlePanelPointerDown = (e: React.PointerEvent) => {
     // Swipe-to-dismiss is a touch affordance; a mouse can use the backdrop /
-    // back button / close controls, and we don't want to hijack text selection.
+    // back button, and we don't want to hijack text selection with a drag.
     if (e.pointerType === 'mouse') return
-    const target = e.target as HTMLElement
-    if (target.closest(NO_DRAG_SELECTOR)) {
-      gestureRef.current = null
-      return
-    }
     gestureRef.current = { startX: e.clientX, startY: e.clientY, decided: 'none' }
   }
 
@@ -128,7 +120,8 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     if (!gesture || dragActiveRef.current || gesture.decided !== 'none') return
     const dy = e.clientY - gesture.startY
     const dx = e.clientX - gesture.startX
-    if (Math.abs(dy) < 5 && Math.abs(dx) < 5) return
+    // Engage as soon as the finger clearly starts moving.
+    if (Math.abs(dy) < 3 && Math.abs(dx) < 3) return
     // A clearly horizontal gesture belongs to something else (e.g. a swipeable
     // row) -- bow out and let it run for the rest of this touch.
     if (Math.abs(dx) > Math.abs(dy)) {
@@ -192,9 +185,9 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             onDragEnd={(_e, info: PanInfo) => {
               dragActiveRef.current = false
               gestureRef.current = null
-              // Easy to dismiss: a short pull (~a quarter of the way) or any
-              // gentle downward flick lets go of the sheet.
-              if (info.velocity.y > 250 || info.offset.y > 64) {
+              // Very easy to dismiss: a small downward pull or any soft flick
+              // lets go of the sheet.
+              if (info.velocity.y > 120 || info.offset.y > 36) {
                 onClose()
               }
             }}
