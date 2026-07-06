@@ -1535,12 +1535,11 @@ function App() {
         <LaunchReady>
         {/* Keyed on the active tab so every view change replays the gentle
             slide entrance instead of hard-swapping content. */}
-        <div className="grid w-full relative">
-        <AnimatePresence initial={false} custom={tabDirection}>
+        <div className="relative w-full">
+        <AnimatePresence mode="popLayout" initial={false} custom={tabDirection}>
         <motion.div 
           key={activeTab} 
           custom={tabDirection}
-          style={{ gridArea: "1 / 1" }}
           initial="enter"
           animate="center"
           exit="exit"
