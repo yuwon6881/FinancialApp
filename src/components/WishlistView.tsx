@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import type { WishlistItem } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { SwipeableRow } from './ui/SwipeableRow'
@@ -430,7 +431,9 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
 
                   {/* Actions */}
                   <div className="flex items-center gap-3 mt-6 border-t border-border/30 pt-4">
-                    <button
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.96 }}
                       onClick={() => onPurchaseItem(activeItem.id)}
                       disabled={!canAfford}
                       className={`flex-1 py-3 text-xs font-extrabold rounded-xl transition duration-200 cursor-pointer text-center ${
@@ -440,24 +443,28 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                       }`}
                     >
                       {canAfford ? 'Claim Reward' : <>Need {formatSensitive(activeItem.price - rewardsBalance)} More</>}
-                    </button>
+                    </motion.button>
                     
-                    <button
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.9 }}
                       onClick={() => handleOpenEditModal(activeItem)}
                       disabled={hideSensitive}
                       title={hideSensitive ? 'Unhide balances to edit' : undefined}
                       className="p-3 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded-xl border border-border/40 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-muted disabled:hover:text-muted-foreground"
                     >
                       <Edit2 className="size-4" />
-                    </button>
-                    <button
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.9 }}
                       onClick={() => onDeleteItem(activeItem.id)}
                       disabled={hideSensitive}
                       title={hideSensitive ? 'Unhide balances to edit' : undefined}
                       className="p-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl border border-red-500/20 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <Trash2 className="size-4" />
-                    </button>
+                    </motion.button>
                   </div>
                 </div>
               )
@@ -467,12 +474,14 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               <Target className="size-10 text-muted-foreground/60 mb-2" />
               <h4 className="font-bold text-foreground text-sm">No Active Focus Item</h4>
               <p className="text-xs text-muted-foreground max-w-xs mt-1">Set a goal from your wishlist queue below or create a new target to track savings progress.</p>
-              <button 
+              <motion.button 
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleOpenAddModal}
                 className="mt-4 flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/10 transition cursor-pointer"
               >
                 <Plus className="size-3.5" /> Add Goal
-              </button>
+              </motion.button>
             </div>
           )}
         </div>
@@ -484,7 +493,12 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
             Wishlist Queue ({queuedItems.length})
           </h3>
 
-          <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1">
+          <motion.div 
+            initial="hidden" animate="show"
+            variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.05 } } }}
+            className="space-y-3 max-h-[460px] overflow-y-auto pr-1"
+          >
+            <AnimatePresence>
             {queuedItems.length > 0 ? (
               queuedItems.map((item, idx) => {
                 const pct = Math.max(0, Math.min(100, (rewardsBalance / item.price) * 100))
@@ -492,8 +506,8 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                 const isBusy = isItemDeleting(item.id) || isItemSyncing(item.id) || item.isPendingSync
 
                 return (
+                  <motion.div layout variants={{ hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 120 } } }} key={item.id}>
                   <SwipeableRow
-                    key={item.id}
                     hint={idx === 0}
                     disabled={isBusy}
                     className={`rounded-xl border shadow-xs transition duration-200 group ${
@@ -581,14 +595,16 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                       </div>
                     </div>
                   </SwipeableRow>
+                  </motion.div>
                 )
               })
             ) : (
-              <div className="p-6 rounded-xl bg-muted/20 border border-border/40 text-center text-xs text-muted-foreground">
+              <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-6 rounded-xl bg-muted/20 border border-border/40 text-center text-xs text-muted-foreground">
                 No items in the wishlist queue.
-              </div>
+              </motion.div>
             )}
-          </div>
+            </AnimatePresence>
+          </motion.div>
         </div>
       </div>
 

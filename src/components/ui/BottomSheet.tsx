@@ -1,6 +1,7 @@
 import React, { useEffect, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
+import { motion, AnimatePresence, type PanInfo } from 'framer-motion'
 import { useDialog } from '../../lib/useDialog'
 
 interface BottomSheetProps {
@@ -108,46 +109,66 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 
   const backdropMouseDownRef = useRef(false)
 
-  if (!isOpen) return null
-
   return createPortal(
-    <div
-      onMouseDown={e => {
-        backdropMouseDownRef.current = e.target === e.currentTarget
-      }}
-      onClick={e => {
-        if (e.target === e.currentTarget && backdropMouseDownRef.current) {
-          onClose()
-        }
-        backdropMouseDownRef.current = false
-      }}
-      className="sheet-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
-    >
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-label={ariaLabel}
-        tabIndex={-1}
-        onClick={e => e.stopPropagation()}
-        className={`sheet-panel w-full ${maxWidthClassName} bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto focus:outline-none`}
-      >
-        <div className="flex items-center justify-between border-b border-border/40 pb-3">
-          <div id={titleId} className="min-w-0 text-base font-bold text-foreground">{title}</div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition cursor-pointer"
-            aria-label="Close"
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          key="backdrop"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          onMouseDown={e => {
+            backdropMouseDownRef.current = e.target === e.currentTarget
+          }}
+          onClick={e => {
+            if (e.target === e.currentTarget && backdropMouseDownRef.current) {
+              onClose()
+            }
+            backdropMouseDownRef.current = false
+          }}
+          className="sheet-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+        >
+          <motion.div
+            key="sheet"
+            ref={panelRef}
+            initial={{ y: "100%", scale: 0.95, opacity: 0 }}
+            animate={{ y: 0, scale: 1, opacity: 1 }}
+            exit={{ y: "100%", scale: 0.95, opacity: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.5 }}
+            onDragEnd={(e, info: PanInfo) => {
+              if (info.velocity.y > 300 || info.offset.y > 100) {
+                onClose()
+              }
+            }}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            aria-label={ariaLabel}
+            tabIndex={-1}
+            onClick={e => e.stopPropagation()}
+            className={`sheet-panel w-full ${maxWidthClassName} bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto focus:outline-none`}
           >
-            <X className="size-4" />
-          </button>
-        </div>
-        {children}
-        {footer && <div className="border-t border-border/40 pt-4">{footer}</div>}
-      </div>
-    </div>,
+            <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <div id={titleId} className="min-w-0 text-base font-bold text-foreground">{title}</div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition cursor-pointer"
+                aria-label="Close"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            {children}
+            {footer && <div className="border-t border-border/40 pt-4">{footer}</div>}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>,
     document.body
   )
 }

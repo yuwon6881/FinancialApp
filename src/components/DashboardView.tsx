@@ -1514,7 +1514,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 required
                 placeholder="0.00"
                 value={newBalanceInput}
-                onChange={e => setNewBalanceInput(maskCurrencyInput(e.target.value, newBalanceInput, true))}
+                onChange={e => setNewBalanceInput(maskCurrencyInput(e.target.value, newBalanceInput))}
                 className="w-full px-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>

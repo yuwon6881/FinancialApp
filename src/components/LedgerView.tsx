@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import type { Transaction, TransactionCategory } from '../types'
 import type { PagedTransactionResult } from '../lib/api'
 import {
@@ -1981,11 +1982,20 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 <th className="p-4 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/30 text-xs">
+            <motion.tbody 
+              initial="hidden" animate="show"
+              variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.05 } } }}
+              className="divide-y divide-border/30 text-xs"
+            >
+              <AnimatePresence>
               {displayTransactions.map(t => {
                 const isOutflow = t.amount < 0
                 return (
-                  <tr id={`tx-row-${t.id}`} key={t.id} className="hover:bg-muted/10 transition duration-150">
+                  <motion.tr 
+                    layout
+                    variants={{ hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 120 } } }} 
+                    id={`tx-row-${t.id}`} key={t.id} className="hover:bg-muted/10 transition duration-150"
+                  >
                     <td className="p-4 font-medium text-muted-foreground">{t.date}</td>
                     <td className="p-4 font-semibold text-foreground flex items-center gap-2">
                       <span>{t.description}</span>
@@ -2091,24 +2101,30 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                         Delete
                       </button>
                     </td>
-                  </tr>
+                  </motion.tr>
                 )
               })}
+              </AnimatePresence>
 
               {displayTransactions.length === 0 && (
-                <tr>
+                <motion.tr layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                   <td colSpan={7} className="p-8 text-center text-muted-foreground text-sm">
                     {serverIsFetching ? 'Loading...' : 'No transactions match your search or filter criteria.'}
                   </td>
-                </tr>
+                </motion.tr>
               )}
-            </tbody>
+            </motion.tbody>
           </table>
         </div>
       </div>
 
       {/* Ledger List - Mobile (swipe a row left to reveal Edit / Delete) */}
-      <div className="block md:hidden space-y-3">
+      <motion.div 
+        initial="hidden" animate="show"
+        variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.05 } } }}
+        className="block md:hidden space-y-3"
+      >
+        <AnimatePresence>
         {displayTransactions.map((t, idx) => {
           const isOutflow = t.amount < 0
           const isTransfer = (t.ledgerCategory || '').startsWith('Transfer:')
@@ -2118,9 +2134,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           const isSyncing = isTxSyncing(t.id)
 
           return (
+            <motion.div layout variants={{ hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 120 } } }} key={t.id}>
             <SwipeableRow
               id={`tx-row-${t.id}`}
-              key={t.id}
               hint={idx === 0}
               disabled={isDeleting || isSyncing}
               className="rounded-2xl border border-border shadow-xs"
@@ -2208,15 +2224,17 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 </div>
               </div>
             </SwipeableRow>
+            </motion.div>
           )
         })}
+        </AnimatePresence>
 
         {displayTransactions.length === 0 && (
-          <div className="p-8 text-center text-muted-foreground border border-border/60 rounded-2xl bg-card text-xs">
-            {serverIsFetching ? 'Loading...' : 'No transactions match your search or filter criteria.'}
-          </div>
+          <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-8 text-center text-muted-foreground text-sm border rounded-xl bg-card">
+            {serverIsFetching ? 'Loading...' : 'No transactions match your criteria.'}
+          </motion.div>
         )}
-      </div>
+      </motion.div>     </div>
 
       {/* Unified Pagination Controls */}
       {(() => {

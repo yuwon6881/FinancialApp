@@ -85,6 +85,15 @@ function App() {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [activeTab])
 
+  const prevTabRef = useRef<AppTab>(activeTab)
+  useEffect(() => {
+    prevTabRef.current = activeTab
+  }, [activeTab])
+
+  const currentIndex = APP_TABS.indexOf(activeTab)
+  const prevIndex = APP_TABS.indexOf(prevTabRef.current)
+  const tabDirection = currentIndex >= prevIndex ? 1 : -1
+
   useEffect(() => {
     let cleanup: (() => void) | undefined
 
@@ -1525,14 +1534,15 @@ function App() {
         <Suspense fallback={<ViewFallback />}>
         <LaunchReady>
         {/* Keyed on the active tab so every view change replays the gentle
-            fade-and-rise entrance instead of hard-swapping content. */}
-        <AnimatePresence mode="wait">
+            slide entrance instead of hard-swapping content. */}
+        <AnimatePresence mode="wait" initial={false} custom={tabDirection}>
         <motion.div 
           key={activeTab} 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.2 }}
+          custom={tabDirection}
+          initial={(direction: number) => ({ opacity: 0, x: direction > 0 ? 30 : -30 })}
+          animate={{ opacity: 1, x: 0 }}
+          exit={(direction: number) => ({ opacity: 0, x: direction > 0 ? -30 : 30 })}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
           className="w-full"
         >
         {activeTab === 'dashboard' && (
