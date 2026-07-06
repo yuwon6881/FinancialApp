@@ -59,7 +59,7 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
     let val = input.value || ''
     
     // If the last character is already an operator, replace it
-    if (/[+\-*/]$/.test(val)) {
+    if (/[+\-×÷]$/.test(val)) {
       val = val.slice(0, -1) + op
     } else {
       val += op
@@ -70,6 +70,9 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
     input.dispatchEvent(new Event('input', { bubbles: true }))
   }
 
+  // To prevent text from being hidden under the buttons, we conditionally add right padding when focused.
+  const conditionalPadding = isFocused ? 'pr-[160px]' : ''
+
   return (
     <div className="relative w-full">
       <input
@@ -78,13 +81,13 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
         onBlur={handleBlur}
         onFocus={handleFocus}
         onKeyDown={handleKeyDown}
-        className={className}
+        className={`${className} ${conditionalPadding} transition-all duration-200`}
         inputMode="decimal"
         {...rest}
       />
       {isFocused && (
-        <div className="absolute top-full right-0 mt-1.5 flex items-center bg-card border border-border/80 shadow-lg rounded-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 z-50">
-          {['+', '-', '*', '/'].map(op => (
+        <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center bg-card/95 backdrop-blur-sm border border-border/80 shadow-sm rounded-lg overflow-hidden animate-in zoom-in-95 duration-150 z-50">
+          {['+', '-', '×', '÷'].map(op => (
             <button
               key={op}
               type="button"
@@ -92,7 +95,7 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
                 e.preventDefault()
                 appendOperator(op)
               }}
-              className="px-3.5 py-2 text-sm font-semibold text-foreground hover:bg-muted/50 active:bg-muted border-r border-border/50 transition cursor-pointer"
+              className="px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted/80 active:bg-muted border-r border-border/50 transition cursor-pointer"
             >
               {op}
             </button>
@@ -105,7 +108,7 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
                 handleEvaluate({ target: internalRef.current })
               }
             }}
-            className="px-3.5 py-2 text-sm font-bold text-blue-600 bg-blue-500/10 hover:bg-blue-500/20 active:bg-blue-500/30 transition cursor-pointer"
+            className="px-2.5 py-1.5 text-xs font-bold text-blue-600 bg-blue-500/10 hover:bg-blue-500/20 active:bg-blue-500/30 transition cursor-pointer"
           >
             =
           </button>

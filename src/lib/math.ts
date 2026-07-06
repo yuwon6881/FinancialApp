@@ -1,7 +1,10 @@
 export const evaluateMathString = (input: string): number | null => {
   try {
+    // Replace nice symbols back to standard ones for JS evaluation
+    let sanitized = input.replace(/×/g, '*').replace(/÷/g, '/')
+    
     // Aggressively sanitize input to only allow numbers, dots, and basic math operators
-    const sanitized = input.replace(/[^0-9+\-*/().\s]/g, '')
+    sanitized = sanitized.replace(/[^0-9+\-*/().\s]/g, '')
     if (!sanitized.trim()) return null
     
     // Safely evaluate using new Function with heavily restricted alphabet

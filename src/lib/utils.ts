@@ -32,20 +32,33 @@ export const formatCurrencyVal = (val: number, currencyCode: string = 'USD') => 
 export const maskCurrencyInput = (rawVal: string, currentValue: string): string => {
   if (!rawVal) return ''
 
-  // If the user is typing a math expression, don't format as cents, just allow valid math chars
-  if (/[+\-*/]/.test(rawVal)) {
-    return rawVal.replace(/[^0-9+\-*/.]/g, '')
-  }
+  // Replace standard operators with nice symbols, and allow them in the regex
+  let val = rawVal.replace(/\*/g, '×').replace(/\//g, '÷')
+  val = val.replace(/[^0-9+\-×÷.]/g, '')
 
-  const digits = rawVal.replace(/\D/g, '')
-  if (!digits) return ''
+  // Split by operators, capturing them so they are preserved in the array
+  const tokens = val.split(/([+\-×÷])/)
+  const currentTokens = currentValue ? currentValue.split(/([+\-×÷])/) : []
 
-  const parsed = parseInt(digits, 10)
-  if (parsed === 0) {
-    return currentValue === '0.00' || currentValue === '' ? '' : '0.00'
-  }
+  const formattedTokens = tokens.map((token, index) => {
+    // If the token is an operator, keep it as is
+    if (/[+\-×÷]/.test(token)) return token
+    if (!token) return ''
 
-  return (parsed / 100).toFixed(2)
+    // Apply ATM formatting to this specific number token
+    const digits = token.replace(/\D/g, '')
+    if (!digits) return ''
+
+    const parsed = parseInt(digits, 10)
+    if (parsed === 0) {
+      const prevToken = currentTokens[index] || ''
+      return prevToken === '0.00' || prevToken === '' ? '' : '0.00'
+    }
+
+    return (parsed / 100).toFixed(2)
+  })
+
+  return formattedTokens.join('')
 }
 
 
