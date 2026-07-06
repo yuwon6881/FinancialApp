@@ -82,6 +82,67 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   const backdropMouseDownRef = useRef(false)
   const dragControls = useDragControls()
 
+  // Instagram-style swipe-to-dismiss from anywhere on the sheet (including over
+  // an unfocused text input) while still letting inner scroll regions scroll. A
+  // downward drag only becomes a dismiss when the scroll container under the
+  // finger is already at its top; otherwise the gesture is left to native
+  // scrolling. Interactive controls (buttons, links, selects, sliders) and any
+  // region explicitly opting out with `data-no-drag` keep their own gestures.
+  // Note text inputs are deliberately NOT excluded so the sheet can still be
+  // dismissed with a finger resting on a field that hasn't been focused yet.
+  const NO_DRAG_SELECTOR =
+    'button, a, select, input[type="range"], [role="button"], [role="slider"], [data-no-drag="true"], [data-no-sheet-drag]'
+  const gestureRef = useRef<{ startY: number; decided: 'none' | 'scroll' | 'drag' } | null>(null)
+  const dragActiveRef = useRef(false)
+
+  // Walk from the touched element up to the panel and report whether the first
+  // scrollable ancestor is pinned to its top (so a downward pull should dismiss
+  // rather than scroll). No scrollable ancestor => treat as "at top".
+  const scrollableAtTop = (target: HTMLElement | null, boundary: HTMLElement): boolean => {
+    let node: HTMLElement | null = target
+    while (node && node !== boundary.parentElement) {
+      const oy = getComputedStyle(node).overflowY
+      if ((oy === 'auto' || oy === 'scroll') && node.scrollHeight - node.clientHeight > 1) {
+        return node.scrollTop <= 0
+      }
+      if (node === boundary) break
+      node = node.parentElement
+    }
+    return true
+  }
+
+  const handlePanelPointerDown = (e: React.PointerEvent) => {
+    // Swipe-to-dismiss is a touch affordance; a mouse can use the backdrop /
+    // back button / close controls, and we don't want to hijack text selection.
+    if (e.pointerType === 'mouse') return
+    const target = e.target as HTMLElement
+    if (target.closest(NO_DRAG_SELECTOR)) {
+      gestureRef.current = null
+      return
+    }
+    gestureRef.current = { startY: e.clientY, decided: 'none' }
+  }
+
+  const handlePanelPointerMove = (e: React.PointerEvent) => {
+    const gesture = gestureRef.current
+    if (!gesture || dragActiveRef.current || gesture.decided !== 'none') return
+    const dy = e.clientY - gesture.startY
+    if (Math.abs(dy) < 8) return
+    const panel = panelRef.current
+    if (dy > 0 && panel && scrollableAtTop(e.target as HTMLElement, panel)) {
+      gesture.decided = 'drag'
+      dragControls.start(e)
+    } else {
+      // Upward, or downward while the content can still scroll up: leave it to
+      // native scrolling for the rest of this gesture.
+      gesture.decided = 'scroll'
+    }
+  }
+
+  const clearGesture = () => {
+    gestureRef.current = null
+  }
+
   return createPortal(
     <AnimatePresence>
       {isOpen && (
@@ -114,29 +175,27 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             dragListener={false}
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.5 }}
+            onDragStart={() => { dragActiveRef.current = true }}
             onDragEnd={(_e, info: PanInfo) => {
+              dragActiveRef.current = false
+              gestureRef.current = null
               if (info.velocity.y > 300 || info.offset.y > 100) {
                 onClose()
               }
             }}
+            onPointerDown={handlePanelPointerDown}
+            onPointerMove={handlePanelPointerMove}
+            onPointerUp={clearGesture}
+            onPointerCancel={clearGesture}
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
             aria-label={ariaLabel}
             tabIndex={-1}
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
-            onPointerDown={(e) => {
-              const target = e.target as HTMLElement;
-              // Do not start drag if clicking a button, link, input, or other interactive element
-              if (target.closest('button, a, input, textarea, select')) return;
-              // Do not start drag if inside an area explicitly opting out (e.g. scrollable lists)
-              if (target.closest('[data-no-drag="true"]')) return;
-              
-              dragControls.start(e);
-            }}
             className={`sheet-panel w-full ${maxWidthClassName} bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto focus:outline-none`}
           >
-            <div 
+            <div
               style={{ touchAction: 'none' }}
               className="pb-3 shrink-0"
             >

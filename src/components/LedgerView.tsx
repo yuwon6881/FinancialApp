@@ -1667,23 +1667,34 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         className="sticky z-30 flex flex-row items-center justify-between gap-2 md:gap-4 p-2 md:p-4 bg-card/90 supports-[backdrop-filter]:bg-card/75 backdrop-blur-md border border-border/60 rounded-xl md:rounded-2xl shadow-sm"
       >
         {showAllCycles ? (
-          /* Server mode: unified pill search bar */
-          <div className="flex min-w-0 flex-1 items-stretch md:w-auto">
-            <div className="flex min-w-0 items-center flex-1 md:w-80 bg-background border border-border rounded-l-xl border-r-0 overflow-hidden focus-within:ring-1 focus-within:ring-blue-500/60 focus-within:border-blue-500/40 transition duration-200">
-              <Search className="size-4 text-muted-foreground ml-3 shrink-0" />
+          /* Server mode: input pill + Search button fused into one focus-aware
+             control so the two read as a single element rather than two boxes. */
+          <div className="group flex min-w-0 flex-1 items-stretch md:w-auto overflow-hidden rounded-xl border border-border/70 bg-background shadow-sm transition duration-200 focus-within:border-blue-500/50 focus-within:ring-2 focus-within:ring-blue-500/25 hover:border-border">
+            <div className="flex min-w-0 flex-1 items-center md:w-80">
+              <Search className="ml-3 size-4 shrink-0 text-muted-foreground transition-colors group-focus-within:text-blue-500" />
               <input
                 type="text"
-                placeholder="Search description, category..."
+                placeholder="Search all transactions..."
                 value={pendingSearchTerm}
                 onChange={e => setPendingSearchTerm(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') handleServerSearch() }}
-                className="min-w-0 flex-1 px-2.5 py-2.5 text-xs bg-transparent border-none outline-none placeholder:text-muted-foreground"
+                className="min-w-0 flex-1 bg-transparent px-2.5 py-2.5 text-xs outline-none placeholder:text-muted-foreground"
               />
+              {pendingSearchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setPendingSearchTerm('')}
+                  aria-label="Clear search"
+                  className="mr-1 flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer"
+                >
+                  <X className="size-3.5" />
+                </button>
+              )}
             </div>
             <button
               onClick={handleServerSearch}
               disabled={serverIsFetching}
-              className="flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-r-xl px-3 md:px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 text-white text-xs font-semibold cursor-pointer transition duration-200 border border-blue-600 border-l-0 whitespace-nowrap"
+              className="flex min-h-10 shrink-0 items-center justify-center gap-1.5 border-l border-border/50 bg-gradient-to-r from-blue-600 to-blue-500 px-3.5 py-2.5 text-xs font-semibold text-white whitespace-nowrap transition duration-200 hover:from-blue-700 hover:to-blue-600 active:from-blue-800 active:to-blue-700 disabled:opacity-50 cursor-pointer md:px-5"
             >
               {serverIsFetching
                 ? <Loader2 className="size-3.5 animate-spin" />
@@ -1692,16 +1703,26 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             </button>
           </div>
         ) : (
-          /* Client mode: standard search input */
-          <div className="relative flex-1 md:w-72 md:flex-initial">
-            <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
+          /* Client mode: live-filtering search input with a clear affordance. */
+          <div className="group relative flex-1 md:w-72 md:flex-initial">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-blue-500" />
             <input
               type="text"
               placeholder="Search description, category..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
+              className="w-full rounded-xl border border-border/70 bg-background py-2.5 pl-9 pr-9 text-xs shadow-sm outline-none transition duration-200 hover:border-border focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/25"
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer"
+              >
+                <X className="size-3.5" />
+              </button>
+            )}
           </div>
         )}
 

@@ -1547,13 +1547,17 @@ function App() {
         <Suspense fallback={<ContentViewFallback />}>
         <LaunchReady>
         {/* Keyed on the active tab so every view change replays the gentle
-            slide entrance instead of hard-swapping content. */}
-        <AnimatePresence mode="wait">
-        <motion.div 
-          key={activeTab} 
+            slide entrance instead of hard-swapping content. Deliberately NOT
+            wrapped in <AnimatePresence mode="wait">: gating the incoming view on
+            the outgoing one's exit animation could deadlock (an interrupted or
+            never-completing exit left the new view unmounted, so the nav showed
+            the new tab as active while the old content stayed on screen and
+            tapping again was a no-op). Remounting on key change replays the
+            entrance without any exit-completion dependency. */}
+        <motion.div
+          key={activeTab}
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -5 }}
           transition={{ type: "spring", stiffness: 400, damping: 30, mass: 1 }}
           className="w-full gpu-layer"
         >
@@ -1703,7 +1707,6 @@ function App() {
           />
         )}
         </motion.div>
-        </AnimatePresence>
         </LaunchReady>
         </Suspense>
         </ErrorBoundary>

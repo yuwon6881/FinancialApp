@@ -8,7 +8,7 @@ import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { MONTH_NAMES, getCycleRangeDates, getStartOfNCyclesAgo, formatDateForApi } from '../lib/cycle'
 import * as api from '../lib/api'
 import type { FingerprintCredentialSummary } from '../lib/api'
-import { isPlatformAuthenticatorAvailable, createFingerprintCredential, getFriendlyDeviceLabel } from '../lib/webauthn'
+import { isPlatformAuthenticatorAvailable, createFingerprintCredential, getFriendlyDeviceLabel, base64UrlToHex } from '../lib/webauthn'
 import type { ToastTone } from './ui/ToastViewport'
 import { ToggleButton } from './ui/ToggleButton'
 
@@ -148,8 +148,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     if (fingerprintCredentials.length === 0) return false
     const storedId = localStorage.getItem(DEVICE_CREDENTIAL_ID_KEY)
     if (!storedId) return false
+    // Sentinel written when we know this device is enrolled but can't pin down
+    // which specific credential id is ours (e.g. an InvalidStateError recovery).
     if (storedId === 'already_enrolled') return true
-    return fingerprintCredentials.some(c => c.id === storedId)
+    // The server lists credentials by uppercase hex id. Historically we stored
+    // the base64url credential id here instead, so match against both forms:
+    // the hex we store now, and the legacy base64url converted to hex.
+    const upper = storedId.toUpperCase()
+    let legacyHex: string | null = null
+    try { legacyHex = base64UrlToHex(storedId) } catch { legacyHex = null }
+    return fingerprintCredentials.some(c => {
+      const serverId = c.id.toUpperCase()
+      return serverId === upper || (legacyHex !== null && serverId === legacyHex)
+    })
   }, [fingerprintCredentials])
 
   const handleEnrollFingerprint = async () => {
@@ -159,17 +170,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       const { challengeId, options } = await api.getFingerprintRegisterOptions()
       const credential = await createFingerprintCredential(options)
       await api.verifyFingerprintRegistration(challengeId, credential, getFriendlyDeviceLabel())
-      localStorage.setItem(DEVICE_CREDENTIAL_ID_KEY, 'already_enrolled')
+      // Store the same uppercase-hex form the server reports so this device is
+      // recognised as already-enrolled on the next load (see enrolledOnThisDevice).
+      localStorage.setItem(DEVICE_CREDENTIAL_ID_KEY, base64UrlToHex(credential.id))
       await loadFingerprintCredentials()
       onToast?.('Fingerprint enabled on this device.', 'Fingerprint enabled', 'success')
     } catch (err: any) {
       console.error(err)
       if (err?.name === 'InvalidStateError') {
-        // The authenticator already holds a credential for this account (excludeCredentials matched) -
-        // this device is already enrolled, nothing went wrong.
+        // The authenticator already holds a credential for this account
+        // (excludeCredentials matched) -- this device is already enrolled, so
+        // reconcile state and tell the user rather than erroring. We can't tell
+        // which stored credential is ours here, so mark it with the sentinel.
         localStorage.setItem(DEVICE_CREDENTIAL_ID_KEY, 'already_enrolled')
         await loadFingerprintCredentials()
-        onToast?.('Fingerprint is already enabled on this device.', 'Fingerprint enabled', 'success')
+        onToast?.('This device already has fingerprint enabled.', 'Already enabled', 'info')
       } else if (err?.name !== 'NotAllowedError') {
         onToast?.(err.message || 'Failed to register fingerprint on this device.', 'Fingerprint error', 'error')
       }

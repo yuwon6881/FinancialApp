@@ -17,6 +17,16 @@ function bufferToBase64Url(buffer: ArrayBuffer): string {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
+// The backend identifies stored credentials by the uppercase hex of their raw
+// credential-id bytes (Convert.ToHexString). The WebAuthn API hands us that id
+// as a base64url string, so convert to the same hex form to compare the two.
+export function base64UrlToHex(base64Url: string): string {
+  const bytes = new Uint8Array(base64UrlToBuffer(base64Url))
+  let hex = ''
+  for (let i = 0; i < bytes.length; i++) hex += bytes[i].toString(16).padStart(2, '0')
+  return hex.toUpperCase()
+}
+
 export function isFingerprintSupported(): boolean {
   return typeof window !== 'undefined' && !!window.PublicKeyCredential
 }
