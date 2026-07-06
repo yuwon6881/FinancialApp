@@ -218,52 +218,52 @@ function App() {
     switch (`${op.entity}:${op.type}`) {
       // Adds -> delete the record that was just created.
       case 'transaction:add':
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'transaction', 'delete', String(op.targetId), undefined, true)) }
+        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'transaction', 'delete', String(op.targetId), undefined, true)) }
       case 'recurringPayment:add':
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'recurringPayment', 'delete', String(op.targetId), undefined, true)) }
+        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'recurringPayment', 'delete', String(op.targetId), undefined, true)) }
       case 'category:add':
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'category', 'delete', String(op.targetId), undefined, true)) }
+        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'category', 'delete', String(op.targetId), undefined, true)) }
       case 'wishlistItem:add': {
         // The server-assigned id only exists post-sync; use it, not the local placeholder.
         const realId = result && result.id != null ? String(result.id) : String(op.targetId)
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'wishlistItem', 'delete', realId, undefined, true)) }
+        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'wishlistItem', 'delete', realId, undefined, true)) }
       }
 
       // Deletes -> re-add the captured record (reusing its id where the API accepts one).
       case 'transaction:delete':
         if (!before) return undefined
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'transaction', 'add', String(before.id), { ...before }, true)) }
+        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'transaction', 'add', String(before.id), { ...before }, true)) }
       case 'recurringPayment:delete':
         if (!before) return undefined
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'recurringPayment', 'add', String(before.id), { ...before }, true)) }
+        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'recurringPayment', 'add', String(before.id), { ...before }, true)) }
       case 'category:delete':
         if (!before) return undefined
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'category', 'add', String(before.id), { ...before }, true)) }
+        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'category', 'add', String(before.id), { ...before }, true)) }
       case 'wishlistItem:delete': {
         if (!before) return undefined
         // Wishlist ids are server-generated, so a re-add takes a fresh local placeholder id.
         const placeholderId = String(createLocalWishlistId())
         const payload = { ...before }
         delete payload.id
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'wishlistItem', 'add', placeholderId, payload, true)) }
+        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'wishlistItem', 'add', placeholderId, payload, true)) }
       }
 
       // Updates -> restore the captured prior values.
       case 'transaction:update':
         if (!before) return undefined
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'transaction', 'update', String(op.targetId), { ...before }, true)) }
+        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'transaction', 'update', String(op.targetId), { ...before }, true)) }
       case 'recurringPayment:update':
         if (!before) return undefined
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'recurringPayment', 'update', String(op.targetId), { ...before }, true)) }
+        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'recurringPayment', 'update', String(op.targetId), { ...before }, true)) }
       case 'wishlistItem:update':
         if (!before) return undefined
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'wishlistItem', 'update', String(op.targetId), { ...before }, true)) }
+        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'wishlistItem', 'update', String(op.targetId), { ...before }, true)) }
 
       // Toggle -> flip back to the prior active state.
       case 'recurringPayment:toggle': {
         if (!op.payload || typeof op.payload.active !== 'boolean') return undefined
         const priorActive = !op.payload.active
-        return { label: 'Undo', onAction: () => setPendingOps(prev => enqueue(prev, 'recurringPayment', 'toggle', String(op.targetId), { active: priorActive }, true)) }
+        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'recurringPayment', 'toggle', String(op.targetId), { active: priorActive }, true)) }
       }
 
       // wishlistItem:purchase and settings:update have no clean reverse — no undo.
@@ -518,7 +518,7 @@ function App() {
     setDashboardData(null)
     setTransactions([])
     setRecurringPayments([])
-    setPendingOps([])
+    mutateQueue(() => [])
     setFailedOps([])
     setDraftTransactions([])
     setCategoriesList([])
@@ -654,7 +654,7 @@ function App() {
         if (parsed && parsed.owner === newUsername) {
           const backedUpOps = sanitizeQueuedOps(parsed.ops || parsed.transactions);
           if (backedUpOps.length > 0) {
-            setPendingOps(backedUpOps);
+            mutateQueue(() => backedUpOps);
             setCachedJSON(CACHE_KEYS.pendingOperations, backedUpOps);
           }
         }
@@ -694,7 +694,7 @@ function App() {
         if (parsed && parsed.owner === newUsername) {
           const backedUpFailed = sanitizeQueuedOps(parsed.ops).map(op => ({ ...op, retryCount: 0 }));
           if (backedUpFailed.length > 0) {
-            setPendingOps(prev => {
+            mutateQueue(prev => {
               const merged = [...prev, ...backedUpFailed];
               setCachedJSON(CACHE_KEYS.pendingOperations, merged);
               return merged;
@@ -751,19 +751,19 @@ function App() {
     currency?: string
   }) => {
     const payload = { ...settings, darkMode, hideSensitive }
-    setPendingOps(prev => enqueue(prev, 'settings', 'update', 'settings', payload))
+    mutateQueue(prev => enqueue(prev, 'settings', 'update', 'settings', payload))
   }
 
   // Custom Categories & Accounts modifiers
   const handleAddCategory = (newCat: Omit<TransactionCategory, 'id'>) => {
     if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     const finalId = createFinalId('category')
-    setPendingOps(prev => enqueue(prev, 'category', 'add', finalId, { ...newCat, id: finalId }))
+    mutateQueue(prev => enqueue(prev, 'category', 'add', finalId, { ...newCat, id: finalId }))
   }
 
   const handleDeleteCategory = (id: string) => {
     snapshotForUndo('category', String(id), allCategories.find(cat => String(cat.id) === String(id)))
-    setPendingOps(prev => enqueue(prev, 'category', 'delete', id))
+    mutateQueue(prev => enqueue(prev, 'category', 'delete', id))
   }
 
   const requestDeleteCategory = (id: string) => {
@@ -794,7 +794,7 @@ function App() {
   const handleAddBalanceAdjustment = (newTx: Omit<Transaction, 'id'>) => {
     const finalId = createFinalId('transaction')
     triggerVibration(20)
-    setPendingOps(prev => enqueue(prev, 'transaction', 'add', finalId, { ...newTx, id: finalId }))
+    mutateQueue(prev => enqueue(prev, 'transaction', 'add', finalId, { ...newTx, id: finalId }))
   }
 
   const handleUpdateDraftTransaction = (id: string, updated: Transaction) => {
@@ -822,20 +822,21 @@ function App() {
   const handleSyncDraftBatch = () => {
     if (draftTransactions.length === 0) return;
 
-    let nextQueue = pendingOps;
-    draftTransactions.forEach(d => {
-      const finalId = createFinalId('transaction');
-      const payload = {
-        ...d,
-        id: finalId
-      };
-      delete payload.isPendingSync;
-      nextQueue = enqueue(nextQueue, 'transaction', 'add', finalId, payload);
-    });
-
+    const drafts = draftTransactions;
     setDraftTransactions([]);
     triggerVibration([25, 45, 25]);
-    setPendingOps(nextQueue);
+    // Build off the live queue via mutateQueue so a drain in progress can't drop
+    // these adds (previously seeded from possibly-stale `pendingOps` state).
+    mutateQueue(prev => {
+      let nextQueue = prev;
+      drafts.forEach(d => {
+        const finalId = createFinalId('transaction');
+        const payload = { ...d, id: finalId };
+        delete payload.isPendingSync;
+        nextQueue = enqueue(nextQueue, 'transaction', 'add', finalId, payload);
+      });
+      return nextQueue;
+    });
   };
 
   const handleDeleteTransaction = (id: string) => {
@@ -847,7 +848,7 @@ function App() {
     }
     setDeletingTxId(deleteId)
     snapshotForUndo('transaction', deleteId, allTransactions.find(t => String(t.id) === deleteId))
-    setPendingOps(prev => enqueue(prev, 'transaction', 'delete', deleteId))
+    mutateQueue(prev => enqueue(prev, 'transaction', 'delete', deleteId))
     if (deleteId === editingPendingId) setEditingPendingId(null)
   }
 
@@ -855,14 +856,14 @@ function App() {
     if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     triggerVibration(15)
     snapshotForUndo('transaction', String(id), allTransactions.find(t => String(t.id) === String(id)))
-    setPendingOps(prev => enqueue(prev, 'transaction', 'update', id, updatedTx))
+    mutateQueue(prev => enqueue(prev, 'transaction', 'update', id, updatedTx))
     if (id === editingPendingId) setEditingPendingId(null)
   }
 
   const handleConfirmSubscription = (noti: any, paidDate: string) => {
     if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     const finalId = createFinalId('transaction')
-    setPendingOps(prev => enqueue(prev, 'transaction', 'add', finalId, {
+    mutateQueue(prev => enqueue(prev, 'transaction', 'add', finalId, {
       id: finalId,
       date: paidDate,
       description: noti.name,
@@ -876,7 +877,7 @@ function App() {
   const handleDiscardSubscription = (noti: any) => {
     if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     const finalId = createFinalId('transaction')
-    setPendingOps(prev => enqueue(prev, 'transaction', 'add', finalId, {
+    mutateQueue(prev => enqueue(prev, 'transaction', 'add', finalId, {
       id: finalId,
       date: noti.billingDate,
       description: `[Discarded] ${noti.name}`,
@@ -890,25 +891,25 @@ function App() {
   // Recurring payment modifiers
   const handleAddPayment = (newPay: Omit<RecurringPayment, 'id'>) => {
     const finalId = createFinalId('recurringPayment')
-    setPendingOps(prev => enqueue(prev, 'recurringPayment', 'add', finalId, { ...newPay, id: finalId, active: true }))
+    mutateQueue(prev => enqueue(prev, 'recurringPayment', 'add', finalId, { ...newPay, id: finalId, active: true }))
   }
 
   const handleToggleActive = (id: string) => {
     if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     const current = allRecurringPayments.find(p => String(p.id) === String(id))
     const payload = current ? { active: !current.active } : undefined
-    setPendingOps(prev => enqueue(prev, 'recurringPayment', 'toggle', id, payload))
+    mutateQueue(prev => enqueue(prev, 'recurringPayment', 'toggle', id, payload))
   }
 
   const handleUpdatePayment = (id: string, payment: RecurringPayment) => {
     if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     snapshotForUndo('recurringPayment', String(id), allRecurringPayments.find(p => String(p.id) === String(id)))
-    setPendingOps(prev => enqueue(prev, 'recurringPayment', 'update', id, payment))
+    mutateQueue(prev => enqueue(prev, 'recurringPayment', 'update', id, payment))
   }
 
   const handleDeletePayment = (id: string) => {
     snapshotForUndo('recurringPayment', String(id), allRecurringPayments.find(p => String(p.id) === String(id)))
-    setPendingOps(prev => enqueue(prev, 'recurringPayment', 'delete', id))
+    mutateQueue(prev => enqueue(prev, 'recurringPayment', 'delete', id))
   }
 
   const requestDeletePayment = (id: string) => {
@@ -933,18 +934,18 @@ function App() {
       createdAt: new Date().toISOString(),
       isActive: newWish.isActive ?? false
     }
-    setPendingOps(prev => enqueue(prev, 'wishlistItem', 'add', placeholderId, payload))
+    mutateQueue(prev => enqueue(prev, 'wishlistItem', 'add', placeholderId, payload))
   }
 
   const handleUpdateWishlistItem = (id: number, updatedWish: WishlistItem) => {
     if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     snapshotForUndo('wishlistItem', String(id), allWishlist.find(w => String(w.id) === String(id)))
-    setPendingOps(prev => enqueue(prev, 'wishlistItem', 'update', String(id), updatedWish))
+    mutateQueue(prev => enqueue(prev, 'wishlistItem', 'update', String(id), updatedWish))
   }
 
   const handleDeleteWishlistItem = (id: number) => {
     snapshotForUndo('wishlistItem', String(id), allWishlist.find(w => String(w.id) === String(id)))
-    setPendingOps(prev => enqueue(prev, 'wishlistItem', 'delete', String(id)))
+    mutateQueue(prev => enqueue(prev, 'wishlistItem', 'delete', String(id)))
   }
 
   const requestDeleteWishlistItem = (id: number) => {
@@ -959,7 +960,7 @@ function App() {
   }
 
   const handlePurchaseWishlistItem = (id: number) => {
-    setPendingOps(prev => enqueue(prev, 'wishlistItem', 'purchase', String(id)))
+    mutateQueue(prev => enqueue(prev, 'wishlistItem', 'purchase', String(id)))
   }
 
   // Save pending operations to localStorage whenever they change
@@ -982,6 +983,21 @@ function App() {
   useEffect(() => {
     pendingOpsRef.current = pendingOps;
   }, [pendingOps]);
+
+  // Single entry point for every queue mutation. Computes the next queue from the
+  // *ref* (the synchronous source of truth) rather than React state, then writes
+  // ref and state together. This is what makes concurrent mutations safe: an Undo
+  // click that enqueues a compensating op while the drain loop is awaiting a
+  // dispatch reads-and-writes the same ref the loop does, so neither clobbers the
+  // other's change (the earlier plain-value writes lost whichever landed second).
+  const mutateQueue = useCallback((updater: (prev: QueuedOp[]) => QueuedOp[]) => {
+    const next = updater(pendingOpsRef.current);
+    // Deliberate synchronous ref write: this ref *is* the live queue the drain
+    // loop reads mid-await, so it must update now, not after the next render.
+    // eslint-disable-next-line react-hooks/immutability
+    pendingOpsRef.current = next;
+    setPendingOps(next);
+  }, []);
 
   useEffect(() => {
     draftTxRef.current = draftTransactions;
@@ -1047,29 +1063,27 @@ function App() {
           const dispatchFn = DISPATCH[key];
           if (!dispatchFn) {
             console.error(`No dispatch handler for ${key}`);
-            const remaining = queue.slice(1);
-            pendingOpsRef.current = remaining;
-            setPendingOps(remaining);
+            // Drop just this op by id (never by index): a concurrent enqueue may
+            // have shifted positions while we were in this iteration.
+            mutateQueue(prev => prev.filter(item => item.id !== nextOp.id));
             continue;
           }
 
           const result = await dispatchFn(nextOp);
 
-          let updatedQueue = pendingOpsRef.current.filter(item => item.id !== nextOp.id);
+          // Functional removal keyed off the live queue, so any op enqueued during
+          // the await above (e.g. an Undo tap) is preserved rather than clobbered.
+          mutateQueue(prev => {
+            let next = prev.filter(item => item.id !== nextOp.id);
+            if (nextOp.entity === 'wishlistItem' && nextOp.type === 'add' && result && result.id) {
+              const realIdStr = String(result.id);
+              next = next.map(op => (op.entity === 'wishlistItem' && op.targetId === nextOp.targetId)
+                ? { ...op, targetId: realIdStr }
+                : op);
+            }
+            return next;
+          });
 
-          if (nextOp.entity === 'wishlistItem' && nextOp.type === 'add' && result && result.id) {
-            const realIdStr = String(result.id);
-            updatedQueue = updatedQueue.map(op => {
-              if (op.entity === 'wishlistItem' && op.targetId === nextOp.targetId) {
-                return { ...op, targetId: realIdStr };
-              }
-              return op;
-            });
-          }
-
-          pendingOpsRef.current = updatedQueue;
-          setPendingOps(updatedQueue);
-          
           setRecentlyCompletedOps(prev => [...prev, { ...nextOp, isCompleted: true }]);
           setTimeout(() => {
             setRecentlyCompletedOps(prev => prev.filter(op => op.id !== nextOp.id));
@@ -1102,17 +1116,15 @@ function App() {
               const opDesc = nextOp.payload?.description || nextOp.payload?.name || nextOp.entity;
               showToast(`Couldn't sync '${opDesc}' — removed from queue`, 'Sync Failed', 'error');
 
-              const remainingQueue = pendingOpsRef.current.filter(item => item.id !== nextOp.id);
-              pendingOpsRef.current = remainingQueue;
-              setPendingOps(remainingQueue);
+              mutateQueue(prev => prev.filter(item => item.id !== nextOp.id));
               setFailedOps(prev => [...prev, { ...nextOp, retryCount: updatedRetryCount }]);
               continue;
             } else {
-              const updatedQueue = pendingOpsRef.current.map((item, idx) =>
-                idx === 0 ? { ...item, retryCount: updatedRetryCount } : item
-              );
-              pendingOpsRef.current = updatedQueue;
-              setPendingOps(updatedQueue);
+              // Bump retry on this op by id (not index 0) so a concurrently
+              // enqueued op that jumped ahead doesn't get the retry count instead.
+              mutateQueue(prev => prev.map(item =>
+                item.id === nextOp.id ? { ...item, retryCount: updatedRetryCount } : item
+              ));
 
               setError('Sync pending: Server is offline or waking up...');
               const backoff = Date.now() + 15000;
@@ -1146,7 +1158,7 @@ function App() {
       setIsBackgroundSyncing(false);
       isSyncingRef.current = false;
     }
-  }, [token, selectedMonth, selectedYear]);
+  }, [token, selectedMonth, selectedYear, mutateQueue]);
 
   useEffect(() => {
     if (!token || pendingOps.length === 0) return;
@@ -1392,7 +1404,7 @@ function App() {
       await api.verifyFingerprintAssert(challengeId, credential)
       setHideSensitive(false)
       localStorage.setItem('hide_sensitive', 'false')
-      setPendingOps(prev => enqueue(prev, 'settings', 'update', 'hideSensitive', { hideSensitive: false }))
+      mutateQueue(prev => enqueue(prev, 'settings', 'update', 'hideSensitive', { hideSensitive: false }))
       return true
     } catch (err) {
       console.warn('Fingerprint prompt failed/cancelled:', err)
@@ -1409,7 +1421,7 @@ function App() {
     } else {
       setHideSensitive(true)
       localStorage.setItem('hide_sensitive', 'true')
-      setPendingOps(prev => enqueue(prev, 'settings', 'update', 'hideSensitive', { hideSensitive: true }))
+      mutateQueue(prev => enqueue(prev, 'settings', 'update', 'hideSensitive', { hideSensitive: true }))
     }
   }
 
@@ -1417,7 +1429,7 @@ function App() {
     const newDark = !darkMode
     setDarkMode(newDark)
     localStorage.setItem('dark_mode', newDark.toString())
-    setPendingOps(prev => enqueue(prev, 'settings', 'update', 'darkMode', { darkMode: newDark }))
+    mutateQueue(prev => enqueue(prev, 'settings', 'update', 'darkMode', { darkMode: newDark }))
   }
 
   // Delegate to the shared haptics helper which tries the Capacitor native
@@ -1535,11 +1547,12 @@ function App() {
         <LaunchReady>
         {/* Keyed on the active tab so every view change replays the gentle
             slide entrance instead of hard-swapping content. */}
-        <div className="relative w-full">
-        <AnimatePresence mode="popLayout" initial={false} custom={tabDirection}>
+        <div className="grid w-full relative" style={{ gridTemplateColumns: 'minmax(0, 1fr)' }}>
+        <AnimatePresence initial={false} custom={tabDirection}>
         <motion.div 
           key={activeTab} 
           custom={tabDirection}
+          style={{ gridArea: '1 / 1' }}
           initial="enter"
           animate="center"
           exit="exit"
@@ -1733,7 +1746,7 @@ function App() {
           setHideSensitive(false)
           localStorage.setItem('hide_sensitive', 'false')
           setShowPasswordPrompt(false)
-          setPendingOps(prev => enqueue(prev, 'settings', 'update', 'hideSensitive', { hideSensitive: false }))
+          mutateQueue(prev => enqueue(prev, 'settings', 'update', 'hideSensitive', { hideSensitive: false }))
         }}
         onTryFingerprint={hasFingerprintSetup ? revealSensitiveWithFingerprint : undefined}
       />

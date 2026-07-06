@@ -109,17 +109,31 @@ export function enqueue(
     isUndo
   }
 
-  const hasQueuedAdd = queue.some(op => op.entity === entity && op.targetId === targetIdStr && op.type === 'add')
+  const sameTarget = (op: QueuedOp) => op.entity === entity && op.targetId === targetIdStr
+  const hasQueuedAdd = queue.some(op => sameTarget(op) && op.type === 'add')
+  const hasQueuedDelete = queue.some(op => sameTarget(op) && op.type === 'delete')
 
   if (type === 'delete') {
+    if (hasQueuedDelete) {
+      // Already queued for deletion: collapse the duplicate so we never fire a
+      // second DELETE at a row the first one already removed (would 404).
+      return queue
+    }
     if (hasQueuedAdd) {
       // Delete against a target with an unsent add: drop the add & cascade-remove all ops for that target
-      return queue.filter(op => !(op.entity === entity && op.targetId === targetIdStr))
+      return queue.filter(op => !sameTarget(op))
     } else {
-      // Delete against existing entity: drop queued update/toggle for that target & append delete
-      const filtered = queue.filter(op => !(op.entity === entity && op.targetId === targetIdStr && (op.type === 'update' || op.type === 'toggle')))
+      // Delete against existing entity: drop queued update/toggle/purchase for that target & append delete
+      const filtered = queue.filter(op => !(sameTarget(op) && (op.type === 'update' || op.type === 'toggle' || op.type === 'purchase')))
       return [...filtered, newOp]
     }
+  }
+
+  // A record already queued for deletion can't be meaningfully mutated further:
+  // any update/toggle/purchase would replay against a row the delete removes.
+  // Drop it (delete wins) rather than queue an op destined to 404.
+  if (hasQueuedDelete && (type === 'update' || type === 'toggle' || type === 'purchase')) {
+    return queue
   }
 
   if (type === 'update') {
@@ -176,7 +190,30 @@ export function enqueue(
     }
   }
 
-  // add or purchase -> append to queue
+  if (type === 'add') {
+    if (hasQueuedDelete) {
+      // A queued delete + a re-add of the same id cancel out (e.g. undoing a
+      // not-yet-synced delete). The row still exists server-side, so just drop
+      // the pending delete instead of round-tripping delete-then-add.
+      return queue.filter(op => !(sameTarget(op) && op.type === 'delete'))
+    }
+    if (hasQueuedAdd) {
+      // Defensive: never queue two adds for the same id -- merge the payloads.
+      return queue.map(op => (sameTarget(op) && op.type === 'add')
+        ? { ...op, payload: { ...op.payload, ...payload } }
+        : op)
+    }
+    return [...queue, newOp]
+  }
+
+  if (type === 'purchase') {
+    // Collapse duplicate purchases so a double-tap can't fire two calls.
+    if (queue.some(op => sameTarget(op) && op.type === 'purchase')) {
+      return queue
+    }
+    return [...queue, newOp]
+  }
+
   return [...queue, newOp]
 }
 
