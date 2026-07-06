@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import type { Transaction } from '../types'
-import { FileText, Edit2, Trash2, ArrowLeft, Plus } from 'lucide-react'
+import { FileText, Edit2, Trash2, ArrowLeft, Plus, AlertCircle } from 'lucide-react'
 import { formatCurrencyVal } from '../lib/utils'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
@@ -30,6 +30,11 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState('')
+  const [validationErrors, setValidationErrors] = useState<{
+    description?: string
+    amount?: string
+    date?: string
+  }>({})
 
   const formatCurrency = (val: number) => {
     return formatCurrencyVal(val, currency)
@@ -49,15 +54,30 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
     setDescription(draft.description)
     setAmount(Math.abs(draft.amount).toString())
     setDate(draft.date)
+    setValidationErrors({})
   }
 
   const handleSaveEdit = (draft: Transaction) => {
+    const errors: { description?: string; amount?: string; date?: string } = {}
+    if (!description.trim()) {
+      errors.description = 'Description is required'
+    }
     const parsedAmount = parseFloat(amount)
-    if (!description.trim() || isNaN(parsedAmount) || parsedAmount <= 0 || !date) {
-      alert('Please fill out all fields correctly.')
+    if (isNaN(parsedAmount)) {
+      errors.amount = 'Amount must be a valid number'
+    } else if (parsedAmount <= 0) {
+      errors.amount = 'Amount must be greater than zero'
+    }
+    if (!date) {
+      errors.date = 'Date is required'
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors)
       return
     }
 
+    setValidationErrors({})
     const sign = draft.amount < 0 ? -1 : 1
     onUpdateDraftTransaction(draft.id, {
       ...draft,
@@ -108,9 +128,24 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                       type="text"
                       required
                       value={description}
-                      onChange={e => setDescription(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      onChange={e => {
+                        setDescription(e.target.value)
+                        if (validationErrors.description) {
+                          setValidationErrors(prev => ({ ...prev, description: undefined }))
+                        }
+                      }}
+                      className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition-all duration-200 ${
+                        validationErrors.description 
+                          ? 'border-red-500/50 focus:ring-red-500 text-red-600 dark:text-red-400 bg-red-500/5' 
+                          : 'border-border focus:ring-blue-500'
+                      }`}
                     />
+                    {validationErrors.description && (
+                      <div className="text-[10px] text-red-500 font-semibold flex items-center gap-1 mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                        <AlertCircle className="size-3 shrink-0" />
+                        <span>{validationErrors.description}</span>
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Amount</label>
@@ -119,9 +154,24 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                       step="0.01"
                       required
                       value={amount}
-                      onChange={e => setAmount(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      onChange={e => {
+                        setAmount(e.target.value)
+                        if (validationErrors.amount) {
+                          setValidationErrors(prev => ({ ...prev, amount: undefined }))
+                        }
+                      }}
+                      className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition-all duration-200 ${
+                        validationErrors.amount 
+                          ? 'border-red-500/50 focus:ring-red-500 text-red-600 dark:text-red-400 bg-red-500/5' 
+                          : 'border-border focus:ring-blue-500'
+                      }`}
                     />
+                    {validationErrors.amount && (
+                      <div className="text-[10px] text-red-500 font-semibold flex items-center gap-1 mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                        <AlertCircle className="size-3 shrink-0" />
+                        <span>{validationErrors.amount}</span>
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Date</label>
@@ -129,9 +179,24 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                       type="date"
                       required
                       value={date}
-                      onChange={e => setDate(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      onChange={e => {
+                        setDate(e.target.value)
+                        if (validationErrors.date) {
+                          setValidationErrors(prev => ({ ...prev, date: undefined }))
+                        }
+                      }}
+                      className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition-all duration-200 ${
+                        validationErrors.date 
+                          ? 'border-red-500/50 focus:ring-red-500 text-red-600 dark:text-red-400 bg-red-500/5' 
+                          : 'border-border focus:ring-blue-500'
+                      }`}
                     />
+                    {validationErrors.date && (
+                      <div className="text-[10px] text-red-500 font-semibold flex items-center gap-1 mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                        <AlertCircle className="size-3 shrink-0" />
+                        <span>{validationErrors.date}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 

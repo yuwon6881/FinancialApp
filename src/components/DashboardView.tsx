@@ -73,6 +73,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // Balance adjustment modal state
   const [adjustingCategory, setAdjustingCategory] = useState<any | null>(null)
   const [newBalanceInput, setNewBalanceInput] = useState<string>('')
+  const [newBalanceError, setNewBalanceError] = useState<string | null>(null)
   const [adjustmentDescription, setAdjustmentDescription] = useState<string>('Balance Adjustment')
   const [pendingBalanceAdjustment, setPendingBalanceAdjustment] = useState<{
     transaction: Omit<Transaction, 'id'>
@@ -253,15 +254,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     setAdjustingCategory(category)
     setNewBalanceInput(category.remaining.toFixed(2))
     setAdjustmentDescription('Balance Adjustment')
+    setNewBalanceError(null)
   }
 
   const prepareBalanceAdjustment = () => {
     if (!adjustingCategory) return
     const targetVal = parseFloat(newBalanceInput)
     if (isNaN(targetVal)) {
-      alert('Please enter a valid balance amount.')
+      setNewBalanceError('Please enter a valid balance amount.')
       return
     }
+    setNewBalanceError(null)
 
     const diff = targetVal - adjustingCategory.remaining
     if (Math.abs(diff) < 0.005) {
@@ -1514,9 +1517,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 required
                 placeholder="0.00"
                 value={newBalanceInput}
-                onChange={e => setNewBalanceInput(maskCurrencyInput(e.target.value, newBalanceInput))}
-                className="w-full px-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
+                onChange={e => {
+                  const val = maskCurrencyInput(e.target.value, newBalanceInput)
+                  setNewBalanceInput(val)
+                  if (newBalanceError && !isNaN(parseFloat(val))) {
+                    setNewBalanceError(null)
+                  }
+                }}
+                className={`w-full px-3 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition-all duration-200 ${
+                  newBalanceError 
+                    ? 'border-red-500/50 focus:ring-red-500 text-red-600 dark:text-red-400 bg-red-500/5' 
+                    : 'border-border focus:ring-blue-500'
+                }`}
               />
+              {newBalanceError && (
+                <div className="text-[10px] text-red-500 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                  <AlertCircle className="size-3.5 shrink-0" />
+                  <span>{newBalanceError}</span>
+                </div>
+              )}
             </div>
 
             <div className="space-y-1">
