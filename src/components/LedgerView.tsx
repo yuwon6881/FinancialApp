@@ -26,7 +26,6 @@ import { lockBodyScroll, unlockBodyScroll } from '../lib/scrollLock'
 import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput, displayLedgerCategory } from '../lib/utils'
 import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } from '../lib/categoryColors'
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../lib/csvExport'
-import { useDialog } from '../lib/useDialog'
 import { useFormDraft } from '../lib/useFormDraft'
 import { getCycleRangeDates, getStartOfNCyclesAgo, formatDateForApi } from '../lib/cycle'
 
@@ -138,6 +137,29 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   })
 
   const [editingTxId, setEditingTxId] = useState<string | null>(null)
+  const openFormRafRef = useRef<number | null>(null)
+
+  const openTransactionForm = useCallback(() => {
+    if (typeof window === 'undefined') {
+      setShowAddForm(true)
+      return
+    }
+    if (openFormRafRef.current !== null) {
+      window.cancelAnimationFrame(openFormRafRef.current)
+    }
+    openFormRafRef.current = window.requestAnimationFrame(() => {
+      openFormRafRef.current = null
+      setShowAddForm(true)
+    })
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (openFormRafRef.current !== null) {
+        window.cancelAnimationFrame(openFormRafRef.current)
+      }
+    }
+  }, [])
 
   // Keep the in-progress add/edit form across an interrupted session (see
   // useFormDraft) -- reopens with exactly what the user had typed.
@@ -158,7 +180,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       if (draft.editingTxId && onStartEditPending) {
         onStartEditPending(draft.editingTxId.startsWith('temp_') ? draft.editingTxId : null)
       }
-      setShowAddForm(true)
+      openTransactionForm()
     }
   )
 
@@ -180,7 +202,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [txToDelete, setTxToDelete] = useState<Transaction | null>(null)
   const [showEditDisabledModal, setShowEditDisabledModal] = useState(false)
 
-  const addFormPanelRef = useRef<HTMLDivElement>(null)
   // Autocomplete suggestion state
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1)
@@ -319,10 +340,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   useEffect(() => {
     if (autoOpenAddForm) {
-      setShowAddForm(true)
+      openTransactionForm()
       onResetAutoOpen?.()
     }
-  }, [autoOpenAddForm, onResetAutoOpen])
+  }, [autoOpenAddForm, onResetAutoOpen, openTransactionForm])
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAmount(maskCurrencyInput(e.target.value, amount));
@@ -362,7 +383,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         setLedgerCategory(t.ledgerCategory as any)
       }
     }
-    setShowAddForm(true)
+    openTransactionForm()
   }
 
   // Reset Ledger Category defaults on transaction type changes. The
@@ -639,110 +660,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     clearFormDraft()
   }
 
-  // Modal a11y: focus trap + Escape. The first Escape is consumed by the open
-  // description autocomplete (canClose returns false while it is showing), so a
-  // second Escape is needed to actually dismiss the form.
-  useDialog({
-    isOpen: showAddForm,
-    onClose: handleCloseForm,
-    ref: addFormPanelRef,
-    autoFocus: false,
-    canClose: () => !suggestionsRef.current,
-  })
-
   // NOTE: body scroll locking for showAddForm / showExportModal /
   // showStabilityCapModal is handled by each modal's own <BottomSheet> (which
   // uses the shared ref-counted lock). A second lock here duplicated that work
   // on the same <body> and, because the two snapshot/restore cycles raced,
   // could restore a stale "locked" snapshot and leave the page unscrollable.
-
-  const handleCloseFormRef = useRef(handleCloseForm)
-  handleCloseFormRef.current = handleCloseForm
-
-  const handleCancelStabilityCapModalRef = useRef<() => void>(() => {})
-
-  // A fixed string modalId can't tell "my own pushed entry is still on top"
-  // apart from "a different mount of this same effect (StrictMode's dev-only
-  // synchronous mount->cleanup->remount, or a fast close+reopen) pushed an
-  // identically-named entry". Suffixing with a counter that increments on
-  // every actual push gives each one a genuinely unique id.
-  const modalPushCounterRef = useRef(0)
-
-  useEffect(() => {
-    if (!showAddForm) return
-
-    // Push a dummy history state so back button pops it instead of exiting the PWA
-    const modalId = `ledger-add-form-${++modalPushCounterRef.current}`
-    window.history.pushState({ modalId }, '')
-
-    const handlePopState = () => {
-      handleCloseFormRef.current()
-    }
-
-    window.addEventListener('popstate', handlePopState)
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState)
-      // Deferred: see BottomSheet.tsx's popstate effect for why this can't
-      // call history.back() synchronously here (the race can misdeliver the
-      // resulting popstate to a just-remounted instance, closing it).
-      setTimeout(() => {
-        if (window.history.state?.modalId === modalId) {
-          window.history.back()
-        }
-      }, 0)
-    }
-  }, [showAddForm])
-
-  useEffect(() => {
-    if (!showExportModal) return
-
-    // Push a dummy history state so back button pops it instead of exiting the PWA
-    const modalId = `ledger-export-${++modalPushCounterRef.current}`
-    window.history.pushState({ modalId }, '')
-
-    const handlePopState = () => {
-      setShowExportModal(false)
-    }
-
-    window.addEventListener('popstate', handlePopState)
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState)
-      // Deferred: see BottomSheet.tsx's popstate effect for why this can't
-      // call history.back() synchronously here.
-      setTimeout(() => {
-        if (window.history.state?.modalId === modalId) {
-          window.history.back()
-        }
-      }, 0)
-    }
-  }, [showExportModal])
-
-  useEffect(() => {
-    if (!showStabilityCapModal) return
-
-    // Push a dummy history state so back button pops it instead of exiting the PWA
-    const modalId = `ledger-stability-cap-${++modalPushCounterRef.current}`
-    window.history.pushState({ modalId }, '')
-
-    const handlePopState = () => {
-      handleCancelStabilityCapModalRef.current()
-    }
-
-    window.addEventListener('popstate', handlePopState)
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState)
-      // Deferred: see BottomSheet.tsx's popstate effect for why this can't
-      // call history.back() synchronously here.
-      setTimeout(() => {
-        if (window.history.state?.modalId === modalId) {
-          window.history.back()
-        }
-      }, 0)
-    }
-  }, [showStabilityCapModal])
 
   useEffect(() => {
     if (!showAddForm || editingTxId) return
@@ -866,7 +788,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setShowStabilityCapModal(false)
     setPendingTxData(null)
   }
-  handleCancelStabilityCapModalRef.current = handleCancelStabilityCapModal
 
   const handleDeleteClick = (t: Transaction) => {
     if (hideSensitive) return
@@ -1337,16 +1258,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           <button
             onClick={() => {
               if (showAddForm) {
-                // Closing the form -- reset everything
-                setDescription('')
-                setAmount('')
-                setLedgerCategory('Essentials')
-                setTxType('outflow')
-                setCategory(categories.length > 0 ? categories[0].name : '')
-                if (editingTxId && editingTxId.startsWith('temp_') && onStartEditPending) {
-                  onStartEditPending(null)
-                }
-                setEditingTxId(null)
+                handleCloseForm()
               } else {
                 // Opening the form fresh -- reset to defaults
                 setDescription('')
@@ -1360,8 +1272,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 const mo = String(now.getMonth() + 1).padStart(2, '0')
                 const d = String(now.getDate()).padStart(2, '0')
                 setDate(`${y}-${mo}-${d}`)
+                openTransactionForm()
               }
-              setShowAddForm(prev => !prev)
             }}
             className="flex flex-1 items-center justify-center gap-2 whitespace-nowrap px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs shadow-lg shadow-blue-600/10 hover:shadow-blue-600/20 transition duration-200 cursor-pointer md:flex-initial"
           >
