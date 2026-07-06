@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { motion } from 'framer-motion'
 import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Fingerprint, ShieldCheck, Bell, ChevronDown, ChevronUp } from 'lucide-react'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
@@ -391,18 +392,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
 
-          <button
+          <motion.button
+            whileHover={allocSum === 100 ? { scale: 1.02 } : undefined}
+            whileTap={allocSum === 100 ? { scale: 0.98 } : undefined}
             type="submit"
             disabled={allocSum !== 100}
-            className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold shadow-md transition duration-150 ${
+            className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold transition duration-150 ${
               allocSum === 100
-                ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 text-white cursor-pointer'
                 : 'bg-muted text-muted-foreground cursor-not-allowed opacity-60'
             }`}
           >
             <Save className="size-3.5" />
             Save Configuration
-          </button>
+          </motion.button>
         </form>
 
         <div className="space-y-6">
@@ -518,18 +521,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       : 'border-border focus:ring-blue-500'
                   }`}
                 />
-                <button
+                <motion.button
+                  whileHover={isCatValid ? { scale: 1.02 } : undefined}
+                  whileTap={isCatValid ? { scale: 0.98 } : undefined}
                   type="button"
                   onClick={handleAddCategory}
                   disabled={!isCatValid}
                   title={hideSensitive ? 'Unhide balances to edit' : undefined}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition duration-200 select-none
-                    bg-blue-600 hover:bg-blue-700 text-white shadow-sm
-                    disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-600 disabled:shadow-none"
+                  className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition duration-200 select-none ${
+                    isCatValid
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 cursor-pointer'
+                      : 'bg-blue-600/50 text-white/50 shadow-none cursor-not-allowed'
+                  }`}
                 >
                   <Plus className="size-3.5" />
                   Add
-                </button>
+                </motion.button>
               </div>
 
               {!isCatEmpty && isCatDuplicate && (

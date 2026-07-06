@@ -310,12 +310,14 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               <Target className="size-4 text-blue-500" />
               Active Goal Focus
             </h3>
-            <button 
+            <motion.button 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={handleOpenAddModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/10 hover:shadow-blue-600/20 transition cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full text-xs font-bold shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition cursor-pointer"
             >
               <Plus className="size-3.5" /> Add Goal
-            </button>
+            </motion.button>
           </div>
 
           {activeItem ? (
@@ -478,7 +480,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleOpenAddModal}
-                className="mt-4 flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/10 transition cursor-pointer"
+                className="mt-4 flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full text-xs font-bold shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition cursor-pointer"
               >
                 <Plus className="size-3.5" /> Add Goal
               </motion.button>
@@ -708,12 +710,14 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                 >
                   Cancel
                 </button>
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   type="submit"
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md shadow-blue-600/10 transition cursor-pointer"
+                  className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full font-bold shadow-lg shadow-blue-500/25 transition cursor-pointer"
                 >
                   Add Goal
-                </button>
+                </motion.button>
               </div>
             </form>
         </BottomSheet>

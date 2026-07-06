@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { motion } from 'framer-motion'
 import type { RecurringPayment, TransactionCategory, ActiveRecurringPayment, Transaction } from '../types'
 import {
   Plus,
@@ -378,12 +379,14 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
               >
                 Cancel
               </button>
-              <button
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 type="submit"
-                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-600/10 transition cursor-pointer"
+                className="px-5 py-2.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition cursor-pointer"
               >
                 {editingPayment ? 'Save Changes' : 'Add Subscription'}
-              </button>
+              </motion.button>
             </div>
           </form>
         </BottomSheet>

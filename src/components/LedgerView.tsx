@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
-import { createPortal } from 'react-dom'
+
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Transaction, TransactionCategory } from '../types'
 import type { PagedTransactionResult } from '../lib/api'
@@ -179,14 +179,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [txToDelete, setTxToDelete] = useState<Transaction | null>(null)
   const [showEditDisabledModal, setShowEditDisabledModal] = useState(false)
 
+  const addFormPanelRef = useRef<HTMLDivElement>(null)
   // Autocomplete suggestion state
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1)
   const suggestionsRef = useRef<HTMLDivElement>(null)
-  const addFormPanelRef = useRef<HTMLDivElement>(null)
-  const addFormBackdropMouseDownRef = useRef(false)
-  const exportBackdropMouseDownRef = useRef(false)
-  const stabilityBackdropMouseDownRef = useRef(false)
 
   // Build unique suggestion entries from past transactions (most recent first, deduped by description)
   const suggestionEntries = useMemo(() => {
@@ -1458,39 +1455,16 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       )}
 
       {/* Post Transaction Modal (bottom sheet on mobile) */}
-      {showAddForm && createPortal(
-        <div
-          onMouseDown={e => {
-            addFormBackdropMouseDownRef.current = e.target === e.currentTarget
-          }}
-          onClick={e => {
-            if (e.target === e.currentTarget && addFormBackdropMouseDownRef.current) handleCloseForm()
-            addFormBackdropMouseDownRef.current = false
-          }}
-          className="sheet-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
-        >
-          <div
-            ref={addFormPanelRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="ledger-form-title"
-            tabIndex={-1}
-            onClick={e => e.stopPropagation()}
-            className="sheet-panel w-full max-w-xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto focus:outline-none"
-          >
-            <div className="flex items-center justify-between border-b border-border/40 pb-3">
-              <h3 id="ledger-form-title" className="text-base font-bold text-foreground flex items-center gap-2">
-                <PlusCircle className="size-4 text-blue-500" /> {editingTxId ? 'Edit Ledger Entry' : 'Post New Ledger Entry'}
-              </h3>
-              <button
-                type="button"
-                onClick={handleCloseForm}
-                className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition cursor-pointer"
-                title="Close"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
+      <BottomSheet
+        isOpen={showAddForm}
+        onClose={handleCloseForm}
+        maxWidthClassName="max-w-xl"
+        title={
+          <span className="flex items-center gap-2">
+            <PlusCircle className="size-4 text-blue-500" /> {editingTxId ? 'Edit Ledger Entry' : 'Post New Ledger Entry'}
+          </span>
+        }
+      >
           <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
             <div className="space-y-1 sm:col-span-2">
@@ -1716,10 +1690,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               </button>
             </div>
           </form>
-          </div>
-        </div>,
-        document.body
-      )}
+      </BottomSheet>
 
       {/* Filter and Search controls (sticky under the header so filtering long lists is reachable) */}
       <div
@@ -2319,72 +2290,59 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         )
       })()}
 
-      {showExportModal && (
-        <div
-          onMouseDown={e => {
-            exportBackdropMouseDownRef.current = e.target === e.currentTarget
-          }}
-          onClick={e => {
-            if (e.target === e.currentTarget && !exportIsFetching && exportBackdropMouseDownRef.current) {
-              setShowExportModal(false)
-            }
-            exportBackdropMouseDownRef.current = false
-          }}
-          className="sheet-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            className="sheet-panel w-full max-w-md bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex items-center gap-2 text-blue-500 pb-2 border-b border-border/40">
-              <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
-                <Download className="size-5" />
-              </span>
-              <h3 className="text-base font-bold text-foreground">Export Ledger CSV</h3>
-            </div>
-
-            <div className="space-y-2 text-xs leading-relaxed text-muted-foreground">
-              <p>
-                Choose whether to export the current page or the full result set based on your active filters.
-              </p>
-              <p className="text-[10px] text-muted-foreground/80">
-                Full exports use a server-side download to avoid large client loads.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={handleExportPage}
-                disabled={exportIsFetching}
-                className="px-4 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-muted text-foreground transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Export This Page
-              </button>
-              <button
-                type="button"
-                onClick={handleExportAll}
-                disabled={exportIsFetching}
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {exportIsFetching && <Loader2 className="size-3.5 animate-spin" />}
-                Export Entire Result
-              </button>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowExportModal(false)}
-                disabled={exportIsFetching}
-                className="px-4 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-muted text-foreground transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
+      <BottomSheet
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        maxWidthClassName="max-w-md"
+        title={
+          <span className="flex items-center gap-2 text-blue-500">
+            <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
+              <Download className="size-5" />
+            </span>
+            <span className="text-foreground">Export Ledger CSV</span>
+          </span>
+        }
+      >
+        <div className="space-y-2 text-xs leading-relaxed text-muted-foreground">
+          <p>
+            Choose whether to export the current page or the full result set based on your active filters.
+          </p>
+          <p className="text-[10px] text-muted-foreground/80">
+            Full exports use a server-side download to avoid large client loads.
+          </p>
         </div>
-      )}
+
+        <div className="flex flex-col gap-2 mt-2">
+          <button
+            type="button"
+            onClick={handleExportPage}
+            disabled={exportIsFetching}
+            className="px-4 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-muted text-foreground transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Export This Page
+          </button>
+          <button
+            type="button"
+            onClick={handleExportAll}
+            disabled={exportIsFetching}
+            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {exportIsFetching && <Loader2 className="size-3.5 animate-spin" />}
+            Export Entire Result
+          </button>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-2">
+          <button
+            type="button"
+            onClick={() => setShowExportModal(false)}
+            disabled={exportIsFetching}
+            className="px-4 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-muted text-foreground transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Cancel
+          </button>
+        </div>
+      </BottomSheet>
 
       {showStabilityCapModal && pendingTxData && (() => {
         const isCapReached = stabilityBalance >= stabilityTarget
@@ -2396,38 +2354,21 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         const totalAmt = pendingTxData.amount
 
         return (
-          <div
-            onMouseDown={e => {
-              stabilityBackdropMouseDownRef.current = e.target === e.currentTarget
-            }}
-            onClick={e => {
-              if (e.target === e.currentTarget && stabilityBackdropMouseDownRef.current) {
-                handleCancelStabilityCapModal()
-              }
-              stabilityBackdropMouseDownRef.current = false
-            }}
-            className="sheet-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+          <BottomSheet
+            isOpen={true}
+            onClose={handleCancelStabilityCapModal}
+            maxWidthClassName="max-w-2xl"
+            title={
+              <span className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
+                  <PlusCircle className="size-5" />
+                </span>
+                <span>
+                  {isCapReached ? 'Stability Cap Threshold Reached' : 'Stability Fund Overflow Detected'}
+                </span>
+              </span>
+            }
           >
-            <div
-              onClick={e => e.stopPropagation()}
-              className="sheet-panel w-full max-w-2xl bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
-            >
-              <div className="flex items-center justify-between border-b border-border/40 pb-3">
-                <div className="flex items-center gap-2">
-                  <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
-                    <PlusCircle className="size-5" />
-                  </span>
-                  <h3 className="text-base font-bold text-foreground">
-                    {isCapReached ? 'Stability Cap Threshold Reached' : 'Stability Fund Overflow Detected'}
-                  </h3>
-                </div>
-                <button 
-                  onClick={handleCancelStabilityCapModal}
-                  className="text-muted-foreground hover:text-foreground transition cursor-pointer"
-                >
-                  <X className="size-5" />
-                </button>
-              </div>
 
               <div className="space-y-3 text-xs">
                 <p className="text-muted-foreground leading-relaxed">
@@ -2588,11 +2529,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   onClick={handleConfirmStabilityCapSplit}
                   className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-muted disabled:text-muted-foreground text-white text-xs font-semibold shadow-md transition cursor-pointer"
                 >
-                  Confirm Allocation
+                  Confirm Split
                 </button>
               </div>
-            </div>
-          </div>
+          </BottomSheet>
         )
       })()}
 

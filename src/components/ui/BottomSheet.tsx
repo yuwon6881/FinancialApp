@@ -135,7 +135,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             initial={{ y: "100%", scale: 0.95, opacity: 0 }}
             animate={{ y: 0, scale: 1, opacity: 1 }}
             exit={{ y: "100%", scale: 0.95, opacity: 0 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            transition={{ type: "spring", bounce: 0, duration: 0.4 }}
             drag="y"
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.5 }}
@@ -152,6 +152,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
             className={`sheet-panel w-full ${maxWidthClassName} bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto focus:outline-none`}
           >
+            <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto mb-2 shrink-0" />
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
               <div id={titleId} className="min-w-0 text-base font-bold text-foreground">{title}</div>
               <button
