@@ -137,28 +137,19 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   })
 
   const [editingTxId, setEditingTxId] = useState<string | null>(null)
-  const openFormRafRef = useRef<number | null>(null)
-
+  // Open the add/edit sheet synchronously. This deliberately does NOT defer
+  // via requestAnimationFrame. The BottomSheet's entrance slide relies on a
+  // two-frame gate (mount the panel at y:100%, then animate to 0 on the next
+  // rAF). Opening from a discrete click handler flushes the mount + that
+  // gate's setup synchronously, so the "mount at 100%" frame reliably paints
+  // before the reveal and the slide plays every time -- exactly like the
+  // recurring-payments modal. Wrapping the open in its own rAF instead pushes
+  // the mount onto React's concurrent "default" scheduler path, which then
+  // races the sheet's internal gate: the 100% frame gets coalesced with the
+  // reveal and the sheet fades instead of sliding (intermittently). See the
+  // enterReady logic in ui/BottomSheet.tsx.
   const openTransactionForm = useCallback(() => {
-    if (typeof window === 'undefined') {
-      setShowAddForm(true)
-      return
-    }
-    if (openFormRafRef.current !== null) {
-      window.cancelAnimationFrame(openFormRafRef.current)
-    }
-    openFormRafRef.current = window.requestAnimationFrame(() => {
-      openFormRafRef.current = null
-      setShowAddForm(true)
-    })
-  }, [])
-
-  useEffect(() => {
-    return () => {
-      if (openFormRafRef.current !== null) {
-        window.cancelAnimationFrame(openFormRafRef.current)
-      }
-    }
+    setShowAddForm(true)
   }, [])
 
   // Keep the in-progress add/edit form across an interrupted session (see
