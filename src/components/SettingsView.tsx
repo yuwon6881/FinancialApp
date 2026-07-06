@@ -268,21 +268,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
     let newAlloc = { ...current, [changedKey]: newValue }
 
-    let remainingDiff = diff
+    let remainingDiff = Math.round(diff)
     let startIdx = 0
     while (remainingDiff !== 0) {
       let adjusted = false
+      const step = Math.min(5, Math.abs(remainingDiff))
+      const sign = Math.sign(remainingDiff)
+      
       for (let i = 0; i < otherKeys.length; i++) {
         const k = otherKeys[(startIdx + i) % otherKeys.length]
-        if (remainingDiff > 0 && newAlloc[k] >= 5) {
-          newAlloc[k] -= 5
-          remainingDiff -= 5
+        if (sign > 0 && newAlloc[k] >= step) {
+          newAlloc[k] -= step
+          remainingDiff -= step
           adjusted = true
           startIdx = (startIdx + i + 1) % otherKeys.length
           break
-        } else if (remainingDiff < 0 && newAlloc[k] <= 95) {
-          newAlloc[k] += 5
-          remainingDiff += 5
+        } else if (sign < 0 && newAlloc[k] <= 100 - step) {
+          newAlloc[k] += step
+          remainingDiff += step
           adjusted = true
           startIdx = (startIdx + i + 1) % otherKeys.length
           break
@@ -514,10 +517,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <button 
                         type="button"
                         onClick={(e) => { e.preventDefault(); toggleLock(key as string); }}
-                        className={`p-1 rounded-md transition ${lockedAllocations.includes(key as string) ? 'text-blue-500 bg-blue-500/10' : 'text-muted-foreground hover:bg-muted'}`}
+                        className={`p-1.5 rounded-md transition ${lockedAllocations.includes(key as string) ? 'text-blue-500 bg-blue-500/10 border border-blue-500/20 shadow-sm shadow-blue-500/10' : 'text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent hover:border-border/50'}`}
                         title={lockedAllocations.includes(key as string) ? 'Unlock' : lockedAllocations.length >= 2 ? 'Max 2 locks reached' : 'Lock'}
                       >
-                        {lockedAllocations.includes(key as string) ? <Lock className="size-3" /> : <Unlock className="size-3" />}
+                        {lockedAllocations.includes(key as string) ? <Lock className="size-3.5" /> : <Unlock className="size-3.5" />}
                       </button>
                     </span>
                     <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md">{Number(value).toFixed(0)}%</span>

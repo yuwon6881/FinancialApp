@@ -1270,7 +1270,7 @@ function App() {
     data.recentTransactions = [...allTransactions];
 
     // Check if settings op queued
-    const settingsOps = pendingOps.filter(o => o.entity === 'settings' && o.type === 'update');
+    const settingsOps = activeOps.filter(o => o.entity === 'settings' && o.type === 'update');
     settingsOps.forEach(op => {
       if (op.payload) {
         data.setting = { ...data.setting, ...op.payload };
