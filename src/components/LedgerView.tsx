@@ -2253,7 +2253,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 </p>
               )}
               <p className="text-[10px] text-orange-500/90 font-medium bg-orange-500/5 p-2 rounded-lg border border-orange-500/10">
-                Warning: This action is permanent and cannot be undone.
+                Are you sure you want to delete this transaction?
               </p>
             </div>
         </BottomSheet>
