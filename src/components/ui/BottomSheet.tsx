@@ -118,10 +118,10 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          onMouseDown={e => {
+          onMouseDown={(e: React.MouseEvent) => {
             backdropMouseDownRef.current = e.target === e.currentTarget
           }}
-          onClick={e => {
+          onClick={(e: React.MouseEvent) => {
             if (e.target === e.currentTarget && backdropMouseDownRef.current) {
               onClose()
             }
@@ -139,7 +139,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             drag="y"
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.5 }}
-            onDragEnd={(e, info: PanInfo) => {
+            onDragEnd={(_e, info: PanInfo) => {
               if (info.velocity.y > 300 || info.offset.y > 100) {
                 onClose()
               }
@@ -149,7 +149,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             aria-labelledby={titleId}
             aria-label={ariaLabel}
             tabIndex={-1}
-            onClick={e => e.stopPropagation()}
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}
             className={`sheet-panel w-full ${maxWidthClassName} bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto focus:outline-none`}
           >
             <div className="flex items-center justify-between border-b border-border/40 pb-3">

@@ -2234,7 +2234,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             {serverIsFetching ? 'Loading...' : 'No transactions match your criteria.'}
           </motion.div>
         )}
-      </motion.div>     </div>
+      </motion.div>
 
       {/* Unified Pagination Controls */}
       {(() => {

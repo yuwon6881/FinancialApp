@@ -1539,9 +1539,14 @@ function App() {
         <motion.div 
           key={activeTab} 
           custom={tabDirection}
-          initial={(direction: number) => ({ opacity: 0, x: direction > 0 ? 30 : -30 })}
-          animate={{ opacity: 1, x: 0 }}
-          exit={(direction: number) => ({ opacity: 0, x: direction > 0 ? -30 : 30 })}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          variants={{
+            enter: (direction: number) => ({ opacity: 0, x: direction > 0 ? 30 : -30 }),
+            center: { opacity: 1, x: 0 },
+            exit: (direction: number) => ({ opacity: 0, x: direction > 0 ? -30 : 30 })
+          }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
           className="w-full"
         >

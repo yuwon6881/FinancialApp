@@ -24,7 +24,7 @@ export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
   }, [value, springValue])
 
   useEffect(() => {
-    const unsubscribe = springValue.on('change', (latest) => {
+    const unsubscribe = springValue.on('change', (latest: number) => {
       setDisplayValue(formatFn(latest))
     })
     return () => unsubscribe()
