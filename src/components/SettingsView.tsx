@@ -321,9 +321,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <input
                 type="number"
                 required
+                disabled={hideSensitive}
                 value={targetInput}
                 onChange={e => setTargetInput(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className={`w-full px-3 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                  hideSensitive 
+                    ? 'border-transparent text-transparent blur-sm select-none pointer-events-none' 
+                    : 'border-border'
+                }`}
               />
             </label>
 
