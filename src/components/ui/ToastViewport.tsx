@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react'
 import { AlertCircle, CheckCircle2, Info, Undo2, X } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 export type ToastTone = 'info' | 'success' | 'warning' | 'error'
 
@@ -62,8 +63,6 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
     return () => timers.forEach(window.clearTimeout)
   }, [toasts, onDismiss])
 
-  if (toasts.length === 0) return null
-
   return (
     <div
       role="region"
@@ -72,43 +71,65 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
       aria-atomic="false"
       className="fixed left-3 right-3 top-[calc(4.75rem+env(safe-area-inset-top,0px))] z-[120] flex flex-col gap-2 pointer-events-none sm:left-auto sm:right-4 sm:w-96"
     >
-      {toasts.map(toast => {
-        const tone = toast.tone || 'info'
-        return (
-          <div
-            key={toast.id}
-            role={tone === 'error' || tone === 'warning' ? 'alert' : 'status'}
-            className={`pointer-events-auto flex items-start gap-3 rounded-xl border p-4 shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200 ${toneClass[tone]}`}
-          >
-            <div className="mt-0.5 shrink-0">{toneIcon[tone]}</div>
-            <div className="min-w-0 flex-1">
-              {toast.title && <div className="text-sm font-bold text-foreground">{toast.title}</div>}
-              <div className="text-[13px] leading-relaxed text-muted-foreground">{toast.message}</div>
-              {toast.action && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    toast.action?.onAction()
-                    onDismiss(toast.id)
-                  }}
-                  className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/60 px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-muted transition cursor-pointer"
-                >
-                  <Undo2 className="size-3.5" />
-                  {toast.action.label}
-                </button>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => onDismiss(toast.id)}
-              className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer"
-              aria-label="Dismiss notification"
+      <AnimatePresence mode="popLayout">
+        {toasts.map(toast => {
+          const tone = toast.tone || 'info'
+          return (
+            <motion.div
+              key={toast.id}
+              layout
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+              drag
+              dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+              dragElastic={0.8}
+              onDragEnd={(_e, info) => {
+                if (info.offset.y < -50 || info.velocity.y < -500) {
+                  // Swipe up: dismiss all
+                  toasts.forEach(t => onDismiss(t.id))
+                } else if (Math.abs(info.offset.x) > 50 || Math.abs(info.velocity.x) > 500) {
+                  // Swipe left/right: dismiss single
+                  onDismiss(toast.id)
+                }
+              }}
+              role={tone === 'error' || tone === 'warning' ? 'alert' : 'status'}
+              className={`pointer-events-auto flex items-start gap-3 rounded-xl border p-4 shadow-xl backdrop-blur-md cursor-grab active:cursor-grabbing ${toneClass[tone]}`}
             >
-              <X className="size-4" />
-            </button>
-          </div>
-        )
-      })}
+              <div className="mt-0.5 shrink-0">{toneIcon[tone]}</div>
+              <div className="min-w-0 flex-1 pointer-events-none">
+                {toast.title && <div className="text-sm font-bold text-foreground">{toast.title}</div>}
+                <div className="text-[13px] leading-relaxed text-muted-foreground">{toast.message}</div>
+                {toast.action && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation() // prevent drag interfering
+                      toast.action?.onAction()
+                      onDismiss(toast.id)
+                    }}
+                    className="pointer-events-auto mt-2 inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/60 px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-muted transition cursor-pointer"
+                  >
+                    <Undo2 className="size-3.5" />
+                    {toast.action.label}
+                  </button>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDismiss(toast.id)
+                }}
+                className="hidden sm:block shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer"
+                aria-label="Dismiss notification"
+              >
+                <X className="size-4" />
+              </button>
+            </motion.div>
+          )
+        })}
+      </AnimatePresence>
     </div>
   )
 }

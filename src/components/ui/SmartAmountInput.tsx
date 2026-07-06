@@ -4,6 +4,7 @@ import { evaluateMathString } from '../../lib/math'
 export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>((props, ref) => {
   const { onBlur, onFocus, onKeyDown, value, className, ...rest } = props
   const [isFocused, setIsFocused] = useState(false)
+  const [inputWidth, setInputWidth] = useState(0)
   const internalRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -13,6 +14,19 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
       ref.current = internalRef.current
     }
   }, [ref])
+
+  useEffect(() => {
+    if (!internalRef.current) return
+    const ro = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        setInputWidth(entry.target.getBoundingClientRect().width)
+      }
+    })
+    ro.observe(internalRef.current)
+    return () => ro.disconnect()
+  }, [])
+
+  const allowCalculator = inputWidth >= 220
 
   const handleEvaluate = (e: React.FocusEvent<HTMLInputElement> | React.KeyboardEvent<HTMLInputElement> | { target: HTMLInputElement }) => {
     const input = e.target as HTMLInputElement
@@ -44,7 +58,7 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === '=') {
+    if (allowCalculator && (e.key === 'Enter' || e.key === '=')) {
       if (e.key === '=') {
         e.preventDefault() // prevent typing '='
       }
@@ -71,7 +85,7 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
   }
 
   // To prevent text from being hidden under the buttons, we conditionally add right padding when focused.
-  const conditionalPadding = isFocused ? 'pr-[160px]' : ''
+  const conditionalPadding = isFocused && allowCalculator ? 'pr-[160px]' : ''
 
   return (
     <div className="relative w-full">
@@ -85,7 +99,7 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
         inputMode="decimal"
         {...rest}
       />
-      {isFocused && (
+      {isFocused && allowCalculator && (
         <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center bg-card/95 backdrop-blur-sm border border-border/80 shadow-sm rounded-lg overflow-hidden animate-in zoom-in-95 duration-150 z-50">
           {['+', '-', '×', '÷'].map(op => (
             <button
