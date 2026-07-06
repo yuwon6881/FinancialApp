@@ -1398,7 +1398,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             <div className="space-y-1">
               <label className="text-xs font-semibold text-muted-foreground">Amount ({getCurrencySymbol(currency)})</label>
               <div className="relative flex items-center">
-                <span className="absolute left-3.5 text-xs font-semibold text-muted-foreground pointer-events-none select-none">
+                <span className="absolute left-3.5 z-10 text-xs font-semibold text-muted-foreground pointer-events-none select-none">
                   {getCurrencySymbol(currency)}
                 </span>
                 <SmartAmountInput

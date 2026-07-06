@@ -29,10 +29,13 @@ export const formatCurrencyVal = (val: number, currencyCode: string = 'USD') => 
   }
 }
 
-// Masks a raw currency input as the user types: strips non-digits, treats the
-// value as cents, and renders it as a "0.00"-style decimal string.
 export const maskCurrencyInput = (rawVal: string, currentValue: string): string => {
   if (!rawVal) return ''
+
+  // If the user is typing a math expression, don't format as cents, just allow valid math chars
+  if (/[+\-*/]/.test(rawVal)) {
+    return rawVal.replace(/[^0-9+\-*/.]/g, '')
+  }
 
   const digits = rawVal.replace(/\D/g, '')
   if (!digits) return ''

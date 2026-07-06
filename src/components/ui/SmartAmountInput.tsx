@@ -83,7 +83,7 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
         {...rest}
       />
       {isFocused && (
-        <div className="absolute bottom-full right-0 mb-1.5 flex items-center bg-card border border-border/80 shadow-lg rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150 z-50">
+        <div className="absolute top-full right-0 mt-1.5 flex items-center bg-card border border-border/80 shadow-lg rounded-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 z-50">
           {['+', '-', '*', '/'].map(op => (
             <button
               key={op}
