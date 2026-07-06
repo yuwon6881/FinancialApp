@@ -18,6 +18,7 @@ import { RowSyncBadge } from './ui/RowSyncBadge'
 import { ToggleButton } from './ui/ToggleButton'
 import { BillTimeline } from './BillTimeline'
 import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } from '../lib/categoryColors'
+import { useAutoOpenModal } from '../lib/useAutoOpenModal'
 
 interface RecurringPaymentsViewProps {
   payments: RecurringPayment[]
@@ -135,12 +136,10 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     return result
   }, [payments, selectedCategories, sortOrder])
 
-  React.useEffect(() => {
-    if (autoOpenAddForm) {
-      setShowAddForm(true)
-      onResetAutoOpen?.()
-    }
-  }, [autoOpenAddForm, onResetAutoOpen])
+  // Deferred so the sheet's entrance animation doesn't start on the contended
+  // tab-switch/mount frame (which made the slide occasionally skip). See
+  // lib/useAutoOpenModal.
+  useAutoOpenModal(autoOpenAddForm, () => setShowAddForm(true), onResetAutoOpen)
 
 
   React.useEffect(() => {

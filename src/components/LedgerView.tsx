@@ -27,6 +27,7 @@ import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput, displayLedgerC
 import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } from '../lib/categoryColors'
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../lib/csvExport'
 import { useFormDraft } from '../lib/useFormDraft'
+import { useAutoOpenModal } from '../lib/useAutoOpenModal'
 import { getCycleRangeDates, getStartOfNCyclesAgo, formatDateForApi } from '../lib/cycle'
 
 interface LedgerViewProps {
@@ -325,12 +326,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
   }, [selectedSuggestionIndex])
 
-  useEffect(() => {
-    if (autoOpenAddForm) {
-      openTransactionForm()
-      onResetAutoOpen?.()
-    }
-  }, [autoOpenAddForm, onResetAutoOpen, openTransactionForm])
+  // Deferred so the sheet's entrance animation doesn't start on the contended
+  // tab-switch/mount frame (which made the slide occasionally skip). See
+  // lib/useAutoOpenModal.
+  useAutoOpenModal(autoOpenAddForm, openTransactionForm, onResetAutoOpen)
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAmount(maskCurrencyInput(e.target.value, amount));

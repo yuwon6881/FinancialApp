@@ -8,6 +8,7 @@ import { CycleSkeleton } from './ui/Skeleton'
 import { RowSyncBadge } from './ui/RowSyncBadge'
 import { formatCurrencyVal, maskCurrencyInput } from '../lib/utils'
 import { useFormDraft } from '../lib/useFormDraft'
+import { useAutoOpenModal } from '../lib/useAutoOpenModal'
 import {
   Wallet,
   PiggyBank,
@@ -183,12 +184,10 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     setShowAddModal(true)
   }
 
-  React.useEffect(() => {
-    if (autoOpenAddModal) {
-      handleOpenAddModal()
-      onResetAutoOpen?.()
-    }
-  }, [autoOpenAddModal, onResetAutoOpen, wishlist])
+  // Deferred so the sheet's entrance animation doesn't start on the contended
+  // tab-switch/mount frame (which made the slide occasionally skip). See
+  // lib/useAutoOpenModal.
+  useAutoOpenModal(autoOpenAddModal, handleOpenAddModal, onResetAutoOpen)
 
   const handleOpenEditModal = (item: WishlistItem) => {
     if (hideSensitive) return
