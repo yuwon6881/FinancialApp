@@ -1548,7 +1548,7 @@ function App() {
         {/* Keyed on the active tab so every view change replays the gentle
             slide entrance instead of hard-swapping content. */}
         <div className="grid w-full relative" style={{ gridTemplateColumns: 'minmax(0, 1fr)' }}>
-        <AnimatePresence initial={false} custom={tabDirection}>
+        <AnimatePresence initial={false} custom={tabDirection} mode="popLayout">
         <motion.div 
           key={activeTab} 
           custom={tabDirection}
@@ -1797,8 +1797,9 @@ function App() {
       {token && (
         <>
           {/* Backdrop Blur Overlay when speed dial is open */}
+          <AnimatePresence>
           {isFabOpen && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -1806,6 +1807,7 @@ function App() {
               className="md:hidden fixed inset-0 z-30 bg-background/60 backdrop-blur-xs"
             />
           )}
+          </AnimatePresence>
 
           {/* Speed Dial Menu Items — staggered so they cascade out from the
               FAB (nearest first) and collapse back together instantly. */}

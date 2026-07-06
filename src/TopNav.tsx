@@ -538,9 +538,9 @@ const TopNav: React.FC<TopNavProps> = ({
     </header>
 
     {/* Mobile Navigation bar (Sticky Bottom Nav) */}
-    <div 
-      className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/88 backdrop-blur-xl select-none shadow-[0_-12px_30px_rgba(0,0,0,0.08)]"
-      style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))', paddingTop: '10px' }}
+    <div
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/88 backdrop-blur-xl select-none shadow-[0_-12px_30px_rgba(0,0,0,0.08)] transform-gpu"
+      style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))', paddingTop: '10px', willChange: 'transform' }}
     >
       <nav aria-label="Primary" className="grid grid-cols-5 w-full max-w-md mx-auto justify-items-center">
         {navItems.map(({ tab, mobileLabel, Icon, activeClass, iconClass, dotClass }) => {
