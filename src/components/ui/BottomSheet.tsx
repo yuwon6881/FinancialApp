@@ -29,31 +29,29 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   const titleId = useId()
   const isMobile = useIsMobile(640)
 
-  // Slide the sheet at a roughly constant speed regardless of its height. The
-  // ledger transaction form is nearly viewport-height, so a low duration cap or
-  // spring settling makes it travel much faster than smaller modals. Use a
-  // measured, deterministic tween instead.
+  // Pace the slide by measured height so a tall sheet and a short sheet travel
+  // at roughly the same perceived *speed*. A fixed duration makes a near-
+  // viewport-height sheet cover its much larger travel so fast it reads as a
+  // fade. Measured in a layout effect -- before the browser paints -- so the
+  // correct duration is already in place for the entrance's first frame.
+  //
+  // The slide itself is driven purely by framer's initial -> animate on mount
+  // (see the `sheet-enter` motion.div). We deliberately do NOT gate it behind
+  // an extra state flag flipped on a later requestAnimationFrame: that gate
+  // raced React's render scheduling against framer's animation clock, so the
+  // entrance only actually played on a minority of opens -- the rest jumped
+  // straight to the shown state and looked like an instant fade. framer's
+  // `initial` already gives every open a below-the-viewport starting point
+  // (both on a fresh mount and when AnimatePresence re-adds the child as
+  // `isOpen` toggles), so no gate is needed.
   const [slideDuration, setSlideDuration] = useState(0.5)
-  const [enterReady, setEnterReady] = useState(false)
 
   useLayoutEffect(() => {
-    let rafId = 0
-    if (!isOpen) {
-      setEnterReady(false)
-      return () => {}
-    }
+    if (!isOpen) return
     const el = panelRef.current
-    if (!el) return () => {}
+    if (!el) return
     const h = el.offsetHeight || el.scrollHeight || window.innerHeight
     setSlideDuration(Math.min(0.88, Math.max(0.46, h / 950)))
-    setEnterReady(false)
-    rafId = window.requestAnimationFrame(() => {
-      setEnterReady(true)
-    })
-
-    return () => {
-      if (rafId) window.cancelAnimationFrame(rafId)
-    }
   }, [isOpen])
 
   useEffect(() => {
@@ -244,16 +242,13 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
               of the element's `y` transform, which was stepping on the entrance
               `y` keyframes and making a tall sheet appear to fade in rather than
               slide. Two elements => two independent `y` transforms => the slide
-              always plays. Held at the hidden state until enterReady flips so
-              every open starts from below the viewport at a measured duration. */}
+              always plays. The entrance is a plain framer initial -> animate:
+              `initial` starts the sheet below the viewport and it animates to
+              rest at a height-paced duration, deterministically, on every open. */}
           <motion.div
             key="sheet-enter"
             initial={isMobile ? { y: "100%" } : { y: "100%", scale: 0.95, opacity: 0 }}
-            animate={
-              enterReady
-                ? (isMobile ? { y: 0 } : { y: 0, scale: 1, opacity: 1 })
-                : (isMobile ? { y: "100%" } : { y: "100%", scale: 0.95, opacity: 0 })
-            }
+            animate={isMobile ? { y: 0 } : { y: 0, scale: 1, opacity: 1 }}
             exit={isMobile ? { y: "100%" } : { y: "100%", scale: 0.95, opacity: 0 }}
             transition={{ type: "tween", ease: [0.22, 1, 0.36, 1], duration: slideDuration }}
             className={`sheet-enter w-full ${maxWidthClassName}`}
