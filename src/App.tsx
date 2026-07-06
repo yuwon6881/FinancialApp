@@ -37,8 +37,17 @@ const createLocalId = (prefix: string, separator = '_') => {
   return `${prefix}${separator}${Date.now()}${separator}${Math.random().toString(36).substring(2, 9)}`
 }
 
-// Instant, flash-free placeholder while a lazily-loaded chunk is fetched.
+// Instant, flash-free placeholder while a lazily-loaded chunk is fetched at the root level.
 const ViewFallback = () => <div className="app-shell min-h-screen" />
+
+// Skeleton placeholder for tab navigation to prevent empty squares in the main content area.
+const ContentViewFallback = () => (
+  <div className="w-full space-y-6 pt-2 animate-in fade-in duration-300">
+    <div className="w-1/3 h-8 rounded-xl skeleton-shimmer" />
+    <div className="w-full h-32 rounded-2xl skeleton-shimmer" />
+    <div className="w-full h-64 rounded-2xl skeleton-shimmer" />
+  </div>
+)
 
 const nextPaint = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
 const wait = (ms: number) => new Promise<void>(resolve => window.setTimeout(resolve, ms))
@@ -1535,7 +1544,7 @@ function App() {
       >
       <main className="flex-1 container mx-auto px-4 py-6 sm:py-8 pb-24 md:pb-8 max-w-7xl relative">
         <ErrorBoundary variant="inline" resetKey={activeTab}>
-        <Suspense fallback={<ViewFallback />}>
+        <Suspense fallback={<ContentViewFallback />}>
         <LaunchReady>
         {/* Keyed on the active tab so every view change replays the gentle
             slide entrance instead of hard-swapping content. */}
