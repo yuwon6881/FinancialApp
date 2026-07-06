@@ -1,7 +1,8 @@
-import React, { useEffect, useId, useRef } from 'react'
+import React, { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useDragControls, type PanInfo } from 'framer-motion'
 import { useDialog } from '../../lib/useDialog'
+import { useIsMobile } from '../../lib/useIsMobile'
 import { lockBodyScroll, unlockBodyScroll } from '../../lib/scrollLock'
 
 interface BottomSheetProps {
@@ -26,6 +27,33 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 }) => {
   const panelRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
+  const isMobile = useIsMobile(640)
+
+  // When the sheet's content fits without scrolling we set `touch-action: none`
+  // so the browser never claims a downward drag as a scroll -- that lets the
+  // *entire* panel be dragged to dismiss as smoothly as the grab handle, rather
+  // than the body feeling dead (the browser was eating those gestures via the
+  // `touch-action: pan-y` the panel needs only when it actually scrolls).
+  const [panelCanScroll, setPanelCanScroll] = useState(false)
+
+  useEffect(() => {
+    if (!isOpen) return
+    const el = panelRef.current
+    if (!el) return
+    const measure = () => {
+      const scrolls = el.scrollHeight - el.clientHeight > 1
+      setPanelCanScroll(prev => (prev === scrolls ? prev : scrolls))
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    Array.from(el.children).forEach(child => ro.observe(child))
+    window.addEventListener('resize', measure)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', measure)
+    }
+  }, [isOpen, children])
 
   useEffect(() => {
     if (!isOpen) return
@@ -167,20 +195,28 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
           <motion.div
             key="sheet"
             ref={panelRef}
-            initial={{ y: "100%", scale: 0.95, opacity: 0 }}
-            animate={{ y: 0, scale: 1, opacity: 1 }}
-            exit={{ y: "100%", scale: 0.95, opacity: 0 }}
-            transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+            // Mobile: a pure slide-up (no scale/opacity) so the entrance always
+            // reads as a slide, never a fade. Desktop keeps the gentle zoom.
+            initial={isMobile ? { y: "100%" } : { y: "100%", scale: 0.95, opacity: 0 }}
+            animate={isMobile ? { y: 0 } : { y: 0, scale: 1, opacity: 1 }}
+            exit={isMobile ? { y: "100%" } : { y: "100%", scale: 0.95, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 320, damping: 34, mass: 0.9 }}
             drag="y"
             dragControls={dragControls}
             dragListener={false}
-            // Lock upward drag at rest (top: 0) but let a downward drag track the
-            // finger 1:1 (bottom elastic 1) so the sheet feels "grabbed" rather
-            // than rubber-banded -- the earlier 0.5 made it move half as far as
-            // the finger, which read as stiff/hard to dismiss.
-            dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0, bottom: 1 }}
+            // A real linear travel range (top locked at rest, a long free run
+            // downward) so the sheet tracks the finger 1:1 the whole way. The
+            // previous {top:0,bottom:0}+elastic put *all* downward motion "beyond
+            // constraints", so framer's rubber-band dampening made it stiffer the
+            // further you pulled -- the "stuck after a bit" feeling.
+            dragConstraints={{ top: 0, bottom: 2000 }}
+            dragElastic={0.12}
             dragMomentum={false}
+            // Wide constraints keep the travel linear; snap-to-origin springs the
+            // sheet back to rest when a drag doesn't reach the dismiss threshold
+            // (without it, a short pull would just stay parked mid-screen).
+            dragSnapToOrigin
+            dragTransition={{ bounceStiffness: 320, bounceDamping: 34 }}
             onDragStart={() => { dragActiveRef.current = true }}
             onDragEnd={(_e, info: PanInfo) => {
               dragActiveRef.current = false
@@ -201,6 +237,10 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             aria-label={ariaLabel}
             tabIndex={-1}
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            // Only allow the browser to own vertical panning when the sheet
+            // genuinely scrolls; otherwise none, so framer gets every gesture
+            // and the whole panel drags smoothly (see panelCanScroll above).
+            style={{ touchAction: panelCanScroll ? 'pan-y' : 'none' }}
             className={`sheet-panel w-full ${maxWidthClassName} bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto focus:outline-none`}
           >
             <div
