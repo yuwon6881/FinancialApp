@@ -1545,8 +1545,8 @@ function App() {
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -5 }}
-          transition={{ duration: 0.15 }}
-          className="w-full"
+          transition={{ type: "spring", stiffness: 400, damping: 30, mass: 1 }}
+          className="w-full gpu-layer"
         >
         {activeTab === 'dashboard' && (
           <DashboardView

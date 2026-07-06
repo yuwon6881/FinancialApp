@@ -514,6 +514,23 @@ html {
     display: none;
 }
 
+/* Apple-like momentum scrolling container */
+.apple-scroll-container {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* Momentum scrolling on iOS */
+    overscroll-behavior-y: contain; /* Allows rubber-banding inside the container */
+    transform: translateZ(0); /* Force hardware acceleration */
+    will-change: scroll-position;
+}
+
+/* Force GPU acceleration for elements that animate frequently */
+.gpu-layer {
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+    will-change: transform, opacity;
+}
+
 @layer base {
     * {
         @apply border-border outline-ring/50;
