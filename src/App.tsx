@@ -85,14 +85,6 @@ function App() {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [activeTab])
 
-  const prevTabRef = useRef<AppTab>(activeTab)
-  useEffect(() => {
-    prevTabRef.current = activeTab
-  }, [activeTab])
-
-  const currentIndex = APP_TABS.indexOf(activeTab)
-  const prevIndex = APP_TABS.indexOf(prevTabRef.current)
-  const tabDirection = currentIndex >= prevIndex ? 1 : -1
 
   useEffect(() => {
     let cleanup: (() => void) | undefined
@@ -1547,21 +1539,13 @@ function App() {
         <LaunchReady>
         {/* Keyed on the active tab so every view change replays the gentle
             slide entrance instead of hard-swapping content. */}
-        <div className="grid w-full relative" style={{ gridTemplateColumns: 'minmax(0, 1fr)' }}>
-        <AnimatePresence initial={false} custom={tabDirection} mode="popLayout">
+        <AnimatePresence mode="wait">
         <motion.div 
           key={activeTab} 
-          custom={tabDirection}
-          style={{ gridArea: '1 / 1' }}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          variants={{
-            enter: (direction: number) => ({ opacity: 0, x: direction > 0 ? 30 : -30 }),
-            center: { opacity: 1, x: 0 },
-            exit: (direction: number) => ({ opacity: 0, x: direction > 0 ? -30 : 30 })
-          }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -5 }}
+          transition={{ duration: 0.15 }}
           className="w-full"
         >
         {activeTab === 'dashboard' && (
@@ -1711,7 +1695,6 @@ function App() {
         )}
         </motion.div>
         </AnimatePresence>
-        </div>
         </LaunchReady>
         </Suspense>
         </ErrorBoundary>
