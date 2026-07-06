@@ -1840,7 +1840,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 </button>
               ) : undefined}
             >
-              <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+              <div data-no-drag="true" className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
                 {(showAllCycles ? pendingFilters : selectedFilters).length > 0 && (
                   <div className="flex justify-end">
                     <button

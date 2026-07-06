@@ -1,6 +1,5 @@
 import React, { useEffect, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { X } from 'lucide-react'
 import { motion, AnimatePresence, useDragControls, type PanInfo } from 'framer-motion'
 import { useDialog } from '../../lib/useDialog'
 import { lockBodyScroll, unlockBodyScroll } from '../../lib/scrollLock'
@@ -126,30 +125,24 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             aria-label={ariaLabel}
             tabIndex={-1}
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            onPointerDown={(e) => {
+              const target = e.target as HTMLElement;
+              // Do not start drag if clicking a button, link, input, or other interactive element
+              if (target.closest('button, a, input, textarea, select')) return;
+              // Do not start drag if inside an area explicitly opting out (e.g. scrollable lists)
+              if (target.closest('[data-no-drag="true"]')) return;
+              
+              dragControls.start(e);
+            }}
             className={`sheet-panel w-full ${maxWidthClassName} bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto focus:outline-none`}
           >
             <div 
-              onPointerDown={(e) => {
-                // Ensure we don't start a drag if the user clicks the close button
-                if (!(e.target as HTMLElement).closest('button')) {
-                  dragControls.start(e)
-                }
-              }}
               style={{ touchAction: 'none' }}
-              className="cursor-grab active:cursor-grabbing pb-3 shrink-0"
+              className="pb-3 shrink-0"
             >
               <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto mb-2 shrink-0" />
               <div className="flex items-center justify-between border-b border-border/40 pb-3">
                 <div id={titleId} className="min-w-0 text-base font-bold text-foreground">{title}</div>
-                <button
-                  type="button"
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={onClose}
-                  className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg transition cursor-pointer"
-                  aria-label="Close"
-                >
-                  <X className="size-4" />
-                </button>
               </div>
             </div>
             {children}

@@ -159,7 +159,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       const { challengeId, options } = await api.getFingerprintRegisterOptions()
       const credential = await createFingerprintCredential(options)
       await api.verifyFingerprintRegistration(challengeId, credential, getFriendlyDeviceLabel())
-      localStorage.setItem(DEVICE_CREDENTIAL_ID_KEY, credential.id)
+      localStorage.setItem(DEVICE_CREDENTIAL_ID_KEY, 'already_enrolled')
       await loadFingerprintCredentials()
       onToast?.('Fingerprint enabled on this device.', 'Fingerprint enabled', 'success')
     } catch (err: any) {
