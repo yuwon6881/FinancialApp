@@ -1424,16 +1424,17 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       )}
 
       {/* Post Transaction Modal (bottom sheet on mobile) */}
-      <BottomSheet
-        isOpen={showAddForm}
-        onClose={handleCloseForm}
-        maxWidthClassName="max-w-xl"
-        title={
-          <span className="flex items-center gap-2">
-            <PlusCircle className="size-4 text-blue-500" /> {editingTxId ? 'Edit Ledger Entry' : 'Post New Ledger Entry'}
-          </span>
-        }
-      >
+      {showAddForm && (
+        <BottomSheet
+          isOpen={showAddForm}
+          onClose={handleCloseForm}
+          maxWidthClassName="max-w-xl"
+          title={
+            <span className="flex items-center gap-2">
+              <PlusCircle className="size-4 text-blue-500" /> {editingTxId ? 'Edit Ledger Entry' : 'Post New Ledger Entry'}
+            </span>
+          }
+        >
           <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
             <div className="space-y-1 sm:col-span-2">
@@ -1659,7 +1660,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               </button>
             </div>
           </form>
-      </BottomSheet>
+        </BottomSheet>
+      )}
 
       {/* Filter and Search controls (sticky under the header so filtering long lists is reachable) */}
       <div

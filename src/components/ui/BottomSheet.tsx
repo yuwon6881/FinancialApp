@@ -31,22 +31,31 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 
   // Slide the sheet at a roughly constant *speed* regardless of its height, so a
   // tall modal doesn't cover its (much larger) travel so fast it reads as a
-  // fade. Duration is derived from the measured height in a layout effect (i.e.
-  // before paint) and `enterReady` gates the entrance until that measurement
-  // exists, so even the very first open animates at the right pace.
+  // fade. Duration is derived from the measured height, and `enterReady` is
+  // deliberately flipped on the next animation frame. That guarantees the
+  // browser paints one offscreen frame before the entrance starts, even for
+  // sheets that stay mounted and are only toggled with `isOpen`.
   const [slideDuration, setSlideDuration] = useState(0.42)
   const [enterReady, setEnterReady] = useState(false)
 
   useLayoutEffect(() => {
+    let rafId = 0
     if (!isOpen) {
       setEnterReady(false)
-      return
+      return () => {}
     }
     const el = panelRef.current
-    if (!el) return
+    if (!el) return () => {}
     const h = el.offsetHeight || el.scrollHeight || window.innerHeight
     setSlideDuration(Math.min(0.6, Math.max(0.3, h / 1300)))
-    setEnterReady(true)
+    setEnterReady(false)
+    rafId = window.requestAnimationFrame(() => {
+      setEnterReady(true)
+    })
+
+    return () => {
+      if (rafId) window.cancelAnimationFrame(rafId)
+    }
   }, [isOpen])
 
   useEffect(() => {
