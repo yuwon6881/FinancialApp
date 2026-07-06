@@ -151,7 +151,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/70 size-4 pointer-events-none" />
               <input
                 type="text"
-                required
                 disabled={loading}
                 placeholder="Admin username"
                 value={username}
@@ -183,7 +182,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/70 size-4 pointer-events-none" />
               <input
                 type={showPassword ? 'text' : 'password'}
-                required
                 disabled={loading}
                 placeholder="••••••••"
                 value={password}
@@ -224,7 +222,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  required
                   disabled={loading}
                   placeholder="••••••••"
                   value={confirmPassword}

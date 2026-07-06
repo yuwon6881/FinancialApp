@@ -318,7 +318,6 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
               <input
                 ref={firstInputRef}
                 type="text"
-                required
                 placeholder="e.g. Netflix, Spotify"
                 value={name}
                 onChange={e => {
@@ -349,7 +348,6 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                 <input
                   type="text"
                   inputMode="decimal"
-                  required
                   placeholder="0.00"
                   value={amount}
                   onChange={e => {
@@ -388,7 +386,6 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
               <label className="text-xs font-semibold text-muted-foreground">Start Billing Date</label>
               <input
                 type="date"
-                required
                 value={startDateInput}
                 onChange={e => {
                   setStartDateInput(e.target.value)

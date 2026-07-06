@@ -362,7 +362,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <span className="text-xs font-semibold text-muted-foreground block">Target Stability Fund Limit</span>
               <input
                 type="number"
-                required
                 disabled={hideSensitive}
                 value={targetInput}
                 onChange={e => {
@@ -439,7 +438,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <span className="text-[10px] font-bold text-muted-foreground block">{label as string} (%)</span>
                   <input
                     type="number"
-                    required
                     min="0"
                     max="100"
                     value={value as string}

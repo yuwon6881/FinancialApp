@@ -696,7 +696,6 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                       ? 'border-destructive focus:ring-destructive' 
                       : 'border-border focus:ring-blue-500'
                   }`}
-                  required
                 />
                 {errors.name && (
                   <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
@@ -724,7 +723,6 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                         ? 'border-destructive focus:ring-destructive' 
                         : 'border-border focus:ring-blue-500'
                     }`}
-                    required
                   />
                   {errors.price && (
                     <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
@@ -806,7 +804,6 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                       ? 'border-destructive focus:ring-destructive' 
                       : 'border-border focus:ring-blue-500'
                   }`}
-                  required
                 />
                 {errors.name && (
                   <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
@@ -833,7 +830,6 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                         ? 'border-destructive focus:ring-destructive' 
                         : 'border-border focus:ring-blue-500'
                     }`}
-                    required
                   />
                   {errors.price && (
                     <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">

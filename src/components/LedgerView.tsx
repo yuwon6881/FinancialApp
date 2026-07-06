@@ -1399,7 +1399,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               <input
                 ref={firstInputRef}
                 type="text"
-                required
                 placeholder="e.g. Grocery Store, Paycheck"
                 value={description}
                 onChange={e => {
@@ -1490,7 +1489,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 <input
                   type="text"
                   inputMode="decimal"
-                  required
                   placeholder="0.00"
                   value={amount}
                   onChange={e => {
@@ -1581,7 +1579,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               <label className="text-xs font-semibold text-muted-foreground">Posting Date</label>
               <input
                 type="date"
-                required
                 value={date}
                 onChange={e => {
                   setDate(e.target.value)
