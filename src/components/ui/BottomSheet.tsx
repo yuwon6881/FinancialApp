@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef, useState } from 'react'
+import React, { useEffect, useLayoutEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useDragControls, type PanInfo } from 'framer-motion'
 import { useDialog } from '../../lib/useDialog'
@@ -29,31 +29,25 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   const titleId = useId()
   const isMobile = useIsMobile(640)
 
-  // When the sheet's content fits without scrolling we set `touch-action: none`
-  // so the browser never claims a downward drag as a scroll -- that lets the
-  // *entire* panel be dragged to dismiss as smoothly as the grab handle, rather
-  // than the body feeling dead (the browser was eating those gestures via the
-  // `touch-action: pan-y` the panel needs only when it actually scrolls).
-  const [panelCanScroll, setPanelCanScroll] = useState(false)
+  // Slide the sheet at a roughly constant *speed* regardless of its height, so a
+  // tall modal doesn't cover its (much larger) travel so fast it reads as a
+  // fade. Duration is derived from the measured height in a layout effect (i.e.
+  // before paint) and `enterReady` gates the entrance until that measurement
+  // exists, so even the very first open animates at the right pace.
+  const [slideDuration, setSlideDuration] = useState(0.42)
+  const [enterReady, setEnterReady] = useState(false)
 
-  useEffect(() => {
-    if (!isOpen) return
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      setEnterReady(false)
+      return
+    }
     const el = panelRef.current
     if (!el) return
-    const measure = () => {
-      const scrolls = el.scrollHeight - el.clientHeight > 1
-      setPanelCanScroll(prev => (prev === scrolls ? prev : scrolls))
-    }
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(el)
-    Array.from(el.children).forEach(child => ro.observe(child))
-    window.addEventListener('resize', measure)
-    return () => {
-      ro.disconnect()
-      window.removeEventListener('resize', measure)
-    }
-  }, [isOpen, children])
+    const h = el.offsetHeight || el.scrollHeight || window.innerHeight
+    setSlideDuration(Math.min(0.6, Math.max(0.3, h / 1300)))
+    setEnterReady(true)
+  }, [isOpen])
 
   useEffect(() => {
     if (!isOpen) return
@@ -172,6 +166,52 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     gestureRef.current = null
   }
 
+  // Non-passive touch listener: the reliable half of the gesture. A sheet that
+  // scrolls carries `touch-action: pan-y`, so the browser would otherwise claim
+  // a downward swipe as a scroll (firing pointercancel) and the drag never
+  // engaged over the content -- which is exactly why scrollable modals like the
+  // ledger filter felt impossible to swipe away. Here we watch the raw touch
+  // stream and, the instant we recognise a downward dismiss from the top,
+  // preventDefault() so the browser lets go and framer's drag (started in
+  // handlePanelPointerMove) can take over. Native scrolling is untouched: we
+  // never preventDefault a scroll or a horizontal gesture.
+  useEffect(() => {
+    const el = panelRef.current
+    if (!isOpen || !el) return
+    let sx = 0
+    let sy = 0
+    let decided: 'none' | 'scroll' | 'drag' = 'none'
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) { decided = 'scroll'; return }
+      sx = e.touches[0].clientX
+      sy = e.touches[0].clientY
+      decided = 'none'
+    }
+    const onMove = (e: TouchEvent) => {
+      if (decided === 'scroll' || e.touches.length !== 1) return
+      const t = e.touches[0]
+      const dx = t.clientX - sx
+      const dy = t.clientY - sy
+      if (decided === 'none') {
+        if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return
+        if (Math.abs(dx) > Math.abs(dy)) { decided = 'scroll'; return }
+        decided = dy > 0 && scrollableAtTop(t.target as HTMLElement, el) ? 'drag' : 'scroll'
+      }
+      if (decided === 'drag' && e.cancelable) e.preventDefault()
+    }
+    const reset = () => { decided = 'none' }
+    el.addEventListener('touchstart', onStart, { passive: true })
+    el.addEventListener('touchmove', onMove, { passive: false })
+    el.addEventListener('touchend', reset)
+    el.addEventListener('touchcancel', reset)
+    return () => {
+      el.removeEventListener('touchstart', onStart)
+      el.removeEventListener('touchmove', onMove)
+      el.removeEventListener('touchend', reset)
+      el.removeEventListener('touchcancel', reset)
+    }
+  }, [isOpen])
+
   return createPortal(
     <AnimatePresence>
       {isOpen && (
@@ -197,10 +237,16 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             ref={panelRef}
             // Mobile: a pure slide-up (no scale/opacity) so the entrance always
             // reads as a slide, never a fade. Desktop keeps the gentle zoom.
+            // `animate` is held at the hidden state until enterReady flips (after
+            // the height is measured) so the slide runs at the correct pace.
             initial={isMobile ? { y: "100%" } : { y: "100%", scale: 0.95, opacity: 0 }}
-            animate={isMobile ? { y: 0 } : { y: 0, scale: 1, opacity: 1 }}
+            animate={
+              enterReady
+                ? (isMobile ? { y: 0 } : { y: 0, scale: 1, opacity: 1 })
+                : (isMobile ? { y: "100%" } : { y: "100%", scale: 0.95, opacity: 0 })
+            }
             exit={isMobile ? { y: "100%" } : { y: "100%", scale: 0.95, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 320, damping: 34, mass: 0.9 }}
+            transition={{ type: "spring", bounce: 0, duration: slideDuration }}
             drag="y"
             dragControls={dragControls}
             dragListener={false}
@@ -237,10 +283,10 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             aria-label={ariaLabel}
             tabIndex={-1}
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
-            // Only allow the browser to own vertical panning when the sheet
-            // genuinely scrolls; otherwise none, so framer gets every gesture
-            // and the whole panel drags smoothly (see panelCanScroll above).
-            style={{ touchAction: panelCanScroll ? 'pan-y' : 'none' }}
+            // pan-y lets inner content scroll natively; the non-passive
+            // touchmove listener above preventDefaults only the dismiss gesture,
+            // so the drag still engages reliably over scrollable content.
+            style={{ touchAction: 'pan-y' }}
             className={`sheet-panel w-full ${maxWidthClassName} bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto focus:outline-none`}
           >
             <div
