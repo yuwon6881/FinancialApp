@@ -72,6 +72,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   }
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingPayment, setEditingPayment] = useState<RecurringPayment | null>(null)
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('')
@@ -155,7 +156,26 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (hideSensitive && editingPayment) return
-    if (!name || !amount || !startDateInput) return
+
+    const newErrors: Record<string, string> = {}
+    if (!name.trim()) {
+      newErrors.name = 'Subscription name is required.'
+    }
+    const parsedAmount = parseFloat(amount)
+    if (!amount.trim()) {
+      newErrors.amount = 'Billing amount is required.'
+    } else if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      newErrors.amount = 'Please enter a valid amount greater than 0.'
+    }
+    if (!startDateInput) {
+      newErrors.startDate = 'Start billing date is required.'
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      return
+    }
+    setErrors({})
     
     // Parse the start date to extract the day of the month as DueDate
     // HTML date inputs are yyyy-MM-dd
@@ -164,7 +184,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
 
     const paymentData = {
       name,
-      amount: -Math.abs(parseFloat(amount)), // Excel outlays are stored as negative
+      amount: -Math.abs(parsedAmount), // Excel outlays are stored as negative
       frequency: 'Monthly' as const,
       category,
       ledgerCategory,
@@ -195,6 +215,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     setLedgerCategory('Essentials')
     setEditingPayment(null)
     setShowAddForm(false)
+    setErrors({})
   }
 
   const handleCancelForm = () => {
@@ -205,6 +226,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     setLedgerCategory('Essentials')
     setEditingPayment(null)
     setShowAddForm(false)
+    setErrors({})
   }
 
   const formatCurrency = (val: number) => {
@@ -290,7 +312,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
             </span>
           }
         >
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <form noValidate onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-xs font-semibold text-muted-foreground">Subscription Name</label>
               <input
@@ -299,9 +321,23 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                 required
                 placeholder="e.g. Netflix, Spotify"
                 value={name}
-                onChange={e => setName(e.target.value)}
-                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
+                onChange={e => {
+                  setName(e.target.value)
+                  if (errors.name) {
+                    setErrors(prev => ({ ...prev, name: '' }))
+                  }
+                }}
+                className={`w-full px-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                  errors.name 
+                    ? 'border-destructive focus:ring-destructive' 
+                    : 'border-border focus:ring-blue-500'
+                }`}
               />
+              {errors.name && (
+                <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                  {errors.name}
+                </p>
+              )}
             </div>
 
             <div className="space-y-1">
@@ -316,12 +352,26 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                   required
                   placeholder="0.00"
                   value={amount}
-                  onChange={handleAmountChange}
-                  className={`w-full pr-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200 ${
+                  onChange={e => {
+                    handleAmountChange(e)
+                    if (errors.amount) {
+                      setErrors(prev => ({ ...prev, amount: '' }))
+                    }
+                  }}
+                  className={`w-full pr-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
                     getCurrencySymbol(currency).length > 2 ? 'pl-11' : getCurrencySymbol(currency).length > 1 ? 'pl-9' : 'pl-7'
+                  } ${
+                    errors.amount 
+                      ? 'border-destructive focus:ring-destructive' 
+                      : 'border-border focus:ring-blue-500'
                   }`}
                 />
               </div>
+              {errors.amount && (
+                <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                  {errors.amount}
+                </p>
+              )}
             </div>
 
             <div className="space-y-1">
@@ -340,9 +390,23 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                 type="date"
                 required
                 value={startDateInput}
-                onChange={e => setStartDateInput(e.target.value)}
-                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
+                onChange={e => {
+                  setStartDateInput(e.target.value)
+                  if (errors.startDate) {
+                    setErrors(prev => ({ ...prev, startDate: '' }))
+                  }
+                }}
+                className={`w-full px-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                  errors.startDate 
+                    ? 'border-destructive focus:ring-destructive' 
+                    : 'border-border focus:ring-blue-500'
+                }`}
               />
+              {errors.startDate && (
+                <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                  {errors.startDate}
+                </p>
+              )}
             </div>
 
             <div className="space-y-1">

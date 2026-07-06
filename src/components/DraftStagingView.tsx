@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import type { Transaction } from '../types'
-import { FileText, Edit2, Trash2, ArrowLeft, Plus, AlertCircle } from 'lucide-react'
+import { FileText, Edit2, Trash2, ArrowLeft, Plus } from 'lucide-react'
 import { formatCurrencyVal } from '../lib/utils'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
@@ -25,16 +25,12 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
   onAddAnother
 }) => {
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null)
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   // Edit Form States
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState('')
-  const [validationErrors, setValidationErrors] = useState<{
-    description?: string
-    amount?: string
-    date?: string
-  }>({})
 
   const formatCurrency = (val: number) => {
     return formatCurrencyVal(val, currency)
@@ -54,30 +50,30 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
     setDescription(draft.description)
     setAmount(Math.abs(draft.amount).toString())
     setDate(draft.date)
-    setValidationErrors({})
+    setErrors({})
   }
 
   const handleSaveEdit = (draft: Transaction) => {
-    const errors: { description?: string; amount?: string; date?: string } = {}
+    const newErrors: Record<string, string> = {}
     if (!description.trim()) {
-      errors.description = 'Description is required'
+      newErrors.description = 'Description is required.'
     }
     const parsedAmount = parseFloat(amount)
-    if (isNaN(parsedAmount)) {
-      errors.amount = 'Amount must be a valid number'
-    } else if (parsedAmount <= 0) {
-      errors.amount = 'Amount must be greater than zero'
+    if (!amount.trim()) {
+      newErrors.amount = 'Amount is required.'
+    } else if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      newErrors.amount = 'Please enter a valid amount greater than 0.'
     }
     if (!date) {
-      errors.date = 'Date is required'
+      newErrors.date = 'Date is required.'
     }
 
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors)
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
       return
     }
+    setErrors({})
 
-    setValidationErrors({})
     const sign = draft.amount < 0 ? -1 : 1
     onUpdateDraftTransaction(draft.id, {
       ...draft,
@@ -122,33 +118,32 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                 className="p-4 rounded-2xl bg-card border border-blue-500/30 shadow-md space-y-3 animate-in zoom-in-95 duration-150"
               >
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Description</label>
+                  <div className="space-y-1 block">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Description</label>
                     <input
                       type="text"
                       required
                       value={description}
                       onChange={e => {
                         setDescription(e.target.value)
-                        if (validationErrors.description) {
-                          setValidationErrors(prev => ({ ...prev, description: undefined }))
+                        if (errors.description) {
+                          setErrors(prev => ({ ...prev, description: '' }))
                         }
                       }}
-                      className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition-all duration-200 ${
-                        validationErrors.description 
-                          ? 'border-red-500/50 focus:ring-red-500 text-red-600 dark:text-red-400 bg-red-500/5' 
+                      className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                        errors.description 
+                          ? 'border-destructive focus:ring-destructive' 
                           : 'border-border focus:ring-blue-500'
                       }`}
                     />
-                    {validationErrors.description && (
-                      <div className="text-[10px] text-red-500 font-semibold flex items-center gap-1 mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                        <AlertCircle className="size-3 shrink-0" />
-                        <span>{validationErrors.description}</span>
-                      </div>
+                    {errors.description && (
+                      <p className="text-[10px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                        {errors.description}
+                      </p>
                     )}
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Amount</label>
+                  <div className="space-y-1 block">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Amount</label>
                     <input
                       type="number"
                       step="0.01"
@@ -156,46 +151,44 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                       value={amount}
                       onChange={e => {
                         setAmount(e.target.value)
-                        if (validationErrors.amount) {
-                          setValidationErrors(prev => ({ ...prev, amount: undefined }))
+                        if (errors.amount) {
+                          setErrors(prev => ({ ...prev, amount: '' }))
                         }
                       }}
-                      className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition-all duration-200 ${
-                        validationErrors.amount 
-                          ? 'border-red-500/50 focus:ring-red-500 text-red-600 dark:text-red-400 bg-red-500/5' 
+                      className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                        errors.amount 
+                          ? 'border-destructive focus:ring-destructive' 
                           : 'border-border focus:ring-blue-500'
                       }`}
                     />
-                    {validationErrors.amount && (
-                      <div className="text-[10px] text-red-500 font-semibold flex items-center gap-1 mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                        <AlertCircle className="size-3 shrink-0" />
-                        <span>{validationErrors.amount}</span>
-                      </div>
+                    {errors.amount && (
+                      <p className="text-[10px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                        {errors.amount}
+                      </p>
                     )}
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Date</label>
+                  <div className="space-y-1 block">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Date</label>
                     <input
                       type="date"
                       required
                       value={date}
                       onChange={e => {
                         setDate(e.target.value)
-                        if (validationErrors.date) {
-                          setValidationErrors(prev => ({ ...prev, date: undefined }))
+                        if (errors.date) {
+                          setErrors(prev => ({ ...prev, date: '' }))
                         }
                       }}
-                      className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition-all duration-200 ${
-                        validationErrors.date 
-                          ? 'border-red-500/50 focus:ring-red-500 text-red-600 dark:text-red-400 bg-red-500/5' 
+                      className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                        errors.date 
+                          ? 'border-destructive focus:ring-destructive' 
                           : 'border-border focus:ring-blue-500'
                       }`}
                     />
-                    {validationErrors.date && (
-                      <div className="text-[10px] text-red-500 font-semibold flex items-center gap-1 mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                        <AlertCircle className="size-3 shrink-0" />
-                        <span>{validationErrors.date}</span>
-                      </div>
+                    {errors.date && (
+                      <p className="text-[10px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                        {errors.date}
+                      </p>
                     )}
                   </div>
                 </div>

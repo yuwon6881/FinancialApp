@@ -16,6 +16,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [fingerprintLoading, setFingerprintLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -38,18 +39,32 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!username || !password) return
+    const newErrors: Record<string, string> = {}
+    if (!username.trim()) {
+      newErrors.username = 'Username is required.'
+    }
+    if (!password.trim()) {
+      newErrors.password = 'Password is required.'
+    }
+    if (!isRegistered) {
+      if (!confirmPassword.trim()) {
+        newErrors.confirmPassword = 'Confirm password is required.'
+      } else if (password !== confirmPassword) {
+        newErrors.confirmPassword = 'Passwords do not match.'
+      }
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      return
+    }
+    setErrors({})
     setError(null)
     setLoading(true)
 
     try {
       if (!isRegistered) {
         // Register flow
-        if (password !== confirmPassword) {
-          setError('Passwords do not match.')
-          setLoading(false)
-          return
-        }
         await api.register({ username, password })
         // Immediately login after successful registration
         const loginRes = await api.login({ username, password })
@@ -128,7 +143,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form noValidate onSubmit={handleSubmit} className="space-y-4">
           {/* Username Input */}
           <div className="space-y-1">
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Username</label>
@@ -140,11 +155,25 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 disabled={loading}
                 placeholder="Admin username"
                 value={username}
-                onChange={e => setUsername(e.target.value)}
+                onChange={e => {
+                  setUsername(e.target.value)
+                  if (errors.username) {
+                    setErrors(prev => ({ ...prev, username: '' }))
+                  }
+                }}
                 autoComplete="off"
-                className="w-full pl-10 pr-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
+                className={`w-full pl-10 pr-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                  errors.username 
+                    ? 'border-destructive focus:ring-destructive' 
+                    : 'border-border focus:ring-blue-500'
+                }`}
               />
             </div>
+            {errors.username && (
+              <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                {errors.username}
+              </p>
+            )}
           </div>
 
           {/* Password Input */}
@@ -158,9 +187,18 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 disabled={loading}
                 placeholder="••••••••"
                 value={password}
-                onChange={e => setPassword(e.target.value)}
+                onChange={e => {
+                  setPassword(e.target.value)
+                  if (errors.password) {
+                    setErrors(prev => ({ ...prev, password: '' }))
+                  }
+                }}
                 autoComplete="new-password"
-                className="w-full pl-10 pr-10 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
+                className={`w-full pl-10 pr-10 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                  errors.password 
+                    ? 'border-destructive focus:ring-destructive' 
+                    : 'border-border focus:ring-blue-500'
+                }`}
               />
               <button
                 type="button"
@@ -171,6 +209,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </button>
             </div>
+            {errors.password && (
+              <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                {errors.password}
+              </p>
+            )}
           </div>
 
           {/* Confirm Password (only for registration) */}
@@ -185,13 +228,27 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   disabled={loading}
                   placeholder="••••••••"
                   value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
+                  onChange={e => {
+                    setConfirmPassword(e.target.value)
+                    if (errors.confirmPassword) {
+                      setErrors(prev => ({ ...prev, confirmPassword: '' }))
+                    }
+                  }}
                   autoComplete="new-password"
                   readOnly
                   onFocus={(e) => e.target.removeAttribute('readonly')}
-                  className="w-full pl-10 pr-10 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
+                  className={`w-full pl-10 pr-10 py-2.5 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                    errors.confirmPassword 
+                      ? 'border-destructive focus:ring-destructive' 
+                      : 'border-border focus:ring-blue-500'
+                  }`}
                 />
               </div>
+              {errors.confirmPassword && (
+                <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                  {errors.confirmPassword}
+                </p>
+              )}
             </div>
           )}
 

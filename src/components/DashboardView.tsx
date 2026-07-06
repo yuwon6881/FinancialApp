@@ -73,7 +73,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // Balance adjustment modal state
   const [adjustingCategory, setAdjustingCategory] = useState<any | null>(null)
   const [newBalanceInput, setNewBalanceInput] = useState<string>('')
-  const [newBalanceError, setNewBalanceError] = useState<string | null>(null)
+  const [balanceErrors, setBalanceErrors] = useState<Record<string, string>>({})
   const [adjustmentDescription, setAdjustmentDescription] = useState<string>('Balance Adjustment')
   const [pendingBalanceAdjustment, setPendingBalanceAdjustment] = useState<{
     transaction: Omit<Transaction, 'id'>
@@ -254,17 +254,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     setAdjustingCategory(category)
     setNewBalanceInput(category.remaining.toFixed(2))
     setAdjustmentDescription('Balance Adjustment')
-    setNewBalanceError(null)
+    setBalanceErrors({})
   }
 
   const prepareBalanceAdjustment = () => {
     if (!adjustingCategory) return
+    
     const targetVal = parseFloat(newBalanceInput)
+    const newErrors: Record<string, string> = {}
     if (isNaN(targetVal)) {
-      setNewBalanceError('Please enter a valid balance amount.')
+      newErrors.balance = 'Please enter a valid balance amount.'
+    }
+    if (!adjustmentDescription.trim()) {
+      newErrors.description = 'Description is required.'
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setBalanceErrors(newErrors)
       return
     }
-    setNewBalanceError(null)
+    setBalanceErrors({})
 
     const diff = targetVal - adjustingCategory.remaining
     if (Math.abs(diff) < 0.005) {
@@ -1520,21 +1529,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 onChange={e => {
                   const val = maskCurrencyInput(e.target.value, newBalanceInput)
                   setNewBalanceInput(val)
-                  if (newBalanceError && !isNaN(parseFloat(val))) {
-                    setNewBalanceError(null)
+                  if (balanceErrors.balance) {
+                    setBalanceErrors(prev => ({ ...prev, balance: '' }))
                   }
                 }}
-                className={`w-full px-3 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition-all duration-200 ${
-                  newBalanceError 
-                    ? 'border-red-500/50 focus:ring-red-500 text-red-600 dark:text-red-400 bg-red-500/5' 
+                className={`w-full px-3 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                  balanceErrors.balance 
+                    ? 'border-destructive focus:ring-destructive' 
                     : 'border-border focus:ring-blue-500'
                 }`}
               />
-              {newBalanceError && (
-                <div className="text-[10px] text-red-500 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                  <AlertCircle className="size-3.5 shrink-0" />
-                  <span>{newBalanceError}</span>
-                </div>
+              {balanceErrors.balance && (
+                <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                  {balanceErrors.balance}
+                </p>
               )}
             </div>
 
@@ -1545,9 +1553,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 required
                 placeholder="e.g. Ledger alignment"
                 value={adjustmentDescription}
-                onChange={e => setAdjustmentDescription(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
+                onChange={e => {
+                  setAdjustmentDescription(e.target.value)
+                  if (balanceErrors.description) {
+                    setBalanceErrors(prev => ({ ...prev, description: '' }))
+                  }
+                }}
+                className={`w-full px-3 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                  balanceErrors.description 
+                    ? 'border-destructive focus:ring-destructive' 
+                    : 'border-border focus:ring-blue-500'
+                }`}
               />
+              {balanceErrors.description && (
+                <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                  {balanceErrors.description}
+                </p>
+              )}
             </div>
 
             {(() => {

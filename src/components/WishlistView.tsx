@@ -82,6 +82,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingItem, setEditingItem] = useState<WishlistItem | null>(null)
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   // Form states
   const [nameInput, setNameInput] = useState('')
@@ -202,18 +203,34 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   const closeAddModal = () => {
     setShowAddModal(false)
     clearAddDraft()
+    setErrors({})
   }
 
   const closeEditModal = () => {
     setShowEditModal(false)
     setEditingItem(null)
     clearEditDraft()
+    setErrors({})
   }
 
   const handleSaveAdd = async (e: React.FormEvent) => {
     e.preventDefault()
+    const newErrors: Record<string, string> = {}
+    if (!nameInput.trim()) {
+      newErrors.name = 'Goal name is required.'
+    }
     const price = parseFloat(priceInput)
-    if (!nameInput.trim() || isNaN(price) || price <= 0) return
+    if (!priceInput.trim()) {
+      newErrors.price = 'Price is required.'
+    } else if (isNaN(price) || price <= 0) {
+      newErrors.price = 'Please enter a valid price greater than 0.'
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      return
+    }
+    setErrors({})
 
     const newGoal = {
       name: nameInput,
@@ -228,8 +245,22 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingItem) return
+    const newErrors: Record<string, string> = {}
+    if (!nameInput.trim()) {
+      newErrors.name = 'Goal name is required.'
+    }
     const price = parseFloat(priceInput)
-    if (!nameInput.trim() || isNaN(price) || price <= 0) return
+    if (!priceInput.trim()) {
+      newErrors.price = 'Price is required.'
+    } else if (isNaN(price) || price <= 0) {
+      newErrors.price = 'Please enter a valid price greater than 0.'
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      return
+    }
+    setErrors({})
 
     const { isPendingSync, ...cleanItem } = editingItem as any
     const updatedGoal = {
@@ -647,17 +678,31 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
           onClose={closeAddModal}
           maxWidthClassName="max-w-md"
         >
-            <form onSubmit={handleSaveAdd} className="space-y-4 text-xs font-semibold">
+            <form noValidate onSubmit={handleSaveAdd} className="space-y-4 text-xs font-semibold">
               <div>
                 <label className="text-muted-foreground block mb-1">Goal Name *</label>
                 <input 
                   type="text" 
                   value={nameInput}
-                  onChange={e => setNameInput(e.target.value)}
+                  onChange={e => {
+                    setNameInput(e.target.value)
+                    if (errors.name) {
+                      setErrors(prev => ({ ...prev, name: '' }))
+                    }
+                  }}
                   placeholder="e.g. Mechanical Keyboard, Weekend Trip"
-                  className="w-full px-3.5 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition font-medium"
+                  className={`w-full px-3.5 py-2 bg-background border rounded-xl focus:outline-none focus:ring-1 transition font-medium ${
+                    errors.name 
+                      ? 'border-destructive focus:ring-destructive' 
+                      : 'border-border focus:ring-blue-500'
+                  }`}
                   required
                 />
+                {errors.name && (
+                  <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                    {errors.name}
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -667,11 +712,25 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                     type="text" 
                     inputMode="decimal"
                     value={priceInput}
-                    onChange={handlePriceChange}
+                    onChange={e => {
+                      handlePriceChange(e)
+                      if (errors.price) {
+                        setErrors(prev => ({ ...prev, price: '' }))
+                      }
+                    }}
                     placeholder="0.00"
-                    className="w-full px-3.5 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className={`w-full px-3.5 py-2 bg-background border rounded-xl focus:outline-none focus:ring-1 transition font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                      errors.price 
+                        ? 'border-destructive focus:ring-destructive' 
+                        : 'border-border focus:ring-blue-500'
+                    }`}
                     required
                   />
+                  {errors.price && (
+                    <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                      {errors.price}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="text-muted-foreground block mb-1">Priority</label>
@@ -730,16 +789,30 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
           onClose={closeEditModal}
           maxWidthClassName="max-w-md"
         >
-            <form onSubmit={handleSaveEdit} className="space-y-4 text-xs font-semibold">
+            <form noValidate onSubmit={handleSaveEdit} className="space-y-4 text-xs font-semibold">
               <div>
                 <label className="text-muted-foreground block mb-1">Goal Name *</label>
                 <input 
                   type="text" 
                   value={nameInput}
-                  onChange={e => setNameInput(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition font-medium"
+                  onChange={e => {
+                    setNameInput(e.target.value)
+                    if (errors.name) {
+                      setErrors(prev => ({ ...prev, name: '' }))
+                    }
+                  }}
+                  className={`w-full px-3.5 py-2 bg-background border rounded-xl focus:outline-none focus:ring-1 transition font-medium ${
+                    errors.name 
+                      ? 'border-destructive focus:ring-destructive' 
+                      : 'border-border focus:ring-blue-500'
+                  }`}
                   required
                 />
+                {errors.name && (
+                  <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                    {errors.name}
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -749,10 +822,24 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                     type="text" 
                     inputMode="decimal"
                     value={priceInput}
-                    onChange={handlePriceChange}
-                    className="w-full px-3.5 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    onChange={e => {
+                      handlePriceChange(e)
+                      if (errors.price) {
+                        setErrors(prev => ({ ...prev, price: '' }))
+                      }
+                    }}
+                    className={`w-full px-3.5 py-2 bg-background border rounded-xl focus:outline-none focus:ring-1 transition font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                      errors.price 
+                        ? 'border-destructive focus:ring-destructive' 
+                        : 'border-border focus:ring-blue-500'
+                    }`}
                     required
                   />
+                  {errors.price && (
+                    <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                      {errors.price}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="text-muted-foreground block mb-1">Priority</label>

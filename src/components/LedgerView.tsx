@@ -138,6 +138,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   })
 
   const [editingTxId, setEditingTxId] = useState<string | null>(null)
+  const [errors, setErrors] = useState<Record<string, string>>({})
   // Open the add/edit sheet synchronously, straight from the click handler,
   // rather than deferring the state update into a requestAnimationFrame. A
   // discrete click flushes the mount synchronously, which keeps the shared
@@ -629,6 +630,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setEditingTxId(null)
     setShowAddForm(false)
     clearFormDraft()
+    setErrors({})
   }
 
   // Fully reset and close the transaction modal (used by Cancel / close / backdrop)
@@ -644,6 +646,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setEditingTxId(null)
     setShowAddForm(false)
     clearFormDraft()
+    setErrors({})
   }
 
   // NOTE: body scroll locking for showAddForm / showExportModal /
@@ -802,9 +805,26 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!description || !amount || !date) return
-
+    const newErrors: Record<string, string> = {}
+    if (!description.trim()) {
+      newErrors.description = 'Description is required.'
+    }
     const parsedAmount = parseFloat(amount)
+    if (!amount.trim()) {
+      newErrors.amount = 'Amount is required.'
+    } else if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      newErrors.amount = 'Please enter a valid amount greater than 0.'
+    }
+    if (!date) {
+      newErrors.date = 'Posting date is required.'
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      return
+    }
+    setErrors({})
+
     let finalAmount = parsedAmount
     let finalLedgerCategory = ledgerCategory
 
@@ -1333,7 +1353,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             </span>
           }
         >
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <form noValidate onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
             <div className="space-y-1 sm:col-span-2">
               <label className="text-xs font-semibold text-muted-foreground">Transaction Type</label>
@@ -1386,14 +1406,26 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   setDescription(e.target.value)
                   setShowSuggestions(true)
                   setSelectedSuggestionIndex(-1)
+                  if (errors.description) {
+                    setErrors(prev => ({ ...prev, description: '' }))
+                  }
                 }}
                 onFocus={() => {
                   if (description.trim().length >= 1) setShowSuggestions(true)
                 }}
                 onKeyDown={handleDescriptionKeyDown}
                 autoComplete="off"
-                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
+                className={`w-full px-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                  errors.description 
+                    ? 'border-destructive focus:ring-destructive' 
+                    : 'border-border focus:ring-blue-500'
+                }`}
               />
+              {errors.description && (
+                <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                  {errors.description}
+                </p>
+              )}
               {showSuggestions && filteredSuggestions.length > 0 && (
                 <div
                   ref={suggestionsRef}
@@ -1461,12 +1493,26 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   required
                   placeholder="0.00"
                   value={amount}
-                  onChange={handleAmountChange}
-                  className={`w-full pr-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200 ${
+                  onChange={e => {
+                    handleAmountChange(e)
+                    if (errors.amount) {
+                      setErrors(prev => ({ ...prev, amount: '' }))
+                    }
+                  }}
+                  className={`w-full pr-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
                     getCurrencySymbol(currency).length > 2 ? 'pl-11' : getCurrencySymbol(currency).length > 1 ? 'pl-9' : 'pl-7'
+                  } ${
+                    errors.amount 
+                      ? 'border-destructive focus:ring-destructive' 
+                      : 'border-border focus:ring-blue-500'
                   }`}
                 />
               </div>
+              {errors.amount && (
+                <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                  {errors.amount}
+                </p>
+              )}
             </div>
 
             {txType === 'transfer' ? (
@@ -1537,9 +1583,23 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 type="date"
                 required
                 value={date}
-                onChange={e => setDate(e.target.value)}
-                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
+                onChange={e => {
+                  setDate(e.target.value)
+                  if (errors.date) {
+                    setErrors(prev => ({ ...prev, date: '' }))
+                  }
+                }}
+                className={`w-full px-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                  errors.date 
+                    ? 'border-destructive focus:ring-destructive' 
+                    : 'border-border focus:ring-blue-500'
+                }`}
               />
+              {errors.date && (
+                <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                  {errors.date}
+                </p>
+              )}
             </div>
 
             <div className="sm:col-span-2 flex gap-2 justify-end border-t border-border/30 pt-4 mt-1">

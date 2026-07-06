@@ -91,6 +91,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   }
 
   const [targetInput, setTargetInput] = useState('')
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [essentialsAllocInput, setEssentialsAllocInput] = useState('')
   const [growthAllocInput, setGrowthAllocInput] = useState('')
   const [stabilityAllocInput, setStabilityAllocInput] = useState('')
@@ -235,11 +236,32 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault()
-    if (allocSum !== 100) return
-
+    const newErrors: Record<string, string> = {}
+    
     const target = parseFloat(targetInput)
+    if (!targetInput.trim()) {
+      newErrors.target = 'Target Stability Fund Limit is required.'
+    } else if (isNaN(target) || target < 0) {
+      newErrors.target = 'Please enter a valid target limit.'
+    }
+
+    if (!essentialsAllocInput.trim()) newErrors.essentials = 'Essentials allocation is required.'
+    if (!growthAllocInput.trim()) newErrors.growth = 'Growth allocation is required.'
+    if (!stabilityAllocInput.trim()) newErrors.stability = 'Stability allocation is required.'
+    if (!rewardsAllocInput.trim()) newErrors.rewards = 'Rewards allocation is required.'
+
+    if (allocSum !== 100) {
+      newErrors.allocationSum = `Allocations must total exactly 100% (currently ${allocSum}%).`
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      return
+    }
+    setErrors({})
+
     const cycle = parseInt(cycleDayInput)
-    if (isNaN(target) || isNaN(cycle)) return
+    if (isNaN(cycle)) return
 
     onUpdateSettings({
       targetStabilityFund: target,
@@ -324,7 +346,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.65fr)] gap-6">
-        <form onSubmit={handleSaveSettings} className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-5">
+        <form noValidate onSubmit={handleSaveSettings} className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-5">
           <div className="flex items-center justify-between gap-3 border-b border-border/40 pb-3">
             <div>
               <h3 className="text-sm font-bold text-foreground">Financial Model</h3>
@@ -336,20 +358,32 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label className="space-y-1">
-              <span className="text-xs font-semibold text-muted-foreground">Target Stability Fund Limit</span>
+            <label className="space-y-1 block">
+              <span className="text-xs font-semibold text-muted-foreground block">Target Stability Fund Limit</span>
               <input
                 type="number"
                 required
                 disabled={hideSensitive}
                 value={targetInput}
-                onChange={e => setTargetInput(e.target.value)}
-                className={`w-full px-3 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                onChange={e => {
+                  setTargetInput(e.target.value)
+                  if (errors.target) {
+                    setErrors(prev => ({ ...prev, target: '' }))
+                  }
+                }}
+                className={`w-full px-3 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
                   hideSensitive 
                     ? 'border-transparent text-transparent blur-sm select-none pointer-events-none' 
-                    : 'border-border'
+                    : errors.target 
+                      ? 'border-destructive focus:ring-destructive' 
+                      : 'border-border focus:ring-blue-500'
                 }`}
               />
+              {errors.target && (
+                <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                  {errors.target}
+                </p>
+              )}
             </label>
 
             <label className="space-y-1">
@@ -396,12 +430,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               {[
-                ['Essentials', essentialsAllocInput, setEssentialsAllocInput],
-                ['Growth', growthAllocInput, setGrowthAllocInput],
-                ['Stability', stabilityAllocInput, setStabilityAllocInput],
-                ['Rewards', rewardsAllocInput, setRewardsAllocInput],
-              ].map(([label, value, setter]) => (
-                <label key={label as string} className="space-y-1">
+                ['Essentials', essentialsAllocInput, setEssentialsAllocInput, 'essentials'],
+                ['Growth', growthAllocInput, setGrowthAllocInput, 'growth'],
+                ['Stability', stabilityAllocInput, setStabilityAllocInput, 'stability'],
+                ['Rewards', rewardsAllocInput, setRewardsAllocInput, 'rewards'],
+              ].map(([label, value, setter, key]) => (
+                <label key={label as string} className="space-y-1 block">
                   <span className="text-[10px] font-bold text-muted-foreground block">{label as string} (%)</span>
                   <input
                     type="number"
@@ -409,24 +443,41 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     min="0"
                     max="100"
                     value={value as string}
-                    onChange={e => (setter as React.Dispatch<React.SetStateAction<string>>)(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    onChange={e => {
+                      (setter as React.Dispatch<React.SetStateAction<string>>)(e.target.value)
+                      if (errors[key as string]) {
+                        setErrors(prev => ({ ...prev, [key as string]: '' }))
+                      }
+                      if (errors.allocationSum) {
+                        setErrors(prev => ({ ...prev, allocationSum: '' }))
+                      }
+                    }}
+                    className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                      errors[key as string] || errors.allocationSum
+                        ? 'border-destructive focus:ring-destructive'
+                        : 'border-border focus:ring-blue-500'
+                    }`}
                   />
+                  {errors[key as string] && (
+                    <p className="text-[9px] text-destructive font-medium mt-0.5 animate-in fade-in slide-in-from-top-1 duration-150">
+                      {errors[key as string]}
+                    </p>
+                  )}
                 </label>
               ))}
             </div>
+            {errors.allocationSum && (
+              <p className="text-xs text-destructive font-medium mt-2 animate-in fade-in slide-in-from-top-1 duration-150">
+                {errors.allocationSum}
+              </p>
+            )}
           </div>
 
           <motion.button
-            whileHover={allocSum === 100 ? { scale: 1.02 } : undefined}
-            whileTap={allocSum === 100 ? { scale: 0.98 } : undefined}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             type="submit"
-            disabled={allocSum !== 100}
-            className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold transition duration-150 ${
-              allocSum === 100
-                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 text-white cursor-pointer'
-                : 'bg-muted text-muted-foreground cursor-not-allowed opacity-60'
-            }`}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 text-white cursor-pointer transition duration-150"
           >
             <Save className="size-3.5" />
             Save Configuration
