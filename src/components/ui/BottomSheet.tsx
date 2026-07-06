@@ -92,7 +92,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   // dismissed with a finger resting on a field that hasn't been focused yet.
   const NO_DRAG_SELECTOR =
     'button, a, select, input[type="range"], [role="button"], [role="slider"], [data-no-drag="true"], [data-no-sheet-drag]'
-  const gestureRef = useRef<{ startY: number; decided: 'none' | 'scroll' | 'drag' } | null>(null)
+  const gestureRef = useRef<{ startX: number; startY: number; decided: 'none' | 'scroll' | 'drag' } | null>(null)
   const dragActiveRef = useRef(false)
 
   // Walk from the touched element up to the panel and report whether the first
@@ -120,21 +120,29 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       gestureRef.current = null
       return
     }
-    gestureRef.current = { startY: e.clientY, decided: 'none' }
+    gestureRef.current = { startX: e.clientX, startY: e.clientY, decided: 'none' }
   }
 
   const handlePanelPointerMove = (e: React.PointerEvent) => {
     const gesture = gestureRef.current
     if (!gesture || dragActiveRef.current || gesture.decided !== 'none') return
     const dy = e.clientY - gesture.startY
-    if (Math.abs(dy) < 8) return
+    const dx = e.clientX - gesture.startX
+    if (Math.abs(dy) < 5 && Math.abs(dx) < 5) return
+    // A clearly horizontal gesture belongs to something else (e.g. a swipeable
+    // row) -- bow out and let it run for the rest of this touch.
+    if (Math.abs(dx) > Math.abs(dy)) {
+      gesture.decided = 'scroll'
+      return
+    }
     const panel = panelRef.current
     if (dy > 0 && panel && scrollableAtTop(e.target as HTMLElement, panel)) {
       gesture.decided = 'drag'
       dragControls.start(e)
     } else {
-      // Upward, or downward while the content can still scroll up: leave it to
-      // native scrolling for the rest of this gesture.
+      // Upward, or downward while the content under the finger can still scroll
+      // up: leave it to native scrolling for the rest of this gesture. The user
+      // must lift and pull again once at the top to dismiss.
       gesture.decided = 'scroll'
     }
   }
@@ -173,13 +181,20 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             drag="y"
             dragControls={dragControls}
             dragListener={false}
+            // Lock upward drag at rest (top: 0) but let a downward drag track the
+            // finger 1:1 (bottom elastic 1) so the sheet feels "grabbed" rather
+            // than rubber-banded -- the earlier 0.5 made it move half as far as
+            // the finger, which read as stiff/hard to dismiss.
             dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0, bottom: 0.5 }}
+            dragElastic={{ top: 0, bottom: 1 }}
+            dragMomentum={false}
             onDragStart={() => { dragActiveRef.current = true }}
             onDragEnd={(_e, info: PanInfo) => {
               dragActiveRef.current = false
               gestureRef.current = null
-              if (info.velocity.y > 300 || info.offset.y > 100) {
+              // Easy to dismiss: a short pull (~a quarter of the way) or any
+              // gentle downward flick lets go of the sheet.
+              if (info.velocity.y > 250 || info.offset.y > 64) {
                 onClose()
               }
             }}

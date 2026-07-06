@@ -65,7 +65,7 @@ export function PendingSubscriptionsModal({
         The following subscription renewals have arrived or passed. Please confirm which bills have been paid to register them in the ledger.
       </div>
 
-      <div data-no-drag="true" className="space-y-3 overflow-y-auto max-h-80 pr-1 py-1 mt-2">
+      <div className="space-y-3 overflow-y-auto max-h-80 pr-1 py-1 mt-2">
         {pendingNotifications.map((noti) => (
           <div key={noti.id} className="p-4 rounded-xl bg-muted/30 border border-border/40 shadow-xs flex flex-col gap-3">
             <div className="flex items-start justify-between gap-4">
