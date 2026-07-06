@@ -232,13 +232,15 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
           }}
           className="sheet-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
         >
+          {/* Entrance/exit slide lives on this OUTER wrapper, deliberately kept
+              separate from the drag below. framer's drag gesture takes ownership
+              of the element's `y` transform, which was stepping on the entrance
+              `y` keyframes and making a tall sheet appear to fade in rather than
+              slide. Two elements => two independent `y` transforms => the slide
+              always plays. Held at the hidden state until enterReady flips (after
+              the height is measured) so it runs at the correct, height-paced speed. */}
           <motion.div
-            key="sheet"
-            ref={panelRef}
-            // Mobile: a pure slide-up (no scale/opacity) so the entrance always
-            // reads as a slide, never a fade. Desktop keeps the gentle zoom.
-            // `animate` is held at the hidden state until enterReady flips (after
-            // the height is measured) so the slide runs at the correct pace.
+            key="sheet-enter"
             initial={isMobile ? { y: "100%" } : { y: "100%", scale: 0.95, opacity: 0 }}
             animate={
               enterReady
@@ -247,6 +249,11 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             }
             exit={isMobile ? { y: "100%" } : { y: "100%", scale: 0.95, opacity: 0 }}
             transition={{ type: "spring", bounce: 0, duration: slideDuration }}
+            className={`sheet-enter w-full ${maxWidthClassName}`}
+          >
+          <motion.div
+            key="sheet"
+            ref={panelRef}
             drag="y"
             dragControls={dragControls}
             dragListener={false}
@@ -287,7 +294,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             // touchmove listener above preventDefaults only the dismiss gesture,
             // so the drag still engages reliably over scrollable content.
             style={{ touchAction: 'pan-y' }}
-            className={`sheet-panel w-full ${maxWidthClassName} bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto focus:outline-none`}
+            className={`sheet-panel w-full bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto focus:outline-none`}
           >
             <div
               style={{ touchAction: 'none' }}
@@ -300,6 +307,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             </div>
             {children}
             {footer && <div className="border-t border-border/40 pt-4">{footer}</div>}
+          </motion.div>
           </motion.div>
         </motion.div>
       )}

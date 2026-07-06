@@ -477,6 +477,13 @@ html {
         will-change: transform, height;
         backface-visibility: hidden;
     }
+    /* The entrance-slide wrapper must span the full width on phones too, so the
+       inner panel (width:100%) isn't capped by its max-width utility class. */
+    .sheet-enter {
+        width: 100%;
+        max-width: none;
+        will-change: transform;
+    }
     .sheet-panel {
         width: 100%;
         max-width: none;
