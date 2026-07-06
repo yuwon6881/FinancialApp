@@ -9,6 +9,7 @@ import { RowSyncBadge } from './ui/RowSyncBadge'
 import { formatCurrencyVal, maskCurrencyInput } from '../lib/utils'
 import { useFormDraft } from '../lib/useFormDraft'
 import { useAutoOpenModal } from '../lib/useAutoOpenModal'
+import { SmartAmountInput } from './ui/SmartAmountInput'
 import {
   Wallet,
   PiggyBank,
@@ -707,9 +708,8 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-muted-foreground block mb-1">Price ({currency}) *</label>
-                  <input 
+                  <SmartAmountInput 
                     type="text" 
-                    inputMode="decimal"
                     value={priceInput}
                     onChange={e => {
                       handlePriceChange(e)
@@ -815,9 +815,8 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-muted-foreground block mb-1">Price ({currency}) *</label>
-                  <input 
+                  <SmartAmountInput 
                     type="text" 
-                    inputMode="decimal"
                     value={priceInput}
                     onChange={e => {
                       handlePriceChange(e)

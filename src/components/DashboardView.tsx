@@ -20,6 +20,7 @@ import { CycleSkeleton } from './ui/Skeleton'
 import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput } from '../lib/utils'
 import { getCategoryBadgeClass, getCategoryChartColor, getCategoryDotClass } from '../lib/categoryColors'
 import { AnimatedNumber } from './ui/AnimatedNumber'
+import { SmartAmountInput } from './ui/SmartAmountInput'
 
 
 interface DashboardViewProps {
@@ -1527,10 +1528,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             <div className="space-y-1">
               <label className="text-[11px] font-bold text-muted-foreground block">Target Remaining Balance</label>
-              <input
-                type="number"
-                step="0.01"
-                required
+              <SmartAmountInput
+                type="text"
                 placeholder="0.00"
                 value={newBalanceInput}
                 onChange={e => {

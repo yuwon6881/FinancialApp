@@ -45,6 +45,7 @@ export interface FinancialSetting {
   cycleDay: number
   darkMode: boolean
   hideSensitive: boolean
+  stabilityOverflowRedirect?: string
   currency?: string
 }
 

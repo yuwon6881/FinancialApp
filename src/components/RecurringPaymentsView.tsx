@@ -16,6 +16,7 @@ import { BottomSheet } from './ui/BottomSheet'
 import { CycleSkeleton } from './ui/Skeleton'
 import { RowSyncBadge } from './ui/RowSyncBadge'
 import { ToggleButton } from './ui/ToggleButton'
+import { SmartAmountInput } from './ui/SmartAmountInput'
 import { BillTimeline } from './BillTimeline'
 import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } from '../lib/categoryColors'
 import { useAutoOpenModal } from '../lib/useAutoOpenModal'
@@ -345,9 +346,8 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                 <span className="absolute left-3.5 text-xs font-semibold text-muted-foreground pointer-events-none select-none">
                   {getCurrencySymbol(currency)}
                 </span>
-                <input
+                <SmartAmountInput
                   type="text"
-                  inputMode="decimal"
                   placeholder="0.00"
                   value={amount}
                   onChange={e => {

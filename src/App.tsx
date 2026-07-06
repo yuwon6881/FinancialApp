@@ -1660,6 +1660,7 @@ function App() {
             growthAlloc={optimisticDashboardData?.setting?.growthAlloc ?? 0.25}
             stabilityAlloc={optimisticDashboardData?.setting?.stabilityAlloc ?? 0.15}
             rewardsAlloc={optimisticDashboardData?.setting?.rewardsAlloc ?? 0.1}
+            stabilityOverflowRedirect={optimisticDashboardData?.setting?.stabilityOverflowRedirect}
             onFetchPagedTransactions={api.fetchPagedTransactions}
             onExportTransactions={api.exportTransactionsCsv}
             onShowAlert={showAlert}

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Fingerprint, ShieldCheck, Bell, ChevronDown, ChevronUp } from 'lucide-react'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
+import { SmartAmountInput } from './ui/SmartAmountInput'
 import { RowSyncBadge } from './ui/RowSyncBadge'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { MONTH_NAMES, getCycleRangeDates, getStartOfNCyclesAgo, formatDateForApi } from '../lib/cycle'
@@ -34,6 +35,7 @@ interface SettingsViewProps {
     rewardsAlloc: number
     cycleDay: number
     currency?: string
+    stabilityOverflowRedirect?: string
   }) => void
   onAddCategory: (category: Omit<TransactionCategory, 'id'>) => void
   onDeleteCategory: (id: string) => void
@@ -96,6 +98,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [growthAllocInput, setGrowthAllocInput] = useState('')
   const [stabilityAllocInput, setStabilityAllocInput] = useState('')
   const [rewardsAllocInput, setRewardsAllocInput] = useState('')
+  const [stabilityOverflowRedirectInput, setStabilityOverflowRedirectInput] = useState('Split: Growth 50%, Rewards 50%')
   const [cycleDayInput, setCycleDayInput] = useState('28')
   const [currencyInput, setCurrencyInput] = useState('USD')
   const [newCatName, setNewCatName] = useState('')
@@ -213,6 +216,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setStabilityAllocInput((activeSettings.stabilityAlloc * 100).toString())
     setRewardsAllocInput((activeSettings.rewardsAlloc * 100).toString())
     setCycleDayInput(activeSettings.cycleDay.toString())
+    setStabilityOverflowRedirectInput(activeSettings.stabilityOverflowRedirect || 'Split: Growth 50%, Rewards 50%')
     setCurrencyInput(activeSettings.currency || 'USD')
   }, [
     activeSettings.targetStabilityFund,
@@ -221,6 +225,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     activeSettings.stabilityAlloc,
     activeSettings.rewardsAlloc,
     activeSettings.cycleDay,
+    activeSettings.stabilityOverflowRedirect,
     activeSettings.currency
   ])
 
@@ -233,6 +238,49 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const r = parseFloat(rewardsAllocInput) || 0
     return Math.round((e + g + s + r) * 100) / 100
   }, [essentialsAllocInput, growthAllocInput, stabilityAllocInput, rewardsAllocInput])
+
+  const handleAllocationChange = (changedKey: 'essentials' | 'growth' | 'stability' | 'rewards', newValue: number) => {
+    const current = {
+      essentials: parseFloat(essentialsAllocInput) || 0,
+      growth: parseFloat(growthAllocInput) || 0,
+      stability: parseFloat(stabilityAllocInput) || 0,
+      rewards: parseFloat(rewardsAllocInput) || 0
+    }
+    
+    newValue = Math.max(0, Math.min(100, newValue))
+    let diff = newValue - current[changedKey]
+    if (diff === 0) return
+
+    const otherKeys = (['essentials', 'growth', 'stability', 'rewards'] as const).filter(k => k !== changedKey)
+    const otherSum = otherKeys.reduce((sum, k) => sum + current[k], 0)
+
+    let newAlloc = { ...current, [changedKey]: newValue }
+
+    if (otherSum === 0) {
+      const split = -diff / otherKeys.length
+      otherKeys.forEach(k => newAlloc[k] = Math.max(0, newAlloc[k] + split))
+    } else {
+      otherKeys.forEach(k => {
+        const proportion = current[k] / otherSum
+        newAlloc[k] = Math.max(0, current[k] - (diff * proportion))
+      })
+    }
+
+    // Fix rounding errors
+    const sum = newAlloc.essentials + newAlloc.growth + newAlloc.stability + newAlloc.rewards
+    if (sum !== 100) {
+      let maxKey = otherKeys[0]
+      otherKeys.forEach(k => {
+        if (newAlloc[k] > newAlloc[maxKey]) maxKey = k
+      })
+      newAlloc[maxKey] += (100 - sum)
+    }
+
+    setEssentialsAllocInput(newAlloc.essentials.toFixed(1))
+    setGrowthAllocInput(newAlloc.growth.toFixed(1))
+    setStabilityAllocInput(newAlloc.stability.toFixed(1))
+    setRewardsAllocInput(newAlloc.rewards.toFixed(1))
+  }
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault()
@@ -269,6 +317,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       growthAlloc: (parseFloat(growthAllocInput) || 0) / 100,
       stabilityAlloc: (parseFloat(stabilityAllocInput) || 0) / 100,
       rewardsAlloc: (parseFloat(rewardsAllocInput) || 0) / 100,
+      stabilityOverflowRedirect: stabilityOverflowRedirectInput,
       cycleDay: cycle,
       currency: currencyInput
     })
@@ -360,8 +409,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <label className="space-y-1 block">
               <span className="text-xs font-semibold text-muted-foreground block">Target Stability Fund Limit</span>
-              <input
-                type="number"
+              <SmartAmountInput
+                type="text"
                 disabled={hideSensitive}
                 value={targetInput}
                 onChange={e => {
@@ -416,51 +465,38 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </label>
           </div>
 
-          <div className="space-y-3 border-t border-border/30 pt-4">
+          <div className="space-y-4 border-t border-border/30 pt-4">
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="text-xs font-bold text-foreground">Allocation Split</h4>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Percentages must add up to 100.</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Interact with sliders to auto-balance (total 100%).</p>
               </div>
               <span className={`text-xs font-bold ${allocSum === 100 ? 'text-green-500 bg-green-500/10 px-2.5 py-1 rounded-lg border border-green-500/20' : 'text-orange-500 bg-orange-500/10 px-2.5 py-1 rounded-lg border border-orange-500/20 animate-pulse'}`}>
-                {allocSum === 100 ? '✓ Ready (100%)' : `Total: ${allocSum}% (${allocSum < 100 ? `Needs +${100 - allocSum}%` : `Over by -${allocSum - 100}%`})`}
+                {allocSum === 100 ? '✓ Balanced (100%)' : `Total: ${allocSum}%`}
               </span>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
               {[
-                ['Essentials', essentialsAllocInput, setEssentialsAllocInput, 'essentials'],
-                ['Growth', growthAllocInput, setGrowthAllocInput, 'growth'],
-                ['Stability', stabilityAllocInput, setStabilityAllocInput, 'stability'],
-                ['Rewards', rewardsAllocInput, setRewardsAllocInput, 'rewards'],
-              ].map(([label, value, setter, key]) => (
-                <label key={label as string} className="space-y-1 block">
-                  <span className="text-[10px] font-bold text-muted-foreground block">{label as string} (%)</span>
+                ['Essentials', essentialsAllocInput, 'essentials', 'accent-blue-500'],
+                ['Growth', growthAllocInput, 'growth', 'accent-green-500'],
+                ['Stability', stabilityAllocInput, 'stability', 'accent-purple-500'],
+                ['Rewards', rewardsAllocInput, 'rewards', 'accent-amber-500'],
+              ].map(([label, value, key, accentClass]) => (
+                <label key={label as string} className="space-y-2 block">
+                  <div className="flex justify-between items-center text-[11px] font-bold">
+                    <span className="text-muted-foreground uppercase tracking-wider">{label as string}</span>
+                    <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md">{Number(value).toFixed(1)}%</span>
+                  </div>
                   <input
-                    type="number"
+                    type="range"
                     min="0"
                     max="100"
+                    step="0.1"
                     value={value as string}
-                    onChange={e => {
-                      (setter as React.Dispatch<React.SetStateAction<string>>)(e.target.value)
-                      if (errors[key as string]) {
-                        setErrors(prev => ({ ...prev, [key as string]: '' }))
-                      }
-                      if (errors.allocationSum) {
-                        setErrors(prev => ({ ...prev, allocationSum: '' }))
-                      }
-                    }}
-                    className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                      errors[key as string] || errors.allocationSum
-                        ? 'border-destructive focus:ring-destructive'
-                        : 'border-border focus:ring-blue-500'
-                    }`}
+                    onChange={e => handleAllocationChange(key as any, parseFloat(e.target.value))}
+                    className={`w-full h-2 rounded-full cursor-pointer ${accentClass as string} bg-border`}
                   />
-                  {errors[key as string] && (
-                    <p className="text-[9px] text-destructive font-medium mt-0.5 animate-in fade-in slide-in-from-top-1 duration-150">
-                      {errors[key as string]}
-                    </p>
-                  )}
                 </label>
               ))}
             </div>
@@ -469,6 +505,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 {errors.allocationSum}
               </p>
             )}
+          </div>
+
+          <div className="space-y-3 border-t border-border/30 pt-4 pb-2">
+            <div>
+              <h4 className="text-xs font-bold text-foreground">Stability Overflow Redirection</h4>
+              <p className="text-[11px] text-muted-foreground mt-0.5">When Stability limit is reached, overflow goes here.</p>
+            </div>
+            <CustomSelect
+              value={stabilityOverflowRedirectInput}
+              onChange={val => setStabilityOverflowRedirectInput(val)}
+              options={[
+                { value: 'Growth 100%', label: '100% to Growth' },
+                { value: 'Rewards 100%', label: '100% to Rewards' },
+                { value: 'Split: Growth 50%, Rewards 50%', label: 'Split 50/50 (Growth/Rewards)' },
+                { value: 'Essentials 100%', label: '100% to Essentials' }
+              ]}
+              className="w-full"
+            />
           </div>
 
           <motion.button

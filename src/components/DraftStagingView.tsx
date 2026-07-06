@@ -4,6 +4,7 @@ import { FileText, Edit2, Trash2, ArrowLeft, Plus } from 'lucide-react'
 import { formatCurrencyVal } from '../lib/utils'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
+import { SmartAmountInput } from './ui/SmartAmountInput'
 
 interface DraftStagingViewProps {
   draftTransactions: Transaction[]
@@ -144,10 +145,8 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                   </div>
                   <div className="space-y-1 block">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Amount</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      required
+                    <SmartAmountInput
+                      type="text"
                       value={amount}
                       onChange={e => {
                         setAmount(e.target.value)
