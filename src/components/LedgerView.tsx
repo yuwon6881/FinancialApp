@@ -22,6 +22,7 @@ import { CycleSkeleton } from './ui/Skeleton'
 import { RowSyncBadge } from './ui/RowSyncBadge'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { BottomSheet } from './ui/BottomSheet'
+import { lockBodyScroll, unlockBodyScroll } from '../lib/scrollLock'
 import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput, displayLedgerCategory } from '../lib/utils'
 import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } from '../lib/categoryColors'
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../lib/csvExport'
@@ -587,13 +588,12 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     runServerFetch({ page: 1, search: pendingSearchTerm, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
   }
 
-  // Toggle dropdown on click out & lock body scrolling while filter dropdown is open
+  // Toggle dropdown on click out & lock body scrolling while filter dropdown is open.
+  // Uses the shared ref-counted lock so it composes with the mobile filter
+  // BottomSheet (same open flag) instead of fighting it over body styles.
   useEffect(() => {
-    if (!isFilterDropdownOpen) {
-      document.body.style.overflow = ''
-      return
-    }
-    document.body.style.overflow = 'hidden'
+    if (!isFilterDropdownOpen) return
+    lockBodyScroll()
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement
       if (!target.closest('.ledger-filter-dropdown')) {
@@ -602,7 +602,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
     document.addEventListener('click', handleClick)
     return () => {
-      document.body.style.overflow = ''
+      unlockBodyScroll()
       document.removeEventListener('click', handleClick)
     }
   }, [isFilterDropdownOpen])
@@ -650,42 +650,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     canClose: () => !suggestionsRef.current,
   })
 
-  useEffect(() => {
-    const isAnyModalOpen = showAddForm || showExportModal || showStabilityCapModal
-    if (!isAnyModalOpen) return
-
-    const scrollY = window.scrollY
-    const { body } = document
-    const previousPosition = body.style.position
-    const previousTop = body.style.top
-    const previousLeft = body.style.left
-    const previousRight = body.style.right
-    const previousWidth = body.style.width
-    const previousOverflow = body.style.overflow
-    const previousPaddingRight = body.style.paddingRight
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
-
-    body.style.position = 'fixed'
-    body.style.top = `-${scrollY}px`
-    body.style.left = '0'
-    body.style.right = '0'
-    body.style.width = '100%'
-    body.style.overflow = 'hidden'
-    if (scrollbarWidth > 0) {
-      body.style.paddingRight = `${scrollbarWidth}px`
-    }
-
-    return () => {
-      body.style.position = previousPosition
-      body.style.top = previousTop
-      body.style.left = previousLeft
-      body.style.right = previousRight
-      body.style.width = previousWidth
-      body.style.overflow = previousOverflow
-      body.style.paddingRight = previousPaddingRight
-      window.scrollTo(0, scrollY)
-    }
-  }, [showAddForm, showExportModal, showStabilityCapModal])
+  // NOTE: body scroll locking for showAddForm / showExportModal /
+  // showStabilityCapModal is handled by each modal's own <BottomSheet> (which
+  // uses the shared ref-counted lock). A second lock here duplicated that work
+  // on the same <body> and, because the two snapshot/restore cycles raced,
+  // could restore a stale "locked" snapshot and leave the page unscrollable.
 
   const handleCloseFormRef = useRef(handleCloseForm)
   handleCloseFormRef.current = handleCloseForm

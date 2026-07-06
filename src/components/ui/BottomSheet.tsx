@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { motion, AnimatePresence, type PanInfo } from 'framer-motion'
 import { useDialog } from '../../lib/useDialog'
+import { lockBodyScroll, unlockBodyScroll } from '../../lib/scrollLock'
 
 interface BottomSheetProps {
   isOpen: boolean
@@ -29,38 +30,10 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 
   useEffect(() => {
     if (!isOpen) return
-
-    const scrollY = window.scrollY
-    const { body } = document
-    const previousPosition = body.style.position
-    const previousTop = body.style.top
-    const previousLeft = body.style.left
-    const previousRight = body.style.right
-    const previousWidth = body.style.width
-    const previousOverflow = body.style.overflow
-    const previousPaddingRight = body.style.paddingRight
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
-
-    body.style.position = 'fixed'
-    body.style.top = `-${scrollY}px`
-    body.style.left = '0'
-    body.style.right = '0'
-    body.style.width = '100%'
-    body.style.overflow = 'hidden'
-    if (scrollbarWidth > 0) {
-      body.style.paddingRight = `${scrollbarWidth}px`
-    }
-
-    return () => {
-      body.style.position = previousPosition
-      body.style.top = previousTop
-      body.style.left = previousLeft
-      body.style.right = previousRight
-      body.style.width = previousWidth
-      body.style.overflow = previousOverflow
-      body.style.paddingRight = previousPaddingRight
-      window.scrollTo(0, scrollY)
-    }
+    // Ref-counted so overlapping locks (nested sheets, or a view that also
+    // locks for this same modal) compose safely -- see lib/scrollLock.ts.
+    lockBodyScroll()
+    return () => unlockBodyScroll()
   }, [isOpen])
 
   const onCloseRef = useRef(onClose)
