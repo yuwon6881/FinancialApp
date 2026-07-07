@@ -838,55 +838,55 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   {fingerprintCredentials.length > 0 ? 'Add another device' : 'Enable on this device'}
                 </button>
               )}
-
-              {/* Active Devices Section */}
-              <div className="pt-2 border-t border-border/40 mt-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-blue-500/10 rounded-xl">
-                    <MonitorSmartphone className="size-4 text-blue-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-foreground">Active Devices</h3>
-                    <p className="text-[11px] text-muted-foreground">Manage devices currently logged into your account.</p>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  {sessions.map(session => {
-                    const isCurrent = session.token === localStorage.getItem('auth_token')
-                    return (
-                      <div key={session.token} className="flex items-center justify-between gap-2 bg-muted/20 border border-border/40 px-3 py-2.5 rounded-xl text-xs">
-                        <div className="flex flex-col gap-0.5 min-w-0">
-                          <span className="flex items-center gap-2 text-foreground font-semibold truncate">
-                            <MonitorSmartphone className="size-3.5 text-blue-500 shrink-0" />
-                            <span className="truncate">{session.deviceName || 'Unknown Device'}</span>
-                            {isCurrent && (
-                              <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-500 text-[10px] font-bold uppercase tracking-wider">Current</span>
-                            )}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                            <CalendarDays className="size-3 opacity-70" />
-                            Logged in: {new Date(session.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        {!isCurrent && (
-                          <button
-                            type="button"
-                            onClick={() => handleRevokeSession(session.token)}
-                            disabled={hideSensitive}
-                            className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg cursor-pointer transition shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
-                            title={hideSensitive ? 'Unhide balances to edit' : 'Log out this device'}
-                          >
-                            <Trash2 className="size-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
             </section>
           )}
+
+          {/* Active Devices Section */}
+          <section className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5 shadow-sm space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-500/10 rounded-xl">
+                <MonitorSmartphone className="size-4 text-blue-500" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-foreground">Active Devices</h3>
+                <p className="text-[11px] text-muted-foreground">Manage devices currently logged into your account.</p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5 pt-2">
+              {sessions.map(session => {
+                const isCurrent = session.token === localStorage.getItem('auth_token')
+                return (
+                  <div key={session.token} className="flex items-center justify-between gap-2 bg-muted/20 border border-border/40 px-3 py-2.5 rounded-xl text-xs">
+                    <div className="flex flex-col gap-0.5 min-w-0">
+                      <span className="flex items-center gap-2 text-foreground font-semibold truncate">
+                        <MonitorSmartphone className="size-3.5 text-blue-500 shrink-0" />
+                        <span className="truncate">{session.deviceName || 'Unknown Device'}</span>
+                        {isCurrent && (
+                          <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-500 text-[10px] font-bold uppercase tracking-wider">Current</span>
+                        )}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                        <CalendarDays className="size-3 opacity-70" />
+                        Logged in: {new Date(session.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    {!isCurrent && (
+                      <button
+                        type="button"
+                        onClick={() => handleRevokeSession(session.token)}
+                        disabled={hideSensitive}
+                        className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg cursor-pointer transition shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+                        title={hideSensitive ? 'Unhide balances to edit' : 'Log out this device'}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </section>
         </div>
       </div>
     </div>
