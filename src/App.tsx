@@ -25,7 +25,7 @@ import { ToastViewport, type ToastMessage, type ToastTone, type ToastAction } fr
 import { CardSkeleton, Skeleton } from './components/ui/Skeleton'
 import { CACHE_KEYS, getCachedJSON, getCachedTransactions, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod, getCachedOps, getCachedCycleSnapshot, setCachedCycleSnapshot } from './lib/cache'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from './lib/modalDrafts'
-import { enqueue, applyOpsToList, createFinalId, createLocalWishlistId, DISPATCH, sanitizeQueuedOps, getSyncSuccessToast, type QueuedOp, type EntityKind } from './lib/outbox'
+import { enqueue as outboxEnqueue, applyOpsToList, createFinalId, createLocalWishlistId, DISPATCH, sanitizeQueuedOps, getSyncSuccessToast, type QueuedOp, type EntityKind } from './lib/outbox'
 import { PendingSubscriptionsModal } from './components/PendingSubscriptionsModal'
 import { PasswordPromptModal } from './components/PasswordPromptModal'
 import { LockScreen } from './components/LockScreen'
@@ -1002,6 +1002,11 @@ function App() {
     // eslint-disable-next-line react-hooks/immutability
     pendingOpsRef.current = next;
     setPendingOps(next);
+  }, []);
+
+  const enqueue = useCallback((queue: QueuedOp[], entity: import('./lib/outbox').EntityKind, type: import('./lib/outbox').OpType, targetId: string, payload?: any, isUndo?: boolean) => {
+    const activeSyncOpId = isSyncingRef.current && queue.length > 0 ? queue[0].id : null;
+    return outboxEnqueue(queue, entity, type, targetId, payload, isUndo, activeSyncOpId);
   }, []);
 
   useEffect(() => {

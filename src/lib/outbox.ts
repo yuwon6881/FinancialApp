@@ -95,7 +95,8 @@ export function enqueue(
   type: OpType,
   targetId: string,
   payload?: any,
-  isUndo?: boolean
+  isUndo?: boolean,
+  activeSyncOpId?: string | null
 ): QueuedOp[] {
   const targetIdStr = String(targetId)
   const newOp: QueuedOp = {
@@ -110,8 +111,11 @@ export function enqueue(
   }
 
   const sameTarget = (op: QueuedOp) => op.entity === entity && op.targetId === targetIdStr
-  const hasQueuedAdd = queue.some(op => sameTarget(op) && op.type === 'add')
-  const hasQueuedDelete = queue.some(op => sameTarget(op) && op.type === 'delete')
+  const queuedAdd = queue.find(op => sameTarget(op) && op.type === 'add')
+  const queuedAddNotInFlight = queuedAdd !== undefined && queuedAdd.id !== activeSyncOpId
+
+  const queuedDelete = queue.find(op => sameTarget(op) && op.type === 'delete')
+  const hasQueuedDelete = queuedDelete !== undefined
 
   if (type === 'delete') {
     if (hasQueuedDelete) {
@@ -119,12 +123,12 @@ export function enqueue(
       // second DELETE at a row the first one already removed (would 404).
       return queue
     }
-    if (hasQueuedAdd) {
+    if (queuedAddNotInFlight) {
       // Delete against a target with an unsent add: drop the add & cascade-remove all ops for that target
       return queue.filter(op => !sameTarget(op))
     } else {
-      // Delete against existing entity: drop queued update/toggle/purchase for that target & append delete
-      const filtered = queue.filter(op => !(sameTarget(op) && (op.type === 'update' || op.type === 'toggle' || op.type === 'purchase')))
+      // Delete against existing entity: drop queued update/toggle/purchase (not in-flight) for that target & append delete
+      const filtered = queue.filter(op => !(sameTarget(op) && (op.type === 'update' || op.type === 'toggle' || op.type === 'purchase') && op.id !== activeSyncOpId))
       return [...filtered, newOp]
     }
   }
@@ -137,7 +141,7 @@ export function enqueue(
   }
 
   if (type === 'update') {
-    if (hasQueuedAdd) {
+    if (queuedAddNotInFlight) {
       // Update against an unsent add: merge into the add op's payload
       return queue.map(op => {
         if (op.entity === entity && op.targetId === targetIdStr && op.type === 'add') {
@@ -150,7 +154,7 @@ export function enqueue(
       })
     } else {
       // Update against existing entity: replace existing queued update payload or append
-      const existingUpdateIndex = queue.findIndex(op => op.entity === entity && op.targetId === targetIdStr && op.type === 'update')
+      const existingUpdateIndex = queue.findIndex(op => op.entity === entity && op.targetId === targetIdStr && op.type === 'update' && op.id !== activeSyncOpId)
       if (existingUpdateIndex >= 0) {
         const next = [...queue]
         next[existingUpdateIndex] = {
@@ -166,7 +170,7 @@ export function enqueue(
   if (type === 'toggle') {
     // payload carries the desired absolute { active } state (mirrors 'update'),
     // so replaying this op against a stale or freshly-refetched base list is idempotent.
-    if (hasQueuedAdd) {
+    if (queuedAddNotInFlight) {
       // Toggle against an unsent add: set active in place on add payload
       return queue.map(op => {
         if (op.entity === entity && op.targetId === targetIdStr && op.type === 'add') {
@@ -180,7 +184,7 @@ export function enqueue(
       })
     } else {
       // Toggle against an existing entity: replace existing queued toggle payload or append
-      const existingToggleIndex = queue.findIndex(op => op.entity === entity && op.targetId === targetIdStr && op.type === 'toggle')
+      const existingToggleIndex = queue.findIndex(op => op.entity === entity && op.targetId === targetIdStr && op.type === 'toggle' && op.id !== activeSyncOpId)
       if (existingToggleIndex >= 0) {
         const next = [...queue]
         next[existingToggleIndex] = { ...next[existingToggleIndex], payload }
@@ -195,9 +199,12 @@ export function enqueue(
       // A queued delete + a re-add of the same id cancel out (e.g. undoing a
       // not-yet-synced delete). The row still exists server-side, so just drop
       // the pending delete instead of round-tripping delete-then-add.
-      return queue.filter(op => !(sameTarget(op) && op.type === 'delete'))
+      const deleteNotInFlight = queuedDelete !== undefined && queuedDelete.id !== activeSyncOpId
+      if (deleteNotInFlight) {
+        return queue.filter(op => !(sameTarget(op) && op.type === 'delete'))
+      }
     }
-    if (hasQueuedAdd) {
+    if (queuedAddNotInFlight) {
       // Defensive: never queue two adds for the same id -- merge the payloads.
       return queue.map(op => (sameTarget(op) && op.type === 'add')
         ? { ...op, payload: { ...op.payload, ...payload } }

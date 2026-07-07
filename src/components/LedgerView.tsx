@@ -1296,6 +1296,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 type="text"
                 placeholder="e.g. Grocery Store, Paycheck"
                 value={description}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                 onChange={e => {
                   setDescription(e.target.value)
                   setShowSuggestions(true)
@@ -1897,7 +1898,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       ) : (
                         <button
                           onClick={() => handleStartEdit(t)}
-                          disabled={isTxDeleting(t.id) || isTxSyncing(t.id) || hideSensitive}
+                          disabled={isTxDeleting(t.id) || hideSensitive}
                           title={hideSensitive ? 'Unhide balances to edit' : undefined}
                           className="text-xs text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                         >
@@ -1906,7 +1907,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       )}
                       <button
                         onClick={() => handleDeleteClick(t)}
-                        disabled={isTxDeleting(t.id) || isTxSyncing(t.id) || hideSensitive}
+                        disabled={isTxDeleting(t.id) || hideSensitive}
                         title={hideSensitive ? 'Unhide balances to edit' : undefined}
                         className="text-xs text-orange-500 hover:text-orange-600 bg-orange-500/5 hover:bg-orange-500/10 border border-orange-500/10 hover:border-orange-500/20 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                       >
@@ -1950,7 +1951,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             <SwipeableRow
               id={`tx-row-${t.id}`}
               hint={idx === 0}
-              disabled={isDeleting || isSyncing}
+              disabled={isDeleting}
               className="rounded-2xl border border-border shadow-xs"
               actionsWidth={128}
               actions={
