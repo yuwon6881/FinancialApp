@@ -33,6 +33,7 @@ import { getCycleRangeDates, getStartOfNCyclesAgo, formatDateForApi } from '../l
 
 interface LedgerViewProps {
   transactions: Transaction[]
+  autocompleteSuggestions?: import('../types').AutocompleteSuggestion[]
   onAddTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void> | void
   onDeleteTransaction: (id: string) => Promise<void> | void
   onUpdateTransaction?: (id: string, transaction: Omit<Transaction, 'id'>) => Promise<void> | void
@@ -88,6 +89,7 @@ interface LedgerViewProps {
 
 export const LedgerView: React.FC<LedgerViewProps> = ({
   transactions,
+  autocompleteSuggestions = [],
   onAddTransaction,
   onDeleteTransaction,
   onUpdateTransaction,
@@ -188,40 +190,24 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const suggestionsRef = useRef<HTMLDivElement>(null)
 
   // Build unique suggestion entries from past transactions (most recent first, deduped by description)
-  const suggestionEntries = useMemo(() => {
-    const seen = new Map<string, { description: string; category: string; ledgerCategory: string; date: string; txType: 'inflow' | 'outflow' }>()
-    // Sort by date descending so we keep the most recent category mapping
-    const sorted = [...transactions]
-      .filter(t => !(t.ledgerCategory || '').startsWith('Transfer:') && t.ledgerCategory !== 'Discarded' && !(t.description || '').startsWith('[Split:') && !(t.description || '').startsWith('[Discarded]'))
-      .sort((a, b) => b.date.localeCompare(a.date))
-    for (const t of sorted) {
-      const entryType = t.amount >= 0 || (t.ledgerCategory || '').startsWith('IncomeSplit:') ? 'inflow' : 'outflow'
-      const key = `${entryType}:${(t.description || '').toLowerCase().trim()}`
-      if (!seen.has(key) && key.length > 0) {
-        seen.set(key, {
-          description: t.description || '',
-          category: t.category || '',
-          ledgerCategory: (t.ledgerCategory || '').startsWith('IncomeSplit:') ? 'Income' : (t.ledgerCategory || ''),
-          date: t.date,
-          txType: entryType
-        })
-      }
-    }
-    return Array.from(seen.values())
-  }, [transactions])
-
   const activeSuggestionEntries = useMemo(() => {
     if (txType === 'transfer') return []
-    return suggestionEntries.filter(s => s.txType === txType)
-  }, [suggestionEntries, txType])
+    return autocompleteSuggestions.filter(s => s.txType === txType)
+  }, [autocompleteSuggestions, txType])
 
   // Filter suggestions based on current description input
   const filteredSuggestions = useMemo(() => {
     if (!description.trim() || description.trim().length < 1) return []
     const query = description.toLowerCase().trim()
-    return activeSuggestionEntries
+    const matches = activeSuggestionEntries
       .filter(s => s.description.toLowerCase().includes(query))
       .slice(0, 8) // Limit to 8 suggestions
+    
+    // Hide hint if the only match is an exact match to avoid redundant UI
+    if (matches.length === 1 && matches[0].description.toLowerCase() === query) {
+      return []
+    }
+    return matches
   }, [description, activeSuggestionEntries])
 
   const quickSuggestionEntries = useMemo(() => {
@@ -1326,6 +1312,15 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 }}
                 onFocus={() => {
                   if (description.trim().length >= 1) setShowSuggestions(true)
+                }}
+                onBlur={() => {
+                  const query = description.toLowerCase().trim()
+                  if (!query) return
+                  const match = activeSuggestionEntries.find(s => s.description.toLowerCase() === query)
+                  if (match) {
+                    setCategory(match.category)
+                    setLedgerCategory(match.ledgerCategory as 'Income' | 'Essentials' | 'Growth' | 'Stability' | 'Rewards')
+                  }
                 }}
                 onKeyDown={handleDescriptionKeyDown}
                 autoComplete="off"

@@ -135,6 +135,13 @@ export interface TransactionCategory {
   isPendingDelete?: boolean
 }
 
+export interface AutocompleteSuggestion {
+  description: string
+  category: string
+  ledgerCategory: string
+  txType: "inflow" | "outflow"
+}
+
 export interface WishlistItem {
   id: number
   name: string

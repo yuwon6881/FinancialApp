@@ -341,6 +341,14 @@ export async function selectPeriod(selectedMonth: string, selectedYear: number):
 }
 
 // Transactions
+export async function fetchAutocompleteSuggestions(): Promise<import('../types').AutocompleteSuggestion[]> {
+  const res = await fetch(`${API_BASE_URL}/transactions/autocomplete`, {
+    headers: getHeaders()
+  })
+  if (!res.ok) throw new Error('Failed to fetch autocomplete suggestions')
+  return res.json()
+}
+
 export function fetchTransactions(month?: string, year?: number, all?: boolean): Promise<Transaction[]> {
   const cacheKey = all ? 'transactions:all' : `transactions:${month || ''}:${year || ''}`
   const cachedPromise = queryCache.get<Transaction[]>(cacheKey)

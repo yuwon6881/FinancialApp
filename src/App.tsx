@@ -116,6 +116,7 @@ function App() {
   const [categoriesList, setCategoriesList] = useState<TransactionCategory[]>(() => getCachedJSON(CACHE_KEYS.categories, []))
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(() => getCachedJSON(CACHE_KEYS.dashboardData, null))
   const [wishlist, setWishlist] = useState<WishlistItem[]>(() => getCachedJSON(CACHE_KEYS.wishlist, []))
+  const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<import('./types').AutocompleteSuggestion[]>([])
 
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState<boolean>(() => !hasCachedKey(CACHE_KEYS.dashboardData))
@@ -559,11 +560,12 @@ function App() {
     }
     try {
       const dbData = await api.fetchDashboard(month, year)
-      const [txs, recs, cats, wishes] = await Promise.all([
+      const [txs, recs, cats, wishes, autoSuggests] = await Promise.all([
         api.fetchTransactions(dbData.setting.selectedMonth, dbData.setting.selectedYear),
         api.fetchRecurringPayments(),
         api.fetchCategories(),
-        api.fetchWishlist().catch(() => [])
+        api.fetchWishlist().catch(() => []),
+        api.fetchAutocompleteSuggestions().catch(() => [])
       ])
       setSelectedMonth(dbData.setting.selectedMonth)
       setSelectedYear(dbData.setting.selectedYear)
@@ -572,6 +574,7 @@ function App() {
       setRecurringPayments(recs)
       setCategoriesList(cats)
       setWishlist(wishes)
+      setAutocompleteSuggestions(autoSuggests)
       setError(null)
       isServerAwakeRef.current = true
       setIsLocked(false)
@@ -1628,6 +1631,7 @@ function App() {
         {activeTab === 'ledger' && (
           <LedgerView 
             transactions={allTransactions}
+            autocompleteSuggestions={autocompleteSuggestions}
             onAddTransaction={handleAddTransaction}
             onDeleteTransaction={handleDeleteTransaction}
             onUpdateTransaction={handleUpdateTransaction}
