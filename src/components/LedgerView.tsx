@@ -18,7 +18,6 @@ import {
   Edit2,
   Trash2,
   Camera,
-  ScanLine,
   CheckCircle2
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
