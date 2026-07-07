@@ -264,7 +264,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
 
     appliedReceiptScanJobRef.current = receiptScanDraft.jobId
-    setActiveReceiptScanJobId(receiptScanDraft.jobId)
+    setActiveReceiptScanJobId(null)
+    setIsScanning(false)
     setEditingTxId(null)
     if (onStartEditPending) {
       onStartEditPending(null)
@@ -296,29 +297,18 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   useEffect(() => {
     if (!activeReceiptScanJobId) return
 
-    // If it failed
+    // If the job failed, show the error and stop spinning
     if (failedScanJob && failedScanJob.jobId === activeReceiptScanJobId) {
       setScanError(failedScanJob.errorMessage)
       setIsScanning(false)
       setActiveReceiptScanJobId(null)
-      appliedReceiptScanJobRef.current = null
       return
     }
 
-    // Check if it is still in the active polling list
-    const isActive = activeScanJobIds.includes(activeReceiptScanJobId)
-    if (isActive) {
-      setIsScanning(true)
-    } else {
-      // If it is no longer active, and we haven't received a draft, and it wasn't marked as failed yet,
-      // it might have been cleared or cancelled.
-      if (appliedReceiptScanJobRef.current === activeReceiptScanJobId) {
-        setIsScanning(false)
-        setActiveReceiptScanJobId(null)
-      } else {
-        setIsScanning(false)
-        setActiveReceiptScanJobId(null)
-      }
+    // Job no longer being polled and hasn't been applied yet — stop spinner (cleared/cancelled)
+    if (!activeScanJobIds.includes(activeReceiptScanJobId)) {
+      setIsScanning(false)
+      setActiveReceiptScanJobId(null)
     }
   }, [activeReceiptScanJobId, activeScanJobIds, failedScanJob])
 
