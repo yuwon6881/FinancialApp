@@ -1363,7 +1363,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   {isScanning ? (
                     <><Loader2 className="size-3.5 animate-spin" /> Scanning receipt...</>
                   ) : (
-                    <><Camera className="size-3.5" /><ScanLine className="size-3.5 -ml-1" /> Scan Receipt</>  
+                    <><Camera className="size-3.5" /> Scan Receipt</>  
                   )}
                 </button>
 
