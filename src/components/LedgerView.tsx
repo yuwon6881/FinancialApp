@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Transaction, TransactionCategory } from '../types'
 import type { PagedTransactionResult } from '../lib/api'
-import { scanReceipt } from '../lib/api'
+import { startReceiptScan, type ReceiptScanResult } from '../lib/api'
 import {
   Plus,
   Search,
@@ -88,6 +88,9 @@ interface LedgerViewProps {
   deletingTxId?: string | null
   onStartEditPending?: (id: string | null) => void
   isSwitchingCycle?: boolean
+  receiptScanDraft?: { jobId: string; result: ReceiptScanResult } | null
+  onReceiptScanStarted?: (scanId: string) => void
+  onReceiptScanCleared?: (scanId: string) => void | Promise<void>
 }
 
 export const LedgerView: React.FC<LedgerViewProps> = ({
@@ -127,7 +130,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   activeSyncId = null,
   deletingTxId = null,
   onStartEditPending,
-  isSwitchingCycle = false
+  isSwitchingCycle = false,
+  receiptScanDraft = null,
+  onReceiptScanStarted,
+  onReceiptScanCleared
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [description, setDescription] = useState('')
@@ -152,7 +158,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [isScanning, setIsScanning] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
   const [showScanBanner, setShowScanBanner] = useState(false)
+  const [activeReceiptScanJobId, setActiveReceiptScanJobId] = useState<string | null>(null)
   const scanFileInputRef = useRef<HTMLInputElement>(null)
+  const appliedReceiptScanJobRef = useRef<string | null>(null)
+  const locallyStartedReceiptScanJobsRef = useRef<Set<string>>(new Set())
   // Open the add/edit sheet synchronously, straight from the click handler,
   // rather than deferring the state update into a requestAnimationFrame. A
   // discrete click flushes the mount synchronously, which keeps the shared
@@ -189,65 +198,67 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   const firstInputRef = React.useRef<HTMLInputElement>(null)
 
+  const applyReceiptScanResult = useCallback((result: ReceiptScanResult) => {
+    if (result.description) setDescription(result.description)
+    if (result.amount != null && result.amount > 0) setAmount(result.amount.toFixed(2))
+
+    if (result.date) {
+      setDate(result.date)
+    } else {
+      const now = new Date()
+      const y = now.getFullYear()
+      const mo = String(now.getMonth() + 1).padStart(2, '0')
+      const d = String(now.getDate()).padStart(2, '0')
+      setDate(`${y}-${mo}-${d}`)
+    }
+
+    setTxType(result.txType === 'inflow' || result.txType === 'outflow' ? result.txType : 'outflow')
+
+    const validLedger = ['Income', 'Essentials', 'Growth', 'Stability', 'Rewards']
+    if (result.ledgerCategory && validLedger.includes(result.ledgerCategory)) {
+      setLedgerCategory(result.ledgerCategory as any)
+    }
+
+    if (result.category) {
+      const matched = categories.find(c => c.name.toLowerCase() === result.category.toLowerCase())
+      if (matched) setCategory(matched.name)
+    }
+
+    setShowScanBanner(true)
+    setErrors({})
+
+    window.setTimeout(() => {
+      firstInputRef.current?.focus()
+      firstInputRef.current?.select()
+    }, 450)
+  }, [categories])
+
+  useEffect(() => {
+    if (!receiptScanDraft) return
+    if (appliedReceiptScanJobRef.current === receiptScanDraft.jobId) return
+    if (showAddForm && !locallyStartedReceiptScanJobsRef.current.has(receiptScanDraft.jobId)) return
+
+    appliedReceiptScanJobRef.current = receiptScanDraft.jobId
+    setActiveReceiptScanJobId(receiptScanDraft.jobId)
+    setEditingTxId(null)
+    if (onStartEditPending) {
+      onStartEditPending(null)
+    }
+    openTransactionForm()
+    applyReceiptScanResult(receiptScanDraft.result)
+  }, [receiptScanDraft, showAddForm, openTransactionForm, applyReceiptScanResult, onStartEditPending])
+
   // Handle the file selected from the native camera/gallery picker
   const handleScanReceipt = useCallback(async (file: File) => {
     setIsScanning(true)
     setScanError(null)
     setShowScanBanner(false)
     try {
-      const result = await scanReceipt(file)
+      const started = await startReceiptScan(file)
+      locallyStartedReceiptScanJobsRef.current.add(started.scanId)
+      onReceiptScanStarted?.(started.scanId)
+      setShowScanBanner(false)
 
-      // Fill description
-      if (result.description) setDescription(result.description)
-
-      // Fill amount (convert to positive string for the input)
-      if (result.amount != null && result.amount > 0) {
-        setAmount(result.amount.toFixed(2))
-      }
-
-      // Fill date — fallback to today if not found
-      if (result.date) {
-        setDate(result.date)
-      } else {
-        const now = new Date()
-        const y = now.getFullYear()
-        const mo = String(now.getMonth() + 1).padStart(2, '0')
-        const d = String(now.getDate()).padStart(2, '0')
-        setDate(`${y}-${mo}-${d}`)
-      }
-
-      // Fill txType
-      if (result.txType === 'inflow' || result.txType === 'outflow') {
-        setTxType(result.txType)
-      } else {
-        setTxType('outflow') // receipts default to outflow
-      }
-
-      // Fill ledgerCategory — validate against allowed values
-      const validLedger = ['Income', 'Essentials', 'Growth', 'Stability', 'Rewards']
-      if (result.ledgerCategory && validLedger.includes(result.ledgerCategory)) {
-        setLedgerCategory(result.ledgerCategory as any)
-      }
-
-      // Fill category — match against available categories (case-insensitive) or use raw value
-      if (result.category) {
-        const matched = categories.find(
-          c => c.name.toLowerCase() === result.category.toLowerCase()
-        )
-        if (matched) {
-          setCategory(matched.name)
-        }
-        // If no match, leave category as is (user can pick from dropdown)
-      }
-
-      setShowScanBanner(true)
-      setErrors({})
-
-      // Focus description field so user can edit/verify immediately
-      window.setTimeout(() => {
-        firstInputRef.current?.focus()
-        firstInputRef.current?.select()
-      }, 80)
     } catch (err: any) {
       setScanError(err.message || 'Could not read the receipt. Please try a clearer photo.')
     } finally {
@@ -255,7 +266,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       // Reset file input so the same file can be selected again if needed
       if (scanFileInputRef.current) scanFileInputRef.current.value = ''
     }
-  }, [categories])
+  }, [onReceiptScanStarted])
 
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [txToDelete, setTxToDelete] = useState<Transaction | null>(null)
@@ -681,10 +692,16 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setErrors({})
     setScanError(null)
     setShowScanBanner(false)
+    if (activeReceiptScanJobId) {
+      locallyStartedReceiptScanJobsRef.current.delete(activeReceiptScanJobId)
+    }
+    setActiveReceiptScanJobId(null)
+    appliedReceiptScanJobRef.current = null
   }
 
   // Fully reset and close the transaction modal (used by Cancel / close / backdrop)
   const handleCloseForm = () => {
+    const scanJobToClear = activeReceiptScanJobId
     setDescription('')
     setAmount('')
     setLedgerCategory('Essentials')
@@ -699,6 +716,14 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setErrors({})
     setScanError(null)
     setShowScanBanner(false)
+    if (scanJobToClear) {
+      locallyStartedReceiptScanJobsRef.current.delete(scanJobToClear)
+    }
+    setActiveReceiptScanJobId(null)
+    appliedReceiptScanJobRef.current = null
+    if (scanJobToClear) {
+      void onReceiptScanCleared?.(scanJobToClear)
+    }
   }
 
   // NOTE: body scroll locking for showAddForm / showExportModal /
@@ -833,8 +858,12 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
     if (editingTxId) {
       const targetId = editingTxId
+      const scanJobToClear = activeReceiptScanJobId
       setEditingTxId(null)
       resetFormFields()
+      if (scanJobToClear) {
+        void onReceiptScanCleared?.(scanJobToClear)
+      }
       await onUpdateTransaction?.(targetId, {
         description,
         amount: finalAmount,
@@ -850,7 +879,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         ledgerCategory: finalLedgerCategory,
         date
       })
+      const scanJobToClear = activeReceiptScanJobId
       resetFormFields()
+      if (scanJobToClear) {
+        void onReceiptScanCleared?.(scanJobToClear)
+      }
     }
   }
 

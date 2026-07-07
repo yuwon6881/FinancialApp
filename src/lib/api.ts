@@ -869,6 +869,59 @@ export interface ReceiptScanResult {
   confidence: number           // 0.0 – 1.0
 }
 
+export interface ReceiptScanJob {
+  scanId: string
+  status: 'queued' | 'processing' | 'completed' | 'failed'
+  result: ReceiptScanResult | null
+  errorMessage?: string | null
+  createdAt: string
+  updatedAt: string
+  completedAt?: string | null
+}
+
+export async function startReceiptScan(imageFile: File): Promise<{ scanId: string; status: string }> {
+  const formData = new FormData()
+  formData.append('image', imageFile)
+
+  const response = await fetch(`${API_BASE_URL}/ocr/scan-receipt/jobs`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: formData,
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Could not start receipt scan. Please try again.')
+  }
+
+  return response.json()
+}
+
+export async function fetchReceiptScanJob(scanId: string): Promise<ReceiptScanJob> {
+  const response = await fetch(`${API_BASE_URL}/ocr/scan-receipt/jobs/${scanId}`, {
+    headers: getHeaders(),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Could not fetch receipt scan status.')
+  }
+
+  return response.json()
+}
+
+export async function deleteReceiptScanJob(scanId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/ocr/scan-receipt/jobs/${scanId}`, {
+    method: 'DELETE',
+    headers: getHeaders(),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Could not clear receipt scan job.')
+  }
+}
+
 export async function scanReceipt(imageFile: File): Promise<ReceiptScanResult> {
   const formData = new FormData()
   formData.append('image', imageFile)

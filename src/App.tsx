@@ -6,6 +6,7 @@ import TopNav from "./TopNav.tsx"
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { APP_TABS, type AppTab, type Transaction, type RecurringPayment, type DashboardData, type TransactionCategory, type WishlistItem } from './types'
 import * as api from './lib/api'
+import type { ReceiptScanResult } from './lib/api'
 import { Loader2, Plus, Wallet, CreditCard, PiggyBank, Upload } from 'lucide-react'
 
 // Every view is code-split so the initial bundle only ships the shell. Each
@@ -186,6 +187,21 @@ function App() {
     onConfirm: () => void
   } | null>(null)
   const [toasts, setToasts] = useState<ToastMessage[]>([])
+  const [receiptScanJobIds, setReceiptScanJobIds] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('receipt_scan_job_ids') || '[]')
+    } catch {
+      return []
+    }
+  })
+  const [notifiedReceiptScanJobIds, setNotifiedReceiptScanJobIds] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('receipt_scan_notified_ids') || '[]')
+    } catch {
+      return []
+    }
+  })
+  const [activeReceiptScanDraft, setActiveReceiptScanDraft] = useState<{ jobId: string; result: ReceiptScanResult } | null>(null)
 
   const showToast = (message: string, title: string = 'Notification', tone: ToastTone = 'info', action?: ToastAction) => {
     const id = Date.now().toString(36) + Math.random().toString(36).substring(2, 7)
@@ -281,6 +297,91 @@ function App() {
   const showAlert = (message: string, title: string = 'Notification') => {
     showToast(message, title, title.toLowerCase().includes('error') ? 'error' : 'info')
   }
+
+  useEffect(() => {
+    localStorage.setItem('receipt_scan_job_ids', JSON.stringify(receiptScanJobIds))
+  }, [receiptScanJobIds])
+
+  useEffect(() => {
+    localStorage.setItem('receipt_scan_notified_ids', JSON.stringify(notifiedReceiptScanJobIds))
+  }, [notifiedReceiptScanJobIds])
+
+  const handleReceiptScanStarted = useCallback((scanId: string) => {
+    setReceiptScanJobIds(prev => prev.includes(scanId) ? prev : [...prev, scanId])
+  }, [])
+
+  const clearReceiptScanJob = useCallback(async (scanId: string) => {
+    setReceiptScanJobIds(prev => prev.filter(id => id !== scanId))
+    setNotifiedReceiptScanJobIds(prev => prev.filter(id => id !== scanId))
+    setActiveReceiptScanDraft(prev => prev?.jobId === scanId ? null : prev)
+
+    try {
+      await api.deleteReceiptScanJob(scanId)
+    } catch (err) {
+      console.warn('Failed to delete receipt scan job', err)
+    }
+  }, [])
+
+  const receiptScanPollInFlightRef = useRef(false)
+
+  useEffect(() => {
+    if (!token || receiptScanJobIds.length === 0) return
+
+    let cancelled = false
+
+    const pollReceiptScans = async () => {
+      if (receiptScanPollInFlightRef.current) return
+      receiptScanPollInFlightRef.current = true
+
+      try {
+        for (const scanId of receiptScanJobIds) {
+          if (cancelled || activeReceiptScanDraft?.jobId === scanId) continue
+
+          try {
+            const job = await api.fetchReceiptScanJob(scanId)
+
+            if (job.status === 'failed') {
+              showToast(job.errorMessage || 'Receipt scan failed. Please try again.', 'Receipt Scan Failed', 'error')
+              await clearReceiptScanJob(scanId)
+              continue
+            }
+
+            if (job.status === 'completed' && job.result) {
+              setActiveReceiptScanDraft({ jobId: scanId, result: job.result })
+
+              if (!notifiedReceiptScanJobIds.includes(scanId)) {
+                setNotifiedReceiptScanJobIds(prev => prev.includes(scanId) ? prev : [...prev, scanId])
+                showToast('Receipt scan completed. Opening transaction form...', 'Receipt Scan Complete', 'success')
+              }
+
+              window.setTimeout(() => {
+                if (cancelled) return
+                setActiveTab('ledger')
+                setAutoOpenLedgerAdd(true)
+              }, 1000)
+            }
+          } catch (err: any) {
+            if (err?.message?.includes('401') || err?.message?.includes('423')) {
+              continue
+            }
+            if ((err?.message || '').toLowerCase().includes('not found')) {
+              setReceiptScanJobIds(prev => prev.filter(id => id !== scanId))
+            }
+          }
+        }
+      } finally {
+        receiptScanPollInFlightRef.current = false
+      }
+    }
+
+    pollReceiptScans()
+    const interval = window.setInterval(pollReceiptScans, 3000)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+    }
+  }, [token, receiptScanJobIds, notifiedReceiptScanJobIds, activeReceiptScanDraft, clearReceiptScanJob])
 
   // Shadow the global alert function
   const alert = (message: string) => showAlert(message, 'Notification')
@@ -1677,6 +1778,9 @@ function App() {
             activeSyncId={activeSyncId}
             deletingTxId={deletingTxId}
             onStartEditPending={setEditingPendingId}
+            receiptScanDraft={activeReceiptScanDraft}
+            onReceiptScanStarted={handleReceiptScanStarted}
+            onReceiptScanCleared={clearReceiptScanJob}
           />
         )}
 
