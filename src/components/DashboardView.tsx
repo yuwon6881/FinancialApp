@@ -258,6 +258,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     setBalanceErrors({})
   }
 
+  const handleCloseAdjustBalance = () => {
+    setAdjustingCategory(null)
+    setNewBalanceInput('')
+    setAdjustmentDescription('')
+    setBalanceErrors({})
+  }
+
   const prepareBalanceAdjustment = () => {
     if (!adjustingCategory) return
     
@@ -1492,7 +1499,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <BottomSheet
           isOpen={!!adjustingCategory}
           title={`Adjust ${adjustingCategory.name} Balance`}
-          onClose={() => setAdjustingCategory(null)}
+          onClose={handleCloseAdjustBalance}
           maxWidthClassName="max-w-sm"
           footer={
             (() => {
@@ -1502,7 +1509,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <div className="flex gap-2.5 justify-end">
                   <button
                     type="button"
-                    onClick={() => setAdjustingCategory(null)}
+                    onClick={handleCloseAdjustBalance}
                     className="px-4 py-2 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-xs rounded-xl transition duration-150 cursor-pointer"
                   >
                     Cancel

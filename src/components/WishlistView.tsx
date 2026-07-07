@@ -203,6 +203,10 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
 
   const closeAddModal = () => {
     setShowAddModal(false)
+    setNameInput('')
+    setPriceInput('')
+    setPriorityInput('Medium')
+    setIsActiveInput(false)
     clearAddDraft()
     setErrors({})
   }
@@ -210,6 +214,10 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   const closeEditModal = () => {
     setShowEditModal(false)
     setEditingItem(null)
+    setNameInput('')
+    setPriceInput('')
+    setPriorityInput('Medium')
+    setIsActiveInput(false)
     clearEditDraft()
     setErrors({})
   }

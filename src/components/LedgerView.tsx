@@ -91,6 +91,7 @@ interface LedgerViewProps {
   receiptScanDraft?: { jobId: string; result: ReceiptScanResult } | null
   onReceiptScanStarted?: (scanId: string) => void
   onReceiptScanCleared?: (scanId: string) => void | Promise<void>
+  onAddFormOpenChange?: (open: boolean) => void
 }
 
 export const LedgerView: React.FC<LedgerViewProps> = ({
@@ -133,7 +134,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   isSwitchingCycle = false,
   receiptScanDraft = null,
   onReceiptScanStarted,
-  onReceiptScanCleared
+  onReceiptScanCleared,
+  onAddFormOpenChange
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [description, setDescription] = useState('')
@@ -143,13 +145,14 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [ledgerCategory, setLedgerCategory] = useState<'Income' | 'Essentials' | 'Growth' | 'Stability' | 'Rewards'>('Essentials')
   const [transferSource, setTransferSource] = useState<'Essentials' | 'Growth' | 'Stability' | 'Rewards'>('Essentials')
   const [transferTarget, setTransferTarget] = useState<'Essentials' | 'Growth' | 'Stability' | 'Rewards'>('Rewards')
-  const [date, setDate] = useState(() => {
+  const getTodayDateString = () => {
     const now = new Date()
     const y = now.getFullYear()
     const m = String(now.getMonth() + 1).padStart(2, '0')
     const d = String(now.getDate()).padStart(2, '0')
     return `${y}-${m}-${d}`
-  })
+  }
+  const [date, setDate] = useState(getTodayDateString)
 
   const [editingTxId, setEditingTxId] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -162,6 +165,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const scanFileInputRef = useRef<HTMLInputElement>(null)
   const appliedReceiptScanJobRef = useRef<string | null>(null)
   const locallyStartedReceiptScanJobsRef = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    onAddFormOpenChange?.(showAddForm)
+    return () => {
+      onAddFormOpenChange?.(false)
+    }
+  }, [showAddForm, onAddFormOpenChange])
+
   // Open the add/edit sheet synchronously, straight from the click handler,
   // rather than deferring the state update into a requestAnimationFrame. A
   // discrete click flushes the mount synchronously, which keeps the shared
@@ -236,7 +246,18 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   useEffect(() => {
     if (!receiptScanDraft) return
     if (appliedReceiptScanJobRef.current === receiptScanDraft.jobId) return
-    if (showAddForm && !locallyStartedReceiptScanJobsRef.current.has(receiptScanDraft.jobId)) return
+
+    const isLocallyStarted = locallyStartedReceiptScanJobsRef.current.has(receiptScanDraft.jobId)
+
+    // If it's not locally started, and the modal is not open, we should wait for auto-open
+    if (!showAddForm && !isLocallyStarted && !autoOpenAddForm) {
+      return
+    }
+
+    // If it is open but not locally started, and not auto-opened, we don't want to overwrite
+    if (showAddForm && !isLocallyStarted && !autoOpenAddForm) {
+      return
+    }
 
     appliedReceiptScanJobRef.current = receiptScanDraft.jobId
     setActiveReceiptScanJobId(receiptScanDraft.jobId)
@@ -246,7 +267,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
     openTransactionForm()
     applyReceiptScanResult(receiptScanDraft.result)
-  }, [receiptScanDraft, showAddForm, openTransactionForm, applyReceiptScanResult, onStartEditPending])
+  }, [receiptScanDraft, showAddForm, autoOpenAddForm, openTransactionForm, applyReceiptScanResult, onStartEditPending])
 
   // Handle the file selected from the native camera/gallery picker
   const handleScanReceipt = useCallback(async (file: File) => {
@@ -707,6 +728,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setLedgerCategory('Essentials')
     setTxType('outflow')
     setCategory(categories.length > 0 ? categories[0].name : '')
+    setDate(getTodayDateString())
+    setTransferSource('Essentials')
+    setTransferTarget('Rewards')
     if (editingTxId && onStartEditPending) {
       onStartEditPending(null)
     }

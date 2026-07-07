@@ -202,7 +202,24 @@ function App() {
     }
   })
   const [activeReceiptScanDraft, setActiveReceiptScanDraft] = useState<{ jobId: string; result: ReceiptScanResult } | null>(null)
+  const [isLedgerAddOpen, setIsLedgerAddOpen] = useState(false)
+  const isMountedRef = useRef(true)
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
 
+  const activeTabRef = useRef(activeTab)
+  useEffect(() => {
+    activeTabRef.current = activeTab
+  }, [activeTab])
+
+  const isLedgerAddOpenRef = useRef(isLedgerAddOpen)
+  useEffect(() => {
+    isLedgerAddOpenRef.current = isLedgerAddOpen
+  }, [isLedgerAddOpen])
   const showToast = (message: string, title: string = 'Notification', tone: ToastTone = 'info', action?: ToastAction) => {
     const id = Date.now().toString(36) + Math.random().toString(36).substring(2, 7)
     setToasts(prev => [...prev.slice(-3), { id, message, title, tone, action }])
@@ -349,16 +366,19 @@ function App() {
             if (job.status === 'completed' && job.result) {
               setActiveReceiptScanDraft({ jobId: scanId, result: job.result })
 
-              if (!notifiedReceiptScanJobIds.includes(scanId)) {
-                setNotifiedReceiptScanJobIds(prev => prev.includes(scanId) ? prev : [...prev, scanId])
-                showToast('Receipt scan completed. Opening transaction form...', 'Receipt Scan Complete', 'success')
-              }
+              const isInModal = activeTabRef.current === 'ledger' && isLedgerAddOpenRef.current
+              if (!isInModal) {
+                if (!notifiedReceiptScanJobIds.includes(scanId)) {
+                  setNotifiedReceiptScanJobIds(prev => prev.includes(scanId) ? prev : [...prev, scanId])
+                  showToast('Your receipt has been scanned successfully.', 'Receipt Scan Complete', 'success')
+                }
 
-              window.setTimeout(() => {
-                if (cancelled) return
-                setActiveTab('ledger')
-                setAutoOpenLedgerAdd(true)
-              }, 1000)
+                window.setTimeout(() => {
+                  if (!isMountedRef.current) return
+                  setActiveTab('ledger')
+                  setAutoOpenLedgerAdd(true)
+                }, 1000)
+              }
             }
           } catch (err: any) {
             if (err?.message?.includes('401') || err?.message?.includes('423')) {
@@ -1781,6 +1801,7 @@ function App() {
             receiptScanDraft={activeReceiptScanDraft}
             onReceiptScanStarted={handleReceiptScanStarted}
             onReceiptScanCleared={clearReceiptScanJob}
+            onAddFormOpenChange={setIsLedgerAddOpen}
           />
         )}
 
