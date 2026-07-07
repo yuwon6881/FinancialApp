@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Fingerprint, ShieldCheck, Bell, ChevronDown, ChevronUp, Lock, Unlock } from 'lucide-react'
+import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Fingerprint, ShieldCheck, Bell, ChevronDown, ChevronUp, Lock, Unlock, MonitorSmartphone, CalendarDays } from 'lucide-react'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { SmartAmountInput } from './ui/SmartAmountInput'
@@ -145,6 +145,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [fingerprintBusy, setFingerprintBusy] = useState(false)
   const [platformAuthAvailable, setPlatformAuthAvailable] = useState(false)
 
+  // Active Sessions state
+  const [sessions, setSessions] = useState<Array<{ token: string; deviceName: string; createdAt: string; isLocked: boolean }>>([])
+
   const loadFingerprintCredentials = async () => {
     try {
       setFingerprintCredentials(await api.listFingerprintCredentials())
@@ -153,8 +156,29 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   }
 
+  const loadSessions = async () => {
+    try {
+      setSessions(await api.getSessions())
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleRevokeSession = async (token: string) => {
+    if (hideSensitive) return
+    try {
+      await api.revokeSession(token)
+      await loadSessions()
+      onToast?.('Session revoked.', 'Session removed', 'success')
+    } catch (err: any) {
+      console.error(err)
+      onToast?.(err.message || 'Failed to revoke session.', 'Error', 'error')
+    }
+  }
+
   useEffect(() => {
     loadFingerprintCredentials()
+    loadSessions()
     isPlatformAuthenticatorAvailable().then(setPlatformAuthAvailable)
   }, [])
 
@@ -814,6 +838,53 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   {fingerprintCredentials.length > 0 ? 'Add another device' : 'Enable on this device'}
                 </button>
               )}
+
+              {/* Active Devices Section */}
+              <div className="pt-2 border-t border-border/40 mt-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-blue-500/10 rounded-xl">
+                    <MonitorSmartphone className="size-4 text-blue-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground">Active Devices</h3>
+                    <p className="text-[11px] text-muted-foreground">Manage devices currently logged into your account.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  {sessions.map(session => {
+                    const isCurrent = session.token === localStorage.getItem('auth_token')
+                    return (
+                      <div key={session.token} className="flex items-center justify-between gap-2 bg-muted/20 border border-border/40 px-3 py-2.5 rounded-xl text-xs">
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                          <span className="flex items-center gap-2 text-foreground font-semibold truncate">
+                            <MonitorSmartphone className="size-3.5 text-blue-500 shrink-0" />
+                            <span className="truncate">{session.deviceName || 'Unknown Device'}</span>
+                            {isCurrent && (
+                              <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-500 text-[10px] font-bold uppercase tracking-wider">Current</span>
+                            )}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                            <CalendarDays className="size-3 opacity-70" />
+                            Logged in: {new Date(session.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        {!isCurrent && (
+                          <button
+                            type="button"
+                            onClick={() => handleRevokeSession(session.token)}
+                            disabled={hideSensitive}
+                            className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg cursor-pointer transition shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+                            title={hideSensitive ? 'Unhide balances to edit' : 'Log out this device'}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
             </section>
           )}
         </div>

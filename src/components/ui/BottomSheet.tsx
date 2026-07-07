@@ -51,7 +51,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     const el = panelRef.current
     if (!el) return
     const h = el.offsetHeight || el.scrollHeight || window.innerHeight
-    setSlideDuration(Math.min(0.88, Math.max(0.46, h / 950)))
+    setSlideDuration(Math.min(0.5, Math.max(0.25, h / 1500)))
   }, [isOpen])
 
   useEffect(() => {

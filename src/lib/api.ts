@@ -60,15 +60,37 @@ window.fetch = async (...args) => {
   return response
 }
 
-function getHeaders(extraHeaders?: Record<string, string>): Record<string, string> {
+const getHeaders = (additionalHeaders: Record<string, string> = {}) => {
   const token = localStorage.getItem('auth_token')
-  const headers: Record<string, string> = {
-    ...extraHeaders
+  return {
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...additionalHeaders
   }
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
+}
+
+export function getDeviceInfo(): { deviceId: string; deviceName: string } {
+  let deviceId = localStorage.getItem('deviceId')
+  if (!deviceId) {
+    deviceId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36)
+    localStorage.setItem('deviceId', deviceId)
   }
-  return headers
+
+  const ua = navigator.userAgent
+  let browser = "Unknown Browser"
+  let os = "Unknown OS"
+
+  if (ua.includes("Firefox/")) browser = "Firefox"
+  else if (ua.includes("Edg/")) browser = "Edge"
+  else if (ua.includes("Chrome/")) browser = "Chrome"
+  else if (ua.includes("Safari/") && !ua.includes("Chrome/")) browser = "Safari"
+
+  if (ua.includes("Windows NT")) os = "Windows"
+  else if (ua.includes("Mac OS X")) os = "macOS"
+  else if (ua.includes("Android")) os = "Android"
+  else if (ua.includes("iPhone")) os = "iOS"
+  else if (ua.includes("Linux")) os = "Linux"
+
+  return { deviceId, deviceName: `${browser} on ${os}` }
 }
 
 const OBFUSCATION_KEY = "FinancialAppObfuscationKey";
@@ -125,12 +147,13 @@ export async function fetchAuthStatus(): Promise<{ isRegistered: boolean; hasFin
 }
 
 export async function login(credentials: any): Promise<{ token: string; username: string }> {
+  const payload = { ...credentials, ...getDeviceInfo() }
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(credentials),
+    body: JSON.stringify(payload),
   })
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
@@ -812,20 +835,41 @@ export async function getFingerprintLoginOptions(): Promise<{ challengeId: strin
   return response.json()
 }
 
-export async function verifyFingerprintLogin(challengeId: string, credential: unknown): Promise<{ token: string; username: string }> {
+export async function verifyFingerprintLogin(challengeId: string, credential: any): Promise<{ token: string; username: string }> {
+  const payload = { challengeId, credential, ...getDeviceInfo() }
   const response = await fetch(`${API_BASE_URL}/auth/webauthn/login/verify`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ challengeId, credential }),
+    body: JSON.stringify(payload),
   })
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))
-    throw new Error(err.message || 'Fingerprint login failed')
+    throw new Error(err.message || 'Verification failed')
   }
   const data = await response.json()
   localStorage.setItem('auth_token', data.token)
   queryCache.invalidateAll()
   return data
+}
+
+export async function getSessions(): Promise<Array<{ token: string; deviceName: string; createdAt: string; expiresAt: string; isLocked: boolean }>> {
+  const response = await fetch(`${API_BASE_URL}/auth/sessions`, {
+    headers: getHeaders(),
+  })
+  if (!response.ok) {
+    throw new Error('Failed to fetch sessions')
+  }
+  return response.json()
+}
+
+export async function revokeSession(token: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/auth/sessions/${encodeURIComponent(token)}`, {
+    method: 'DELETE',
+    headers: getHeaders(),
+  })
+  if (!response.ok) {
+    throw new Error('Failed to revoke session')
+  }
 }
 
 // WebAuthn (fingerprint) re-verification against the CALLER'S EXISTING
