@@ -172,7 +172,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       setTransferTarget(draft.transferTarget)
       setDate(draft.date)
       if (draft.editingTxId && onStartEditPending) {
-        onStartEditPending(draft.editingTxId.startsWith('temp_') ? draft.editingTxId : null)
+        onStartEditPending(draft.editingTxId)
       }
       openTransactionForm()
     }
@@ -199,15 +199,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const filteredSuggestions = useMemo(() => {
     if (!description.trim() || description.trim().length < 1) return []
     const query = description.toLowerCase().trim()
-    const matches = activeSuggestionEntries
+    return activeSuggestionEntries
       .filter(s => s.description.toLowerCase().includes(query))
       .slice(0, 8) // Limit to 8 suggestions
-    
-    // Hide hint if the only match is an exact match to avoid redundant UI
-    if (matches.length === 1 && matches[0].description.toLowerCase() === query) {
-      return []
-    }
-    return matches
   }, [description, activeSuggestionEntries])
 
   const quickSuggestionEntries = useMemo(() => {
@@ -320,7 +314,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setAmount(Math.abs(t.amount).toFixed(2))
     setDate(t.date)
     if (onStartEditPending) {
-      onStartEditPending(t.id.startsWith('temp_') ? t.id : null)
+      onStartEditPending(t.id)
     }
     if ((t.ledgerCategory || '').startsWith('Transfer:')) {
       setTxType('transfer')
@@ -601,7 +595,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     const mo = String(now.getMonth() + 1).padStart(2, '0')
     const d = String(now.getDate()).padStart(2, '0')
     setDate(`${y}-${mo}-${d}`)
-    if (editingTxId && editingTxId.startsWith('temp_') && onStartEditPending) {
+    if (editingTxId && onStartEditPending) {
       onStartEditPending(null)
     }
     setEditingTxId(null)
@@ -617,7 +611,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setLedgerCategory('Essentials')
     setTxType('outflow')
     setCategory(categories.length > 0 ? categories[0].name : '')
-    if (editingTxId && editingTxId.startsWith('temp_') && onStartEditPending) {
+    if (editingTxId && onStartEditPending) {
       onStartEditPending(null)
     }
     setEditingTxId(null)
@@ -1312,15 +1306,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 }}
                 onFocus={() => {
                   if (description.trim().length >= 1) setShowSuggestions(true)
-                }}
-                onBlur={() => {
-                  const query = description.toLowerCase().trim()
-                  if (!query) return
-                  const match = activeSuggestionEntries.find(s => s.description.toLowerCase() === query)
-                  if (match) {
-                    setCategory(match.category)
-                    setLedgerCategory(match.ledgerCategory as 'Income' | 'Essentials' | 'Growth' | 'Stability' | 'Rewards')
-                  }
                 }}
                 onKeyDown={handleDescriptionKeyDown}
                 autoComplete="off"
