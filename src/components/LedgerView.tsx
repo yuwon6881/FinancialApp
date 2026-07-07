@@ -279,6 +279,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setIsScanning(true)
     setScanError(null)
     setShowScanBanner(false)
+    // Reset the applied ref so a fresh scan on the same session can be applied
+    appliedReceiptScanJobRef.current = null
     try {
       const started = await startReceiptScan(file)
       locallyStartedReceiptScanJobsRef.current.add(started.scanId)
@@ -767,7 +769,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       locallyStartedReceiptScanJobsRef.current.delete(scanJobToClear)
     }
     setActiveReceiptScanJobId(null)
-    appliedReceiptScanJobRef.current = null
+    // Do NOT reset appliedReceiptScanJobRef here — keeping it prevents the
+    // receiptScanDraft useEffect from re-applying the same scan result and
+    // reopening the form after the user intentionally closes it.
     if (scanJobToClear) {
       void onReceiptScanCleared?.(scanJobToClear)
     }
