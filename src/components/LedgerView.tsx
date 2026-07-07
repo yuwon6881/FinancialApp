@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Transaction, TransactionCategory } from '../types'
 import type { PagedTransactionResult } from '../lib/api'
+import { scanReceipt } from '../lib/api'
 import {
   Plus,
   Search,
@@ -15,7 +16,10 @@ import {
   AlertCircle,
   Loader2,
   Edit2,
-  Trash2
+  Trash2,
+  Camera,
+  ScanLine,
+  CheckCircle2
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
 import { CycleSkeleton } from './ui/Skeleton'
@@ -144,6 +148,12 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   const [editingTxId, setEditingTxId] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // OCR scan state
+  const [isScanning, setIsScanning] = useState(false)
+  const [scanError, setScanError] = useState<string | null>(null)
+  const [showScanBanner, setShowScanBanner] = useState(false)
+  const scanFileInputRef = useRef<HTMLInputElement>(null)
   // Open the add/edit sheet synchronously, straight from the click handler,
   // rather than deferring the state update into a requestAnimationFrame. A
   // discrete click flushes the mount synchronously, which keeps the shared
@@ -179,6 +189,74 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   )
 
   const firstInputRef = React.useRef<HTMLInputElement>(null)
+
+  // Handle the file selected from the native camera/gallery picker
+  const handleScanReceipt = useCallback(async (file: File) => {
+    setIsScanning(true)
+    setScanError(null)
+    setShowScanBanner(false)
+    try {
+      const result = await scanReceipt(file)
+
+      // Fill description
+      if (result.description) setDescription(result.description)
+
+      // Fill amount (convert to positive string for the input)
+      if (result.amount != null && result.amount > 0) {
+        setAmount(result.amount.toFixed(2))
+      }
+
+      // Fill date — fallback to today if not found
+      if (result.date) {
+        setDate(result.date)
+      } else {
+        const now = new Date()
+        const y = now.getFullYear()
+        const mo = String(now.getMonth() + 1).padStart(2, '0')
+        const d = String(now.getDate()).padStart(2, '0')
+        setDate(`${y}-${mo}-${d}`)
+      }
+
+      // Fill txType
+      if (result.txType === 'inflow' || result.txType === 'outflow') {
+        setTxType(result.txType)
+      } else {
+        setTxType('outflow') // receipts default to outflow
+      }
+
+      // Fill ledgerCategory — validate against allowed values
+      const validLedger = ['Income', 'Essentials', 'Growth', 'Stability', 'Rewards']
+      if (result.ledgerCategory && validLedger.includes(result.ledgerCategory)) {
+        setLedgerCategory(result.ledgerCategory as any)
+      }
+
+      // Fill category — match against available categories (case-insensitive) or use raw value
+      if (result.category) {
+        const matched = categories.find(
+          c => c.name.toLowerCase() === result.category.toLowerCase()
+        )
+        if (matched) {
+          setCategory(matched.name)
+        }
+        // If no match, leave category as is (user can pick from dropdown)
+      }
+
+      setShowScanBanner(true)
+      setErrors({})
+
+      // Focus description field so user can edit/verify immediately
+      window.setTimeout(() => {
+        firstInputRef.current?.focus()
+        firstInputRef.current?.select()
+      }, 80)
+    } catch (err: any) {
+      setScanError(err.message || 'Could not read the receipt. Please try a clearer photo.')
+    } finally {
+      setIsScanning(false)
+      // Reset file input so the same file can be selected again if needed
+      if (scanFileInputRef.current) scanFileInputRef.current.value = ''
+    }
+  }, [categories])
 
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [txToDelete, setTxToDelete] = useState<Transaction | null>(null)
@@ -602,6 +680,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setShowAddForm(false)
     clearFormDraft()
     setErrors({})
+    setScanError(null)
+    setShowScanBanner(false)
   }
 
   // Fully reset and close the transaction modal (used by Cancel / close / backdrop)
@@ -618,6 +698,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setShowAddForm(false)
     clearFormDraft()
     setErrors({})
+    setScanError(null)
+    setShowScanBanner(false)
   }
 
   // NOTE: body scroll locking for showAddForm / showExportModal /
@@ -1249,6 +1331,91 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           }
         >
           <form noValidate onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+            {/* ── Scan Receipt button (add mode only) ── */}
+            {!editingTxId && (
+              <div className="sm:col-span-2">
+                {/* Hidden file input: capture="environment" opens rear camera on mobile */}
+                <input
+                  ref={scanFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={e => {
+                    const file = e.target.files?.[0]
+                    if (file) handleScanReceipt(file)
+                  }}
+                />
+                <button
+                  type="button"
+                  disabled={isScanning}
+                  onClick={() => {
+                    setScanError(null)
+                    scanFileInputRef.current?.click()
+                  }}
+                  className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border transition duration-200 text-xs font-semibold cursor-pointer ${
+                    isScanning
+                      ? 'border-border bg-muted text-muted-foreground cursor-not-allowed'
+                      : 'border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                  }`}
+                >
+                  {isScanning ? (
+                    <><Loader2 className="size-3.5 animate-spin" /> Scanning receipt...</>
+                  ) : (
+                    <><Camera className="size-3.5" /><ScanLine className="size-3.5 -ml-1" /> Scan Receipt</>  
+                  )}
+                </button>
+
+                {/* Scan success banner */}
+                <AnimatePresence>
+                  {showScanBanner && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      className="mt-2 flex items-start justify-between gap-2 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400"
+                    >
+                      <div className="flex items-center gap-1.5 text-[11px] font-medium">
+                        <CheckCircle2 className="size-3.5 shrink-0" />
+                        Receipt scanned — review fields below and edit as needed
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowScanBanner(false)}
+                        className="shrink-0 text-emerald-500/60 hover:text-emerald-500 transition cursor-pointer"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Scan error */}
+                <AnimatePresence>
+                  {scanError && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      className="mt-2 flex items-start justify-between gap-2 px-3 py-2 rounded-xl bg-destructive/10 border border-destructive/25 text-destructive"
+                    >
+                      <div className="flex items-center gap-1.5 text-[11px] font-medium">
+                        <AlertCircle className="size-3.5 shrink-0" />
+                        {scanError}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setScanError(null)}
+                        className="shrink-0 text-destructive/60 hover:text-destructive transition cursor-pointer"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
 
             <div className="space-y-1 sm:col-span-2">
               <label className="text-xs font-semibold text-muted-foreground">Transaction Type</label>

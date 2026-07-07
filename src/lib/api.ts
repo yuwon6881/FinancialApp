@@ -857,4 +857,32 @@ export async function verifyFingerprintAssert(challengeId: string, credential: u
   return response.json()
 }
 
+// ── Receipt OCR ───────────────────────────────────────────────────────────────
 
+export interface ReceiptScanResult {
+  description: string
+  amount: number | null
+  date: string | null          // ISO date YYYY-MM-DD, or null if not found
+  category: string
+  ledgerCategory: string       // Essentials | Growth | Stability | Rewards | Income
+  txType: 'inflow' | 'outflow'
+  confidence: number           // 0.0 – 1.0
+}
+
+export async function scanReceipt(imageFile: File): Promise<ReceiptScanResult> {
+  const formData = new FormData()
+  formData.append('image', imageFile)
+
+  const response = await fetch(`${API_BASE_URL}/ocr/scan-receipt`, {
+    method: 'POST',
+    headers: getHeaders(), // Auth header only — browser sets Content-Type for FormData
+    body: formData,
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Receipt scan failed. Please try again.')
+  }
+
+  return response.json()
+}
