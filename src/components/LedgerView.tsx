@@ -32,6 +32,7 @@ import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } fr
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../lib/csvExport'
 import { useFormDraft } from '../lib/useFormDraft'
 import { useAutoOpenModal } from '../lib/useAutoOpenModal'
+import { useIsMobile } from '../lib/useIsMobile'
 import { getCycleRangeDates, getStartOfNCyclesAgo, formatDateForApi } from '../lib/cycle'
 
 interface LedgerViewProps {
@@ -141,6 +142,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   activeScanJobIds = [],
   failedScanJob = null
 }) => {
+  const isMobile = useIsMobile(768)
   const [showAddForm, setShowAddForm] = useState(false)
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
@@ -1940,7 +1942,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           )}
 
           {/* Mobile BottomSheet Filter */}
-          <div className="md:hidden">
+          {isMobile && (
             <BottomSheet
               isOpen={isFilterDropdownOpen}
               title="Filter Ledger Entries"
@@ -2026,7 +2028,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 </div>
               </div>
             </BottomSheet>
-          </div>
+          )}
         </div>
       </div>
 

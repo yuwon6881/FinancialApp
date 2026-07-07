@@ -20,6 +20,7 @@ import { SmartAmountInput } from './ui/SmartAmountInput'
 import { BillTimeline } from './BillTimeline'
 import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } from '../lib/categoryColors'
 import { useAutoOpenModal } from '../lib/useAutoOpenModal'
+import { useIsMobile } from '../lib/useIsMobile'
 
 interface RecurringPaymentsViewProps {
   payments: RecurringPayment[]
@@ -62,6 +63,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   activeSyncId = null,
   deletingId = null
 }) => {
+  const isMobile = useIsMobile(640)
   const isPaymentSyncing = (rpId: string) => {
     return activeSyncId !== null && activeSyncId !== undefined && String(activeSyncId) === String(rpId)
   }
@@ -510,7 +512,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
           )}
 
           {/* Mobile BottomSheet Filter */}
-          <div className="sm:hidden">
+          {isMobile && (
             <BottomSheet
               isOpen={isFilterDropdownOpen}
               title="Filter Categories"
@@ -549,7 +551,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                 </div>
               </div>
             </BottomSheet>
-          </div>
+          )}
         </div>
 
         {/* Sort Select */}
