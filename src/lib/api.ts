@@ -922,20 +922,3 @@ export async function deleteReceiptScanJob(scanId: string): Promise<void> {
   }
 }
 
-export async function scanReceipt(imageFile: File): Promise<ReceiptScanResult> {
-  const formData = new FormData()
-  formData.append('image', imageFile)
-
-  const response = await fetch(`${API_BASE_URL}/ocr/scan-receipt`, {
-    method: 'POST',
-    headers: getHeaders(), // Auth header only — browser sets Content-Type for FormData
-    body: formData,
-  })
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}))
-    throw new Error(err.message || 'Receipt scan failed. Please try again.')
-  }
-
-  return response.json()
-}
