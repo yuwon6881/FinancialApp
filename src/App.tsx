@@ -202,6 +202,7 @@ function App() {
     }
   })
   const [activeReceiptScanDraft, setActiveReceiptScanDraft] = useState<{ jobId: string; result: ReceiptScanResult } | null>(null)
+  const [failedScanJob, setFailedScanJob] = useState<{ jobId: string; errorMessage: string } | null>(null)
   const [isLedgerAddOpen, setIsLedgerAddOpen] = useState(false)
   const isMountedRef = useRef(true)
   useEffect(() => {
@@ -331,6 +332,7 @@ function App() {
     setReceiptScanJobIds(prev => prev.filter(id => id !== scanId))
     setNotifiedReceiptScanJobIds(prev => prev.filter(id => id !== scanId))
     setActiveReceiptScanDraft(prev => prev?.jobId === scanId ? null : prev)
+    setFailedScanJob(prev => prev?.jobId === scanId ? null : prev)
 
     try {
       await api.deleteReceiptScanJob(scanId)
@@ -358,7 +360,13 @@ function App() {
             const job = await api.fetchReceiptScanJob(scanId)
 
             if (job.status === 'failed') {
-              showToast(job.errorMessage || 'Receipt scan failed. Please try again.', 'Receipt Scan Failed', 'error')
+              const errMsg = job.errorMessage || 'Receipt scan failed. Please try again.'
+              setFailedScanJob({ jobId: scanId, errorMessage: errMsg })
+
+              const isInModal = activeTabRef.current === 'ledger' && isLedgerAddOpenRef.current
+              if (!isInModal) {
+                showToast(errMsg, 'Receipt Scan Failed', 'error')
+              }
               await clearReceiptScanJob(scanId)
               continue
             }
@@ -1802,6 +1810,8 @@ function App() {
             onReceiptScanStarted={handleReceiptScanStarted}
             onReceiptScanCleared={clearReceiptScanJob}
             onAddFormOpenChange={setIsLedgerAddOpen}
+            activeScanJobIds={receiptScanJobIds}
+            failedScanJob={failedScanJob}
           />
         )}
 

@@ -92,6 +92,8 @@ interface LedgerViewProps {
   onReceiptScanStarted?: (scanId: string) => void
   onReceiptScanCleared?: (scanId: string) => void | Promise<void>
   onAddFormOpenChange?: (open: boolean) => void
+  activeScanJobIds?: string[]
+  failedScanJob?: { jobId: string; errorMessage: string } | null
 }
 
 export const LedgerView: React.FC<LedgerViewProps> = ({
@@ -135,7 +137,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   receiptScanDraft = null,
   onReceiptScanStarted,
   onReceiptScanCleared,
-  onAddFormOpenChange
+  onAddFormOpenChange,
+  activeScanJobIds = [],
+  failedScanJob = null
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [description, setDescription] = useState('')
@@ -278,16 +282,45 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       const started = await startReceiptScan(file)
       locallyStartedReceiptScanJobsRef.current.add(started.scanId)
       onReceiptScanStarted?.(started.scanId)
+      setActiveReceiptScanJobId(started.scanId)
       setShowScanBanner(false)
-
     } catch (err: any) {
       setScanError(err.message || 'Could not read the receipt. Please try a clearer photo.')
-    } finally {
       setIsScanning(false)
+    } finally {
       // Reset file input so the same file can be selected again if needed
       if (scanFileInputRef.current) scanFileInputRef.current.value = ''
     }
   }, [onReceiptScanStarted])
+
+  useEffect(() => {
+    if (!activeReceiptScanJobId) return
+
+    // If it failed
+    if (failedScanJob && failedScanJob.jobId === activeReceiptScanJobId) {
+      setScanError(failedScanJob.errorMessage)
+      setIsScanning(false)
+      setActiveReceiptScanJobId(null)
+      appliedReceiptScanJobRef.current = null
+      return
+    }
+
+    // Check if it is still in the active polling list
+    const isActive = activeScanJobIds.includes(activeReceiptScanJobId)
+    if (isActive) {
+      setIsScanning(true)
+    } else {
+      // If it is no longer active, and we haven't received a draft, and it wasn't marked as failed yet,
+      // it might have been cleared or cancelled.
+      if (appliedReceiptScanJobRef.current === activeReceiptScanJobId) {
+        setIsScanning(false)
+        setActiveReceiptScanJobId(null)
+      } else {
+        setIsScanning(false)
+        setActiveReceiptScanJobId(null)
+      }
+    }
+  }, [activeReceiptScanJobId, activeScanJobIds, failedScanJob])
 
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [txToDelete, setTxToDelete] = useState<Transaction | null>(null)
