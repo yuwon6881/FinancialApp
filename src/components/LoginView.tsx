@@ -9,7 +9,10 @@ interface LoginViewProps {
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
-  const [isRegistered, setIsRegistered] = useState<boolean | null>(null)
+  const [isRegistered, setIsRegistered] = useState<boolean | null>(() => {
+    const cached = localStorage.getItem('cached_is_registered')
+    return cached === 'true' ? true : cached === 'false' ? false : null
+  })
   const [hasFingerprint, setHasFingerprint] = useState(false)
   const [platformAuthAvailable, setPlatformAuthAvailable] = useState(false)
   const [username, setUsername] = useState('')
@@ -26,6 +29,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       const res = await api.fetchAuthStatus()
       setIsRegistered(res.isRegistered)
       setHasFingerprint(res.hasFingerprint)
+      localStorage.setItem('cached_is_registered', res.isRegistered.toString())
     } catch (err) {
       console.error(err)
       setError('Could not connect to the backend server. Please make sure the API is running.')
@@ -66,12 +70,14 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       if (!isRegistered) {
         // Register flow
         await api.register({ username, password })
+        localStorage.setItem('cached_is_registered', 'true')
         // Immediately login after successful registration
         const loginRes = await api.login({ username, password })
         onLoginSuccess(loginRes.token, loginRes.username)
       } else {
         // Login flow
         const loginRes = await api.login({ username, password })
+        localStorage.setItem('cached_is_registered', 'true')
         onLoginSuccess(loginRes.token, loginRes.username)
       }
     } catch (err: any) {
@@ -104,7 +110,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
   if (isRegistered === null && !error) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center select-none">
+      <div className="app-shell min-h-screen text-foreground flex items-center justify-center select-none">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
           <p className="text-xs font-semibold text-muted-foreground">Checking authentication status...</p>
@@ -114,13 +120,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-background via-muted/10 to-background text-foreground flex items-center justify-center p-4">
-      {/* Background glow effects */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
-        <div className="absolute top-[20%] left-[30%] -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl" />
-        <div className="absolute bottom-[20%] right-[30%] translate-x-1/2 translate-y-1/2 w-96 h-96 rounded-full bg-violet-500/10 blur-3xl" />
-      </div>
-
+    <div className="app-shell min-h-screen text-foreground flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-card/60 backdrop-blur-xl border border-border/60 rounded-3xl p-8 shadow-2xl relative z-10 space-y-6">
         
         {/* Brand Header */}
