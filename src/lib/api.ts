@@ -13,6 +13,7 @@ const getApiBaseUrl = (): string => {
 }
 
 const API_BASE_URL = getApiBaseUrl()
+export const SESSION_LOCKED_EVENT = 'financialapp:session-locked'
 
 interface CacheEntry {
   promise: Promise<any>
@@ -54,6 +55,7 @@ window.fetch = async (...args) => {
       throw new Error('401 Unauthorized')
     }
     if (response.status === 423 && !url.includes('/auth/login') && !url.includes('/auth/status') && !url.includes('/auth/webauthn')) {
+      window.dispatchEvent(new CustomEvent(SESSION_LOCKED_EVENT, { detail: { url } }))
       throw new Error('423 Locked')
     }
   }

@@ -84,6 +84,10 @@ const LaunchReady = ({ children }: { children: ReactNode }) => {
   return <>{children}</>
 }
 
+const isSessionLockedError = (err: any) => {
+  return !!err?.message && err.message.includes('423')
+}
+
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'))
   const [username, setUsername] = useState<string>(localStorage.getItem('auth_username') || '')
@@ -576,6 +580,25 @@ function App() {
   const [isLocked, setIsLocked] = useState<boolean>(() => {
     return sessionStorage.getItem('session_locked') === 'true'
   })
+  const syncBackoffUntilRef = useRef(syncBackoffUntil)
+
+  const markSessionLocked = useCallback(() => {
+    loadAllAbortRef.current?.abort()
+    api.invalidateCache()
+    setError(null)
+    setSyncBackoffUntil(0)
+    syncBackoffUntilRef.current = 0
+    setIsLocked(true)
+    sessionStorage.setItem('session_locked', 'true')
+  }, [])
+
+  useEffect(() => {
+    if (!token) return
+
+    const handleSessionLocked = () => markSessionLocked()
+    window.addEventListener(api.SESSION_LOCKED_EVENT, handleSessionLocked)
+    return () => window.removeEventListener(api.SESSION_LOCKED_EVENT, handleSessionLocked)
+  }, [token, markSessionLocked])
 
   // Inactivity tracking - update last_active_time in localStorage
   useEffect(() => {
@@ -615,8 +638,7 @@ function App() {
       if (Date.now() - lastActive > LOCK_TIMEOUT_MS) {
         api.lockSession()
           .then(() => {
-            setIsLocked(true)
-            sessionStorage.setItem('session_locked', 'true')
+            markSessionLocked()
           })
           .catch(err => {
             if (err?.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
@@ -628,7 +650,7 @@ function App() {
       }
     }, 15000)
     return () => clearInterval(interval)
-  }, [token, isLocked])
+  }, [token, isLocked, markSessionLocked])
 
   // Password Prompt for revealing sensitive information
   const [showPasswordPrompt, setShowPasswordPrompt] = useState<boolean>(false)
@@ -802,11 +824,8 @@ function App() {
         } else {
           setError(null)
         }
-      } else if (err.message && err.message.includes('423')) {
-        if (Date.now() - lastUnlockedTimeRef.current > 15000) {
-          setIsLocked(true)
-          sessionStorage.setItem('session_locked', 'true')
-        }
+      } else if (isSessionLockedError(err)) {
+        markSessionLocked()
       } else {
         setError('Could not connect to the database API server. Running in offline view mode.')
         isServerAwakeRef.current = false
@@ -931,6 +950,8 @@ function App() {
       console.error(err)
       if (err.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
         handleLogout()
+      } else if (isSessionLockedError(err)) {
+        markSessionLocked()
       } else {
         alert('Error updating active month.')
       }
@@ -1181,7 +1202,6 @@ function App() {
   const failedOpsRef = useRef(failedOps);
   const usernameRef = useRef(username);
   const editingPendingIdRef = useRef(editingPendingId);
-  const syncBackoffUntilRef = useRef(syncBackoffUntil);
 
   useEffect(() => {
     pendingOpsRef.current = pendingOps;
@@ -1310,12 +1330,14 @@ function App() {
           if (isAuthError && !isJustLoggedIn) {
             handleLogout();
             break;
-          } else if (isAuthError || isLockError) {
-            // Either a spurious 401 racing a fresh login, or the session is
-            // momentarily locked (423) -- wait it out without burning a
-            // retry or ever moving the op to failedOps.
-            setError(isLockError ? 'Sync pending: session is locked...' : 'Sync pending: reconnecting...');
-            const backoff = Date.now() + (isLockError ? 15000 : 3000);
+          } else if (isLockError) {
+            markSessionLocked();
+            break;
+          } else if (isAuthError) {
+            // A spurious 401 can race a fresh login -- wait it out without
+            // burning a retry or moving the op to failedOps.
+            setError('Sync pending: reconnecting...');
+            const backoff = Date.now() + 3000;
             syncBackoffUntilRef.current = backoff;
             setSyncBackoffUntil(backoff);
             break;
