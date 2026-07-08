@@ -55,34 +55,13 @@ export function hasCachedKey(key: string): boolean {
   return localStorage.getItem(key) !== null
 }
 
-function isUsableDashboardData(value: unknown): value is DashboardData {
-  if (!value || typeof value !== 'object') return false
-  const dashboard = value as { setting?: unknown; stats?: unknown }
-  if (!dashboard.setting || typeof dashboard.setting !== 'object') return false
-  if (!dashboard.stats || typeof dashboard.stats !== 'object') return false
-
-  const setting = dashboard.setting as Record<string, unknown>
-  return (
-    typeof setting.selectedMonth === 'string' &&
-    setting.selectedMonth.length > 0 &&
-    typeof setting.selectedYear === 'number' &&
-    Number.isFinite(setting.selectedYear)
-  )
-}
-
-export function getCachedDashboardData(): DashboardData | null {
-  const cached = getCachedJSON<unknown>(CACHE_KEYS.dashboardData, null)
-  return isUsableDashboardData(cached) ? cached : null
-}
-
-export function hasCachedDashboardData(): boolean {
-  return getCachedDashboardData() !== null
-}
-
 // The dashboard cache is the source of truth for which month/year was last active,
 // so several call sites need to peek at just that nested field.
 export function getCachedDashboardPeriod(): { month?: string; year?: number } {
-  const cached = getCachedDashboardData()
+  const cached = getCachedJSON<{ setting?: { selectedMonth?: string; selectedYear?: number } } | null>(
+    CACHE_KEYS.dashboardData,
+    null
+  )
   return {
     month: cached?.setting?.selectedMonth || undefined,
     year: cached?.setting?.selectedYear || undefined

@@ -24,7 +24,7 @@ import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 import { PullToRefresh } from './components/ui/PullToRefresh'
 import { ToastViewport, type ToastMessage, type ToastTone, type ToastAction } from './components/ui/ToastViewport'
 import { CardSkeleton, Skeleton } from './components/ui/Skeleton'
-import { CACHE_KEYS, getCachedJSON, getCachedTransactions, sanitizeTransactions, setCachedJSON, hasCachedDashboardData, getCachedDashboardData, getCachedDashboardPeriod, getCachedOps, getCachedCycleSnapshot, setCachedCycleSnapshot } from './lib/cache'
+import { CACHE_KEYS, getCachedJSON, getCachedTransactions, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod, getCachedOps, getCachedCycleSnapshot, setCachedCycleSnapshot } from './lib/cache'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from './lib/modalDrafts'
 import { enqueue as outboxEnqueue, createFinalId, createLocalWishlistId, DISPATCH, sanitizeQueuedOps, getSyncSuccessToast, type QueuedOp, type EntityKind } from './lib/outbox'
 import { useOptimisticList } from './lib/useOptimisticList'
@@ -126,7 +126,7 @@ function App() {
   const [transactions, setTransactions] = useState<Transaction[]>(() => getCachedTransactions(CACHE_KEYS.transactions))
   const [recurringPayments, setRecurringPayments] = useState<RecurringPayment[]>(() => getCachedJSON(CACHE_KEYS.recurringPayments, []))
   const [categoriesList, setCategoriesList] = useState<TransactionCategory[]>(() => getCachedJSON(CACHE_KEYS.categories, []))
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(() => getCachedDashboardData())
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(() => getCachedJSON(CACHE_KEYS.dashboardData, null))
   // Always the real current cycle's wallet total (see fetchWalletBalance) -- deliberately NOT
   // derived from dashboardData/optimisticDashboardData, since those track whatever cycle the
   // Dashboard/Ledger has navigated to and the navbar wallet must not follow that navigation.
@@ -135,7 +135,7 @@ function App() {
   const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<import('./types').AutocompleteSuggestion[]>([])
 
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState<boolean>(() => !hasCachedDashboardData())
+  const [loading, setLoading] = useState<boolean>(() => !hasCachedKey(CACHE_KEYS.dashboardData))
   const [isOffline, setIsOffline] = useState<boolean>(() => typeof navigator !== 'undefined' ? !navigator.onLine : false)
 
   // Sync Queue States
@@ -746,8 +746,7 @@ function App() {
 
   // Fetch initial ledger and dashboard statistics
   async function loadAll(month?: string, year?: number, isBackground = false) {
-    if (!token && !localStorage.getItem('auth_token')) return
-    let keepLoading = false
+    if (!token) return
     const requestSeq = ++loadAllSeqRef.current
     const isStale = () => requestSeq !== loadAllSeqRef.current
     loadAllAbortRef.current?.abort()
@@ -760,97 +759,60 @@ function App() {
     }
     try {
       const dbData = await api.fetchDashboard(month, year, ac.signal)
+      const [txs, recs, cats, wishes, autoSuggests, wallet] = await Promise.all([
+        api.fetchTransactions(dbData.setting.selectedMonth, dbData.setting.selectedYear, undefined, ac.signal),
+        api.fetchRecurringPayments(ac.signal),
+        api.fetchCategories(ac.signal),
+        api.fetchWishlist(ac.signal).catch(() => []),
+        api.fetchAutocompleteSuggestions(ac.signal).catch(() => []),
+        api.fetchWalletBalance(ac.signal).catch(() => null)
+      ])
+      // A newer loadAll() was kicked off (e.g. the user switched cycles again)
+      // while this one was in flight -- discard this now-stale response instead
+      // of clobbering the newer cycle's data.
       if (isStale()) return
-
+      if (wallet !== null) {
+        setWalletBalance(wallet)
+        setCachedJSON(CACHE_KEYS.walletBalance, wallet)
+      }
       setSelectedMonth(dbData.setting.selectedMonth)
       setSelectedYear(dbData.setting.selectedYear)
       setDashboardData(dbData)
+      setTransactions(txs)
+      setRecurringPayments(recs)
+      setCategoriesList(cats)
+      setWishlist(wishes)
+      setAutocompleteSuggestions(autoSuggests)
       setError(null)
       isServerAwakeRef.current = true
       setIsLocked(false)
       sessionStorage.setItem('session_locked', 'false')
-      setCachedJSON(CACHE_KEYS.dashboardData, dbData)
 
+      // Save to localStorage cache
+      setCachedJSON(CACHE_KEYS.dashboardData, dbData)
+      setCachedJSON(CACHE_KEYS.transactions, txs)
+      setCachedJSON(CACHE_KEYS.recurringPayments, recs)
+      setCachedJSON(CACHE_KEYS.categories, cats)
+      setCachedJSON(CACHE_KEYS.wishlist, wishes)
+      setCachedCycleSnapshot(dbData.setting.selectedMonth, dbData.setting.selectedYear, dbData, txs)
+
+      // Sync dark mode from server preference (server wins over localStorage)
       const serverDark = dbData.setting.darkMode ?? false
       setDarkMode(serverDark)
       localStorage.setItem('dark_mode', serverDark.toString())
 
+      // Sync hide sensitive from server preference (server wins over localStorage)
       const serverHideSensitive = dbData.setting.hideSensitive ?? true
       setHideSensitive(serverHideSensitive)
       localStorage.setItem('hide_sensitive', serverHideSensitive.toString())
+
+
 
       if (dbData.pendingNotifications && dbData.pendingNotifications.length > 0 && !hasShownModalThisSession) {
         if (localStorage.getItem('show_notifications_on_login') !== 'false') {
           setShowLoginModal(true)
         }
         setHasShownModalThisSession(true)
-      }
-
-      const [txsResult, recsResult, catsResult, wishesResult, autoSuggestsResult, walletResult] = await Promise.allSettled([
-        api.fetchTransactions(dbData.setting.selectedMonth, dbData.setting.selectedYear, undefined, ac.signal),
-        api.fetchRecurringPayments(ac.signal),
-        api.fetchCategories(ac.signal),
-        api.fetchWishlist(ac.signal),
-        api.fetchAutocompleteSuggestions(ac.signal),
-        api.fetchWalletBalance(ac.signal)
-      ])
-      // A newer loadAll() was kicked off (e.g. the user switched cycles again)
-      // while this one was in flight -- discard this now-stale response instead
-      // of clobbering the newer cycle's data.
-      if (isStale()) return
-
-      const failedParts: string[] = []
-      const trackFailure = (label: string, result: PromiseSettledResult<unknown>) => {
-        if (result.status === 'rejected' && result.reason?.name !== 'AbortError') {
-          failedParts.push(label)
-          console.error(`Failed to hydrate ${label}:`, result.reason)
-        }
-      }
-
-      if (txsResult.status === 'fulfilled') {
-        setTransactions(txsResult.value)
-        setCachedJSON(CACHE_KEYS.transactions, txsResult.value)
-        setCachedCycleSnapshot(dbData.setting.selectedMonth, dbData.setting.selectedYear, dbData, txsResult.value)
-      } else {
-        trackFailure('transactions', txsResult)
-      }
-
-      if (recsResult.status === 'fulfilled') {
-        setRecurringPayments(recsResult.value)
-        setCachedJSON(CACHE_KEYS.recurringPayments, recsResult.value)
-      } else {
-        trackFailure('recurring payments', recsResult)
-      }
-
-      if (catsResult.status === 'fulfilled') {
-        setCategoriesList(catsResult.value)
-        setCachedJSON(CACHE_KEYS.categories, catsResult.value)
-      } else {
-        trackFailure('categories', catsResult)
-      }
-
-      if (wishesResult.status === 'fulfilled') {
-        setWishlist(wishesResult.value)
-        setCachedJSON(CACHE_KEYS.wishlist, wishesResult.value)
-      } else {
-        trackFailure('wishlist', wishesResult)
-      }
-
-      if (autoSuggestsResult.status === 'fulfilled') {
-        setAutocompleteSuggestions(autoSuggestsResult.value)
-      } else {
-        trackFailure('autocomplete suggestions', autoSuggestsResult)
-      }
-
-      if (walletResult.status === 'fulfilled') {
-        setWalletBalance(walletResult.value)
-        setCachedJSON(CACHE_KEYS.walletBalance, walletResult.value)
-      } else {
-        trackFailure('wallet balance', walletResult)
-      }
-
-      if (failedParts.length > 0) {
-        setError(`Some data could not be refreshed: ${failedParts.join(', ')}.`)
       }
     } catch (err: any) {
       if (err?.name === 'AbortError' || isStale()) return
@@ -860,13 +822,7 @@ function App() {
         if (!isJustLoggedIn) {
           handleLogout()
         } else {
-          keepLoading = true
-          setError('Starting session. Retrying data load...')
-          window.setTimeout(() => {
-            if (localStorage.getItem('auth_token')) {
-              void loadAll(month, year, false)
-            }
-          }, 750)
+          setError(null)
         }
       } else if (isSessionLockedError(err)) {
         markSessionLocked()
@@ -876,9 +832,7 @@ function App() {
       }
     } finally {
       if (!isStale()) {
-        if (!keepLoading) {
-          setLoading(false)
-        }
+        setLoading(false)
         setIsBackgroundSyncing(false)
       }
     }
@@ -886,7 +840,7 @@ function App() {
 
   useEffect(() => {
     if (token) {
-      const hasCache = hasCachedDashboardData();
+      const hasCache = hasCachedKey(CACHE_KEYS.dashboardData);
       const { month: cachedMonth, year: cachedYear } = getCachedDashboardPeriod();
       loadAll(cachedMonth, cachedYear, hasCache);
     }
@@ -900,19 +854,6 @@ function App() {
     lastUnlockedTimeRef.current = Date.now()
     setIsLocked(false)
     api.invalidateCache()
-    setError(null)
-    setDashboardData(null)
-    setWalletBalance(null)
-    setTransactions([])
-    setRecurringPayments([])
-    setCategoriesList([])
-    setWishlist([])
-    setAutocompleteSuggestions([])
-    setSelectedMonth('')
-    setSelectedYear(0)
-    setLoading(true)
-    setIsBackgroundSyncing(false)
-    isServerAwakeRef.current = false
     setToken(newToken)
     setUsername(newUsername)
 
@@ -1632,9 +1573,9 @@ function App() {
     )
   }
 
-  // Top Nav wallet total: prefer the dedicated current-cycle wallet endpoint, then the
-  // dashboard's server total while that endpoint is still loading/unavailable.
-  const totalBalance = walletBalance ?? optimisticDashboardData?.stats?.totalBalance ?? allTransactions.reduce((acc, t) => acc + t.amount, 0)
+  // Top Nav wallet total: always the real current cycle's total (from walletBalance), falling
+  // back to the naive all-time sum only until the very first fetch lands.
+  const totalBalance = walletBalance ?? allTransactions.reduce((acc, t) => acc + t.amount, 0)
 
   const [ledgerCyclesRange, setLedgerCyclesRange] = useState<'monthly' | '3month' | '6month' | 'yearly'>('monthly')
 
@@ -2053,7 +1994,7 @@ function App() {
           localStorage.setItem('last_active_time', Date.now().toString())
           sessionStorage.setItem('session_locked', 'false')
           setIsLocked(false)
-          const hasCache = hasCachedDashboardData();
+          const hasCache = hasCachedKey(CACHE_KEYS.dashboardData);
           const { month: cachedMonth, year: cachedYear } = getCachedDashboardPeriod();
           loadAll(cachedMonth, cachedYear, hasCache);
         }}
