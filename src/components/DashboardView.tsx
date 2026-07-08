@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { listContainerVariants, listItemVariants, listItemExit } from '../lib/animations'
+import { Button } from './ui/Button'
 import type { Transaction, DashboardData, WishlistItem } from '../types'
 import { 
   Wallet, 
@@ -495,7 +496,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               )
               return (
                 <motion.div
-                  layout
                   key={noti.id}
                   variants={listItemVariants}
                   exit={listItemExit}
@@ -513,15 +513,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           className="w-full sm:flex-1 px-2.5 py-1 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                         <div className="flex gap-2 w-full sm:w-auto">
-                          <button
+                          <Button
+                            size="sm"
                             onClick={() => {
                               onConfirmSubscription(noti, paidDateInput)
                               setActiveConfirmId(null)
                             }}
-                            className="flex-1 sm:flex-initial px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition text-center"
+                            className="flex-1 sm:flex-initial text-xs"
                           >
                             Confirm
-                          </button>
+                          </Button>
                           <button
                             onClick={() => setActiveConfirmId(null)}
                             className="flex-1 sm:flex-initial px-2.5 py-1.5 bg-muted hover:bg-muted/80 text-foreground rounded-lg text-xs font-semibold cursor-pointer transition border border-border text-center"
@@ -1472,7 +1473,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <AnimatePresence>
                 {activeRecurring.map((rp: any) => (
                   <motion.div
-                    layout
                     key={rp.id}
                     variants={listItemVariants}
                     exit={listItemExit}

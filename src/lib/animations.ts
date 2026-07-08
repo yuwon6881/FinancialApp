@@ -18,3 +18,12 @@ export const listItemExit: TargetAndTransition = {
   scale: 0.95,
   transition: { duration: 0.15 },
 }
+
+// Plain fade for Ledger's transaction rows -- deliberately opacity-only, no `y`
+// offset and no `layout` prop on the callers, so pagination/cycle switches
+// (which remount the whole row set) never trigger a position-FLIP cascade
+// across sibling rows. See listItemVariants above for the card-grid equivalent.
+export const rowFadeVariants: Variants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: 0.18, ease: 'easeOut' } },
+}

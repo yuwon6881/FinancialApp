@@ -1,5 +1,6 @@
 import React from 'react'
 import { cn } from '../../lib/utils'
+import { Card } from './Card'
 
 /**
  * Elegant shimmering skeleton loader — a soft gradient sweeps across a muted
@@ -32,24 +33,24 @@ export const CycleHeaderSkeleton: React.FC<{
   subtitleWidth?: string
   controlWidth?: string
 }> = ({ titleWidth = 'w-48', subtitleWidth = 'w-64', controlWidth = 'w-52' }) => (
-  <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+  <Card className="flex flex-col md:flex-row items-center justify-between gap-4">
     <div className="space-y-2 w-full md:w-auto">
       <Skeleton className={cn('h-6', titleWidth)} />
       <Skeleton className={cn('h-3', subtitleWidth)} />
     </div>
     <Skeleton className={cn('h-9 rounded-xl', controlWidth)} />
-  </div>
+  </Card>
 )
 
 /** A single stat tile placeholder, matching the small banner cards used on Wishlist/Dashboard. */
 export const StatTileSkeleton: React.FC = () => (
-  <div className="p-5 rounded-2xl bg-card border border-border/60 shadow-xs flex items-center justify-between">
+  <Card className="p-5 flex items-center justify-between">
     <div className="space-y-2">
       <Skeleton className="h-2.5 w-24" />
       <Skeleton className="h-5 w-20" />
     </div>
     <Skeleton className="size-10 rounded-xl" />
-  </div>
+  </Card>
 )
 
 /** A single list-row placeholder, matching Ledger's transaction rows. */

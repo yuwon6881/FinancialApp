@@ -2,7 +2,7 @@ import { forwardRef, type ButtonHTMLAttributes } from 'react'
 import { cn } from '../../lib/utils'
 
 export type ButtonVariant = 'primary' | 'ghost' | 'danger'
-export type ButtonSize = 'sm' | 'md'
+export type ButtonSize = 'sm' | 'md' | 'lg'
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: 'text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 border border-transparent',
@@ -13,6 +13,9 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 const SIZE_CLASSES: Record<ButtonSize, string> = {
   sm: 'px-2.5 py-1.5 text-[10px] gap-1',
   md: 'px-3 py-2 text-xs gap-1.5',
+  // Matches the header "New Subscription"/"Post Transaction"-style CTA buttons;
+  // callers add rounded-xl + shadow-lg via className since only those CTAs want it.
+  lg: 'px-4 py-2.5 text-sm gap-2',
 }
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

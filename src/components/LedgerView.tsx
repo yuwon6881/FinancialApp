@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { listContainerVariants } from '../lib/animations'
+import { listContainerVariants, rowFadeVariants } from '../lib/animations'
 import type { Transaction, TransactionCategory } from '../types'
 import type { PagedTransactionResult } from '../lib/api'
 import { startReceiptScan, type ReceiptScanResult } from '../lib/api'
@@ -24,6 +24,8 @@ import {
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
 import { CycleSkeleton } from './ui/Skeleton'
+import { Button } from './ui/Button'
+import { Card } from './ui/Card'
 import { RowSyncBadge } from './ui/RowSyncBadge'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { BottomSheet } from './ui/BottomSheet'
@@ -66,9 +68,7 @@ const DesktopLedgerRow = React.memo(function DesktopLedgerRow({
   )
   return (
     <motion.tr
-      layout
-      transition={{ type: "tween", ease: [0.22, 1, 0.36, 1], duration: 0.2 }}
-      variants={{ hidden: { opacity: 0, y: 4 }, show: { opacity: 1, y: 0, transition: { type: "tween", duration: 0.18, ease: "easeOut" } } }}
+      variants={rowFadeVariants}
       id={`tx-row-${t.id}`} key={t.id} className="hover:bg-muted/10 transition duration-150"
     >
       <td className="p-4 font-medium text-muted-foreground">{t.date}</td>
@@ -194,9 +194,7 @@ const MobileLedgerRow = React.memo(function MobileLedgerRow({
   )
   return (
     <motion.div
-      layout
-      transition={{ type: "tween", ease: [0.22, 1, 0.36, 1], duration: 0.2 }}
-      variants={{ hidden: { opacity: 0, y: 4 }, show: { opacity: 1, y: 0, transition: { type: "tween", duration: 0.18, ease: "easeOut" } } }}
+      variants={rowFadeVariants}
       key={t.id}
     >
     <SwipeableRow
@@ -1582,7 +1580,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     <div className="space-y-6 soft-rise">
       
       {/* Header section with total and actions */}
-      <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <Card className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-xl font-bold text-foreground">Financial Ledger</h2>
@@ -1626,7 +1624,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             <Download className="size-3.5 text-muted-foreground" />
             Export CSV
           </button>
-          <button
+          <Button
+            variant="primary"
+            size="lg"
             onClick={() => {
               if (showAddForm) {
                 handleCloseForm()
@@ -1646,13 +1646,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 openTransactionForm()
               }
             }}
-            className="flex flex-1 items-center justify-center gap-2 whitespace-nowrap px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs shadow-lg shadow-blue-600/10 hover:shadow-blue-600/20 transition duration-200 cursor-pointer md:flex-initial"
+            className="flex-1 whitespace-nowrap rounded-xl text-xs shadow-lg shadow-blue-600/10 hover:shadow-blue-600/20 duration-200 md:flex-initial"
           >
             {showAddForm ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
             {showAddForm ? 'Cancel' : 'Post Transaction'}
-          </button>
+          </Button>
         </div>
-      </div>
+      </Card>
 
       {/* Dashboard navigation filter banner */}
       {(incomingCategory || incomingDate || incomingTxType || showAllCycles) && (
@@ -2414,7 +2414,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               </AnimatePresence>
 
               {displayTransactions.length === 0 && (
-                <motion.tr layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <motion.tr initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                   <td colSpan={7} className="p-8 text-center text-muted-foreground text-sm">
                     {serverIsFetching ? 'Loading...' : 'No transactions match your search or filter criteria.'}
                   </td>
@@ -2449,7 +2449,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         </AnimatePresence>
 
         {displayTransactions.length === 0 && (
-          <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-8 text-center text-muted-foreground text-sm border rounded-xl bg-card">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-8 text-center text-muted-foreground text-sm border rounded-xl bg-card">
             {serverIsFetching ? 'Loading...' : 'No transactions match your criteria.'}
           </motion.div>
         )}

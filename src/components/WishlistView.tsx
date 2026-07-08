@@ -6,6 +6,7 @@ import { CustomSelect } from './ui/CustomSelect'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { BottomSheet } from './ui/BottomSheet'
 import { CycleSkeleton } from './ui/Skeleton'
+import { Card } from './ui/Card'
 import { RowSyncBadge } from './ui/RowSyncBadge'
 import { formatCurrencyVal, maskCurrencyInput } from '../lib/utils'
 import { useFormDraft } from '../lib/useFormDraft'
@@ -296,9 +297,9 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
         <CycleSkeleton variant="wishlist" />
       ) : (
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div
+        <Card
           onClick={() => onNavigateToLedger?.({ category: 'Rewards', showAllCycles: true })}
-          className="p-5 rounded-2xl bg-card border border-border/60 shadow-xs hover:border-blue-500/30 transition-all duration-300 group cursor-pointer flex items-center justify-between"
+          className="p-5 hover:border-blue-500/30 transition-all duration-300 group cursor-pointer flex items-center justify-between"
         >
           <div>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Rewards Balance</span>
@@ -310,9 +311,9 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
           <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform duration-300">
             <Wallet className="size-5" />
           </div>
-        </div>
-        
-        <div className="p-5 rounded-2xl bg-card border border-border/60 shadow-xs flex items-center justify-between">
+        </Card>
+
+        <Card className="p-5 flex items-center justify-between">
           <div>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Total Goals Cost</span>
             <span className="text-xl font-black text-foreground mt-1 block">{formatSensitive(totalCost)}</span>
@@ -320,7 +321,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
           <div className="p-2.5 rounded-xl bg-slate-500/10 text-slate-500">
             <Target className="size-5" />
           </div>
-        </div>
+        </Card>
 
         <div className="p-5 rounded-2xl bg-card border border-border/60 shadow-xs flex items-center justify-between">
           <div>
@@ -506,7 +507,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               )
             })()
           ) : (
-            <div className="p-8 rounded-2xl bg-card border border-border/60 border-dashed text-center flex flex-col items-center justify-center min-h-[300px]">
+            <Card className="p-8 border-dashed text-center flex flex-col items-center justify-center min-h-[300px]">
               <Target className="size-10 text-muted-foreground/60 mb-2" />
               <h4 className="font-bold text-foreground text-sm">No Active Focus Item</h4>
               <p className="text-xs text-muted-foreground max-w-xs mt-1">Set a goal from your wishlist queue below or create a new target to track savings progress.</p>
@@ -518,7 +519,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               >
                 <Plus className="size-3.5" /> Add Goal
               </motion.button>
-            </div>
+            </Card>
           )}
         </div>
 
@@ -542,7 +543,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                 const isBusy = isItemDeleting(item.id) || isItemSyncing(item.id) || item.isPendingSync
 
                 return (
-                  <motion.div layout variants={listItemVariants} key={item.id}>
+                  <motion.div variants={listItemVariants} key={item.id}>
                   <SwipeableRow
                     hint={idx === 0}
                     disabled={isBusy}
@@ -646,7 +647,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
 
       {/* History Log / Purchased Items */}
       {purchasedItems.length > 0 && (
-        <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs">
+        <Card>
           <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5 mb-4">
             <CheckCircle2 className="size-4 text-blue-500" />
             Purchased Rewards History ({purchasedItems.length})
@@ -671,7 +672,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Add Item Modal */}

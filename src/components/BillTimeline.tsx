@@ -4,6 +4,7 @@ import { Calendar, CheckCircle2, AlertCircle, Ban, List, ChevronDown, ChevronUp 
 import { formatCurrencyVal } from '../lib/utils'
 import { getCategoryBadgeClass, getCategoryDotClass } from '../lib/categoryColors'
 import { BottomSheet } from './ui/BottomSheet'
+import { Card } from './ui/Card'
 
 interface BillTimelineProps {
   activeRecurringPayments: ActiveRecurringPayment[]
@@ -314,9 +315,9 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
 
   if (!isExpanded) {
     return (
-      <div
+      <Card
         onClick={() => setIsExpanded(true)}
-        className="p-4 rounded-2xl bg-card border border-border/60 shadow-xs flex items-center justify-between cursor-pointer hover:bg-muted/30 transition duration-200 select-none flex-wrap gap-2"
+        className="p-4 flex items-center justify-between cursor-pointer hover:bg-muted/30 transition duration-200 select-none flex-wrap gap-2"
       >
         <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-foreground flex-wrap">
           <Calendar className="size-4 text-blue-500 shrink-0" />
@@ -332,12 +333,12 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
         <div className="text-[10px] text-muted-foreground font-semibold bg-muted/50 px-2.5 py-1 rounded-lg whitespace-nowrap shrink-0 hidden sm:block">
           {startLabel} – {endLabel}
         </div>
-      </div>
+      </Card>
     )
   }
 
   return (
-    <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-6 animate-in fade-in zoom-in-98 duration-150">
+    <Card className="space-y-6 animate-in fade-in zoom-in-98 duration-150">
       <div
         onClick={() => setIsExpanded(false)}
         className="flex items-center justify-between border-b border-border/30 pb-3 gap-2 cursor-pointer hover:bg-muted/20 -mx-3 -mt-2 p-3 rounded-xl transition duration-150 select-none"
@@ -671,6 +672,6 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
           </div>
         </BottomSheet>
       )}
-    </div>
+    </Card>
   )
 }

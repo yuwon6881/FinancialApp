@@ -268,7 +268,9 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
               </div>
             </div>
           </div>
-          <button
+          <Button
+            variant="primary"
+            size="lg"
             onClick={() => {
               if (showAddForm) {
                 handleCancelForm()
@@ -276,11 +278,11 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                 setShowAddForm(true)
               }
             }}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm shadow-lg shadow-blue-600/10 hover:shadow-blue-600/20 transition duration-200 cursor-pointer self-start md:self-center"
+            className="rounded-xl shadow-lg shadow-blue-600/10 hover:shadow-blue-600/20 duration-200 self-start md:self-center"
           >
             {showAddForm ? <X className="size-4" /> : <Plus className="size-4" />}
             {showAddForm ? 'Cancel' : 'New Subscription'}
-          </button>
+          </Button>
         </Card>
       </div>
 
@@ -577,7 +579,6 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
           const isBusy = isPaymentDeleting(rp.id) || isPaymentSyncing(rp.id) || rp.isPendingSync
           return (
             <motion.div
-              layout
               key={rp.id}
               variants={listItemVariants}
               exit={listItemExit}
