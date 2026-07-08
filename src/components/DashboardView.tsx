@@ -23,6 +23,15 @@ import { getCategoryBadgeClass, getCategoryChartColor, getCategoryDotClass } fro
 import { AnimatedNumber } from './ui/AnimatedNumber'
 import { SmartAmountInput } from './ui/SmartAmountInput'
 
+const formatOrdinalDay = (day: number) => {
+  if (day >= 11 && day <= 13) return `${day}th`
+  switch (day % 10) {
+    case 1: return `${day}st`
+    case 2: return `${day}nd`
+    case 3: return `${day}rd`
+    default: return `${day}th`
+  }
+}
 
 interface DashboardViewProps {
   dashboardData: DashboardData | null
@@ -352,22 +361,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </p>
             </div>
           </div>
-          <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] font-bold text-muted-foreground">
-            <div className="status-chip rounded-lg px-2.5 py-1.5 min-w-0">
-              <span className="block text-blue-500">Inflow</span>
-              <span className="block truncate text-foreground">{formatSensitive(stats.monthlyInflow)}</span>
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2.5 lg:max-w-2xl">
+            <div className="min-w-0 rounded-xl border border-blue-500/15 bg-background/60 px-3 py-2.5 shadow-sm sm:px-3.5 lg:px-4 lg:py-3">
+              <span className="block text-[10px] font-bold uppercase text-blue-500">Inflow</span>
+              <span className="mt-1 block truncate text-sm font-extrabold text-foreground sm:text-base">{formatSensitive(stats.monthlyInflow)}</span>
             </div>
-            <div className="status-chip rounded-lg px-2.5 py-1.5 min-w-0">
-              <span className="block text-orange-500">Outflow</span>
-              <span className="block truncate text-foreground">{formatSensitive(stats.monthlyExpenses)}</span>
+            <div className="min-w-0 rounded-xl border border-orange-500/15 bg-background/60 px-3 py-2.5 shadow-sm sm:px-3.5 lg:px-4 lg:py-3">
+              <span className="block text-[10px] font-bold uppercase text-orange-500">Outflow</span>
+              <span className="mt-1 block truncate text-sm font-extrabold text-foreground sm:text-base">{formatSensitive(stats.monthlyExpenses)}</span>
             </div>
-            <div className="status-chip rounded-lg px-2.5 py-1.5 min-w-0">
-              <span className="block text-teal-500">Cycle Day</span>
-              <span className="block truncate text-foreground">{activeSettings.cycleDay}</span>
-            </div>
-            <div className="status-chip rounded-lg px-2.5 py-1.5 min-w-0">
-              <span className="block text-pink-500">Year</span>
-              <span className="block truncate text-foreground">{activeSettings.selectedYear}</span>
+            <div className="col-span-2 min-w-0 rounded-xl border border-teal-500/15 bg-background/60 px-3 py-2.5 shadow-sm sm:col-span-1 sm:px-3.5 lg:px-4 lg:py-3">
+              <span className="block text-[10px] font-bold uppercase text-teal-500">Cycle Start Date</span>
+              <span className="mt-1 block truncate text-sm font-extrabold text-foreground sm:text-base">{formatOrdinalDay(activeSettings.cycleDay)}</span>
             </div>
           </div>
         </div>
