@@ -852,8 +852,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         Logged in: {new Date(session.createdAt).toLocaleDateString()}
                       </span>
                       <span>&middot; Last active: {formatRelativeTime(session.lastActiveAt)}</span>
-                      {session.ipAddress && <span>&middot; {session.ipAddress}</span>}
                     </span>
+                    {session.ipAddress && (
+                      <span className="text-[10px] text-muted-foreground/75 mt-0.5 block">
+                        IP: {session.ipAddress}
+                      </span>
+                    )}
                   </div>
                   {!session.isCurrent && (
                     <button
