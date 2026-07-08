@@ -2393,6 +2393,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               </tr>
             </thead>
             <motion.tbody
+              key={`${selectedMonth}-${selectedYear}-${showAllCycles}-${currentPage}`}
               initial="hidden" animate="show"
               variants={listContainerVariants}
               className="divide-y divide-border/30 text-xs"
@@ -2427,6 +2428,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
       {/* Ledger List - Mobile (swipe a row left to reveal Edit / Delete) */}
       <motion.div
+        key={`${selectedMonth}-${selectedYear}-${showAllCycles}-${currentPage}`}
         initial="hidden" animate="show"
         variants={listContainerVariants}
         className="block md:hidden space-y-3"
