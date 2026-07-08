@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Lock, User, ShieldAlert, Sparkles, Eye, EyeOff, Fingerprint } from 'lucide-react'
+import { Lock, User, ShieldAlert, Sparkles, Eye, EyeOff, Fingerprint, ShieldCheck } from 'lucide-react'
 import * as api from '../lib/api'
 import { AppLogo } from './ui/AppLogo'
 import { isPlatformAuthenticatorAvailable, getFingerprintAssertion } from '../lib/webauthn'
@@ -23,6 +23,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState(false)
   const [fingerprintLoading, setFingerprintLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [pendingToken, setPendingToken] = useState<string | null>(null)
+  const [twoFactorCode, setTwoFactorCode] = useState('')
+  const [twoFactorLoading, setTwoFactorLoading] = useState(false)
 
   async function checkStatus() {
     try {
@@ -73,18 +76,46 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         localStorage.setItem('cached_is_registered', 'true')
         // Immediately login after successful registration
         const loginRes = await api.login({ username, password })
-        onLoginSuccess(loginRes.token, loginRes.username)
+        if ('requiresTwoFactor' in loginRes) {
+          setPendingToken(loginRes.pendingToken)
+        } else {
+          onLoginSuccess(loginRes.token, loginRes.username)
+        }
       } else {
         // Login flow
         const loginRes = await api.login({ username, password })
         localStorage.setItem('cached_is_registered', 'true')
-        onLoginSuccess(loginRes.token, loginRes.username)
+        if ('requiresTwoFactor' in loginRes) {
+          setPendingToken(loginRes.pendingToken)
+        } else {
+          onLoginSuccess(loginRes.token, loginRes.username)
+        }
       }
     } catch (err: any) {
       console.error(err)
       setError(err.message || 'Authentication failed. Please try again.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleTwoFactorSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!pendingToken) return
+    if (!twoFactorCode.trim()) {
+      setError('Enter the 6-digit code from your authenticator app.')
+      return
+    }
+    setError(null)
+    setTwoFactorLoading(true)
+    try {
+      const res = await api.verifyTwoFactorLogin(pendingToken, twoFactorCode.trim())
+      onLoginSuccess(res.token, res.username)
+    } catch (err: any) {
+      console.error(err)
+      setError(err.message || 'Invalid code. Please try again.')
+    } finally {
+      setTwoFactorLoading(false)
     }
   }
 
@@ -119,10 +150,72 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     )
   }
 
+  if (pendingToken) {
+    return (
+      <div className="app-shell min-h-screen text-foreground flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-card/60 backdrop-blur-xl border border-border/60 rounded-3xl p-8 shadow-2xl relative z-10 space-y-6">
+          <div className="text-center space-y-2 select-none">
+            <div className="mx-auto size-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
+              <ShieldCheck className="size-6 text-blue-500" />
+            </div>
+            <h1 className="text-2xl font-black tracking-tight text-foreground">Two-Factor Verification</h1>
+            <p className="text-xs text-muted-foreground">
+              Enter the 6-digit code from your authenticator app, or one of your recovery codes.
+            </p>
+          </div>
+
+          {error && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-xl flex items-start gap-2.5 animate-in slide-in-from-top-2 duration-200">
+              <ShieldAlert className="size-4 shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form noValidate onSubmit={handleTwoFactorSubmit} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Verification code</label>
+              <input
+                type="text"
+                inputMode="text"
+                autoFocus
+                disabled={twoFactorLoading}
+                placeholder="123456"
+                value={twoFactorCode}
+                onChange={e => setTwoFactorCode(e.target.value)}
+                autoComplete="one-time-code"
+                className="w-full px-3.5 py-2 text-sm text-center tracking-[0.3em] bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={twoFactorLoading}
+              className="press-scale w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-muted disabled:text-muted-foreground text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-600/15 hover:shadow-blue-600/25 transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              {twoFactorLoading ? (
+                <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              ) : (
+                'Verify'
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setPendingToken(null); setTwoFactorCode(''); setError(null) }}
+              className="w-full text-center text-xs font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer"
+            >
+              Back to login
+            </button>
+          </form>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="app-shell min-h-screen text-foreground flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-card/60 backdrop-blur-xl border border-border/60 rounded-3xl p-8 shadow-2xl relative z-10 space-y-6">
-        
+
         {/* Brand Header */}
         <div className="text-center space-y-2 select-none">
           <AppLogo className="mx-auto size-12 rounded-2xl shadow-xl shadow-blue-500/15" pulse />

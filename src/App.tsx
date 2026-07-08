@@ -562,16 +562,25 @@ function App() {
   useEffect(() => {
     if (!token || isLocked) return
     localStorage.setItem('last_active_time', Date.now().toString())
+    void api.sendSessionHeartbeat()
     const updateActivity = () => {
       localStorage.setItem('last_active_time', Date.now().toString())
     }
     // Throttle to once per 5 seconds
     let lastUpdate = 0
+    // Longer, separate throttle for the network heartbeat (this is what makes "Active Devices"
+    // in Settings show real last-used time instead of just session creation time) -- no need to
+    // hit the server anywhere near as often as we update the local inactivity-lock timestamp.
+    let lastHeartbeat = 0
     const throttled = () => {
       const now = Date.now()
       if (now - lastUpdate > 5000) {
         lastUpdate = now
         updateActivity()
+      }
+      if (now - lastHeartbeat > 60000) {
+        lastHeartbeat = now
+        void api.sendSessionHeartbeat()
       }
     }
     const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart']

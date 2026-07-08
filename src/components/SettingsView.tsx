@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Fingerprint, ShieldCheck, Bell, ChevronDown, ChevronUp, Lock, Unlock, MonitorSmartphone, CalendarDays } from 'lucide-react'
+import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Fingerprint, ShieldCheck, Bell, ChevronDown, ChevronUp, Lock, Unlock, MonitorSmartphone, CalendarDays, LogOut } from 'lucide-react'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { SmartAmountInput } from './ui/SmartAmountInput'
@@ -8,10 +8,25 @@ import { RowSyncBadge } from './ui/RowSyncBadge'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { getCycleRangeDates, getStartOfNCyclesAgo, getCurrentCycleYearAndMonth, formatDateForApi } from '../lib/cycle'
 import * as api from '../lib/api'
-import type { FingerprintCredentialSummary } from '../lib/api'
+import type { FingerprintCredentialSummary, SessionSummary } from '../lib/api'
 import { isPlatformAuthenticatorAvailable, createFingerprintCredential, getFriendlyDeviceLabel, base64UrlToHex } from '../lib/webauthn'
 import type { ToastTone } from './ui/ToastViewport'
 import { ToggleButton } from './ui/ToggleButton'
+import { TwoFactorSection } from './TwoFactorSection'
+import { EmailSection } from './EmailSection'
+import { ChangePasswordSection } from './ChangePasswordSection'
+
+const formatRelativeTime = (iso: string | null): string => {
+  if (!iso) return 'Never'
+  const diffMs = Date.now() - new Date(iso).getTime()
+  const diffMinutes = Math.round(diffMs / 60000)
+  if (diffMinutes < 1) return 'Just now'
+  if (diffMinutes < 60) return `${diffMinutes}m ago`
+  const diffHours = Math.round(diffMinutes / 60)
+  if (diffHours < 24) return `${diffHours}h ago`
+  const diffDays = Math.round(diffHours / 24)
+  return `${diffDays}d ago`
+}
 
 const DEVICE_CREDENTIAL_ID_KEY = 'fingerprint_credential_id_on_this_device'
 
@@ -150,7 +165,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [platformAuthAvailable, setPlatformAuthAvailable] = useState(false)
 
   // Active Sessions state
-  const [sessions, setSessions] = useState<Array<{ token: string; deviceName: string; createdAt: string; isLocked: boolean }>>([])
+  const [sessions, setSessions] = useState<SessionSummary[]>([])
 
   const loadFingerprintCredentials = async () => {
     try {
@@ -168,15 +183,27 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   }
 
-  const handleRevokeSession = async (token: string) => {
+  const handleRevokeSession = async (id: string) => {
     if (hideSensitive) return
     try {
-      await api.revokeSession(token)
+      await api.revokeSession(id)
       await loadSessions()
       onToast?.('Session revoked.', 'Session removed', 'success')
     } catch (err: any) {
       console.error(err)
       onToast?.(err.message || 'Failed to revoke session.', 'Error', 'error')
+    }
+  }
+
+  const handleRevokeAllOtherSessions = async () => {
+    if (hideSensitive) return
+    try {
+      const { revokedCount } = await api.revokeAllSessions(true)
+      await loadSessions()
+      onToast?.(`Logged out ${revokedCount} other device(s).`, 'Devices logged out', 'success')
+    } catch (err: any) {
+      console.error(err)
+      onToast?.(err.message || 'Failed to log out other devices.', 'Error', 'error')
     }
   }
 
@@ -858,39 +885,57 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
 
             <div className="space-y-1.5 pt-2">
-              {sessions.map(session => {
-                const isCurrent = session.token === localStorage.getItem('auth_token')
-                return (
-                  <div key={session.token} className="flex items-center justify-between gap-2 bg-muted/20 border border-border/40 px-3 py-2.5 rounded-xl text-xs">
-                    <div className="flex flex-col gap-0.5 min-w-0">
-                      <span className="flex items-center gap-2 text-foreground font-semibold truncate">
-                        <MonitorSmartphone className="size-3.5 text-blue-500 shrink-0" />
-                        <span className="truncate">{session.deviceName || 'Unknown Device'}</span>
-                        {isCurrent && (
-                          <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-500 text-[10px] font-bold uppercase tracking-wider">Current</span>
-                        )}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+              {sessions.map(session => (
+                <div key={session.id} className="flex items-center justify-between gap-2 bg-muted/20 border border-border/40 px-3 py-2.5 rounded-xl text-xs">
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="flex items-center gap-2 text-foreground font-semibold truncate">
+                      <MonitorSmartphone className="size-3.5 text-blue-500 shrink-0" />
+                      <span className="truncate">{session.deviceName || 'Unknown Device'}</span>
+                      {session.isCurrent && (
+                        <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-500 text-[10px] font-bold uppercase tracking-wider">Current</span>
+                      )}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-1.5 flex-wrap">
+                      <span className="flex items-center gap-1">
                         <CalendarDays className="size-3 opacity-70" />
                         Logged in: {new Date(session.createdAt).toLocaleDateString()}
                       </span>
-                    </div>
-                    {!isCurrent && (
-                      <button
-                        type="button"
-                        onClick={() => handleRevokeSession(session.token)}
-                        disabled={hideSensitive}
-                        className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg cursor-pointer transition shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
-                        title={hideSensitive ? 'Unhide balances to edit' : 'Log out this device'}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
-                    )}
+                      <span>&middot; Last active: {formatRelativeTime(session.lastActiveAt)}</span>
+                      {session.ipAddress && <span>&middot; {session.ipAddress}</span>}
+                    </span>
                   </div>
-                )
-              })}
+                  {!session.isCurrent && (
+                    <button
+                      type="button"
+                      onClick={() => handleRevokeSession(session.id)}
+                      disabled={hideSensitive}
+                      className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg cursor-pointer transition shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+                      title={hideSensitive ? 'Unhide balances to edit' : 'Log out this device'}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
+
+            {sessions.length > 1 && (
+              <button
+                type="button"
+                onClick={handleRevokeAllOtherSessions}
+                disabled={hideSensitive}
+                className="press-scale w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-500 border border-red-500/30 hover:bg-red-500/10 disabled:opacity-40 transition cursor-pointer"
+              >
+                <LogOut className="size-3.5" /> Log out all other devices
+              </button>
+            )}
           </section>
+
+          <TwoFactorSection hideSensitive={hideSensitive} onToast={onToast} />
+
+          <EmailSection hideSensitive={hideSensitive} onToast={onToast} />
+
+          <ChangePasswordSection hideSensitive={hideSensitive} onToast={onToast} />
         </div>
       </div>
     </div>

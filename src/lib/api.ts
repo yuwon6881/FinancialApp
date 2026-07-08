@@ -146,7 +146,11 @@ export async function fetchAuthStatus(): Promise<{ isRegistered: boolean; hasFin
   return response.json()
 }
 
-export async function login(credentials: any): Promise<{ token: string; username: string }> {
+export type LoginResult =
+  | { token: string; username: string }
+  | { requiresTwoFactor: true; pendingToken: string }
+
+export async function login(credentials: any): Promise<LoginResult> {
   const payload = { ...credentials, ...getDeviceInfo() }
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: 'POST',
@@ -158,6 +162,25 @@ export async function login(credentials: any): Promise<{ token: string; username
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
     throw new Error(errorData.message || 'Invalid credentials')
+  }
+  const data = await response.json()
+  if (data.requiresTwoFactor) {
+    return data
+  }
+  localStorage.setItem('auth_token', data.token)
+  queryCache.invalidateAll()
+  return data
+}
+
+export async function verifyTwoFactorLogin(pendingToken: string, code: string): Promise<{ token: string; username: string }> {
+  const response = await fetch(`${API_BASE_URL}/auth/login/2fa`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pendingToken, code }),
+  })
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(errorData.message || 'Invalid code')
   }
   const data = await response.json()
   localStorage.setItem('auth_token', data.token)
@@ -852,7 +875,19 @@ export async function verifyFingerprintLogin(challengeId: string, credential: an
   return data
 }
 
-export async function getSessions(): Promise<Array<{ token: string; deviceName: string; createdAt: string; expiresAt: string; isLocked: boolean }>> {
+export interface SessionSummary {
+  id: string
+  deviceName: string
+  createdAt: string
+  expiresAt: string
+  isLocked: boolean
+  lastActiveAt: string | null
+  ipAddress: string | null
+  userAgent: string | null
+  isCurrent: boolean
+}
+
+export async function getSessions(): Promise<SessionSummary[]> {
   const response = await fetch(`${API_BASE_URL}/auth/sessions`, {
     headers: getHeaders(),
   })
@@ -862,14 +897,162 @@ export async function getSessions(): Promise<Array<{ token: string; deviceName: 
   return response.json()
 }
 
-export async function revokeSession(token: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/auth/sessions/${encodeURIComponent(token)}`, {
+export async function revokeSession(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/auth/sessions/${encodeURIComponent(id)}`, {
     method: 'DELETE',
     headers: getHeaders(),
   })
   if (!response.ok) {
     throw new Error('Failed to revoke session')
   }
+}
+
+export async function revokeAllSessions(keepCurrent: boolean = true): Promise<{ revokedCount: number }> {
+  const response = await fetch(`${API_BASE_URL}/auth/sessions/revoke-all?keepCurrent=${keepCurrent}`, {
+    method: 'POST',
+    headers: getHeaders(),
+  })
+  if (!response.ok) {
+    throw new Error('Failed to log out other devices')
+  }
+  return response.json()
+}
+
+export async function sendSessionHeartbeat(): Promise<void> {
+  try {
+    await fetch(`${API_BASE_URL}/auth/sessions/heartbeat`, {
+      method: 'POST',
+      headers: getHeaders(),
+    })
+  } catch {
+    // Best-effort -- the client-side inactivity timer doesn't depend on this succeeding.
+  }
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ currentPassword, newPassword }),
+  })
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Failed to change password')
+  }
+}
+
+// Email binding/verification
+export async function bindEmail(email: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/auth/email`, {
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ email }),
+  })
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Failed to send verification code')
+  }
+}
+
+export async function verifyEmail(code: string): Promise<{ verified: boolean; message?: string }> {
+  const response = await fetch(`${API_BASE_URL}/auth/email/verify`, {
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ code }),
+  })
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Failed to verify email')
+  }
+  return response.json()
+}
+
+export async function resendEmailCode(): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/auth/email/resend`, {
+    method: 'POST',
+    headers: getHeaders(),
+  })
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Failed to resend code')
+  }
+}
+
+export async function unbindEmail(): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/auth/email`, {
+    method: 'DELETE',
+    headers: getHeaders(),
+  })
+  if (!response.ok) {
+    throw new Error('Failed to remove email')
+  }
+}
+
+// Two-factor authentication (TOTP)
+export interface TwoFactorStatus {
+  enabled: boolean
+  email: string | null
+  emailVerified: boolean
+}
+
+export async function getTwoFactorStatus(): Promise<TwoFactorStatus> {
+  const response = await fetch(`${API_BASE_URL}/auth/2fa/status`, {
+    headers: getHeaders(),
+  })
+  if (!response.ok) {
+    throw new Error('Failed to load two-factor status')
+  }
+  return response.json()
+}
+
+export async function setupTotp(): Promise<{ secret: string; otpauthUri: string }> {
+  const response = await fetch(`${API_BASE_URL}/auth/2fa/totp/setup`, {
+    method: 'POST',
+    headers: getHeaders(),
+  })
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Failed to start two-factor setup')
+  }
+  return response.json()
+}
+
+export async function enableTotp(code: string): Promise<{ enabled: boolean; recoveryCodes: string[] }> {
+  const response = await fetch(`${API_BASE_URL}/auth/2fa/totp/enable`, {
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ code }),
+  })
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Invalid code')
+  }
+  return response.json()
+}
+
+export async function disableTotp(password: string, code: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/auth/2fa/totp/disable`, {
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ password, code }),
+  })
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Failed to disable two-factor authentication')
+  }
+}
+
+export async function regenerateRecoveryCodes(password: string): Promise<{ recoveryCodes: string[] }> {
+  const response = await fetch(`${API_BASE_URL}/auth/2fa/recovery-codes/regenerate`, {
+    method: 'POST',
+    headers: getHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ password }),
+  })
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Failed to regenerate recovery codes')
+  }
+  return response.json()
 }
 
 // WebAuthn (fingerprint) re-verification against the CALLER'S EXISTING
