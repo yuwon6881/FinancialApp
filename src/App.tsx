@@ -747,6 +747,7 @@ function App() {
   // Fetch initial ledger and dashboard statistics
   async function loadAll(month?: string, year?: number, isBackground = false) {
     if (!token && !localStorage.getItem('auth_token')) return
+    let keepLoading = false
     const requestSeq = ++loadAllSeqRef.current
     const isStale = () => requestSeq !== loadAllSeqRef.current
     loadAllAbortRef.current?.abort()
@@ -759,60 +760,97 @@ function App() {
     }
     try {
       const dbData = await api.fetchDashboard(month, year, ac.signal)
-      const [txs, recs, cats, wishes, autoSuggests, wallet] = await Promise.all([
-        api.fetchTransactions(dbData.setting.selectedMonth, dbData.setting.selectedYear, undefined, ac.signal),
-        api.fetchRecurringPayments(ac.signal),
-        api.fetchCategories(ac.signal),
-        api.fetchWishlist(ac.signal).catch(() => []),
-        api.fetchAutocompleteSuggestions(ac.signal).catch(() => []),
-        api.fetchWalletBalance(ac.signal).catch(() => null)
-      ])
-      // A newer loadAll() was kicked off (e.g. the user switched cycles again)
-      // while this one was in flight -- discard this now-stale response instead
-      // of clobbering the newer cycle's data.
       if (isStale()) return
-      if (wallet !== null) {
-        setWalletBalance(wallet)
-        setCachedJSON(CACHE_KEYS.walletBalance, wallet)
-      }
+
       setSelectedMonth(dbData.setting.selectedMonth)
       setSelectedYear(dbData.setting.selectedYear)
       setDashboardData(dbData)
-      setTransactions(txs)
-      setRecurringPayments(recs)
-      setCategoriesList(cats)
-      setWishlist(wishes)
-      setAutocompleteSuggestions(autoSuggests)
       setError(null)
       isServerAwakeRef.current = true
       setIsLocked(false)
       sessionStorage.setItem('session_locked', 'false')
-
-      // Save to localStorage cache
       setCachedJSON(CACHE_KEYS.dashboardData, dbData)
-      setCachedJSON(CACHE_KEYS.transactions, txs)
-      setCachedJSON(CACHE_KEYS.recurringPayments, recs)
-      setCachedJSON(CACHE_KEYS.categories, cats)
-      setCachedJSON(CACHE_KEYS.wishlist, wishes)
-      setCachedCycleSnapshot(dbData.setting.selectedMonth, dbData.setting.selectedYear, dbData, txs)
 
-      // Sync dark mode from server preference (server wins over localStorage)
       const serverDark = dbData.setting.darkMode ?? false
       setDarkMode(serverDark)
       localStorage.setItem('dark_mode', serverDark.toString())
 
-      // Sync hide sensitive from server preference (server wins over localStorage)
       const serverHideSensitive = dbData.setting.hideSensitive ?? true
       setHideSensitive(serverHideSensitive)
       localStorage.setItem('hide_sensitive', serverHideSensitive.toString())
-
-
 
       if (dbData.pendingNotifications && dbData.pendingNotifications.length > 0 && !hasShownModalThisSession) {
         if (localStorage.getItem('show_notifications_on_login') !== 'false') {
           setShowLoginModal(true)
         }
         setHasShownModalThisSession(true)
+      }
+
+      const [txsResult, recsResult, catsResult, wishesResult, autoSuggestsResult, walletResult] = await Promise.allSettled([
+        api.fetchTransactions(dbData.setting.selectedMonth, dbData.setting.selectedYear, undefined, ac.signal),
+        api.fetchRecurringPayments(ac.signal),
+        api.fetchCategories(ac.signal),
+        api.fetchWishlist(ac.signal),
+        api.fetchAutocompleteSuggestions(ac.signal),
+        api.fetchWalletBalance(ac.signal)
+      ])
+      // A newer loadAll() was kicked off (e.g. the user switched cycles again)
+      // while this one was in flight -- discard this now-stale response instead
+      // of clobbering the newer cycle's data.
+      if (isStale()) return
+
+      const failedParts: string[] = []
+      const trackFailure = (label: string, result: PromiseSettledResult<unknown>) => {
+        if (result.status === 'rejected' && result.reason?.name !== 'AbortError') {
+          failedParts.push(label)
+          console.error(`Failed to hydrate ${label}:`, result.reason)
+        }
+      }
+
+      if (txsResult.status === 'fulfilled') {
+        setTransactions(txsResult.value)
+        setCachedJSON(CACHE_KEYS.transactions, txsResult.value)
+        setCachedCycleSnapshot(dbData.setting.selectedMonth, dbData.setting.selectedYear, dbData, txsResult.value)
+      } else {
+        trackFailure('transactions', txsResult)
+      }
+
+      if (recsResult.status === 'fulfilled') {
+        setRecurringPayments(recsResult.value)
+        setCachedJSON(CACHE_KEYS.recurringPayments, recsResult.value)
+      } else {
+        trackFailure('recurring payments', recsResult)
+      }
+
+      if (catsResult.status === 'fulfilled') {
+        setCategoriesList(catsResult.value)
+        setCachedJSON(CACHE_KEYS.categories, catsResult.value)
+      } else {
+        trackFailure('categories', catsResult)
+      }
+
+      if (wishesResult.status === 'fulfilled') {
+        setWishlist(wishesResult.value)
+        setCachedJSON(CACHE_KEYS.wishlist, wishesResult.value)
+      } else {
+        trackFailure('wishlist', wishesResult)
+      }
+
+      if (autoSuggestsResult.status === 'fulfilled') {
+        setAutocompleteSuggestions(autoSuggestsResult.value)
+      } else {
+        trackFailure('autocomplete suggestions', autoSuggestsResult)
+      }
+
+      if (walletResult.status === 'fulfilled') {
+        setWalletBalance(walletResult.value)
+        setCachedJSON(CACHE_KEYS.walletBalance, walletResult.value)
+      } else {
+        trackFailure('wallet balance', walletResult)
+      }
+
+      if (failedParts.length > 0) {
+        setError(`Some data could not be refreshed: ${failedParts.join(', ')}.`)
       }
     } catch (err: any) {
       if (err?.name === 'AbortError' || isStale()) return
@@ -822,7 +860,13 @@ function App() {
         if (!isJustLoggedIn) {
           handleLogout()
         } else {
-          setError(null)
+          keepLoading = true
+          setError('Starting session. Retrying data load...')
+          window.setTimeout(() => {
+            if (localStorage.getItem('auth_token')) {
+              void loadAll(month, year, false)
+            }
+          }, 750)
         }
       } else if (isSessionLockedError(err)) {
         markSessionLocked()
@@ -832,7 +876,9 @@ function App() {
       }
     } finally {
       if (!isStale()) {
-        setLoading(false)
+        if (!keepLoading) {
+          setLoading(false)
+        }
         setIsBackgroundSyncing(false)
       }
     }
@@ -1586,9 +1632,9 @@ function App() {
     )
   }
 
-  // Top Nav wallet total: always the real current cycle's total (from walletBalance), falling
-  // back to the naive all-time sum only until the very first fetch lands.
-  const totalBalance = walletBalance ?? allTransactions.reduce((acc, t) => acc + t.amount, 0)
+  // Top Nav wallet total: prefer the dedicated current-cycle wallet endpoint, then the
+  // dashboard's server total while that endpoint is still loading/unavailable.
+  const totalBalance = walletBalance ?? optimisticDashboardData?.stats?.totalBalance ?? allTransactions.reduce((acc, t) => acc + t.amount, 0)
 
   const [ledgerCyclesRange, setLedgerCyclesRange] = useState<'monthly' | '3month' | '6month' | 'yearly'>('monthly')
 
