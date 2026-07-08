@@ -225,7 +225,8 @@ export function invalidateCache(): void {
 // Dashboard
 export function fetchDashboard(month?: string, year?: number, signal?: AbortSignal): Promise<DashboardData> {
   const cacheKey = `dashboard:${month || ''}:${year || ''}`
-  const cachedPromise = queryCache.get<DashboardData>(cacheKey)
+  const canUseCache = !signal
+  const cachedPromise = canUseCache ? queryCache.get<DashboardData>(cacheKey) : null
   if (cachedPromise) return cachedPromise
 
   const promise = (async () => {
@@ -309,7 +310,9 @@ export function fetchDashboard(month?: string, year?: number, signal?: AbortSign
     }
   })()
 
-  queryCache.set(cacheKey, promise)
+  if (canUseCache) {
+    queryCache.set(cacheKey, promise)
+  }
   return promise
 }
 
@@ -431,7 +434,8 @@ function isClosedCycle(month?: string, year?: number): boolean {
 
 export function fetchTransactions(month?: string, year?: number, all?: boolean, signal?: AbortSignal): Promise<Transaction[]> {
   const cacheKey = all ? 'transactions:all' : `transactions:${month || ''}:${year || ''}`
-  const cachedPromise = queryCache.get<Transaction[]>(cacheKey)
+  const canUseCache = !signal
+  const cachedPromise = canUseCache ? queryCache.get<Transaction[]>(cacheKey) : null
   if (cachedPromise) return cachedPromise
 
   const promise = (async () => {
@@ -460,7 +464,9 @@ export function fetchTransactions(month?: string, year?: number, all?: boolean, 
     return (data || []).map(deobfuscateTransaction)
   })()
 
-  queryCache.set(cacheKey, promise, isClosedCycle(month, year) ? CLOSED_CYCLE_STALE_TIME : undefined)
+  if (canUseCache) {
+    queryCache.set(cacheKey, promise, isClosedCycle(month, year) ? CLOSED_CYCLE_STALE_TIME : undefined)
+  }
   return promise
 }
 
@@ -588,7 +594,8 @@ export async function updateTransaction(id: string, transaction: Omit<Transactio
 // Recurring Payments
 export function fetchRecurringPayments(signal?: AbortSignal): Promise<RecurringPayment[]> {
   const cacheKey = 'recurringPayments'
-  const cachedPromise = queryCache.get<RecurringPayment[]>(cacheKey)
+  const canUseCache = !signal
+  const cachedPromise = canUseCache ? queryCache.get<RecurringPayment[]>(cacheKey) : null
   if (cachedPromise) return cachedPromise
 
   const promise = (async () => {
@@ -603,7 +610,9 @@ export function fetchRecurringPayments(signal?: AbortSignal): Promise<RecurringP
     return (data || []).map(deobfuscateRecurringPayment)
   })()
 
-  queryCache.set(cacheKey, promise, 300000)
+  if (canUseCache) {
+    queryCache.set(cacheKey, promise, 300000)
+  }
   return promise
 }
 
@@ -674,7 +683,8 @@ export async function deleteRecurringPayment(id: string): Promise<void> {
 // Categories Management
 export function fetchCategories(signal?: AbortSignal): Promise<TransactionCategory[]> {
   const cacheKey = 'categories'
-  const cachedPromise = queryCache.get<TransactionCategory[]>(cacheKey)
+  const canUseCache = !signal
+  const cachedPromise = canUseCache ? queryCache.get<TransactionCategory[]>(cacheKey) : null
   if (cachedPromise) return cachedPromise
 
   const promise = (async () => {
@@ -688,7 +698,9 @@ export function fetchCategories(signal?: AbortSignal): Promise<TransactionCatego
     return response.json()
   })()
 
-  queryCache.set(cacheKey, promise, 300000)
+  if (canUseCache) {
+    queryCache.set(cacheKey, promise, 300000)
+  }
   return promise
 }
 
@@ -750,7 +762,8 @@ export async function lockSession(): Promise<void> {
 }
 
 export async function fetchWishlist(signal?: AbortSignal): Promise<WishlistItem[]> {
-  const cachedPromise = queryCache.get<WishlistItem[]>('wishlist')
+  const canUseCache = !signal
+  const cachedPromise = canUseCache ? queryCache.get<WishlistItem[]>('wishlist') : null
   if (cachedPromise) return cachedPromise
 
   const promise = (async () => {
@@ -764,7 +777,9 @@ export async function fetchWishlist(signal?: AbortSignal): Promise<WishlistItem[
     return response.json()
   })()
   
-  queryCache.set('wishlist', promise, 120000)
+  if (canUseCache) {
+    queryCache.set('wishlist', promise, 120000)
+  }
   return promise
 }
 
