@@ -2086,7 +2086,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 return (
                   <motion.tr 
                     layout
-                    variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { type: "spring", stiffness: 120 } } }} 
+                    variants={{ hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] } } }} 
                     id={`tx-row-${t.id}`} key={t.id} className="hover:bg-muted/10 transition duration-150"
                   >
                     <td className="p-4 font-medium text-muted-foreground">{t.date}</td>
@@ -2227,7 +2227,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           const isSyncing = isTxSyncing(t.id)
 
           return (
-            <motion.div layout variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { type: "spring", stiffness: 120 } } }} key={t.id}>
+            <motion.div layout variants={{ hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] } } }} key={t.id}>
             <SwipeableRow
               id={`tx-row-${t.id}`}
               hint={idx === 0}

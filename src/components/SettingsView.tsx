@@ -13,8 +13,8 @@ import { isPlatformAuthenticatorAvailable, createFingerprintCredential, getFrien
 import type { ToastTone } from './ui/ToastViewport'
 import { ToggleButton } from './ui/ToggleButton'
 import { TwoFactorSection } from './TwoFactorSection'
-import { EmailSection } from './EmailSection'
 import { ChangePasswordSection } from './ChangePasswordSection'
+import { CollapsibleBody } from './ui/CollapsibleBody'
 
 const formatRelativeTime = (iso: string | null): string => {
   if (!iso) return 'Never'
@@ -128,6 +128,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     })
   }
   const [showUsageDetails, setShowUsageDetails] = useState(false)
+  const [categoriesOpen, setCategoriesOpen] = useState(false)
+  const [devicesOpen, setDevicesOpen] = useState(false)
   const [usageTransactions, setUsageTransactions] = useState<{ category: string }[] | null>(null)
   const [usageError, setUsageError] = useState<string | null>(null)
 
@@ -643,9 +645,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
         <div className="space-y-6">
 
-          <section className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
+          <section className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => setCategoriesOpen(o => !o)}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCategoriesOpen(o => !o) } }}
+              aria-expanded={categoriesOpen}
+              className="flex items-center justify-between gap-3 cursor-pointer"
+            >
+              <div className="min-w-0">
                 <h3 className="text-sm font-bold text-foreground">Transaction Categories</h3>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
                   {visibleCategories.length} active categories.
@@ -657,46 +666,52 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   )}
                 </p>
               </div>
-              {categoryUsage && visibleCategories.length > 0 && (
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowUsageDetails(v => !v)}
-                    className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-muted-foreground bg-background border border-border/60 hover:text-foreground hover:bg-muted transition cursor-pointer"
-                  >
-                    Usage
-                    {showUsageDetails ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
-                  </button>
+              <div className="flex items-center gap-2 shrink-0">
+                {categoryUsage && visibleCategories.length > 0 && (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); setShowUsageDetails(v => !v) }}
+                      className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-muted-foreground bg-background border border-border/60 hover:text-foreground hover:bg-muted transition cursor-pointer"
+                    >
+                      Usage
+                      {showUsageDetails ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+                    </button>
 
-                  {showUsageDetails && (
-                    <div className="absolute right-0 top-full mt-2 w-72 md:w-80 z-50 bg-card border border-border/80 shadow-lg rounded-xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-150">
-                      <p className="text-[10px] text-muted-foreground leading-relaxed">
-                        Usage over the last {USAGE_LOOKBACK_CYCLES} cycles, least used first. Categories with no recent activity are good candidates to remove.
-                      </p>
-                      <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                        {categoryUsage.map(({ category, count }) => (
-                          <div
-                            key={category.id}
-                            className={`flex items-center justify-between gap-2 border px-2.5 py-1.5 rounded-lg text-[11px] ${
-                              count === 0 ? 'bg-orange-500/5 border-orange-500/25' : 'bg-background border-border/50'
-                            }`}
-                          >
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded border font-semibold ${getCategoryBadgeClass(category.name)}`}>
-                              {category.name}
-                            </span>
-                            {count === 0 ? (
-                              <span className="text-orange-500 font-semibold text-right text-[10px]">No activity in last {USAGE_LOOKBACK_CYCLES} cycles</span>
-                            ) : (
-                              <span className="text-muted-foreground font-semibold text-[10px]">{count}&times; in {USAGE_LOOKBACK_CYCLES} cycles</span>
-                            )}
-                          </div>
-                        ))}
+                    {showUsageDetails && (
+                      <div className="absolute right-0 top-full mt-2 w-72 md:w-80 z-50 bg-card border border-border/80 shadow-lg rounded-xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-150">
+                        <p className="text-[10px] text-muted-foreground leading-relaxed">
+                          Usage over the last {USAGE_LOOKBACK_CYCLES} cycles, least used first. Categories with no recent activity are good candidates to remove.
+                        </p>
+                        <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                          {categoryUsage.map(({ category, count }) => (
+                            <div
+                              key={category.id}
+                              className={`flex items-center justify-between gap-2 border px-2.5 py-1.5 rounded-lg text-[11px] ${
+                                count === 0 ? 'bg-orange-500/5 border-orange-500/25' : 'bg-background border-border/50'
+                              }`}
+                            >
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded border font-semibold ${getCategoryBadgeClass(category.name)}`}>
+                                {category.name}
+                              </span>
+                              {count === 0 ? (
+                                <span className="text-orange-500 font-semibold text-right text-[10px]">No activity in last {USAGE_LOOKBACK_CYCLES} cycles</span>
+                              ) : (
+                                <span className="text-muted-foreground font-semibold text-[10px]">{count}&times; in {USAGE_LOOKBACK_CYCLES} cycles</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                )}
+                {categoriesOpen ? <ChevronUp className="size-4 text-muted-foreground shrink-0" /> : <ChevronDown className="size-4 text-muted-foreground shrink-0" />}
+              </div>
             </div>
+
+            <CollapsibleBody open={categoriesOpen}>
+            <div className="space-y-4 pt-4">
 
             {usageError && (
               <p className="text-[10px] font-semibold text-orange-500 flex items-center gap-1">
@@ -793,6 +808,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </p>
               )}
             </div>
+
+            </div>
+            </CollapsibleBody>
           </section>
 
           {/* Notifications Section */}
@@ -873,18 +891,28 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           )}
 
           {/* Active Devices Section */}
-          <section className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5 shadow-sm space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500/10 rounded-xl">
+          <section className="app-panel rounded-2xl border border-border/60 bg-card/92 shadow-sm overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setDevicesOpen(o => !o)}
+              aria-expanded={devicesOpen}
+              className="w-full flex items-center gap-3 p-5 text-left cursor-pointer"
+            >
+              <div className="p-2 bg-blue-500/10 rounded-xl shrink-0">
                 <MonitorSmartphone className="size-4 text-blue-500" />
               </div>
-              <div>
+              <div className="flex-1 min-w-0">
                 <h3 className="text-sm font-bold text-foreground">Active Devices</h3>
                 <p className="text-[11px] text-muted-foreground">Manage devices currently logged into your account.</p>
               </div>
-            </div>
+              <span className="shrink-0 text-[10px] font-bold text-muted-foreground">{sessions.length}</span>
+              {devicesOpen ? <ChevronUp className="size-4 text-muted-foreground shrink-0" /> : <ChevronDown className="size-4 text-muted-foreground shrink-0" />}
+            </button>
 
-            <div className="space-y-1.5 pt-2">
+            <CollapsibleBody open={devicesOpen}>
+            <div className="px-5 pb-5 border-t border-border/40 pt-4 space-y-4">
+
+            <div className="space-y-1.5">
               {sessions.map(session => (
                 <div key={session.id} className="flex items-center justify-between gap-2 bg-muted/20 border border-border/40 px-3 py-2.5 rounded-xl text-xs">
                   <div className="flex flex-col gap-0.5 min-w-0">
@@ -929,11 +957,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <LogOut className="size-3.5" /> Log out all other devices
               </button>
             )}
+
+            </div>
+            </CollapsibleBody>
           </section>
 
           <TwoFactorSection hideSensitive={hideSensitive} onToast={onToast} />
-
-          <EmailSection hideSensitive={hideSensitive} onToast={onToast} />
 
           <ChangePasswordSection hideSensitive={hideSensitive} onToast={onToast} />
         </div>

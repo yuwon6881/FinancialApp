@@ -310,6 +310,19 @@ export function fetchDashboard(month?: string, year?: number): Promise<Dashboard
   return promise
 }
 
+// Always reflects the real current cycle's wallet total, independent of whatever cycle the
+// Dashboard/Ledger has navigated to -- used by the navbar wallet widget.
+export async function fetchWalletBalance(): Promise<number> {
+  const response = await fetch(`${API_BASE_URL}/financial/wallet-balance`, {
+    headers: getHeaders(),
+  })
+  if (!response.ok) {
+    throw new Error('Failed to fetch wallet balance')
+  }
+  const data = await response.json()
+  return deobfuscateAmount(data.totalBalance)
+}
+
 export async function updateSettings(settings: {
   targetStabilityFund: number
   essentialsAlloc: number
@@ -941,58 +954,9 @@ export async function changePassword(currentPassword: string, newPassword: strin
   }
 }
 
-// Email binding/verification
-export async function bindEmail(email: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/auth/email`, {
-    method: 'POST',
-    headers: getHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ email }),
-  })
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}))
-    throw new Error(err.message || 'Failed to send verification code')
-  }
-}
-
-export async function verifyEmail(code: string): Promise<{ verified: boolean; message?: string }> {
-  const response = await fetch(`${API_BASE_URL}/auth/email/verify`, {
-    method: 'POST',
-    headers: getHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ code }),
-  })
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}))
-    throw new Error(err.message || 'Failed to verify email')
-  }
-  return response.json()
-}
-
-export async function resendEmailCode(): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/auth/email/resend`, {
-    method: 'POST',
-    headers: getHeaders(),
-  })
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}))
-    throw new Error(err.message || 'Failed to resend code')
-  }
-}
-
-export async function unbindEmail(): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/auth/email`, {
-    method: 'DELETE',
-    headers: getHeaders(),
-  })
-  if (!response.ok) {
-    throw new Error('Failed to remove email')
-  }
-}
-
 // Two-factor authentication (TOTP)
 export interface TwoFactorStatus {
   enabled: boolean
-  email: string | null
-  emailVerified: boolean
 }
 
 export async function getTwoFactorStatus(): Promise<TwoFactorStatus> {

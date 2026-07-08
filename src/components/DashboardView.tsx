@@ -40,7 +40,6 @@ interface DashboardViewProps {
     showAllCycles?: boolean;
   }) => void
   wishlist?: WishlistItem[]
-  isHoveringWallet: boolean
   onDiscardSubscription?: (noti: any) => void
   onAddTransaction?: (newTx: Omit<Transaction, 'id'>) => Promise<void> | void
   onAddBalanceAdjustment?: (newTx: Omit<Transaction, 'id'>) => Promise<void> | void
@@ -57,7 +56,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onDeletePayment,
   onNavigateToLedger,
   wishlist = [],
-  isHoveringWallet,
   onDiscardSubscription,
   onAddBalanceAdjustment,
   isSwitchingCycle = false
@@ -570,7 +568,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {/* Table Body */}
             {categories.map(c => {
               const isNeg = c.remaining < 0
-              const isHighlighted = (isHoveringLiquidNetWorth || isHoveringWallet) && c.name !== 'Growth'
+              const isHighlighted = isHoveringLiquidNetWorth && c.name !== 'Growth'
               
               let highlightClass = 'border-transparent bg-transparent hover:bg-muted/10'
               let transitionStyles: React.CSSProperties = {
@@ -644,7 +642,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="block md:hidden space-y-4">
           {categories.map(c => {
             const isNeg = c.remaining < 0
-            const isHighlighted = (isHoveringLiquidNetWorth || isHoveringWallet) && c.name !== 'Growth'
+            const isHighlighted = isHoveringLiquidNetWorth && c.name !== 'Growth'
             
             let highlightClass = 'border-border bg-background/50'
             let transitionStyles: React.CSSProperties = {

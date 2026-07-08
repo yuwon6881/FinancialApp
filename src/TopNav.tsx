@@ -45,8 +45,6 @@ interface TopNavProps {
   darkMode: boolean
   onToggleDarkMode: () => void
   currency?: string
-  onMouseEnterWallet?: () => void
-  onMouseLeaveWallet?: () => void
   isSyncing?: boolean
   syncLabel?: string
   isOffline?: boolean
@@ -71,8 +69,6 @@ const TopNav: React.FC<TopNavProps> = ({
   darkMode,
   onToggleDarkMode,
   currency = 'USD',
-  onMouseEnterWallet,
-  onMouseLeaveWallet,
   isSyncing = false,
   syncLabel,
   isOffline = false,
@@ -251,13 +247,11 @@ const TopNav: React.FC<TopNavProps> = ({
         {/* Right Side Widgets & Actions */}
         <div className="flex-1 flex items-center justify-end gap-1.5 sm:gap-3 md:gap-4 min-w-max">
           
-          {/* Quick Metrics (Balance Display) */}
-          <div 
-            onMouseEnter={onMouseEnterWallet}
-            onMouseLeave={onMouseLeaveWallet}
+          {/* Quick Metrics (Balance Display) -- always the current cycle's wallet total, shown at every breakpoint */}
+          <div
             onClick={() => onTabChange('dashboard')}
-            className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/20 hover:border-blue-500/40 rounded-xl select-none shrink-0 cursor-pointer transition-all duration-150" 
-            title={hideSensitive ? "Sensitive balance hidden (Click to view dashboard)" : "Net Balance (Hover to highlight categories)"}
+            className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/20 hover:border-blue-500/40 rounded-xl select-none shrink-0 cursor-pointer transition-all duration-150"
+            title={hideSensitive ? "Sensitive balance hidden (Click to view dashboard)" : "Net Balance (Click to view dashboard)"}
           >
             <Wallet className="size-3.5 text-blue-500" />
             {hideSensitive ? (

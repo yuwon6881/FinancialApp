@@ -117,6 +117,10 @@ function App() {
   const [recurringPayments, setRecurringPayments] = useState<RecurringPayment[]>(() => getCachedJSON(CACHE_KEYS.recurringPayments, []))
   const [categoriesList, setCategoriesList] = useState<TransactionCategory[]>(() => getCachedJSON(CACHE_KEYS.categories, []))
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(() => getCachedJSON(CACHE_KEYS.dashboardData, null))
+  // Always the real current cycle's wallet total (see fetchWalletBalance) -- deliberately NOT
+  // derived from dashboardData/optimisticDashboardData, since those track whatever cycle the
+  // Dashboard/Ledger has navigated to and the navbar wallet must not follow that navigation.
+  const [walletBalance, setWalletBalance] = useState<number | null>(null)
   const [wishlist, setWishlist] = useState<WishlistItem[]>(() => getCachedJSON(CACHE_KEYS.wishlist, []))
   const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<import('./types').AutocompleteSuggestion[]>([])
 
@@ -148,7 +152,6 @@ function App() {
   const [autoOpenLedgerAdd, setAutoOpenLedgerAdd] = useState(false)
   const [autoOpenSubscriptionAdd, setAutoOpenSubscriptionAdd] = useState(false)
   const [autoOpenWishlistAdd, setAutoOpenWishlistAdd] = useState(false)
-  const [isHoveringWallet, setIsHoveringWallet] = useState(false)
   const [highlightedTxId, setHighlightedTxId] = useState<string | null>(null)
   const [hideSensitive, setHideSensitive] = useState<boolean>(() => {
     return localStorage.getItem('hide_sensitive') !== 'false'
@@ -711,13 +714,15 @@ function App() {
     }
     try {
       const dbData = await api.fetchDashboard(month, year)
-      const [txs, recs, cats, wishes, autoSuggests] = await Promise.all([
+      const [txs, recs, cats, wishes, autoSuggests, wallet] = await Promise.all([
         api.fetchTransactions(dbData.setting.selectedMonth, dbData.setting.selectedYear),
         api.fetchRecurringPayments(),
         api.fetchCategories(),
         api.fetchWishlist().catch(() => []),
-        api.fetchAutocompleteSuggestions().catch(() => [])
+        api.fetchAutocompleteSuggestions().catch(() => []),
+        api.fetchWalletBalance().catch(() => null)
       ])
+      if (wallet !== null) setWalletBalance(wallet)
       setSelectedMonth(dbData.setting.selectedMonth)
       setSelectedYear(dbData.setting.selectedYear)
       setDashboardData(dbData)
@@ -1515,13 +1520,9 @@ function App() {
     )
   }
 
-  // Calculate Net Worth for Top Nav summary display
-  const totalBalance = useMemo(() => {
-    if (optimisticDashboardData) {
-      return optimisticDashboardData.stats.totalBalance
-    }
-    return allTransactions.reduce((acc, t) => acc + t.amount, 0)
-  }, [allTransactions, optimisticDashboardData])
+  // Top Nav wallet total: always the real current cycle's total (from walletBalance), falling
+  // back to the naive all-time sum only until the very first fetch lands.
+  const totalBalance = walletBalance ?? allTransactions.reduce((acc, t) => acc + t.amount, 0)
 
   const [ledgerCyclesRange, setLedgerCyclesRange] = useState<'monthly' | '3month' | '6month' | 'yearly'>('monthly')
 
@@ -1675,8 +1676,6 @@ function App() {
         darkMode={darkMode}
         onToggleDarkMode={handleToggleDarkMode}
         currency={optimisticDashboardData?.setting?.currency || 'USD'}
-        onMouseEnterWallet={() => setIsHoveringWallet(true)}
-        onMouseLeaveWallet={() => setIsHoveringWallet(false)}
         isSyncing={isBackgroundSyncing || pendingOps.length > 0}
         isOffline={isOffline}
         syncLabel={
@@ -1746,7 +1745,6 @@ function App() {
             onDeletePayment={handleDeletePayment}
             onNavigateToLedger={handleNavigateToLedger}
             wishlist={allWishlist}
-            isHoveringWallet={isHoveringWallet}
             onDiscardSubscription={handleDiscardSubscription}
             onAddTransaction={handleAddTransaction}
             onAddBalanceAdjustment={handleAddBalanceAdjustment}
