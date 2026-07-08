@@ -578,8 +578,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="grid grid-cols-[1.8fr_1fr_1.5fr_2fr_2fr_2fr] items-center gap-4 border-b border-border/50 text-muted-foreground font-semibold pb-2.5 px-4 mb-2">
               <div>Category</div>
               <div>Target Alloc.</div>
-              <div className="text-right">Target Budget</div>
-              <div className="text-right">Start Budget (Carried Over)</div>
+              <div className="text-right">Cycle Budget</div>
+              <div className="text-right">Carried Over</div>
               <div className="text-right">Net Change (This Cycle)</div>
               <div className="text-right">Remaining Balance</div>
             </div>
@@ -699,11 +699,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 
                 <div className="grid grid-cols-2 gap-4 text-xs border-t border-border/30 pt-2.5">
                   <div>
-                    <span className="text-muted-foreground text-[10px] block mb-0.5">Target Budget</span>
+                    <span className="text-muted-foreground text-[10px] block mb-0.5">Cycle Budget</span>
                     <span className="font-semibold text-foreground">{formatSensitive(c.target)}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground text-[10px] block mb-0.5">Start (Carried Over)</span>
+                    <span className="text-muted-foreground text-[10px] block mb-0.5">Carried Over</span>
                     <span className="font-semibold text-foreground">{formatSensitive(c.budget)}</span>
                   </div>
                 </div>
