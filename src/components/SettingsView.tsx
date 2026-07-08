@@ -6,7 +6,7 @@ import { CustomSelect } from './ui/CustomSelect'
 import { SmartAmountInput } from './ui/SmartAmountInput'
 import { RowSyncBadge } from './ui/RowSyncBadge'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
-import { MONTH_NAMES, getCycleRangeDates, getStartOfNCyclesAgo, formatDateForApi } from '../lib/cycle'
+import { getCycleRangeDates, getStartOfNCyclesAgo, getCurrentCycleYearAndMonth, formatDateForApi } from '../lib/cycle'
 import * as api from '../lib/api'
 import type { FingerprintCredentialSummary } from '../lib/api'
 import { isPlatformAuthenticatorAvailable, createFingerprintCredential, getFriendlyDeviceLabel, base64UrlToHex } from '../lib/webauthn'
@@ -118,11 +118,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   useEffect(() => {
     let cancelled = false
-    const activeMonthIdx = MONTH_NAMES.indexOf(activeSettings.selectedMonth) + 1
-    if (activeMonthIdx <= 0) return
+    // Anchored to today's real cycle, not activeSettings.selectedMonth/selectedYear --
+    // that field tracks whatever cycle was last navigated to on the Dashboard/Ledger,
+    // which is a different concept ("last viewed") and would otherwise make this
+    // "recent usage" window silently drift to a stale period if the user had been
+    // browsing an old month elsewhere before opening Settings.
+    const { year: activeYear, monthIndex: activeMonthIdx } = getCurrentCycleYearAndMonth(activeSettings.cycleDay)
 
-    const startDate = getStartOfNCyclesAgo(activeSettings.selectedYear, activeMonthIdx, activeSettings.cycleDay, USAGE_LOOKBACK_CYCLES)
-    const endDate = getCycleRangeDates(activeSettings.selectedYear, activeMonthIdx, activeSettings.cycleDay).end
+    const startDate = getStartOfNCyclesAgo(activeYear, activeMonthIdx, activeSettings.cycleDay, USAGE_LOOKBACK_CYCLES)
+    const endDate = getCycleRangeDates(activeYear, activeMonthIdx, activeSettings.cycleDay).end
 
     // pageSize is clamped to 500 server-side; comfortably covers 6 cycles for normal usage volumes.
     api.fetchPagedTransactions({
@@ -138,7 +142,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         if (!cancelled) setUsageError('Could not load category usage.')
       })
     return () => { cancelled = true }
-  }, [activeSettings.selectedMonth, activeSettings.selectedYear, activeSettings.cycleDay])
+  }, [activeSettings.cycleDay])
 
   // Fingerprint (WebAuthn) state
   const [fingerprintCredentials, setFingerprintCredentials] = useState<FingerprintCredentialSummary[]>([])

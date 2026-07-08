@@ -38,6 +38,24 @@ export function getStartOfNCyclesAgo(activeYear: number, activeMonthIndex: numbe
   return start
 }
 
+// The cycle "today" actually falls in, independent of whatever cycle the user
+// has navigated to elsewhere (Dashboard/Ledger persist that as the "selected"
+// period, which is a different concept -- last viewed, not current). Mirrors
+// the backend's GetCycleYearAndMonthIndexForDate.
+export function getCurrentCycleYearAndMonth(cycleDay: number): { year: number; monthIndex: number } {
+  const now = new Date()
+  let year = now.getFullYear()
+  let monthIndex = now.getMonth() + 1
+  if (cycleDay > 1 && now.getDate() < cycleDay) {
+    monthIndex--
+    if (monthIndex < 1) {
+      monthIndex = 12
+      year--
+    }
+  }
+  return { year, monthIndex }
+}
+
 export function formatDateForApi(d: Date): string {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
