@@ -9,6 +9,7 @@ export const CACHE_KEYS = {
   wishlist: 'cached_wishlist',
   pendingTransactions: 'pending_transactions',
   pendingOperations: 'pending_operations',
+  walletBalance: 'cached_wallet_balance',
 } as const
 
 export function getCachedJSON<T>(key: string, fallback: T): T {

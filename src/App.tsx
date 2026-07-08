@@ -120,7 +120,7 @@ function App() {
   // Always the real current cycle's wallet total (see fetchWalletBalance) -- deliberately NOT
   // derived from dashboardData/optimisticDashboardData, since those track whatever cycle the
   // Dashboard/Ledger has navigated to and the navbar wallet must not follow that navigation.
-  const [walletBalance, setWalletBalance] = useState<number | null>(null)
+  const [walletBalance, setWalletBalance] = useState<number | null>(() => getCachedJSON<number | null>(CACHE_KEYS.walletBalance, null))
   const [wishlist, setWishlist] = useState<WishlistItem[]>(() => getCachedJSON(CACHE_KEYS.wishlist, []))
   const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<import('./types').AutocompleteSuggestion[]>([])
 
@@ -672,6 +672,7 @@ function App() {
     setToken(null)
     setUsername('')
     setDashboardData(null)
+    setWalletBalance(null)
     setTransactions([])
     setRecurringPayments([])
     mutateQueue(() => [])
@@ -696,6 +697,7 @@ function App() {
     localStorage.removeItem(CACHE_KEYS.recurringPayments)
     localStorage.removeItem(CACHE_KEYS.categories)
     localStorage.removeItem(CACHE_KEYS.wishlist)
+    localStorage.removeItem(CACHE_KEYS.walletBalance)
     localStorage.removeItem(CACHE_KEYS.pendingTransactions)
     localStorage.removeItem(CACHE_KEYS.pendingOperations)
     localStorage.removeItem('failed_operations')
@@ -722,7 +724,10 @@ function App() {
         api.fetchAutocompleteSuggestions().catch(() => []),
         api.fetchWalletBalance().catch(() => null)
       ])
-      if (wallet !== null) setWalletBalance(wallet)
+      if (wallet !== null) {
+        setWalletBalance(wallet)
+        setCachedJSON(CACHE_KEYS.walletBalance, wallet)
+      }
       setSelectedMonth(dbData.setting.selectedMonth)
       setSelectedYear(dbData.setting.selectedYear)
       setDashboardData(dbData)

@@ -59,7 +59,7 @@ export const PasswordEntryModal: React.FC<PasswordEntryModalProps> = ({
         </div>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-3 -mt-2">
         {description && <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>}
         <div className="space-y-1">
           <input

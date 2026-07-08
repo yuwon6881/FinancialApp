@@ -813,6 +813,82 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </CollapsibleBody>
           </section>
 
+          {/* Active Devices Section */}
+          <section className="app-panel rounded-2xl border border-border/60 bg-card/92 shadow-sm overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setDevicesOpen(o => !o)}
+              aria-expanded={devicesOpen}
+              className="w-full flex items-center gap-3 p-5 text-left cursor-pointer"
+            >
+              <div className="p-2 bg-blue-500/10 rounded-xl shrink-0">
+                <MonitorSmartphone className="size-4 text-blue-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-foreground">Active Devices</h3>
+                <p className="text-[11px] text-muted-foreground">Manage devices currently logged into your account.</p>
+              </div>
+              <span className="shrink-0 text-[10px] font-bold text-muted-foreground">{sessions.length}</span>
+              {devicesOpen ? <ChevronUp className="size-4 text-muted-foreground shrink-0" /> : <ChevronDown className="size-4 text-muted-foreground shrink-0" />}
+            </button>
+
+            <CollapsibleBody open={devicesOpen}>
+            <div className="px-5 pb-5 border-t border-border/40 pt-4 space-y-4">
+
+            <div className="space-y-1.5">
+              {sessions.map(session => (
+                <div key={session.id} className="flex items-center justify-between gap-2 bg-muted/20 border border-border/40 px-3 py-2.5 rounded-xl text-xs">
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="flex items-center gap-2 text-foreground font-semibold truncate">
+                      <MonitorSmartphone className="size-3.5 text-blue-500 shrink-0" />
+                      <span className="truncate">{session.deviceName || 'Unknown Device'}</span>
+                      {session.isCurrent && (
+                        <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-500 text-[10px] font-bold uppercase tracking-wider">Current</span>
+                      )}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-1.5 flex-wrap">
+                      <span className="flex items-center gap-1">
+                        <CalendarDays className="size-3 opacity-70" />
+                        Logged in: {new Date(session.createdAt).toLocaleDateString()}
+                      </span>
+                      <span>&middot; Last active: {formatRelativeTime(session.lastActiveAt)}</span>
+                      {session.ipAddress && <span>&middot; {session.ipAddress}</span>}
+                    </span>
+                  </div>
+                  {!session.isCurrent && (
+                    <button
+                      type="button"
+                      onClick={() => handleRevokeSession(session.id)}
+                      disabled={hideSensitive}
+                      className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg cursor-pointer transition shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+                      title={hideSensitive ? 'Unhide balances to edit' : 'Log out this device'}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {sessions.length > 1 && (
+              <button
+                type="button"
+                onClick={handleRevokeAllOtherSessions}
+                disabled={hideSensitive}
+                className="press-scale w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-500 border border-red-500/30 hover:bg-red-500/10 disabled:opacity-40 transition cursor-pointer"
+              >
+                <LogOut className="size-3.5" /> Log out all other devices
+              </button>
+            )}
+
+            </div>
+            </CollapsibleBody>
+          </section>
+
+          <TwoFactorSection hideSensitive={hideSensitive} onToast={onToast} />
+
+          <ChangePasswordSection hideSensitive={hideSensitive} onToast={onToast} />
+
           {/* Notifications Section */}
           <section className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5 shadow-sm space-y-3">
             <div className="flex items-center gap-2.5 pb-3 border-b border-border/40">
@@ -889,82 +965,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               )}
             </section>
           )}
-
-          {/* Active Devices Section */}
-          <section className="app-panel rounded-2xl border border-border/60 bg-card/92 shadow-sm overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setDevicesOpen(o => !o)}
-              aria-expanded={devicesOpen}
-              className="w-full flex items-center gap-3 p-5 text-left cursor-pointer"
-            >
-              <div className="p-2 bg-blue-500/10 rounded-xl shrink-0">
-                <MonitorSmartphone className="size-4 text-blue-500" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-bold text-foreground">Active Devices</h3>
-                <p className="text-[11px] text-muted-foreground">Manage devices currently logged into your account.</p>
-              </div>
-              <span className="shrink-0 text-[10px] font-bold text-muted-foreground">{sessions.length}</span>
-              {devicesOpen ? <ChevronUp className="size-4 text-muted-foreground shrink-0" /> : <ChevronDown className="size-4 text-muted-foreground shrink-0" />}
-            </button>
-
-            <CollapsibleBody open={devicesOpen}>
-            <div className="px-5 pb-5 border-t border-border/40 pt-4 space-y-4">
-
-            <div className="space-y-1.5">
-              {sessions.map(session => (
-                <div key={session.id} className="flex items-center justify-between gap-2 bg-muted/20 border border-border/40 px-3 py-2.5 rounded-xl text-xs">
-                  <div className="flex flex-col gap-0.5 min-w-0">
-                    <span className="flex items-center gap-2 text-foreground font-semibold truncate">
-                      <MonitorSmartphone className="size-3.5 text-blue-500 shrink-0" />
-                      <span className="truncate">{session.deviceName || 'Unknown Device'}</span>
-                      {session.isCurrent && (
-                        <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-500 text-[10px] font-bold uppercase tracking-wider">Current</span>
-                      )}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground flex items-center gap-1.5 flex-wrap">
-                      <span className="flex items-center gap-1">
-                        <CalendarDays className="size-3 opacity-70" />
-                        Logged in: {new Date(session.createdAt).toLocaleDateString()}
-                      </span>
-                      <span>&middot; Last active: {formatRelativeTime(session.lastActiveAt)}</span>
-                      {session.ipAddress && <span>&middot; {session.ipAddress}</span>}
-                    </span>
-                  </div>
-                  {!session.isCurrent && (
-                    <button
-                      type="button"
-                      onClick={() => handleRevokeSession(session.id)}
-                      disabled={hideSensitive}
-                      className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg cursor-pointer transition shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
-                      title={hideSensitive ? 'Unhide balances to edit' : 'Log out this device'}
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {sessions.length > 1 && (
-              <button
-                type="button"
-                onClick={handleRevokeAllOtherSessions}
-                disabled={hideSensitive}
-                className="press-scale w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-500 border border-red-500/30 hover:bg-red-500/10 disabled:opacity-40 transition cursor-pointer"
-              >
-                <LogOut className="size-3.5" /> Log out all other devices
-              </button>
-            )}
-
-            </div>
-            </CollapsibleBody>
-          </section>
-
-          <TwoFactorSection hideSensitive={hideSensitive} onToast={onToast} />
-
-          <ChangePasswordSection hideSensitive={hideSensitive} onToast={onToast} />
         </div>
       </div>
     </div>
