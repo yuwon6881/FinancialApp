@@ -57,7 +57,7 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/95 backdrop-blur-md animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-background/95 backdrop-blur-md animate-in fade-in duration-300">
       <div className="w-full max-w-sm flex flex-col items-center gap-6">
         <AppLogo className="size-16 rounded-2xl shadow-xl shadow-blue-500/20" />
         <div className="text-center">

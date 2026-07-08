@@ -18,6 +18,7 @@ import {
   Edit2,
   Trash2,
   Camera,
+  Image,
   CheckCircle2
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
@@ -168,7 +169,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [scanError, setScanError] = useState<string | null>(null)
   const [showScanBanner, setShowScanBanner] = useState(false)
   const [activeReceiptScanJobId, setActiveReceiptScanJobId] = useState<string | null>(null)
+  const [showScanPicker, setShowScanPicker] = useState(false)
   const scanFileInputRef = useRef<HTMLInputElement>(null)
+  const scanGalleryInputRef = useRef<HTMLInputElement>(null)
   const appliedReceiptScanJobRef = useRef<string | null>(null)
   const locallyStartedReceiptScanJobsRef = useRef<Set<string>>(new Set())
   useEffect(() => {
@@ -293,8 +296,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       setScanError(err.message || 'Could not read the receipt. Please try a clearer photo.')
       setIsScanning(false)
     } finally {
-      // Reset file input so the same file can be selected again if needed
+      // Reset file inputs so the same file can be selected again if needed
       if (scanFileInputRef.current) scanFileInputRef.current.value = ''
+      if (scanGalleryInputRef.current) scanGalleryInputRef.current.value = ''
     }
   }, [onReceiptScanStarted])
 
@@ -1448,39 +1452,79 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             {/* ── Scan Receipt button (add mode only) ── */}
             {!editingTxId && (
               <div className="sm:col-span-2">
-                {/* Hidden file input: opens the native camera/gallery chooser */}
+                {/* Hidden input with capture: opens rear camera directly */}
                 <input
                   ref={scanFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={e => {
+                    const file = e.target.files?.[0]
+                    if (file) { setShowScanPicker(false); handleScanReceipt(file) }
+                  }}
+                />
+                {/* Hidden input without capture: opens the photo gallery/library */}
+                <input
+                  ref={scanGalleryInputRef}
                   type="file"
                   accept="image/*"
                   className="hidden"
                   onChange={e => {
                     const file = e.target.files?.[0]
-                    if (file) handleScanReceipt(file)
+                    if (file) { setShowScanPicker(false); handleScanReceipt(file) }
                   }}
                 />
-                <button
-                  type="button"
-                  disabled={isScanning}
-                  onClick={() => {
-                    setScanError(null)
-                    scanFileInputRef.current?.click()
-                  }}
-                  className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border transition duration-200 text-xs font-semibold cursor-pointer ${
-                    isScanning
-                      ? 'border-border bg-muted text-muted-foreground cursor-not-allowed'
-                      : 'border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                  }`}
-                >
-                  {isScanning ? (
-                    <><Loader2 className="size-3.5 animate-spin" /> Scanning receipt...</>
-                  ) : (
-                    <>
-                      <Camera className="size-3.5" />
-                      <span>Scan Receipt (Photo / Upload)</span>
-                    </>
-                  )}
-                </button>
+
+                {/* Main trigger button — collapses to a spinner while AI scans */}
+                {!showScanPicker && (
+                  <button
+                    type="button"
+                    disabled={isScanning}
+                    onClick={() => {
+                      setScanError(null)
+                      if (!isScanning) setShowScanPicker(true)
+                    }}
+                    className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border transition duration-200 text-xs font-semibold cursor-pointer ${
+                      isScanning
+                        ? 'border-border bg-muted text-muted-foreground cursor-not-allowed'
+                        : 'border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                    }`}
+                  >
+                    {isScanning ? (
+                      <><Loader2 className="size-3.5 animate-spin" /> Scanning receipt...</>
+                    ) : (
+                      <><Camera className="size-3.5" /><span>Scan Receipt</span></>
+                    )}
+                  </button>
+                )}
+
+                {/* Inline action picker — replaces button when tapped */}
+                {showScanPicker && !isScanning && (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => scanFileInputRef.current?.click()}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400 transition duration-200 text-xs font-semibold cursor-pointer"
+                    >
+                      <Camera className="size-3.5" /> Take Photo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => scanGalleryInputRef.current?.click()}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400 transition duration-200 text-xs font-semibold cursor-pointer"
+                    >
+                      <Image className="size-3.5" /> Upload Photo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowScanPicker(false)}
+                      className="flex items-center justify-center px-3 py-2.5 rounded-xl border border-border bg-muted hover:bg-muted/80 text-muted-foreground transition duration-200 text-xs font-semibold cursor-pointer"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  </div>
+                )}
 
                 {/* Scan success banner */}
                 <AnimatePresence>
