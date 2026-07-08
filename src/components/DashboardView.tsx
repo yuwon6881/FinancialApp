@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
+import { listContainerVariants, listItemVariants, listItemExit } from '../lib/animations'
 import type { Transaction, DashboardData, WishlistItem } from '../types'
 import { 
   Wallet, 
@@ -408,7 +409,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <p className="text-xs text-muted-foreground mt-0.5">
             You have {dashboardData.pendingNotifications.length} subscription billing cycle{dashboardData.pendingNotifications.length > 1 ? 's' : ''} awaiting confirmation.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+          <motion.div
+            initial="hidden" animate="show"
+            variants={listContainerVariants}
+            className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3"
+          >
+            <AnimatePresence>
             {dashboardData.pendingNotifications.map((noti) => {
               const isConfirming = activeConfirmId === noti.id
               const notificationBody = (
@@ -483,7 +489,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </>
               )
               return (
-                <div key={noti.id} className={isConfirming ? "p-3.5 rounded-xl bg-card border border-border/40 shadow-xs flex flex-col justify-between gap-3" : "rounded-xl"}>
+                <motion.div
+                  layout
+                  key={noti.id}
+                  variants={listItemVariants}
+                  exit={listItemExit}
+                  className={isConfirming ? "p-3.5 rounded-xl bg-card border border-border/40 shadow-xs flex flex-col justify-between gap-3" : "rounded-xl"}
+                >
                   {isConfirming ? (
                     <div className="flex flex-col gap-2 p-2 bg-muted/30 border border-border/40 rounded-lg animate-in slide-in-from-bottom-2 duration-200">
                       {notificationBody}
@@ -525,10 +537,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       {notificationBody}
                     </SwipeableRow>
                   )}
-                </div>
+                </motion.div>
               )
             })}
-          </div>
+            </AnimatePresence>
+          </motion.div>
         </div>
       )}
 
@@ -1446,9 +1459,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <Calendar className="size-4 text-blue-500 shrink-0" />
               </div>
 
-              <div className="space-y-2 mt-4 flex-1 overflow-y-auto pr-1 min-h-0">
+              <motion.div
+                initial="hidden" animate="show"
+                variants={listContainerVariants}
+                className="space-y-2 mt-4 flex-1 overflow-y-auto pr-1 min-h-0"
+              >
+                <AnimatePresence>
                 {activeRecurring.map((rp: any) => (
-                  <div key={rp.id} className={`flex items-center justify-between text-xs py-1.5 border-b border-border/30 last:border-b-0 ${rp.isDiscarded ? 'opacity-50' : ''}`}>
+                  <motion.div
+                    layout
+                    key={rp.id}
+                    variants={listItemVariants}
+                    exit={listItemExit}
+                    className={`flex items-center justify-between text-xs py-1.5 border-b border-border/30 last:border-b-0 ${rp.isDiscarded ? 'opacity-50' : ''}`}
+                  >
                     <div className="truncate mr-2">
                       <span className={`font-bold text-foreground truncate block max-w-[120px] ${rp.isDiscarded ? 'line-through' : ''}`}>{rp.name}</span>
                       <div className="flex flex-wrap items-center gap-1 mt-0.5 select-none">
@@ -1474,12 +1498,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <span className={`font-bold block ${rp.isDiscarded ? 'text-slate-500 line-through' : 'text-orange-500'}`}>-{formatSensitive(rp.amount)}</span>
                       <span className="text-muted-foreground text-[9px]">Due {rp.dueDate}</span>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
+                </AnimatePresence>
                 {activeRecurring.length === 0 && (
                   <div className="text-xs text-muted-foreground py-10 text-center">No subscriptions for this cycle.</div>
                 )}
-              </div>
+              </motion.div>
             </div>
 
             <button 

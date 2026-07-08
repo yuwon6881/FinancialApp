@@ -26,7 +26,8 @@ import { ToastViewport, type ToastMessage, type ToastTone, type ToastAction } fr
 import { CardSkeleton, Skeleton } from './components/ui/Skeleton'
 import { CACHE_KEYS, getCachedJSON, getCachedTransactions, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod, getCachedOps, getCachedCycleSnapshot, setCachedCycleSnapshot } from './lib/cache'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from './lib/modalDrafts'
-import { enqueue as outboxEnqueue, applyOpsToList, createFinalId, createLocalWishlistId, DISPATCH, sanitizeQueuedOps, getSyncSuccessToast, type QueuedOp, type EntityKind } from './lib/outbox'
+import { enqueue as outboxEnqueue, createFinalId, createLocalWishlistId, DISPATCH, sanitizeQueuedOps, getSyncSuccessToast, type QueuedOp, type EntityKind } from './lib/outbox'
+import { useOptimisticList } from './lib/useOptimisticList'
 import { PendingSubscriptionsModal } from './components/PendingSubscriptionsModal'
 import { FailedSyncModal } from './components/FailedSyncModal'
 import { PasswordPromptModal } from './components/PasswordPromptModal'
@@ -34,6 +35,7 @@ import { LockScreen } from './components/LockScreen'
 import { AppLogo } from './components/ui/AppLogo'
 import { triggerHaptic } from './lib/haptics'
 import { isPlatformAuthenticatorAvailable, getFingerprintAssertion } from './lib/webauthn'
+import { initNativeUi, syncStatusBarTheme } from './lib/nativeUi'
 
 const createLocalId = (prefix: string, separator = '_') => {
   return `${prefix}${separator}${Date.now()}${separator}${Math.random().toString(36).substring(2, 9)}`
@@ -112,7 +114,11 @@ function App() {
 
     return () => cleanup?.()
   }, [])
-  
+
+  useEffect(() => {
+    void initNativeUi()
+  }, [])
+
   const [transactions, setTransactions] = useState<Transaction[]>(() => getCachedTransactions(CACHE_KEYS.transactions))
   const [recurringPayments, setRecurringPayments] = useState<RecurringPayment[]>(() => getCachedJSON(CACHE_KEYS.recurringPayments, []))
   const [categoriesList, setCategoriesList] = useState<TransactionCategory[]>(() => getCachedJSON(CACHE_KEYS.categories, []))
@@ -140,6 +146,15 @@ function App() {
   const [recentlyCompletedOps, setRecentlyCompletedOps] = useState<QueuedOp[]>([])
   const isSyncingRef = useRef<boolean>(false)
   const isServerAwakeRef = useRef<boolean>(false)
+  // Bumped on every loadAll() call; a call only commits its fetched data if it's
+  // still the most recent one when it resolves. Without this, an older in-flight
+  // request (e.g. the initial-mount load of the last-viewed cycle) can resolve
+  // after the user has already switched cycles and clobber the newer selection.
+  const loadAllSeqRef = useRef(0)
+  const selectPeriodSeqRef = useRef(0)
+  // Aborts the previous loadAll()'s in-flight requests whenever a newer one starts,
+  // so switching cycles repeatedly doesn't leave superseded fetches running to completion.
+  const loadAllAbortRef = useRef<AbortController | null>(null)
 
 
 
@@ -424,6 +439,7 @@ function App() {
     document.documentElement.classList.toggle('dark', darkMode)
     const meta = document.querySelector('meta[name="theme-color"]')
     if (meta) meta.setAttribute('content', darkMode ? '#0a0d14' : '#f6f8fc')
+    void syncStatusBarTheme(darkMode)
   }, [darkMode])
 
   // Keep visual viewport CSS vars in sync so fixed bottom-sheet modals stay
@@ -709,21 +725,30 @@ function App() {
   // Fetch initial ledger and dashboard statistics
   async function loadAll(month?: string, year?: number, isBackground = false) {
     if (!token) return
+    const requestSeq = ++loadAllSeqRef.current
+    const isStale = () => requestSeq !== loadAllSeqRef.current
+    loadAllAbortRef.current?.abort()
+    const ac = new AbortController()
+    loadAllAbortRef.current = ac
     if (!isBackground) {
       setLoading(true)
     } else {
       setIsBackgroundSyncing(true)
     }
     try {
-      const dbData = await api.fetchDashboard(month, year)
+      const dbData = await api.fetchDashboard(month, year, ac.signal)
       const [txs, recs, cats, wishes, autoSuggests, wallet] = await Promise.all([
-        api.fetchTransactions(dbData.setting.selectedMonth, dbData.setting.selectedYear),
-        api.fetchRecurringPayments(),
-        api.fetchCategories(),
-        api.fetchWishlist().catch(() => []),
-        api.fetchAutocompleteSuggestions().catch(() => []),
-        api.fetchWalletBalance().catch(() => null)
+        api.fetchTransactions(dbData.setting.selectedMonth, dbData.setting.selectedYear, undefined, ac.signal),
+        api.fetchRecurringPayments(ac.signal),
+        api.fetchCategories(ac.signal),
+        api.fetchWishlist(ac.signal).catch(() => []),
+        api.fetchAutocompleteSuggestions(ac.signal).catch(() => []),
+        api.fetchWalletBalance(ac.signal).catch(() => null)
       ])
+      // A newer loadAll() was kicked off (e.g. the user switched cycles again)
+      // while this one was in flight -- discard this now-stale response instead
+      // of clobbering the newer cycle's data.
+      if (isStale()) return
       if (wallet !== null) {
         setWalletBalance(wallet)
         setCachedJSON(CACHE_KEYS.walletBalance, wallet)
@@ -768,6 +793,7 @@ function App() {
         setHasShownModalThisSession(true)
       }
     } catch (err: any) {
+      if (err?.name === 'AbortError' || isStale()) return
       console.error(err)
       const isJustLoggedIn = Date.now() - lastUnlockedTimeRef.current < 10000
       if (err.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
@@ -786,8 +812,10 @@ function App() {
         isServerAwakeRef.current = false
       }
     } finally {
-      setLoading(false)
-      setIsBackgroundSyncing(false)
+      if (!isStale()) {
+        setLoading(false)
+        setIsBackgroundSyncing(false)
+      }
     }
   }
 
@@ -880,6 +908,10 @@ function App() {
 
   // Period / Settings changes
   const handleSelectPeriod = async (month: string, year: number) => {
+    // Guards against an older switch's cleanup firing after a newer one has
+    // already taken over (e.g. the user taps two different cycles in quick
+    // succession) and prematurely clearing the "switching" skeleton state.
+    const requestSeq = ++selectPeriodSeqRef.current
     // If we've visited this cycle before, show its last-known data immediately
     // (stale-while-revalidate) instead of a skeleton, then refresh quietly.
     const cachedSnapshot = getCachedCycleSnapshot(month, year)
@@ -895,6 +927,7 @@ function App() {
       await api.selectPeriod(month, year)
       await loadAll(month, year, true)
     } catch (err: any) {
+      if (requestSeq !== selectPeriodSeqRef.current) return
       console.error(err)
       if (err.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
         handleLogout()
@@ -902,7 +935,9 @@ function App() {
         alert('Error updating active month.')
       }
     } finally {
-      setIsSwitchingCycle(false)
+      if (requestSeq === selectPeriodSeqRef.current) {
+        setIsSwitchingCycle(false)
+      }
     }
   }
 
@@ -1074,6 +1109,7 @@ function App() {
   }
 
   const handleDeletePayment = (id: string) => {
+    triggerVibration(30)
     snapshotForUndo('recurringPayment', String(id), allRecurringPayments.find(p => String(p.id) === String(id)))
     mutateQueue(prev => enqueue(prev, 'recurringPayment', 'delete', id))
   }
@@ -1110,6 +1146,7 @@ function App() {
   }
 
   const handleDeleteWishlistItem = (id: number) => {
+    triggerVibration(30)
     snapshotForUndo('wishlistItem', String(id), allWishlist.find(w => String(w.id) === String(id)))
     mutateQueue(prev => enqueue(prev, 'wishlistItem', 'delete', String(id)))
   }
@@ -1425,21 +1462,10 @@ function App() {
   // Combine synced and pending items for each entity
   const activeOps = useMemo(() => [...pendingOps, ...recentlyCompletedOps], [pendingOps, recentlyCompletedOps]);
 
-  const allTransactions = useMemo(() => {
-    return applyOpsToList(transactions, activeOps, 'transaction');
-  }, [activeOps, transactions]);
-
-  const allRecurringPayments = useMemo(() => {
-    return applyOpsToList(recurringPayments, activeOps, 'recurringPayment');
-  }, [activeOps, recurringPayments]);
-
-  const allWishlist = useMemo(() => {
-    return applyOpsToList(wishlist, activeOps, 'wishlistItem');
-  }, [activeOps, wishlist]);
-
-  const allCategories = useMemo(() => {
-    return applyOpsToList(categoriesList, activeOps, 'category');
-  }, [activeOps, categoriesList]);
+  const allTransactions = useOptimisticList(transactions, activeOps, 'transaction');
+  const allRecurringPayments = useOptimisticList(recurringPayments, activeOps, 'recurringPayment');
+  const allWishlist = useOptimisticList(wishlist, activeOps, 'wishlistItem');
+  const allCategories = useOptimisticList(categoriesList, activeOps, 'category');
 
   // Create optimistic dashboardData from server data + pending queue
   const optimisticDashboardData = useMemo(() => {

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { listContainerVariants, listItemVariants } from '../lib/animations'
 import type { WishlistItem } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { SwipeableRow } from './ui/SwipeableRow'
@@ -9,6 +10,7 @@ import { RowSyncBadge } from './ui/RowSyncBadge'
 import { formatCurrencyVal, maskCurrencyInput } from '../lib/utils'
 import { useFormDraft } from '../lib/useFormDraft'
 import { useAutoOpenModal } from '../lib/useAutoOpenModal'
+import { useSyncStatus } from '../lib/useOptimisticList'
 import { SmartAmountInput } from './ui/SmartAmountInput'
 import {
   Wallet,
@@ -70,15 +72,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   deletingId = null,
   isSwitchingCycle = false
 }) => {
-  const isItemSyncing = (itemId: string | number) => {
-    return activeSyncId !== null && activeSyncId !== undefined && String(activeSyncId) === String(itemId)
-  }
-
-  const isItemDeleting = (itemId: string | number) => {
-    if (deletingId && String(deletingId) === String(itemId)) return true
-    const found = wishlist.find(i => String(i.id) === String(itemId))
-    return Boolean(found?.isPendingDelete)
-  }
+  const { isSyncing: isItemSyncing, isDeleting: isItemDeleting } = useSyncStatus(wishlist, activeSyncId, deletingId)
 
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -536,7 +530,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
 
           <motion.div 
             initial="hidden" animate="show"
-            variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.05 } } }}
+            variants={listContainerVariants}
             className="space-y-3 max-h-[460px] overflow-y-auto pr-1"
           >
             <AnimatePresence>
@@ -547,7 +541,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                 const isBusy = isItemDeleting(item.id) || isItemSyncing(item.id) || item.isPendingSync
 
                 return (
-                  <motion.div layout variants={{ hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 120 } } }} key={item.id}>
+                  <motion.div layout variants={listItemVariants} key={item.id}>
                   <SwipeableRow
                     hint={idx === 0}
                     disabled={isBusy}

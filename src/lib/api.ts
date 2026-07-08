@@ -221,7 +221,7 @@ export function invalidateCache(): void {
 }
 
 // Dashboard
-export function fetchDashboard(month?: string, year?: number): Promise<DashboardData> {
+export function fetchDashboard(month?: string, year?: number, signal?: AbortSignal): Promise<DashboardData> {
   const cacheKey = `dashboard:${month || ''}:${year || ''}`
   const cachedPromise = queryCache.get<DashboardData>(cacheKey)
   if (cachedPromise) return cachedPromise
@@ -231,7 +231,7 @@ export function fetchDashboard(month?: string, year?: number): Promise<Dashboard
     const params = new URLSearchParams()
     if (month) params.append('month', month)
     if (year) params.append('year', year.toString())
-    
+
     const queryString = params.toString()
     if (queryString) {
       url += `?${queryString}`
@@ -239,6 +239,7 @@ export function fetchDashboard(month?: string, year?: number): Promise<Dashboard
 
     const response = await fetch(url, {
       headers: getHeaders(),
+      signal,
     })
     if (!response.ok) {
       throw new Error('Failed to fetch dashboard data')
@@ -312,9 +313,10 @@ export function fetchDashboard(month?: string, year?: number): Promise<Dashboard
 
 // Always reflects the real current cycle's wallet total, independent of whatever cycle the
 // Dashboard/Ledger has navigated to -- used by the navbar wallet widget.
-export async function fetchWalletBalance(): Promise<number> {
+export async function fetchWalletBalance(signal?: AbortSignal): Promise<number> {
   const response = await fetch(`${API_BASE_URL}/financial/wallet-balance`, {
     headers: getHeaders(),
+    signal,
   })
   if (!response.ok) {
     throw new Error('Failed to fetch wallet balance')
@@ -400,9 +402,10 @@ export async function selectPeriod(selectedMonth: string, selectedYear: number):
 }
 
 // Transactions
-export async function fetchAutocompleteSuggestions(): Promise<import('../types').AutocompleteSuggestion[]> {
+export async function fetchAutocompleteSuggestions(signal?: AbortSignal): Promise<import('../types').AutocompleteSuggestion[]> {
   const res = await fetch(`${API_BASE_URL}/transactions/autocomplete`, {
-    headers: getHeaders()
+    headers: getHeaders(),
+    signal,
   })
   if (!res.ok) throw new Error('Failed to fetch autocomplete suggestions')
   return res.json()
@@ -424,7 +427,7 @@ function isClosedCycle(month?: string, year?: number): boolean {
   return year < now.getFullYear() || (year === now.getFullYear() && monthIndex < now.getMonth())
 }
 
-export function fetchTransactions(month?: string, year?: number, all?: boolean): Promise<Transaction[]> {
+export function fetchTransactions(month?: string, year?: number, all?: boolean, signal?: AbortSignal): Promise<Transaction[]> {
   const cacheKey = all ? 'transactions:all' : `transactions:${month || ''}:${year || ''}`
   const cachedPromise = queryCache.get<Transaction[]>(cacheKey)
   if (cachedPromise) return cachedPromise
@@ -438,7 +441,7 @@ export function fetchTransactions(month?: string, year?: number, all?: boolean):
       if (month) params.append('month', month)
       if (year) params.append('year', year.toString())
     }
-    
+
     const queryString = params.toString()
     if (queryString) {
       url += `?${queryString}`
@@ -446,6 +449,7 @@ export function fetchTransactions(month?: string, year?: number, all?: boolean):
 
     const response = await fetch(url, {
       headers: getHeaders(),
+      signal,
     })
     if (!response.ok) {
       throw new Error('Failed to fetch transactions')
@@ -580,7 +584,7 @@ export async function updateTransaction(id: string, transaction: Omit<Transactio
 }
 
 // Recurring Payments
-export function fetchRecurringPayments(): Promise<RecurringPayment[]> {
+export function fetchRecurringPayments(signal?: AbortSignal): Promise<RecurringPayment[]> {
   const cacheKey = 'recurringPayments'
   const cachedPromise = queryCache.get<RecurringPayment[]>(cacheKey)
   if (cachedPromise) return cachedPromise
@@ -588,6 +592,7 @@ export function fetchRecurringPayments(): Promise<RecurringPayment[]> {
   const promise = (async () => {
     const response = await fetch(`${API_BASE_URL}/recurring-payments`, {
       headers: getHeaders(),
+      signal,
     })
     if (!response.ok) {
       throw new Error('Failed to fetch recurring payments')
@@ -665,7 +670,7 @@ export async function deleteRecurringPayment(id: string): Promise<void> {
 }
 
 // Categories Management
-export function fetchCategories(): Promise<TransactionCategory[]> {
+export function fetchCategories(signal?: AbortSignal): Promise<TransactionCategory[]> {
   const cacheKey = 'categories'
   const cachedPromise = queryCache.get<TransactionCategory[]>(cacheKey)
   if (cachedPromise) return cachedPromise
@@ -673,6 +678,7 @@ export function fetchCategories(): Promise<TransactionCategory[]> {
   const promise = (async () => {
     const response = await fetch(`${API_BASE_URL}/categories`, {
       headers: getHeaders(),
+      signal,
     })
     if (!response.ok) {
       throw new Error('Failed to fetch custom categories')
@@ -741,13 +747,14 @@ export async function lockSession(): Promise<void> {
   }
 }
 
-export async function fetchWishlist(): Promise<WishlistItem[]> {
+export async function fetchWishlist(signal?: AbortSignal): Promise<WishlistItem[]> {
   const cachedPromise = queryCache.get<WishlistItem[]>('wishlist')
   if (cachedPromise) return cachedPromise
-  
+
   const promise = (async () => {
     const response = await fetch(`${API_BASE_URL}/wishlist`, {
       headers: getHeaders(),
+      signal,
     })
     if (!response.ok) {
       throw new Error('Failed to fetch wishlist')

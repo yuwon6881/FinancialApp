@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
+import { listContainerVariants, listItemVariants, listItemExit } from '../lib/animations'
 import type { RecurringPayment, TransactionCategory, ActiveRecurringPayment, Transaction } from '../types'
 import {
   Plus,
@@ -11,6 +12,9 @@ import {
   Edit
 } from 'lucide-react'
 import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput } from '../lib/utils'
+import { useSyncStatus } from '../lib/useOptimisticList'
+import { Button } from './ui/Button'
+import { Card } from './ui/Card'
 import { CustomSelect } from './ui/CustomSelect'
 import { BottomSheet } from './ui/BottomSheet'
 import { CycleSkeleton } from './ui/Skeleton'
@@ -64,15 +68,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   deletingId = null
 }) => {
   const isMobile = useIsMobile(640)
-  const isPaymentSyncing = (rpId: string) => {
-    return activeSyncId !== null && activeSyncId !== undefined && String(activeSyncId) === String(rpId)
-  }
-
-  const isPaymentDeleting = (rpId: string) => {
-    if (deletingId && String(deletingId) === String(rpId)) return true
-    const found = payments.find(p => String(p.id) === String(rpId))
-    return Boolean(found?.isPendingDelete)
-  }
+  const { isSyncing: isPaymentSyncing, isDeleting: isPaymentDeleting } = useSyncStatus(payments, activeSyncId, deletingId)
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingPayment, setEditingPayment] = useState<RecurringPayment | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -257,7 +253,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
       
       {/* Header section with Stats */}
       <div className="w-full">
-        <div className="p-6 rounded-2xl bg-card border border-border/60 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <Card className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold text-foreground">Recurring Bills & Subscriptions</h2>
             <p className="text-xs text-muted-foreground mt-0.5">Track, toggle, and manage your recurring committed outlays.</p>
@@ -285,7 +281,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
             {showAddForm ? <X className="size-4" /> : <Plus className="size-4" />}
             {showAddForm ? 'Cancel' : 'New Subscription'}
           </button>
-        </div>
+        </Card>
       </div>
 
       {/* Visual Bill Timeline */}
@@ -571,15 +567,23 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
       </div>
 
       {/* Subscriptions Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <motion.div
+        initial="hidden" animate="show"
+        variants={listContainerVariants}
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+      >
+        <AnimatePresence>
         {filteredAndSortedPayments.map(rp => {
           const isBusy = isPaymentDeleting(rp.id) || isPaymentSyncing(rp.id) || rp.isPendingSync
           return (
-            <div 
-              key={rp.id} 
+            <motion.div
+              layout
+              key={rp.id}
+              variants={listItemVariants}
+              exit={listItemExit}
               className={`p-6 rounded-2xl bg-card border transition-all duration-300 flex flex-col justify-between ${
-                rp.active 
-                  ? 'border-border/60 hover:border-blue-500/30 shadow-xs' 
+                rp.active
+                  ? 'border-border/60 hover:border-blue-500/30 shadow-xs'
                   : 'border-dashed border-border/60 opacity-60'
               }`}
             >
@@ -648,7 +652,8 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                   <Bell className="size-3 text-blue-500" /> Auto-notify
                 </span>
                 <div className="flex items-center gap-2">
-                  <button
+                  <Button
+                    variant="ghost"
                     onClick={() => {
                       if (hideSensitive) return
                       setName(rp.name)
@@ -661,34 +666,34 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                       setShowAddForm(true)
                     }}
                     disabled={isBusy || hideSensitive}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-blue-500 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/15 cursor-pointer transition duration-150 text-xs font-bold active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none"
                     title={hideSensitive ? 'Unhide balances to edit' : 'Edit subscription'}
                   >
                     <Edit className="size-3.5" /> Edit
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="danger"
                     onClick={() => { if (!hideSensitive) onDeletePayment(rp.id) }}
                     disabled={isBusy || hideSensitive}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-orange-500 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/15 cursor-pointer transition duration-150 text-xs font-bold active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none"
                     title={hideSensitive ? 'Unhide balances to edit' : 'Delete subscription'}
                   >
                     <Trash2 className="size-3.5" /> Delete
-                  </button>
+                  </Button>
                 </div>
               </div>
-            </div>
+            </motion.div>
           )
         })}
-        
+        </AnimatePresence>
+
         {filteredAndSortedPayments.length === 0 && (
           <div className="p-12 text-center border border-dashed border-border rounded-2xl md:col-span-3 text-muted-foreground text-sm">
-            {payments.length > 0 
+            {payments.length > 0
               ? 'No subscriptions match your filter criteria.'
               : 'You don\'t have any subscription added yet. Click "New Subscription" above to create one.'
             }
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 
 import { motion, AnimatePresence } from 'framer-motion'
+import { listContainerVariants } from '../lib/animations'
 import type { Transaction, TransactionCategory } from '../types'
 import type { PagedTransactionResult } from '../lib/api'
 import { startReceiptScan, type ReceiptScanResult } from '../lib/api'
@@ -2395,7 +2396,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             <motion.tbody 
               key={`table-body-${currentPage}-${showAllCycles}`}
               initial="hidden" animate="show"
-              variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.05 } } }}
+              variants={listContainerVariants}
               className="divide-y divide-border/30 text-xs"
             >
               <AnimatePresence>
@@ -2430,7 +2431,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       <motion.div 
         key={`mobile-list-${currentPage}-${showAllCycles}`}
         initial="hidden" animate="show"
-        variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.05 } } }}
+        variants={listContainerVariants}
         className="block md:hidden space-y-3"
       >
         <AnimatePresence>
