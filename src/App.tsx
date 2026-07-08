@@ -24,7 +24,7 @@ import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 import { PullToRefresh } from './components/ui/PullToRefresh'
 import { ToastViewport, type ToastMessage, type ToastTone, type ToastAction } from './components/ui/ToastViewport'
 import { CardSkeleton, Skeleton } from './components/ui/Skeleton'
-import { CACHE_KEYS, getCachedJSON, getCachedTransactions, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod, getCachedOps, getCachedCycleSnapshot, setCachedCycleSnapshot } from './lib/cache'
+import { CACHE_KEYS, getCachedJSON, getCachedTransactions, sanitizeTransactions, setCachedJSON, hasCachedDashboardData, getCachedDashboardData, getCachedDashboardPeriod, getCachedOps, getCachedCycleSnapshot, setCachedCycleSnapshot } from './lib/cache'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from './lib/modalDrafts'
 import { enqueue as outboxEnqueue, createFinalId, createLocalWishlistId, DISPATCH, sanitizeQueuedOps, getSyncSuccessToast, type QueuedOp, type EntityKind } from './lib/outbox'
 import { useOptimisticList } from './lib/useOptimisticList'
@@ -126,7 +126,7 @@ function App() {
   const [transactions, setTransactions] = useState<Transaction[]>(() => getCachedTransactions(CACHE_KEYS.transactions))
   const [recurringPayments, setRecurringPayments] = useState<RecurringPayment[]>(() => getCachedJSON(CACHE_KEYS.recurringPayments, []))
   const [categoriesList, setCategoriesList] = useState<TransactionCategory[]>(() => getCachedJSON(CACHE_KEYS.categories, []))
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(() => getCachedJSON(CACHE_KEYS.dashboardData, null))
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(() => getCachedDashboardData())
   // Always the real current cycle's wallet total (see fetchWalletBalance) -- deliberately NOT
   // derived from dashboardData/optimisticDashboardData, since those track whatever cycle the
   // Dashboard/Ledger has navigated to and the navbar wallet must not follow that navigation.
@@ -135,7 +135,7 @@ function App() {
   const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<import('./types').AutocompleteSuggestion[]>([])
 
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState<boolean>(() => !hasCachedKey(CACHE_KEYS.dashboardData))
+  const [loading, setLoading] = useState<boolean>(() => !hasCachedDashboardData())
   const [isOffline, setIsOffline] = useState<boolean>(() => typeof navigator !== 'undefined' ? !navigator.onLine : false)
 
   // Sync Queue States
@@ -746,7 +746,7 @@ function App() {
 
   // Fetch initial ledger and dashboard statistics
   async function loadAll(month?: string, year?: number, isBackground = false) {
-    if (!token) return
+    if (!token && !localStorage.getItem('auth_token')) return
     const requestSeq = ++loadAllSeqRef.current
     const isStale = () => requestSeq !== loadAllSeqRef.current
     loadAllAbortRef.current?.abort()
@@ -840,7 +840,7 @@ function App() {
 
   useEffect(() => {
     if (token) {
-      const hasCache = hasCachedKey(CACHE_KEYS.dashboardData);
+      const hasCache = hasCachedDashboardData();
       const { month: cachedMonth, year: cachedYear } = getCachedDashboardPeriod();
       loadAll(cachedMonth, cachedYear, hasCache);
     }
@@ -854,6 +854,19 @@ function App() {
     lastUnlockedTimeRef.current = Date.now()
     setIsLocked(false)
     api.invalidateCache()
+    setError(null)
+    setDashboardData(null)
+    setWalletBalance(null)
+    setTransactions([])
+    setRecurringPayments([])
+    setCategoriesList([])
+    setWishlist([])
+    setAutocompleteSuggestions([])
+    setSelectedMonth('')
+    setSelectedYear(0)
+    setLoading(true)
+    setIsBackgroundSyncing(false)
+    isServerAwakeRef.current = false
     setToken(newToken)
     setUsername(newUsername)
 
@@ -1994,7 +2007,7 @@ function App() {
           localStorage.setItem('last_active_time', Date.now().toString())
           sessionStorage.setItem('session_locked', 'false')
           setIsLocked(false)
-          const hasCache = hasCachedKey(CACHE_KEYS.dashboardData);
+          const hasCache = hasCachedDashboardData();
           const { month: cachedMonth, year: cachedYear } = getCachedDashboardPeriod();
           loadAll(cachedMonth, cachedYear, hasCache);
         }}
