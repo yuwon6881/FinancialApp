@@ -1157,7 +1157,6 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
       let ess = essentialsAlloc
       let gro = growthAlloc
-      let sta = stabilityAlloc
       let rew = rewardsAlloc
 
       let actualStabilityShare = 0
@@ -1171,7 +1170,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       }
 
       const redirectShare = stabilityAlloc - actualStabilityShare
-      sta = actualStabilityShare
+      let sta = actualStabilityShare
 
       if (redirectShare > 0 && redirectTargets.length > 0) {
         const N = redirectTargets.length
@@ -2393,8 +2392,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 <th className="p-4 text-center">Actions</th>
               </tr>
             </thead>
-            <motion.tbody 
-              key={`table-body-${currentPage}-${showAllCycles}`}
+            <motion.tbody
               initial="hidden" animate="show"
               variants={listContainerVariants}
               className="divide-y divide-border/30 text-xs"
@@ -2428,8 +2426,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       </div>
 
       {/* Ledger List - Mobile (swipe a row left to reveal Edit / Delete) */}
-      <motion.div 
-        key={`mobile-list-${currentPage}-${showAllCycles}`}
+      <motion.div
         initial="hidden" animate="show"
         variants={listContainerVariants}
         className="block md:hidden space-y-3"

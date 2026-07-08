@@ -316,14 +316,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
     
     newValue = Math.round(Math.max(0, Math.min(100, newValue)) / 5) * 5
-    let diff = newValue - current[changedKey]
+    const diff = newValue - current[changedKey]
     if (diff === 0) return
 
     const otherKeys = (['essentials', 'growth', 'stability', 'rewards'] as const).filter(k => k !== changedKey && !lockedAllocations.includes(k))
 
     if (otherKeys.length === 0) return
 
-    let newAlloc = { ...current, [changedKey]: newValue }
+    const newAlloc = { ...current, [changedKey]: newValue }
 
     let remainingDiff = Math.round(diff)
     let startIdx = 0

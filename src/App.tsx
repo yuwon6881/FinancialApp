@@ -55,6 +55,7 @@ const ContentViewFallback = () => (
 
 const nextPaint = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
 const wait = (ms: number) => new Promise<void>(resolve => window.setTimeout(resolve, ms))
+const getCurrentTimeMs = () => Date.now()
 
 // On a warm reopen (cached data already in localStorage) the app skips the
 // lightweight skeleton and mounts the full dashboard tree on its very first
@@ -590,7 +591,7 @@ function App() {
     syncBackoffUntilRef.current = 0
     setIsLocked(true)
     sessionStorage.setItem('session_locked', 'true')
-  }, [])
+  }, [setIsLocked])
 
   useEffect(() => {
     if (!token) return
@@ -630,28 +631,6 @@ function App() {
     return () => events.forEach(e => window.removeEventListener(e, throttled))
   }, [token, isLocked])
 
-  // Check inactivity every 15 seconds and lock if exceeded
-  useEffect(() => {
-    if (!token || isLocked) return
-    const interval = setInterval(() => {
-      const lastActive = Number(localStorage.getItem('last_active_time') || Date.now())
-      if (Date.now() - lastActive > LOCK_TIMEOUT_MS) {
-        api.lockSession()
-          .then(() => {
-            markSessionLocked()
-          })
-          .catch(err => {
-            if (err?.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
-              handleLogout()
-            } else {
-              console.warn('Failed to lock session on server, bypassing local lock to prevent fake lock state:', err)
-            }
-          })
-      }
-    }, 15000)
-    return () => clearInterval(interval)
-  }, [token, isLocked, markSessionLocked])
-
   // Password Prompt for revealing sensitive information
   const [showPasswordPrompt, setShowPasswordPrompt] = useState<boolean>(false)
   const [hasFingerprintSetup, setHasFingerprintSetup] = useState<boolean>(false)
@@ -684,9 +663,9 @@ function App() {
   const handleDiscardAllFailedOps = useCallback(() => {
     setFailedOps([])
     setShowFailedOpsModal(false)
-  }, [])
+  }, [setShowFailedOpsModal])
 
-  const handleLogout = async () => {
+  async function handleLogout() {
     const currentPending = pendingOpsRef.current;
     const currentDrafts = draftTxRef.current;
     const currentFailed = failedOpsRef.current;
@@ -743,6 +722,28 @@ function App() {
     clearAllModalDrafts()
     setIsLocked(false)
   }
+
+  // Check inactivity every 15 seconds and lock if exceeded
+  useEffect(() => {
+    if (!token || isLocked) return
+    const interval = setInterval(() => {
+      const lastActive = Number(localStorage.getItem('last_active_time') || Date.now())
+      if (Date.now() - lastActive > LOCK_TIMEOUT_MS) {
+        api.lockSession()
+          .then(() => {
+            markSessionLocked()
+          })
+          .catch(err => {
+            if (err?.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
+              handleLogout()
+            } else {
+              console.warn('Failed to lock session on server, bypassing local lock to prevent fake lock state:', err)
+            }
+          })
+      }
+    }, 15000)
+    return () => clearInterval(interval)
+  }, [token, isLocked, markSessionLocked])
 
   // Fetch initial ledger and dashboard statistics
   async function loadAll(month?: string, year?: number, isBackground = false) {
@@ -850,8 +851,9 @@ function App() {
     localStorage.setItem('auth_token', newToken)
     localStorage.setItem('auth_username', newUsername)
     sessionStorage.setItem('session_locked', 'false')
-    localStorage.setItem('last_active_time', Date.now().toString())
-    lastUnlockedTimeRef.current = Date.now()
+    const now = getCurrentTimeMs()
+    localStorage.setItem('last_active_time', now.toString())
+    lastUnlockedTimeRef.current = now
     setIsLocked(false)
     api.invalidateCache()
     setToken(newToken)

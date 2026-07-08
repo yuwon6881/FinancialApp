@@ -63,7 +63,9 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   }, [isOpen])
 
   const onCloseRef = useRef(onClose)
-  onCloseRef.current = onClose
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   // useId() is stable for a given component instance, including across
   // React StrictMode's dev-only synchronous mount->cleanup->remount

@@ -29,7 +29,9 @@ export function useFormDraft<T>(
   onRestore: (draft: T) => void
 ): { clearDraft: () => void } {
   const onRestoreRef = useRef(onRestore)
-  onRestoreRef.current = onRestore
+  useEffect(() => {
+    onRestoreRef.current = onRestore
+  }, [onRestore])
 
   // Restore-on-mount only -- this runs once when the owning component first
   // mounts (e.g. right after relogin remounts the app, or the tab becomes

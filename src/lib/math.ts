@@ -14,7 +14,7 @@ export const evaluateMathString = (input: string): number | null => {
       return Math.round(result * 100) / 100
     }
     return null
-  } catch (e) {
+  } catch {
     return null
   }
 }

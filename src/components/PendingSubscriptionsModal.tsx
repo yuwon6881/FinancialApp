@@ -50,7 +50,7 @@ export function PendingSubscriptionsModal({
               onChange={(e) => onToggleShowOnLogin(e.target.checked)}
               className="rounded border-border text-blue-500 focus:ring-blue-500"
             />
-            Show this notification automatically every time I log in
+            Show pending-payment reminder automatically after sign-in or app reload
           </label>
           <button
             onClick={onClose}
