@@ -53,6 +53,7 @@ interface TopNavProps {
   onDiscardSubscription?: (noti: any) => void
   draftCount?: number
   failedOpsCount?: number
+  onOpenFailedOps?: () => void
 }
 
 const TopNav: React.FC<TopNavProps> = ({
@@ -77,7 +78,8 @@ const TopNav: React.FC<TopNavProps> = ({
   isOffline = false,
   onDiscardSubscription,
   draftCount = 0,
-  failedOpsCount = 0
+  failedOpsCount = 0,
+  onOpenFailedOps
 }) => {
   const [isBellOpen, setIsBellOpen] = useState(false)
   const [confirmNotiId, setConfirmNotiId] = useState<string | null>(null)
@@ -200,9 +202,10 @@ const TopNav: React.FC<TopNavProps> = ({
             </div>
           )}
           {failedOpsCount > 0 && (
-            <div 
-              className="ml-2 flex items-center gap-1 px-2 py-0.5 bg-destructive/10 border border-destructive/20 rounded-md text-[10px] font-bold text-destructive select-none shrink-0"
-              title="Operations that failed to sync after 5 attempts and were removed from active queue"
+            <div
+              onClick={() => onOpenFailedOps?.()}
+              className="ml-2 flex items-center gap-1 px-2 py-0.5 bg-destructive/10 border border-destructive/20 rounded-md text-[10px] font-bold text-destructive cursor-pointer select-none shrink-0 hover:bg-destructive/20 transition duration-150"
+              title="Operations that failed to sync after 5 attempts and were removed from active queue — click to view and discard"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
               <span>{failedOpsCount} failed</span>

@@ -13,6 +13,8 @@ export interface QueuedOp {
   retryCount: number
   isCompleted?: boolean
   isUndo?: boolean
+  /** Message from the last failed dispatch attempt, set only once an op is moved to failedOps. */
+  lastError?: string
 }
 
 export type ToastTone = 'info' | 'success' | 'warning' | 'error'

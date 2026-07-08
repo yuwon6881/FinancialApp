@@ -28,6 +28,7 @@ import { CACHE_KEYS, getCachedJSON, getCachedTransactions, sanitizeTransactions,
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from './lib/modalDrafts'
 import { enqueue as outboxEnqueue, applyOpsToList, createFinalId, createLocalWishlistId, DISPATCH, sanitizeQueuedOps, getSyncSuccessToast, type QueuedOp, type EntityKind } from './lib/outbox'
 import { PendingSubscriptionsModal } from './components/PendingSubscriptionsModal'
+import { FailedSyncModal } from './components/FailedSyncModal'
 import { PasswordPromptModal } from './components/PasswordPromptModal'
 import { LockScreen } from './components/LockScreen'
 import { AppLogo } from './components/ui/AppLogo'
@@ -622,6 +623,18 @@ function App() {
   const [modalCheckbox, setModalCheckbox] = useState<boolean>(
     localStorage.getItem('show_notifications_on_login') !== 'false'
   )
+
+  // Failed Sync Items Modal State
+  const [showFailedOpsModal, setShowFailedOpsModal] = useState<boolean>(false)
+
+  const handleDiscardFailedOp = useCallback((id: string) => {
+    setFailedOps(prev => prev.filter(op => op.id !== id))
+  }, [])
+
+  const handleDiscardAllFailedOps = useCallback(() => {
+    setFailedOps([])
+    setShowFailedOpsModal(false)
+  }, [])
 
   const handleLogout = async () => {
     const currentPending = pendingOpsRef.current;
@@ -1223,10 +1236,11 @@ function App() {
             return next;
           });
 
+          // Kept in the merge buffer (isPendingSync flips false, but the item stays
+          // rendered with its confirmed values) until the loadAll() below actually
+          // lands -- see the cleanup next to that call for why a fixed timer here
+          // was wrong.
           setRecentlyCompletedOps(prev => [...prev, { ...nextOp, isCompleted: true }]);
-          setTimeout(() => {
-            setRecentlyCompletedOps(prev => prev.filter(op => op.id !== nextOp.id));
-          }, 3000);
 
           setError(null);
           processedAny = true;
@@ -1256,7 +1270,7 @@ function App() {
               showToast(`Couldn't sync '${opDesc}' — removed from queue`, 'Sync Failed', 'error');
 
               mutateQueue(prev => prev.filter(item => item.id !== nextOp.id));
-              setFailedOps(prev => [...prev, { ...nextOp, retryCount: updatedRetryCount }]);
+              setFailedOps(prev => [...prev, { ...nextOp, retryCount: updatedRetryCount, lastError: err.message || String(err) }]);
               continue;
             } else {
               // Bump retry on this op by id (not index 0) so a concurrently
@@ -1281,7 +1295,19 @@ function App() {
         } catch (refreshErr) {
           console.error('Post-sync dashboard refresh failed:', refreshErr);
         }
-        
+
+        // Only now -- once `transactions` has actually been refreshed (or we've
+        // given up trying) -- is it safe to drop these ops from the "recently
+        // completed" merge buffer. The previous approach cleared each op on a
+        // fixed 3s timer instead, which raced this refresh: if loadAll() took
+        // longer than the timer (e.g. a Cloud Run cold start), the op fell out of
+        // every buffer before the fresh data landed, and the merged list briefly
+        // reflected neither the optimistic nor the server-confirmed state -- an
+        // add would vanish and an edit would revert to its pre-edit value until
+        // the next render after `transactions` caught up.
+        const completedIds = new Set(successfulOps.map(({ op }) => op.id));
+        setRecentlyCompletedOps(prev => prev.filter(op => !completedIds.has(op.id)));
+
         // Show toasts only after UI is refreshed so they are fully "final". Copy (and any
         // opt-out) lives in one place — lib/outbox.ts — so new op types need no changes here.
         successfulOps.forEach(({ op, result }) => {
@@ -1656,6 +1682,7 @@ function App() {
                   : undefined
         }
         failedOpsCount={failedOps.length}
+        onOpenFailedOps={() => setShowFailedOpsModal(true)}
         onDiscardSubscription={handleDiscardSubscription}
         draftCount={draftTransactions.length}
       />
@@ -1878,6 +1905,14 @@ function App() {
           confirmText: 'Remove',
           onConfirm: () => handleDeletePayment(recurringPaymentId)
         })}
+      />
+
+      <FailedSyncModal
+        isOpen={showFailedOpsModal}
+        failedOps={failedOps}
+        onClose={() => setShowFailedOpsModal(false)}
+        onDiscard={handleDiscardFailedOp}
+        onDiscardAll={handleDiscardAllFailedOps}
       />
 
       <PasswordPromptModal

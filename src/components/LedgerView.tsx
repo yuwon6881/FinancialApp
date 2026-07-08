@@ -480,25 +480,26 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     openTransactionForm()
   }
 
-  // Reset Ledger Category defaults on transaction type changes. The
-  // ledgerCategory fix-up runs in both add and edit mode — otherwise
-  // switching a transaction's type mid-edit (e.g. Income inflow -> outflow,
-  // or away from Transfer) can leave a stale/incompatible ledgerCategory
-  // (like "Income" or "Transfer:X->Y") on a transaction of a different type.
-  // The Category fallback (Salary/first category) only applies in add mode,
-  // since overwriting it mid-edit would clobber the transaction's real
-  // category whenever an unrelated re-render (e.g. background category sync)
-  // fires this effect.
+  // Reset Ledger Category defaults on transaction type changes. In add mode,
+  // switching to Inflow always defaults to Income (Auto-Split) -- a sensible
+  // fresh-entry default. In edit mode, ledgerCategory was already populated
+  // with the transaction's real value by handleStartEdit, so it's only reset
+  // if it's actually invalid for the current type (mirrors the Outflow branch
+  // below) -- otherwise every inflow edit would clobber a real bucket-targeted
+  // or split value back to a bare "Income (Auto-Split)". The Category fallback
+  // (Salary/first category) only applies in add mode for the same reason.
   useEffect(() => {
     if (txType === 'inflow') {
-      setLedgerCategory('Income')
       if (!editingTxId) {
+        setLedgerCategory('Income')
         const hasSalary = categories.some(c => c.name === 'Salary')
         if (hasSalary) {
           setCategory('Salary')
         } else if (categories.length > 0) {
           setCategory(categories[0].name)
         }
+      } else if ((ledgerCategory || '').startsWith('Transfer:')) {
+        setLedgerCategory('Income')
       }
     } else if (txType === 'outflow') {
       if (ledgerCategory === 'Income' || (ledgerCategory || '').startsWith('IncomeSplit:') || (ledgerCategory || '').startsWith('Transfer:')) {
@@ -507,12 +508,15 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
   }, [txType, categories, editingTxId])
 
-  // Auto-generate description for transfers
+  // Auto-generate description for transfers -- add mode only. An edit's initial
+  // description (the transaction's real, possibly custom, description) must
+  // survive opening the form; regenerating it the instant the form mounts in
+  // Transfer mode would silently discard whatever the user originally typed.
   useEffect(() => {
-    if (txType === 'transfer') {
+    if (txType === 'transfer' && !editingTxId) {
       setDescription(`Transfer from ${transferSource} to ${transferTarget}`)
     }
-  }, [txType, transferSource, transferTarget])
+  }, [txType, transferSource, transferTarget, editingTxId])
 
   useEffect(() => {
     if (categories.length > 0 && !category) {
@@ -575,6 +579,15 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
   }, [showAllCycles, cyclesRange, selectedMonth, selectedYear, cycleDay])
 
+  // Transaction ids whose sync op just finished (isPendingSync already false) but
+  // whose effect isn't reflected in `serverResult` yet -- that snapshot is a
+  // separate fetch (below) that only starts once the whole queue drain finishes,
+  // so there's a real gap between "confirmed by server" and "serverResult knows
+  // it". Kept covered by the optimistic overlay (see filteredPendingTransactions)
+  // until the next successful runServerFetch, instead of dropping out the moment
+  // isPendingSync flips and showing whatever stale value serverResult still has.
+  const [recentlySyncedIds, setRecentlySyncedIds] = useState<Set<string>>(new Set())
+
   const runServerFetch = useCallback(async (opts: {
     page: number
     search: string
@@ -598,6 +611,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         endDate: allCyclesRange?.endDate
       })
       setServerResult(result)
+      // A fresh fetch is authoritative for everything it covers -- whatever was
+      // "not yet reconciled" now is, so the overlay can stand down.
+      setRecentlySyncedIds(new Set())
     } finally {
       setServerIsFetching(false)
     }
@@ -637,6 +653,18 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   // Re-fetch server result when activeSyncId transitions from non-null to null (sync completed)
   const prevActiveSyncId = useRef<string | null>(null)
   useEffect(() => {
+    // activeSyncId moves off an id the instant that op's dispatch finishes (each op
+    // in a batch gets its own turn as activeSyncId before the next one starts) --
+    // that id's isPendingSync flips false right away, well before serverResult is
+    // refetched below. Keep it in the overlay until then.
+    if (prevActiveSyncId.current !== null && prevActiveSyncId.current !== activeSyncId) {
+      const finishedId = prevActiveSyncId.current
+      setRecentlySyncedIds(prev => {
+        const next = new Set(prev)
+        next.add(finishedId)
+        return next
+      })
+    }
     if (showAllCycles && prevActiveSyncId.current !== null && activeSyncId === null && onFetchPagedTransactions && isInitialFetchDone.current) {
       runServerFetch({ page: currentPage, search: appliedSearch, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
     }
@@ -961,8 +989,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const sourceTransactions = useMemo(() => transactions, [transactions])
 
   const pendingTransactions = useMemo(() => {
-    return transactions.filter(t => t.isPendingSync)
-  }, [transactions])
+    return transactions.filter(t => t.isPendingSync || recentlySyncedIds.has(String(t.id)))
+  }, [transactions, recentlySyncedIds])
 
   const filteredPendingTransactions = useMemo(() => {
     if (!showAllCycles) return []
