@@ -408,6 +408,22 @@ export async function fetchAutocompleteSuggestions(): Promise<import('../types')
   return res.json()
 }
 
+// A cycle whose calendar month is strictly before the current month is fully in the
+// past: its transactions can't change through normal use, so it's safe to cache far
+// longer than the live cycle. (Backdated edits to an old cycle still call
+// queryCache.invalidateAll() like every other mutation, so a stale entry can never
+// outlive an actual change.)
+const MONTH_ABBREVIATIONS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const CLOSED_CYCLE_STALE_TIME = 24 * 60 * 60 * 1000  // 24h
+
+function isClosedCycle(month?: string, year?: number): boolean {
+  if (!month || !year) return false
+  const monthIndex = MONTH_ABBREVIATIONS.indexOf(month)
+  if (monthIndex === -1) return false
+  const now = new Date()
+  return year < now.getFullYear() || (year === now.getFullYear() && monthIndex < now.getMonth())
+}
+
 export function fetchTransactions(month?: string, year?: number, all?: boolean): Promise<Transaction[]> {
   const cacheKey = all ? 'transactions:all' : `transactions:${month || ''}:${year || ''}`
   const cachedPromise = queryCache.get<Transaction[]>(cacheKey)
@@ -438,7 +454,7 @@ export function fetchTransactions(month?: string, year?: number, all?: boolean):
     return (data || []).map(deobfuscateTransaction)
   })()
 
-  queryCache.set(cacheKey, promise)
+  queryCache.set(cacheKey, promise, isClosedCycle(month, year) ? CLOSED_CYCLE_STALE_TIME : undefined)
   return promise
 }
 

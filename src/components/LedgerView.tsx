@@ -36,6 +36,261 @@ import { useAutoOpenModal } from '../lib/useAutoOpenModal'
 import { useIsMobile } from '../lib/useIsMobile'
 import { getCycleRangeDates, getStartOfNCyclesAgo, formatDateForApi } from '../lib/cycle'
 
+// Memoized ledger rows. Extracted from the render body so React can skip re-rendering
+// the (up to ~100) visible rows when the parent re-renders for reasons unrelated to a
+// given row -- e.g. typing in the search box, a background fetch toggling, or an
+// unrelated row's sync state changing. All render-affecting inputs are passed as
+// primitive props (isDeleting/isSyncing/hideSensitive/currency), so React.memo's shallow
+// prop compare correctly re-renders a row exactly when its own state changes and skips it
+// otherwise. Handlers are passed with stable identities from the parent (see below).
+interface LedgerRowProps {
+  t: Transaction
+  isDeleting: boolean
+  isSyncing: boolean
+  hideSensitive: boolean
+  currency: string
+  onStartEdit: (t: Transaction) => void
+  onDeleteClick: (t: Transaction) => void
+  onSplitEditBlocked: () => void
+}
+
+const DesktopLedgerRow = React.memo(function DesktopLedgerRow({
+  t, isDeleting, isSyncing, hideSensitive, currency, onStartEdit, onDeleteClick, onSplitEditBlocked,
+}: LedgerRowProps) {
+  const isOutflow = t.amount < 0
+  const formatSensitive = (val: number) => (
+    <span className={hideSensitive ? 'blur-sm select-none pointer-events-none inline-block transition-[filter] duration-200' : 'transition-[filter] duration-200'}>
+      {formatCurrencyVal(val, currency)}
+    </span>
+  )
+  return (
+    <motion.tr
+      layout
+      transition={{ type: "tween", ease: [0.22, 1, 0.36, 1], duration: 0.2 }}
+      variants={{ hidden: { opacity: 0, y: 4 }, show: { opacity: 1, y: 0, transition: { type: "tween", duration: 0.18, ease: "easeOut" } } }}
+      id={`tx-row-${t.id}`} key={t.id} className="hover:bg-muted/10 transition duration-150"
+    >
+      <td className="p-4 font-medium text-muted-foreground">{t.date}</td>
+      <td className="p-4 font-semibold text-foreground flex items-center gap-2">
+        <span>{t.description}</span>
+        {isDeleting ? (
+          <RowSyncBadge state="deleting" entityLabel="transaction" />
+        ) : (isSyncing || t.isPendingSync) ? (
+          <RowSyncBadge state={isSyncing ? 'syncing' : 'pending'} entityLabel="transaction" />
+        ) : null}
+      </td>
+      <td className="p-4">
+        <span className={`inline-block text-[10px] px-2 py-0.5 font-semibold rounded-md border ${
+          getCategoryBadgeClass(t.category)
+        }`}>
+          {t.category}
+        </span>
+      </td>
+      <td className="p-4">
+        <span className={`inline-block text-[10px] px-2 py-0.5 font-semibold rounded-md border ${getCategoryBadgeClass(t.ledgerCategory)}`}>
+          {displayLedgerCategory(t.ledgerCategory)}
+        </span>
+      </td>
+      <td className="p-4 text-right font-medium">
+        {(() => {
+          const isIncomeRecord = t.ledgerCategory === 'Income' || (t.ledgerCategory || '').startsWith('IncomeSplit:')
+          const isSplitSub = t.id.includes('-split-')
+          if (isIncomeRecord || isSplitSub) {
+            return <span className="text-muted-foreground/30">-</span>
+          }
+          if ((t.ledgerCategory || '').startsWith('Transfer:')) {
+            return (
+              <span className="inline-block px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-500 font-bold text-xs">
+                {formatSensitive(t.amount)}
+              </span>
+            )
+          }
+          return isOutflow ? (
+            <span className="inline-block px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-500 font-bold text-xs">
+              {formatSensitive(Math.abs(t.amount))}
+            </span>
+          ) : (
+            <span className="text-muted-foreground/30">-</span>
+          )
+        })()}
+      </td>
+      <td className="p-4 text-right font-medium">
+        {(() => {
+          const isIncomeRecord = t.ledgerCategory === 'Income' || (t.ledgerCategory || '').startsWith('IncomeSplit:')
+          const isSplitSub = t.id.includes('-split-')
+          if (isIncomeRecord) {
+            return (
+              <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-xs">
+                {formatSensitive(t.amount)}
+              </span>
+            )
+          }
+          if (isSplitSub) {
+            return (
+              <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-xs">
+                {formatSensitive(t.amount)}
+              </span>
+            )
+          }
+          if ((t.ledgerCategory || '').startsWith('Transfer:')) {
+            return (
+              <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-xs">
+                {formatSensitive(t.amount)}
+              </span>
+            )
+          }
+          return !isOutflow ? (
+            <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-xs">
+              {formatSensitive(t.amount)}
+            </span>
+          ) : (
+            <span className="text-muted-foreground/30">-</span>
+          )
+        })()}
+      </td>
+      <td className="p-4 text-center flex items-center justify-center gap-2">
+        {t.id.includes('-split-') ? (
+          <button
+            onClick={onSplitEditBlocked}
+            className="text-xs text-muted-foreground/45 hover:text-muted-foreground/60 bg-muted/20 hover:bg-muted/30 border border-border/40 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer"
+          >
+            Edit
+          </button>
+        ) : (
+          <button
+            onClick={() => onStartEdit(t)}
+            disabled={isDeleting || hideSensitive}
+            title={hideSensitive ? 'Unhide balances to edit' : undefined}
+            className="text-xs text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Edit
+          </button>
+        )}
+        <button
+          onClick={() => onDeleteClick(t)}
+          disabled={isDeleting || hideSensitive}
+          title={hideSensitive ? 'Unhide balances to edit' : undefined}
+          className="text-xs text-orange-500 hover:text-orange-600 bg-orange-500/5 hover:bg-orange-500/10 border border-orange-500/10 hover:border-orange-500/20 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Delete
+        </button>
+      </td>
+    </motion.tr>
+  )
+})
+
+const MobileLedgerRow = React.memo(function MobileLedgerRow({
+  t, isDeleting, isSyncing, hideSensitive, currency, hint, onStartEdit, onDeleteClick, onSplitEditBlocked,
+}: LedgerRowProps & { hint: boolean }) {
+  const isOutflow = t.amount < 0
+  const isTransfer = (t.ledgerCategory || '').startsWith('Transfer:')
+  const isSplit = t.id.includes('-split-')
+  const ledgerLabel = displayLedgerCategory(t.ledgerCategory)
+  const formatSensitive = (val: number) => (
+    <span className={hideSensitive ? 'blur-sm select-none pointer-events-none inline-block transition-[filter] duration-200' : 'transition-[filter] duration-200'}>
+      {formatCurrencyVal(val, currency)}
+    </span>
+  )
+  return (
+    <motion.div
+      layout
+      transition={{ type: "tween", ease: [0.22, 1, 0.36, 1], duration: 0.2 }}
+      variants={{ hidden: { opacity: 0, y: 4 }, show: { opacity: 1, y: 0, transition: { type: "tween", duration: 0.18, ease: "easeOut" } } }}
+      key={t.id}
+    >
+    <SwipeableRow
+      id={`tx-row-${t.id}`}
+      hint={hint}
+      disabled={isDeleting}
+      className="rounded-2xl border border-border shadow-xs"
+      actionsWidth={128}
+      actions={
+        <>
+          {isSplit ? (
+            <button
+              onClick={onSplitEditBlocked}
+              className="flex-1 flex flex-col items-center justify-center gap-1 bg-slate-500 text-white text-[11px] font-bold active:bg-slate-600 transition"
+            >
+              <Edit2 className="size-4" />
+              Edit
+            </button>
+          ) : (
+            <button
+              onClick={() => onStartEdit(t)}
+              disabled={isDeleting || isSyncing || hideSensitive}
+              className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-500 text-white text-[11px] font-bold active:bg-blue-600 transition disabled:opacity-50 disabled:pointer-events-none"
+            >
+              <Edit2 className="size-4" />
+              Edit
+            </button>
+          )}
+          <button
+            onClick={() => onDeleteClick(t)}
+            disabled={isDeleting || isSyncing || hideSensitive}
+            className="flex-1 flex flex-col items-center justify-center gap-1 bg-red-500 text-white text-[11px] font-bold active:bg-red-600 transition disabled:opacity-50 disabled:pointer-events-none"
+          >
+            <Trash2 className="size-4" />
+            Delete
+          </button>
+        </>
+      }
+    >
+      {/* Top accent bar */}
+      <div className={`h-0.5 w-full ${
+        isTransfer ? 'bg-blue-500/60' : isOutflow ? 'bg-orange-500/60' : 'bg-emerald-500/60'
+      }`} />
+
+      <div className="p-4 space-y-3">
+        {/* Row 1: Date + Category badge */}
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-muted-foreground font-mono tracking-wide">{t.date}</span>
+          <span className={`inline-block text-[10px] px-2 py-0.5 font-semibold rounded-full border ${
+            getCategoryBadgeClass(t.category)
+          }`}>
+            {t.category}
+          </span>
+        </div>
+
+        {/* Row 2: Description + Amount */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex-1 flex items-center gap-1.5 min-w-0">
+            <h4 className="text-sm font-bold text-foreground leading-snug truncate">{t.description}</h4>
+            {isDeleting ? (
+              <RowSyncBadge state="deleting" entityLabel="transaction" />
+            ) : (isSyncing || t.isPendingSync) ? (
+              <RowSyncBadge state={isSyncing ? 'syncing' : 'pending'} entityLabel="transaction" />
+            ) : null}
+          </div>
+          <div className="shrink-0">
+            {isTransfer ? (
+              <span className="text-sm font-bold text-blue-400">
+                {formatSensitive(t.amount)}
+              </span>
+            ) : (
+              <span className={`text-sm font-bold ${
+                isOutflow ? 'text-orange-400' : 'text-emerald-400'
+              }`}>
+                {isOutflow ? '-' : '+'}{formatSensitive(isOutflow ? Math.abs(t.amount) : t.amount)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Row 3: Ledger category */}
+        <div className="flex items-center justify-between pt-2 border-t border-border/30">
+          <span className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+            Ledger:
+            <span className={`inline-block px-1.5 py-0.5 rounded-md border font-semibold ${getCategoryBadgeClass(t.ledgerCategory)}`}>
+              {ledgerLabel}
+            </span>
+          </span>
+        </div>
+      </div>
+    </SwipeableRow>
+    </motion.div>
+  )
+})
+
 interface LedgerViewProps {
   transactions: Transaction[]
   autocompleteSuggestions?: import('../types').AutocompleteSuggestion[]
@@ -1173,6 +1428,22 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     )
   }
 
+  // Stable handler identities for the memoized ledger rows. The refs keep the wrappers
+  // stale-closure-safe (they always invoke the latest closure), so the rows get a
+  // constant function reference across renders and React.memo can skip re-rendering
+  // them -- without needing a dependency array on these heavyweight handlers (this
+  // project disables react-hooks/exhaustive-deps, so a hand-maintained one would be a
+  // silent-staleness hazard).
+  const handleStartEditRef = useRef(handleStartEdit)
+  const handleDeleteClickRef = useRef(handleDeleteClick)
+  useEffect(() => {
+    handleStartEditRef.current = handleStartEdit
+    handleDeleteClickRef.current = handleDeleteClick
+  })
+  const onStartEditStable = useCallback((t: Transaction) => handleStartEditRef.current(t), [])
+  const onDeleteClickStable = useCallback((t: Transaction) => handleDeleteClickRef.current(t), [])
+  const onSplitEditBlockedStable = useCallback(() => setShowEditDisabledModal(true), [])
+
   const isServerMode = showAllCycles && !!serverResult
 
   const getCycleRangeLabel = () => {
@@ -2128,123 +2399,19 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               className="divide-y divide-border/30 text-xs"
             >
               <AnimatePresence>
-              {displayTransactions.map(t => {
-                const isOutflow = t.amount < 0
-                return (
-                  <motion.tr 
-                    layout
-                    transition={{ type: "tween", ease: [0.22, 1, 0.36, 1], duration: 0.2 }}
-                    variants={{ hidden: { opacity: 0, y: 4 }, show: { opacity: 1, y: 0, transition: { type: "tween", duration: 0.18, ease: "easeOut" } } }} 
-                    id={`tx-row-${t.id}`} key={t.id} className="hover:bg-muted/10 transition duration-150"
-                  >
-                    <td className="p-4 font-medium text-muted-foreground">{t.date}</td>
-                    <td className="p-4 font-semibold text-foreground flex items-center gap-2">
-                      <span>{t.description}</span>
-                      {isTxDeleting(t.id) ? (
-                        <RowSyncBadge state="deleting" entityLabel="transaction" />
-                      ) : (isTxSyncing(t.id) || t.isPendingSync) ? (
-                        <RowSyncBadge state={isTxSyncing(t.id) ? 'syncing' : 'pending'} entityLabel="transaction" />
-                      ) : null}
-                    </td>
-                    <td className="p-4">
-                      <span className={`inline-block text-[10px] px-2 py-0.5 font-semibold rounded-md border ${
-                        getCategoryBadgeClass(t.category)
-                      }`}>
-                        {t.category}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <span className={`inline-block text-[10px] px-2 py-0.5 font-semibold rounded-md border ${getCategoryBadgeClass(t.ledgerCategory)}`}>
-                        {displayLedgerCategory(t.ledgerCategory)}
-                      </span>
-                    </td>
-                    <td className="p-4 text-right font-medium">
-                      {(() => {
-                        const isIncomeRecord = t.ledgerCategory === 'Income' || (t.ledgerCategory || '').startsWith('IncomeSplit:')
-                        const isSplitSub = t.id.includes('-split-')
-                        if (isIncomeRecord || isSplitSub) {
-                          return <span className="text-muted-foreground/30">-</span>
-                        }
-                        if ((t.ledgerCategory || '').startsWith('Transfer:')) {
-                          return (
-                            <span className="inline-block px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-500 font-bold text-xs">
-                              {formatSensitive(t.amount)}
-                            </span>
-                          )
-                        }
-                        return isOutflow ? (
-                          <span className="inline-block px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-500 font-bold text-xs">
-                            {formatSensitive(Math.abs(t.amount))}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground/30">-</span>
-                        )
-                      })()}
-                    </td>
-                    <td className="p-4 text-right font-medium">
-                      {(() => {
-                        const isIncomeRecord = t.ledgerCategory === 'Income' || (t.ledgerCategory || '').startsWith('IncomeSplit:')
-                        const isSplitSub = t.id.includes('-split-')
-                        if (isIncomeRecord) {
-                          return (
-                            <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-xs">
-                              {formatSensitive(t.amount)}
-                            </span>
-                          )
-                        }
-                        if (isSplitSub) {
-                          return (
-                            <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-xs">
-                              {formatSensitive(t.amount)}
-                            </span>
-                          )
-                        }
-                        if ((t.ledgerCategory || '').startsWith('Transfer:')) {
-                          return (
-                            <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-xs">
-                              {formatSensitive(t.amount)}
-                            </span>
-                          )
-                        }
-                        return !isOutflow ? (
-                          <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-xs">
-                            {formatSensitive(t.amount)}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground/30">-</span>
-                        )
-                      })()}
-                    </td>
-                    <td className="p-4 text-center flex items-center justify-center gap-2">
-                      {t.id.includes('-split-') ? (
-                        <button
-                          onClick={() => setShowEditDisabledModal(true)}
-                          className="text-xs text-muted-foreground/45 hover:text-muted-foreground/60 bg-muted/20 hover:bg-muted/30 border border-border/40 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer"
-                        >
-                          Edit
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleStartEdit(t)}
-                          disabled={isTxDeleting(t.id) || hideSensitive}
-                          title={hideSensitive ? 'Unhide balances to edit' : undefined}
-                          className="text-xs text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          Edit
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleDeleteClick(t)}
-                        disabled={isTxDeleting(t.id) || hideSensitive}
-                        title={hideSensitive ? 'Unhide balances to edit' : undefined}
-                        className="text-xs text-orange-500 hover:text-orange-600 bg-orange-500/5 hover:bg-orange-500/10 border border-orange-500/10 hover:border-orange-500/20 px-2.5 py-1 rounded-lg transition duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </motion.tr>
-                )
-              })}
+              {displayTransactions.map(t => (
+                <DesktopLedgerRow
+                  key={t.id}
+                  t={t}
+                  isDeleting={isTxDeleting(t.id)}
+                  isSyncing={isTxSyncing(t.id)}
+                  hideSensitive={hideSensitive}
+                  currency={currency}
+                  onStartEdit={onStartEditStable}
+                  onDeleteClick={onDeleteClickStable}
+                  onSplitEditBlocked={onSplitEditBlockedStable}
+                />
+              ))}
               </AnimatePresence>
 
               {displayTransactions.length === 0 && (
@@ -2267,113 +2434,20 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         className="block md:hidden space-y-3"
       >
         <AnimatePresence>
-        {displayTransactions.map((t, idx) => {
-          const isOutflow = t.amount < 0
-          const isTransfer = (t.ledgerCategory || '').startsWith('Transfer:')
-          const isSplit = t.id.includes('-split-')
-          const ledgerLabel = displayLedgerCategory(t.ledgerCategory)
-          const isDeleting = isTxDeleting(t.id)
-          const isSyncing = isTxSyncing(t.id)
-
-          return (
-            <motion.div 
-              layout 
-              transition={{ type: "tween", ease: [0.22, 1, 0.36, 1], duration: 0.2 }}
-              variants={{ hidden: { opacity: 0, y: 4 }, show: { opacity: 1, y: 0, transition: { type: "tween", duration: 0.18, ease: "easeOut" } } }} 
-              key={t.id}
-            >
-            <SwipeableRow
-              id={`tx-row-${t.id}`}
-              hint={idx === 0}
-              disabled={isDeleting}
-              className="rounded-2xl border border-border shadow-xs"
-              actionsWidth={128}
-              actions={
-                <>
-                  {isSplit ? (
-                    <button
-                      onClick={() => setShowEditDisabledModal(true)}
-                      className="flex-1 flex flex-col items-center justify-center gap-1 bg-slate-500 text-white text-[11px] font-bold active:bg-slate-600 transition"
-                    >
-                      <Edit2 className="size-4" />
-                      Edit
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleStartEdit(t)}
-                      disabled={isDeleting || isSyncing || hideSensitive}
-                      className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-500 text-white text-[11px] font-bold active:bg-blue-600 transition disabled:opacity-50 disabled:pointer-events-none"
-                    >
-                      <Edit2 className="size-4" />
-                      Edit
-                    </button>
-                  )}
-                  <button
-                    onClick={() => handleDeleteClick(t)}
-                    disabled={isDeleting || isSyncing || hideSensitive}
-                    className="flex-1 flex flex-col items-center justify-center gap-1 bg-red-500 text-white text-[11px] font-bold active:bg-red-600 transition disabled:opacity-50 disabled:pointer-events-none"
-                  >
-                    <Trash2 className="size-4" />
-                    Delete
-                  </button>
-                </>
-              }
-            >
-              {/* Top accent bar */}
-              <div className={`h-0.5 w-full ${
-                isTransfer ? 'bg-blue-500/60' : isOutflow ? 'bg-orange-500/60' : 'bg-emerald-500/60'
-              }`} />
-
-              <div className="p-4 space-y-3">
-                {/* Row 1: Date + Category badge */}
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-muted-foreground font-mono tracking-wide">{t.date}</span>
-                  <span className={`inline-block text-[10px] px-2 py-0.5 font-semibold rounded-full border ${
-                    getCategoryBadgeClass(t.category)
-                  }`}>
-                    {t.category}
-                  </span>
-                </div>
-
-                {/* Row 2: Description + Amount */}
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex-1 flex items-center gap-1.5 min-w-0">
-                    <h4 className="text-sm font-bold text-foreground leading-snug truncate">{t.description}</h4>
-                    {isDeleting ? (
-                      <RowSyncBadge state="deleting" entityLabel="transaction" />
-                    ) : (isSyncing || t.isPendingSync) ? (
-                      <RowSyncBadge state={isSyncing ? 'syncing' : 'pending'} entityLabel="transaction" />
-                    ) : null}
-                  </div>
-                  <div className="shrink-0">
-                    {isTransfer ? (
-                      <span className="text-sm font-bold text-blue-400">
-                        {formatSensitive(t.amount)}
-                      </span>
-                    ) : (
-                      <span className={`text-sm font-bold ${
-                        isOutflow ? 'text-orange-400' : 'text-emerald-400'
-                      }`}>
-                        {isOutflow ? '-' : '+'}{formatSensitive(isOutflow ? Math.abs(t.amount) : t.amount)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Row 3: Ledger category */}
-                <div className="flex items-center justify-between pt-2 border-t border-border/30">
-                  <span className="text-[10px] text-muted-foreground flex items-center gap-1.5">
-                    Ledger:
-                    <span className={`inline-block px-1.5 py-0.5 rounded-md border font-semibold ${getCategoryBadgeClass(t.ledgerCategory)}`}>
-                      {ledgerLabel}
-                    </span>
-                  </span>
-                </div>
-              </div>
-            </SwipeableRow>
-            </motion.div>
-          )
-        })}
+        {displayTransactions.map((t, idx) => (
+          <MobileLedgerRow
+            key={t.id}
+            t={t}
+            hint={idx === 0}
+            isDeleting={isTxDeleting(t.id)}
+            isSyncing={isTxSyncing(t.id)}
+            hideSensitive={hideSensitive}
+            currency={currency}
+            onStartEdit={onStartEditStable}
+            onDeleteClick={onDeleteClickStable}
+            onSplitEditBlocked={onSplitEditBlockedStable}
+          />
+        ))}
         </AnimatePresence>
 
         {displayTransactions.length === 0 && (
