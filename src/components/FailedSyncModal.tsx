@@ -29,6 +29,23 @@ function describeOp(op: QueuedOp): string {
   return op.payload?.description || op.payload?.name || `${ENTITY_LABELS[op.entity] || op.entity} ${op.targetId}`
 }
 
+function formatFieldName(key: string): string {
+  return key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim()
+}
+
+function formatFieldValue(value: unknown): string {
+  if (value === null || value === undefined || value === '') return '—'
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+  return String(value)
+}
+
+// The queued payload already holds exactly what was being sent to the server,
+// so showing it is free -- no extra data threading needed.
+function getPayloadEntries(op: QueuedOp): Array<[string, unknown]> {
+  if (!op.payload || typeof op.payload !== 'object') return []
+  return Object.entries(op.payload).filter(([key]) => key !== 'id' && key !== 'isPendingSync')
+}
+
 export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDiscardAll }: FailedSyncModalProps) {
   if (failedOps.length === 0) return null
 
@@ -81,6 +98,16 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
                 </div>
               </div>
             </div>
+            {getPayloadEntries(op).length > 0 && (
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] bg-muted/40 border border-border/30 rounded-lg px-2.5 py-2">
+                {getPayloadEntries(op).map(([key, value]) => (
+                  <div key={key} className="min-w-0">
+                    <span className="text-muted-foreground font-semibold">{formatFieldName(key)}: </span>
+                    <span className="text-foreground font-medium break-words">{formatFieldValue(value)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             {op.lastError && (
               <div className="text-[10px] text-destructive/90 bg-destructive/5 border border-destructive/10 rounded-lg px-2.5 py-1.5 break-words">
                 {op.lastError}
