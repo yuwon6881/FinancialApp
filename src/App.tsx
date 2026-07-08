@@ -245,6 +245,53 @@ function App() {
   useEffect(() => {
     isLedgerAddOpenRef.current = isLedgerAddOpen
   }, [isLedgerAddOpen])
+
+  // Background Sync Queue Worker Refs
+  const pendingOpsRef = useRef(pendingOps)
+  const draftTxRef = useRef(draftTransactions)
+  const failedOpsRef = useRef(failedOps)
+  const usernameRef = useRef(username)
+  const editingPendingIdRef = useRef(editingPendingId)
+
+  useEffect(() => {
+    pendingOpsRef.current = pendingOps
+  }, [pendingOps])
+
+  useEffect(() => {
+    draftTxRef.current = draftTransactions
+  }, [draftTransactions])
+
+  useEffect(() => {
+    failedOpsRef.current = failedOps
+  }, [failedOps])
+
+  useEffect(() => {
+    usernameRef.current = username
+  }, [username])
+
+  useEffect(() => {
+    editingPendingIdRef.current = editingPendingId
+  }, [editingPendingId])
+
+  const enqueue = useCallback((queue: QueuedOp[], entity: import('./lib/outbox').EntityKind, type: import('./lib/outbox').OpType, targetId: string, payload?: any, isUndo?: boolean) => {
+    const activeSyncOpId = isSyncingRef.current && queue.length > 0 ? queue[0].id : null
+    return outboxEnqueue(queue, entity, type, targetId, payload, isUndo, activeSyncOpId)
+  }, [])
+
+  // Single entry point for every queue mutation. Computes the next queue from the
+  // *ref* (the synchronous source of truth) rather than React state, then writes
+  // ref and state together. This is what makes concurrent mutations safe: an Undo
+  // click that enqueues a compensating op while the drain loop is awaiting a
+  // dispatch reads-and-writes the same ref the loop does, so neither clobbers the
+  // other's change (the earlier plain-value writes lost whichever landed second).
+  const mutateQueue = useCallback((updater: (prev: QueuedOp[]) => QueuedOp[]) => {
+    const next = updater(pendingOpsRef.current)
+    // Deliberate synchronous ref write: this ref *is* the live queue the drain
+    // loop reads mid-await, so it must update now, not after the next render.
+    pendingOpsRef.current = next
+    setPendingOps(next)
+  }, [])
+
   const showToast = (message: string, title: string = 'Notification', tone: ToastTone = 'info', action?: ToastAction) => {
     const id = Date.now().toString(36) + Math.random().toString(36).substring(2, 7)
     setToasts(prev => [...prev.slice(-3), { id, message, title, tone, action }])
@@ -1197,53 +1244,6 @@ function App() {
   useEffect(() => {
     setCachedJSON('failed_operations', failedOps)
   }, [failedOps])
-
-  // Background Sync Queue Worker Refs
-  const pendingOpsRef = useRef(pendingOps);
-  const draftTxRef = useRef(draftTransactions);
-  const failedOpsRef = useRef(failedOps);
-  const usernameRef = useRef(username);
-  const editingPendingIdRef = useRef(editingPendingId);
-
-  useEffect(() => {
-    pendingOpsRef.current = pendingOps;
-  }, [pendingOps]);
-
-  // Single entry point for every queue mutation. Computes the next queue from the
-  // *ref* (the synchronous source of truth) rather than React state, then writes
-  // ref and state together. This is what makes concurrent mutations safe: an Undo
-  // click that enqueues a compensating op while the drain loop is awaiting a
-  // dispatch reads-and-writes the same ref the loop does, so neither clobbers the
-  // other's change (the earlier plain-value writes lost whichever landed second).
-  const mutateQueue = useCallback((updater: (prev: QueuedOp[]) => QueuedOp[]) => {
-    const next = updater(pendingOpsRef.current);
-    // Deliberate synchronous ref write: this ref *is* the live queue the drain
-    // loop reads mid-await, so it must update now, not after the next render.
-    // eslint-disable-next-line react-hooks/immutability
-    pendingOpsRef.current = next;
-    setPendingOps(next);
-  }, []);
-
-  const enqueue = useCallback((queue: QueuedOp[], entity: import('./lib/outbox').EntityKind, type: import('./lib/outbox').OpType, targetId: string, payload?: any, isUndo?: boolean) => {
-    const activeSyncOpId = isSyncingRef.current && queue.length > 0 ? queue[0].id : null;
-    return outboxEnqueue(queue, entity, type, targetId, payload, isUndo, activeSyncOpId);
-  }, []);
-
-  useEffect(() => {
-    draftTxRef.current = draftTransactions;
-  }, [draftTransactions]);
-
-  useEffect(() => {
-    failedOpsRef.current = failedOps;
-  }, [failedOps]);
-
-  useEffect(() => {
-    usernameRef.current = username;
-  }, [username]);
-
-  useEffect(() => {
-    editingPendingIdRef.current = editingPendingId;
-  }, [editingPendingId]);
 
   useEffect(() => {
     syncBackoffUntilRef.current = syncBackoffUntil;

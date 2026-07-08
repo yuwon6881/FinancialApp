@@ -2,6 +2,7 @@ import type { PendingNotification } from '../types'
 import { formatCurrencyVal } from '../lib/utils'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { BottomSheet } from './ui/BottomSheet'
+import { ToggleButton } from './ui/ToggleButton'
 
 interface PendingSubscriptionsModalProps {
   isOpen: boolean
@@ -43,15 +44,14 @@ export function PendingSubscriptionsModal({
       }
       footer={
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-          <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer w-full sm:w-auto">
-            <input
-              type="checkbox"
-              checked={showOnLoginChecked}
-              onChange={(e) => onToggleShowOnLogin(e.target.checked)}
-              className="rounded border-border text-blue-500 focus:ring-blue-500"
+          <div className="flex items-center justify-between gap-3 text-xs font-medium text-foreground w-full sm:w-auto">
+            <span>Show pending-payment reminder after startup</span>
+            <ToggleButton
+              active={showOnLoginChecked}
+              onClick={() => onToggleShowOnLogin(!showOnLoginChecked)}
+              className="size-6 shrink-0"
             />
-            Show pending-payment reminder automatically after sign-in or app reload
-          </label>
+          </div>
           <button
             onClick={onClose}
             className="w-full sm:w-auto px-4 py-2 bg-foreground text-background font-bold text-xs rounded-xl hover:bg-foreground/90 transition shadow-sm cursor-pointer text-center"
