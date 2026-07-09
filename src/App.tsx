@@ -736,17 +736,42 @@ function App() {
   const [hasFingerprintSetup, setHasFingerprintSetup] = useState<boolean>(false)
 
   useEffect(() => {
-    if (!token) return
-    isPlatformAuthenticatorAvailable().then(available => {
-      if (!available) return
-      api.fetchAuthStatus().then(res => {
-        setHasFingerprintSetup(res.hasFingerprint)
-        if (res.hasFingerprint) {
-          void prefetchFingerprintAssertOptions().catch(() => undefined)
-        }
-      }).catch(() => undefined)
-    })
+    if (!token) {
+      setHasFingerprintSetup(false)
+      clearCachedFingerprintAssertOptions()
+      return
+    }
+
+    let cancelled = false
+    ;(async () => {
+      const platformAvailable = await isPlatformAuthenticatorAvailable().catch(() => false)
+      if (cancelled) return
+
+      if (!platformAvailable) {
+        setHasFingerprintSetup(false)
+        clearCachedFingerprintAssertOptions()
+        return
+      }
+
+      const status = await api.fetchAuthStatus().catch(() => null)
+      if (cancelled) return
+
+      const hasFingerprint = !!status?.hasFingerprint
+      setHasFingerprintSetup(hasFingerprint)
+      if (!hasFingerprint) {
+        clearCachedFingerprintAssertOptions()
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
   }, [token])
+
+  useEffect(() => {
+    if (!token || isLocked || !hideSensitive || !hasFingerprintSetup) return
+    void prefetchFingerprintAssertOptions().catch(() => undefined)
+  }, [token, isLocked, hideSensitive, hasFingerprintSetup])
 
   // Cycle switching state for skeleton loader
   const [isSwitchingCycle, setIsSwitchingCycle] = useState<boolean>(false)
@@ -857,17 +882,9 @@ function App() {
             }
           })
       }
-      // Sensitive mode can be revealed at any point in an active session, not just right
-      // after a lock, so piggyback on this same tick to keep the assert-challenge cache
-      // warm the whole time it's on -- prefetchFingerprintAssertOptions() is a no-op
-      // network-wise unless the cached challenge is actually stale (see PREFETCH_TTL_MS),
-      // so calling it every 15s here doesn't spam the server.
-      if (hasFingerprintSetup && hideSensitive) {
-        void prefetchFingerprintAssertOptions().catch(() => undefined)
-      }
     }, 15000)
     return () => clearInterval(interval)
-  }, [token, isLocked, markSessionLocked, hasFingerprintSetup, hideSensitive])
+  }, [token, isLocked, markSessionLocked, hasFingerprintSetup])
 
   // Fetch initial ledger and dashboard statistics
   async function loadAll(month?: string, year?: number, isBackground = false) {
@@ -1888,22 +1905,25 @@ function App() {
   }
 
   const revealSensitiveWithFingerprint = async (): Promise<boolean> => {
-    if (!(await isPlatformAuthenticatorAvailable())) return false
+    if (!hasFingerprintSetup) return false
+    let verified = false
     try {
-      const status = await api.fetchAuthStatus()
-      if (!status.hasFingerprint) return false
       const { challengeId, options } = await getCachedFingerprintAssertOptions()
       const credential = await getFingerprintAssertion(options)
       await api.verifyFingerprintAssert(challengeId, credential)
       setHideSensitive(false)
       localStorage.setItem('hide_sensitive', 'false')
       mutateQueue(prev => enqueue(prev, 'settings', 'update', 'hideSensitive', { hideSensitive: false }))
+      verified = true
       return true
     } catch (err) {
       console.warn('Fingerprint prompt failed/cancelled:', err)
       return false
     } finally {
       clearCachedFingerprintAssertOptions()
+      if (!verified && token && !isLocked && hideSensitive) {
+        void prefetchFingerprintAssertOptions().catch(() => undefined)
+      }
     }
   }
 
@@ -1916,6 +1936,9 @@ function App() {
     } else {
       setHideSensitive(true)
       localStorage.setItem('hide_sensitive', 'true')
+      if (hasFingerprintSetup) {
+        void prefetchFingerprintAssertOptions().catch(() => undefined)
+      }
       mutateQueue(prev => enqueue(prev, 'settings', 'update', 'hideSensitive', { hideSensitive: true }))
     }
   }
