@@ -253,6 +253,9 @@ function App() {
   }, [isLedgerAddOpen])
 
   // Background Sync Queue Worker Refs
+  // Earliest time the next sync-success toast may show, so a burst of ops that
+  // complete within the same tick still stagger visually instead of stacking.
+  const nextToastAtRef = useRef(0)
   const pendingOpsRef = useRef(pendingOps)
   const draftTxRef = useRef(draftTransactions)
   const failedOpsRef = useRef(failedOps)
@@ -1321,6 +1324,7 @@ function App() {
 
     let processedAny = false;
     const successfulOps: Array<{ op: QueuedOp; result: DispatchResult }> = [];
+    const TOAST_STAGGER_MS = 350;
 
     try {
       while (true) {
@@ -1373,6 +1377,23 @@ function App() {
           setError(null);
           processedAny = true;
           successfulOps.push({ op: nextOp, result });
+
+          // Fire this op's toast as soon as its own dispatch resolves, not after the
+          // whole queue drains -- otherwise toggling several cards in quick succession
+          // (each picked up by the same continuing while-loop iteration) delays every
+          // toast until the last one finishes. Undo actions are still built eagerly,
+          // right here, so the snapshot read/delete in buildUndoAction happens before a
+          // later action in this same batch can overwrite the same key in undoSnapshotsRef.
+          const toastMsg = getSyncSuccessToast(nextOp);
+          if (toastMsg) {
+            const undoAction = nextOp.isUndo ? undefined : buildUndoAction(nextOp, result);
+            const now = Date.now();
+            const showAt = Math.max(now, nextToastAtRef.current);
+            nextToastAtRef.current = showAt + TOAST_STAGGER_MS;
+            window.setTimeout(() => {
+              showToast(toastMsg.message, toastMsg.title, toastMsg.tone, undoAction);
+            }, showAt - now);
+          }
         } catch (err: unknown) {
           console.error(`Failed to sync ${nextOp.entity}:${nextOp.type}:`, err);
           const isAuthError = errorMessageIncludes(err, '401') || errorMessageIncludesLower(err, 'unauthorized');
@@ -1450,22 +1471,6 @@ function App() {
       // so concurrent executions remain impossible.
       if (pendingOpsRef.current.length > 0) {
         void processQueue();
-      }
-      // Show each success toast individually after the spinner clears, staggered
-      // so they pop in one-by-one rather than all at once. Undo actions are built
-      // eagerly here (before the setTimeout fires) so the snapshot read/delete in
-      // buildUndoAction happens at the correct time — not after a user action may
-      // have overwritten the same key in undoSnapshotsRef.
-      const TOAST_STAGGER_MS = 350;
-      let toastIdx = 0;
-      for (const { op, result } of successfulOps) {
-        const toastMsg = getSyncSuccessToast(op);
-        if (!toastMsg) continue;
-        const undoAction = op.isUndo ? undefined : buildUndoAction(op, result);
-        window.setTimeout(() => {
-          showToast(toastMsg.message, toastMsg.title, toastMsg.tone, undoAction);
-        }, toastIdx * TOAST_STAGGER_MS);
-        toastIdx++;
       }
     }
   }, [token, selectedMonth, selectedYear, mutateQueue]);
