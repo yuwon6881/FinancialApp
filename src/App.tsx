@@ -208,6 +208,9 @@ function App() {
   const [hideSensitive, setHideSensitive] = useState<boolean>(() => {
     return localStorage.getItem('hide_sensitive') !== 'false'
   })
+  const [hideBalanceAmounts, setHideBalanceAmounts] = useState<boolean>(() => {
+    return localStorage.getItem('hide_balance_amounts') === 'true'
+  })
 
   // Dark mode — initialize from localStorage immediately, sync with server after load
   const [darkMode, setDarkMode] = useState<boolean>(() => {
@@ -1940,6 +1943,12 @@ function App() {
     }
   }
 
+  const handleToggleBalanceAmounts = () => {
+    const nextHidden = !hideBalanceAmounts
+    setHideBalanceAmounts(nextHidden)
+    localStorage.setItem('hide_balance_amounts', nextHidden.toString())
+  }
+
   const handleToggleDarkMode = () => {
     const newDark = !darkMode
     setDarkMode(newDark)
@@ -2080,8 +2089,9 @@ function App() {
             onSelectPeriod={handleSelectPeriod}
             onNavigate={setActiveTab}
             hideSensitive={hideSensitive}
+            hideBalanceAmounts={hideBalanceAmounts}
             walletBalance={totalBalance}
-            onToggleHideSensitive={handleToggleHideSensitive}
+            onToggleBalanceAmounts={handleToggleBalanceAmounts}
             onConfirmSubscription={handleConfirmSubscription}
             onDeletePayment={handleDeletePayment}
             onNavigateToLedger={handleNavigateToLedger}

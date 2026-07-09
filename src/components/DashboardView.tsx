@@ -42,8 +42,9 @@ interface DashboardViewProps {
   onSelectPeriod: (month: string, year: number) => void
   onNavigate: (tab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist' | 'settings') => void
   hideSensitive: boolean
+  hideBalanceAmounts: boolean
   walletBalance: number
-  onToggleHideSensitive: () => void
+  onToggleBalanceAmounts: () => void
   onConfirmSubscription: (noti: PendingNotification, paidDate: string) => void
   onDeletePayment: (id: string) => void
   onNavigateToLedger?: (options: { 
@@ -67,8 +68,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onSelectPeriod,
   onNavigate,
   hideSensitive,
+  hideBalanceAmounts,
   walletBalance,
-  onToggleHideSensitive,
+  onToggleBalanceAmounts,
   onConfirmSubscription,
   onDeletePayment,
   onNavigateToLedger,
@@ -196,6 +198,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
 
   const activeRecurring = dashboardData?.activeRecurringPayments || []
+  const areBalanceAmountsMasked = hideSensitive || hideBalanceAmounts
 
   const pendingDeductionsByCategory = useMemo(() => {
     const sums: Record<string, number> = {
@@ -424,32 +427,32 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </span>
               </div>
               <p className="mt-1 text-[11px] text-muted-foreground">
-                Always reflects the active wallet total, independent of the selected historical dashboard cycle.
+                Includes Essentials, Stability, and Rewards balances. Growth savings are excluded.
               </p>
             </div>
           </div>
 
           <div className="flex items-center justify-between gap-3 sm:justify-end">
             <div className="min-w-0 text-left sm:text-right">
-              <div className="truncate text-2xl font-black text-foreground sm:text-3xl">
-                {hideSensitive ? (
+              <div className="truncate text-xl font-black text-foreground sm:text-2xl">
+                {areBalanceAmountsMasked ? (
                   <span className="font-mono tracking-wide">{SENSITIVE_AMOUNT_MASK}</span>
                 ) : (
                   <AnimatedNumber value={walletBalance} formatFn={formatCurrency} />
                 )}
               </div>
               <p className="mt-1 text-[10px] font-semibold text-muted-foreground">
-                {hideSensitive ? 'Sensitive mode active' : 'Visible on this device'}
+                {hideSensitive ? 'Sensitive mode active' : hideBalanceAmounts ? 'Balance hidden on this device' : 'Visible on this device'}
               </p>
             </div>
             <button
               type="button"
-              onClick={onToggleHideSensitive}
+              onClick={onToggleBalanceAmounts}
               className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-background/80 text-muted-foreground transition hover:border-blue-500/35 hover:bg-blue-500/10 hover:text-blue-500 cursor-pointer"
-              title={hideSensitive ? 'Show balances' : 'Hide balances'}
-              aria-label={hideSensitive ? 'Show balances' : 'Hide balances'}
+              title={hideBalanceAmounts ? 'Show wallet and carryover balances' : 'Hide wallet and carryover balances'}
+              aria-label={hideBalanceAmounts ? 'Show wallet and carryover balances' : 'Hide wallet and carryover balances'}
             >
-              {hideSensitive ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+              {hideBalanceAmounts ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
             </button>
           </div>
         </div>
@@ -668,25 +671,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     {c.name}
                   </div>
                   <div className="text-muted-foreground font-medium">{(c.allocation * 100).toFixed(0)}%</div>
-                  <div className="text-right font-medium text-foreground">{formatSensitive(c.target)}</div>
-                  <div className="text-right text-muted-foreground font-medium">{formatSensitive(c.budget)}</div>
+                  <div className="text-right font-medium text-foreground">{areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : formatCurrency(c.target)}</div>
+                  <div className="text-right text-muted-foreground font-medium">{areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : formatCurrency(c.budget)}</div>
                   <div className={`text-right font-medium ${c.netChange < 0 ? 'text-orange-500' : c.netChange > 0 ? 'text-blue-500' : ''}`}>
-                    <div>{hideSensitive ? SENSITIVE_AMOUNT_MASK : <>{c.netChange > 0 ? '+' : ''}<AnimatedNumber value={c.netChange} formatFn={formatCurrency} /></>}</div>
+                    <div>{areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : <>{c.netChange > 0 ? '+' : ''}<AnimatedNumber value={c.netChange} formatFn={formatCurrency} /></>}</div>
                     {pendingDeductionsByCategory[c.name] > 0 && (
                       <div className="text-[10px] text-yellow-500 font-normal flex items-center justify-end gap-1 mt-0.5">
                         <Clock className="size-3" />
-                        Pending: -{formatSensitive(pendingDeductionsByCategory[c.name])}
+                        Pending: -{areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : formatCurrency(pendingDeductionsByCategory[c.name])}
                       </div>
                     )}
                   </div>
                   <div className="flex items-center justify-end gap-1.5 text-right">
                     <div className="flex min-w-[96px] flex-col items-end gap-1">
                       <div className={`font-bold ${isNeg ? 'text-orange-500' : 'text-foreground'}`}>
-                        {hideSensitive ? SENSITIVE_AMOUNT_MASK : <AnimatedNumber value={c.remaining} formatFn={formatCurrency} />}
+                        {areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : <AnimatedNumber value={c.remaining} formatFn={formatCurrency} />}
                       </div>
                       {pendingDeductionsByCategory[c.name] > 0 && (
                         <div className={`text-[10px] font-semibold flex items-center justify-end gap-1 mt-0.5 ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
-                          Projected: {formatSensitive(c.remaining - pendingDeductionsByCategory[c.name])}
+                          Projected: {areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : formatCurrency(c.remaining - pendingDeductionsByCategory[c.name])}
                         </div>
                       )}
                     </div>
@@ -750,11 +753,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <div className="grid grid-cols-2 gap-4 text-xs border-t border-border/30 pt-2.5">
                   <div>
                     <span className="text-muted-foreground text-[10px] block mb-0.5">Allocated Budget</span>
-                    <span className="font-semibold text-foreground">{formatSensitive(c.target)}</span>
+                    <span className="font-semibold text-foreground">{areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : formatCurrency(c.target)}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground text-[10px] block mb-0.5">Carried Over</span>
-                    <span className="font-semibold text-foreground">{formatSensitive(c.budget)}</span>
+                    <span className="font-semibold text-foreground">{areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : formatCurrency(c.budget)}</span>
                   </div>
                 </div>
  
@@ -762,12 +765,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <div>
                     <span className="text-muted-foreground text-[10px] block mb-0.5">Net Change</span>
                     <span className={`font-semibold ${c.netChange < 0 ? 'text-orange-500' : c.netChange > 0 ? 'text-blue-500' : 'text-foreground'}`}>
-                      {hideSensitive ? SENSITIVE_AMOUNT_MASK : <>{c.netChange > 0 ? '+' : ''}<AnimatedNumber value={c.netChange} formatFn={formatCurrency} /></>}
+                      {areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : <>{c.netChange > 0 ? '+' : ''}<AnimatedNumber value={c.netChange} formatFn={formatCurrency} /></>}
                     </span>
                     {pendingDeductionsByCategory[c.name] > 0 && (
                       <span className="text-[10px] text-yellow-500 flex items-center gap-1 font-normal mt-0.5">
                         <Clock className="size-3" />
-                        Pending: -{formatSensitive(pendingDeductionsByCategory[c.name])}
+                        Pending: -{areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : formatCurrency(pendingDeductionsByCategory[c.name])}
                       </span>
                     )}
                   </div>
@@ -775,7 +778,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <span className="text-muted-foreground text-[10px] block mb-0.5">Remaining Balance</span>
                     <div className="flex items-center gap-1.5">
                       <span className={`font-bold ${isNeg ? 'text-orange-500' : 'text-foreground'}`}>
-                        {hideSensitive ? SENSITIVE_AMOUNT_MASK : <AnimatedNumber value={c.remaining} formatFn={formatCurrency} />}
+                        {areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : <AnimatedNumber value={c.remaining} formatFn={formatCurrency} />}
                       </span>
                       <button
                         type="button"
@@ -790,7 +793,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     </div>
                     {pendingDeductionsByCategory[c.name] > 0 && (
                       <span className={`text-[10px] flex items-center gap-1 mt-0.5 font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
-                        Projected: {formatSensitive(c.remaining - pendingDeductionsByCategory[c.name])}
+                        Projected: {areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : formatCurrency(c.remaining - pendingDeductionsByCategory[c.name])}
                       </span>
                     )}
                   </div>
