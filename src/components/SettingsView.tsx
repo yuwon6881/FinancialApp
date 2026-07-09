@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Fingerprint, ShieldCheck, Bell, ChevronDown, ChevronUp, Lock, Unlock, MonitorSmartphone, CalendarDays, LogOut, Sparkles, Loader2 } from 'lucide-react'
+import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Fingerprint, ShieldCheck, Bell, ChevronDown, ChevronUp, Lock, Unlock, MonitorSmartphone, CalendarDays, LogOut, Sparkles, Loader2, ArrowUpRight } from 'lucide-react'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { SmartAmountInput } from './ui/SmartAmountInput'
@@ -62,6 +62,14 @@ interface SettingsViewProps {
   activeSyncId?: string | null
   deletingId?: string | null
   onToast?: (message: string, title?: string, tone?: ToastTone) => void
+  onNavigateToLedger?: (options: {
+    category?: string | null
+    date?: string | null
+    txType?: 'inflow' | 'outflow' | null
+    range?: 'monthly' | '3month' | '6month' | 'yearly'
+    highlightedTxId?: string | null
+    showAllCycles?: boolean
+  }) => void
 }
 
 const getDayWithSuffix = (day: number) => {
@@ -85,7 +93,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onToggleNotifyOnLogin,
   activeSyncId = null,
   deletingId = null,
-  onToast
+  onToast,
+  onNavigateToLedger
 }) => {
   const isCatSyncing = (catId: string) => {
     return activeSyncId !== null && activeSyncId !== undefined && String(activeSyncId) === String(catId)
@@ -854,9 +863,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           {suggestion.categories.length > 0 && (
                             <div className="flex flex-wrap gap-1">
                               {suggestion.categories.map(name => (
-                                <span key={name} className={`inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-semibold ${getCategoryBadgeClass(name)}`}>
+                                <button
+                                  key={name}
+                                  type="button"
+                                  onClick={() => onNavigateToLedger?.({ category: name, showAllCycles: true })}
+                                  title={`Filter ledger by ${name}`}
+                                  className={`press-scale inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-semibold cursor-pointer hover:opacity-85 transition ${getCategoryBadgeClass(name)}`}
+                                >
                                   {name}
-                                </span>
+                                </button>
                               ))}
                             </div>
                           )}
@@ -877,20 +892,32 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           )}
 
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-[10px] font-semibold text-muted-foreground">
-                              {suggestion.affectedTransactionCount > 0
-                                ? `${suggestion.affectedTransactionCount} ledger entr${suggestion.affectedTransactionCount === 1 ? 'y' : 'ies'} need validation`
-                                : 'No ledger entries affected'}
-                            </span>
+                            {suggestion.affectedTransactionCount > 0 && suggestion.categories.length > 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => onNavigateToLedger?.({ category: suggestion.categories[0], showAllCycles: true })}
+                                title="View entries in ledger"
+                                className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 hover:underline cursor-pointer inline-flex items-center gap-0.5 transition"
+                              >
+                                {suggestion.affectedTransactionCount} ledger {suggestion.affectedTransactionCount === 1 ? 'entry' : 'entries'} need validation
+                                <ArrowUpRight className="size-3" />
+                              </button>
+                            ) : (
+                              <span className="text-[10px] font-semibold text-muted-foreground">
+                                {suggestion.affectedTransactionCount > 0
+                                  ? `${suggestion.affectedTransactionCount} ledger entr${suggestion.affectedTransactionCount === 1 ? 'y' : 'ies'} need validation`
+                                  : 'No ledger entries affected'}
+                              </span>
+                            )}
                             <button
                               type="button"
                               onClick={() => void handleApplyCleanupSuggestion(suggestion)}
                               disabled={!onApplyCategoryCleanupSuggestion || applyingCleanupId !== null || isConsolidateDisabled}
                               title={!onApplyCategoryCleanupSuggestion ? 'Category cleanup is unavailable' : actionLabel}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/5 px-2 py-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="inline-flex items-center justify-center shrink-0 w-44 rounded-lg border border-blue-500/30 bg-blue-500/5 px-2 py-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               {isApplyingThis ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
-                              {actionLabel}
+                              <span className="truncate">{actionLabel}</span>
                             </button>
                           </div>
                         </div>

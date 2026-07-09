@@ -1929,10 +1929,7 @@ function App() {
 
   const handleToggleHideSensitive = async () => {
     if (hideSensitive) {
-      const revealed = await revealSensitiveWithFingerprint()
-      if (!revealed) {
-        setShowPasswordPrompt(true)
-      }
+      setShowPasswordPrompt(true)
     } else {
       setHideSensitive(true)
       localStorage.setItem('hide_sensitive', 'true')
@@ -2114,6 +2111,7 @@ function App() {
             activeSyncId={activeSyncId}
             deletingId={deletingTxId}
             onToast={showToast}
+            onNavigateToLedger={handleNavigateToLedger}
           />
         )}
 
