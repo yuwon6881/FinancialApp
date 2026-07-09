@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { ChevronsLeft } from 'lucide-react'
 import { motion, useMotionValue, useAnimation, type PanInfo } from 'framer-motion'
 import { cn } from '../../lib/utils'
@@ -36,10 +36,15 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   const [open, setOpen] = useState(false)
   const x = useMotionValue(0)
   const controls = useAnimation()
+  const isAnimating = useRef(false)
+  const contentRef = useRef<HTMLDivElement>(null)
 
   const close = useCallback(() => {
+    isAnimating.current = true
     setOpen(false)
-    controls.start({ x: 0, transition: { type: 'spring', stiffness: 750, damping: 42 } })
+    controls.start({ x: 0, transition: { type: 'spring', stiffness: 750, damping: 42 } }).then(() => {
+      isAnimating.current = false
+    })
   }, [controls])
 
   const closeForAction = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -72,16 +77,31 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
 
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     setSwipeLocked(false)
+    
+    // Briefly block pointer events to cleanly release framer's pointer capture
+    if (contentRef.current) {
+      contentRef.current.style.pointerEvents = 'none'
+      setTimeout(() => {
+        if (contentRef.current) contentRef.current.style.pointerEvents = ''
+      }, 80)
+    }
+
     const currentX = x.get()
     const shouldOpen = currentX < -actionsWidth / 2 || info.velocity.x < -200
 
     if (shouldOpen) {
       if (!open) triggerHaptic(10)
       setOpen(true)
-      controls.start({ x: -actionsWidth, transition: { type: 'spring', stiffness: 750, damping: 42 } })
+      isAnimating.current = true
+      controls.start({ x: -actionsWidth, transition: { type: 'spring', stiffness: 750, damping: 42 } }).then(() => {
+        isAnimating.current = false
+      })
     } else {
+      isAnimating.current = true
       setOpen(false)
-      controls.start({ x: 0, transition: { type: 'spring', stiffness: 750, damping: 42 } })
+      controls.start({ x: 0, transition: { type: 'spring', stiffness: 750, damping: 42 } }).then(() => {
+        isAnimating.current = false
+      })
     }
   }
 
@@ -111,6 +131,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
 
       {/* Sliding content surface */}
       <motion.div
+        ref={contentRef}
         drag={disabled ? false : 'x'}
         dragConstraints={{ left: -actionsWidth, right: 0 }}
         dragElastic={0.1}
@@ -118,11 +139,11 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         animate={controls}
-        style={{ x }}
+        style={{ x, touchAction: 'manipulation' }}
         onClick={() => {
-          if (open) close()
+          if (open && !isAnimating.current) close()
         }}
-        className={cn('relative bg-card touch-pan-y', contentClassName)}
+        className={cn('relative bg-card', contentClassName)}
       >
         {children}
 
