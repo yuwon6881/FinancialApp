@@ -736,7 +736,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </button>
 
                     {showUsageDetails && (
-                      <div className="absolute right-0 top-full mt-2 w-72 md:w-80 z-50 bg-card border border-border/80 shadow-lg rounded-xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-32px)] md:w-80 z-50 bg-card border border-border/80 shadow-lg rounded-xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-150">
                         <p className="text-[10px] text-muted-foreground leading-relaxed">
                           Usage over the last {USAGE_LOOKBACK_CYCLES} cycles, least used first. Categories with no recent activity are good candidates to remove.
                         </p>
@@ -836,15 +836,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         !suggestion.categories.some(name => name.toLowerCase() === cat.name.toLowerCase())
                       )
                       const consolidateTarget = consolidateTargets[suggestion.id] || ''
-                      const actionLabel = suggestion.type === 'merge'
-                        ? `Merge to ${suggestion.targetCategory || 'category'}`
-                        : suggestion.type === 'add'
-                        ? `Add ${suggestion.newCategoryName || 'category'}`
-                        : suggestion.type === 'consolidate'
-                        ? consolidateTarget
-                          ? `Move entries to ${consolidateTarget}`
-                          : 'Choose a category first'
-                        : 'Remove category'
+                      const actionLabel = suggestion.type === 'consolidate' && !consolidateTarget
+                        ? 'Choose category'
+                        : 'Accept'
                       const isApplyingThis = applyingCleanupId === suggestion.id
                       const isConsolidateDisabled = suggestion.type === 'consolidate' && !consolidateTarget
 
@@ -897,13 +891,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 type="button"
                                 onClick={() => onNavigateToLedger?.({ category: suggestion.categories[0], showAllCycles: true })}
                                 title="View entries in ledger"
-                                className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 hover:underline cursor-pointer inline-flex items-center gap-0.5 transition"
+                                className="press-scale inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-orange-500/20 bg-orange-500/10 text-[9px] font-bold uppercase text-orange-600 dark:text-orange-400 hover:bg-orange-500/20 transition cursor-pointer select-none"
                               >
                                 {suggestion.affectedTransactionCount} ledger {suggestion.affectedTransactionCount === 1 ? 'entry' : 'entries'} need validation
-                                <ArrowUpRight className="size-3" />
+                                <ArrowUpRight className="size-2.5 text-orange-500" />
                               </button>
                             ) : (
-                              <span className="text-[10px] font-semibold text-muted-foreground">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full border border-border bg-muted/30 text-[9px] font-bold uppercase text-muted-foreground select-none">
                                 {suggestion.affectedTransactionCount > 0
                                   ? `${suggestion.affectedTransactionCount} ledger entr${suggestion.affectedTransactionCount === 1 ? 'y' : 'ies'} need validation`
                                   : 'No ledger entries affected'}
@@ -914,7 +908,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                               onClick={() => void handleApplyCleanupSuggestion(suggestion)}
                               disabled={!onApplyCategoryCleanupSuggestion || applyingCleanupId !== null || isConsolidateDisabled}
                               title={!onApplyCategoryCleanupSuggestion ? 'Category cleanup is unavailable' : actionLabel}
-                              className="inline-flex items-center justify-center shrink-0 w-44 rounded-lg border border-blue-500/30 bg-blue-500/5 px-2 py-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="inline-flex items-center justify-center gap-1.5 shrink-0 w-32 rounded-lg border border-blue-500/30 bg-blue-500/5 px-2 py-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               {isApplyingThis ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
                               <span className="truncate">{actionLabel}</span>

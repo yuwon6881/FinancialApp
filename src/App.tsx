@@ -1203,7 +1203,7 @@ function App() {
     setConfirmModalData({
       title: 'Delete Category',
       message: (
-        <div className="space-y-3">
+        <div className={`space-y-3 ${requiresReplacement ? 'pb-36' : ''}`}>
           <p>
             Delete "{category.name}"?
           </p>

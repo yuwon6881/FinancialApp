@@ -298,10 +298,26 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
     } else if (op.type === 'update') {
       const existingIndex = result.findIndex(item => String(item.id) === targetStr)
       if (existingIndex >= 0) {
-        result[existingIndex] = {
-          ...result[existingIndex],
-          ...op.payload,
-          isPendingSync: !op.isCompleted
+        if (entity === 'wishlistItem' && op.payload && op.payload.isActive === true) {
+          result = result.map((item, idx) => {
+            if (idx === existingIndex) {
+              return {
+                ...item,
+                ...op.payload,
+                isPendingSync: !op.isCompleted
+              } as unknown as T
+            }
+            return {
+              ...item,
+              isActive: false
+            } as unknown as T
+          })
+        } else {
+          result[existingIndex] = {
+            ...result[existingIndex],
+            ...op.payload,
+            isPendingSync: !op.isCompleted
+          }
         }
       }
     } else if (op.type === 'delete') {

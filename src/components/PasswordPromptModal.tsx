@@ -63,7 +63,7 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified, onTryFingerpr
           ) : (
             <Fingerprint className="size-3.5" />
           )}
-          {fingerprintBusy ? 'Verifying...' : 'Try Fingerprint Instead'}
+          {fingerprintBusy ? 'Verifying...' : 'Unlock with Fingerprint'}
         </button>
       )}
 
@@ -100,7 +100,6 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified, onTryFingerpr
             readOnly
             onFocus={(e) => e.target.removeAttribute('readonly')}
             className="w-full px-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
-            autoFocus
           />
           {promptError && (
             <p className="text-[10px] text-orange-500 font-semibold mt-1">

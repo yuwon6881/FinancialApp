@@ -361,7 +361,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleOpenAddModal}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full text-xs font-bold shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs font-bold shadow-md shadow-blue-600/10 transition cursor-pointer"
             >
               <Plus className="size-3.5" /> Add Goal
             </motion.button>
@@ -482,13 +482,13 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                   </div>
 
                   {/* Actions — matches subscription card footer style */}
-                  <div className="mt-6 flex flex-wrap items-center justify-between border-t border-border/30 pt-4 gap-2">
+                  <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between border-t border-border/30 pt-4 gap-3 sm:gap-2">
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.96 }}
                       onClick={() => onPurchaseItem(activeItem.id)}
                       disabled={!canAfford}
-                      className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl transition duration-200 cursor-pointer ${
+                      className={`flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-xl transition duration-200 cursor-pointer w-full sm:w-auto ${
                         canAfford
                           ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/10'
                           : 'bg-muted text-muted-foreground cursor-not-allowed'
@@ -498,12 +498,13 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                       {canAfford ? 'Claim Reward' : <>Need {formatSensitive(activeItem.price - rewardsBalance)} More</>}
                     </motion.button>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
                       <Button
                         variant="ghost"
                         onClick={() => handleOpenEditModal(activeItem)}
                         disabled={hideSensitive}
                         title={hideSensitive ? 'Unhide balances to edit' : 'Edit goal'}
+                        className="flex-1 sm:flex-none justify-center py-2.5"
                       >
                         <Edit2 className="size-3.5" /> Edit
                       </Button>
@@ -512,6 +513,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                         onClick={() => onDeleteItem(activeItem.id)}
                         disabled={hideSensitive}
                         title={hideSensitive ? 'Unhide balances to delete' : 'Delete goal'}
+                        className="flex-1 sm:flex-none justify-center py-2.5"
                       >
                         <Trash2 className="size-3.5" /> Delete
                       </Button>
@@ -529,7 +531,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleOpenAddModal}
-                className="mt-4 flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full text-xs font-bold shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition cursor-pointer"
+                className="mt-4 flex items-center gap-1.5 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs font-bold shadow-md shadow-blue-600/10 transition cursor-pointer"
               >
                 <Plus className="size-3.5" /> Add Goal
               </motion.button>
@@ -579,7 +581,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                         <button
                           onClick={() => handleOpenEditModal(item)}
                           disabled={hideSensitive || isBusy}
-                          className="flex-1 flex flex-col items-center justify-center gap-1 bg-slate-500 text-white text-[10px] font-bold active:bg-slate-600 transition disabled:opacity-40 disabled:pointer-events-none"
+                          className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-600 text-white text-[10px] font-bold active:bg-blue-700 transition disabled:opacity-40 disabled:pointer-events-none"
                         >
                           <Edit2 className="size-3.5" />
                           Edit
@@ -587,7 +589,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                         <button
                           onClick={() => onDeleteItem(item.id)}
                           disabled={isBusy || hideSensitive}
-                          className="flex-1 flex flex-col items-center justify-center gap-1 bg-red-500 text-white text-[10px] font-bold active:bg-red-600 transition disabled:opacity-40 disabled:pointer-events-none"
+                          className="flex-1 flex flex-col items-center justify-center gap-1 bg-orange-600 text-white text-[10px] font-bold active:bg-orange-700 transition disabled:opacity-40 disabled:pointer-events-none"
                         >
                           <Trash2 className="size-3.5" />
                           Delete
@@ -596,30 +598,33 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                     }
                     desktopActions={
                       <>
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleToggleActive(item)}
                           disabled={isBusy || hideSensitive}
                           title={hideSensitive ? 'Unhide balances to edit' : undefined}
-                          className="px-2.5 py-1.5 bg-blue-500/10 text-blue-500 hover:bg-blue-500 text-xs font-bold rounded-lg border border-blue-500/10 hover:text-white transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-500/10 disabled:hover:text-blue-500"
                         >
                           Focus
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleOpenEditModal(item)}
                           disabled={hideSensitive || isBusy}
                           title={hideSensitive ? 'Unhide balances to edit' : undefined}
-                          className="p-1.5 hover:bg-muted text-muted-foreground rounded-lg border border-transparent hover:border-border/40 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                         >
-                          <Edit2 className="size-3.5" />
-                        </button>
-                        <button
+                          <Edit2 className="size-3" /> Edit
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
                           onClick={() => onDeleteItem(item.id)}
                           disabled={isBusy || hideSensitive}
                           title={hideSensitive ? 'Unhide balances to edit' : undefined}
-                          className="p-1.5 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 rounded-lg border border-transparent hover:border-red-500/10 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
                         >
-                          <Trash2 className="size-3.5" />
-                        </button>
+                          <Trash2 className="size-3" /> Delete
+                        </Button>
                       </>
                     }
                   >
