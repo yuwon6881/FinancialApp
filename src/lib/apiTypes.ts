@@ -9,6 +9,7 @@ import type {
   RecurringPayment,
   Transaction,
   TrendPoint,
+  WishlistItem,
 } from '../types'
 
 type WireAmount = string | number
@@ -26,6 +27,10 @@ export type WireTransaction = Omit<Transaction, 'amount'> & {
 
 export type WireRecurringPayment = Omit<RecurringPayment, 'amount'> & {
   amount: WireAmount
+}
+
+export type WireWishlistItem = Omit<WishlistItem, 'price'> & {
+  price: WireAmount
 }
 
 type WireDashboardSetting = Omit<FinancialSetting, 'targetStabilityFund'> & {
@@ -115,6 +120,6 @@ export interface WirePagedTransactionResult {
 }
 
 export interface WireWishlistPurchaseResult {
-  item: import('../types').WishlistItem
+  item: WireWishlistItem
   transaction: WireTransaction
 }

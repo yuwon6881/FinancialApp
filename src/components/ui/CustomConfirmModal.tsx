@@ -8,6 +8,7 @@ interface CustomConfirmModalProps {
   message: React.ReactNode
   confirmText?: string
   cancelText?: string
+  confirmDisabled?: boolean
   onConfirm: () => void
   onCancel: () => void
 }
@@ -18,6 +19,7 @@ export const CustomConfirmModal: React.FC<CustomConfirmModalProps> = ({
   message,
   confirmText = 'Confirm',
   cancelText = 'Cancel',
+  confirmDisabled = false,
   onConfirm,
   onCancel
 }) => {
@@ -46,7 +48,8 @@ export const CustomConfirmModal: React.FC<CustomConfirmModalProps> = ({
           <button
             type="button"
             onClick={onConfirm}
-            className="px-5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-md transition cursor-pointer"
+            disabled={confirmDisabled}
+            className="px-5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-md transition cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:bg-orange-600"
           >
             {confirmText}
           </button>

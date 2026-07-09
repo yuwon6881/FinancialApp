@@ -13,6 +13,7 @@ import type {
   WireRecurringPayment,
   WireTransaction,
   WireTrendPoint,
+  WireWishlistItem,
   WireWishlistPurchaseResult,
 } from './apiTypes'
 
@@ -152,6 +153,13 @@ function deobfuscateRecurringPayment(rp: WireRecurringPayment): RecurringPayment
   return {
     ...rp,
     amount: deobfuscateAmount(rp.amount)
+  }
+}
+
+function deobfuscateWishlistItem(item: WireWishlistItem): WishlistItem {
+  return {
+    ...item,
+    price: deobfuscateAmount(item.price)
   }
 }
 
@@ -475,6 +483,38 @@ export interface CategorySuggestion {
   confidence: number
 }
 
+export interface TransactionNoteSuggestion {
+  note: string
+  reason: string
+}
+
+export interface CategoryCleanupSuggestion {
+  id: string
+  type: 'add' | 'delete' | 'merge'
+  title: string
+  summary: string
+  categories: string[]
+  targetCategory?: string | null
+  newCategoryName?: string | null
+  affectedTransactionCount: number
+  confidence: number
+}
+
+export interface CategoryCleanupAction {
+  type: 'add' | 'delete' | 'deleteByName' | 'merge' | 'restoreTransactions' | 'restoreRecurringPayments'
+  categories?: string[]
+  targetCategory?: string | null
+  newCategoryName?: string | null
+  transactionIds?: string[]
+  recurringPaymentIds?: string[]
+  categoryId?: string | null
+}
+
+export interface CategoryCleanupApplyResult {
+  appliedCount: number
+  undoActions: CategoryCleanupAction[]
+}
+
 export async function suggestTransactionCategories(params: {
   description: string
   txType: 'inflow' | 'outflow'
@@ -496,6 +536,69 @@ export async function suggestTransactionCategories(params: {
 
   const data = await response.json() as { suggestions?: CategorySuggestion[] }
   return data.suggestions || []
+}
+
+export async function suggestTransactionNotes(params: {
+  description: string
+  category?: string
+  ledgerCategory?: string
+  txType: 'inflow' | 'outflow' | 'transfer'
+  historyDescriptions?: string[]
+}, signal?: AbortSignal): Promise<TransactionNoteSuggestion[]> {
+  const response = await fetch(`${API_BASE_URL}/categories/suggest-notes`, {
+    method: 'POST',
+    headers: getHeaders({
+      'Content-Type': 'application/json',
+    }),
+    body: JSON.stringify(params),
+    signal,
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Failed to suggest transaction notes')
+  }
+
+  const data = await response.json() as { suggestions?: TransactionNoteSuggestion[] }
+  return data.suggestions || []
+}
+
+export async function reviewCategoryCleanup(signal?: AbortSignal): Promise<{ suggestions: CategoryCleanupSuggestion[] }> {
+  const response = await fetch(`${API_BASE_URL}/categories/cleanup/review`, {
+    method: 'POST',
+    headers: getHeaders({
+      'Content-Type': 'application/json',
+    }),
+    body: JSON.stringify({}),
+    signal,
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Failed to review categories')
+  }
+
+  const data = await response.json() as { suggestions?: CategoryCleanupSuggestion[] }
+  return { suggestions: data.suggestions || [] }
+}
+
+export async function applyCategoryCleanup(actions: CategoryCleanupAction[]): Promise<CategoryCleanupApplyResult> {
+  const response = await fetch(`${API_BASE_URL}/categories/cleanup/apply`, {
+    method: 'POST',
+    headers: getHeaders({
+      'Content-Type': 'application/json',
+    }),
+    body: JSON.stringify({ actions }),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Failed to apply category cleanup')
+  }
+
+  queryCache.invalidateAll()
+  const data = await response.json() as CategoryCleanupApplyResult
+  return { appliedCount: data.appliedCount || 0, undoActions: data.undoActions || [] }
 }
 
 // A cycle whose calendar month is strictly before the current month is fully in the
@@ -777,7 +880,7 @@ export function fetchCategories(signal?: AbortSignal): Promise<TransactionCatego
     if (!response.ok) {
       throw new Error('Failed to fetch custom categories')
     }
-    return response.json()
+    return response.json() as Promise<TransactionCategory[]>
   })()
 
   if (canUseCache) {
@@ -802,13 +905,16 @@ export async function addCategory(category: Omit<TransactionCategory, 'id'> & { 
   return response.json()
 }
 
-export async function deleteCategory(id: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
+export async function deleteCategory(id: string, replacementCategoryId?: string): Promise<void> {
+  const query = replacementCategoryId ? `?replacementCategoryId=${encodeURIComponent(replacementCategoryId)}` : ''
+
+  const response = await fetch(`${API_BASE_URL}/categories/${id}${query}`, {
     method: 'DELETE',
     headers: getHeaders(),
   })
   if (!response.ok) {
-    throw new Error('Failed to delete custom category')
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Failed to delete custom category')
   }
   queryCache.invalidateAll()
 }
@@ -866,27 +972,36 @@ export async function fetchWishlist(signal?: AbortSignal): Promise<WishlistItem[
 }
 
 export async function addWishlistItem(item: Partial<WishlistItem>): Promise<WishlistItem> {
+  const payload = {
+    ...item,
+    price: obfuscateAmount(item.price ?? 0)
+  }
   const response = await fetch(`${API_BASE_URL}/wishlist`, {
     method: 'POST',
     headers: getHeaders({
       'Content-Type': 'application/json',
     }),
-    body: JSON.stringify(item),
+    body: JSON.stringify(payload),
   })
   if (!response.ok) {
     throw new Error('Failed to create wishlist item')
   }
   queryCache.invalidateAll()
-  return response.json()
+  const data = await response.json() as WireWishlistItem
+  return deobfuscateWishlistItem(data)
 }
 
 export async function updateWishlistItem(id: number, item: WishlistItem): Promise<void> {
+  const payload = {
+    ...item,
+    price: obfuscateAmount(item.price)
+  }
   const response = await fetch(`${API_BASE_URL}/wishlist/${id}`, {
     method: 'PUT',
     headers: getHeaders({
       'Content-Type': 'application/json',
     }),
-    body: JSON.stringify(item),
+    body: JSON.stringify(payload),
   })
   if (!response.ok) {
     throw new Error('Failed to update wishlist item')
@@ -916,7 +1031,7 @@ export async function purchaseWishlistItem(id: number): Promise<{ item: Wishlist
   }
   queryCache.invalidateAll()
   const data = await response.json() as WireWishlistPurchaseResult
-  return { ...data, transaction: deobfuscateTransaction(data.transaction) }
+  return { item: deobfuscateWishlistItem(data.item), transaction: deobfuscateTransaction(data.transaction) }
 }
 
 export async function unpurchaseWishlistItem(id: number): Promise<WishlistItem> {
@@ -929,7 +1044,8 @@ export async function unpurchaseWishlistItem(id: number): Promise<WishlistItem> 
     throw new Error(errorBody.message || 'Failed to undo wishlist purchase')
   }
   queryCache.invalidateAll()
-  return response.json()
+  const data = await response.json() as WireWishlistItem
+  return deobfuscateWishlistItem(data)
 }
 
 export async function pingServer(): Promise<{ status: string }> {
@@ -1205,6 +1321,10 @@ export interface ReceiptScanJob {
   completedAt?: string | null
 }
 
+type WireReceiptScanJob = Omit<ReceiptScanJob, 'result'> & {
+  result: (Omit<ReceiptScanResult, 'amount'> & { amount: string | number | null }) | null
+}
+
 export async function startReceiptScan(imageFile: File): Promise<{ scanId: string; status: string }> {
   const formData = new FormData()
   formData.append('image', imageFile)
@@ -1233,7 +1353,17 @@ export async function fetchReceiptScanJob(scanId: string): Promise<ReceiptScanJo
     throw new Error(err.message || 'Could not fetch receipt scan status.')
   }
 
-  return response.json()
+  const job = await response.json() as WireReceiptScanJob
+  if (job.result) {
+    return {
+      ...job,
+      result: {
+        ...job.result,
+        amount: job.result.amount == null ? null : deobfuscateAmount(job.result.amount)
+      }
+    }
+  }
+  return { ...job, result: null }
 }
 
 export async function deleteReceiptScanJob(scanId: string): Promise<void> {

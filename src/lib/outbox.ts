@@ -17,6 +17,7 @@ export interface OutboxPayload {
   hideSensitive?: boolean
   purchasedAt?: string
   purchaseTransactionId?: string | null
+  replacementCategoryId?: string
   date?: string
   postedAt?: string
 }
@@ -411,7 +412,7 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
   'wishlistItem:unpurchase': (op) => api.unpurchaseWishlistItem(Number(op.targetId)),
 
   'category:add': (op) => api.addCategory({ ...(op.payload as Partial<TransactionCategory>), id: op.targetId } as Omit<TransactionCategory, 'id'> & { id?: string }),
-  'category:delete': (op) => api.deleteCategory(op.targetId),
+  'category:delete': (op) => api.deleteCategory(op.targetId, typeof op.payload?.replacementCategoryId === 'string' ? op.payload.replacementCategoryId : undefined),
 
   'settings:update': (op) => {
     if (op.targetId === 'darkMode') return api.updateDarkMode(op.payload?.darkMode === true)

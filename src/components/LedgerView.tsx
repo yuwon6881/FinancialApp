@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { listContainerVariants, rowFadeVariants } from '../lib/animations'
 import type { Transaction, TransactionCategory } from '../types'
 import type { PagedTransactionResult } from '../lib/api'
-import { startReceiptScan, suggestTransactionCategories, type CategorySuggestion, type ReceiptScanResult } from '../lib/api'
+import { startReceiptScan, suggestTransactionCategories, suggestTransactionNotes, type CategorySuggestion, type ReceiptScanResult, type TransactionNoteSuggestion } from '../lib/api'
 import {
   Plus,
   Search,
@@ -20,7 +20,8 @@ import {
   Trash2,
   Camera,
   Image,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
 import { SearchableSelect } from './ui/SearchableSelect'
@@ -599,12 +600,17 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1)
   const [categorySuggestions, setCategorySuggestions] = useState<CategorySuggestion[]>([])
   const [isSuggestingCategory, setIsSuggestingCategory] = useState(false)
+  const [noteSuggestions, setNoteSuggestions] = useState<TransactionNoteSuggestion[]>([])
+  const [showNoteSuggestions, setShowNoteSuggestions] = useState(false)
+  const [isSuggestingNote, setIsSuggestingNote] = useState(false)
   const suggestionsRef = useRef<HTMLDivElement>(null)
   const descriptionRef = useRef('')
   const autocompletedDescriptionRef = useRef<string | null>(null)
   const categorySuggestionAbortRef = useRef<AbortController | null>(null)
   const categorySuggestionRequestSeqRef = useRef(0)
   const lastCategorySuggestionKeyRef = useRef<string | null>(null)
+  const noteSuggestionAbortRef = useRef<AbortController | null>(null)
+  const noteSuggestionRequestSeqRef = useRef(0)
 
   useEffect(() => {
     descriptionRef.current = description
@@ -638,17 +644,18 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   // Close suggestions when clicking outside
   useEffect(() => {
-    if (!showSuggestions) return
+    if (!showSuggestions && !showNoteSuggestions) return
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement
       if (!target.closest('.description-autocomplete')) {
         setShowSuggestions(false)
+        setShowNoteSuggestions(false)
         setSelectedSuggestionIndex(-1)
       }
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
-  }, [showSuggestions])
+  }, [showSuggestions, showNoteSuggestions])
 
   const handleSelectSuggestion = (suggestion: { description: string; category: string; ledgerCategory: string; txType?: 'inflow' | 'outflow' }) => {
     descriptionRef.current = suggestion.description
@@ -657,9 +664,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setShowSuggestions(false)
     setSelectedSuggestionIndex(-1)
     setCategorySuggestions([])
+    setNoteSuggestions([])
+    setShowNoteSuggestions(false)
     setIsSuggestingCategory(false)
     lastCategorySuggestionKeyRef.current = null
     categorySuggestionAbortRef.current?.abort()
+    noteSuggestionAbortRef.current?.abort()
+    setIsSuggestingNote(false)
 
     // Auto-fill category and ledger category (only if not editing and not in transfer mode)
     if (txType !== 'transfer') {
@@ -724,6 +735,56 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
   }, [categories, editingTxId, showAddForm, txType])
 
+  const requestNoteSuggestions = useCallback(async () => {
+    const trimmedDescription = descriptionRef.current.trim()
+    if (!showAddForm || txType === 'transfer' || trimmedDescription.length < 2) return
+
+    noteSuggestionAbortRef.current?.abort()
+    const controller = new AbortController()
+    noteSuggestionAbortRef.current = controller
+    const requestSeq = noteSuggestionRequestSeqRef.current + 1
+    noteSuggestionRequestSeqRef.current = requestSeq
+
+    setShowSuggestions(false)
+    setSelectedSuggestionIndex(-1)
+    setShowNoteSuggestions(true)
+    setIsSuggestingNote(true)
+
+    try {
+      const suggestions = await suggestTransactionNotes({
+        description: trimmedDescription,
+        category,
+        ledgerCategory,
+        txType,
+        historyDescriptions: activeSuggestionEntries.map(s => s.description)
+      }, controller.signal)
+
+      if (noteSuggestionRequestSeqRef.current !== requestSeq) return
+      setNoteSuggestions(suggestions)
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
+      if (noteSuggestionRequestSeqRef.current === requestSeq) {
+        setNoteSuggestions([])
+      }
+      console.warn('Failed to suggest transaction notes', err)
+    } finally {
+      if (noteSuggestionRequestSeqRef.current === requestSeq) {
+        setIsSuggestingNote(false)
+      }
+    }
+  }, [activeSuggestionEntries, category, ledgerCategory, showAddForm, txType])
+
+  const handleSelectNoteSuggestion = (suggestion: TransactionNoteSuggestion) => {
+    descriptionRef.current = suggestion.note
+    autocompletedDescriptionRef.current = null
+    setDescription(suggestion.note)
+    setShowNoteSuggestions(false)
+    setNoteSuggestions([])
+    if (errors.description) {
+      setErrors(prev => ({ ...prev, description: '' }))
+    }
+  }
+
   const handleDescriptionBlur = () => {
     window.setTimeout(() => {
       setShowSuggestions(false)
@@ -739,8 +800,12 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       descriptionRef.current = ''
       autocompletedDescriptionRef.current = null
       setCategorySuggestions([])
+      setNoteSuggestions([])
+      setShowNoteSuggestions(false)
       setIsSuggestingCategory(false)
       categorySuggestionAbortRef.current?.abort()
+      noteSuggestionAbortRef.current?.abort()
+      setIsSuggestingNote(false)
       lastCategorySuggestionKeyRef.current = null
       setShowSuggestions(false)
       setSelectedSuggestionIndex(-1)
@@ -790,6 +855,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   useEffect(() => {
     return () => {
       categorySuggestionAbortRef.current?.abort()
+      noteSuggestionAbortRef.current?.abort()
     }
   }, [])
 
@@ -1914,7 +1980,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     }}
                     className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border transition duration-200 text-xs font-semibold cursor-pointer ${
                       isScanning
-                        ? 'border-border bg-muted text-muted-foreground cursor-not-allowed'
+                        ? 'ai-shimmer-border border-blue-500/40 bg-blue-500/5 text-blue-600 dark:text-blue-400 cursor-not-allowed'
                         : 'border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400'
                     }`}
                   >
@@ -2043,47 +2109,97 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             </div>
 
             <div className="space-y-1 relative description-autocomplete">
-              <label className="text-xs font-semibold text-muted-foreground">Description</label>
-              <input
-                ref={firstInputRef}
-                type="text"
-                placeholder="e.g. Grocery Store, Paycheck"
-                value={description}
-                onBlur={handleDescriptionBlur}
-                onChange={e => {
-                  const nextDescription = e.target.value
-                  descriptionRef.current = nextDescription
-                  setDescription(nextDescription)
-                  if (autocompletedDescriptionRef.current && autocompletedDescriptionRef.current !== nextDescription.trim()) {
-                    autocompletedDescriptionRef.current = null
-                  }
-                  setCategorySuggestions([])
-                  setIsSuggestingCategory(false)
-                  categorySuggestionAbortRef.current?.abort()
-                  lastCategorySuggestionKeyRef.current = null
-                  setShowSuggestions(true)
-                  setSelectedSuggestionIndex(-1)
-                  if (errors.description) {
-                    setErrors(prev => ({ ...prev, description: '' }))
-                  }
-                }}
-                onFocus={() => {
-                  if (description.trim().length >= 1) setShowSuggestions(true)
-                }}
-                onKeyDown={handleDescriptionKeyDown}
-                autoComplete="off"
-                className={`w-full px-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                  errors.description 
-                    ? 'border-destructive focus:ring-destructive' 
-                    : 'border-border focus:ring-blue-500'
-                }`}
-              />
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-xs font-semibold text-muted-foreground">Description</label>
+                {txType !== 'transfer' && (
+                  <button
+                    type="button"
+                    onMouseDown={e => e.preventDefault()}
+                    onClick={() => void requestNoteSuggestions()}
+                    disabled={isSuggestingNote || description.trim().length < 2}
+                    title={description.trim().length < 2 ? 'Enter a description first' : 'Suggest better notes'}
+                    className="inline-flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/5 px-2 py-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed transition cursor-pointer"
+                  >
+                    {isSuggestingNote ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
+                    AI
+                  </button>
+                )}
+              </div>
+              <div className="relative">
+                <input
+                  ref={firstInputRef}
+                  type="text"
+                  placeholder="e.g. Grocery Store, Paycheck"
+                  value={description}
+                  onBlur={handleDescriptionBlur}
+                  onChange={e => {
+                    const nextDescription = e.target.value
+                    descriptionRef.current = nextDescription
+                    setDescription(nextDescription)
+                    if (autocompletedDescriptionRef.current && autocompletedDescriptionRef.current !== nextDescription.trim()) {
+                      autocompletedDescriptionRef.current = null
+                    }
+                    setCategorySuggestions([])
+                    setNoteSuggestions([])
+                    setShowNoteSuggestions(false)
+                    setIsSuggestingCategory(false)
+                    categorySuggestionAbortRef.current?.abort()
+                    noteSuggestionAbortRef.current?.abort()
+                    setIsSuggestingNote(false)
+                    lastCategorySuggestionKeyRef.current = null
+                    setShowSuggestions(true)
+                    setSelectedSuggestionIndex(-1)
+                    if (errors.description) {
+                      setErrors(prev => ({ ...prev, description: '' }))
+                    }
+                  }}
+                  onFocus={() => {
+                    if (!showNoteSuggestions && description.trim().length >= 1) setShowSuggestions(true)
+                  }}
+                  onKeyDown={handleDescriptionKeyDown}
+                  autoComplete="off"
+                  className={`w-full px-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                    isSuggestingNote
+                      ? 'ai-shimmer-border'
+                      : errors.description 
+                      ? 'border-destructive focus:ring-destructive' 
+                      : 'border-border focus:ring-blue-500'
+                  }`}
+                />
+              </div>
               {errors.description && (
                 <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
                   {errors.description}
                 </p>
               )}
-              {showSuggestions && filteredSuggestions.length > 0 && (
+              {showNoteSuggestions && (
+                <div className="absolute z-50 w-full mt-1 overflow-hidden bg-card border border-blue-500/25 rounded-xl shadow-xl animate-in fade-in slide-in-from-top-2 duration-150">
+                  {isSuggestingNote ? (
+                    <div className="flex items-center gap-2 px-3.5 py-3 text-xs font-semibold text-muted-foreground">
+                      <Loader2 className="size-3.5 animate-spin text-blue-500" />
+                      Suggesting cleaner notes...
+                    </div>
+                  ) : noteSuggestions.length > 0 ? (
+                    noteSuggestions.map(s => (
+                      <button
+                        key={s.note}
+                        type="button"
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={() => handleSelectNoteSuggestion(s)}
+                        className="w-full text-left px-3.5 py-2.5 text-sm flex flex-col gap-0.5 cursor-pointer transition duration-100 hover:bg-blue-500/10 first:rounded-t-xl last:rounded-b-xl"
+                      >
+                        <span className="font-semibold text-foreground">{s.note}</span>
+                        <span className="text-[10px] text-muted-foreground">{s.reason}</span>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-3.5 py-3 text-xs font-semibold text-muted-foreground">
+                      No better note found for this description.
+                    </div>
+                  )}
+                </div>
+              )}
+              {showSuggestions && !showNoteSuggestions && filteredSuggestions.length > 0 && (
                 <div
                   ref={suggestionsRef}
                   className="absolute z-50 w-full mt-1 max-h-52 overflow-y-auto bg-card border border-border/80 rounded-xl shadow-xl animate-in fade-in slide-in-from-top-2 duration-150"
@@ -2122,7 +2238,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   })}
                 </div>
               )}
-              {!description.trim() && quickSuggestionEntries.length > 0 && (
+              {!showNoteSuggestions && !description.trim() && quickSuggestionEntries.length > 0 && (
                 <div
                   onWheel={handleQuickSuggestionsWheel}
                   className="no-scrollbar flex gap-1.5 overflow-x-auto overscroll-x-contain pt-1 pb-0.5"

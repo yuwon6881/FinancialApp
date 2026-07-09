@@ -6,7 +6,7 @@ import TopNav from "./TopNav.tsx"
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { APP_TABS, type AppTab, type Transaction, type RecurringPayment, type DashboardData, type TransactionCategory, type WishlistItem, type PendingNotification } from './types'
 import * as api from './lib/api'
-import type { ReceiptScanResult } from './lib/api'
+import type { CategoryCleanupSuggestion, ReceiptScanResult } from './lib/api'
 import { Loader2, Plus, Wallet, CreditCard, PiggyBank, Upload } from 'lucide-react'
 
 // Every view is code-split so the initial bundle only ships the shell. Each
@@ -212,8 +212,9 @@ function App() {
   const [customAlert, setCustomAlert] = useState<{ message: string; title: string } | null>(null)
   const [confirmModalData, setConfirmModalData] = useState<{
     title: string
-    message: string
+    message: React.ReactNode
     confirmText?: string
+    confirmDisabled?: boolean
     onConfirm: () => void
   } | null>(null)
   const [toasts, setToasts] = useState<ToastMessage[]>([])
@@ -360,6 +361,7 @@ function App() {
         if (!before) return undefined
         return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'recurringPayment', 'add', String(before.id), toOutboxPayload(before), true)) }
       case 'category:delete':
+        if (op.payload?.replacementCategoryId) return undefined
         if (!before) return undefined
         return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'category', 'add', String(before.id), toOutboxPayload(before), true)) }
       case 'wishlistItem:delete': {
@@ -1116,20 +1118,132 @@ function App() {
     mutateQueue(prev => enqueue(prev, 'category', 'add', finalId, { ...newCat, id: finalId }))
   }
 
-  const handleDeleteCategory = (id: string) => {
+  const handleDeleteCategory = (id: string, replacementCategoryId?: string) => {
     snapshotForUndo('category', String(id), allCategories.find(cat => String(cat.id) === String(id)))
-    mutateQueue(prev => enqueue(prev, 'category', 'delete', id))
+    mutateQueue(prev => enqueue(prev, 'category', 'delete', id, replacementCategoryId ? { replacementCategoryId } : undefined))
   }
 
-  const requestDeleteCategory = (id: string) => {
+  const requestDeleteCategory = async (id: string) => {
     if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     const category = categoriesList.find(cat => cat.id === id)
+    if (!category) return
+
+    const replacementOptions = categoriesList.filter(cat => {
+      const lower = cat.name.toLowerCase()
+      return cat.id !== id &&
+        lower !== 'transfer' &&
+        lower !== 'adjustment' &&
+        !cat.isPendingDelete
+    })
+
+    let transactionCount = 0
+    let usageLookupFailed = false
+    try {
+      const usage = await api.fetchPagedTransactions({
+        page: 1,
+        pageSize: 1,
+        categories: [category.name]
+      })
+      transactionCount = usage.total
+    } catch (err) {
+      console.error(err)
+      usageLookupFailed = true
+    }
+
+    const recurringPaymentCount = allRecurringPayments.filter(payment =>
+      !payment.isPendingDelete &&
+      payment.category.trim().toLowerCase() === category.name.trim().toLowerCase()
+    ).length
+    const requiresReplacement = usageLookupFailed || transactionCount > 0 || recurringPaymentCount > 0
+    let selectedReplacementId = ''
+
     setConfirmModalData({
       title: 'Delete Category',
-      message: `Delete "${category?.name || 'this category'}"? Existing transactions that use it may keep the old category name, but it will no longer be available for new entries.`,
-      confirmText: 'Delete',
-      onConfirm: () => { handleDeleteCategory(id) }
+      message: (
+        <div className="space-y-3">
+          <p>
+            Delete "{category.name}"?
+          </p>
+          {requiresReplacement ? (
+            <>
+              <p>
+                This category is used by {usageLookupFailed ? 'existing ledger transactions' : `${transactionCount} ledger transaction${transactionCount === 1 ? '' : 's'}`}
+                {recurringPaymentCount > 0 ? ` and ${recurringPaymentCount} recurring payment${recurringPaymentCount === 1 ? '' : 's'}` : ''}.
+                Choose a replacement category before deleting it.
+              </p>
+              <select
+                defaultValue=""
+                onChange={e => {
+                  selectedReplacementId = e.target.value
+                  setConfirmModalData(prev => prev ? { ...prev, confirmDisabled: selectedReplacementId.length === 0 } : prev)
+                }}
+                className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-foreground"
+              >
+                <option value="">Choose replacement category</option>
+                {replacementOptions.map(option => (
+                  <option key={option.id} value={option.id}>{option.name}</option>
+                ))}
+              </select>
+              {replacementOptions.length === 0 && (
+                <p className="text-[11px] font-semibold text-orange-500">
+                  Add another category before deleting this one.
+                </p>
+              )}
+            </>
+          ) : (
+            <p>No ledger transactions or recurring payments currently use this category.</p>
+          )}
+        </div>
+      ),
+      confirmText: requiresReplacement ? 'Transfer and Delete' : 'Delete',
+      confirmDisabled: requiresReplacement,
+      onConfirm: () => { handleDeleteCategory(id, selectedReplacementId || undefined) }
     })
+  }
+
+  const handleApplyCategoryCleanupSuggestion = async (suggestion: CategoryCleanupSuggestion) => {
+    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
+
+    const actions = suggestion.type === 'add'
+      ? [{ type: 'add' as const, newCategoryName: suggestion.newCategoryName || undefined }]
+      : suggestion.type === 'merge'
+      ? [{ type: 'merge' as const, categories: suggestion.categories, targetCategory: suggestion.targetCategory || undefined }]
+      : [{ type: 'delete' as const, categories: suggestion.categories }]
+
+    try {
+      const result = await api.applyCategoryCleanup(actions)
+      await loadAll(selectedMonth, selectedYear, true)
+      if (result.appliedCount === 0) {
+        showToast('No category changes were applied.', 'AI Cleanup', 'info')
+        return
+      }
+
+      const undoAction = result.undoActions.length > 0
+        ? {
+            label: 'Undo',
+            onAction: () => {
+              void (async () => {
+                try {
+                  await api.applyCategoryCleanup(result.undoActions)
+                  await loadAll(selectedMonth, selectedYear, true)
+                  showToast('AI cleanup was undone.', 'Undo successful', 'success')
+                } catch (err: unknown) {
+                  showToast(getErrorMessage(err, 'Could not undo AI cleanup.'), 'Undo failed', 'error')
+                }
+              })()
+            }
+          }
+        : undefined
+
+      showToast(
+        `${result.appliedCount} AI category cleanup action${result.appliedCount === 1 ? '' : 's'} applied.`,
+        'AI Cleanup Applied',
+        'success',
+        undoAction
+      )
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, 'Could not apply AI category cleanup.'), 'AI Cleanup Failed', 'error')
+    }
   }
 
   // Transaction modifiers
@@ -1940,6 +2054,7 @@ function App() {
             onUpdateSettings={handleUpdateSettings}
             onAddCategory={handleAddCategory}
             onDeleteCategory={requestDeleteCategory}
+            onApplyCategoryCleanupSuggestion={handleApplyCategoryCleanupSuggestion}
             notifyOnLoginEnabled={modalCheckbox}
             onToggleNotifyOnLogin={(checked) => {
               setModalCheckbox(checked)
@@ -2147,6 +2262,7 @@ function App() {
         message={confirmModalData?.message || ''}
         confirmText={confirmModalData?.confirmText || 'Confirm'}
         cancelText="Cancel"
+        confirmDisabled={confirmModalData?.confirmDisabled || false}
         onConfirm={() => {
           if (confirmModalData) {
             confirmModalData.onConfirm()

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Fingerprint, ShieldCheck, Bell, ChevronDown, ChevronUp, Lock, Unlock, MonitorSmartphone, CalendarDays, LogOut } from 'lucide-react'
+import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Fingerprint, ShieldCheck, Bell, ChevronDown, ChevronUp, Lock, Unlock, MonitorSmartphone, CalendarDays, LogOut, Sparkles, Loader2 } from 'lucide-react'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { SmartAmountInput } from './ui/SmartAmountInput'
@@ -8,7 +8,7 @@ import { RowSyncBadge } from './ui/RowSyncBadge'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { getCycleRangeDates, getStartOfNCyclesAgo, getCurrentCycleYearAndMonth, formatDateForApi } from '../lib/cycle'
 import * as api from '../lib/api'
-import type { FingerprintCredentialSummary, SessionSummary } from '../lib/api'
+import type { CategoryCleanupSuggestion, FingerprintCredentialSummary, SessionSummary } from '../lib/api'
 import { isPlatformAuthenticatorAvailable, createFingerprintCredential, getFriendlyDeviceLabel, base64UrlToHex } from '../lib/webauthn'
 import type { ToastTone } from './ui/ToastViewport'
 import { ToggleButton } from './ui/ToggleButton'
@@ -56,6 +56,7 @@ interface SettingsViewProps {
   }) => void
   onAddCategory: (category: Omit<TransactionCategory, 'id'>) => void
   onDeleteCategory: (id: string) => void
+  onApplyCategoryCleanupSuggestion?: (suggestion: CategoryCleanupSuggestion) => Promise<void> | void
   notifyOnLoginEnabled?: boolean
   onToggleNotifyOnLogin?: (checked: boolean) => void
   activeSyncId?: string | null
@@ -79,6 +80,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onUpdateSettings,
   onAddCategory,
   onDeleteCategory,
+  onApplyCategoryCleanupSuggestion,
   notifyOnLoginEnabled = true,
   onToggleNotifyOnLogin,
   activeSyncId = null,
@@ -134,6 +136,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [devicesOpen, setDevicesOpen] = useState(false)
   const [usageTransactions, setUsageTransactions] = useState<{ category: string }[] | null>(null)
   const [usageError, setUsageError] = useState<string | null>(null)
+  const [cleanupSuggestions, setCleanupSuggestions] = useState<CategoryCleanupSuggestion[]>([])
+  const [cleanupReviewOpen, setCleanupReviewOpen] = useState(false)
+  const [isReviewingCleanup, setIsReviewingCleanup] = useState(false)
+  const [applyingCleanupId, setApplyingCleanupId] = useState<string | null>(null)
+  const [cleanupReviewError, setCleanupReviewError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -435,6 +442,38 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     onDeleteCategory(id)
   }
 
+  const handleAiCleanupReview = async () => {
+    if (hideSensitive || isReviewingCleanup) return
+    setCategoriesOpen(true)
+    setCleanupReviewOpen(true)
+    setCleanupReviewError(null)
+    setIsReviewingCleanup(true)
+    try {
+      const result = await api.reviewCategoryCleanup()
+      setCleanupSuggestions(result.suggestions)
+      if (result.suggestions.length === 0) {
+        onToast?.('AI did not find category cleanup changes worth proposing.', 'AI Review Complete', 'info')
+      }
+    } catch (err: unknown) {
+      console.error(err)
+      setCleanupReviewError(getErrorMessage(err, 'Could not review categories.'))
+      onToast?.(getErrorMessage(err, 'Could not review categories.'), 'AI Review Failed', 'error')
+    } finally {
+      setIsReviewingCleanup(false)
+    }
+  }
+
+  const handleApplyCleanupSuggestion = async (suggestion: CategoryCleanupSuggestion) => {
+    if (hideSensitive || applyingCleanupId) return
+    setApplyingCleanupId(suggestion.id)
+    try {
+      await onApplyCategoryCleanupSuggestion?.(suggestion)
+      setCleanupSuggestions(prev => prev.filter(item => item.id !== suggestion.id))
+    } finally {
+      setApplyingCleanupId(null)
+    }
+  }
+
   const visibleCategories = categoriesList.filter(cat => {
     const lower = cat.name.toLowerCase()
     return lower !== 'transfer' && lower !== 'adjustment'
@@ -708,6 +747,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     )}
                   </div>
                 )}
+                <button
+                  type="button"
+                  onClick={e => { e.stopPropagation(); void handleAiCleanupReview() }}
+                  disabled={hideSensitive || isReviewingCleanup || visibleCategories.length === 0}
+                  title={hideSensitive ? 'Unhide balances to review' : 'AI category review'}
+                  className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition cursor-pointer ${
+                    isReviewingCleanup
+                      ? 'ai-shimmer-border border-blue-500/35 bg-blue-500/5 text-blue-600 dark:text-blue-400'
+                      : 'text-blue-600 dark:text-blue-400 bg-blue-500/5 border-blue-500/30 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed'
+                  }`}
+                >
+                  {isReviewingCleanup ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
+                  AI
+                </button>
                 {categoriesOpen ? <ChevronUp className="size-4 text-muted-foreground shrink-0" /> : <ChevronDown className="size-4 text-muted-foreground shrink-0" />}
               </div>
             </div>
@@ -720,6 +773,101 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <AlertCircle className="size-3 shrink-0" />
                 {usageError}
               </p>
+            )}
+
+            {(cleanupReviewOpen || cleanupReviewError) && (
+              <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+                    <Sparkles className="size-3.5 text-blue-500" />
+                    AI Category Review
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setCleanupReviewOpen(false); setCleanupReviewError(null) }}
+                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-background transition cursor-pointer"
+                    aria-label="Close AI category review"
+                  >
+                    <ChevronUp className="size-3.5" />
+                  </button>
+                </div>
+
+                {isReviewingCleanup && (
+                  <div className="flex items-center gap-2 text-[11px] font-semibold text-muted-foreground">
+                    <Loader2 className="size-3.5 animate-spin text-blue-500" />
+                    Reviewing category usage...
+                  </div>
+                )}
+
+                {cleanupReviewError && (
+                  <p className="text-[11px] font-semibold text-orange-500 flex items-center gap-1">
+                    <AlertCircle className="size-3 shrink-0" />
+                    {cleanupReviewError}
+                  </p>
+                )}
+
+                {!isReviewingCleanup && !cleanupReviewError && cleanupSuggestions.length === 0 && (
+                  <p className="text-[11px] text-muted-foreground">
+                    No cleanup proposals right now.
+                  </p>
+                )}
+
+                {!isReviewingCleanup && cleanupSuggestions.length > 0 && (
+                  <div className="space-y-2">
+                    {cleanupSuggestions.map(suggestion => {
+                      const confidence = Math.round(Math.max(0, Math.min(1, suggestion.confidence)) * 100)
+                      const actionLabel = suggestion.type === 'merge'
+                        ? `Merge to ${suggestion.targetCategory || 'category'}`
+                        : suggestion.type === 'add'
+                        ? `Add ${suggestion.newCategoryName || 'category'}`
+                        : 'Remove category'
+                      const isApplyingThis = applyingCleanupId === suggestion.id
+
+                      return (
+                        <div key={suggestion.id} className="rounded-lg border border-border/60 bg-background p-2.5 space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-foreground">{suggestion.title}</div>
+                              <div className="text-[11px] text-muted-foreground leading-relaxed">{suggestion.summary}</div>
+                            </div>
+                            <span className="shrink-0 rounded-md border border-blue-500/25 bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-blue-600 dark:text-blue-400">
+                              {confidence}%
+                            </span>
+                          </div>
+
+                          {suggestion.categories.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {suggestion.categories.map(name => (
+                                <span key={name} className={`inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-semibold ${getCategoryBadgeClass(name)}`}>
+                                  {name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[10px] font-semibold text-muted-foreground">
+                              {suggestion.affectedTransactionCount > 0
+                                ? `${suggestion.affectedTransactionCount} ledger entr${suggestion.affectedTransactionCount === 1 ? 'y' : 'ies'} need validation`
+                                : 'No ledger entries affected'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => void handleApplyCleanupSuggestion(suggestion)}
+                              disabled={!onApplyCategoryCleanupSuggestion || applyingCleanupId !== null}
+                              title={!onApplyCategoryCleanupSuggestion ? 'Category cleanup is unavailable' : actionLabel}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/5 px-2 py-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {isApplyingThis ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
+                              {actionLabel}
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             )}
 
             <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1 select-none">

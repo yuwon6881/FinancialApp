@@ -373,6 +373,44 @@
     animation: skeleton-shimmer 1.5s ease-in-out infinite;
 }
 
+@keyframes ai-border-sweep {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+}
+
+.ai-shimmer-border {
+    position: relative;
+    overflow: hidden;
+    border-color: color-mix(in srgb, var(--ledger-blue-500) 55%, transparent) !important;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--ledger-blue-500) 18%, transparent);
+}
+
+.ai-shimmer-border::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    pointer-events: none;
+    border-radius: inherit;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in srgb, var(--ledger-sky-500) 38%, transparent) 40%,
+        color-mix(in srgb, var(--ledger-income-500) 30%, transparent) 50%,
+        transparent 62%
+    );
+    background-size: 220% 100%;
+    animation: ai-border-sweep 1.15s linear infinite;
+    mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    padding: 1px;
+}
+
 /* Chart craftsmanship: soft glow under the trend line + a smooth path
    draw-in on load. Line uses pathLength="1" so one keyframe fits any data. */
 .chart-glow {
