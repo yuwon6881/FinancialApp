@@ -4,6 +4,13 @@ import { applyOpsToList, enqueue, type QueuedOp } from './outbox'
 interface TestItem {
   id: string | number
   name: string
+  date?: string
+  postedAt?: string
+  description?: string
+  category?: string
+  ledgerCategory?: string
+  amount?: number
+  wishlistItemId?: number
   active?: boolean
   isPurchased?: boolean
   purchasedAt?: string
@@ -108,6 +115,34 @@ describe('applyOpsToList', () => {
     const result = applyOpsToList(base, ops, 'wishlistItem')
     expect(result[0]).toMatchObject({ isPurchased: false, purchaseTransactionId: null, isPendingSync: true })
     expect(result[0].purchasedAt).toBeUndefined()
+  })
+
+  it('projects a pending ledger transaction for a wishlist purchase op', () => {
+    const ops = [makeOp({
+      entity: 'wishlistItem',
+      type: 'purchase',
+      targetId: '1',
+      payload: { name: 'Headphones', price: 99, date: '2026-07-09', postedAt: '2026-07-09T03:00:00.000Z' }
+    })]
+    const result = applyOpsToList([] as TestItem[], ops, 'transaction')
+    expect(result[0]).toMatchObject({
+      id: 'wishlist-purchase-1',
+      date: '2026-07-09',
+      postedAt: '2026-07-09T03:00:00.000Z',
+      description: 'Purchased: Headphones (Wish List)',
+      category: 'Other',
+      ledgerCategory: 'Rewards',
+      amount: -99,
+      wishlistItemId: 1,
+      isPendingSync: true
+    })
+  })
+
+  it('marks a purchased wishlist ledger transaction pending delete for an unpurchase op', () => {
+    const base: TestItem[] = [{ id: 'tx-1', name: 'Headphones', description: 'Purchased: Headphones (Wish List)' }]
+    const ops = [makeOp({ entity: 'wishlistItem', type: 'unpurchase', targetId: '1', payload: { purchaseTransactionId: 'tx-1' } })]
+    const result = applyOpsToList(base, ops, 'transaction')
+    expect(result[0]).toMatchObject({ isPendingDelete: true, isPendingSync: true })
   })
 
   it('ignores ops for a different entity', () => {

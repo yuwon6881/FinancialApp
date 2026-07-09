@@ -4,6 +4,7 @@ export type AppTab = typeof APP_TABS[number]
 export interface Transaction {
   id: string
   date: string
+  postedAt?: string
   description: string
   category: string
   ledgerCategory: string

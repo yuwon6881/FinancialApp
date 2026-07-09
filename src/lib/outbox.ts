@@ -245,8 +245,14 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
 ): T[] {
   let result = baseList.map(item => ({ ...item }))
   const entityOps = ops.filter(op => op.entity === entity)
+  const effectiveOps = entity === 'transaction'
+    ? [
+        ...entityOps,
+        ...ops.filter(op => op.entity === 'wishlistItem' && (op.type === 'purchase' || op.type === 'unpurchase'))
+      ]
+    : entityOps
 
-  for (const op of entityOps) {
+  for (const op of effectiveOps) {
     const targetStr = String(op.targetId)
 
     if (op.type === 'add') {
@@ -298,6 +304,40 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
           active: nextActive,
           isPendingSync: !op.isCompleted
         }
+      }
+    } else if (entity === 'transaction' && op.entity === 'wishlistItem' && op.type === 'purchase') {
+      const syntheticId = op.payload?.purchaseTransactionId || `wishlist-purchase-${op.targetId}`
+      const newItem = {
+        id: syntheticId,
+        date: op.payload?.date || new Date(op.createdAt).toLocaleDateString('en-CA'),
+        postedAt: op.payload?.postedAt || new Date(op.createdAt).toISOString(),
+        description: `Purchased: ${op.payload?.name || 'Wishlist item'} (Wish List)`,
+        category: 'Other',
+        ledgerCategory: 'Rewards',
+        amount: -Math.abs(Number(op.payload?.price || 0)),
+        wishlistItemId: Number(op.targetId),
+        isPendingSync: !op.isCompleted
+      } as unknown as T
+
+      const existingIndex = result.findIndex(item => String(item.id) === String(syntheticId))
+      if (existingIndex >= 0) {
+        result[existingIndex] = {
+          ...result[existingIndex],
+          ...newItem
+        }
+      } else {
+        result = [newItem, ...result]
+      }
+    } else if (entity === 'transaction' && op.entity === 'wishlistItem' && op.type === 'unpurchase') {
+      const purchaseTransactionId = op.payload?.purchaseTransactionId
+      if (purchaseTransactionId) {
+        result = result.map(item => String(item.id) === String(purchaseTransactionId)
+          ? {
+              ...item,
+              isPendingDelete: true,
+              isPendingSync: !op.isCompleted
+            }
+          : item)
       }
     } else if (op.type === 'purchase') {
       const existingIndex = result.findIndex(item => String(item.id) === targetStr)

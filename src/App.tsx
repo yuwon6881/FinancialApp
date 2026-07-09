@@ -367,7 +367,8 @@ function App() {
         return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'wishlistItem', 'update', String(op.targetId), { ...before }, true)) }
       case 'wishlistItem:purchase': {
         const realId = result?.item?.id != null ? String(result.item.id) : String(op.targetId)
-        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'wishlistItem', 'unpurchase', realId, undefined, true)) }
+        const purchaseTransactionId = result?.item?.purchaseTransactionId || result?.transaction?.id
+        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'wishlistItem', 'unpurchase', realId, { purchaseTransactionId }, true)) }
       }
 
       // Toggle -> flip back to the prior active state.
@@ -1238,7 +1239,15 @@ function App() {
 
   const handlePurchaseWishlistItem = (id: number) => {
     if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
-    mutateQueue(prev => enqueue(prev, 'wishlistItem', 'purchase', String(id)))
+    const item = allWishlist.find(w => String(w.id) === String(id))
+    const now = new Date()
+    const date = now.toLocaleDateString('en-CA')
+    mutateQueue(prev => enqueue(prev, 'wishlistItem', 'purchase', String(id), item ? {
+      name: item.name,
+      price: item.price,
+      date,
+      postedAt: now.toISOString()
+    } : undefined))
   }
 
   // Save pending operations to localStorage whenever they change

@@ -39,6 +39,8 @@ import { useAutoOpenModal } from '../lib/useAutoOpenModal'
 import { useIsMobile } from '../lib/useIsMobile'
 import { getCycleRangeDates, getStartOfNCyclesAgo, formatDateForApi } from '../lib/cycle'
 
+const transactionSortKey = (t: Transaction) => t.postedAt || `${t.date}T00:00:00.000Z`
+
 // Memoized ledger rows. Extracted from the render body so React can skip re-rendering
 // the (up to ~100) visible rows when the parent re-renders for reasons unrelated to a
 // given row -- e.g. typing in the search box, a background fetch toggling, or an
@@ -1301,7 +1303,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
       return true
     }).sort((a, b) => {
-      const dateDiff = b.date.localeCompare(a.date)
+      const dateDiff = transactionSortKey(b).localeCompare(transactionSortKey(a))
       if (dateDiff !== 0) return dateDiff
       return b.id.localeCompare(a.id)
     })
@@ -1351,7 +1353,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       
       return matchesSearch && matchesBucket && matchesSubcat && matchesDate && matchesTxType
     }).sort((a, b) => {
-      const dateDiff = b.date.localeCompare(a.date)
+      const dateDiff = transactionSortKey(b).localeCompare(transactionSortKey(a))
       if (dateDiff !== 0) return dateDiff
       
       const aPending = a.isPendingSync ? 1 : 0
