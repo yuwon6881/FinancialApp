@@ -829,9 +829,17 @@ function App() {
             }
           })
       }
+      // Sensitive mode can be revealed at any point in an active session, not just right
+      // after a lock, so piggyback on this same tick to keep the assert-challenge cache
+      // warm the whole time it's on -- prefetchFingerprintAssertOptions() is a no-op
+      // network-wise unless the cached challenge is actually stale (see PREFETCH_TTL_MS),
+      // so calling it every 15s here doesn't spam the server.
+      if (hasFingerprintSetup && hideSensitive) {
+        void prefetchFingerprintAssertOptions().catch(() => undefined)
+      }
     }, 15000)
     return () => clearInterval(interval)
-  }, [token, isLocked, markSessionLocked, hasFingerprintSetup])
+  }, [token, isLocked, markSessionLocked, hasFingerprintSetup, hideSensitive])
 
   // Fetch initial ledger and dashboard statistics
   async function loadAll(month?: string, year?: number, isBackground = false) {
