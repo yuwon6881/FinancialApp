@@ -1373,6 +1373,13 @@ function App() {
           setError(null);
           processedAny = true;
           successfulOps.push({ op: nextOp, result });
+
+          // Show the toast immediately as each op resolves so the user sees
+          // progress one-by-one rather than all at once after the final loadAll().
+          const toast = getSyncSuccessToast(nextOp)
+          if (toast) {
+            showToast(toast.message, toast.title, toast.tone, nextOp.isUndo ? undefined : buildUndoAction(nextOp, result))
+          }
         } catch (err: unknown) {
           console.error(`Failed to sync ${nextOp.entity}:${nextOp.type}:`, err);
           const isAuthError = errorMessageIncludes(err, '401') || errorMessageIncludesLower(err, 'unauthorized');
@@ -1437,15 +1444,6 @@ function App() {
         // the next render after `transactions` caught up.
         const completedIds = new Set(successfulOps.map(({ op }) => op.id));
         setRecentlyCompletedOps(prev => prev.filter(op => !completedIds.has(op.id)));
-
-        // Show toasts only after UI is refreshed so they are fully "final". Copy (and any
-        // opt-out) lives in one place — lib/outbox.ts — so new op types need no changes here.
-        successfulOps.forEach(({ op, result }) => {
-          const toast = getSyncSuccessToast(op)
-          if (toast) {
-            showToast(toast.message, toast.title, toast.tone, op.isUndo ? undefined : buildUndoAction(op, result))
-          }
-        })
       }
     } finally {
       setActiveSyncId(null);
