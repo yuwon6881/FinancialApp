@@ -35,6 +35,11 @@ import { LockScreen } from './components/LockScreen'
 import { AppLogo } from './components/ui/AppLogo'
 import { triggerHaptic } from './lib/haptics'
 import { isPlatformAuthenticatorAvailable, getFingerprintAssertion } from './lib/webauthn'
+import {
+  clearCachedFingerprintAssertOptions,
+  getCachedFingerprintAssertOptions,
+  prefetchFingerprintAssertOptions,
+} from './lib/fingerprintOptionsCache'
 import { initNativeUi, syncStatusBarTheme } from './lib/nativeUi'
 
 const createLocalId = (prefix: string, separator = '_') => {
@@ -629,7 +634,9 @@ function App() {
 
   // Inactivity Auto-Lock
   const LOCK_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
+  const UNLOCK_CHALLENGE_PREFETCH_WINDOW_MS = 30 * 1000
   const lastUnlockedTimeRef = useRef<number>(0)
+  const unlockChallengePrefetchedForIdleRef = useRef(false)
   const [isLocked, setIsLocked] = useState<boolean>(() => {
     return sessionStorage.getItem('session_locked') === 'true'
   })
@@ -671,6 +678,7 @@ function App() {
       const now = Date.now()
       if (now - lastUpdate > 5000) {
         lastUpdate = now
+        unlockChallengePrefetchedForIdleRef.current = false
         updateActivity()
       }
       if (now - lastHeartbeat > 60000) {
@@ -691,7 +699,12 @@ function App() {
     if (!token) return
     isPlatformAuthenticatorAvailable().then(available => {
       if (!available) return
-      api.fetchAuthStatus().then(res => setHasFingerprintSetup(res.hasFingerprint)).catch(() => undefined)
+      api.fetchAuthStatus().then(res => {
+        setHasFingerprintSetup(res.hasFingerprint)
+        if (res.hasFingerprint) {
+          void prefetchFingerprintAssertOptions().catch(() => undefined)
+        }
+      }).catch(() => undefined)
     })
   }, [token])
 
@@ -772,6 +785,7 @@ function App() {
     localStorage.removeItem('failed_operations')
     localStorage.removeItem('draft_transactions')
     clearAllModalDrafts()
+    clearCachedFingerprintAssertOptions()
     setIsLocked(false)
   }
 
@@ -780,9 +794,19 @@ function App() {
     if (!token || isLocked) return
     const interval = setInterval(() => {
       const lastActive = Number(localStorage.getItem('last_active_time') || Date.now())
-      if (Date.now() - lastActive > LOCK_TIMEOUT_MS) {
+      const idleFor = Date.now() - lastActive
+      if (
+        hasFingerprintSetup &&
+        !unlockChallengePrefetchedForIdleRef.current &&
+        idleFor > LOCK_TIMEOUT_MS - UNLOCK_CHALLENGE_PREFETCH_WINDOW_MS
+      ) {
+        unlockChallengePrefetchedForIdleRef.current = true
+        void prefetchFingerprintAssertOptions().catch(() => undefined)
+      }
+      if (idleFor > LOCK_TIMEOUT_MS) {
         api.lockSession()
           .then(() => {
+            void prefetchFingerprintAssertOptions().catch(() => undefined)
             markSessionLocked()
           })
           .catch(err => {
@@ -795,7 +819,7 @@ function App() {
       }
     }, 15000)
     return () => clearInterval(interval)
-  }, [token, isLocked, markSessionLocked])
+  }, [token, isLocked, markSessionLocked, hasFingerprintSetup])
 
   // Fetch initial ledger and dashboard statistics
   async function loadAll(month?: string, year?: number, isBackground = false) {
@@ -1643,7 +1667,7 @@ function App() {
     try {
       const status = await api.fetchAuthStatus()
       if (!status.hasFingerprint) return false
-      const { challengeId, options } = await api.getFingerprintAssertOptions()
+      const { challengeId, options } = await getCachedFingerprintAssertOptions()
       const credential = await getFingerprintAssertion(options)
       await api.verifyFingerprintAssert(challengeId, credential)
       setHideSensitive(false)
@@ -1653,6 +1677,8 @@ function App() {
     } catch (err) {
       console.warn('Fingerprint prompt failed/cancelled:', err)
       return false
+    } finally {
+      clearCachedFingerprintAssertOptions()
     }
   }
 

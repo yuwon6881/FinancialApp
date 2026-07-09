@@ -3,6 +3,11 @@ import { Lock, User, ShieldAlert, Sparkles, Eye, EyeOff, Fingerprint, ShieldChec
 import * as api from '../lib/api'
 import { AppLogo } from './ui/AppLogo'
 import { isPlatformAuthenticatorAvailable, getFingerprintAssertion } from '../lib/webauthn'
+import {
+  clearCachedFingerprintLoginOptions,
+  getCachedFingerprintLoginOptions,
+  prefetchFingerprintLoginOptions,
+} from '../lib/fingerprintOptionsCache'
 
 interface LoginViewProps {
   onLoginSuccess: (token: string, username: string) => void
@@ -43,6 +48,14 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     checkStatus()
     isPlatformAuthenticatorAvailable().then(setPlatformAuthAvailable)
   }, [])
+
+  useEffect(() => {
+    if (!isRegistered || !hasFingerprint || !platformAuthAvailable) {
+      clearCachedFingerprintLoginOptions()
+      return
+    }
+    void prefetchFingerprintLoginOptions().catch(() => undefined)
+  }, [isRegistered, hasFingerprint, platformAuthAvailable])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -123,7 +136,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     setError(null)
     setFingerprintLoading(true)
     try {
-      const { challengeId, options } = await api.getFingerprintLoginOptions()
+      const { challengeId, options } = await getCachedFingerprintLoginOptions()
       const credential = await getFingerprintAssertion(options)
       const res = await api.verifyFingerprintLogin(challengeId, credential)
       onLoginSuccess(res.token, res.username)
@@ -135,6 +148,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         setError(err.message || 'Fingerprint login failed. Please use your password instead.')
       }
     } finally {
+      clearCachedFingerprintLoginOptions()
       setFingerprintLoading(false)
     }
   }

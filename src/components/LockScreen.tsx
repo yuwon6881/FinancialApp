@@ -3,6 +3,11 @@ import { Fingerprint } from 'lucide-react'
 import * as api from '../lib/api'
 import { AppLogo } from './ui/AppLogo'
 import { isPlatformAuthenticatorAvailable, getFingerprintAssertion } from '../lib/webauthn'
+import {
+  clearCachedFingerprintAssertOptions,
+  getCachedFingerprintAssertOptions,
+  prefetchFingerprintAssertOptions,
+} from '../lib/fingerprintOptionsCache'
 
 interface LockScreenProps {
   isOpen: boolean
@@ -18,28 +23,39 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
   const [fingerprintAvailable, setFingerprintAvailable] = useState(false)
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) {
+      setFingerprintAvailable(false)
+      clearCachedFingerprintAssertOptions()
+      return
+    }
 
+    setFingerprintAvailable(false)
     let cancelled = false
     ;(async () => {
-      if (!(await isPlatformAuthenticatorAvailable())) return
+      const [platformAvailable, status] = await Promise.all([
+        isPlatformAuthenticatorAvailable(),
+        api.fetchAuthStatus().catch(() => null),
+      ])
+      if (!platformAvailable || cancelled || !status?.hasFingerprint) return
       try {
-        const status = await api.fetchAuthStatus()
-        if (cancelled || !status.hasFingerprint) return
         setFingerprintAvailable(true)
+        void prefetchFingerprintAssertOptions().catch(() => undefined)
       } catch {
         // Backend unreachable - fall through to password unlock only.
       }
     })()
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      clearCachedFingerprintAssertOptions()
+    }
   }, [isOpen])
 
   const handleFingerprintUnlock = async () => {
     setFingerprintVerifying(true)
     setLockError(null)
     try {
-      const { challengeId, options } = await api.getFingerprintAssertOptions()
+      const { challengeId, options } = await getCachedFingerprintAssertOptions()
       const credential = await getFingerprintAssertion(options)
       await api.verifyFingerprintAssert(challengeId, credential)
       setLockPassword('')
@@ -50,6 +66,7 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
         setLockError(err.message || 'Fingerprint unlock failed. Please use your password.')
       }
     } finally {
+      clearCachedFingerprintAssertOptions()
       setFingerprintVerifying(false)
     }
   }
