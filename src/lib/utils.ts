@@ -5,6 +5,8 @@ export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs))
 }
 
+export const SENSITIVE_AMOUNT_MASK = '......'
+
 export const formatCurrencyVal = (val: number, currencyCode: string = 'USD') => {
   const code = currencyCode.toUpperCase()
   const isoCode = code === 'RM' ? 'MYR' : code

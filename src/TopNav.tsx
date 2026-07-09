@@ -21,20 +21,21 @@ import {
   Sun,
   PiggyBank,
   FileText,
-  Settings
+  Settings,
+  Sparkles
 } from 'lucide-react'
-import { formatCurrencyVal } from './lib/utils'
 import { triggerHaptic } from './lib/haptics'
 import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 import { SwipeableRow } from './components/ui/SwipeableRow'
 import { AppLogo } from './components/ui/AppLogo'
+import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from './lib/utils'
 import type { AppTab, PendingNotification } from './types'
 
 interface TopNavProps {
   activeTab: AppTab
   onTabChange: (tab: AppTab) => void
-  totalBalance: number
   onQuickAction?: (action: 'transaction' | 'subscription' | 'wishlist') => void
+  onAskAI?: () => void
   hideSensitive: boolean
   onToggleHideSensitive: () => void
   onLogout: () => void
@@ -57,8 +58,8 @@ interface TopNavProps {
 const TopNav: React.FC<TopNavProps> = ({
   activeTab,
   onTabChange,
-  totalBalance,
   onQuickAction,
+  onAskAI,
   hideSensitive,
   onToggleHideSensitive,
   onLogout,
@@ -104,10 +105,6 @@ const TopNav: React.FC<TopNavProps> = ({
     const parts = name.trim().split(/\s+/)
     if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase()
     return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase()
-  }
-
-  const formatCurrency = (val: number) => {
-    return formatCurrencyVal(val, currency)
   }
 
   const navItems: Array<{
@@ -247,30 +244,16 @@ const TopNav: React.FC<TopNavProps> = ({
         {/* Right Side Widgets & Actions */}
         <div className="flex-1 flex items-center justify-end gap-1.5 sm:gap-3 md:gap-4 min-w-max">
           
-          {/* Quick Metrics (Balance Display) -- always the current cycle's wallet total, shown at every breakpoint */}
-          <div
-            onClick={() => onTabChange('dashboard')}
-            className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/20 hover:border-blue-500/40 rounded-xl select-none shrink-0 cursor-pointer transition-all duration-150"
-            title={hideSensitive ? "Sensitive balance hidden (Click to view dashboard)" : "Net Balance (Click to view dashboard)"}
+          <button
+            type="button"
+            onClick={onAskAI}
+            className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-blue-500/8 hover:bg-blue-500/14 border border-blue-500/20 hover:border-blue-500/35 text-blue-600 dark:text-blue-400 rounded-xl select-none shrink-0 transition-all duration-150 cursor-pointer"
+            title="ASK AI"
+            aria-label="ASK AI"
           >
-            <Wallet className="size-3.5 text-blue-500" />
-            {hideSensitive ? (
-              <span 
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onToggleHideSensitive()
-                }}
-                title="Tap to toggle privacy mode"
-                className="animate-pulse bg-blue-500/20 hover:bg-blue-500/30 text-transparent blur-[3px] hover:blur-0 rounded px-1.5 py-0.5 text-xs font-mono select-none cursor-pointer transition-all duration-300"
-              >
-                {formatCurrency(totalBalance)}
-              </span>
-            ) : (
-              <span className="text-xs font-extrabold text-blue-600 dark:text-blue-400 transition-all duration-300">
-                {formatCurrency(totalBalance)}
-              </span>
-            )}
-          </div>
+            <Sparkles className="size-3.5" />
+            <span className="hidden sm:inline text-xs font-extrabold tracking-wide">ASK AI</span>
+          </button>
 
           {/* Notification Bell Dropdown */}
           <div className="relative bell-container">
@@ -304,8 +287,8 @@ const TopNav: React.FC<TopNavProps> = ({
                           <span className="text-[9px] text-muted-foreground block whitespace-nowrap">{noti.billingDate}</span>
                         </div>
                         <div className="text-right shrink-0">
-                          <span className={`text-orange-500 font-extrabold block transition-all duration-300 ${hideSensitive ? 'blur-sm select-none pointer-events-none' : ''}`}>
-                            -{formatCurrency(noti.amount)}
+                          <span className="text-orange-500 font-extrabold block transition-all duration-300">
+                            {hideSensitive ? SENSITIVE_AMOUNT_MASK : `-${formatCurrencyVal(noti.amount, currency)}`}
                           </span>
                         </div>
                       </div>

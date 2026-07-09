@@ -18,7 +18,7 @@ const LedgerView = lazy(() => import('./components/LedgerView').then(m => ({ def
 const WishlistView = lazy(() => import('./components/WishlistView').then(m => ({ default: m.WishlistView })))
 const SettingsView = lazy(() => import('./components/SettingsView').then(m => ({ default: m.SettingsView })))
 const DraftStagingView = lazy(() => import('./components/DraftStagingView').then(m => ({ default: m.DraftStagingView })))
-import { formatCurrencyVal } from './lib/utils'
+import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from './lib/utils'
 import { CustomAlertModal } from './components/ui/CustomAlertModal'
 import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 import { CustomSelect } from './components/ui/CustomSelect'
@@ -1849,13 +1849,13 @@ function App() {
   const formatSensitive = (val: number) => {
     const formatted = formatCurrencyVal(val, optimisticDashboardData?.setting?.currency || 'USD')
     return (
-      <span className={hideSensitive ? 'blur-sm select-none pointer-events-none inline-block transition-[filter] duration-200' : 'transition-[filter] duration-200'}>
-        {formatted}
+      <span className={hideSensitive ? 'inline-block font-mono tracking-wide select-none' : 'transition-[filter] duration-200'}>
+        {hideSensitive ? SENSITIVE_AMOUNT_MASK : formatted}
       </span>
     )
   }
 
-  // Top Nav wallet total: always the real current cycle's total (from walletBalance), falling
+  // Wallet total: always the real current cycle's total (from walletBalance), falling
   // back to the naive all-time sum only until the very first fetch lands.
   const totalBalance = walletBalance ?? allTransactions.reduce((acc, t) => acc + t.amount, 0)
 
@@ -2004,7 +2004,6 @@ function App() {
       <TopNav 
         activeTab={activeTab} 
         onTabChange={setActiveTab} 
-        totalBalance={totalBalance}
         onQuickAction={handleQuickAction}
         hideSensitive={hideSensitive}
         onToggleHideSensitive={handleToggleHideSensitive}
@@ -2081,6 +2080,8 @@ function App() {
             onSelectPeriod={handleSelectPeriod}
             onNavigate={setActiveTab}
             hideSensitive={hideSensitive}
+            walletBalance={totalBalance}
+            onToggleHideSensitive={handleToggleHideSensitive}
             onConfirmSubscription={handleConfirmSubscription}
             onDeletePayment={handleDeletePayment}
             onNavigateToLedger={handleNavigateToLedger}

@@ -12,14 +12,16 @@ import {
   TrendingUp as TrendLineIcon,
   PiggyBank,
   Edit2,
-  Clock
+  Clock,
+  Eye,
+  EyeOff
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
 import { CustomConfirmModal } from './ui/CustomConfirmModal'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { BottomSheet } from './ui/BottomSheet'
 import { CycleSkeleton } from './ui/Skeleton'
-import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput } from '../lib/utils'
+import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
 import { getCategoryBadgeClass, getCategoryChartColor, getCategoryDotClass } from '../lib/categoryColors'
 import { AnimatedNumber } from './ui/AnimatedNumber'
 import { SmartAmountInput } from './ui/SmartAmountInput'
@@ -40,6 +42,8 @@ interface DashboardViewProps {
   onSelectPeriod: (month: string, year: number) => void
   onNavigate: (tab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist' | 'settings') => void
   hideSensitive: boolean
+  walletBalance: number
+  onToggleHideSensitive: () => void
   onConfirmSubscription: (noti: PendingNotification, paidDate: string) => void
   onDeletePayment: (id: string) => void
   onNavigateToLedger?: (options: { 
@@ -63,6 +67,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onSelectPeriod,
   onNavigate,
   hideSensitive,
+  walletBalance,
+  onToggleHideSensitive,
   onConfirmSubscription,
   onDeletePayment,
   onNavigateToLedger,
@@ -224,9 +230,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return hideSensitive ? (
       <span
         title="Sensitive data masked (Privacy Mode active)"
-        className="animate-pulse bg-primary/10 hover:bg-primary/20 text-transparent blur-[3px] hover:blur-0 rounded px-1 select-none cursor-pointer transition-all duration-300 inline-block font-mono"
+        className="inline-block font-mono font-semibold tracking-wide text-foreground select-none"
       >
-        {formatCurrency(val)}
+        {SENSITIVE_AMOUNT_MASK}
       </span>
     ) : (
       <span className="transition-[filter] duration-200">{formatCurrency(val)}</span>
@@ -249,9 +255,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return hideSensitive ? (
       <span
         title="Sensitive data masked (Privacy Mode active)"
-        className="animate-pulse bg-primary/10 hover:bg-primary/20 text-transparent blur-[3px] hover:blur-0 rounded px-1 select-none cursor-pointer transition-all duration-300 inline-block font-mono"
+        className="inline-block font-mono font-semibold tracking-wide text-foreground select-none"
       >
-        {formatCompactNetValue(val)}
+        {SENSITIVE_AMOUNT_MASK}
       </span>
     ) : (
       <span className="transition-[filter] duration-200">{formatCompactNetValue(val)}</span>
@@ -401,6 +407,51 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             align="right"
           />
         </div>
+        </div>
+      </div>
+
+      <div className="app-panel overflow-hidden rounded-2xl border border-blue-500/15 bg-card/92">
+        <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5 bg-linear-to-r from-blue-500/8 via-transparent to-teal-500/8">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/10 text-blue-500">
+              <Wallet className="size-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-sm font-bold text-foreground">Wallet Balance</h3>
+                <span className="rounded-md border border-border/50 bg-background/60 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                  Current cycle
+                </span>
+              </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Always reflects the active wallet total, independent of the selected historical dashboard cycle.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 sm:justify-end">
+            <div className="min-w-0 text-left sm:text-right">
+              <div className="truncate text-2xl font-black text-foreground sm:text-3xl">
+                {hideSensitive ? (
+                  <span className="font-mono tracking-wide">{SENSITIVE_AMOUNT_MASK}</span>
+                ) : (
+                  <AnimatedNumber value={walletBalance} formatFn={formatCurrency} />
+                )}
+              </div>
+              <p className="mt-1 text-[10px] font-semibold text-muted-foreground">
+                {hideSensitive ? 'Sensitive mode active' : 'Visible on this device'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onToggleHideSensitive}
+              className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-background/80 text-muted-foreground transition hover:border-blue-500/35 hover:bg-blue-500/10 hover:text-blue-500 cursor-pointer"
+              title={hideSensitive ? 'Show balances' : 'Hide balances'}
+              aria-label={hideSensitive ? 'Show balances' : 'Hide balances'}
+            >
+              {hideSensitive ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -620,7 +671,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <div className="text-right font-medium text-foreground">{formatSensitive(c.target)}</div>
                   <div className="text-right text-muted-foreground font-medium">{formatSensitive(c.budget)}</div>
                   <div className={`text-right font-medium ${c.netChange < 0 ? 'text-orange-500' : c.netChange > 0 ? 'text-blue-500' : ''}`}>
-                    <div>{c.netChange > 0 ? '+' : ''}{hideSensitive ? '••••••' : <AnimatedNumber value={c.netChange} formatFn={formatCurrency} />}</div>
+                    <div>{hideSensitive ? SENSITIVE_AMOUNT_MASK : <>{c.netChange > 0 ? '+' : ''}<AnimatedNumber value={c.netChange} formatFn={formatCurrency} /></>}</div>
                     {pendingDeductionsByCategory[c.name] > 0 && (
                       <div className="text-[10px] text-yellow-500 font-normal flex items-center justify-end gap-1 mt-0.5">
                         <Clock className="size-3" />
@@ -631,7 +682,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <div className="flex items-center justify-end gap-1.5 text-right">
                     <div className="flex min-w-[96px] flex-col items-end gap-1">
                       <div className={`font-bold ${isNeg ? 'text-orange-500' : 'text-foreground'}`}>
-                        {hideSensitive ? '••••••' : <AnimatedNumber value={c.remaining} formatFn={formatCurrency} />}
+                        {hideSensitive ? SENSITIVE_AMOUNT_MASK : <AnimatedNumber value={c.remaining} formatFn={formatCurrency} />}
                       </div>
                       {pendingDeductionsByCategory[c.name] > 0 && (
                         <div className={`text-[10px] font-semibold flex items-center justify-end gap-1 mt-0.5 ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
@@ -711,7 +762,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <div>
                     <span className="text-muted-foreground text-[10px] block mb-0.5">Net Change</span>
                     <span className={`font-semibold ${c.netChange < 0 ? 'text-orange-500' : c.netChange > 0 ? 'text-blue-500' : 'text-foreground'}`}>
-                      {c.netChange > 0 ? '+' : ''}{hideSensitive ? '••••••' : <AnimatedNumber value={c.netChange} formatFn={formatCurrency} />}
+                      {hideSensitive ? SENSITIVE_AMOUNT_MASK : <>{c.netChange > 0 ? '+' : ''}<AnimatedNumber value={c.netChange} formatFn={formatCurrency} /></>}
                     </span>
                     {pendingDeductionsByCategory[c.name] > 0 && (
                       <span className="text-[10px] text-yellow-500 flex items-center gap-1 font-normal mt-0.5">
@@ -724,7 +775,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <span className="text-muted-foreground text-[10px] block mb-0.5">Remaining Balance</span>
                     <div className="flex items-center gap-1.5">
                       <span className={`font-bold ${isNeg ? 'text-orange-500' : 'text-foreground'}`}>
-                        {hideSensitive ? '••••••' : <AnimatedNumber value={c.remaining} formatFn={formatCurrency} />}
+                        {hideSensitive ? SENSITIVE_AMOUNT_MASK : <AnimatedNumber value={c.remaining} formatFn={formatCurrency} />}
                       </span>
                       <button
                         type="button"
@@ -923,7 +974,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           <div className="text-2xl font-black text-foreground">
-            {hideSensitive ? '••••••' : <AnimatedNumber value={stats.totalBalance} formatFn={formatCurrency} />}
+            {hideSensitive ? SENSITIVE_AMOUNT_MASK : <AnimatedNumber value={stats.totalBalance} formatFn={formatCurrency} />}
           </div>
           <p className="text-[10px] text-muted-foreground mt-1.5 flex items-start gap-1">
             <AlertCircle className="size-3 text-blue-500 shrink-0 mt-0.5" />
@@ -943,7 +994,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           <div className="text-2xl font-black text-foreground">
-            {hideSensitive ? '••••••' : <AnimatedNumber value={stats.monthlyInflow} formatFn={formatCurrency} />}
+            {hideSensitive ? SENSITIVE_AMOUNT_MASK : <AnimatedNumber value={stats.monthlyInflow} formatFn={formatCurrency} />}
           </div>
           <p className="text-[10px] mt-1.5 text-muted-foreground">
             Total Actual Income: <span className="font-semibold text-teal-500">{formatSensitive(stats.monthlyIncome)}</span>
@@ -962,7 +1013,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           <div className="text-2xl font-black text-foreground">
-            {hideSensitive ? '••••••' : <AnimatedNumber value={stats.monthlyExpenses} formatFn={formatCurrency} />}
+            {hideSensitive ? SENSITIVE_AMOUNT_MASK : <AnimatedNumber value={stats.monthlyExpenses} formatFn={formatCurrency} />}
           </div>
           <p className="text-[10px] text-muted-foreground mt-1.5">
             Active committed bills: <span className="font-semibold text-orange-500">{formatSensitive(stats.activeRecurringTotal)}</span>/mo
@@ -1003,7 +1054,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
 
               <p className="text-[10px] text-muted-foreground mt-2 flex justify-between">
-                <span>{hideSensitive ? '••••••' : <AnimatedNumber value={rewardsBalance} formatFn={formatCurrency} />} saved</span>
+                <span>{hideSensitive ? SENSITIVE_AMOUNT_MASK : <AnimatedNumber value={rewardsBalance} formatFn={formatCurrency} />} saved</span>
                 <span className="font-semibold text-foreground">{formatSensitive(activeWishlistItem.price)}</span>
               </p>
             </div>
@@ -1159,7 +1210,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         >
                           <span className="text-[9px] font-bold text-foreground leading-none mb-1">{p.month}</span>
                           <span className="text-[10px] font-black text-blue-500 leading-none">
-                            {hideSensitive ? '•••••' : formatCurrency(p.balance)}
+                            {hideSensitive ? SENSITIVE_AMOUNT_MASK : formatCurrency(p.balance)}
                           </span>
                         </div>
                       </>
