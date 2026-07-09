@@ -1373,13 +1373,6 @@ function App() {
           setError(null);
           processedAny = true;
           successfulOps.push({ op: nextOp, result });
-
-          // Show the toast immediately as each op resolves so the user sees
-          // progress one-by-one rather than all at once after the final loadAll().
-          const toast = getSyncSuccessToast(nextOp)
-          if (toast) {
-            showToast(toast.message, toast.title, toast.tone, nextOp.isUndo ? undefined : buildUndoAction(nextOp, result))
-          }
         } catch (err: unknown) {
           console.error(`Failed to sync ${nextOp.entity}:${nextOp.type}:`, err);
           const isAuthError = errorMessageIncludes(err, '401') || errorMessageIncludesLower(err, 'unauthorized');
@@ -1457,6 +1450,22 @@ function App() {
       // so concurrent executions remain impossible.
       if (pendingOpsRef.current.length > 0) {
         void processQueue();
+      }
+      // Show each success toast individually after the spinner clears, staggered
+      // so they pop in one-by-one rather than all at once. Undo actions are built
+      // eagerly here (before the setTimeout fires) so the snapshot read/delete in
+      // buildUndoAction happens at the correct time — not after a user action may
+      // have overwritten the same key in undoSnapshotsRef.
+      const TOAST_STAGGER_MS = 350;
+      let toastIdx = 0;
+      for (const { op, result } of successfulOps) {
+        const toastMsg = getSyncSuccessToast(op);
+        if (!toastMsg) continue;
+        const undoAction = op.isUndo ? undefined : buildUndoAction(op, result);
+        window.setTimeout(() => {
+          showToast(toastMsg.message, toastMsg.title, toastMsg.tone, undoAction);
+        }, toastIdx * TOAST_STAGGER_MS);
+        toastIdx++;
       }
     }
   }, [token, selectedMonth, selectedYear, mutateQueue]);
