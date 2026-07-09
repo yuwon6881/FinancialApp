@@ -1221,13 +1221,20 @@ function App() {
     })
   }
 
-  const handleApplyCategoryCleanupSuggestion = async (suggestion: CategoryCleanupSuggestion) => {
+  const handleApplyCategoryCleanupSuggestion = async (suggestion: CategoryCleanupSuggestion, targetCategoryOverride?: string) => {
     if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
+
+    if (suggestion.type === 'consolidate' && !targetCategoryOverride) {
+      showToast('Choose a category to move these entries to first.', 'AI Cleanup', 'warning')
+      return
+    }
 
     const actions = suggestion.type === 'add'
       ? [{ type: 'add' as const, newCategoryName: suggestion.newCategoryName || undefined }]
       : suggestion.type === 'merge'
       ? [{ type: 'merge' as const, categories: suggestion.categories, targetCategory: suggestion.targetCategory || undefined }]
+      : suggestion.type === 'consolidate'
+      ? [{ type: 'merge' as const, categories: suggestion.categories, targetCategory: targetCategoryOverride }]
       : [{ type: 'delete' as const, categories: suggestion.categories }]
 
     try {

@@ -56,7 +56,7 @@ interface SettingsViewProps {
   }) => void
   onAddCategory: (category: Omit<TransactionCategory, 'id'>) => void
   onDeleteCategory: (id: string) => void
-  onApplyCategoryCleanupSuggestion?: (suggestion: CategoryCleanupSuggestion) => Promise<void> | void
+  onApplyCategoryCleanupSuggestion?: (suggestion: CategoryCleanupSuggestion, targetCategoryOverride?: string) => Promise<void> | void
   notifyOnLoginEnabled?: boolean
   onToggleNotifyOnLogin?: (checked: boolean) => void
   activeSyncId?: string | null
@@ -141,6 +141,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [isReviewingCleanup, setIsReviewingCleanup] = useState(false)
   const [applyingCleanupId, setApplyingCleanupId] = useState<string | null>(null)
   const [cleanupReviewError, setCleanupReviewError] = useState<string | null>(null)
+  const [consolidateTargets, setConsolidateTargets] = useState<Record<string, string>>({})
 
   useEffect(() => {
     let cancelled = false
@@ -465,10 +466,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const handleApplyCleanupSuggestion = async (suggestion: CategoryCleanupSuggestion) => {
     if (hideSensitive || applyingCleanupId) return
+    if (suggestion.type === 'consolidate' && !consolidateTargets[suggestion.id]) return
     setApplyingCleanupId(suggestion.id)
     try {
-      await onApplyCategoryCleanupSuggestion?.(suggestion)
+      await onApplyCategoryCleanupSuggestion?.(suggestion, consolidateTargets[suggestion.id])
       setCleanupSuggestions(prev => prev.filter(item => item.id !== suggestion.id))
+      setConsolidateTargets(prev => {
+        const next = { ...prev }
+        delete next[suggestion.id]
+        return next
+      })
     } finally {
       setApplyingCleanupId(null)
     }
@@ -816,12 +823,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <div className="space-y-2">
                     {cleanupSuggestions.map(suggestion => {
                       const confidence = Math.round(Math.max(0, Math.min(1, suggestion.confidence)) * 100)
+                      const consolidateOptions = visibleCategories.filter(cat =>
+                        !suggestion.categories.some(name => name.toLowerCase() === cat.name.toLowerCase())
+                      )
+                      const consolidateTarget = consolidateTargets[suggestion.id] || ''
                       const actionLabel = suggestion.type === 'merge'
                         ? `Merge to ${suggestion.targetCategory || 'category'}`
                         : suggestion.type === 'add'
                         ? `Add ${suggestion.newCategoryName || 'category'}`
+                        : suggestion.type === 'consolidate'
+                        ? consolidateTarget
+                          ? `Move entries to ${consolidateTarget}`
+                          : 'Choose a category first'
                         : 'Remove category'
                       const isApplyingThis = applyingCleanupId === suggestion.id
+                      const isConsolidateDisabled = suggestion.type === 'consolidate' && !consolidateTarget
 
                       return (
                         <div key={suggestion.id} className="rounded-lg border border-border/60 bg-background p-2.5 space-y-2">
@@ -845,6 +861,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             </div>
                           )}
 
+                          {suggestion.type === 'consolidate' && (
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-semibold text-muted-foreground">Move its entries to:</span>
+                              <CustomSelect
+                                value={consolidateTarget}
+                                onChange={val => setConsolidateTargets(prev => ({ ...prev, [suggestion.id]: String(val) }))}
+                                options={[
+                                  { value: '', label: 'Choose a category' },
+                                  ...consolidateOptions.map(cat => ({ value: cat.name, label: cat.name }))
+                                ]}
+                                className="w-full"
+                              />
+                            </div>
+                          )}
+
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-[10px] font-semibold text-muted-foreground">
                               {suggestion.affectedTransactionCount > 0
@@ -854,7 +885,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             <button
                               type="button"
                               onClick={() => void handleApplyCleanupSuggestion(suggestion)}
-                              disabled={!onApplyCategoryCleanupSuggestion || applyingCleanupId !== null}
+                              disabled={!onApplyCategoryCleanupSuggestion || applyingCleanupId !== null || isConsolidateDisabled}
                               title={!onApplyCategoryCleanupSuggestion ? 'Category cleanup is unavailable' : actionLabel}
                               className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/5 px-2 py-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                             >

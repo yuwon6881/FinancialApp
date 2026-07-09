@@ -490,7 +490,7 @@ export interface TransactionNoteSuggestion {
 
 export interface CategoryCleanupSuggestion {
   id: string
-  type: 'add' | 'delete' | 'merge'
+  type: 'add' | 'delete' | 'merge' | 'consolidate'
   title: string
   summary: string
   categories: string[]
@@ -962,9 +962,10 @@ export async function fetchWishlist(signal?: AbortSignal): Promise<WishlistItem[
     if (!response.ok) {
       throw new Error('Failed to fetch wishlist')
     }
-    return response.json()
+    const data = await response.json() as WireWishlistItem[] | null
+    return (data || []).map(deobfuscateWishlistItem)
   })()
-  
+
   if (canUseCache) {
     queryCache.set('wishlist', promise, 120000)
   }
