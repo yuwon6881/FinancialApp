@@ -736,7 +736,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </button>
 
                     {showUsageDetails && (
-                      <div className="absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-32px)] md:w-80 z-50 bg-card border border-border/80 shadow-lg rounded-xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="absolute right-[-80px] sm:right-0 top-full mt-2 w-72 max-w-[calc(100vw-32px)] md:w-80 z-50 bg-card border border-border/80 shadow-lg rounded-xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-150">
                         <p className="text-[10px] text-muted-foreground leading-relaxed">
                           Usage over the last {USAGE_LOOKBACK_CYCLES} cycles, least used first. Categories with no recent activity are good candidates to remove.
                         </p>

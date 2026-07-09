@@ -39,7 +39,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
 
   const close = useCallback(() => {
     setOpen(false)
-    controls.start({ x: 0, transition: { type: 'spring', stiffness: 400, damping: 30 } })
+    controls.start({ x: 0, transition: { type: 'spring', stiffness: 750, damping: 42 } })
   }, [controls])
 
   const closeForAction = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -78,10 +78,10 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
     if (shouldOpen) {
       if (!open) triggerHaptic(10)
       setOpen(true)
-      controls.start({ x: -actionsWidth, transition: { type: 'spring', stiffness: 400, damping: 30 } })
+      controls.start({ x: -actionsWidth, transition: { type: 'spring', stiffness: 750, damping: 42 } })
     } else {
       setOpen(false)
-      controls.start({ x: 0, transition: { type: 'spring', stiffness: 400, damping: 30 } })
+      controls.start({ x: 0, transition: { type: 'spring', stiffness: 750, damping: 42 } })
     }
   }
 
