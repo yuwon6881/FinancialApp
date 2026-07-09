@@ -1251,6 +1251,9 @@ function App() {
     if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     snapshotForUndo('wishlistItem', String(id), allWishlist.find(w => String(w.id) === String(id)))
     mutateQueue(prev => enqueue(prev, 'wishlistItem', 'update', String(id), toOutboxPayload(updatedWish)))
+    // Mirror handleUpdateTransaction: clear the edit-lock so the drain loop can
+    // dispatch this op once the modal closes.
+    if (String(id) === editingPendingId) setEditingPendingId(null)
   }
 
   const handleDeleteWishlistItem = (id: number) => {
@@ -1449,6 +1452,14 @@ function App() {
       setDeletingTxId(null);
       setIsBackgroundSyncing(false);
       isSyncingRef.current = false;
+      // Lost-wakeup guard: ops that arrived while the lock was held triggered the
+      // edge-triggered effect, but isSyncingRef.current was true so processQueue()
+      // returned immediately.  Now that the lock is free, check if any ops are still
+      // waiting and re-trigger once — the recursive call starts with the same guard
+      // so concurrent executions remain impossible.
+      if (pendingOpsRef.current.length > 0) {
+        void processQueue();
+      }
     }
   }, [token, selectedMonth, selectedYear, mutateQueue]);
 
@@ -1973,6 +1984,7 @@ function App() {
             activeSyncId={activeSyncId}
             deletingId={deletingTxId}
             isSwitchingCycle={isSwitchingCycle}
+            onStartEditPending={setEditingPendingId}
           />
         )}
 

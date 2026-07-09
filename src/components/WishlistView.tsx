@@ -52,6 +52,9 @@ interface WishlistViewProps {
   activeSyncId?: string | null
   deletingId?: string | null
   isSwitchingCycle?: boolean
+  // Signals to the parent's drain loop which item is being edited, so the
+  // corresponding queued op isn't dispatched while the edit modal is open.
+  onStartEditPending?: (id: string | null) => void
 }
 
 export const WishlistView: React.FC<WishlistViewProps> = ({
@@ -72,7 +75,8 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   onNavigateToLedger,
   activeSyncId = null,
   deletingId = null,
-  isSwitchingCycle = false
+  isSwitchingCycle = false,
+  onStartEditPending
 }) => {
   const { isSyncing: isItemSyncing, isDeleting: isItemDeleting } = useSyncStatus(wishlist, activeSyncId, deletingId)
 
@@ -122,6 +126,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
       setPriceInput(draft.priceInput)
       setPriorityInput(draft.priorityInput)
       setIsActiveInput(draft.isActiveInput)
+      onStartEditPending?.(String(draft.editingItemId))
       setShowEditModal(true)
     }
   )
@@ -194,6 +199,9 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     setPriceInput(item.price.toFixed(2))
     setPriorityInput(item.priority)
     setIsActiveInput(item.isActive)
+    // Notify the parent drain loop so this item's queued op is held until the
+    // modal closes (mirrors the protection transaction edits already have).
+    onStartEditPending?.(String(item.id))
     setShowEditModal(true)
   }
 
@@ -216,6 +224,9 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     setIsActiveInput(false)
     clearEditDraft()
     setErrors({})
+    // Release the drain-loop hold now that the user has finished (or cancelled)
+    // editing.
+    onStartEditPending?.(null)
   }
 
   const handleSaveAdd = async (e: React.FormEvent) => {
