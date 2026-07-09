@@ -23,6 +23,7 @@ import {
   CheckCircle2
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
+import { SearchableSelect } from './ui/SearchableSelect'
 import { CycleSkeleton } from './ui/Skeleton'
 import { Button } from './ui/Button'
 import { Card } from './ui/Card'
@@ -2044,11 +2045,12 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               <>
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-muted-foreground">Category</label>
-                  <CustomSelect
+                  <SearchableSelect
                     value={category || (categories[0]?.name || '')}
                     onChange={val => setCategory(val)}
                     options={categories.map(c => ({ value: c.name, label: c.name }))}
                     className="w-full"
+                    placeholder="Search category…"
                   />
                 </div>
 

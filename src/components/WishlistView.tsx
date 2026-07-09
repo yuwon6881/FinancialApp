@@ -12,6 +12,7 @@ import { formatCurrencyVal, maskCurrencyInput } from '../lib/utils'
 import { useFormDraft } from '../lib/useFormDraft'
 import { useAutoOpenModal } from '../lib/useAutoOpenModal'
 import { useSyncStatus } from '../lib/useOptimisticList'
+import { Button } from './ui/Button'
 import { SmartAmountInput } from './ui/SmartAmountInput'
 import {
   Wallet,
@@ -470,7 +471,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                   </div>
 
                   {/* Actions — matches subscription card footer style */}
-                  <div className="mt-6 flex items-center justify-between border-t border-border/30 pt-4 gap-2">
+                  <div className="mt-6 flex flex-wrap items-center justify-between border-t border-border/30 pt-4 gap-2">
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.96 }}
@@ -487,28 +488,25 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                     </motion.button>
 
                     <div className="flex items-center gap-2">
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.9 }}
+                      <Button
+                        variant="ghost"
                         onClick={() => handleOpenEditModal(activeItem)}
                         disabled={hideSensitive}
                         title={hideSensitive ? 'Unhide balances to edit' : 'Edit goal'}
-                        className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl border border-transparent hover:border-border/40 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
                       >
                         <Edit2 className="size-3.5" /> Edit
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.9 }}
+                      </Button>
+                      <Button
+                        variant="danger"
                         onClick={() => onDeleteItem(activeItem.id)}
                         disabled={hideSensitive}
-                        title={hideSensitive ? 'Unhide balances to edit' : 'Delete goal'}
-                        className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-xl border border-transparent hover:border-red-500/10 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+                        title={hideSensitive ? 'Unhide balances to delete' : 'Delete goal'}
                       >
                         <Trash2 className="size-3.5" /> Delete
-                      </motion.button>
+                      </Button>
                     </div>
                   </div>
+                </div>
                 </div>
               )
             })()
