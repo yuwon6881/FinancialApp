@@ -1325,6 +1325,11 @@ function App() {
     let processedAny = false;
     const successfulOps: Array<{ op: QueuedOp; result: DispatchResult }> = [];
     const TOAST_STAGGER_MS = 350;
+    // The row's "syncing" badge clears via a React state update issued in the same
+    // synchronous block as the toast scheduling below; a 0ms setTimeout can fire before
+    // that update has actually painted, so the toast visually beats the spinner. This
+    // floor gives the browser a frame to commit the spinner-off render first.
+    const TOAST_MIN_DELAY_MS = 60;
 
     try {
       while (true) {
@@ -1388,7 +1393,7 @@ function App() {
           if (toastMsg) {
             const undoAction = nextOp.isUndo ? undefined : buildUndoAction(nextOp, result);
             const now = Date.now();
-            const showAt = Math.max(now, nextToastAtRef.current);
+            const showAt = Math.max(now + TOAST_MIN_DELAY_MS, nextToastAtRef.current);
             nextToastAtRef.current = showAt + TOAST_STAGGER_MS;
             window.setTimeout(() => {
               showToast(toastMsg.message, toastMsg.title, toastMsg.tone, undoAction);
