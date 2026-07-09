@@ -21,10 +21,11 @@ const DraftStagingView = lazy(() => import('./components/DraftStagingView').then
 import { formatCurrencyVal } from './lib/utils'
 import { CustomAlertModal } from './components/ui/CustomAlertModal'
 import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
+import { CustomSelect } from './components/ui/CustomSelect'
 import { PullToRefresh } from './components/ui/PullToRefresh'
 import { ToastViewport, type ToastMessage, type ToastTone, type ToastAction } from './components/ui/ToastViewport'
 import { CardSkeleton, Skeleton } from './components/ui/Skeleton'
-import { CACHE_KEYS, getCachedJSON, getCachedTransactions, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod, getCachedOps, getCachedCycleSnapshot, setCachedCycleSnapshot } from './lib/cache'
+import { CACHE_KEYS, getCachedJSON, getCachedTransactions, getCachedWishlist, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod, getCachedOps, getCachedCycleSnapshot, setCachedCycleSnapshot } from './lib/cache'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from './lib/modalDrafts'
 import { enqueue as outboxEnqueue, createFinalId, createLocalWishlistId, DISPATCH, sanitizeQueuedOps, getSyncSuccessToast, type QueuedOp, type EntityKind, type OpType, type OutboxPayload, type DispatchResult } from './lib/outbox'
 import { useOptimisticList } from './lib/useOptimisticList'
@@ -83,6 +84,31 @@ const finishLaunchHandoff = async () => {
   await hideNativeSplashAfterPaint()
 }
 
+const CategoryReplacementSelect = ({
+  options,
+  onChange,
+}: {
+  options: Array<{ id: string; name: string }>
+  onChange: (value: string) => void
+}) => {
+  const [value, setValue] = useState('')
+  return (
+    <CustomSelect
+      value={value}
+      onChange={nextValue => {
+        const selected = String(nextValue)
+        setValue(selected)
+        onChange(selected)
+      }}
+      options={[
+        { value: '', label: 'Choose replacement category' },
+        ...options.map(option => ({ value: option.id, label: option.name }))
+      ]}
+      className="w-full"
+    />
+  )
+}
+
 const LaunchReady = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     void finishLaunchHandoff()
@@ -138,7 +164,7 @@ function App() {
   // derived from dashboardData/optimisticDashboardData, since those track whatever cycle the
   // Dashboard/Ledger has navigated to and the navbar wallet must not follow that navigation.
   const [walletBalance, setWalletBalance] = useState<number | null>(() => getCachedJSON<number | null>(CACHE_KEYS.walletBalance, null))
-  const [wishlist, setWishlist] = useState<WishlistItem[]>(() => getCachedJSON(CACHE_KEYS.wishlist, []))
+  const [wishlist, setWishlist] = useState<WishlistItem[]>(() => getCachedWishlist(CACHE_KEYS.wishlist))
   const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<import('./types').AutocompleteSuggestion[]>([])
 
   const [error, setError] = useState<string | null>(null)
@@ -1171,19 +1197,13 @@ function App() {
                 {recurringPaymentCount > 0 ? ` and ${recurringPaymentCount} recurring payment${recurringPaymentCount === 1 ? '' : 's'}` : ''}.
                 Choose a replacement category before deleting it.
               </p>
-              <select
-                defaultValue=""
+              <CategoryReplacementSelect
+                options={replacementOptions}
                 onChange={e => {
-                  selectedReplacementId = e.target.value
+                  selectedReplacementId = e
                   setConfirmModalData(prev => prev ? { ...prev, confirmDisabled: selectedReplacementId.length === 0 } : prev)
                 }}
-                className="w-full px-3 py-2 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 text-foreground"
-              >
-                <option value="">Choose replacement category</option>
-                {replacementOptions.map(option => (
-                  <option key={option.id} value={option.id}>{option.name}</option>
-                ))}
-              </select>
+              />
               {replacementOptions.length === 0 && (
                 <p className="text-[11px] font-semibold text-orange-500">
                   Add another category before deleting this one.

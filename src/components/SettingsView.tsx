@@ -831,7 +831,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                               <div className="text-[11px] text-muted-foreground leading-relaxed">{suggestion.summary}</div>
                             </div>
                             <span className="shrink-0 rounded-md border border-blue-500/25 bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-blue-600 dark:text-blue-400">
-                              {confidence}%
+                              Confidence {confidence}%
                             </span>
                           </div>
 

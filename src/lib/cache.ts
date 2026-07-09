@@ -1,4 +1,4 @@
-import type { Transaction, DashboardData } from '../types'
+import type { Transaction, DashboardData, WishlistItem } from '../types'
 import { sanitizeQueuedOps, type QueuedOp } from './outbox'
 
 type LegacyPendingTransaction = Transaction & { serverTxId?: string }
@@ -47,6 +47,56 @@ export function sanitizeTransactions(value: unknown): Transaction[] {
 
 export function getCachedTransactions(key: string): Transaction[] {
   return sanitizeTransactions(getCachedJSON<unknown>(key, []))
+}
+
+const OBFUSCATION_KEY = "FinancialAppObfuscationKey"
+
+function decodeCachedAmount(value: unknown): number {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0
+  if (typeof value !== 'string') return 0
+
+  const plain = Number(value)
+  if (Number.isFinite(plain)) return plain
+
+  try {
+    const binaryString = atob(value)
+    const bytes = new Uint8Array(binaryString.length)
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i) ^ OBFUSCATION_KEY.charCodeAt(i % OBFUSCATION_KEY.length)
+    }
+    const decoded = new TextDecoder().decode(bytes)
+    const amount = Number(decoded)
+    return Number.isFinite(amount) ? amount : 0
+  } catch {
+    return 0
+  }
+}
+
+function isWellFormedWishlistItem(item: unknown): item is WishlistItem {
+  if (!item || typeof item !== 'object') return false
+  const wish = item as Record<string, unknown>
+  return (
+    typeof wish.id === 'number' &&
+    typeof wish.name === 'string' &&
+    typeof wish.priority === 'string' &&
+    typeof wish.isPurchased === 'boolean' &&
+    typeof wish.createdAt === 'string' &&
+    typeof wish.isActive === 'boolean'
+  )
+}
+
+export function sanitizeWishlist(value: unknown): WishlistItem[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter(isWellFormedWishlistItem)
+    .map(item => ({
+      ...item,
+      price: decodeCachedAmount((item as unknown as Record<string, unknown>).price)
+    }))
+}
+
+export function getCachedWishlist(key: string): WishlistItem[] {
+  return sanitizeWishlist(getCachedJSON<unknown>(key, []))
 }
 
 export function setCachedJSON(key: string, value: unknown): void {
