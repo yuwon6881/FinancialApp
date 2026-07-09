@@ -365,6 +365,10 @@ function App() {
       case 'wishlistItem:update':
         if (!before) return undefined
         return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'wishlistItem', 'update', String(op.targetId), { ...before }, true)) }
+      case 'wishlistItem:purchase': {
+        const realId = result?.item?.id != null ? String(result.item.id) : String(op.targetId)
+        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'wishlistItem', 'unpurchase', realId, undefined, true)) }
+      }
 
       // Toggle -> flip back to the prior active state.
       case 'recurringPayment:toggle': {
@@ -1233,6 +1237,7 @@ function App() {
   }
 
   const handlePurchaseWishlistItem = (id: number) => {
+    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     mutateQueue(prev => enqueue(prev, 'wishlistItem', 'purchase', String(id)))
   }
 

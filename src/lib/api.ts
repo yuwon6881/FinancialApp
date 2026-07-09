@@ -837,6 +837,19 @@ export async function purchaseWishlistItem(id: number): Promise<{ item: Wishlist
   return { ...data, transaction: deobfuscateTransaction(data.transaction) }
 }
 
+export async function unpurchaseWishlistItem(id: number): Promise<WishlistItem> {
+  const response = await fetch(`${API_BASE_URL}/wishlist/${id}/purchase`, {
+    method: 'DELETE',
+    headers: getHeaders(),
+  })
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(errorBody.message || 'Failed to undo wishlist purchase')
+  }
+  queryCache.invalidateAll()
+  return response.json()
+}
+
 export async function pingServer(): Promise<{ status: string }> {
   try {
     const response = await fetch(`${API_BASE_URL}/ping?t=${Date.now()}`)

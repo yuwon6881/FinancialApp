@@ -1,7 +1,7 @@
 import * as api from './api'
 
 export type EntityKind = 'transaction' | 'recurringPayment' | 'wishlistItem' | 'category' | 'settings'
-export type OpType = 'add' | 'update' | 'delete' | 'toggle' | 'purchase'
+export type OpType = 'add' | 'update' | 'delete' | 'toggle' | 'purchase' | 'unpurchase'
 
 export interface QueuedOp {
   id: string
@@ -38,7 +38,8 @@ const TYPE_VERBS: Record<OpType, string> = {
   update: 'updated',
   delete: 'deleted',
   toggle: 'toggled',
-  purchase: 'purchased'
+  purchase: 'purchased',
+  unpurchase: 'purchase undone'
 }
 
 function defaultSyncSuccessToast(op: QueuedOp): ToastCopy {
@@ -129,8 +130,8 @@ export function enqueue(
       // Delete against a target with an unsent add: drop the add & cascade-remove all ops for that target
       return queue.filter(op => !sameTarget(op))
     } else {
-      // Delete against existing entity: drop queued update/toggle/purchase (not in-flight) for that target & append delete
-      const filtered = queue.filter(op => !(sameTarget(op) && (op.type === 'update' || op.type === 'toggle' || op.type === 'purchase') && op.id !== activeSyncOpId))
+      // Delete against existing entity: drop queued update/toggle/purchase/unpurchase (not in-flight) for that target & append delete
+      const filtered = queue.filter(op => !(sameTarget(op) && (op.type === 'update' || op.type === 'toggle' || op.type === 'purchase' || op.type === 'unpurchase') && op.id !== activeSyncOpId))
       return [...filtered, newOp]
     }
   }
@@ -138,7 +139,7 @@ export function enqueue(
   // A record already queued for deletion can't be meaningfully mutated further:
   // any update/toggle/purchase would replay against a row the delete removes.
   // Drop it (delete wins) rather than queue an op destined to 404.
-  if (hasQueuedDelete && (type === 'update' || type === 'toggle' || type === 'purchase')) {
+  if (hasQueuedDelete && (type === 'update' || type === 'toggle' || type === 'purchase' || type === 'unpurchase')) {
     return queue
   }
 
@@ -223,6 +224,17 @@ export function enqueue(
     return [...queue, newOp]
   }
 
+  if (type === 'unpurchase') {
+    const queuedPurchase = queue.find(op => sameTarget(op) && op.type === 'purchase')
+    if (queuedPurchase && queuedPurchase.id !== activeSyncOpId) {
+      return queue.filter(op => !(sameTarget(op) && op.type === 'purchase'))
+    }
+    if (queue.some(op => sameTarget(op) && op.type === 'unpurchase')) {
+      return queue
+    }
+    return [...queue, newOp]
+  }
+
   return [...queue, newOp]
 }
 
@@ -295,6 +307,19 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
           ...item,
           isPurchased: true,
           purchasedAt: op.payload?.purchasedAt || new Date().toISOString(),
+          purchaseTransactionId: op.payload?.purchaseTransactionId ?? item.purchaseTransactionId ?? null,
+          isPendingSync: !op.isCompleted
+        }
+      }
+    } else if (op.type === 'unpurchase') {
+      const existingIndex = result.findIndex(item => String(item.id) === targetStr)
+      if (existingIndex >= 0) {
+        const item = result[existingIndex] as any
+        result[existingIndex] = {
+          ...item,
+          isPurchased: false,
+          purchasedAt: undefined,
+          purchaseTransactionId: null,
           isPendingSync: !op.isCompleted
         }
       }
@@ -318,6 +343,7 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<any>> = {
   'wishlistItem:update': (op) => api.updateWishlistItem(Number(op.targetId), op.payload),
   'wishlistItem:delete': (op) => api.deleteWishlistItem(Number(op.targetId)),
   'wishlistItem:purchase': (op) => api.purchaseWishlistItem(Number(op.targetId)),
+  'wishlistItem:unpurchase': (op) => api.unpurchaseWishlistItem(Number(op.targetId)),
 
   'category:add': (op) => api.addCategory({ ...op.payload, id: op.targetId }),
   'category:delete': (op) => api.deleteCategory(op.targetId),
@@ -337,7 +363,7 @@ function isWellFormedOp(op: unknown): op is QueuedOp {
     typeof o.entity === 'string' &&
     ['transaction', 'recurringPayment', 'wishlistItem', 'category', 'settings'].includes(o.entity as string) &&
     typeof o.type === 'string' &&
-    ['add', 'update', 'delete', 'toggle', 'purchase'].includes(o.type as string) &&
+    ['add', 'update', 'delete', 'toggle', 'purchase', 'unpurchase'].includes(o.type as string) &&
     (typeof o.targetId === 'string' || typeof o.targetId === 'number') &&
     typeof o.createdAt === 'number' &&
     typeof o.retryCount === 'number'

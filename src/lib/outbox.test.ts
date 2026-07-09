@@ -7,6 +7,7 @@ interface TestItem {
   active?: boolean
   isPurchased?: boolean
   purchasedAt?: string
+  purchaseTransactionId?: string | null
   isPendingSync?: boolean
   isPendingDelete?: boolean
 }
@@ -96,9 +97,17 @@ describe('applyOpsToList', () => {
 
   it('marks an item purchased for a purchase op', () => {
     const base: TestItem[] = [{ id: '1', name: 'Item' }]
-    const ops = [makeOp({ entity: 'wishlistItem', type: 'purchase', targetId: '1', payload: { purchasedAt: '2026-01-01' } })]
+    const ops = [makeOp({ entity: 'wishlistItem', type: 'purchase', targetId: '1', payload: { purchasedAt: '2026-01-01', purchaseTransactionId: 'tx-1' } })]
     const result = applyOpsToList(base, ops, 'wishlistItem')
-    expect(result[0]).toMatchObject({ isPurchased: true, purchasedAt: '2026-01-01' })
+    expect(result[0]).toMatchObject({ isPurchased: true, purchasedAt: '2026-01-01', purchaseTransactionId: 'tx-1' })
+  })
+
+  it('marks a purchased item unpurchased for an unpurchase op', () => {
+    const base: TestItem[] = [{ id: '1', name: 'Item', isPurchased: true, purchasedAt: '2026-01-01', purchaseTransactionId: 'tx-1' }]
+    const ops = [makeOp({ entity: 'wishlistItem', type: 'unpurchase', targetId: '1' })]
+    const result = applyOpsToList(base, ops, 'wishlistItem')
+    expect(result[0]).toMatchObject({ isPurchased: false, purchaseTransactionId: null, isPendingSync: true })
+    expect(result[0].purchasedAt).toBeUndefined()
   })
 
   it('ignores ops for a different entity', () => {
@@ -178,5 +187,18 @@ describe('enqueue', () => {
     const purchaseOp = makeOp({ id: 'op-purchase', entity: 'wishlistItem', type: 'purchase', targetId: '1' })
     const next = enqueue([purchaseOp], 'wishlistItem', 'purchase', '1')
     expect(next).toEqual([purchaseOp])
+  })
+
+  it('cancels a not-yet-synced purchase when unpurchase is queued for the same target', () => {
+    const purchaseOp = makeOp({ id: 'op-purchase', entity: 'wishlistItem', type: 'purchase', targetId: '1' })
+    const next = enqueue([purchaseOp], 'wishlistItem', 'unpurchase', '1')
+    expect(next).toEqual([])
+  })
+
+  it('queues unpurchase after an in-flight purchase so undo can reverse a synced purchase', () => {
+    const purchaseOp = makeOp({ id: 'op-purchase', entity: 'wishlistItem', type: 'purchase', targetId: '1' })
+    const next = enqueue([purchaseOp], 'wishlistItem', 'unpurchase', '1', undefined, true, 'op-purchase')
+    expect(next).toHaveLength(2)
+    expect(next[1]).toMatchObject({ entity: 'wishlistItem', type: 'unpurchase', targetId: '1', isUndo: true })
   })
 })
