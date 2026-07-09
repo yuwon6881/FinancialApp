@@ -1325,11 +1325,6 @@ function App() {
     let processedAny = false;
     const successfulOps: Array<{ op: QueuedOp; result: DispatchResult }> = [];
     const TOAST_STAGGER_MS = 350;
-    // The row's "syncing" badge clears via a React state update issued in the same
-    // synchronous block as the toast scheduling below; a 0ms setTimeout can fire before
-    // that update has actually painted, so the toast visually beats the spinner. This
-    // floor gives the browser a frame to commit the spinner-off render first.
-    const TOAST_MIN_DELAY_MS = 60;
 
     try {
       while (true) {
@@ -1383,6 +1378,16 @@ function App() {
           processedAny = true;
           successfulOps.push({ op: nextOp, result });
 
+          // This op's own PUT/DELETE/POST already succeeded -- clear its row's
+          // "syncing" badge now rather than leaving it lit until the trailing
+          // loadAll() refetch (recurring payments/categories/wishlist/etc.) below
+          // finishes. If there's a next op, the top of the next loop iteration
+          // immediately overwrites this with that op's id in the same tick, so
+          // this only actually shows once the drained op was the last (or only)
+          // one. The top-nav background-sync indicator (isBackgroundSyncing)
+          // still stays lit until the refetch completes.
+          setActiveSyncId(null);
+
           // Fire this op's toast as soon as its own dispatch resolves, not after the
           // whole queue drains -- otherwise toggling several cards in quick succession
           // (each picked up by the same continuing while-loop iteration) delays every
@@ -1393,7 +1398,7 @@ function App() {
           if (toastMsg) {
             const undoAction = nextOp.isUndo ? undefined : buildUndoAction(nextOp, result);
             const now = Date.now();
-            const showAt = Math.max(now + TOAST_MIN_DELAY_MS, nextToastAtRef.current);
+            const showAt = Math.max(now, nextToastAtRef.current);
             nextToastAtRef.current = showAt + TOAST_STAGGER_MS;
             window.setTimeout(() => {
               showToast(toastMsg.message, toastMsg.title, toastMsg.tone, undoAction);
