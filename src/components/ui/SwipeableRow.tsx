@@ -49,6 +49,28 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
     close()
   }, [close])
 
+  // Mobile browsers hold back the synthesized `click` event for a defensive
+  // cooldown after any drag gesture on the page, so tapping an action button
+  // right after swiping can take an extra tap before the native click fires.
+  // Pointer events aren't subject to that delay, so drive the tap ourselves.
+  const actionTapStart = useRef<{ x: number; y: number; target: HTMLElement } | null>(null)
+
+  const handleActionPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== 'touch') return
+    const target = (e.target as HTMLElement).closest('button, a, [role="button"], [data-swipe-action]') as HTMLElement | null
+    if (!target) return
+    e.preventDefault()
+    actionTapStart.current = { x: e.clientX, y: e.clientY, target }
+  }, [])
+
+  const handleActionPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const start = actionTapStart.current
+    actionTapStart.current = null
+    if (!start || e.pointerType !== 'touch') return
+    if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) return
+    start.target.click()
+  }, [])
+
   // Keep only one row open at a time across the whole app.
   useEffect(() => {
     if (open) {
@@ -119,6 +141,8 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         style={{ width: actionsWidth }}
         aria-hidden={!open}
         onClickCapture={closeForAction}
+        onPointerDown={handleActionPointerDown}
+        onPointerUp={handleActionPointerUp}
       >
         {actions}
       </div>
