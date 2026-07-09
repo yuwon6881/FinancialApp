@@ -748,7 +748,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               )})}
             </div>
 
-            <div className="space-y-1.5 pt-1">
+            <div className="space-y-1.5 pt-1 px-px pb-px">
               <div className="flex gap-2 items-center">
                 <input
                   type="text"

@@ -507,7 +507,6 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                     </div>
                   </div>
                 </div>
-                </div>
               )
             })()
           ) : (
