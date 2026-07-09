@@ -861,15 +861,23 @@ function App() {
       const transactionsPromise = (month && year !== undefined)
         ? api.fetchTransactions(month, year, undefined, ac.signal)
         : dashboardPromise.then(d => api.fetchTransactions(d.setting.selectedMonth, d.setting.selectedYear, undefined, ac.signal))
+      // The expensive historical breakdowns (yearly/last3/last6 + rewards average) live behind
+      // their own endpoint now -- see FinancialService.GetDashboardInsightsAsync -- so they're
+      // fetched in parallel with everything else instead of adding ~24 sequential queries to
+      // every dashboard load. Merged back into a full DashboardData below.
+      const insightsPromise = (month && year !== undefined)
+        ? api.fetchDashboardInsights(month, year, ac.signal)
+        : dashboardPromise.then(d => api.fetchDashboardInsights(d.setting.selectedMonth, d.setting.selectedYear, ac.signal))
 
-      const [dbData, txs, recs, cats, wishes, autoSuggests, wallet] = await Promise.all([
+      const [dbData, txs, recs, cats, wishes, autoSuggests, wallet, insights] = await Promise.all([
         dashboardPromise,
         transactionsPromise,
         api.fetchRecurringPayments(ac.signal),
         api.fetchCategories(ac.signal),
         api.fetchWishlist(ac.signal).catch(() => []),
         api.fetchAutocompleteSuggestions(ac.signal).catch(() => []),
-        api.fetchWalletBalance(ac.signal).catch(() => null)
+        api.fetchWalletBalance(ac.signal).catch(() => null),
+        insightsPromise
       ])
       // A newer loadAll() was kicked off (e.g. the user switched cycles again)
       // while this one was in flight -- discard this now-stale response instead
@@ -879,9 +887,20 @@ function App() {
         setWalletBalance(wallet)
         setCachedJSON(CACHE_KEYS.walletBalance, wallet)
       }
+      const mergedDashboard: DashboardData = {
+        ...dbData,
+        last3CategoryBreakdown: insights.last3CategoryBreakdown,
+        last6CategoryBreakdown: insights.last6CategoryBreakdown,
+        yearlyCategoryBreakdown: insights.yearlyCategoryBreakdown,
+        stats: {
+          ...dbData.stats,
+          pastThreeMonthsRewardsAverage: insights.pastThreeMonthsRewardsAverage,
+          hasRewardsHistory: insights.hasRewardsHistory
+        }
+      }
       setSelectedMonth(dbData.setting.selectedMonth)
       setSelectedYear(dbData.setting.selectedYear)
-      setDashboardData(dbData)
+      setDashboardData(mergedDashboard)
       setTransactions(txs)
       setRecurringPayments(recs)
       setCategoriesList(cats)
@@ -893,12 +912,12 @@ function App() {
       sessionStorage.setItem('session_locked', 'false')
 
       // Save to localStorage cache
-      setCachedJSON(CACHE_KEYS.dashboardData, dbData)
+      setCachedJSON(CACHE_KEYS.dashboardData, mergedDashboard)
       setCachedJSON(CACHE_KEYS.transactions, txs)
       setCachedJSON(CACHE_KEYS.recurringPayments, recs)
       setCachedJSON(CACHE_KEYS.categories, cats)
       setCachedJSON(CACHE_KEYS.wishlist, wishes)
-      setCachedCycleSnapshot(dbData.setting.selectedMonth, dbData.setting.selectedYear, dbData, txs)
+      setCachedCycleSnapshot(dbData.setting.selectedMonth, dbData.setting.selectedYear, mergedDashboard, txs)
 
       // Sync dark mode from server preference (server wins over localStorage)
       const serverDark = dbData.setting.darkMode ?? false

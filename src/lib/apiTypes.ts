@@ -39,16 +39,17 @@ export type WireCategorySummary = Omit<CategorySummary, 'target' | 'budget' | 'n
   remaining: WireAmount
 }
 
+// pastThreeMonthsRewardsAverage/hasRewardsHistory are no longer part of the /dashboard response --
+// they've moved to WireDashboardInsights below (see fetchDashboardInsights).
 type WireDashboardStats = Omit<
   DashboardStats,
-  'totalBalance' | 'monthlyIncome' | 'monthlyInflow' | 'monthlyExpenses' | 'activeRecurringTotal' | 'pastThreeMonthsRewardsAverage'
+  'totalBalance' | 'monthlyIncome' | 'monthlyInflow' | 'monthlyExpenses' | 'activeRecurringTotal' | 'pastThreeMonthsRewardsAverage' | 'hasRewardsHistory'
 > & {
   totalBalance: WireAmount
   monthlyIncome: WireAmount
   monthlyInflow: WireAmount
   monthlyExpenses: WireAmount
   activeRecurringTotal: WireAmount
-  pastThreeMonthsRewardsAverage: WireAmount
 }
 
 export type WireActiveRecurringPayment = Omit<ActiveRecurringPayment, 'amount'> & {
@@ -93,9 +94,17 @@ export type WireDashboardData = Omit<
   last6TrendPoints: WireTrendPoint[]
   pendingNotifications: WirePendingNotification[]
   monthlyCategoryBreakdown: WireCategoryBreakdown[]
+}
+
+// The expensive historical aggregates split out of /dashboard into /dashboard/insights (see
+// FinancialService.GetDashboardInsightsAsync on the backend) -- fetched separately and merged
+// back into a full DashboardData client-side in App.tsx's loadAll().
+export interface WireDashboardInsights {
   last3CategoryBreakdown: WireCategoryBreakdown[]
   last6CategoryBreakdown: WireCategoryBreakdown[]
   yearlyCategoryBreakdown: WireCategoryBreakdown[]
+  pastThreeMonthsRewardsAverage: WireAmount
+  hasRewardsHistory: boolean
 }
 
 export interface WirePagedTransactionResult {

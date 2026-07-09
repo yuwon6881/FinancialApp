@@ -1,4 +1,4 @@
-import type { Transaction, RecurringPayment, DashboardData, TransactionCategory, WishlistItem } from '../types'
+import type { Transaction, RecurringPayment, DashboardCore, DashboardInsights, TransactionCategory, WishlistItem } from '../types'
 import type { CreateOptionsJson, AssertionOptionsJson } from './webauthn'
 import type {
   LoginCredentials,
@@ -7,6 +7,7 @@ import type {
   WireCategoryBreakdown,
   WireCategorySummary,
   WireDashboardData,
+  WireDashboardInsights,
   WirePagedTransactionResult,
   WirePendingNotification,
   WireRecurringPayment,
@@ -238,10 +239,10 @@ export function invalidateCache(): void {
 }
 
 // Dashboard
-export function fetchDashboard(month?: string, year?: number, signal?: AbortSignal): Promise<DashboardData> {
+export function fetchDashboard(month?: string, year?: number, signal?: AbortSignal): Promise<DashboardCore> {
   const cacheKey = `dashboard:${month || ''}:${year || ''}`
   const canUseCache = !signal
-  const cachedPromise = canUseCache ? queryCache.get<DashboardData>(cacheKey) : null
+  const cachedPromise = canUseCache ? queryCache.get<DashboardCore>(cacheKey) : null
   if (cachedPromise) return cachedPromise
 
   const promise = (async () => {
@@ -282,8 +283,7 @@ export function fetchDashboard(month?: string, year?: number, signal?: AbortSign
         monthlyIncome: deobfuscateAmount(data.stats.monthlyIncome),
         monthlyInflow: deobfuscateAmount(data.stats.monthlyInflow),
         monthlyExpenses: deobfuscateAmount(data.stats.monthlyExpenses),
-        activeRecurringTotal: deobfuscateAmount(data.stats.activeRecurringTotal),
-        pastThreeMonthsRewardsAverage: deobfuscateAmount(data.stats.pastThreeMonthsRewardsAverage)
+        activeRecurringTotal: deobfuscateAmount(data.stats.activeRecurringTotal)
       },
       recentTransactions: (data.recentTransactions || []).map(deobfuscateTransaction),
       activeRecurringPayments: (data.activeRecurringPayments || []).map((rp: WireActiveRecurringPayment) => ({
@@ -309,7 +309,44 @@ export function fetchDashboard(month?: string, year?: number, signal?: AbortSign
       monthlyCategoryBreakdown: (data.monthlyCategoryBreakdown || []).map((cb: WireCategoryBreakdown) => ({
         ...cb,
         amount: deobfuscateAmount(cb.amount)
-      })),
+      }))
+    }
+  })()
+
+  if (canUseCache) {
+    queryCache.set(cacheKey, promise)
+  }
+  return promise
+}
+
+// The expensive historical aggregates split out of /dashboard -- see FinancialService.
+// GetDashboardInsightsAsync on the backend and DashboardInsights in ../types.
+export function fetchDashboardInsights(month?: string, year?: number, signal?: AbortSignal): Promise<DashboardInsights> {
+  const cacheKey = `dashboard-insights:${month || ''}:${year || ''}`
+  const canUseCache = !signal
+  const cachedPromise = canUseCache ? queryCache.get<DashboardInsights>(cacheKey) : null
+  if (cachedPromise) return cachedPromise
+
+  const promise = (async () => {
+    let url = `${API_BASE_URL}/financial/dashboard/insights`
+    const params = new URLSearchParams()
+    if (month) params.append('month', month)
+    if (year) params.append('year', year.toString())
+
+    const queryString = params.toString()
+    if (queryString) {
+      url += `?${queryString}`
+    }
+
+    const response = await fetch(url, {
+      headers: getHeaders(),
+      signal,
+    })
+    if (!response.ok) {
+      throw new Error('Failed to fetch dashboard insights')
+    }
+    const data = await response.json() as WireDashboardInsights
+    return {
       last3CategoryBreakdown: (data.last3CategoryBreakdown || []).map((cb: WireCategoryBreakdown) => ({
         ...cb,
         amount: deobfuscateAmount(cb.amount)
@@ -321,7 +358,9 @@ export function fetchDashboard(month?: string, year?: number, signal?: AbortSign
       yearlyCategoryBreakdown: (data.yearlyCategoryBreakdown || []).map((cb: WireCategoryBreakdown) => ({
         ...cb,
         amount: deobfuscateAmount(cb.amount)
-      }))
+      })),
+      pastThreeMonthsRewardsAverage: deobfuscateAmount(data.pastThreeMonthsRewardsAverage),
+      hasRewardsHistory: data.hasRewardsHistory
     }
   })()
 

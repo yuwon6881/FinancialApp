@@ -130,6 +130,22 @@ export interface DashboardData {
   availableYears?: number[]
 }
 
+// What api.fetchDashboard actually returns before loadAll() merges in DashboardInsights --
+// everything DashboardData has except the fields that moved to the insights fetch.
+export type DashboardCore = Omit<DashboardData, 'last3CategoryBreakdown' | 'last6CategoryBreakdown' | 'yearlyCategoryBreakdown' | 'stats'> & {
+  stats: Omit<DashboardStats, 'pastThreeMonthsRewardsAverage' | 'hasRewardsHistory'>
+}
+
+// The expensive historical aggregates, fetched separately via api.fetchDashboardInsights and
+// merged into a full DashboardData in App.tsx's loadAll() -- see WireDashboardInsights.
+export interface DashboardInsights {
+  last3CategoryBreakdown: CategoryBreakdown[]
+  last6CategoryBreakdown: CategoryBreakdown[]
+  yearlyCategoryBreakdown: CategoryBreakdown[]
+  pastThreeMonthsRewardsAverage: number
+  hasRewardsHistory: boolean
+}
+
 export interface TransactionCategory {
   id: string
   name: string
