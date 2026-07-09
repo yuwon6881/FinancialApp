@@ -368,51 +368,54 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                       : 'border-border/60 shadow-xs'
                   }`}
                 >
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className={`text-[9px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider ${
-                        activeItem.priority === 'High' 
-                          ? 'bg-red-500/10 text-red-500 border border-red-500/20' 
-                          : activeItem.priority === 'Medium'
-                          ? 'bg-orange-500/10 text-orange-500 border border-orange-500/20'
-                          : 'bg-slate-500/10 text-slate-500 border border-slate-500/20'
-                      }`}>
-                        {activeItem.priority} Priority
-                      </span>
+                  <div>
+                    {/* Header — name + status badge, mirrors subscription card top */}
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h2 className="text-base font-bold text-foreground flex items-center gap-1.5 flex-wrap">
+                          {activeItem.name}
+                          {isItemDeleting(activeItem.id) ? (
+                            <RowSyncBadge state="deleting" entityLabel="item" />
+                          ) : (isItemSyncing(activeItem.id) || activeItem.isPendingSync) ? (
+                            <RowSyncBadge state={isItemSyncing(activeItem.id) ? 'syncing' : 'pending'} entityLabel="item" />
+                          ) : null}
+                        </h2>
+                        <span className={`inline-block mt-1 text-[9px] px-1.5 py-0.5 rounded border font-semibold ${
+                          activeItem.priority === 'High' 
+                            ? 'bg-red-500/10 text-red-500 border-red-500/20' 
+                            : activeItem.priority === 'Medium'
+                            ? 'bg-orange-500/10 text-orange-500 border-orange-500/20'
+                            : 'bg-slate-500/10 text-slate-500 border-slate-500/20'
+                        }`}>
+                          {activeItem.priority} Priority
+                        </span>
+                      </div>
                       {canAfford ? (
-                        <span className="text-[10px] font-bold text-blue-500 flex items-center gap-1">
+                        <span className="text-[10px] font-bold text-blue-500 flex items-center gap-1 shrink-0">
                           <PiggyBank className="size-3.5" /> Ready to Claim
                         </span>
                       ) : (
-                        <span className="text-[10px] font-semibold text-muted-foreground flex items-center gap-1">
+                        <span className="text-[10px] font-semibold text-muted-foreground flex items-center gap-1 shrink-0">
                           <Clock className="size-3.5" /> Saving In Progress
                         </span>
                       )}
                     </div>
 
-                    <div>
-                      <h2 className="text-xl font-extrabold text-foreground flex items-center gap-2 flex-wrap">
-                        {activeItem.name}
-                        {isItemDeleting(activeItem.id) ? (
-                          <RowSyncBadge state="deleting" entityLabel="item" />
-                        ) : (isItemSyncing(activeItem.id) || activeItem.isPendingSync) ? (
-                          <RowSyncBadge state={isItemSyncing(activeItem.id) ? 'syncing' : 'pending'} entityLabel="item" />
-                        ) : null}
-                      </h2>
-                      <div className="text-3xl font-black text-foreground mt-2">
-                        {formatSensitive(activeItem.price)}
-                      </div>
+                    {/* Price — large figure, mirrors subscription card amount */}
+                    <div className="mt-4 flex items-baseline gap-1">
+                      <span className="text-2xl font-extrabold text-foreground">{formatSensitive(activeItem.price)}</span>
+                      <span className="text-xs text-muted-foreground">goal</span>
                     </div>
 
-                    {/* Progress Bar Area */}
-                    <div className="space-y-2 pt-2">
+                    {/* Progress details */}
+                    <div className="mt-6 space-y-2 border-t border-border/30 pt-4 text-xs">
                       <div className="flex justify-between text-xs font-bold text-muted-foreground">
                         <span>Funded</span>
                         <span className={canAfford ? 'text-blue-500' : 'text-foreground'}>
                           {pct.toFixed(0)}%
                         </span>
                       </div>
-                      <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+                      <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
                         <div 
                           className="h-full bg-blue-500 transition-all duration-500 rounded-full"
                           style={{ width: `${pct}%` }}
@@ -426,7 +429,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
 
                     {/* Predictor Ribbon */}
                     {!canAfford && (
-                      <div className="grid grid-cols-2 gap-3 p-3 bg-muted/40 rounded-xl border border-border/30">
+                      <div className="mt-4 grid grid-cols-2 gap-3 p-3 bg-muted/40 rounded-xl border border-border/30">
                         <div className="space-y-1">
                           <span className="text-[10px] uppercase tracking-wider font-extrabold text-blue-500">Optimistic Projection</span>
                           <span className="text-[11px] font-bold text-foreground block">
@@ -466,42 +469,45 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                     )}
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-3 mt-6 border-t border-border/30 pt-4">
+                  {/* Actions — matches subscription card footer style */}
+                  <div className="mt-6 flex items-center justify-between border-t border-border/30 pt-4 gap-2">
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.96 }}
                       onClick={() => onPurchaseItem(activeItem.id)}
                       disabled={!canAfford}
-                      className={`flex-1 py-3 text-xs font-extrabold rounded-xl transition duration-200 cursor-pointer text-center ${
+                      className={`flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl transition duration-200 cursor-pointer ${
                         canAfford
                           ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/10'
                           : 'bg-muted text-muted-foreground cursor-not-allowed'
                       }`}
                     >
+                      <PiggyBank className="size-3.5" />
                       {canAfford ? 'Claim Reward' : <>Need {formatSensitive(activeItem.price - rewardsBalance)} More</>}
                     </motion.button>
-                    
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => handleOpenEditModal(activeItem)}
-                      disabled={hideSensitive}
-                      title={hideSensitive ? 'Unhide balances to edit' : undefined}
-                      className="p-3 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded-xl border border-border/40 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-muted disabled:hover:text-muted-foreground"
-                    >
-                      <Edit2 className="size-4" />
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => onDeleteItem(activeItem.id)}
-                      disabled={hideSensitive}
-                      title={hideSensitive ? 'Unhide balances to edit' : undefined}
-                      className="p-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl border border-red-500/20 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <Trash2 className="size-4" />
-                    </motion.button>
+
+                    <div className="flex items-center gap-2">
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => handleOpenEditModal(activeItem)}
+                        disabled={hideSensitive}
+                        title={hideSensitive ? 'Unhide balances to edit' : 'Edit goal'}
+                        className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl border border-transparent hover:border-border/40 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+                      >
+                        <Edit2 className="size-3.5" /> Edit
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => onDeleteItem(activeItem.id)}
+                        disabled={hideSensitive}
+                        title={hideSensitive ? 'Unhide balances to edit' : 'Delete goal'}
+                        className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-xl border border-transparent hover:border-red-500/10 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+                      >
+                        <Trash2 className="size-3.5" /> Delete
+                      </motion.button>
+                    </div>
                   </div>
                 </div>
               )
