@@ -36,15 +36,11 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   const [open, setOpen] = useState(false)
   const x = useMotionValue(0)
   const controls = useAnimation()
-  const isAnimating = useRef(false)
-  const contentRef = useRef<HTMLDivElement>(null)
+  const suppressNextClick = useRef(false)
 
   const close = useCallback(() => {
-    isAnimating.current = true
     setOpen(false)
-    controls.start({ x: 0, transition: { type: 'spring', stiffness: 750, damping: 42 } }).then(() => {
-      isAnimating.current = false
-    })
+    controls.start({ x: 0, transition: { type: 'spring', stiffness: 750, damping: 42 } })
   }, [controls])
 
   const closeForAction = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -77,13 +73,17 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
 
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     setSwipeLocked(false)
-    
-    // Briefly block pointer events to cleanly release framer's pointer capture
-    if (contentRef.current) {
-      contentRef.current.style.pointerEvents = 'none'
-      setTimeout(() => {
-        if (contentRef.current) contentRef.current.style.pointerEvents = ''
-      }, 80)
+
+    // A real drag can make the browser dispatch a trailing synthetic click on
+    // this element once the gesture ends; swallow just that one click, not
+    // any tap that happens to land while the settle animation is still running.
+    if (Math.hypot(info.offset.x, info.offset.y) > 5) {
+      suppressNextClick.current = true
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          suppressNextClick.current = false
+        })
+      })
     }
 
     const currentX = x.get()
@@ -92,16 +92,10 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
     if (shouldOpen) {
       if (!open) triggerHaptic(10)
       setOpen(true)
-      isAnimating.current = true
-      controls.start({ x: -actionsWidth, transition: { type: 'spring', stiffness: 750, damping: 42 } }).then(() => {
-        isAnimating.current = false
-      })
+      controls.start({ x: -actionsWidth, transition: { type: 'spring', stiffness: 750, damping: 42 } })
     } else {
-      isAnimating.current = true
       setOpen(false)
-      controls.start({ x: 0, transition: { type: 'spring', stiffness: 750, damping: 42 } }).then(() => {
-        isAnimating.current = false
-      })
+      controls.start({ x: 0, transition: { type: 'spring', stiffness: 750, damping: 42 } })
     }
   }
 
@@ -131,7 +125,6 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
 
       {/* Sliding content surface */}
       <motion.div
-        ref={contentRef}
         drag={disabled ? false : 'x'}
         dragConstraints={{ left: -actionsWidth, right: 0 }}
         dragElastic={0.1}
@@ -141,7 +134,8 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         animate={controls}
         style={{ x, touchAction: 'manipulation' }}
         onClick={() => {
-          if (open && !isAnimating.current) close()
+          if (suppressNextClick.current) return
+          if (open) close()
         }}
         className={cn('relative bg-card', contentClassName)}
       >
