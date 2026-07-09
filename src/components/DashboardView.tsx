@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { listContainerVariants, listItemVariants, listItemExit } from '../lib/animations'
 import { Button } from './ui/Button'
-import type { Transaction, DashboardData, WishlistItem } from '../types'
+import type { Transaction, DashboardData, WishlistItem, PendingNotification, CategorySummary, ActiveRecurringPayment } from '../types'
 import { 
   Wallet, 
   ArrowUpRight, 
@@ -40,7 +40,7 @@ interface DashboardViewProps {
   onSelectPeriod: (month: string, year: number) => void
   onNavigate: (tab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist' | 'settings') => void
   hideSensitive: boolean
-  onConfirmSubscription: (noti: any, paidDate: string) => void
+  onConfirmSubscription: (noti: PendingNotification, paidDate: string) => void
   onDeletePayment: (id: string) => void
   onNavigateToLedger?: (options: { 
     category?: string | null; 
@@ -51,7 +51,7 @@ interface DashboardViewProps {
     showAllCycles?: boolean;
   }) => void
   wishlist?: WishlistItem[]
-  onDiscardSubscription?: (noti: any) => void
+  onDiscardSubscription?: (noti: PendingNotification) => void
   onAddTransaction?: (newTx: Omit<Transaction, 'id'>) => Promise<void> | void
   onAddBalanceAdjustment?: (newTx: Omit<Transaction, 'id'>) => Promise<void> | void
   isSwitchingCycle?: boolean
@@ -72,7 +72,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   isSwitchingCycle = false
 }) => {
   const [isHoveringLiquidNetWorth, setIsHoveringLiquidNetWorth] = useState(false)
-  const [notiToDelete, setNotiToDelete] = useState<any | null>(null)
+  const [notiToDelete, setNotiToDelete] = useState<PendingNotification | null>(null)
 
   // Active wishlist item for dashboard progress display
   const activeWishlistItem = useMemo(() => {
@@ -81,7 +81,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   }, [wishlist])
   
   // Balance adjustment modal state
-  const [adjustingCategory, setAdjustingCategory] = useState<any | null>(null)
+  const [adjustingCategory, setAdjustingCategory] = useState<CategorySummary | null>(null)
   const [newBalanceInput, setNewBalanceInput] = useState<string>('')
   const [balanceErrors, setBalanceErrors] = useState<Record<string, string>>({})
   const [adjustmentDescription, setAdjustmentDescription] = useState<string>('Balance Adjustment')
@@ -145,7 +145,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   const years = useMemo<number[]>(() => {
-    return (dashboardData as any)?.availableYears || [new Date().getFullYear()]
+    return dashboardData?.availableYears || [new Date().getFullYear()]
   }, [dashboardData])
 
   const todayStr = useMemo(() => {
@@ -201,7 +201,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     }
     const rpList = dashboardData?.activeRecurringPayments
     if (rpList) {
-      rpList.forEach((rp: any) => {
+      rpList.forEach((rp: ActiveRecurringPayment) => {
         // Only a bill still awaiting action should be projected as an upcoming deduction --
         // isPaid alone is false for both "not yet paid" and "discarded", and a discarded bill
         // isn't coming out of the budget, so status is the only field that distinguishes them.
@@ -259,7 +259,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     )
   }
 
-  const openBalanceAdjustment = (category: any) => {
+  const openBalanceAdjustment = (category: CategorySummary) => {
     if (hideSensitive) return
     setAdjustingCategory(category)
     setNewBalanceInput(category.remaining.toFixed(2))
@@ -393,7 +393,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Year Selector */}
           <CustomSelect 
             value={activeSettings.selectedYear}
-            onChange={(val) => onSelectPeriod(activeSettings.selectedMonth, parseInt(val))}
+            onChange={(val) => onSelectPeriod(activeSettings.selectedMonth, Number(val))}
             options={years.map(y => ({
               value: y,
               label: y.toString()
@@ -1356,7 +1356,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             // Net per day from transactions (contains ALL transactions in the active cycle)
             const netByDay: Record<string, number> = {}
-            transactions.forEach((t: any) => {
+            transactions.forEach((t: Transaction) => {
               if (t.date >= cycleStartStr && t.date <= cycleEndStr) {
                 // Internal transfers are neutral and do not affect total net activity
                 if (t.ledgerCategory && t.ledgerCategory.startsWith('Transfer:')) {
@@ -1368,7 +1368,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             // Recurring bills by day
             const recurringByDay: Record<string, string[]> = {}
-            activeRecurring.forEach((rp: any) => {
+            activeRecurring.forEach((rp: ActiveRecurringPayment) => {
               if (rp.dueDate >= cycleStartStr && rp.dueDate <= cycleEndStr) {
                 if (!recurringByDay[rp.dueDate]) recurringByDay[rp.dueDate] = []
                 recurringByDay[rp.dueDate].push(rp.name)
@@ -1471,7 +1471,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 className="space-y-2 mt-4 flex-1 overflow-y-auto pr-1 min-h-0"
               >
                 <AnimatePresence>
-                {activeRecurring.map((rp: any) => (
+                {activeRecurring.map((rp: ActiveRecurringPayment) => (
                   <motion.div
                     key={rp.id}
                     variants={listItemVariants}

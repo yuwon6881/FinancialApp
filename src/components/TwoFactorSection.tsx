@@ -6,6 +6,7 @@ import type { ToastTone } from './ui/ToastViewport'
 import { RecoveryCodesModal } from './ui/RecoveryCodesModal'
 import { CollapsibleBody } from './ui/CollapsibleBody'
 import { PasswordEntryModal } from './ui/PasswordEntryModal'
+import { getErrorMessage } from '../lib/errors'
 
 interface TwoFactorSectionProps {
   hideSensitive: boolean
@@ -57,8 +58,8 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
       const { secret, otpauthUri } = await api.setupTotp()
       setSetupSecret(secret)
       setQrDataUrl(await QRCode.toDataURL(otpauthUri))
-    } catch (err: any) {
-      onToast?.(err.message || 'Failed to start two-factor setup.', 'Error', 'error')
+    } catch (err: unknown) {
+      onToast?.(getErrorMessage(err, 'Failed to start two-factor setup.'), 'Error', 'error')
     } finally {
       setSetupBusy(false)
     }
@@ -80,8 +81,8 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
       setSetupCode('')
       setRecoveryCodes(codes)
       onToast?.('Two-factor authentication is now enabled.', 'Two-factor enabled', 'success')
-    } catch (err: any) {
-      setSetupError(err.message || 'Invalid code.')
+    } catch (err: unknown) {
+      setSetupError(getErrorMessage(err, 'Invalid code.'))
     } finally {
       setSetupBusy(false)
     }
@@ -112,8 +113,8 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
       setDisablePassword('')
       setDisableCode('')
       onToast?.('Two-factor authentication has been disabled.', 'Two-factor disabled', 'success')
-    } catch (err: any) {
-      setDisableErrors({ code: err.message || 'Failed to disable two-factor authentication.' })
+    } catch (err: unknown) {
+      setDisableErrors({ code: getErrorMessage(err, 'Failed to disable two-factor authentication.') })
     } finally {
       setDisableBusy(false)
     }

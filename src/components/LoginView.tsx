@@ -8,6 +8,7 @@ import {
   getCachedFingerprintLoginOptions,
   prefetchFingerprintLoginOptions,
 } from '../lib/fingerprintOptionsCache'
+import { getErrorMessage, getErrorName } from '../lib/errors'
 
 interface LoginViewProps {
   onLoginSuccess: (token: string, username: string) => void
@@ -104,9 +105,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           onLoginSuccess(loginRes.token, loginRes.username)
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
-      setError(err.message || 'Authentication failed. Please try again.')
+      setError(getErrorMessage(err, 'Authentication failed. Please try again.'))
     } finally {
       setLoading(false)
     }
@@ -124,9 +125,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     try {
       const res = await api.verifyTwoFactorLogin(pendingToken, twoFactorCode.trim())
       onLoginSuccess(res.token, res.username)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
-      setError(err.message || 'Invalid code. Please try again.')
+      setError(getErrorMessage(err, 'Invalid code. Please try again.'))
     } finally {
       setTwoFactorLoading(false)
     }
@@ -140,12 +141,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       const credential = await getFingerprintAssertion(options)
       const res = await api.verifyFingerprintLogin(challengeId, credential)
       onLoginSuccess(res.token, res.username)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
-      if (err?.name === 'NotAllowedError') {
+      if (getErrorName(err) === 'NotAllowedError') {
         // User cancelled the prompt or it timed out - not worth alarming them.
       } else {
-        setError(err.message || 'Fingerprint login failed. Please use your password instead.')
+        setError(getErrorMessage(err, 'Fingerprint login failed. Please use your password instead.'))
       }
     } finally {
       clearCachedFingerprintLoginOptions()

@@ -267,7 +267,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     }
     setErrors({})
 
-    const cleanItem = { ...(editingItem as any) }
+    const cleanItem: Omit<WishlistItem, 'isPendingSync'> & { isPendingSync?: boolean } = { ...editingItem }
     delete cleanItem.isPendingSync
     const updatedGoal = {
       ...cleanItem,

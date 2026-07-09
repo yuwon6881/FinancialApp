@@ -1,14 +1,39 @@
 import * as api from './api'
+import type { FinancialSetting, RecurringPayment, Transaction, TransactionCategory, WishlistItem } from '../types'
 
 export type EntityKind = 'transaction' | 'recurringPayment' | 'wishlistItem' | 'category' | 'settings'
 export type OpType = 'add' | 'update' | 'delete' | 'toggle' | 'purchase' | 'unpurchase'
+export interface OutboxPayload {
+  [key: string]: unknown
+  id?: string | number
+  name?: string
+  description?: string
+  category?: string
+  ledgerCategory?: string
+  amount?: number
+  price?: number
+  active?: boolean
+  darkMode?: boolean
+  hideSensitive?: boolean
+  purchasedAt?: string
+  purchaseTransactionId?: string | null
+  date?: string
+  postedAt?: string
+}
+export type DispatchResult =
+  | Transaction
+  | RecurringPayment
+  | WishlistItem
+  | TransactionCategory
+  | { item: WishlistItem; transaction: Transaction; id?: undefined }
+  | void
 
 export interface QueuedOp {
   id: string
   entity: EntityKind
   type: OpType
   targetId: string
-  payload?: any
+  payload?: OutboxPayload
   createdAt: number
   retryCount: number
   isCompleted?: boolean
@@ -97,7 +122,7 @@ export function enqueue(
   entity: EntityKind,
   type: OpType,
   targetId: string,
-  payload?: any,
+  payload?: OutboxPayload,
   isUndo?: boolean,
   activeSyncOpId?: string | null
 ): QueuedOp[] {
@@ -177,7 +202,7 @@ export function enqueue(
       // Toggle against an unsent add: set active in place on add payload
       return queue.map(op => {
         if (op.entity === entity && op.targetId === targetIdStr && op.type === 'add') {
-          const nextActive = payload && typeof payload.active === 'boolean' ? payload.active : !op.payload.active
+          const nextActive = payload && typeof payload.active === 'boolean' ? payload.active : op.payload?.active !== true
           return {
             ...op,
             payload: { ...op.payload, active: nextActive }
@@ -293,7 +318,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
     } else if (op.type === 'toggle') {
       const existingIndex = result.findIndex(item => String(item.id) === targetStr)
       if (existingIndex >= 0) {
-        const item = result[existingIndex] as any
+        const item = result[existingIndex] as T & { active?: boolean }
         // Prefer the absolute desired state captured at click time; only fall back to a
         // relative flip for legacy queued ops (e.g. persisted from before this fix) that
         // have no payload. A relative flip here would double-apply against a refreshed
@@ -342,7 +367,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
     } else if (op.type === 'purchase') {
       const existingIndex = result.findIndex(item => String(item.id) === targetStr)
       if (existingIndex >= 0) {
-        const item = result[existingIndex] as any
+        const item = result[existingIndex] as T & { isPurchased?: boolean; purchasedAt?: string; purchaseTransactionId?: string | null }
         result[existingIndex] = {
           ...item,
           isPurchased: true,
@@ -354,7 +379,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
     } else if (op.type === 'unpurchase') {
       const existingIndex = result.findIndex(item => String(item.id) === targetStr)
       if (existingIndex >= 0) {
-        const item = result[existingIndex] as any
+        const item = result[existingIndex] as T & { isPurchased?: boolean; purchasedAt?: string; purchaseTransactionId?: string | null }
         result[existingIndex] = {
           ...item,
           isPurchased: false,
@@ -369,29 +394,29 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
   return result
 }
 
-export const DISPATCH: Record<string, (op: QueuedOp) => Promise<any>> = {
-  'transaction:add': (op) => api.addTransaction({ ...op.payload, id: op.targetId }),
-  'transaction:update': (op) => api.updateTransaction(op.targetId, op.payload),
+export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>> = {
+  'transaction:add': (op) => api.addTransaction({ ...(op.payload as Partial<Transaction>), id: op.targetId } as Omit<Transaction, 'id'> & { id?: string }),
+  'transaction:update': (op) => api.updateTransaction(op.targetId, op.payload as unknown as Omit<Transaction, 'id'>),
   'transaction:delete': (op) => api.deleteTransaction(op.targetId),
 
-  'recurringPayment:add': (op) => api.addRecurringPayment({ ...op.payload, id: op.targetId }),
-  'recurringPayment:update': (op) => api.updateRecurringPayment(op.targetId, op.payload),
+  'recurringPayment:add': (op) => api.addRecurringPayment({ ...(op.payload as Partial<RecurringPayment>), id: op.targetId } as Omit<RecurringPayment, 'id'> & { id?: string }),
+  'recurringPayment:update': (op) => api.updateRecurringPayment(op.targetId, op.payload as unknown as RecurringPayment),
   'recurringPayment:delete': (op) => api.deleteRecurringPayment(op.targetId),
   'recurringPayment:toggle': (op) => api.toggleRecurringPayment(op.targetId),
 
-  'wishlistItem:add': (op) => api.addWishlistItem(op.payload),
-  'wishlistItem:update': (op) => api.updateWishlistItem(Number(op.targetId), op.payload),
+  'wishlistItem:add': (op) => api.addWishlistItem(op.payload as Partial<WishlistItem>),
+  'wishlistItem:update': (op) => api.updateWishlistItem(Number(op.targetId), op.payload as unknown as WishlistItem),
   'wishlistItem:delete': (op) => api.deleteWishlistItem(Number(op.targetId)),
   'wishlistItem:purchase': (op) => api.purchaseWishlistItem(Number(op.targetId)),
   'wishlistItem:unpurchase': (op) => api.unpurchaseWishlistItem(Number(op.targetId)),
 
-  'category:add': (op) => api.addCategory({ ...op.payload, id: op.targetId }),
+  'category:add': (op) => api.addCategory({ ...(op.payload as Partial<TransactionCategory>), id: op.targetId } as Omit<TransactionCategory, 'id'> & { id?: string }),
   'category:delete': (op) => api.deleteCategory(op.targetId),
 
   'settings:update': (op) => {
-    if (op.targetId === 'darkMode') return api.updateDarkMode(op.payload.darkMode)
-    if (op.targetId === 'hideSensitive') return api.updateHideSensitive(op.payload.hideSensitive)
-    return api.updateSettings(op.payload)
+    if (op.targetId === 'darkMode') return api.updateDarkMode(op.payload?.darkMode === true)
+    if (op.targetId === 'hideSensitive') return api.updateHideSensitive(op.payload?.hideSensitive === true)
+    return api.updateSettings(op.payload as unknown as Pick<FinancialSetting, 'targetStabilityFund' | 'essentialsAlloc' | 'growthAlloc' | 'stabilityAlloc' | 'rewardsAlloc' | 'cycleDay'> & Partial<FinancialSetting>)
   }
 }
 

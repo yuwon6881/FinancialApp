@@ -15,6 +15,7 @@ import { ToggleButton } from './ui/ToggleButton'
 import { TwoFactorSection } from './TwoFactorSection'
 import { ChangePasswordSection } from './ChangePasswordSection'
 import { CollapsibleBody } from './ui/CollapsibleBody'
+import { getErrorMessage, getErrorName } from '../lib/errors'
 
 const formatRelativeTime = (iso: string | null): string => {
   if (!iso) return 'Never'
@@ -29,6 +30,7 @@ const formatRelativeTime = (iso: string | null): string => {
 }
 
 const DEVICE_CREDENTIAL_ID_KEY = 'fingerprint_credential_id_on_this_device'
+type AllocationKey = 'essentials' | 'growth' | 'stability' | 'rewards'
 
 // How far back to look when flagging a category as unused/rarely used. Long enough that
 // categories only touched a couple times a year (insurance, annual renewals) aren't
@@ -117,10 +119,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [cycleDayInput, setCycleDayInput] = useState('28')
   const [currencyInput, setCurrencyInput] = useState('USD')
   const [newCatName, setNewCatName] = useState('')
-  const [lockedAllocations, setLockedAllocations] = useState<string[]>([])
+  const [lockedAllocations, setLockedAllocations] = useState<AllocationKey[]>([])
   const [globalAllocLock, setGlobalAllocLock] = useState(true)
 
-  const toggleLock = (key: string) => {
+  const toggleLock = (key: AllocationKey) => {
     setLockedAllocations(prev => {
       if (prev.includes(key)) return prev.filter(k => k !== key)
       if (prev.length >= 2) return prev
@@ -191,9 +193,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       await api.revokeSession(id)
       await loadSessions()
       onToast?.('Session revoked.', 'Session removed', 'success')
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
-      onToast?.(err.message || 'Failed to revoke session.', 'Error', 'error')
+      onToast?.(getErrorMessage(err, 'Failed to revoke session.'), 'Error', 'error')
     }
   }
 
@@ -203,9 +205,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       const { revokedCount } = await api.revokeAllSessions(true)
       await loadSessions()
       onToast?.(`Logged out ${revokedCount} other device(s).`, 'Devices logged out', 'success')
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
-      onToast?.(err.message || 'Failed to log out other devices.', 'Error', 'error')
+      onToast?.(getErrorMessage(err, 'Failed to log out other devices.'), 'Error', 'error')
     }
   }
 
@@ -246,9 +248,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       localStorage.setItem(DEVICE_CREDENTIAL_ID_KEY, base64UrlToHex(credential.id))
       await loadFingerprintCredentials()
       onToast?.('Fingerprint enabled on this device.', 'Fingerprint enabled', 'success')
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
-      if (err?.name === 'InvalidStateError') {
+      if (getErrorName(err) === 'InvalidStateError') {
         // The authenticator already holds a credential for this account
         // (excludeCredentials matched) -- this device is already enrolled, so
         // reconcile state and tell the user rather than erroring. We can't tell
@@ -256,8 +258,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         localStorage.setItem(DEVICE_CREDENTIAL_ID_KEY, 'already_enrolled')
         await loadFingerprintCredentials()
         onToast?.('This device already has fingerprint enabled.', 'Already enabled', 'info')
-      } else if (err?.name !== 'NotAllowedError') {
-        onToast?.(err.message || 'Failed to register fingerprint on this device.', 'Fingerprint error', 'error')
+      } else if (getErrorName(err) !== 'NotAllowedError') {
+        onToast?.(getErrorMessage(err, 'Failed to register fingerprint on this device.'), 'Fingerprint error', 'error')
       }
     } finally {
       setFingerprintBusy(false)
@@ -270,9 +272,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       await api.deleteFingerprintCredential(id)
       await loadFingerprintCredentials()
       onToast?.('Fingerprint credential removed.', 'Fingerprint removed', 'success')
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
-      onToast?.(err.message || 'Failed to remove fingerprint credential.', 'Fingerprint error', 'error')
+      onToast?.(getErrorMessage(err, 'Failed to remove fingerprint credential.'), 'Fingerprint error', 'error')
     }
   }
 
@@ -305,7 +307,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     return Math.round(e + g + s + r)
   }, [essentialsAllocInput, growthAllocInput, stabilityAllocInput, rewardsAllocInput])
 
-  const handleAllocationChange = (changedKey: 'essentials' | 'growth' | 'stability' | 'rewards', newValue: number) => {
+  const handleAllocationChange = (changedKey: AllocationKey, newValue: number) => {
     if (lockedAllocations.includes(changedKey)) return
 
     const current = {
@@ -561,23 +563,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-              {[
+              {([
                 ['Essentials', essentialsAllocInput, 'essentials', 'accent-blue-500'],
                 ['Growth', growthAllocInput, 'growth', 'accent-green-500'],
                 ['Stability', stabilityAllocInput, 'stability', 'accent-purple-500'],
                 ['Rewards', rewardsAllocInput, 'rewards', 'accent-amber-500'],
-              ].map(([label, value, key, accentClass]) => (
-                <label key={label as string} className="space-y-2 block">
+              ] satisfies Array<[string, string, AllocationKey, string]>).map(([label, value, key, accentClass]) => (
+                <label key={label} className="space-y-2 block">
                   <div className="flex justify-between items-center text-[11px] font-bold">
                     <span className="text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                      {label as string}
+                      {label}
                       <button 
                         type="button"
-                        onClick={(e) => { e.preventDefault(); toggleLock(key as string); }}
-                        className={`p-1.5 rounded-md transition ${lockedAllocations.includes(key as string) ? 'text-blue-500 bg-blue-500/10 border border-blue-500/20 shadow-sm shadow-blue-500/10' : 'text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent hover:border-border/50'}`}
-                        title={lockedAllocations.includes(key as string) ? 'Unlock' : lockedAllocations.length >= 2 ? 'Max 2 locks reached' : 'Lock'}
+                        onClick={(e) => { e.preventDefault(); toggleLock(key); }}
+                        className={`p-1.5 rounded-md transition ${lockedAllocations.includes(key) ? 'text-blue-500 bg-blue-500/10 border border-blue-500/20 shadow-sm shadow-blue-500/10' : 'text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent hover:border-border/50'}`}
+                        title={lockedAllocations.includes(key) ? 'Unlock' : lockedAllocations.length >= 2 ? 'Max 2 locks reached' : 'Lock'}
                       >
-                        {lockedAllocations.includes(key as string) ? <Lock className="size-3.5" /> : <Unlock className="size-3.5" />}
+                        {lockedAllocations.includes(key) ? <Lock className="size-3.5" /> : <Unlock className="size-3.5" />}
                       </button>
                     </span>
                     <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md">{Number(value).toFixed(0)}%</span>
@@ -587,10 +589,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     min="0"
                     max="100"
                     step="5"
-                    disabled={globalAllocLock || lockedAllocations.includes(key as string)}
-                    value={value as string}
-                    onChange={e => handleAllocationChange(key as any, parseFloat(e.target.value))}
-                    className={`w-full h-2 rounded-full cursor-pointer ${accentClass as string} bg-border disabled:opacity-50 disabled:cursor-not-allowed`}
+                    disabled={globalAllocLock || lockedAllocations.includes(key)}
+                    value={value}
+                    onChange={e => handleAllocationChange(key, parseFloat(e.target.value))}
+                    className={`w-full h-2 rounded-full cursor-pointer ${accentClass} bg-border disabled:opacity-50 disabled:cursor-not-allowed`}
                   />
                 </label>
               ))}

@@ -18,6 +18,13 @@
     /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
+    "alwaysStrict": true,
+    "useUnknownInCatchVariables": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "strictFunctionTypes": true,
+    "noImplicitAny": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
 

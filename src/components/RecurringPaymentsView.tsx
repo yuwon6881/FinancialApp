@@ -26,6 +26,13 @@ import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } fr
 import { useAutoOpenModal } from '../lib/useAutoOpenModal'
 import { useIsMobile } from '../lib/useIsMobile'
 
+const RECURRING_LEDGER_CATEGORIES = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const
+type RecurringLedgerCategory = typeof RECURRING_LEDGER_CATEGORIES[number]
+
+function isRecurringLedgerCategory(value: string): value is RecurringLedgerCategory {
+  return (RECURRING_LEDGER_CATEGORIES as readonly string[]).includes(value)
+}
+
 interface RecurringPaymentsViewProps {
   payments: RecurringPayment[]
   activeRecurringPayments: ActiveRecurringPayment[]
@@ -79,7 +86,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAmount(maskCurrencyInput(e.target.value, amount));
   };
-  const [ledgerCategory, setLedgerCategory] = useState<'Essentials' | 'Growth' | 'Stability' | 'Rewards'>('Essentials')
+  const [ledgerCategory, setLedgerCategory] = useState<RecurringLedgerCategory>('Essentials')
   const [startDateInput, setStartDateInput] = useState('')
   const [endDateInput, setEndDateInput] = useState('')
 
@@ -660,7 +667,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                       setName(rp.name)
                       setAmount(Math.abs(rp.amount).toFixed(2))
                       setCategory(rp.category)
-                      setLedgerCategory(rp.ledgerCategory as any)
+                      setLedgerCategory(isRecurringLedgerCategory(rp.ledgerCategory) ? rp.ledgerCategory : 'Essentials')
                       setStartDateInput(rp.startDate)
                       setEndDateInput(rp.endDate || '')
                       setEditingPayment(rp)

@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { KeyRound } from 'lucide-react'
 import { BottomSheet } from './BottomSheet'
+import { getErrorMessage } from '../../lib/errors'
 
 interface PasswordEntryModalProps {
   isOpen: boolean
@@ -38,8 +39,8 @@ export const PasswordEntryModal: React.FC<PasswordEntryModalProps> = ({
       await onSubmit(password)
       setPassword('')
       onClose()
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong.')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err))
     } finally {
       setBusy(false)
     }

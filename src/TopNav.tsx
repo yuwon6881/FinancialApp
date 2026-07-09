@@ -28,7 +28,7 @@ import { triggerHaptic } from './lib/haptics'
 import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 import { SwipeableRow } from './components/ui/SwipeableRow'
 import { AppLogo } from './components/ui/AppLogo'
-import type { AppTab } from './types'
+import type { AppTab, PendingNotification } from './types'
 
 interface TopNavProps {
   activeTab: AppTab
@@ -39,8 +39,8 @@ interface TopNavProps {
   onToggleHideSensitive: () => void
   onLogout: () => void
   username: string
-  pendingNotifications: any[]
-  onConfirmSubscription: (noti: any, paidDate: string) => void
+  pendingNotifications: PendingNotification[]
+  onConfirmSubscription: (noti: PendingNotification, paidDate: string) => void
   onDeletePayment: (id: string) => void
   darkMode: boolean
   onToggleDarkMode: () => void
@@ -48,7 +48,7 @@ interface TopNavProps {
   isSyncing?: boolean
   syncLabel?: string
   isOffline?: boolean
-  onDiscardSubscription?: (noti: any) => void
+  onDiscardSubscription?: (noti: PendingNotification) => void
   draftCount?: number
   failedOpsCount?: number
   onOpenFailedOps?: () => void
@@ -80,7 +80,7 @@ const TopNav: React.FC<TopNavProps> = ({
   const [isBellOpen, setIsBellOpen] = useState(false)
   const [confirmNotiId, setConfirmNotiId] = useState<string | null>(null)
   const [paidDate, setPaidDate] = useState('')
-  const [notiToDelete, setNotiToDelete] = useState<any | null>(null)
+  const [notiToDelete, setNotiToDelete] = useState<PendingNotification | null>(null)
 
   useEffect(() => {
     if (!isBellOpen) return

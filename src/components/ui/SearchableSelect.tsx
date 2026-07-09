@@ -1,28 +1,28 @@
-import React, { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { ChevronDown, Search } from 'lucide-react'
 
-interface SelectOption {
-  value: string | number
+interface SelectOption<T extends string | number = string | number> {
+  value: T
   label: string
 }
 
-interface SearchableSelectProps {
-  value: string | number
-  onChange: (value: any) => void
-  options: SelectOption[]
+interface SearchableSelectProps<T extends string | number = string | number> {
+  value: T
+  onChange: (value: T) => void
+  options: SelectOption<T>[]
   className?: string
   align?: 'left' | 'right'
   placeholder?: string
 }
 
-export const SearchableSelect: React.FC<SearchableSelectProps> = ({
+export function SearchableSelect<T extends string | number>({
   value,
   onChange,
   options,
   className = '',
   align = 'left',
   placeholder = 'Search…',
-}) => {
+}: SearchableSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false)
   const [query, setQuery] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)

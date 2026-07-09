@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "strictNullChecks": true
+  },
+  "include": [
+    "src/lib/api.ts",
+    "src/lib/apiTypes.ts",
+    "src/lib/outbox.ts"
+  ]
+}

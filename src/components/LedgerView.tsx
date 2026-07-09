@@ -33,6 +33,7 @@ import { BottomSheet } from './ui/BottomSheet'
 import { SmartAmountInput } from './ui/SmartAmountInput'
 import { lockBodyScroll, unlockBodyScroll } from '../lib/scrollLock'
 import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput, displayLedgerCategory } from '../lib/utils'
+import { getErrorMessage } from '../lib/errors'
 import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } from '../lib/categoryColors'
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../lib/csvExport'
 import { useFormDraft } from '../lib/useFormDraft'
@@ -41,6 +42,19 @@ import { useIsMobile } from '../lib/useIsMobile'
 import { getCycleRangeDates, getStartOfNCyclesAgo, formatDateForApi } from '../lib/cycle'
 
 const transactionSortKey = (t: Transaction) => t.postedAt || `${t.date}T00:00:00.000Z`
+
+const TRANSFER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const
+type TransferBucket = typeof TRANSFER_BUCKETS[number]
+const SELECTABLE_LEDGER_CATEGORIES = ['Income', ...TRANSFER_BUCKETS] as const
+type SelectableLedgerCategory = typeof SELECTABLE_LEDGER_CATEGORIES[number]
+
+function isTransferBucket(value: string): value is TransferBucket {
+  return (TRANSFER_BUCKETS as readonly string[]).includes(value)
+}
+
+function isSelectableLedgerCategory(value: string): value is SelectableLedgerCategory {
+  return (SELECTABLE_LEDGER_CATEGORIES as readonly string[]).includes(value)
+}
 
 // Memoized ledger rows. Extracted from the render body so React can skip re-rendering
 // the (up to ~100) visible rows when the parent re-renders for reasons unrelated to a
@@ -406,9 +420,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [amount, setAmount] = useState('')
   const [txType, setTxType] = useState<'inflow' | 'outflow' | 'transfer'>('outflow')
   const [category, setCategory] = useState('')
-  const [ledgerCategory, setLedgerCategory] = useState<'Income' | 'Essentials' | 'Growth' | 'Stability' | 'Rewards'>('Essentials')
-  const [transferSource, setTransferSource] = useState<'Essentials' | 'Growth' | 'Stability' | 'Rewards'>('Essentials')
-  const [transferTarget, setTransferTarget] = useState<'Essentials' | 'Growth' | 'Stability' | 'Rewards'>('Rewards')
+  const [ledgerCategory, setLedgerCategory] = useState<SelectableLedgerCategory>('Essentials')
+  const [transferSource, setTransferSource] = useState<TransferBucket>('Essentials')
+  const [transferTarget, setTransferTarget] = useState<TransferBucket>('Rewards')
   const getTodayDateString = () => {
     const now = new Date()
     const y = now.getFullYear()
@@ -490,9 +504,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
     setTxType(result.txType === 'inflow' || result.txType === 'outflow' ? result.txType : 'outflow')
 
-    const validLedger = ['Income', 'Essentials', 'Growth', 'Stability', 'Rewards']
-    if (result.ledgerCategory && validLedger.includes(result.ledgerCategory)) {
-      setLedgerCategory(result.ledgerCategory as any)
+    if (result.ledgerCategory && isSelectableLedgerCategory(result.ledgerCategory)) {
+      setLedgerCategory(result.ledgerCategory)
     }
 
     if (result.category) {
@@ -549,8 +562,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       onReceiptScanStarted?.(started.scanId)
       setActiveReceiptScanJobId(started.scanId)
       setShowScanBanner(false)
-    } catch (err: any) {
-      setScanError(err.message || 'Could not read the receipt. Please try a clearer photo.')
+    } catch (err: unknown) {
+      setScanError(getErrorMessage(err, 'Could not read the receipt. Please try a clearer photo.'))
       setIsScanning(false)
     } finally {
       // Reset file inputs so the same file can be selected again if needed
@@ -633,9 +646,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
     // Auto-fill category and ledger category (only if not editing and not in transfer mode)
     if (txType !== 'transfer') {
-      const validLedgerCats = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
-      if (validLedgerCats.includes(suggestion.ledgerCategory)) {
-        setLedgerCategory(suggestion.ledgerCategory as any)
+      if (isSelectableLedgerCategory(suggestion.ledgerCategory)) {
+        setLedgerCategory(suggestion.ledgerCategory)
         // Sync txType based on suggestion's ledger category
         if (suggestion.txType && suggestion.txType !== txType) return
       }
@@ -722,8 +734,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       setLedgerCategory('Essentials')
       const parts = t.ledgerCategory.substring(9).split('->')
       if (parts.length === 2) {
-        setTransferSource(parts[0].trim() as any)
-        setTransferTarget(parts[1].trim() as any)
+        const source = parts[0].trim()
+        const target = parts[1].trim()
+        if (isTransferBucket(source)) setTransferSource(source)
+        if (isTransferBucket(target)) setTransferTarget(target)
       }
     } else {
       if (t.amount < 0) {
@@ -735,7 +749,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       if ((t.ledgerCategory || '').startsWith('IncomeSplit:')) {
         setLedgerCategory('Income')
       } else {
-        setLedgerCategory(t.ledgerCategory as any)
+        if (isSelectableLedgerCategory(t.ledgerCategory)) {
+          setLedgerCategory(t.ledgerCategory)
+        }
       }
     }
     openTransactionForm()
@@ -1134,7 +1150,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setErrors({})
 
     let finalAmount = parsedAmount
-    let finalLedgerCategory = ledgerCategory
+    let finalLedgerCategory: string = ledgerCategory
 
     if (txType === 'outflow') {
       finalAmount = -Math.abs(parsedAmount)
@@ -1142,7 +1158,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       finalAmount = Math.abs(parsedAmount)
     } else if (txType === 'transfer') {
       finalAmount = Math.abs(parsedAmount)
-      finalLedgerCategory = `Transfer:${transferSource}->${transferTarget}` as any
+      finalLedgerCategory = `Transfer:${transferSource}->${transferTarget}`
     }
 
     const isIncome = txType === 'inflow' && ledgerCategory === 'Income'
@@ -1194,7 +1210,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       sta = Math.round(sta * 10000) / 10000
       rew = Math.round(rew * 10000) / 10000
 
-      finalLedgerCategory = `IncomeSplit:${(ess * 100).toFixed(4)},${(gro * 100).toFixed(4)},${(sta * 100).toFixed(4)},${(rew * 100).toFixed(4)}` as any
+      finalLedgerCategory = `IncomeSplit:${(ess * 100).toFixed(4)},${(gro * 100).toFixed(4)},${(sta * 100).toFixed(4)},${(rew * 100).toFixed(4)}`
     }
 
     if (editingTxId) {
@@ -1602,7 +1618,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               />
               <CustomSelect
                 value={selectedYear}
-                onChange={(val) => onSelectPeriod(selectedMonth, parseInt(val))}
+                onChange={(val) => onSelectPeriod(selectedMonth, Number(val))}
                 options={availableYears.map(y => ({
                   value: y,
                   label: y.toString()
@@ -2058,7 +2074,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   <label className="text-xs font-semibold text-muted-foreground">Ledger Category</label>
                   <CustomSelect
                     value={ledgerCategory}
-                    onChange={val => setLedgerCategory(val)}
+                    onChange={val => setLedgerCategory(val as typeof ledgerCategory)}
                     options={[
                       ...(txType === 'inflow' ? [{ value: 'Income', label: 'Income (Auto-Split)' }] : []),
                       { value: 'Essentials', label: 'Essentials' },
@@ -2488,7 +2504,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 <CustomSelect
                   value={pageSize}
                   onChange={(val) => {
-                    setPageSize(parseInt(val))
+                    setPageSize(Number(val))
                     setCurrentPage(1)
                   }}
                   options={[

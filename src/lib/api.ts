@@ -1,5 +1,19 @@
 import type { Transaction, RecurringPayment, DashboardData, TransactionCategory, WishlistItem } from '../types'
 import type { CreateOptionsJson, AssertionOptionsJson } from './webauthn'
+import type {
+  LoginCredentials,
+  RegisterCredentials,
+  WireActiveRecurringPayment,
+  WireCategoryBreakdown,
+  WireCategorySummary,
+  WireDashboardData,
+  WirePagedTransactionResult,
+  WirePendingNotification,
+  WireRecurringPayment,
+  WireTransaction,
+  WireTrendPoint,
+  WireWishlistPurchaseResult,
+} from './apiTypes'
 
 const getApiBaseUrl = (): string => {
   if (import.meta.env.VITE_API_URL) {
@@ -16,7 +30,7 @@ const API_BASE_URL = getApiBaseUrl()
 export const SESSION_LOCKED_EVENT = 'financialapp:session-locked'
 
 interface CacheEntry {
-  promise: Promise<any>
+  promise: Promise<unknown>
   timestamp: number
   staleTime: number
 }
@@ -34,7 +48,7 @@ const queryCache = {
     return entry.promise as Promise<T>
   },
 
-  set(key: string, promise: Promise<any>, staleTime = 30000) {
+  set(key: string, promise: Promise<unknown>, staleTime = 30000) {
     this.store.set(key, { promise, timestamp: Date.now(), staleTime })
     promise.catch(() => {
       this.store.delete(key)
@@ -47,9 +61,10 @@ const queryCache = {
 }
 
 const originalFetch = window.fetch
-window.fetch = async (...args) => {
+window.fetch = async (...args: Parameters<typeof fetch>) => {
   const response = await originalFetch(...args)
-  const url = typeof args[0] === 'string' ? args[0] : (args[0] as any).url || ''
+  const request = args[0]
+  const url = typeof request === 'string' ? request : request instanceof URL ? request.toString() : request.url
   if (!response.ok) {
     if (response.status === 401 && !url.includes('/auth/login') && !url.includes('/auth/status') && !url.includes('/auth/webauthn')) {
       throw new Error('401 Unauthorized')
@@ -125,14 +140,14 @@ export function obfuscateAmount(val: number | string): string {
   return btoa(binaryString);
 }
 
-function deobfuscateTransaction(t: any): Transaction {
+function deobfuscateTransaction(t: WireTransaction): Transaction {
   return {
     ...t,
     amount: deobfuscateAmount(t.amount)
   }
 }
 
-function deobfuscateRecurringPayment(rp: any): RecurringPayment {
+function deobfuscateRecurringPayment(rp: WireRecurringPayment): RecurringPayment {
   return {
     ...rp,
     amount: deobfuscateAmount(rp.amount)
@@ -152,7 +167,7 @@ export type LoginResult =
   | { token: string; username: string }
   | { requiresTwoFactor: true; pendingToken: string }
 
-export async function login(credentials: any): Promise<LoginResult> {
+export async function login(credentials: LoginCredentials): Promise<LoginResult> {
   const payload = { ...credentials, ...getDeviceInfo() }
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: 'POST',
@@ -190,7 +205,7 @@ export async function verifyTwoFactorLogin(pendingToken: string, code: string): 
   return data
 }
 
-export async function register(credentials: any): Promise<void> {
+export async function register(credentials: RegisterCredentials): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/auth/register`, {
     method: 'POST',
     headers: {
@@ -247,14 +262,14 @@ export function fetchDashboard(month?: string, year?: number, signal?: AbortSign
     if (!response.ok) {
       throw new Error('Failed to fetch dashboard data')
     }
-    const data = await response.json()
+    const data = await response.json() as WireDashboardData
     return {
       ...data,
       setting: {
         ...data.setting,
         targetStabilityFund: deobfuscateAmount(data.setting.targetStabilityFund)
       },
-      categories: (data.categories || []).map((c: any) => ({
+      categories: (data.categories || []).map((c: WireCategorySummary) => ({
         ...c,
         target: deobfuscateAmount(c.target),
         budget: deobfuscateAmount(c.budget),
@@ -271,39 +286,39 @@ export function fetchDashboard(month?: string, year?: number, signal?: AbortSign
         pastThreeMonthsRewardsAverage: deobfuscateAmount(data.stats.pastThreeMonthsRewardsAverage)
       },
       recentTransactions: (data.recentTransactions || []).map(deobfuscateTransaction),
-      activeRecurringPayments: (data.activeRecurringPayments || []).map((rp: any) => ({
+      activeRecurringPayments: (data.activeRecurringPayments || []).map((rp: WireActiveRecurringPayment) => ({
         ...rp,
         amount: deobfuscateAmount(rp.amount)
       })),
-      trendPoints: (data.trendPoints || []).map((tp: any) => ({
+      trendPoints: (data.trendPoints || []).map((tp: WireTrendPoint) => ({
         ...tp,
         balance: deobfuscateAmount(tp.balance)
       })),
-      last3TrendPoints: (data.last3TrendPoints || []).map((tp: any) => ({
+      last3TrendPoints: (data.last3TrendPoints || []).map((tp: WireTrendPoint) => ({
         ...tp,
         balance: deobfuscateAmount(tp.balance)
       })),
-      last6TrendPoints: (data.last6TrendPoints || []).map((tp: any) => ({
+      last6TrendPoints: (data.last6TrendPoints || []).map((tp: WireTrendPoint) => ({
         ...tp,
         balance: deobfuscateAmount(tp.balance)
       })),
-      pendingNotifications: (data.pendingNotifications || []).map((pn: any) => ({
+      pendingNotifications: (data.pendingNotifications || []).map((pn: WirePendingNotification) => ({
         ...pn,
         amount: deobfuscateAmount(pn.amount)
       })),
-      monthlyCategoryBreakdown: (data.monthlyCategoryBreakdown || []).map((cb: any) => ({
+      monthlyCategoryBreakdown: (data.monthlyCategoryBreakdown || []).map((cb: WireCategoryBreakdown) => ({
         ...cb,
         amount: deobfuscateAmount(cb.amount)
       })),
-      last3CategoryBreakdown: (data.last3CategoryBreakdown || []).map((cb: any) => ({
+      last3CategoryBreakdown: (data.last3CategoryBreakdown || []).map((cb: WireCategoryBreakdown) => ({
         ...cb,
         amount: deobfuscateAmount(cb.amount)
       })),
-      last6CategoryBreakdown: (data.last6CategoryBreakdown || []).map((cb: any) => ({
+      last6CategoryBreakdown: (data.last6CategoryBreakdown || []).map((cb: WireCategoryBreakdown) => ({
         ...cb,
         amount: deobfuscateAmount(cb.amount)
       })),
-      yearlyCategoryBreakdown: (data.yearlyCategoryBreakdown || []).map((cb: any) => ({
+      yearlyCategoryBreakdown: (data.yearlyCategoryBreakdown || []).map((cb: WireCategoryBreakdown) => ({
         ...cb,
         amount: deobfuscateAmount(cb.amount)
       }))
@@ -460,7 +475,7 @@ export function fetchTransactions(month?: string, year?: number, all?: boolean, 
     if (!response.ok) {
       throw new Error('Failed to fetch transactions')
     }
-    const data = await response.json()
+    const data = await response.json() as WireTransaction[] | null
     return (data || []).map(deobfuscateTransaction)
   })()
 
@@ -533,7 +548,7 @@ export async function fetchPagedTransactions(params: {
 
   const response = await fetch(url.toString(), { headers: getHeaders() })
   if (!response.ok) throw new Error('Failed to fetch paged transactions')
-  const data = await response.json()
+  const data = await response.json() as WirePagedTransactionResult
   return {
     items: (data.items || []).map(deobfuscateTransaction),
     total: data.total ?? 0,
@@ -558,7 +573,7 @@ export async function addTransaction(transaction: Omit<Transaction, 'id'> & { id
     throw new Error('Failed to add transaction')
   }
   queryCache.invalidateAll()
-  const data = await response.json()
+  const data = await response.json() as WireTransaction
   return deobfuscateTransaction(data)
 }
 
@@ -606,7 +621,7 @@ export function fetchRecurringPayments(signal?: AbortSignal): Promise<RecurringP
     if (!response.ok) {
       throw new Error('Failed to fetch recurring payments')
     }
-    const data = await response.json()
+    const data = await response.json() as WireRecurringPayment[] | null
     return (data || []).map(deobfuscateRecurringPayment)
   })()
 
@@ -632,7 +647,7 @@ export async function addRecurringPayment(payment: Omit<RecurringPayment, 'id'> 
     throw new Error('Failed to add recurring payment')
   }
   queryCache.invalidateAll()
-  const data = await response.json()
+  const data = await response.json() as WireRecurringPayment
   return deobfuscateRecurringPayment(data)
 }
 
@@ -645,7 +660,7 @@ export async function toggleRecurringPayment(id: string): Promise<RecurringPayme
     throw new Error('Failed to toggle recurring payment')
   }
   queryCache.invalidateAll()
-  const data = await response.json()
+  const data = await response.json() as WireRecurringPayment
   return deobfuscateRecurringPayment(data)
 }
 
@@ -665,7 +680,7 @@ export async function updateRecurringPayment(id: string, payment: RecurringPayme
     throw new Error('Failed to update recurring payment')
   }
   queryCache.invalidateAll()
-  const data = await response.json()
+  const data = await response.json() as WireRecurringPayment
   return deobfuscateRecurringPayment(data)
 }
 
@@ -833,7 +848,7 @@ export async function purchaseWishlistItem(id: number): Promise<{ item: Wishlist
     throw new Error(errorBody.message || 'Failed to purchase wishlist item')
   }
   queryCache.invalidateAll()
-  const data = await response.json()
+  const data = await response.json() as WireWishlistPurchaseResult
   return { ...data, transaction: deobfuscateTransaction(data.transaction) }
 }
 
@@ -924,7 +939,7 @@ export async function getFingerprintLoginOptions(): Promise<{ challengeId: strin
   return response.json()
 }
 
-export async function verifyFingerprintLogin(challengeId: string, credential: any): Promise<{ token: string; username: string }> {
+export async function verifyFingerprintLogin(challengeId: string, credential: unknown): Promise<{ token: string; username: string }> {
   const payload = { challengeId, credential, ...getDeviceInfo() }
   const response = await fetch(`${API_BASE_URL}/auth/webauthn/login/verify`, {
     method: 'POST',

@@ -1,6 +1,8 @@
 import type { Transaction, DashboardData } from '../types'
 import { sanitizeQueuedOps, type QueuedOp } from './outbox'
 
+type LegacyPendingTransaction = Transaction & { serverTxId?: string }
+
 export const CACHE_KEYS = {
   dashboardData: 'cached_dashboard_data',
   transactions: 'cached_transactions',
@@ -113,11 +115,11 @@ export function getCachedOps(): QueuedOp[] {
   // Migration path for legacy pending_transactions key
   const rawPendingTx = localStorage.getItem(CACHE_KEYS.pendingTransactions)
   if (rawPendingTx !== null) {
-    const legacyTxs = getCachedTransactions(CACHE_KEYS.pendingTransactions)
+    const legacyTxs = getCachedTransactions(CACHE_KEYS.pendingTransactions) as LegacyPendingTransaction[]
     const convertedOps: QueuedOp[] = legacyTxs.map(tx => {
-      const finalId = (tx as any).serverTxId || tx.id
+      const finalId = tx.serverTxId || tx.id
       const payload = { ...tx, id: finalId }
-      delete (payload as any).serverTxId
+      delete payload.serverTxId
       delete payload.isPendingSync
       return {
         id: `op-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,

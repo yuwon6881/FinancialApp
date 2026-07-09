@@ -8,6 +8,7 @@ import {
   getCachedFingerprintAssertOptions,
   prefetchFingerprintAssertOptions,
 } from '../lib/fingerprintOptionsCache'
+import { getErrorMessage, getErrorName } from '../lib/errors'
 
 interface LockScreenProps {
   isOpen: boolean
@@ -60,10 +61,10 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
       await api.verifyFingerprintAssert(challengeId, credential)
       setLockPassword('')
       onUnlocked()
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
-      if (err?.name !== 'NotAllowedError') {
-        setLockError(err.message || 'Fingerprint unlock failed. Please use your password.')
+      if (getErrorName(err) !== 'NotAllowedError') {
+        setLockError(getErrorMessage(err, 'Fingerprint unlock failed. Please use your password.'))
       }
     } finally {
       clearCachedFingerprintAssertOptions()

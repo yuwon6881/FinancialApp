@@ -3,6 +3,7 @@ import { KeyRound, ChevronDown, ChevronUp } from 'lucide-react'
 import * as api from '../lib/api'
 import type { ToastTone } from './ui/ToastViewport'
 import { CollapsibleBody } from './ui/CollapsibleBody'
+import { getErrorMessage } from '../lib/errors'
 
 interface ChangePasswordSectionProps {
   hideSensitive: boolean
@@ -43,8 +44,8 @@ export const ChangePasswordSection: React.FC<ChangePasswordSectionProps> = ({ hi
       setNewPassword('')
       setConfirmPassword('')
       onToast?.('Password changed. Other devices have been logged out.', 'Password updated', 'success')
-    } catch (err: any) {
-      onToast?.(err.message || 'Failed to change password.', 'Error', 'error')
+    } catch (err: unknown) {
+      onToast?.(getErrorMessage(err, 'Failed to change password.'), 'Error', 'error')
     } finally {
       setBusy(false)
     }

@@ -1,26 +1,26 @@
-import React, { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { ChevronDown } from 'lucide-react'
 
-interface SelectOption {
-  value: string | number
+interface SelectOption<T extends string | number = string | number> {
+  value: T
   label: string
 }
 
-interface CustomSelectProps {
-  value: string | number
-  onChange: (value: any) => void
-  options: SelectOption[]
+interface CustomSelectProps<T extends string | number = string | number> {
+  value: T
+  onChange: (value: T) => void
+  options: SelectOption<T>[]
   className?: string
   align?: 'left' | 'right'
 }
 
-export const CustomSelect: React.FC<CustomSelectProps> = ({ 
+export function CustomSelect<T extends string | number>({ 
   value, 
   onChange, 
   options, 
   className = '',
   align = 'left'
-}) => {
+}: CustomSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 

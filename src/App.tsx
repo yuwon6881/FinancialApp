@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { SplashScreen } from '@capacitor/splash-screen'
 import TopNav from "./TopNav.tsx"
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { APP_TABS, type AppTab, type Transaction, type RecurringPayment, type DashboardData, type TransactionCategory, type WishlistItem } from './types'
+import { APP_TABS, type AppTab, type Transaction, type RecurringPayment, type DashboardData, type TransactionCategory, type WishlistItem, type PendingNotification } from './types'
 import * as api from './lib/api'
 import type { ReceiptScanResult } from './lib/api'
 import { Loader2, Plus, Wallet, CreditCard, PiggyBank, Upload } from 'lucide-react'
@@ -26,13 +26,14 @@ import { ToastViewport, type ToastMessage, type ToastTone, type ToastAction } fr
 import { CardSkeleton, Skeleton } from './components/ui/Skeleton'
 import { CACHE_KEYS, getCachedJSON, getCachedTransactions, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod, getCachedOps, getCachedCycleSnapshot, setCachedCycleSnapshot } from './lib/cache'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from './lib/modalDrafts'
-import { enqueue as outboxEnqueue, createFinalId, createLocalWishlistId, DISPATCH, sanitizeQueuedOps, getSyncSuccessToast, type QueuedOp, type EntityKind } from './lib/outbox'
+import { enqueue as outboxEnqueue, createFinalId, createLocalWishlistId, DISPATCH, sanitizeQueuedOps, getSyncSuccessToast, type QueuedOp, type EntityKind, type OpType, type OutboxPayload, type DispatchResult } from './lib/outbox'
 import { useOptimisticList } from './lib/useOptimisticList'
 import { PendingSubscriptionsModal } from './components/PendingSubscriptionsModal'
 import { FailedSyncModal } from './components/FailedSyncModal'
 import { PasswordPromptModal } from './components/PasswordPromptModal'
 import { LockScreen } from './components/LockScreen'
 import { AppLogo } from './components/ui/AppLogo'
+import { errorMessageIncludes, errorMessageIncludesLower, getErrorMessage, getErrorName } from './lib/errors'
 import { triggerHaptic } from './lib/haptics'
 import { isPlatformAuthenticatorAvailable, getFingerprintAssertion } from './lib/webauthn'
 import {
@@ -90,8 +91,8 @@ const LaunchReady = ({ children }: { children: ReactNode }) => {
   return <>{children}</>
 }
 
-const isSessionLockedError = (err: any) => {
-  return !!err?.message && err.message.includes('423')
+const isSessionLockedError = (err: unknown) => {
+  return errorMessageIncludes(err, '423')
 }
 
 function App() {
@@ -278,7 +279,7 @@ function App() {
     editingPendingIdRef.current = editingPendingId
   }, [editingPendingId])
 
-  const enqueue = useCallback((queue: QueuedOp[], entity: import('./lib/outbox').EntityKind, type: import('./lib/outbox').OpType, targetId: string, payload?: any, isUndo?: boolean) => {
+  const enqueue = useCallback((queue: QueuedOp[], entity: EntityKind, type: OpType, targetId: string, payload?: OutboxPayload, isUndo?: boolean) => {
     const activeSyncOpId = isSyncingRef.current && queue.length > 0 ? queue[0].id : null
     return outboxEnqueue(queue, entity, type, targetId, payload, isUndo, activeSyncOpId)
   }, [])
@@ -306,8 +307,15 @@ function App() {
   // of a reversible update/delete so the drain loop can build a compensating op once the
   // change has synced. First-write-wins per key: if several edits to the same record are
   // coalesced into one queued op (and one toast), undo reverts to the earliest known state.
-  const undoSnapshotsRef = useRef<Map<string, any>>(new Map())
-  const snapshotForUndo = (entity: EntityKind, targetId: string, obj: any) => {
+  type UndoSnapshot = (Transaction | RecurringPayment | TransactionCategory | WishlistItem) & {
+    isPendingSync?: boolean
+    isPendingDelete?: boolean
+  }
+
+  const toOutboxPayload = (value: object): OutboxPayload => ({ ...value })
+
+  const undoSnapshotsRef = useRef<Map<string, UndoSnapshot>>(new Map())
+  const snapshotForUndo = (entity: EntityKind, targetId: string, obj: UndoSnapshot | undefined) => {
     if (!obj) return
     const key = `${entity}:${targetId}`
     if (undoSnapshotsRef.current.has(key)) return
@@ -322,7 +330,7 @@ function App() {
   // after sync (that's when the success toast fires), so undo is a real reverse mutation,
   // not a queue cancellation. Returns undefined for ops that can't be cleanly reversed
   // (wishlist purchase, settings) or when the needed "before" snapshot is missing.
-  const buildUndoAction = (op: QueuedOp, result: any): ToastAction | undefined => {
+  const buildUndoAction = (op: QueuedOp, result: DispatchResult): ToastAction | undefined => {
     const key = `${op.entity}:${op.targetId}`
     const before = undoSnapshotsRef.current.get(key)
     undoSnapshotsRef.current.delete(key) // snapshots are single-use
@@ -337,25 +345,25 @@ function App() {
         return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'category', 'delete', String(op.targetId), undefined, true)) }
       case 'wishlistItem:add': {
         // The server-assigned id only exists post-sync; use it, not the local placeholder.
-        const realId = result && result.id != null ? String(result.id) : String(op.targetId)
+        const realId = result && 'id' in result && result.id != null ? String(result.id) : String(op.targetId)
         return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'wishlistItem', 'delete', realId, undefined, true)) }
       }
 
       // Deletes -> re-add the captured record (reusing its id where the API accepts one).
       case 'transaction:delete':
         if (!before) return undefined
-        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'transaction', 'add', String(before.id), { ...before }, true)) }
+        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'transaction', 'add', String(before.id), toOutboxPayload(before), true)) }
       case 'recurringPayment:delete':
         if (!before) return undefined
-        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'recurringPayment', 'add', String(before.id), { ...before }, true)) }
+        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'recurringPayment', 'add', String(before.id), toOutboxPayload(before), true)) }
       case 'category:delete':
         if (!before) return undefined
-        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'category', 'add', String(before.id), { ...before }, true)) }
+        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'category', 'add', String(before.id), toOutboxPayload(before), true)) }
       case 'wishlistItem:delete': {
         if (!before) return undefined
         // Wishlist ids are server-generated, so a re-add takes a fresh local placeholder id.
         const placeholderId = String(createLocalWishlistId())
-        const payload = { ...before }
+        const payload = toOutboxPayload(before)
         delete payload.id
         return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'wishlistItem', 'add', placeholderId, payload, true)) }
       }
@@ -363,16 +371,17 @@ function App() {
       // Updates -> restore the captured prior values.
       case 'transaction:update':
         if (!before) return undefined
-        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'transaction', 'update', String(op.targetId), { ...before }, true)) }
+        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'transaction', 'update', String(op.targetId), toOutboxPayload(before), true)) }
       case 'recurringPayment:update':
         if (!before) return undefined
-        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'recurringPayment', 'update', String(op.targetId), { ...before }, true)) }
+        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'recurringPayment', 'update', String(op.targetId), toOutboxPayload(before), true)) }
       case 'wishlistItem:update':
         if (!before) return undefined
-        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'wishlistItem', 'update', String(op.targetId), { ...before }, true)) }
+        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'wishlistItem', 'update', String(op.targetId), toOutboxPayload(before), true)) }
       case 'wishlistItem:purchase': {
-        const realId = result?.item?.id != null ? String(result.item.id) : String(op.targetId)
-        const purchaseTransactionId = result?.item?.purchaseTransactionId || result?.transaction?.id
+        const purchaseResult = result && 'item' in result ? result : undefined
+        const realId = purchaseResult?.item?.id != null ? String(purchaseResult.item.id) : String(op.targetId)
+        const purchaseTransactionId = purchaseResult?.item?.purchaseTransactionId || purchaseResult?.transaction?.id
         return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'wishlistItem', 'unpurchase', realId, { purchaseTransactionId }, true)) }
       }
 
@@ -469,11 +478,11 @@ function App() {
                 }, 1000)
               }
             }
-          } catch (err: any) {
-            if (err?.message?.includes('401') || err?.message?.includes('423')) {
+          } catch (err: unknown) {
+            if (errorMessageIncludes(err, '401') || errorMessageIncludes(err, '423')) {
               continue
             }
-            if ((err?.message || '').toLowerCase().includes('not found')) {
+            if (errorMessageIncludesLower(err, 'not found')) {
               setReceiptScanJobIds(prev => prev.filter(id => id !== scanId))
             }
           }
@@ -891,11 +900,11 @@ function App() {
         }
         setHasShownModalThisSession(true)
       }
-    } catch (err: any) {
-      if (err?.name === 'AbortError' || isStale()) return
+    } catch (err: unknown) {
+      if (getErrorName(err) === 'AbortError' || isStale()) return
       console.error(err)
       const isJustLoggedIn = Date.now() - lastUnlockedTimeRef.current < 10000
-      if (err.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
+      if (errorMessageIncludes(err, '401') || errorMessageIncludesLower(err, 'unauthorized')) {
         if (!isJustLoggedIn) {
           handleLogout()
         } else {
@@ -1023,10 +1032,10 @@ function App() {
     try {
       await api.selectPeriod(month, year)
       await loadAll(month, year, true)
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (requestSeq !== selectPeriodSeqRef.current) return
       console.error(err)
-      if (err.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
+      if (errorMessageIncludes(err, '401') || errorMessageIncludesLower(err, 'unauthorized')) {
         handleLogout()
       } else if (isSessionLockedError(err)) {
         markSessionLocked()
@@ -1160,7 +1169,7 @@ function App() {
     if (id === editingPendingId) setEditingPendingId(null)
   }
 
-  const handleConfirmSubscription = (noti: any, paidDate: string) => {
+  const handleConfirmSubscription = (noti: PendingNotification, paidDate: string) => {
     if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     const finalId = createFinalId('transaction')
     mutateQueue(prev => enqueue(prev, 'transaction', 'add', finalId, {
@@ -1174,7 +1183,7 @@ function App() {
     }))
   }
 
-  const handleDiscardSubscription = (noti: any) => {
+  const handleDiscardSubscription = (noti: PendingNotification) => {
     if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     const finalId = createFinalId('transaction')
     mutateQueue(prev => enqueue(prev, 'transaction', 'add', finalId, {
@@ -1204,7 +1213,7 @@ function App() {
   const handleUpdatePayment = (id: string, payment: RecurringPayment) => {
     if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     snapshotForUndo('recurringPayment', String(id), allRecurringPayments.find(p => String(p.id) === String(id)))
-    mutateQueue(prev => enqueue(prev, 'recurringPayment', 'update', id, payment))
+    mutateQueue(prev => enqueue(prev, 'recurringPayment', 'update', id, toOutboxPayload(payment)))
   }
 
   const handleDeletePayment = (id: string) => {
@@ -1241,7 +1250,7 @@ function App() {
   const handleUpdateWishlistItem = (id: number, updatedWish: WishlistItem) => {
     if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
     snapshotForUndo('wishlistItem', String(id), allWishlist.find(w => String(w.id) === String(id)))
-    mutateQueue(prev => enqueue(prev, 'wishlistItem', 'update', String(id), updatedWish))
+    mutateQueue(prev => enqueue(prev, 'wishlistItem', 'update', String(id), toOutboxPayload(updatedWish)))
   }
 
   const handleDeleteWishlistItem = (id: number) => {
@@ -1308,7 +1317,7 @@ function App() {
     setIsBackgroundSyncing(true);
 
     let processedAny = false;
-    const successfulOps: Array<{ op: QueuedOp; result: any }> = [];
+    const successfulOps: Array<{ op: QueuedOp; result: DispatchResult }> = [];
 
     try {
       while (true) {
@@ -1361,10 +1370,10 @@ function App() {
           setError(null);
           processedAny = true;
           successfulOps.push({ op: nextOp, result });
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.error(`Failed to sync ${nextOp.entity}:${nextOp.type}:`, err);
-          const isAuthError = err.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'));
-          const isLockError = err.message && err.message.includes('423');
+          const isAuthError = errorMessageIncludes(err, '401') || errorMessageIncludesLower(err, 'unauthorized');
+          const isLockError = errorMessageIncludes(err, '423');
           const isJustLoggedIn = Date.now() - lastUnlockedTimeRef.current < 10000;
 
           if (isAuthError && !isJustLoggedIn) {
@@ -1388,7 +1397,7 @@ function App() {
               showToast(`Couldn't sync '${opDesc}' — removed from queue`, 'Sync Failed', 'error');
 
               mutateQueue(prev => prev.filter(item => item.id !== nextOp.id));
-              setFailedOps(prev => [...prev, { ...nextOp, retryCount: updatedRetryCount, lastError: err.message || String(err) }]);
+              setFailedOps(prev => [...prev, { ...nextOp, retryCount: updatedRetryCount, lastError: getErrorMessage(err, String(err)) }]);
               continue;
             } else {
               // Bump retry on this op by id (not index 0) so a concurrently
