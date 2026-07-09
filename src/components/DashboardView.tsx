@@ -185,7 +185,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     monthlyExpenses: 0.00,
     activeRecurringTotal: 29.50,
     growthPercentAchieved: 0.0,
-    essentialsPercentRemaining: 0.0,
     stabilityPercentReached: 0.2436
   }
 
@@ -932,7 +931,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </p>
         </div>
 
-        {/* Inflow Card (Arrow points up/right, green) */}
+        {/* Inflow Card */}
         <div 
           onClick={() => onNavigateToLedger?.({ txType: 'inflow' })}
           className="metric-card interactive-card app-panel p-6 rounded-2xl bg-card/92 border border-border/60 hover:border-teal-500/30 transition-all duration-300 group cursor-pointer"
@@ -940,7 +939,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-muted-foreground">Cycle Inflow</span>
             <div className="p-2 rounded-lg bg-teal-500/10 text-teal-500 group-hover:scale-110 transition-transform duration-300">
-              <ArrowUpRight className="size-4" />
+              <ArrowDownLeft className="size-4" />
             </div>
           </div>
           <div className="text-2xl font-black text-foreground">
@@ -951,7 +950,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </p>
         </div>
 
-        {/* Expenses Card (Arrow points down/left, red) */}
+        {/* Expenses Card */}
         <div 
           onClick={() => onNavigateToLedger?.({ txType: 'outflow' })}
           className="metric-card interactive-card app-panel p-6 rounded-2xl bg-card/92 border border-border/60 hover:border-orange-500/30 transition-all duration-300 group cursor-pointer"
@@ -959,7 +958,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-muted-foreground">Cycle Outflow</span>
             <div className="p-2 rounded-lg bg-orange-500/10 text-orange-500 group-hover:scale-110 transition-transform duration-300">
-              <ArrowDownLeft className="size-4" />
+              <ArrowUpRight className="size-4" />
             </div>
           </div>
           <div className="text-2xl font-black text-foreground">

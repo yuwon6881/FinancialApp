@@ -892,6 +892,7 @@ function App() {
         last3CategoryBreakdown: insights.last3CategoryBreakdown,
         last6CategoryBreakdown: insights.last6CategoryBreakdown,
         yearlyCategoryBreakdown: insights.yearlyCategoryBreakdown,
+        availableYears: insights.availableYears,
         stats: {
           ...dbData.stats,
           pastThreeMonthsRewardsAverage: insights.pastThreeMonthsRewardsAverage,
@@ -1613,7 +1614,6 @@ function App() {
     data.setting = { ...data.setting };
     data.stats = { ...data.stats };
     data.categories = data.categories.map(c => ({ ...c }));
-    data.recentTransactions = [...allTransactions];
 
     // Check if settings op queued
     const settingsOps = activeOps.filter(o => o.entity === 'settings' && o.type === 'update');

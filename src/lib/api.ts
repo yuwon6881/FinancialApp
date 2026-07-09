@@ -285,7 +285,6 @@ export function fetchDashboard(month?: string, year?: number, signal?: AbortSign
         monthlyExpenses: deobfuscateAmount(data.stats.monthlyExpenses),
         activeRecurringTotal: deobfuscateAmount(data.stats.activeRecurringTotal)
       },
-      recentTransactions: (data.recentTransactions || []).map(deobfuscateTransaction),
       activeRecurringPayments: (data.activeRecurringPayments || []).map((rp: WireActiveRecurringPayment) => ({
         ...rp,
         amount: deobfuscateAmount(rp.amount)
@@ -360,7 +359,8 @@ export function fetchDashboardInsights(month?: string, year?: number, signal?: A
         amount: deobfuscateAmount(cb.amount)
       })),
       pastThreeMonthsRewardsAverage: deobfuscateAmount(data.pastThreeMonthsRewardsAverage),
-      hasRewardsHistory: data.hasRewardsHistory
+      hasRewardsHistory: data.hasRewardsHistory,
+      availableYears: data.availableYears || [new Date().getFullYear()]
     }
   })()
 

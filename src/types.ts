@@ -68,7 +68,6 @@ export interface DashboardStats {
   monthlyExpenses: number
   activeRecurringTotal: number
   growthPercentAchieved: number
-  essentialsPercentRemaining: number
   stabilityPercentReached: number
   pastThreeMonthsRewardsAverage: number
   hasRewardsHistory: boolean
@@ -117,7 +116,6 @@ export interface DashboardData {
   cycleLabel: string
   categories: CategorySummary[]
   stats: DashboardStats
-  recentTransactions: Transaction[]
   activeRecurringPayments: ActiveRecurringPayment[]
   trendPoints: TrendPoint[]
   last3TrendPoints: TrendPoint[]
@@ -132,7 +130,7 @@ export interface DashboardData {
 
 // What api.fetchDashboard actually returns before loadAll() merges in DashboardInsights --
 // everything DashboardData has except the fields that moved to the insights fetch.
-export type DashboardCore = Omit<DashboardData, 'last3CategoryBreakdown' | 'last6CategoryBreakdown' | 'yearlyCategoryBreakdown' | 'stats'> & {
+export type DashboardCore = Omit<DashboardData, 'last3CategoryBreakdown' | 'last6CategoryBreakdown' | 'yearlyCategoryBreakdown' | 'availableYears' | 'stats'> & {
   stats: Omit<DashboardStats, 'pastThreeMonthsRewardsAverage' | 'hasRewardsHistory'>
 }
 
@@ -144,6 +142,7 @@ export interface DashboardInsights {
   yearlyCategoryBreakdown: CategoryBreakdown[]
   pastThreeMonthsRewardsAverage: number
   hasRewardsHistory: boolean
+  availableYears: number[]
 }
 
 export interface TransactionCategory {

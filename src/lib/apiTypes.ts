@@ -73,7 +73,6 @@ export type WireDashboardData = Omit<
   | 'setting'
   | 'categories'
   | 'stats'
-  | 'recentTransactions'
   | 'activeRecurringPayments'
   | 'trendPoints'
   | 'last3TrendPoints'
@@ -83,11 +82,11 @@ export type WireDashboardData = Omit<
   | 'last3CategoryBreakdown'
   | 'last6CategoryBreakdown'
   | 'yearlyCategoryBreakdown'
+  | 'availableYears'
 > & {
   setting: WireDashboardSetting
   categories: WireCategorySummary[]
   stats: WireDashboardStats
-  recentTransactions: WireTransaction[]
   activeRecurringPayments: WireActiveRecurringPayment[]
   trendPoints: WireTrendPoint[]
   last3TrendPoints: WireTrendPoint[]
@@ -105,6 +104,7 @@ export interface WireDashboardInsights {
   yearlyCategoryBreakdown: WireCategoryBreakdown[]
   pastThreeMonthsRewardsAverage: WireAmount
   hasRewardsHistory: boolean
+  availableYears: number[]
 }
 
 export interface WirePagedTransactionResult {

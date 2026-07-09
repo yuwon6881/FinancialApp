@@ -21,18 +21,13 @@ const dashboardPayload = {
     monthlyInflow: 'd1leUV5NWVE=',
     monthlyExpenses: 'd1leUV5NWVE=',
     activeRecurringTotal: 'd1leUV5NWVE=',
-    pastThreeMonthsRewardsAverage: 'd1leUV5NWVE=',
   },
-  recentTransactions: [],
   activeRecurringPayments: [],
   trendPoints: [],
   last3TrendPoints: [],
   last6TrendPoints: [],
   pendingNotifications: [],
   monthlyCategoryBreakdown: [],
-  last3CategoryBreakdown: [],
-  last6CategoryBreakdown: [],
-  yearlyCategoryBreakdown: [],
 }
 
 function mockDashboardFetch() {
