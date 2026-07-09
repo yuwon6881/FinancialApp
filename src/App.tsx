@@ -847,9 +847,24 @@ function App() {
       setIsBackgroundSyncing(true)
     }
     try {
-      const dbData = await api.fetchDashboard(month, year, ac.signal)
-      const [txs, recs, cats, wishes, autoSuggests, wallet] = await Promise.all([
-        api.fetchTransactions(dbData.setting.selectedMonth, dbData.setting.selectedYear, undefined, ac.signal),
+      // fetchTransactions only needs to wait on the dashboard response when the
+      // caller doesn't already know which cycle is active (the very first load
+      // with no cached period yet) -- the backend resolves an omitted month/year
+      // to the persisted "selected period" itself, and writes that resolution
+      // back to the DB, so reading it via a second un-parameterized call could
+      // race that write. Once month/year are known they're passed to both calls
+      // directly, sidestepping that lookup entirely, so there's nothing to wait
+      // on. Everything else here (recurring payments, categories, wishlist,
+      // autocomplete, wallet balance) never depended on the dashboard response
+      // at all, so it was needlessly serialized behind it before.
+      const dashboardPromise = api.fetchDashboard(month, year, ac.signal)
+      const transactionsPromise = (month && year !== undefined)
+        ? api.fetchTransactions(month, year, undefined, ac.signal)
+        : dashboardPromise.then(d => api.fetchTransactions(d.setting.selectedMonth, d.setting.selectedYear, undefined, ac.signal))
+
+      const [dbData, txs, recs, cats, wishes, autoSuggests, wallet] = await Promise.all([
+        dashboardPromise,
+        transactionsPromise,
         api.fetchRecurringPayments(ac.signal),
         api.fetchCategories(ac.signal),
         api.fetchWishlist(ac.signal).catch(() => []),
