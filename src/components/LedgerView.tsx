@@ -1240,6 +1240,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const isTxSyncing = useCallback((txId: string) => {
     if (!activeSyncId) return false
     if (txId === activeSyncId) return true
+    if (txId === `wishlist-purchase-${activeSyncId}`) return true
     if (txId.startsWith(`${activeSyncId}-split-`)) return true
     if (txId.includes('-split-') && txId.split('-split-')[0] === activeSyncId) return true
     return false
