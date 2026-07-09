@@ -4,6 +4,7 @@ import { ChevronDown, Search } from 'lucide-react'
 interface SelectOption<T extends string | number = string | number> {
   value: T
   label: string
+  badge?: string
 }
 
 interface SearchableSelectProps<T extends string | number = string | number> {
@@ -114,7 +115,20 @@ export function SearchableSelect<T extends string | number>({
                       : 'hover:bg-muted/80 text-foreground font-medium'
                   }`}
                 >
-                  {opt.label}
+                  <span className="flex min-w-0 items-center justify-between gap-2">
+                    <span className="truncate">{opt.label}</span>
+                    {opt.badge && (
+                      <span
+                        className={`shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-normal ${
+                          opt.value === value
+                            ? 'border-white/30 bg-white/15 text-white'
+                            : 'border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-300'
+                        }`}
+                      >
+                        {opt.badge}
+                      </span>
+                    )}
+                  </span>
                 </button>
               ))
             ) : (

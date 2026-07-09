@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { listContainerVariants, rowFadeVariants } from '../lib/animations'
 import type { Transaction, TransactionCategory } from '../types'
 import type { PagedTransactionResult } from '../lib/api'
-import { startReceiptScan, type ReceiptScanResult } from '../lib/api'
+import { startReceiptScan, suggestTransactionCategories, type CategorySuggestion, type ReceiptScanResult } from '../lib/api'
 import {
   Plus,
   Search,
@@ -597,7 +597,18 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   // Autocomplete suggestion state
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1)
+  const [categorySuggestions, setCategorySuggestions] = useState<CategorySuggestion[]>([])
+  const [isSuggestingCategory, setIsSuggestingCategory] = useState(false)
   const suggestionsRef = useRef<HTMLDivElement>(null)
+  const descriptionRef = useRef('')
+  const autocompletedDescriptionRef = useRef<string | null>(null)
+  const categorySuggestionAbortRef = useRef<AbortController | null>(null)
+  const categorySuggestionRequestSeqRef = useRef(0)
+  const lastCategorySuggestionKeyRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    descriptionRef.current = description
+  }, [description])
 
   // Build unique suggestion entries from past transactions (most recent first, deduped by description)
   const activeSuggestionEntries = useMemo(() => {
@@ -640,9 +651,15 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   }, [showSuggestions])
 
   const handleSelectSuggestion = (suggestion: { description: string; category: string; ledgerCategory: string; txType?: 'inflow' | 'outflow' }) => {
+    descriptionRef.current = suggestion.description
+    autocompletedDescriptionRef.current = suggestion.description.trim()
     setDescription(suggestion.description)
     setShowSuggestions(false)
     setSelectedSuggestionIndex(-1)
+    setCategorySuggestions([])
+    setIsSuggestingCategory(false)
+    lastCategorySuggestionKeyRef.current = null
+    categorySuggestionAbortRef.current?.abort()
 
     // Auto-fill category and ledger category (only if not editing and not in transfer mode)
     if (txType !== 'transfer') {
@@ -657,11 +674,74 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
   }
 
+  const requestCategorySuggestions = useCallback(async (rawDescription: string) => {
+    const trimmedDescription = rawDescription.trim()
+    const normalizedAutocompleted = autocompletedDescriptionRef.current?.trim()
+
+    if (
+      !showAddForm ||
+      editingTxId ||
+      txType === 'transfer' ||
+      trimmedDescription.length < 2 ||
+      categories.length === 0 ||
+      (normalizedAutocompleted && normalizedAutocompleted === trimmedDescription)
+    ) {
+      return
+    }
+
+    const categoryNames = categories.map(c => c.name).filter(Boolean)
+    const requestKey = JSON.stringify([trimmedDescription.toLowerCase(), txType, categoryNames])
+    if (lastCategorySuggestionKeyRef.current === requestKey) return
+    lastCategorySuggestionKeyRef.current = requestKey
+
+    categorySuggestionAbortRef.current?.abort()
+    const controller = new AbortController()
+    categorySuggestionAbortRef.current = controller
+    const requestSeq = categorySuggestionRequestSeqRef.current + 1
+    categorySuggestionRequestSeqRef.current = requestSeq
+    setIsSuggestingCategory(true)
+
+    try {
+      const suggestions = await suggestTransactionCategories({
+        description: trimmedDescription,
+        txType,
+        categories: categoryNames,
+      }, controller.signal)
+
+      if (categorySuggestionRequestSeqRef.current !== requestSeq) return
+      setCategorySuggestions(suggestions)
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
+      if (categorySuggestionRequestSeqRef.current === requestSeq) {
+        setCategorySuggestions([])
+        lastCategorySuggestionKeyRef.current = null
+      }
+      console.warn('Failed to suggest transaction categories', err)
+    } finally {
+      if (categorySuggestionRequestSeqRef.current === requestSeq) {
+        setIsSuggestingCategory(false)
+      }
+    }
+  }, [categories, editingTxId, showAddForm, txType])
+
+  const handleDescriptionBlur = () => {
+    window.setTimeout(() => {
+      setShowSuggestions(false)
+      void requestCategorySuggestions(descriptionRef.current)
+    }, 220)
+  }
+
   const handleChangeTxType = (nextType: 'inflow' | 'outflow' | 'transfer') => {
     if (nextType === txType) return
     setTxType(nextType)
     if (!editingTxId) {
       setDescription('')
+      descriptionRef.current = ''
+      autocompletedDescriptionRef.current = null
+      setCategorySuggestions([])
+      setIsSuggestingCategory(false)
+      categorySuggestionAbortRef.current?.abort()
+      lastCategorySuggestionKeyRef.current = null
       setShowSuggestions(false)
       setSelectedSuggestionIndex(-1)
     }
@@ -707,6 +787,38 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
   }, [selectedSuggestionIndex])
 
+  useEffect(() => {
+    return () => {
+      categorySuggestionAbortRef.current?.abort()
+    }
+  }, [])
+
+  const categorySelectOptions = useMemo(() => {
+    const categoryByName = new Map(categories.map(c => [c.name.toLowerCase(), c.name]))
+    const suggestedNames = new Set<string>()
+    const suggestedOptions = categorySuggestions
+      .map(s => {
+        const canonicalName = categoryByName.get(s.category.toLowerCase())
+        if (!canonicalName || suggestedNames.has(canonicalName.toLowerCase())) return null
+        suggestedNames.add(canonicalName.toLowerCase())
+        const confidence = Number.isFinite(s.confidence)
+          ? Math.max(0, Math.min(100, Math.round(s.confidence * 100)))
+          : null
+        return {
+          value: canonicalName,
+          label: canonicalName,
+          badge: confidence == null ? 'Suggested' : `Suggested ${confidence}%`,
+        }
+      })
+      .filter((option): option is { value: string; label: string; badge: string } => option !== null)
+
+    const remainingOptions = categories
+      .filter(c => !suggestedNames.has(c.name.toLowerCase()))
+      .map(c => ({ value: c.name, label: c.name }))
+
+    return [...suggestedOptions, ...remainingOptions]
+  }, [categories, categorySuggestions])
+
   // Deferred so the sheet's entrance animation doesn't start on the contended
   // tab-switch/mount frame (which made the slide occasionally skip). See
   // lib/useAutoOpenModal.
@@ -719,6 +831,12 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const handleStartEdit = (t: Transaction) => {
     if (hideSensitive) return
     setEditingTxId(t.id)
+    descriptionRef.current = t.description
+    autocompletedDescriptionRef.current = null
+    setCategorySuggestions([])
+    setIsSuggestingCategory(false)
+    categorySuggestionAbortRef.current?.abort()
+    lastCategorySuggestionKeyRef.current = null
     setDescription(t.description)
     setAmount(Math.abs(t.amount).toFixed(2))
     setDate(t.date)
@@ -1029,6 +1147,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   const resetFormFields = () => {
     setDescription('')
+    descriptionRef.current = ''
+    autocompletedDescriptionRef.current = null
     setAmount('')
     setLedgerCategory('Essentials')
     const now = new Date()
@@ -1043,6 +1163,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setShowAddForm(false)
     clearFormDraft()
     setErrors({})
+    setCategorySuggestions([])
+    setIsSuggestingCategory(false)
+    categorySuggestionAbortRef.current?.abort()
+    lastCategorySuggestionKeyRef.current = null
     setScanError(null)
     setShowScanBanner(false)
     if (activeReceiptScanJobId) {
@@ -1056,6 +1180,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const handleCloseForm = () => {
     const scanJobToClear = activeReceiptScanJobId
     setDescription('')
+    descriptionRef.current = ''
+    autocompletedDescriptionRef.current = null
     setAmount('')
     setLedgerCategory('Essentials')
     setTxType('outflow')
@@ -1070,6 +1196,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setShowAddForm(false)
     clearFormDraft()
     setErrors({})
+    setCategorySuggestions([])
+    setIsSuggestingCategory(false)
+    categorySuggestionAbortRef.current?.abort()
+    lastCategorySuggestionKeyRef.current = null
     setScanError(null)
     setShowScanBanner(false)
     if (scanJobToClear) {
@@ -1653,6 +1783,12 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               } else {
                 // Opening the form fresh -- reset to defaults
                 setDescription('')
+                descriptionRef.current = ''
+                autocompletedDescriptionRef.current = null
+                setCategorySuggestions([])
+                setIsSuggestingCategory(false)
+                categorySuggestionAbortRef.current?.abort()
+                lastCategorySuggestionKeyRef.current = null
                 setAmount('')
                 setTxType('outflow')
                 setLedgerCategory('Essentials')
@@ -1913,9 +2049,18 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 type="text"
                 placeholder="e.g. Grocery Store, Paycheck"
                 value={description}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                onBlur={handleDescriptionBlur}
                 onChange={e => {
-                  setDescription(e.target.value)
+                  const nextDescription = e.target.value
+                  descriptionRef.current = nextDescription
+                  setDescription(nextDescription)
+                  if (autocompletedDescriptionRef.current && autocompletedDescriptionRef.current !== nextDescription.trim()) {
+                    autocompletedDescriptionRef.current = null
+                  }
+                  setCategorySuggestions([])
+                  setIsSuggestingCategory(false)
+                  categorySuggestionAbortRef.current?.abort()
+                  lastCategorySuggestionKeyRef.current = null
                   setShowSuggestions(true)
                   setSelectedSuggestionIndex(-1)
                   if (errors.description) {
@@ -1958,6 +2103,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                         key={s.description}
                         data-suggestion
                         type="button"
+                        onMouseDown={() => {
+                          autocompletedDescriptionRef.current = s.description.trim()
+                        }}
                         onClick={() => handleSelectSuggestion(s)}
                         className={`w-full text-left px-3.5 py-2 text-sm flex items-center justify-between gap-2 cursor-pointer transition duration-100 first:rounded-t-xl last:rounded-b-xl ${
                           idx === selectedSuggestionIndex
@@ -1983,6 +2131,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     <button
                       key={s.description}
                       type="button"
+                      onMouseDown={() => {
+                        autocompletedDescriptionRef.current = s.description.trim()
+                      }}
                       onClick={() => handleSelectSuggestion(s)}
                       className="shrink-0 rounded-full border border-border bg-muted/30 px-2.5 py-1 text-[10px] font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer"
                     >
@@ -2060,11 +2211,18 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             ) : (
               <>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-muted-foreground">Category</label>
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-xs font-semibold text-muted-foreground">Category</label>
+                    {isSuggestingCategory && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-500">
+                        <Loader2 className="size-3 animate-spin" /> Suggesting
+                      </span>
+                    )}
+                  </div>
                   <SearchableSelect
                     value={category || (categories[0]?.name || '')}
                     onChange={val => setCategory(val)}
-                    options={categories.map(c => ({ value: c.name, label: c.name }))}
+                    options={categorySelectOptions}
                     className="w-full"
                     placeholder="Search category…"
                   />

@@ -431,6 +431,34 @@ export async function fetchAutocompleteSuggestions(signal?: AbortSignal): Promis
   return res.json()
 }
 
+export interface CategorySuggestion {
+  category: string
+  confidence: number
+}
+
+export async function suggestTransactionCategories(params: {
+  description: string
+  txType: 'inflow' | 'outflow'
+  categories: string[]
+}, signal?: AbortSignal): Promise<CategorySuggestion[]> {
+  const response = await fetch(`${API_BASE_URL}/categories/suggest`, {
+    method: 'POST',
+    headers: getHeaders({
+      'Content-Type': 'application/json',
+    }),
+    body: JSON.stringify(params),
+    signal,
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(err.message || 'Failed to suggest categories')
+  }
+
+  const data = await response.json() as { suggestions?: CategorySuggestion[] }
+  return data.suggestions || []
+}
+
 // A cycle whose calendar month is strictly before the current month is fully in the
 // past: its transactions can't change through normal use, so it's safe to cache far
 // longer than the live cycle. (Backdated edits to an old cycle still call
