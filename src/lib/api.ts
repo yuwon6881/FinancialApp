@@ -495,7 +495,7 @@ export async function chatWithAi(message: string, history: AiChatMessage[]): Pro
 
   const data = await response.json().catch(() => ({})) as Partial<AiChatResponse>
   if (!response.ok) {
-    return { reply: data.reply || 'AI is unavailable. Please try again.', actions: [], closeChat: false }
+    throw new Error(data.reply || 'AI is unavailable. Please try again.')
   }
   return { reply: data.reply || '', actions: data.actions || [], closeChat: data.closeChat === true }
 }

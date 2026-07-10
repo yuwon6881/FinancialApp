@@ -68,8 +68,10 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
           return
         }
       }
-    } catch {
-      setMessages([...nextMessages, { role: 'assistant', content: 'AI is unavailable. Please try again.' }])
+    } catch (err) {
+      console.warn('Ask AI request failed', err)
+      const content = err instanceof Error ? err.message : 'AI is unavailable. Please try again.'
+      setMessages([...nextMessages, { role: 'assistant', content }])
     } finally {
       setIsSending(false)
     }
