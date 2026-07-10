@@ -481,6 +481,7 @@ export interface AiUiAction {
 export interface AiChatResponse {
   reply: string
   actions: AiUiAction[]
+  closeChat: boolean
 }
 
 export async function chatWithAi(message: string, history: AiChatMessage[]): Promise<AiChatResponse> {
@@ -494,9 +495,9 @@ export async function chatWithAi(message: string, history: AiChatMessage[]): Pro
 
   const data = await response.json().catch(() => ({})) as Partial<AiChatResponse>
   if (!response.ok) {
-    return { reply: data.reply || 'AI is unavailable. Please try again.', actions: [] }
+    return { reply: data.reply || 'AI is unavailable. Please try again.', actions: [], closeChat: false }
   }
-  return { reply: data.reply || '', actions: data.actions || [] }
+  return { reply: data.reply || '', actions: data.actions || [], closeChat: data.closeChat === true }
 }
 
 // Transactions
