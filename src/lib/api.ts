@@ -478,13 +478,53 @@ export interface AiUiAction {
   payload: Record<string, unknown>
 }
 
+// Opaque structured conversation state round-tripped between turns. The client never reads
+// or trusts its contents (the server re-validates everything on the way back in); it only
+// stores the last response's state and echoes it on the next request so short follow-ups
+// ("those", "the previous cycle") resolve. Reset when the chat closes.
+export interface AiConversationState {
+  lastIntent?: string | null
+  lastSearchText?: string | null
+  lastCycleHint?: string | null
+  lastWishlistReference?: string | null
+  lastResolvedCycle?: string | null
+  lastMatchedTransactionIds?: string[] | null
+  lastWishlistItemId?: number | null
+  lastCategory?: string | null
+}
+
 export interface AiChatResponse {
   reply: string
   actions: AiUiAction[]
   closeChat: boolean
+  state?: AiConversationState | null
 }
 
-export async function chatWithAi(message: string, history: AiChatMessage[]): Promise<AiChatResponse> {
+function normalizeAiConversationState(value: unknown): AiConversationState | null {
+  if (!value || typeof value !== 'object') return null
+  const candidate = value as Record<string, unknown>
+  const text = (key: string, max = 80) => typeof candidate[key] === 'string' ? (candidate[key] as string).trim().slice(0, max) || null : null
+  const ids = Array.isArray(candidate.lastMatchedTransactionIds)
+    ? candidate.lastMatchedTransactionIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0).slice(0, 50)
+    : null
+  const itemId = typeof candidate.lastWishlistItemId === 'number' && Number.isInteger(candidate.lastWishlistItemId) && candidate.lastWishlistItemId > 0
+    ? candidate.lastWishlistItemId
+    : null
+  const state: AiConversationState = {}
+  for (const key of ['lastIntent', 'lastSearchText', 'lastCycleHint', 'lastWishlistReference', 'lastResolvedCycle', 'lastCategory'] as const) {
+    const value = text(key)
+    if (Object.prototype.hasOwnProperty.call(candidate, key)) state[key] = value
+  }
+  if (Object.prototype.hasOwnProperty.call(candidate, 'lastMatchedTransactionIds')) state.lastMatchedTransactionIds = ids
+  if (Object.prototype.hasOwnProperty.call(candidate, 'lastWishlistItemId')) state.lastWishlistItemId = itemId
+  return state
+}
+
+export async function chatWithAi(
+  message: string,
+  history: AiChatMessage[],
+  state?: AiConversationState | null,
+): Promise<AiChatResponse> {
   const response = await fetch(`${API_BASE_URL}/ai/chat`, {
     method: 'POST',
     headers: getHeaders({
@@ -492,14 +532,19 @@ export async function chatWithAi(message: string, history: AiChatMessage[]): Pro
     }),
     // Backend SanitizeHistory keeps only the last 6 turns; matching that here avoids sending
     // two messages that will just be discarded server-side.
-    body: JSON.stringify({ message, history: history.slice(-6) }),
+    body: JSON.stringify({ message, history: history.slice(-6), state: state ?? null }),
   })
 
   const data = await response.json().catch(() => ({})) as Partial<AiChatResponse>
   if (!response.ok) {
     throw new Error(data.reply || 'AI is unavailable. Please try again.')
   }
-  return { reply: data.reply || '', actions: data.actions || [], closeChat: data.closeChat === true }
+  return {
+    reply: data.reply || '',
+    actions: data.actions || [],
+    closeChat: data.closeChat === true,
+    state: normalizeAiConversationState(data.state),
+  }
 }
 
 // Transactions

@@ -41,6 +41,7 @@ import { useFormDraft } from '../lib/useFormDraft'
 import { useAutoOpenModal } from '../lib/useAutoOpenModal'
 import { useIsMobile } from '../lib/useIsMobile'
 import { getCycleRangeDates, getStartOfNCyclesAgo, formatDateForApi } from '../lib/cycle'
+import { calculateLedgerTotals } from '../lib/ledgerTotals'
 
 const transactionSortKey = (t: Transaction) => t.postedAt || `${t.date}T00:00:00.000Z`
 
@@ -1738,35 +1739,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     )
   }
 
-  const pageTotals = useMemo(() => {
-    let inflow = 0
-    let outflow = 0
-    displayTransactions.forEach(t => {
-      const isOutflow = t.amount < 0
-      const isIncomeRecord = t.ledgerCategory === 'Income' || (t.ledgerCategory || '').startsWith('IncomeSplit:')
-      const isSplitSub = t.id.includes('-split-')
-      const isTransfer = (t.ledgerCategory || '').startsWith('Transfer:')
-
-      // Outflow calculation
-      if (isIncomeRecord || isSplitSub) {
-        // Outflow is 0
-      } else if (isTransfer) {
-        outflow += t.amount
-      } else if (isOutflow) {
-        outflow += Math.abs(t.amount)
-      }
-
-      // Inflow calculation
-      if (isIncomeRecord || isSplitSub) {
-        inflow += t.amount
-      } else if (isTransfer) {
-        inflow += t.amount
-      } else if (!isOutflow) {
-        inflow += t.amount
-      }
-    })
-    return { inflow, outflow }
-  }, [displayTransactions])
+  const pageTotals = useMemo(() => calculateLedgerTotals(displayTransactions), [displayTransactions])
 
   // Stable handler identities for the memoized ledger rows. The refs keep the wrappers
   // stale-closure-safe (they always invoke the latest closure), so the rows get a

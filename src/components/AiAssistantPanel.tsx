@@ -17,10 +17,14 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
   const [input, setInput] = useState('')
   const [isSending, setIsSending] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  // Structured conversation state from the last reply, echoed on the next request. Kept in a
+  // ref (not state) so it never triggers a re-render and is always read fresh at send time.
+  const conversationStateRef = useRef<api.AiConversationState | null>(null)
 
   const resetChat = () => {
     setMessages([])
     setInput('')
+    conversationStateRef.current = null
   }
 
   useEffect(() => {
@@ -49,7 +53,8 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
     setIsSending(true)
 
     try {
-      const result = await api.chatWithAi(trimmed, messages)
+      const result = await api.chatWithAi(trimmed, messages, conversationStateRef.current)
+      conversationStateRef.current = result.state ?? null
       setMessages([...nextMessages, { role: 'assistant', content: result.reply || 'Done.' }])
       if (result.actions.length > 0) {
         const opensModalAction = result.actions.some(action =>
@@ -92,7 +97,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
       }
     >
       <div className="flex h-[55vh] sm:h-[480px] flex-col gap-3">
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto rounded-xl border border-border/60 bg-muted/10 p-3">
+        <div className={`min-h-0 flex-1 space-y-3 rounded-xl border border-border/60 bg-muted/10 p-3 ${messages.length > 0 ? 'overflow-y-auto' : 'overflow-y-hidden'}`}>
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center text-center text-xs text-muted-foreground">
               <div className="mb-3 grid size-11 place-items-center rounded-xl border border-border/60 bg-muted/40 shadow-xs">
@@ -118,10 +123,10 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
               </div>
             ))
           )}
-          <div ref={messagesEndRef} />
+          {messages.length > 0 && <div ref={messagesEndRef} />}
         </div>
 
-        <form onSubmit={sendMessage} className="flex items-end gap-2 rounded-xl border border-border bg-card p-1.5 focus-within:border-primary/50 transition-colors shadow-xs">
+        <form onSubmit={sendMessage} className="flex items-center gap-2 rounded-xl border border-border bg-card p-1.5 focus-within:border-primary/50 transition-colors shadow-xs">
           <textarea
             aria-label="Ask AI"
             value={input}
@@ -133,8 +138,8 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
               }
             }}
             placeholder=""
-            rows={2}
-            className="min-h-[44px] flex-1 resize-none rounded-xl border border-transparent bg-transparent px-3 py-2 text-sm outline-hidden focus:bg-background/40"
+            rows={1}
+            className="h-11 min-h-11 max-h-28 flex-1 resize-none rounded-xl border border-transparent bg-transparent px-3 py-2 text-sm outline-hidden focus:bg-background/40"
           />
           <button
             type="button"

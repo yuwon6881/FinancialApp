@@ -1,0 +1,172 @@
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import type { AiChatResponse, AiConversationState } from '../lib/api'
+
+// Mock the API module so no network happens and we can assert on call arguments.
+vi.mock('../lib/api', () => ({
+  chatWithAi: vi.fn(),
+}))
+
+// Mock BottomSheet to a transparent passthrough so we test the panel's own markup/logic
+// (scroll classes, send controls, state round-trip) without portals/animation.
+vi.mock('./ui/BottomSheet', () => ({
+  BottomSheet: ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) =>
+    isOpen ? <div data-testid="sheet">{children}</div> : null,
+}))
+
+import * as api from '../lib/api'
+import { AiAssistantPanel } from './AiAssistantPanel'
+
+const chatWithAi = api.chatWithAi as unknown as ReturnType<typeof vi.fn>
+
+const reply = (over: Partial<AiChatResponse> = {}): AiChatResponse => ({
+  reply: 'ok',
+  actions: [],
+  closeChat: false,
+  state: null,
+  ...over,
+})
+
+const typeAndSend = (text: string) => {
+  const textarea = screen.getByLabelText('Ask AI')
+  fireEvent.change(textarea, { target: { value: text } })
+  fireEvent.keyDown(textarea, { key: 'Enter' })
+}
+
+beforeAll(() => {
+  // jsdom does not implement scrollIntoView; the panel calls it on every message change.
+  Element.prototype.scrollIntoView = vi.fn()
+})
+
+afterEach(() => {
+  cleanup()
+  chatWithAi.mockReset()
+})
+
+describe('AiAssistantPanel', () => {
+  it('uses hidden overflow when empty and scrollable overflow once messages exist', async () => {
+    chatWithAi.mockResolvedValue(reply({ reply: 'Hello there' }))
+    const { container } = render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+
+    expect(container.querySelector('.overflow-y-hidden')).not.toBeNull()
+    expect(container.querySelector('.overflow-y-auto')).toBeNull()
+
+    typeAndSend('hi')
+    await waitFor(() => expect(container.querySelector('.overflow-y-auto')).not.toBeNull())
+    expect(container.querySelector('.overflow-y-hidden')).toBeNull()
+  })
+
+  it('disables the send button for empty input', () => {
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+    expect((screen.getByTitle('Send') as HTMLButtonElement).disabled).toBe(true)
+    fireEvent.change(screen.getByLabelText('Ask AI'), { target: { value: 'hello' } })
+    expect((screen.getByTitle('Send') as HTMLButtonElement).disabled).toBe(false)
+  })
+
+  it('sends on Enter but inserts a newline on Shift+Enter', () => {
+    chatWithAi.mockResolvedValue(reply())
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+    const textarea = screen.getByLabelText('Ask AI')
+
+    fireEvent.change(textarea, { target: { value: 'draft' } })
+    fireEvent.keyDown(textarea, { key: 'Enter', shiftKey: true })
+    expect(chatWithAi).not.toHaveBeenCalled()
+
+    fireEvent.keyDown(textarea, { key: 'Enter' })
+    expect(chatWithAi).toHaveBeenCalledTimes(1)
+  })
+
+  it('prevents duplicate sends while a request is in flight', async () => {
+    let resolve!: (r: AiChatResponse) => void
+    chatWithAi.mockReturnValue(new Promise<AiChatResponse>(r => { resolve = r }))
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+
+    typeAndSend('hi')
+    // While in flight the send button is disabled, so a second submit cannot fire.
+    expect((screen.getByTitle('Send') as HTMLButtonElement).disabled).toBe(true)
+    resolve(reply())
+    await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(1))
+  })
+
+  it('echoes the returned conversation state on the next request', async () => {
+    const state: AiConversationState = { lastIntent: 'ledger.spending_total', lastSearchText: 'coffee' }
+    chatWithAi
+      .mockResolvedValueOnce(reply({ reply: 'first', state }))
+      .mockResolvedValueOnce(reply({ reply: 'second' }))
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+
+    typeAndSend('how much did I spend')
+    await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(1))
+    expect(chatWithAi.mock.calls[0][2]).toBeNull()
+
+    typeAndSend('what about last cycle')
+    await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(2))
+    expect(chatWithAi.mock.calls[1][2]).toEqual(state)
+  })
+
+  it('resets conversation state when the chat is closed and reopened', async () => {
+    const state: AiConversationState = { lastIntent: 'ledger.spending_total' }
+    chatWithAi.mockResolvedValue(reply({ state }))
+    const onClose = vi.fn()
+    const { rerender } = render(<AiAssistantPanel isOpen onClose={onClose} onActions={vi.fn()} />)
+
+    typeAndSend('hi')
+    await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(1))
+
+    // Close then reopen -> state must be cleared, so the next send carries null again.
+    rerender(<AiAssistantPanel isOpen={false} onClose={onClose} onActions={vi.fn()} />)
+    rerender(<AiAssistantPanel isOpen onClose={onClose} onActions={vi.fn()} />)
+
+    typeAndSend('fresh question')
+    await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(2))
+    expect(chatWithAi.mock.calls[1][2]).toBeNull()
+  })
+
+  it('runs a navigation action without closing the chat', async () => {
+    chatWithAi.mockResolvedValue(reply({ actions: [{ type: 'openDashboard', payload: {} }], closeChat: false }))
+    const onClose = vi.fn()
+    const onActions = vi.fn()
+    render(<AiAssistantPanel isOpen onClose={onClose} onActions={onActions} />)
+
+    typeAndSend('open the dashboard')
+    await waitFor(() => expect(onActions).toHaveBeenCalledTimes(1))
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('closes after a navigation action explicitly requests closeChat', async () => {
+    chatWithAi.mockResolvedValue(reply({ actions: [{ type: 'openDashboard', payload: {} }], closeChat: true }))
+    const onClose = vi.fn()
+    render(<AiAssistantPanel isOpen onClose={onClose} onActions={vi.fn()} />)
+
+    typeAndSend('open dashboard and close')
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+  })
+
+  it('preserves the last valid state when a subsequent request fails', async () => {
+    const state: AiConversationState = { lastIntent: 'ledger.spending_total', lastSearchText: 'coffee' }
+    chatWithAi
+      .mockResolvedValueOnce(reply({ state }))
+      .mockRejectedValueOnce(new Error('provider unavailable'))
+      .mockResolvedValueOnce(reply())
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+
+    typeAndSend('first')
+    await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(1))
+    typeAndSend('failed follow up')
+    await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(2))
+    typeAndSend('retry')
+    await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(3))
+    expect(chatWithAi.mock.calls[2][2]).toEqual(state)
+  })
+
+  it('closes before executing an add/edit modal action', async () => {
+    chatWithAi.mockResolvedValue(reply({ actions: [{ type: 'openAddLedgerDraft', payload: {} }] }))
+    const onClose = vi.fn()
+    const onActions = vi.fn()
+    render(<AiAssistantPanel isOpen onClose={onClose} onActions={onActions} />)
+
+    typeAndSend('add a lunch transaction')
+    await waitFor(() => expect(onActions).toHaveBeenCalledTimes(1))
+    expect(onClose).toHaveBeenCalled()
+  })
+})

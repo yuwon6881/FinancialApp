@@ -72,3 +72,60 @@ describe('fetchDashboard request caching', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('chatWithAi state contract', () => {
+  it('sends conversation state in the request body and returns it from the response', async () => {
+    const state = { lastIntent: 'ledger.spending_total', lastSearchText: 'coffee' }
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(new Response(
+        JSON.stringify({ reply: 'ok', actions: [], closeChat: false, state }),
+        { status: 200 },
+      )))
+    vi.stubGlobal('fetch', fetchMock)
+    Object.defineProperty(window, 'fetch', { value: fetchMock, configurable: true })
+
+    const api = await import('./api')
+    const result = await api.chatWithAi('how much did I spend', [], state)
+
+    const body = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, { body: string }])[1].body)
+    expect(body.state).toEqual(state)
+    expect(result.state).toEqual(state)
+  })
+
+  it('sends null state when none is provided and tolerates a missing state field', async () => {
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(new Response(
+        JSON.stringify({ reply: 'ok', actions: [], closeChat: false }),
+        { status: 200 },
+      )))
+    vi.stubGlobal('fetch', fetchMock)
+    Object.defineProperty(window, 'fetch', { value: fetchMock, configurable: true })
+
+    const api = await import('./api')
+    const result = await api.chatWithAi('hello', [])
+
+    const body = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, { body: string }])[1].body)
+    expect(body.state).toBeNull()
+    expect(result.state).toBeNull()
+  })
+
+  it('normalizes malformed response state before returning it to the panel', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(new Response(
+      JSON.stringify({ reply: 'ok', actions: [], closeChat: false, state: {
+        lastSearchText: '  coffee  ',
+        lastMatchedTransactionIds: ['a', 42, '', ...Array.from({ length: 60 }, (_, i) => `id-${i}`)],
+        lastWishlistItemId: -4,
+      } }),
+      { status: 200 },
+    )))
+    vi.stubGlobal('fetch', fetchMock)
+    Object.defineProperty(window, 'fetch', { value: fetchMock, configurable: true })
+
+    const api = await import('./api')
+    const result = await api.chatWithAi('follow up', [])
+
+    expect(result.state?.lastSearchText).toBe('coffee')
+    expect(result.state?.lastMatchedTransactionIds).toHaveLength(50)
+    expect(result.state?.lastWishlistItemId).toBeNull()
+  })
+})
