@@ -371,6 +371,8 @@ interface LedgerViewProps {
   failedScanJob?: { jobId: string; errorMessage: string } | null
   aiDraft?: { nonce: number; fields: Record<string, unknown> } | null
   aiEditDraft?: { nonce: number; id: string; changes: Record<string, unknown> } | null
+  onAiDraftConsumed?: () => void
+  onAiEditDraftConsumed?: () => void
 }
 
 export const LedgerView: React.FC<LedgerViewProps> = ({
@@ -419,7 +421,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   activeScanJobIds = [],
   failedScanJob = null,
   aiDraft = null,
-  aiEditDraft = null
+  aiEditDraft = null,
+  onAiDraftConsumed,
+  onAiEditDraftConsumed
 }) => {
   const isMobile = useIsMobile(768)
   const [showAddForm, setShowAddForm] = useState(false)
@@ -991,14 +995,19 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setDate(getTodayDateString())
     applyAiLedgerFields(aiDraft.fields)
     openTransactionForm()
+    onAiDraftConsumed?.()
   }, [aiDraft?.nonce])
 
   useEffect(() => {
     if (!aiEditDraft) return
     const target = transactions.find(t => String(t.id) === String(aiEditDraft.id))
-    if (!target) return
+    if (!target) {
+      onAiEditDraftConsumed?.()
+      return
+    }
     handleStartEdit(target)
     applyAiLedgerFields(aiEditDraft.changes)
+    onAiEditDraftConsumed?.()
   }, [aiEditDraft?.nonce])
 
   // Reset Ledger Category defaults on transaction type changes. In add mode,
@@ -2481,23 +2490,23 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         {showAllCycles ? (
           /* Server mode: input pill + Search button fused into one focus-aware
              control so the two read as a single element rather than two boxes. */
-          <div className="group flex min-w-0 flex-1 items-stretch md:w-auto overflow-hidden rounded-xl border border-border/70 bg-background shadow-sm transition duration-200 focus-within:border-blue-500/50 focus-within:ring-2 focus-within:ring-blue-500/25 hover:border-border">
+          <div className="group flex min-w-0 flex-1 items-stretch md:w-auto overflow-hidden rounded-xl border border-border bg-card shadow-sm transition duration-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/25 hover:border-blue-500/50">
             <div className="flex min-w-0 flex-1 items-center md:w-80">
-              <Search className="ml-3 size-4 shrink-0 text-muted-foreground transition-colors group-focus-within:text-blue-500" />
+              <Search className="ml-3 size-4 shrink-0 text-foreground transition-colors group-focus-within:text-blue-500" />
               <input
                 type="text"
                 placeholder="Search all transactions..."
                 value={pendingSearchTerm}
                 onChange={e => setPendingSearchTerm(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') handleServerSearch() }}
-                className="min-w-0 flex-1 bg-transparent px-2.5 py-2.5 text-xs outline-none placeholder:text-muted-foreground"
+                className="min-w-0 flex-1 bg-transparent px-2.5 py-2.5 text-xs text-foreground outline-none placeholder:text-foreground/60"
               />
               {pendingSearchTerm && (
                 <button
                   type="button"
                   onClick={() => setPendingSearchTerm('')}
                   aria-label="Clear search"
-                  className="mr-1 flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer"
+                  className="mr-1 flex size-6 shrink-0 items-center justify-center rounded-md text-foreground hover:bg-muted transition cursor-pointer"
                 >
                   <X className="size-3.5" />
                 </button>

@@ -54,6 +54,8 @@ interface RecurringPaymentsViewProps {
   deletingId?: string | null
   aiDraft?: { nonce: number; fields: Record<string, unknown> } | null
   aiEditDraft?: { nonce: number; id: string; changes: Record<string, unknown> } | null
+  onAiDraftConsumed?: () => void
+  onAiEditDraftConsumed?: () => void
 }
 
 export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
@@ -76,7 +78,9 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   activeSyncId = null,
   deletingId = null,
   aiDraft = null,
-  aiEditDraft = null
+  aiEditDraft = null,
+  onAiDraftConsumed,
+  onAiEditDraftConsumed
 }) => {
   const isMobile = useIsMobile(640)
   const { isSyncing: isPaymentSyncing, isDeleting: isPaymentDeleting } = useSyncStatus(payments, activeSyncId, deletingId)
@@ -136,12 +140,20 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     setEndDateInput('')
     applyAiRecurringFields(aiDraft.fields)
     setShowAddForm(true)
+    onAiDraftConsumed?.()
   }, [aiDraft?.nonce])
 
   React.useEffect(() => {
-    if (!aiEditDraft || hideSensitive) return
+    if (!aiEditDraft) return
+    if (hideSensitive) {
+      onAiEditDraftConsumed?.()
+      return
+    }
     const payment = payments.find(p => String(p.id) === String(aiEditDraft.id))
-    if (!payment) return
+    if (!payment) {
+      onAiEditDraftConsumed?.()
+      return
+    }
     setName(payment.name)
     setAmount(Math.abs(payment.amount).toFixed(2))
     setCategory(payment.category)
@@ -151,6 +163,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     setEditingPayment(payment)
     applyAiRecurringFields(aiEditDraft.changes)
     setShowAddForm(true)
+    onAiEditDraftConsumed?.()
   }, [aiEditDraft?.nonce])
 
   // Filter & Sorting state

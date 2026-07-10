@@ -44,6 +44,7 @@ import {
   prefetchFingerprintAssertOptions,
 } from './lib/fingerprintOptionsCache'
 import { initNativeUi, syncStatusBarTheme } from './lib/nativeUi'
+import { getCurrentCycleYearAndMonth, MONTH_NAMES } from './lib/cycle'
 
 const createLocalId = (prefix: string, separator = '_') => {
   return `${prefix}${separator}${Date.now()}${separator}${Math.random().toString(36).substring(2, 9)}`
@@ -161,6 +162,7 @@ function App() {
   const [recurringPayments, setRecurringPayments] = useState<RecurringPayment[]>(() => getCachedJSON(CACHE_KEYS.recurringPayments, []))
   const [categoriesList, setCategoriesList] = useState<TransactionCategory[]>(() => getCachedJSON(CACHE_KEYS.categories, []))
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(() => getCachedJSON(CACHE_KEYS.dashboardData, null))
+  const [currentCycleDashboardData, setCurrentCycleDashboardData] = useState<DashboardData | null>(null)
   // Always the real current cycle's wallet total (see fetchWalletBalance) -- deliberately NOT
   // derived from dashboardData/optimisticDashboardData, since those track whatever cycle the
   // Dashboard/Ledger has navigated to and the navbar wallet must not follow that navigation.
@@ -1858,6 +1860,47 @@ function App() {
     return data;
   }, [dashboardData, pendingOps, transactions, allTransactions]);
 
+  useEffect(() => {
+    if (!token || !dashboardData) return
+
+    const cycleDay = dashboardData.setting.cycleDay || 28
+    const { year, monthIndex } = getCurrentCycleYearAndMonth(cycleDay)
+    const month = MONTH_NAMES[monthIndex - 1]
+
+    if (dashboardData.setting.selectedMonth === month && dashboardData.setting.selectedYear === year) {
+      setCurrentCycleDashboardData(null)
+      return
+    }
+
+    const ac = new AbortController()
+    Promise.all([
+      api.fetchDashboard(month, year, ac.signal),
+      api.fetchDashboardInsights(month, year, ac.signal)
+    ]).then(([core, insights]) => {
+      const merged: DashboardData = {
+        ...core,
+        last3CategoryBreakdown: insights.last3CategoryBreakdown,
+        last6CategoryBreakdown: insights.last6CategoryBreakdown,
+        yearlyCategoryBreakdown: insights.yearlyCategoryBreakdown,
+        availableYears: insights.availableYears,
+        stats: {
+          ...core.stats,
+          pastThreeMonthsRewardsAverage: insights.pastThreeMonthsRewardsAverage,
+          hasRewardsHistory: insights.hasRewardsHistory
+        }
+      }
+      setCurrentCycleDashboardData(merged)
+    }).catch(err => {
+      if (getErrorName(err) !== 'AbortError') {
+        console.warn('Could not load current-cycle wishlist metrics', err)
+      }
+    })
+
+    return () => ac.abort()
+  }, [token, dashboardData])
+
+  const wishlistDashboardData = currentCycleDashboardData || optimisticDashboardData
+
   const formatSensitive = (val: number) => {
     const formatted = formatCurrencyVal(val, optimisticDashboardData?.setting?.currency || 'USD')
     return (
@@ -1996,6 +2039,10 @@ function App() {
         setAiWishlistDraft({ nonce: Date.now(), fields: payload })
         setActiveTab('wishlist')
       } else if (action.type === 'openEditLedgerDraft') {
+        if (hideSensitive) {
+          showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning')
+          continue
+        }
         const id = getPayloadString(payload, 'id')
         const changes = payload.changes && typeof payload.changes === 'object' ? payload.changes as Record<string, unknown> : {}
         if (id) {
@@ -2003,6 +2050,10 @@ function App() {
           setActiveTab('ledger')
         }
       } else if (action.type === 'openEditRecurringDraft') {
+        if (hideSensitive) {
+          showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning')
+          continue
+        }
         const id = getPayloadString(payload, 'id')
         const changes = payload.changes && typeof payload.changes === 'object' ? payload.changes as Record<string, unknown> : {}
         if (id) {
@@ -2010,6 +2061,10 @@ function App() {
           setActiveTab('recurring')
         }
       } else if (action.type === 'openEditWishlistDraft') {
+        if (hideSensitive) {
+          showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning')
+          continue
+        }
         const id = getPayloadNumber(payload, 'id')
         const changes = payload.changes && typeof payload.changes === 'object' ? payload.changes as Record<string, unknown> : {}
         if (id != null) {
@@ -2232,6 +2287,8 @@ function App() {
             deletingId={deletingTxId}
             aiDraft={aiRecurringDraft}
             aiEditDraft={aiRecurringEditDraft}
+            onAiDraftConsumed={() => setAiRecurringDraft(null)}
+            onAiEditDraftConsumed={() => setAiRecurringEditDraft(null)}
           />
         )}
 
@@ -2289,16 +2346,18 @@ function App() {
             failedScanJob={failedScanJob}
             aiDraft={aiLedgerDraft}
             aiEditDraft={aiLedgerEditDraft}
+            onAiDraftConsumed={() => setAiLedgerDraft(null)}
+            onAiEditDraftConsumed={() => setAiLedgerEditDraft(null)}
           />
         )}
 
         {activeTab === 'wishlist' && (
           <WishlistView 
             wishlist={allWishlist}
-            rewardsBalance={optimisticDashboardData?.categories?.find(c => c.name === 'Rewards')?.remaining ?? 0}
-            rewardsTarget={optimisticDashboardData?.categories?.find(c => c.name === 'Rewards')?.target ?? 400}
-            pastThreeMonthsRewardsAverage={optimisticDashboardData?.stats?.pastThreeMonthsRewardsAverage ?? 0}
-            hasRewardsHistory={optimisticDashboardData?.stats?.hasRewardsHistory ?? false}
+            rewardsBalance={wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')?.remaining ?? 0}
+            rewardsTarget={wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')?.target ?? 400}
+            pastThreeMonthsRewardsAverage={wishlistDashboardData?.stats?.pastThreeMonthsRewardsAverage ?? 0}
+            hasRewardsHistory={wishlistDashboardData?.stats?.hasRewardsHistory ?? false}
             currency={optimisticDashboardData?.setting?.currency || 'USD'}
             hideSensitive={hideSensitive}
             onAddItem={handleAddWishlistItem}
@@ -2315,6 +2374,8 @@ function App() {
             onStartEditPending={setEditingPendingId}
             aiDraft={aiWishlistDraft}
             aiEditDraft={aiWishlistEditDraft}
+            onAiDraftConsumed={() => setAiWishlistDraft(null)}
+            onAiEditDraftConsumed={() => setAiWishlistEditDraft(null)}
           />
         )}
 

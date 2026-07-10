@@ -57,6 +57,8 @@ interface WishlistViewProps {
   onStartEditPending?: (id: string | null) => void
   aiDraft?: { nonce: number; fields: Record<string, unknown> } | null
   aiEditDraft?: { nonce: number; id: number; changes: Record<string, unknown> } | null
+  onAiDraftConsumed?: () => void
+  onAiEditDraftConsumed?: () => void
 }
 
 export const WishlistView: React.FC<WishlistViewProps> = ({
@@ -80,7 +82,9 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   isSwitchingCycle = false,
   onStartEditPending,
   aiDraft = null,
-  aiEditDraft = null
+  aiEditDraft = null,
+  onAiDraftConsumed,
+  onAiEditDraftConsumed
 }) => {
   const { isSyncing: isItemSyncing, isDeleting: isItemDeleting } = useSyncStatus(wishlist, activeSyncId, deletingId)
 
@@ -132,12 +136,20 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     setIsActiveInput(wishlist.filter(w => !w.isPurchased).length === 0)
     applyAiWishlistFields(aiDraft.fields)
     setShowAddModal(true)
+    onAiDraftConsumed?.()
   }, [aiDraft?.nonce])
 
   useEffect(() => {
-    if (!aiEditDraft || hideSensitive) return
+    if (!aiEditDraft) return
+    if (hideSensitive) {
+      onAiEditDraftConsumed?.()
+      return
+    }
     const item = wishlist.find(w => Number(w.id) === Number(aiEditDraft.id))
-    if (!item) return
+    if (!item) {
+      onAiEditDraftConsumed?.()
+      return
+    }
     setEditingItem(item)
     setNameInput(item.name)
     setPriceInput(item.price.toFixed(2))
@@ -146,6 +158,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     applyAiWishlistFields(aiEditDraft.changes)
     onStartEditPending?.(String(item.id))
     setShowEditModal(true)
+    onAiEditDraftConsumed?.()
   }, [aiEditDraft?.nonce])
 
   // Keep in-progress modal fields across an interrupted session (see
