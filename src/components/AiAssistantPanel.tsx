@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Loader2, Send, Sparkles, X } from 'lucide-react'
 import { BottomSheet } from './ui/BottomSheet'
 import * as api from '../lib/api'
@@ -16,6 +16,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const resetChat = () => {
     setMessages([])
@@ -25,6 +26,12 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
   useEffect(() => {
     resetChat()
   }, [isOpen])
+
+  useEffect(() => {
+    if (isOpen) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages, isOpen])
 
   const handleClose = () => {
     resetChat()
@@ -77,17 +84,17 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
       maxWidthClassName="max-w-2xl"
       title={
         <span className="flex items-center gap-2">
-          <Sparkles className="size-4 text-blue-500" />
+          <Sparkles className="size-4 text-primary" />
           ASK AI
         </span>
       }
     >
-      <div className="flex h-[min(68vh,560px)] flex-col gap-3">
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto rounded-2xl border border-blue-500/20 bg-linear-to-b from-blue-500/[0.06] via-background to-background p-3 shadow-inner">
+      <div className="flex h-[55vh] sm:h-[480px] flex-col gap-3">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto rounded-xl border border-border/60 bg-muted/10 p-3">
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center text-center text-xs text-muted-foreground">
-              <div className="mb-3 grid size-11 place-items-center rounded-xl border border-blue-500/25 bg-blue-500/10 shadow-sm">
-                <Sparkles className="size-5 text-blue-500" />
+              <div className="mb-3 grid size-11 place-items-center rounded-xl border border-border/60 bg-muted/40 shadow-xs">
+                <Sparkles className="size-5 text-muted-foreground" />
               </div>
               <p className="font-medium text-foreground">Ready.</p>
             </div>
@@ -100,8 +107,8 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
                 <div
                   className={`max-w-[85%] whitespace-pre-wrap rounded-xl px-3 py-2 text-xs leading-relaxed ${
                     message.role === 'user'
-                      ? 'bg-linear-to-r from-blue-600 to-sky-500 text-white shadow-sm'
-                      : 'border border-blue-500/15 bg-card/95 text-foreground shadow-sm'
+                      ? 'bg-primary text-primary-foreground shadow-xs'
+                      : 'border border-border/50 bg-card text-foreground shadow-xs'
                   }`}
                 >
                   {message.content}
@@ -109,9 +116,10 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
               </div>
             ))
           )}
+          <div ref={messagesEndRef} />
         </div>
 
-        <form onSubmit={sendMessage} className="flex items-end gap-2 rounded-2xl border border-blue-500/20 bg-card/95 p-1.5 shadow-sm">
+        <form onSubmit={sendMessage} className="flex items-end gap-2 rounded-xl border border-border bg-card p-1.5 focus-within:border-primary/50 transition-colors shadow-xs">
           <textarea
             aria-label="Ask AI"
             value={input}
@@ -124,7 +132,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
             }}
             placeholder=""
             rows={2}
-            className="min-h-[44px] flex-1 resize-none rounded-xl border border-transparent bg-transparent px-3 py-2 text-sm outline-hidden focus:bg-background/80"
+            className="min-h-[44px] flex-1 resize-none rounded-xl border border-transparent bg-transparent px-3 py-2 text-sm outline-hidden focus:bg-background/40"
           />
           <button
             type="button"
@@ -137,7 +145,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
           <button
             type="submit"
             disabled={!input.trim() || isSending}
-            className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-linear-to-r from-blue-600 to-sky-500 text-white shadow-sm transition hover:brightness-105 disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer"
+            className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs transition hover:bg-primary/95 disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer"
             title="Send"
           >
             {isSending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
