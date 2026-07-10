@@ -1738,6 +1738,36 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     )
   }
 
+  const pageTotals = useMemo(() => {
+    let inflow = 0
+    let outflow = 0
+    displayTransactions.forEach(t => {
+      const isOutflow = t.amount < 0
+      const isIncomeRecord = t.ledgerCategory === 'Income' || (t.ledgerCategory || '').startsWith('IncomeSplit:')
+      const isSplitSub = t.id.includes('-split-')
+      const isTransfer = (t.ledgerCategory || '').startsWith('Transfer:')
+
+      // Outflow calculation
+      if (isIncomeRecord || isSplitSub) {
+        // Outflow is 0
+      } else if (isTransfer) {
+        outflow += t.amount
+      } else if (isOutflow) {
+        outflow += Math.abs(t.amount)
+      }
+
+      // Inflow calculation
+      if (isIncomeRecord || isSplitSub) {
+        inflow += t.amount
+      } else if (isTransfer) {
+        inflow += t.amount
+      } else if (!isOutflow) {
+        inflow += t.amount
+      }
+    })
+    return { inflow, outflow }
+  }, [displayTransactions])
+
   // Stable handler identities for the memoized ledger rows. The refs keep the wrappers
   // stale-closure-safe (they always invoke the latest closure), so the rows get a
   // constant function reference across renders and React.memo can skip re-rendering
@@ -2806,6 +2836,20 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   onSplitEditBlocked={onSplitEditBlockedStable}
                 />
               ))}
+              {displayTransactions.length > 0 && (
+                <tr className="bg-muted/15 font-bold border-t border-border/85 text-xs select-none">
+                  <td className="p-4 text-muted-foreground" colSpan={4}>
+                    Page Total ({displayTransactions.length} items)
+                  </td>
+                  <td className="p-4 text-right text-orange-500 font-bold">
+                    {formatSensitive(pageTotals.outflow)}
+                  </td>
+                  <td className="p-4 text-right text-emerald-500 font-bold">
+                    {formatSensitive(pageTotals.inflow)}
+                  </td>
+                  <td className="p-4"></td>
+                </tr>
+              )}
               </AnimatePresence>
 
               {displayTransactions.length === 0 && (
@@ -2842,6 +2886,26 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             onSplitEditBlocked={onSplitEditBlockedStable}
           />
         ))}
+        {displayTransactions.length > 0 && (
+          <div className="flex flex-col gap-2.5 p-4 bg-card border border-border/60 rounded-xl text-xs shadow-xs select-none">
+            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Page Total Summary</div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground font-semibold">Total Outflow (Debit)</span>
+              <span className="text-orange-500 font-bold text-sm">{formatSensitive(pageTotals.outflow)}</span>
+            </div>
+            <div className="flex justify-between items-center border-t border-border/30 pt-2.5">
+              <span className="text-muted-foreground font-semibold">Total Inflow (Credit)</span>
+              <span className="text-emerald-500 font-bold text-sm">{formatSensitive(pageTotals.inflow)}</span>
+            </div>
+            <div className="flex justify-between items-center border-t border-border/50 pt-2.5 font-bold">
+              <span className="text-foreground">Net Position</span>
+              <span className={`${pageTotals.inflow - pageTotals.outflow >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
+                {pageTotals.inflow - pageTotals.outflow >= 0 ? '+' : '-'}
+                {formatSensitive(Math.abs(pageTotals.inflow - pageTotals.outflow))}
+              </span>
+            </div>
+          </div>
+        )}
         </AnimatePresence>
 
         {displayTransactions.length === 0 && (
@@ -2887,6 +2951,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     { value: 100, label: '100' }
                   ]}
                   className="w-24"
+                  direction="up"
                 />
               </div>
 

@@ -12,6 +12,7 @@ interface CustomSelectProps<T extends string | number = string | number> {
   options: SelectOption<T>[]
   className?: string
   align?: 'left' | 'right'
+  direction?: 'up' | 'down'
 }
 
 export function CustomSelect<T extends string | number>({ 
@@ -19,7 +20,8 @@ export function CustomSelect<T extends string | number>({
   onChange, 
   options, 
   className = '',
-  align = 'left'
+  align = 'left',
+  direction = 'down'
 }: CustomSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -48,7 +50,7 @@ export function CustomSelect<T extends string | number>({
       </button>
 
       {isOpen && (
-        <div className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-1.5 min-w-[180px] w-max max-w-[calc(100vw-32px)] sm:max-w-[280px] bg-card dark:bg-slate-900 border border-border rounded-xl shadow-xl p-1 z-[120] max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-100 flex flex-col gap-0.5`}>
+        <div className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} ${direction === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'} min-w-[180px] w-max max-w-[calc(100vw-32px)] sm:max-w-[280px] bg-card dark:bg-slate-900 border border-border rounded-xl shadow-xl p-1 z-[120] max-h-60 overflow-y-auto animate-in fade-in ${direction === 'up' ? 'slide-in-from-bottom-1' : 'slide-in-from-top-1'} duration-100 flex flex-col gap-0.5`}>
           {options.map((opt) => (
             <button
               key={opt.value}
