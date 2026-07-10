@@ -79,7 +79,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onAddBalanceAdjustment,
   isSwitchingCycle = false
 }) => {
-  const [isHoveringLiquidNetWorth, setIsHoveringLiquidNetWorth] = useState(false)
+  const isHoveringLiquidNetWorth = false
   const [notiToDelete, setNotiToDelete] = useState<PendingNotification | null>(null)
 
   // Active wishlist item for dashboard progress display
@@ -370,18 +370,47 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </p>
             </div>
           </div>
-          <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2.5 lg:max-w-2xl">
-            <div className="min-w-0 rounded-xl border border-blue-500/15 bg-background/60 px-3 py-2.5 shadow-sm sm:px-3.5 lg:px-4 lg:py-3">
-              <span className="block text-[10px] font-bold uppercase text-blue-500">Inflow</span>
-              <span className="mt-1 block truncate text-sm font-extrabold text-foreground sm:text-base">{formatSensitive(stats.monthlyInflow)}</span>
+          <div className="mt-4 flex flex-col gap-3 lg:max-w-2xl">
+            <div className="flex flex-col gap-3 rounded-xl border border-blue-500/15 bg-background/55 px-3.5 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase text-blue-500">Wallet Balance</span>
+                  <span className="rounded-md border border-border/50 bg-card/70 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                    Essentials + Stability + Rewards
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Growth savings are excluded from this spendable balance.
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center justify-between gap-2 sm:justify-end">
+                <div className="text-left sm:text-right">
+                  <div className="text-xl font-black text-foreground">
+                    {areBalanceAmountsMasked ? (
+                      <span className="font-mono tracking-wide">{SENSITIVE_AMOUNT_MASK}</span>
+                    ) : (
+                      <AnimatedNumber value={walletBalance} formatFn={formatCurrency} />
+                    )}
+                  </div>
+                  <p className="mt-0.5 text-[10px] font-semibold text-muted-foreground">
+                    {hideSensitive ? 'Sensitive mode active' : hideBalanceAmounts ? 'Hidden on this device' : 'Visible'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={onToggleBalanceAmounts}
+                  className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-card/80 text-muted-foreground transition hover:border-blue-500/35 hover:bg-blue-500/10 hover:text-blue-500 cursor-pointer"
+                  title={hideBalanceAmounts ? 'Show wallet and carryover balances' : 'Hide wallet and carryover balances'}
+                  aria-label={hideBalanceAmounts ? 'Show wallet and carryover balances' : 'Hide wallet and carryover balances'}
+                >
+                  {hideBalanceAmounts ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+                </button>
+              </div>
             </div>
-            <div className="min-w-0 rounded-xl border border-orange-500/15 bg-background/60 px-3 py-2.5 shadow-sm sm:px-3.5 lg:px-4 lg:py-3">
-              <span className="block text-[10px] font-bold uppercase text-orange-500">Outflow</span>
-              <span className="mt-1 block truncate text-sm font-extrabold text-foreground sm:text-base">{formatSensitive(stats.monthlyExpenses)}</span>
-            </div>
-            <div className="col-span-2 min-w-0 rounded-xl border border-teal-500/15 bg-background/60 px-3 py-2.5 shadow-sm sm:col-span-1 sm:px-3.5 lg:px-4 lg:py-3">
-              <span className="block text-[10px] font-bold uppercase text-teal-500">Cycle Start Date</span>
-              <span className="mt-1 block truncate text-sm font-extrabold text-foreground sm:text-base">{formatOrdinalDay(activeSettings.cycleDay)}</span>
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <Calendar className="size-3.5 text-teal-500" />
+              <span>Cycle starts on the</span>
+              <span className="font-bold text-foreground">{formatOrdinalDay(activeSettings.cycleDay)}</span>
             </div>
           </div>
         </div>
@@ -410,51 +439,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             align="right"
           />
         </div>
-        </div>
-      </div>
-
-      <div className="app-panel overflow-hidden rounded-2xl border border-blue-500/15 bg-card/92">
-        <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5 bg-linear-to-r from-blue-500/8 via-transparent to-teal-500/8">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/10 text-blue-500">
-              <Wallet className="size-5" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-bold text-foreground">Wallet Balance</h3>
-                <span className="rounded-md border border-border/50 bg-background/60 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                  Current cycle
-                </span>
-              </div>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Includes Essentials, Stability, and Rewards balances. Growth savings are excluded.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between gap-3 sm:justify-end">
-            <div className="min-w-0 text-left sm:text-right">
-              <div className="truncate text-xl font-black text-foreground sm:text-2xl">
-                {areBalanceAmountsMasked ? (
-                  <span className="font-mono tracking-wide">{SENSITIVE_AMOUNT_MASK}</span>
-                ) : (
-                  <AnimatedNumber value={walletBalance} formatFn={formatCurrency} />
-                )}
-              </div>
-              <p className="mt-1 text-[10px] font-semibold text-muted-foreground">
-                {hideSensitive ? 'Sensitive mode active' : hideBalanceAmounts ? 'Balance hidden on this device' : 'Visible on this device'}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onToggleBalanceAmounts}
-              className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-background/80 text-muted-foreground transition hover:border-blue-500/35 hover:bg-blue-500/10 hover:text-blue-500 cursor-pointer"
-              title={hideBalanceAmounts ? 'Show wallet and carryover balances' : 'Hide wallet and carryover balances'}
-              aria-label={hideBalanceAmounts ? 'Show wallet and carryover balances' : 'Hide wallet and carryover balances'}
-            >
-              {hideBalanceAmounts ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
-            </button>
-          </div>
         </div>
       </div>
 
@@ -963,28 +947,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* Grid of Metric Cards */}
-      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${activeWishlistItem ? '4' : '3'} gap-4`}>
-        {/* Total Balance (Liquid Only) */}
-        <div 
-          onMouseEnter={() => setIsHoveringLiquidNetWorth(true)}
-          onMouseLeave={() => setIsHoveringLiquidNetWorth(false)}
-          className="metric-card interactive-card app-panel p-6 rounded-2xl bg-card/92 border border-border/60 hover:border-blue-500/30 transition-all duration-300 group"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-muted-foreground">Liquid Net Worth</span>
-            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform duration-300">
-              <Wallet className="size-4" />
-            </div>
-          </div>
-          <div className="text-2xl font-black text-foreground">
-            {hideSensitive ? SENSITIVE_AMOUNT_MASK : <AnimatedNumber value={stats.totalBalance} formatFn={formatCurrency} />}
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-1.5 flex items-start gap-1">
-            <AlertCircle className="size-3 text-blue-500 shrink-0 mt-0.5" />
-            <span>Growth (long-term savings) is excluded.</span>
-          </p>
-        </div>
-
+      <div className={`grid grid-cols-1 md:grid-cols-2 ${activeWishlistItem ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-4`}>
         {/* Inflow Card */}
         <div 
           onClick={() => onNavigateToLedger?.({ txType: 'inflow' })}
