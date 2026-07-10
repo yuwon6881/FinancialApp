@@ -1976,44 +1976,55 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       </Card>
 
       {/* Dashboard navigation filter banner */}
-      {(incomingCategory || incomingSearch || incomingDate || incomingTxType || showAllCycles) && (
+      {(() => {
+        // Derive the banner from the LIVE applied/selected filters, never from the incoming
+        // navigation props: those are only the initial intent and don't change when the user
+        // unticks a filter, which left a stale "filtered by Stability" hanging around. In
+        // all-cycles (server) mode the applied* state is authoritative; otherwise selected*.
+        const activeCategoryFilters = showAllCycles ? appliedFilters : selectedFilters
+        const activeTxType = showAllCycles ? appliedTxTypeFilter : selectedTxTypeFilter
+        const activeSearch = showAllCycles ? appliedSearch : searchTerm
+        const activeDate = selectedDateFilter
+        const hasAnyFilter = activeCategoryFilters.length > 0 || !!activeTxType || !!activeSearch || !!activeDate
+        if (!showAllCycles && !hasAnyFilter) return null
+
+        const parts: string[] = []
+        if (showAllCycles) {
+          if (cyclesRange === '3month') parts.push("last 3 cycles")
+          else if (cyclesRange === '6month') parts.push("last 6 cycles")
+          else if (cyclesRange === 'yearly') parts.push(`full year ${selectedYear}`)
+          else parts.push("all cycles")
+        } else {
+          parts.push("current cycle")
+        }
+
+        const filterDetails: string[] = []
+        for (const category of activeCategoryFilters) {
+          const isLedgerBucket = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income'].includes(category)
+          filterDetails.push(`${isLedgerBucket ? 'ledger category' : 'category'} "${category}"`)
+        }
+        if (activeDate) {
+          const d = new Date(activeDate)
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+          const formattedDate = isNaN(d.getTime()) ? activeDate : `${monthNames[d.getMonth()]} ${d.getDate()}${getSuffix(d.getDate())}, ${d.getFullYear()}`
+          filterDetails.push(`date ${formattedDate}`)
+        }
+        if (activeTxType) {
+          filterDetails.push(activeTxType === 'inflow' ? "inflows only" : "outflows only")
+        }
+        if (activeSearch) {
+          filterDetails.push(`search "${activeSearch}"`)
+        }
+
+        const label = filterDetails.length > 0
+          ? `Showing ${parts.join(', ')} — filtered by ${filterDetails.join(' and ')}`
+          : `Showing ${parts.join(', ')}`
+
+        return (
         <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-blue-500/8 border border-blue-500/20 text-xs animate-in fade-in duration-200">
           <div className="flex min-w-0 items-center gap-2 text-blue-500 font-medium leading-relaxed">
             <span className="size-1.5 rounded-full bg-blue-500 shrink-0 animate-pulse" />
-            {(() => {
-              const parts: string[] = []
-              if (showAllCycles) {
-                if (cyclesRange === '3month') parts.push("last 3 cycles")
-                else if (cyclesRange === '6month') parts.push("last 6 cycles")
-                else if (cyclesRange === 'yearly') parts.push(`full year ${selectedYear}`)
-                else parts.push("all cycles")
-              } else {
-                parts.push("current cycle")
-              }
-
-              const filterDetails: string[] = []
-              if (incomingCategory) {
-                const isLedgerBucket = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income'].includes(incomingCategory)
-                filterDetails.push(`${isLedgerBucket ? 'ledger category' : 'category'} "${incomingCategory}"`)
-              }
-              if (incomingDate) {
-                const d = new Date(incomingDate)
-                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-                const formattedDate = isNaN(d.getTime()) ? incomingDate : `${monthNames[d.getMonth()]} ${d.getDate()}${getSuffix(d.getDate())}, ${d.getFullYear()}`
-                filterDetails.push(`date ${formattedDate}`)
-              }
-              if (incomingTxType) {
-                filterDetails.push(incomingTxType === 'inflow' ? "inflows only" : "outflows only")
-              }
-              if (incomingSearch) {
-                filterDetails.push(`search "${incomingSearch}"`)
-              }
-
-              if (filterDetails.length > 0) {
-                return `Showing ${parts.join(', ')} — filtered by ${filterDetails.join(' and ')}`
-              }
-              return `Showing ${parts.join(', ')}`
-            })()}
+            {label}
           </div>
           <button
             onClick={() => {
@@ -2022,13 +2033,19 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               setSelectedFilters([])
               setSelectedDateFilter(null)
               setSelectedTxTypeFilter(null)
+              setSearchTerm('')
+              setPendingFilters([])
+              setAppliedFilters([])
+              setAppliedSearch('')
+              setAppliedTxTypeFilter(null)
             }}
             className="flex shrink-0 items-center gap-1 whitespace-nowrap text-blue-500/70 hover:text-blue-500 text-[10px] font-semibold transition cursor-pointer"
           >
             <X className="size-3" /> Clear filter
           </button>
         </div>
-      )}
+        )
+      })()}
 
       {/* Post Transaction Modal (bottom sheet on mobile) */}
       {showAddForm && (
@@ -2810,15 +2827,22 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 />
               ))}
               {displayTransactions.length > 0 && (
-                <tr className="bg-muted/15 font-bold border-t border-border/85 text-xs select-none">
-                  <td className="p-4 text-muted-foreground" colSpan={4}>
-                    Page Total ({displayTransactions.length} items)
+                <tr className="bg-muted/25 font-bold border-t-2 border-border text-xs select-none">
+                  <td className="p-4 uppercase tracking-wider text-foreground font-extrabold" colSpan={4}>
+                    Page Total <span className="text-muted-foreground font-bold normal-case tracking-normal">({displayTransactions.length} items)</span>
                   </td>
-                  <td className="p-4 text-right text-orange-500 font-bold">
-                    {formatSensitive(pageTotals.outflow)}
+                  {/* Wrapped in the same pill shape as the row values so the totals line up exactly
+                      under each column (plain text sat ~0.6rem further right than the pill text),
+                      with a ring + stronger fill to read clearly as the column total. */}
+                  <td className="p-4 text-right">
+                    <span className="inline-block px-2.5 py-1 rounded-lg bg-orange-500/15 ring-1 ring-inset ring-orange-500/40 text-orange-500 font-extrabold text-xs">
+                      {formatSensitive(pageTotals.outflow)}
+                    </span>
                   </td>
-                  <td className="p-4 text-right text-emerald-500 font-bold">
-                    {formatSensitive(pageTotals.inflow)}
+                  <td className="p-4 text-right">
+                    <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/15 ring-1 ring-inset ring-emerald-500/40 text-emerald-500 font-extrabold text-xs">
+                      {formatSensitive(pageTotals.inflow)}
+                    </span>
                   </td>
                   <td className="p-4"></td>
                 </tr>

@@ -12,6 +12,14 @@ interface AiAssistantPanelProps {
 type ChatMessage = api.AiChatMessage
 const nextFrame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
 
+// Example prompts surfaced in the empty state so newly-supported questions are discoverable.
+const SUGGESTED_PROMPTS = [
+  'Which transaction exceeded 250 this cycle?',
+  'How long until my Growth reaches 50000?',
+  'How much do my subscriptions cost me a month?',
+  'Compare my spending this cycle vs last cycle',
+]
+
 export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onClose, onActions }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -104,6 +112,18 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
                 <Sparkles className="size-5 text-muted-foreground" />
               </div>
               <p className="font-medium text-foreground">Ready.</p>
+              <div className="mt-4 flex max-w-md flex-wrap justify-center gap-2">
+                {SUGGESTED_PROMPTS.map(prompt => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    onClick={() => setInput(prompt)}
+                    className="rounded-full border border-border/60 bg-background px-3 py-1.5 text-[11px] text-muted-foreground transition hover:border-primary/50 hover:text-foreground cursor-pointer"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
             </div>
           ) : (
             messages.map((message, index) => (

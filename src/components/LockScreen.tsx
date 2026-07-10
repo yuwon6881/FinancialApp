@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Fingerprint } from 'lucide-react'
 import * as api from '../lib/api'
 import { AppLogo } from './ui/AppLogo'
@@ -74,8 +75,13 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
 
   if (!isOpen) return null
 
-  return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-background/95 backdrop-blur-md animate-in fade-in duration-300">
+  // Rendered through a portal to document.body so the lock overlay is a top-level
+  // stacking sibling of every other portal (bottom sheets, modals, the AI chat panel).
+  // Mounted inside App's tree its z-[300] was trapped in a nested stacking context and
+  // the sheet portals (z-[100]) painted over it; at body level the higher z-index wins,
+  // so the lock screen always covers any open modal without having to close it first.
+  return createPortal(
+    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-background/95 backdrop-blur-md animate-in fade-in duration-300">
       <div className="w-full max-w-sm flex flex-col items-center gap-6">
         <AppLogo className="size-16 rounded-2xl shadow-xl shadow-blue-500/20" />
         <div className="text-center">
@@ -143,7 +149,8 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
           Sign out instead
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
