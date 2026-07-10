@@ -45,7 +45,8 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
       setMessages([...nextMessages, { role: 'assistant', content: result.reply || 'Done.' }])
       if (result.actions.length > 0) {
         await onActions(result.actions)
-        if (result.closeChat) {
+        const hasEditAction = result.actions.some(action => action.type.startsWith('openEdit'))
+        if (result.closeChat && !hasEditAction) {
           handleClose()
           return
         }

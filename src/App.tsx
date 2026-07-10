@@ -2016,12 +2016,6 @@ function App() {
           setAiWishlistEditDraft({ nonce: Date.now(), id, changes })
           setActiveTab('wishlist')
         }
-      } else if (action.type === 'setRecurringActive') {
-        const id = getPayloadString(payload, 'id')
-        const target = allRecurringPayments.find(p => p.id === id)
-        if (id && target && target.active !== (payload.active === true)) {
-          handleToggleActive(id)
-        }
       }
     }
   }
