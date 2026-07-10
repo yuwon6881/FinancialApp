@@ -687,6 +687,18 @@ export function fetchTransactions(month?: string, year?: number, all?: boolean, 
   return promise
 }
 
+export async function fetchTransactionById(id: string, signal?: AbortSignal): Promise<Transaction> {
+  const response = await fetch(`${API_BASE_URL}/transactions/${encodeURIComponent(id)}`, {
+    headers: getHeaders(),
+    signal,
+  })
+  if (!response.ok) {
+    throw new Error('Failed to fetch transaction')
+  }
+  const data = await response.json() as WireTransaction
+  return deobfuscateTransaction(data)
+}
+
 export async function exportTransactionsCsv(params: {
   search?: string
   ledgerCategories?: string[]

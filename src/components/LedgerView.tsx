@@ -350,6 +350,7 @@ interface LedgerViewProps {
     startDate?: string
     endDate?: string
   }) => Promise<PagedTransactionResult>
+  onFetchTransactionById?: (id: string) => Promise<Transaction>
   onExportTransactions?: (params: {
     search?: string
     ledgerCategories?: string[]
@@ -408,6 +409,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   rewardsAlloc = 0.1,
   stabilityOverflowRedirect = 'Split: Growth 50%, Rewards 50%',
   onFetchPagedTransactions,
+  onFetchTransactionById,
   onExportTransactions,
   onShowAlert,
   activeSyncId = null,
@@ -1000,14 +1002,34 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   useEffect(() => {
     if (!aiEditDraft) return
-    const target = transactions.find(t => String(t.id) === String(aiEditDraft.id))
-    if (!target) {
+    let cancelled = false
+
+    const openAiEditDraft = async () => {
+      let target = transactions.find(t => String(t.id) === String(aiEditDraft.id))
+      if (!target && onFetchTransactionById) {
+        try {
+          target = await onFetchTransactionById(String(aiEditDraft.id))
+        } catch {
+          target = undefined
+        }
+      }
+
+      if (cancelled) return
+      if (!target) {
+        onShowAlert?.('Could not find the transaction AI selected.', 'AI Edit Failed')
+        onAiEditDraftConsumed?.()
+        return
+      }
+
+      handleStartEdit(target)
+      applyAiLedgerFields(aiEditDraft.changes)
       onAiEditDraftConsumed?.()
-      return
     }
-    handleStartEdit(target)
-    applyAiLedgerFields(aiEditDraft.changes)
-    onAiEditDraftConsumed?.()
+
+    void openAiEditDraft()
+    return () => {
+      cancelled = true
+    }
   }, [aiEditDraft?.nonce])
 
   // Reset Ledger Category defaults on transaction type changes. In add mode,

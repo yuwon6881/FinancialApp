@@ -2026,6 +2026,7 @@ function App() {
           category: getPayloadString(payload, 'category') || getPayloadString(payload, 'ledgerCategory'),
           txType: getPayloadString(payload, 'txType') === 'inflow' ? 'inflow' : getPayloadString(payload, 'txType') === 'outflow' ? 'outflow' : null,
           search: getPayloadString(payload, 'search'),
+          date: getPayloadString(payload, 'date'),
           showAllCycles: payload.allCycles === true,
           range: payload.allCycles === true ? 'monthly' : 'monthly'
         })
@@ -2333,6 +2334,7 @@ function App() {
             rewardsAlloc={optimisticDashboardData?.setting?.rewardsAlloc ?? 0.1}
             stabilityOverflowRedirect={optimisticDashboardData?.setting?.stabilityOverflowRedirect}
             onFetchPagedTransactions={api.fetchPagedTransactions}
+            onFetchTransactionById={api.fetchTransactionById}
             onExportTransactions={api.exportTransactionsCsv}
             onShowAlert={showAlert}
             activeSyncId={activeSyncId}
