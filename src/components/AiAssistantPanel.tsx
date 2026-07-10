@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Loader2, Send, Sparkles, X } from 'lucide-react'
 import { BottomSheet } from './ui/BottomSheet'
 import * as api from '../lib/api'
@@ -16,6 +16,20 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
   const [input, setInput] = useState('')
   const [isSending, setIsSending] = useState(false)
 
+  const resetChat = () => {
+    setMessages([])
+    setInput('')
+  }
+
+  useEffect(() => {
+    resetChat()
+  }, [isOpen])
+
+  const handleClose = () => {
+    resetChat()
+    onClose()
+  }
+
   const sendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault()
     const trimmed = input.trim()
@@ -31,6 +45,10 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
       setMessages([...nextMessages, { role: 'assistant', content: result.reply || 'Done.' }])
       if (result.actions.length > 0) {
         await onActions(result.actions)
+        if (!result.reply.includes('?')) {
+          handleClose()
+          return
+        }
       }
     } catch {
       setMessages([...nextMessages, { role: 'assistant', content: 'AI is unavailable. Please try again.' }])
@@ -44,7 +62,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
   return (
     <BottomSheet
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       maxWidthClassName="max-w-2xl"
       title={
         <span className="flex items-center gap-2">
@@ -96,7 +114,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
           />
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-muted-foreground hover:bg-muted cursor-pointer"
             title="Close"
           >
