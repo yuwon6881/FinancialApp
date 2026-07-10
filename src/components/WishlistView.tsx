@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { listContainerVariants, listItemVariants } from '../lib/animations'
 import type { WishlistItem } from '../types'
@@ -55,6 +55,8 @@ interface WishlistViewProps {
   // Signals to the parent's drain loop which item is being edited, so the
   // corresponding queued op isn't dispatched while the edit modal is open.
   onStartEditPending?: (id: string | null) => void
+  aiDraft?: { nonce: number; fields: Record<string, unknown> } | null
+  aiEditDraft?: { nonce: number; id: number; changes: Record<string, unknown> } | null
 }
 
 export const WishlistView: React.FC<WishlistViewProps> = ({
@@ -76,7 +78,9 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   activeSyncId = null,
   deletingId = null,
   isSwitchingCycle = false,
-  onStartEditPending
+  onStartEditPending,
+  aiDraft = null,
+  aiEditDraft = null
 }) => {
   const { isSyncing: isItemSyncing, isDeleting: isItemDeleting } = useSyncStatus(wishlist, activeSyncId, deletingId)
 
@@ -94,6 +98,55 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   };
   const [priorityInput, setPriorityInput] = useState('Medium')
   const [isActiveInput, setIsActiveInput] = useState(false)
+
+  const applyAiWishlistFields = (fields: Record<string, unknown>) => {
+    const getString = (key: string) => {
+      const value = fields[key]
+      return typeof value === 'string' && value.trim() ? value.trim() : null
+    }
+    const getNumber = (key: string) => {
+      const value = fields[key]
+      if (typeof value === 'number' && Number.isFinite(value)) return value
+      if (typeof value === 'string' && value.trim()) {
+        const parsed = Number(value)
+        return Number.isFinite(parsed) ? parsed : null
+      }
+      return null
+    }
+
+    const nextName = getString('name')
+    if (nextName !== null) setNameInput(nextName)
+    const nextPrice = getNumber('price')
+    if (nextPrice !== null) setPriceInput(Math.abs(nextPrice).toFixed(2))
+    const nextPriority = getString('priority')
+    if (nextPriority === 'High' || nextPriority === 'Medium' || nextPriority === 'Low') setPriorityInput(nextPriority)
+    if (typeof fields.isActive === 'boolean') setIsActiveInput(fields.isActive)
+  }
+
+  useEffect(() => {
+    if (!aiDraft) return
+    setEditingItem(null)
+    setNameInput('')
+    setPriceInput('')
+    setPriorityInput('Medium')
+    setIsActiveInput(wishlist.filter(w => !w.isPurchased).length === 0)
+    applyAiWishlistFields(aiDraft.fields)
+    setShowAddModal(true)
+  }, [aiDraft?.nonce])
+
+  useEffect(() => {
+    if (!aiEditDraft || hideSensitive) return
+    const item = wishlist.find(w => Number(w.id) === Number(aiEditDraft.id))
+    if (!item) return
+    setEditingItem(item)
+    setNameInput(item.name)
+    setPriceInput(item.price.toFixed(2))
+    setPriorityInput(item.priority)
+    setIsActiveInput(item.isActive)
+    applyAiWishlistFields(aiEditDraft.changes)
+    onStartEditPending?.(String(item.id))
+    setShowEditModal(true)
+  }, [aiEditDraft?.nonce])
 
   // Keep in-progress modal fields across an interrupted session (see
   // useFormDraft) -- reopens the right modal with what the user had typed.

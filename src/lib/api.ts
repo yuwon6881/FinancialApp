@@ -468,6 +468,37 @@ export async function selectPeriod(selectedMonth: string, selectedYear: number):
   queryCache.invalidateAll()
 }
 
+export interface AiChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+export interface AiUiAction {
+  type: string
+  payload: Record<string, unknown>
+}
+
+export interface AiChatResponse {
+  reply: string
+  actions: AiUiAction[]
+}
+
+export async function chatWithAi(message: string, history: AiChatMessage[]): Promise<AiChatResponse> {
+  const response = await fetch(`${API_BASE_URL}/ai/chat`, {
+    method: 'POST',
+    headers: getHeaders({
+      'Content-Type': 'application/json',
+    }),
+    body: JSON.stringify({ message, history: history.slice(-8) }),
+  })
+
+  const data = await response.json().catch(() => ({})) as Partial<AiChatResponse>
+  if (!response.ok) {
+    return { reply: data.reply || 'AI is unavailable. Please try again.', actions: [] }
+  }
+  return { reply: data.reply || '', actions: data.actions || [] }
+}
+
 // Transactions
 export async function fetchAutocompleteSuggestions(signal?: AbortSignal): Promise<import('../types').AutocompleteSuggestion[]> {
   const res = await fetch(`${API_BASE_URL}/transactions/autocomplete`, {

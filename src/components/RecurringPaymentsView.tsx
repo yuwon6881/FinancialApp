@@ -52,6 +52,8 @@ interface RecurringPaymentsViewProps {
   isSwitchingCycle?: boolean
   activeSyncId?: string | null
   deletingId?: string | null
+  aiDraft?: { nonce: number; fields: Record<string, unknown> } | null
+  aiEditDraft?: { nonce: number; id: string; changes: Record<string, unknown> } | null
 }
 
 export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
@@ -72,7 +74,9 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   onResetAutoOpen,
   isSwitchingCycle = false,
   activeSyncId = null,
-  deletingId = null
+  deletingId = null,
+  aiDraft = null,
+  aiEditDraft = null
 }) => {
   const isMobile = useIsMobile(640)
   const { isSyncing: isPaymentSyncing, isDeleting: isPaymentDeleting } = useSyncStatus(payments, activeSyncId, deletingId)
@@ -91,6 +95,63 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   const [endDateInput, setEndDateInput] = useState('')
 
   const firstInputRef = React.useRef<HTMLInputElement>(null)
+
+  const applyAiRecurringFields = React.useCallback((fields: Record<string, unknown>) => {
+    const getString = (key: string) => {
+      const value = fields[key]
+      return typeof value === 'string' && value.trim() ? value.trim() : null
+    }
+    const getNumber = (key: string) => {
+      const value = fields[key]
+      if (typeof value === 'number' && Number.isFinite(value)) return value
+      if (typeof value === 'string' && value.trim()) {
+        const parsed = Number(value)
+        return Number.isFinite(parsed) ? parsed : null
+      }
+      return null
+    }
+
+    const nextName = getString('name')
+    if (nextName !== null) setName(nextName)
+    const nextAmount = getNumber('amount')
+    if (nextAmount !== null) setAmount(Math.abs(nextAmount).toFixed(2))
+    const nextCategory = getString('category')
+    if (nextCategory !== null) setCategory(nextCategory)
+    const nextLedgerCategory = getString('ledgerCategory')
+    if (nextLedgerCategory && isRecurringLedgerCategory(nextLedgerCategory)) setLedgerCategory(nextLedgerCategory)
+    const nextStartDate = getString('startDate')
+    if (nextStartDate !== null) setStartDateInput(nextStartDate)
+    const nextEndDate = getString('endDate')
+    if (nextEndDate !== null) setEndDateInput(nextEndDate)
+  }, [])
+
+  React.useEffect(() => {
+    if (!aiDraft) return
+    setEditingPayment(null)
+    setName('')
+    setAmount('')
+    setCategory(categories.length > 0 ? categories[0].name : '')
+    setLedgerCategory('Essentials')
+    setStartDateInput('')
+    setEndDateInput('')
+    applyAiRecurringFields(aiDraft.fields)
+    setShowAddForm(true)
+  }, [aiDraft?.nonce])
+
+  React.useEffect(() => {
+    if (!aiEditDraft || hideSensitive) return
+    const payment = payments.find(p => String(p.id) === String(aiEditDraft.id))
+    if (!payment) return
+    setName(payment.name)
+    setAmount(Math.abs(payment.amount).toFixed(2))
+    setCategory(payment.category)
+    setLedgerCategory(isRecurringLedgerCategory(payment.ledgerCategory) ? payment.ledgerCategory : 'Essentials')
+    setStartDateInput(payment.startDate)
+    setEndDateInput(payment.endDate || '')
+    setEditingPayment(payment)
+    applyAiRecurringFields(aiEditDraft.changes)
+    setShowAddForm(true)
+  }, [aiEditDraft?.nonce])
 
   // Filter & Sorting state
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])

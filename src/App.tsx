@@ -33,6 +33,7 @@ import { PendingSubscriptionsModal } from './components/PendingSubscriptionsModa
 import { FailedSyncModal } from './components/FailedSyncModal'
 import { PasswordPromptModal } from './components/PasswordPromptModal'
 import { LockScreen } from './components/LockScreen'
+import { AiAssistantPanel } from './components/AiAssistantPanel'
 import { AppLogo } from './components/ui/AppLogo'
 import { errorMessageIncludes, errorMessageIncludesLower, getErrorMessage, getErrorName } from './lib/errors'
 import { triggerHaptic } from './lib/haptics'
@@ -205,6 +206,14 @@ function App() {
   const [autoOpenSubscriptionAdd, setAutoOpenSubscriptionAdd] = useState(false)
   const [autoOpenWishlistAdd, setAutoOpenWishlistAdd] = useState(false)
   const [highlightedTxId, setHighlightedTxId] = useState<string | null>(null)
+  const [isAiOpen, setIsAiOpen] = useState(false)
+  const [ledgerIncomingSearch, setLedgerIncomingSearch] = useState<string | null>(null)
+  const [aiLedgerDraft, setAiLedgerDraft] = useState<{ nonce: number; fields: Record<string, unknown> } | null>(null)
+  const [aiLedgerEditDraft, setAiLedgerEditDraft] = useState<{ nonce: number; id: string; changes: Record<string, unknown> } | null>(null)
+  const [aiRecurringDraft, setAiRecurringDraft] = useState<{ nonce: number; fields: Record<string, unknown> } | null>(null)
+  const [aiRecurringEditDraft, setAiRecurringEditDraft] = useState<{ nonce: number; id: string; changes: Record<string, unknown> } | null>(null)
+  const [aiWishlistDraft, setAiWishlistDraft] = useState<{ nonce: number; fields: Record<string, unknown> } | null>(null)
+  const [aiWishlistEditDraft, setAiWishlistEditDraft] = useState<{ nonce: number; id: number; changes: Record<string, unknown> } | null>(null)
   const [hideSensitive, setHideSensitive] = useState<boolean>(() => {
     return localStorage.getItem('hide_sensitive') !== 'false'
   })
@@ -1879,6 +1888,7 @@ function App() {
   useEffect(() => {
     if (activeTab !== 'ledger') {
       setLedgerIncomingCategory(null)
+      setLedgerIncomingSearch(null)
       setLedgerIncomingDate(null)
       setLedgerIncomingTxType(null)
       setLedgerCyclesRange('monthly')
@@ -1888,6 +1898,7 @@ function App() {
 
   const handleNavigateToLedger = (options: {
     category?: string | null
+    search?: string | null
     date?: string | null
     txType?: 'inflow' | 'outflow' | null
     range?: 'monthly' | '3month' | '6month' | 'yearly'
@@ -1895,6 +1906,7 @@ function App() {
     showAllCycles?: boolean
   }) => {
     setLedgerIncomingCategory(options.category || null)
+    setLedgerIncomingSearch(options.search || null)
     setLedgerIncomingDate(options.date || null)
     setLedgerIncomingTxType(options.txType || null)
     const range = options.range || 'monthly'
@@ -1940,6 +1952,77 @@ function App() {
         void prefetchFingerprintAssertOptions().catch(() => undefined)
       }
       mutateQueue(prev => enqueue(prev, 'settings', 'update', 'hideSensitive', { hideSensitive: true }))
+    }
+  }
+
+  const getPayloadString = (payload: Record<string, unknown>, key: string) => {
+    const value = payload[key]
+    return typeof value === 'string' && value.trim() ? value.trim() : null
+  }
+
+  const getPayloadNumber = (payload: Record<string, unknown>, key: string) => {
+    const value = payload[key]
+    if (typeof value === 'number' && Number.isFinite(value)) return value
+    if (typeof value === 'string' && value.trim()) {
+      const parsed = Number(value)
+      return Number.isFinite(parsed) ? parsed : null
+    }
+    return null
+  }
+
+  const handleAiActions = async (actions: api.AiUiAction[]) => {
+    for (const action of actions.slice(0, 3)) {
+      const payload = (action.payload || {}) as Record<string, unknown>
+      if (action.type === 'openLedger') {
+        const month = getPayloadString(payload, 'month')
+        const year = getPayloadNumber(payload, 'year')
+        if (month && year) {
+          await handleSelectPeriod(month, year)
+        }
+        handleNavigateToLedger({
+          category: getPayloadString(payload, 'category') || getPayloadString(payload, 'ledgerCategory'),
+          txType: getPayloadString(payload, 'txType') === 'inflow' ? 'inflow' : getPayloadString(payload, 'txType') === 'outflow' ? 'outflow' : null,
+          search: getPayloadString(payload, 'search'),
+          showAllCycles: payload.allCycles === true,
+          range: payload.allCycles === true ? 'monthly' : 'monthly'
+        })
+      } else if (action.type === 'openAddLedgerDraft') {
+        setAiLedgerDraft({ nonce: Date.now(), fields: payload })
+        setActiveTab('ledger')
+      } else if (action.type === 'openAddRecurringDraft') {
+        setAiRecurringDraft({ nonce: Date.now(), fields: payload })
+        setActiveTab('recurring')
+      } else if (action.type === 'openAddWishlistDraft') {
+        setAiWishlistDraft({ nonce: Date.now(), fields: payload })
+        setActiveTab('wishlist')
+      } else if (action.type === 'openEditLedgerDraft') {
+        const id = getPayloadString(payload, 'id')
+        const changes = payload.changes && typeof payload.changes === 'object' ? payload.changes as Record<string, unknown> : {}
+        if (id) {
+          setAiLedgerEditDraft({ nonce: Date.now(), id, changes })
+          setActiveTab('ledger')
+        }
+      } else if (action.type === 'openEditRecurringDraft') {
+        const id = getPayloadString(payload, 'id')
+        const changes = payload.changes && typeof payload.changes === 'object' ? payload.changes as Record<string, unknown> : {}
+        if (id) {
+          setAiRecurringEditDraft({ nonce: Date.now(), id, changes })
+          setActiveTab('recurring')
+        }
+      } else if (action.type === 'openEditWishlistDraft') {
+        const id = getPayloadNumber(payload, 'id')
+        const changes = payload.changes && typeof payload.changes === 'object' ? payload.changes as Record<string, unknown> : {}
+        if (id != null) {
+          setAiWishlistEditDraft({ nonce: Date.now(), id, changes })
+          setActiveTab('wishlist')
+        }
+      } else if (action.type === 'setRecurringActive') {
+        const id = getPayloadString(payload, 'id')
+        const target = allRecurringPayments.find(p => p.id === id)
+        if (id && target && target.active !== (payload.active === true)) {
+          handleToggleActive(id)
+        }
+      }
     }
   }
 
@@ -2014,6 +2097,7 @@ function App() {
         activeTab={activeTab} 
         onTabChange={setActiveTab} 
         onQuickAction={handleQuickAction}
+        onAskAI={() => setIsAiOpen(true)}
         hideSensitive={hideSensitive}
         onToggleHideSensitive={handleToggleHideSensitive}
         onLogout={handleLogout}
@@ -2041,6 +2125,12 @@ function App() {
         onOpenFailedOps={() => setShowFailedOpsModal(true)}
         onDiscardSubscription={handleDiscardSubscription}
         draftCount={draftTransactions.length}
+      />
+
+      <AiAssistantPanel
+        isOpen={isAiOpen}
+        onClose={() => setIsAiOpen(false)}
+        onActions={handleAiActions}
       />
 
       {error && (
@@ -2146,6 +2236,8 @@ function App() {
             isSwitchingCycle={isSwitchingCycle}
             activeSyncId={activeSyncId}
             deletingId={deletingTxId}
+            aiDraft={aiRecurringDraft}
+            aiEditDraft={aiRecurringEditDraft}
           />
         )}
 
@@ -2164,11 +2256,13 @@ function App() {
             cycleDay={optimisticDashboardData?.setting?.cycleDay || 28}
             onSelectPeriod={handleSelectPeriod}
             incomingCategory={ledgerIncomingCategory}
+            incomingSearch={ledgerIncomingSearch}
             incomingDate={ledgerIncomingDate}
             incomingTxType={ledgerIncomingTxType}
             highlightedTxId={highlightedTxId}
             onClearIncomingFilters={() => {
               setLedgerIncomingCategory(null)
+              setLedgerIncomingSearch(null)
               setLedgerIncomingDate(null)
               setLedgerIncomingTxType(null)
               setHighlightedTxId(null)
@@ -2199,6 +2293,8 @@ function App() {
             onAddFormOpenChange={setIsLedgerAddOpen}
             activeScanJobIds={receiptScanJobIds}
             failedScanJob={failedScanJob}
+            aiDraft={aiLedgerDraft}
+            aiEditDraft={aiLedgerEditDraft}
           />
         )}
 
@@ -2223,6 +2319,8 @@ function App() {
             deletingId={deletingTxId}
             isSwitchingCycle={isSwitchingCycle}
             onStartEditPending={setEditingPendingId}
+            aiDraft={aiWishlistDraft}
+            aiEditDraft={aiWishlistEditDraft}
           />
         )}
 

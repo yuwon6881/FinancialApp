@@ -322,6 +322,7 @@ interface LedgerViewProps {
   cycleDay: number
   onSelectPeriod: (month: string, year: number) => void
   incomingCategory: string | null
+  incomingSearch?: string | null
   incomingDate?: string | null
   incomingTxType?: 'inflow' | 'outflow' | null
   highlightedTxId?: string | null
@@ -368,6 +369,8 @@ interface LedgerViewProps {
   onAddFormOpenChange?: (open: boolean) => void
   activeScanJobIds?: string[]
   failedScanJob?: { jobId: string; errorMessage: string } | null
+  aiDraft?: { nonce: number; fields: Record<string, unknown> } | null
+  aiEditDraft?: { nonce: number; id: string; changes: Record<string, unknown> } | null
 }
 
 export const LedgerView: React.FC<LedgerViewProps> = ({
@@ -384,6 +387,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   cycleDay,
   onSelectPeriod,
   incomingCategory,
+  incomingSearch,
   incomingDate,
   incomingTxType,
   highlightedTxId,
@@ -413,7 +417,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   onReceiptScanCleared,
   onAddFormOpenChange,
   activeScanJobIds = [],
-  failedScanJob = null
+  failedScanJob = null,
+  aiDraft = null,
+  aiEditDraft = null
 }) => {
   const isMobile = useIsMobile(768)
   const [showAddForm, setShowAddForm] = useState(false)
@@ -941,6 +947,60 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     openTransactionForm()
   }
 
+  const applyAiLedgerFields = useCallback((fields: Record<string, unknown>) => {
+    const getString = (key: string) => {
+      const value = fields[key]
+      return typeof value === 'string' && value.trim() ? value.trim() : null
+    }
+    const getNumber = (key: string) => {
+      const value = fields[key]
+      if (typeof value === 'number' && Number.isFinite(value)) return value
+      if (typeof value === 'string' && value.trim()) {
+        const parsed = Number(value)
+        return Number.isFinite(parsed) ? parsed : null
+      }
+      return null
+    }
+
+    const nextDescription = getString('description')
+    if (nextDescription !== null) setDescription(nextDescription)
+    const nextAmount = getNumber('amount')
+    if (nextAmount !== null) setAmount(Math.abs(nextAmount).toFixed(2))
+    const nextDate = getString('date')
+    if (nextDate !== null) setDate(nextDate)
+    const nextCategory = getString('category')
+    if (nextCategory !== null) setCategory(nextCategory)
+    const nextLedgerCategory = getString('ledgerCategory')
+    if (nextLedgerCategory && isSelectableLedgerCategory(nextLedgerCategory)) {
+      setLedgerCategory(nextLedgerCategory)
+    }
+    const nextTxType = getString('txType')
+    if (nextTxType === 'inflow' || nextTxType === 'outflow' || nextTxType === 'transfer') {
+      setTxType(nextTxType)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!aiDraft) return
+    setEditingTxId(null)
+    setDescription('')
+    setAmount('')
+    setCategory(categories.length > 0 ? categories[0].name : '')
+    setLedgerCategory('Essentials')
+    setTxType('outflow')
+    setDate(getTodayDateString())
+    applyAiLedgerFields(aiDraft.fields)
+    openTransactionForm()
+  }, [aiDraft?.nonce])
+
+  useEffect(() => {
+    if (!aiEditDraft) return
+    const target = transactions.find(t => String(t.id) === String(aiEditDraft.id))
+    if (!target) return
+    handleStartEdit(target)
+    applyAiLedgerFields(aiEditDraft.changes)
+  }, [aiEditDraft?.nonce])
+
   // Reset Ledger Category defaults on transaction type changes. In add mode,
   // switching to Inflow always defaults to Income (Auto-Split) -- a sensible
   // fresh-entry default. In edit mode, ledgerCategory was already populated
@@ -1085,16 +1145,17 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     if (showAllCycles && onFetchPagedTransactions) {
       const initialFilters = incomingCategory ? [incomingCategory] : []
       const initialTxType = incomingTxType || null
+      const initialSearch = incomingSearch || ''
 
-      setPendingSearchTerm('')
+      setPendingSearchTerm(initialSearch)
       setPendingFilters(initialFilters)
-      setAppliedSearch('')
+      setAppliedSearch(initialSearch)
       setAppliedFilters(initialFilters)
       setAppliedTxTypeFilter(initialTxType)
       setCurrentPage(1)
       setPageSize(100)  // Default 100 for server mode -- covers most users' full history on page 1
       isInitialFetchDone.current = false
-      runServerFetch({ page: 1, search: '', filters: initialFilters, txType: initialTxType, pSize: 100 })
+      runServerFetch({ page: 1, search: initialSearch, filters: initialFilters, txType: initialTxType, pSize: 100 })
         .finally(() => {
           isInitialFetchDone.current = true
         })
@@ -1102,7 +1163,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       setServerResult(null)
       isInitialFetchDone.current = false
     }
-  }, [showAllCycles, onFetchPagedTransactions, runServerFetch, allCyclesRange, incomingCategory, incomingTxType])
+  }, [showAllCycles, onFetchPagedTransactions, runServerFetch, allCyclesRange, incomingCategory, incomingTxType, incomingSearch])
 
   // Re-fetch when page changes in server mode
   useEffect(() => {
@@ -1145,6 +1206,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       setSelectedFilters([])
     }
   }, [incomingCategory])
+
+  useEffect(() => {
+    setSearchTerm(incomingSearch || '')
+  }, [incomingSearch])
 
   useEffect(() => {
     setSelectedDateFilter(incomingDate || null)
@@ -1877,7 +1942,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       </Card>
 
       {/* Dashboard navigation filter banner */}
-      {(incomingCategory || incomingDate || incomingTxType || showAllCycles) && (
+      {(incomingCategory || incomingSearch || incomingDate || incomingTxType || showAllCycles) && (
         <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-blue-500/8 border border-blue-500/20 text-xs animate-in fade-in duration-200">
           <div className="flex min-w-0 items-center gap-2 text-blue-500 font-medium leading-relaxed">
             <span className="size-1.5 rounded-full bg-blue-500 shrink-0 animate-pulse" />
@@ -1905,6 +1970,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               }
               if (incomingTxType) {
                 filterDetails.push(incomingTxType === 'inflow' ? "inflows only" : "outflows only")
+              }
+              if (incomingSearch) {
+                filterDetails.push(`search "${incomingSearch}"`)
               }
 
               if (filterDetails.length > 0) {
