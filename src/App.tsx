@@ -2016,7 +2016,15 @@ function App() {
   const handleAiActions = async (actions: api.AiUiAction[]) => {
     for (const action of actions.slice(0, 3)) {
       const payload = (action.payload || {}) as Record<string, unknown>
-      if (action.type === 'openLedger') {
+      if (action.type === 'openDashboard') {
+        setActiveTab('dashboard')
+      } else if (action.type === 'openRecurring') {
+        setActiveTab('recurring')
+      } else if (action.type === 'openWishlist') {
+        setActiveTab('wishlist')
+      } else if (action.type === 'openSettings') {
+        setActiveTab('settings')
+      } else if (action.type === 'openLedger') {
         const month = getPayloadString(payload, 'month')
         const year = getPayloadNumber(payload, 'year')
         if (month && year) {

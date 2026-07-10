@@ -490,7 +490,9 @@ export async function chatWithAi(message: string, history: AiChatMessage[]): Pro
     headers: getHeaders({
       'Content-Type': 'application/json',
     }),
-    body: JSON.stringify({ message, history: history.slice(-8) }),
+    // Backend SanitizeHistory keeps only the last 6 turns; matching that here avoids sending
+    // two messages that will just be discarded server-side.
+    body: JSON.stringify({ message, history: history.slice(-6) }),
   })
 
   const data = await response.json().catch(() => ({})) as Partial<AiChatResponse>
