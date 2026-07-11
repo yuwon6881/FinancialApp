@@ -44,6 +44,11 @@ afterEach(() => {
 })
 
 describe('AiAssistantPanel', () => {
+  it('shows exactly three prompt suggestions from the curated pool', () => {
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+    expect(screen.getAllByRole('button').filter(button => button.textContent?.endsWith('?'))).toHaveLength(3)
+  })
+
   it('uses hidden overflow when empty and scrollable overflow once messages exist', async () => {
     chatWithAi.mockResolvedValue(reply({ reply: 'Hello there' }))
     const { container } = render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Fingerprint, ShieldCheck, Bell, ChevronDown, ChevronUp, Lock, Unlock, MonitorSmartphone, CalendarDays, LogOut, Sparkles, Loader2, ArrowUpRight } from 'lucide-react'
+import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Fingerprint, ShieldCheck, Bell, ChevronDown, ChevronUp, Lock, Unlock, MonitorSmartphone, CalendarDays, LogOut, Sparkles, Loader2 } from 'lucide-react'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { SmartAmountInput } from './ui/SmartAmountInput'
@@ -836,9 +836,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         !suggestion.categories.some(name => name.toLowerCase() === cat.name.toLowerCase())
                       )
                       const consolidateTarget = consolidateTargets[suggestion.id] || ''
-                      const actionLabel = suggestion.type === 'consolidate' && !consolidateTarget
-                        ? 'Choose category'
-                        : 'Accept'
                       const isApplyingThis = applyingCleanupId === suggestion.id
                       const isConsolidateDisabled = suggestion.type === 'consolidate' && !consolidateTarget
 
@@ -873,15 +870,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           {suggestion.type === 'consolidate' && (
                             <div className="space-y-1">
                               <span className="text-[10px] font-semibold text-muted-foreground">Move its entries to:</span>
-                              <CustomSelect
-                                value={consolidateTarget}
-                                onChange={val => setConsolidateTargets(prev => ({ ...prev, [suggestion.id]: String(val) }))}
-                                options={[
-                                  { value: '', label: 'Choose a category' },
-                                  ...consolidateOptions.map(cat => ({ value: cat.name, label: cat.name }))
-                                ]}
-                                className="w-full"
-                              />
+                              <div>
+                                <CustomSelect
+                                  value={consolidateTarget}
+                                  onChange={val => setConsolidateTargets(prev => ({ ...prev, [suggestion.id]: String(val) }))}
+                                  options={[
+                                    { value: '', label: 'Choose a category' },
+                                    ...consolidateOptions.map(cat => ({ value: cat.name, label: cat.name }))
+                                  ]}
+                                  className="max-w-full"
+                                />
+                              </div>
                             </div>
                           )}
 
@@ -891,13 +890,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 type="button"
                                 onClick={() => onNavigateToLedger?.({ category: suggestion.categories[0], showAllCycles: true })}
                                 title="View entries in ledger"
-                                className="press-scale inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-orange-500/20 bg-orange-500/10 text-[9px] font-bold uppercase text-orange-600 dark:text-orange-400 hover:bg-orange-500/20 transition cursor-pointer select-none"
+                                className="press-scale inline-flex h-8 min-w-0 items-center px-2.5 rounded-full border border-orange-500/20 bg-orange-500/10 text-[9px] font-bold uppercase text-orange-600 dark:text-orange-400 hover:bg-orange-500/20 transition cursor-pointer select-none"
                               >
-                                {suggestion.affectedTransactionCount} ledger {suggestion.affectedTransactionCount === 1 ? 'entry' : 'entries'} need validation
-                                <ArrowUpRight className="size-2.5 text-orange-500" />
+                                <span className="truncate">{suggestion.affectedTransactionCount} ledger {suggestion.affectedTransactionCount === 1 ? 'entry' : 'entries'} need validation</span>
                               </button>
                             ) : (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full border border-border bg-muted/30 text-[9px] font-bold uppercase text-muted-foreground select-none">
+                              <span className="inline-flex h-8 min-w-0 items-center px-2.5 rounded-full border border-border bg-muted/30 text-[9px] font-bold uppercase text-muted-foreground select-none">
                                 {suggestion.affectedTransactionCount > 0
                                   ? `${suggestion.affectedTransactionCount} ledger entr${suggestion.affectedTransactionCount === 1 ? 'y' : 'ies'} need validation`
                                   : 'No ledger entries affected'}
@@ -907,11 +905,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                               type="button"
                               onClick={() => void handleApplyCleanupSuggestion(suggestion)}
                               disabled={!onApplyCategoryCleanupSuggestion || applyingCleanupId !== null || isConsolidateDisabled}
-                              title={!onApplyCategoryCleanupSuggestion ? 'Category cleanup is unavailable' : actionLabel}
-                              className="inline-flex items-center justify-center gap-1.5 shrink-0 w-32 rounded-lg border border-blue-500/30 bg-blue-500/5 px-2 py-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                              title={!onApplyCategoryCleanupSuggestion ? 'Category cleanup is unavailable' : isConsolidateDisabled ? 'Choose a category first' : 'Accept'}
+                              className="inline-flex h-8 w-20 shrink-0 items-center justify-center rounded-lg border border-blue-500/30 bg-blue-500/5 px-3 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              {isApplyingThis ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
-                              <span className="truncate">{actionLabel}</span>
+                              {isApplyingThis ? <Loader2 className="size-3 animate-spin" /> : 'Accept'}
                             </button>
                           </div>
                         </div>

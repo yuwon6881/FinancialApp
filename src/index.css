@@ -411,6 +411,49 @@
     padding: 1px;
 }
 
+/* Receipt scanning: a travelling AI highlight around the edge, without washing
+   a translucent shimmer across the button's contents. */
+@property --ai-orbit-angle {
+    syntax: "<angle>";
+    initial-value: 0deg;
+    inherits: false;
+}
+
+@keyframes ai-orbit-spin {
+    to { --ai-orbit-angle: 360deg; }
+}
+
+.ai-orbit-border {
+    position: relative;
+    isolation: isolate;
+    box-shadow: 0 0 10px color-mix(in srgb, var(--ledger-blue-500) 22%, transparent),
+                0 0 22px color-mix(in srgb, var(--ledger-sky-500) 12%, transparent);
+}
+
+.ai-orbit-border::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: -1px;
+    padding: 2px;
+    border-radius: inherit;
+    pointer-events: none;
+    background: conic-gradient(
+        from var(--ai-orbit-angle),
+        color-mix(in srgb, var(--ledger-blue-500) 24%, transparent) 0deg,
+        var(--ledger-sky-500) 45deg,
+        color-mix(in srgb, var(--ledger-income-500) 88%, white) 76deg,
+        color-mix(in srgb, var(--ledger-blue-500) 24%, transparent) 115deg,
+        color-mix(in srgb, var(--ledger-blue-500) 24%, transparent) 360deg
+    );
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    filter: drop-shadow(0 0 4px var(--ledger-sky-500));
+    animation: ai-orbit-spin 1.8s linear infinite;
+}
+
 /* Chart craftsmanship: soft glow under the trend line + a smooth path
    draw-in on load. Line uses pathLength="1" so one keyframe fits any data. */
 .chart-glow {
@@ -443,6 +486,7 @@
     .soft-rise,
     .view-enter,
     .skeleton-shimmer,
+    .ai-orbit-border::before,
     .trend-draw,
     .area-fade,
     .press-scale {

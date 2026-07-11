@@ -2099,7 +2099,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     }}
                     className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border transition duration-200 text-xs font-semibold cursor-pointer ${
                       isScanning
-                        ? 'ai-shimmer-border border-blue-500/40 bg-blue-500/5 text-blue-600 dark:text-blue-400 cursor-not-allowed'
+                        ? 'ai-orbit-border border-transparent bg-blue-500/5 text-blue-600 dark:text-blue-400 cursor-not-allowed'
                         : 'border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400'
                     }`}
                   >

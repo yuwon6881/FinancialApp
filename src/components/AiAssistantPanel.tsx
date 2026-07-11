@@ -12,18 +12,34 @@ interface AiAssistantPanelProps {
 type ChatMessage = api.AiChatMessage
 const nextFrame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
 
-// Example prompts surfaced in the empty state so newly-supported questions are discoverable.
+// Keep discovery prompts local: static UI copy does not justify an AI round trip.
 const SUGGESTED_PROMPTS = [
   'Which transaction exceeded 250 this cycle?',
   'How long until my Growth reaches 50000?',
   'How much do my subscriptions cost me a month?',
   'Compare my spending this cycle vs last cycle',
+  'Are there any duplicate transactions this cycle?',
+  'What unusual spending happened this cycle?',
+  'Which subscriptions are due next?',
+  'How much did I spend on Food this cycle?',
+  'Which wishlist items can I afford now?',
+  'Show my most recent transactions',
 ]
+
+const pickSuggestedPrompts = () => {
+  const prompts = [...SUGGESTED_PROMPTS]
+  for (let index = prompts.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1))
+    ;[prompts[index], prompts[swapIndex]] = [prompts[swapIndex], prompts[index]]
+  }
+  return prompts.slice(0, 3)
+}
 
 export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onClose, onActions }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const [suggestedPrompts, setSuggestedPrompts] = useState(pickSuggestedPrompts)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   // Structured conversation state from the last reply, echoed on the next request. Kept in a
   // ref (not state) so it never triggers a re-render and is always read fresh at send time.
@@ -37,6 +53,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
 
   useEffect(() => {
     resetChat()
+    if (isOpen) setSuggestedPrompts(pickSuggestedPrompts())
   }, [isOpen])
 
   useEffect(() => {
@@ -113,7 +130,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
               </div>
               <p className="font-medium text-foreground">Ready.</p>
               <div className="mt-4 flex max-w-md flex-wrap justify-center gap-2">
-                {SUGGESTED_PROMPTS.map(prompt => (
+                {suggestedPrompts.map(prompt => (
                   <button
                     key={prompt}
                     type="button"
