@@ -19,11 +19,13 @@ import {
   PiggyBank,
   Plus, 
   Trash2, 
-  ExternalLink, 
   Clock,
   CheckCircle2,
   Target,
-  Edit2
+  Edit2,
+  Sparkles,
+  Trophy,
+  ArrowUpRight
 } from 'lucide-react'
 
 interface WishlistViewProps {
@@ -368,22 +370,39 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
 
   return (
     <div className="space-y-6 soft-rise">
+      <section className="relative overflow-hidden rounded-3xl border border-blue-500/15 bg-card px-5 py-6 shadow-sm sm:px-7">
+        <div className="pointer-events-none absolute -right-16 -top-20 size-56 rounded-full bg-blue-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 left-1/3 size-48 rounded-full bg-violet-500/10 blur-3xl" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="max-w-xl">
+            <div className="mb-3 flex size-11 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/10 text-blue-500">
+              <Sparkles className="size-5" />
+            </div>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-blue-500">Reward roadmap</p>
+            <h2 className="mt-1 text-2xl font-black tracking-tight text-foreground sm:text-3xl">Turn saved rewards into something memorable.</h2>
+            <p className="mt-2 max-w-lg text-xs leading-relaxed text-muted-foreground">Choose one goal to focus on, see what is within reach, and keep everything else in a clear priority queue.</p>
+          </div>
+          <Button onClick={handleOpenAddModal} className="w-full justify-center rounded-xl px-5 py-2.5 sm:w-auto">
+            <Plus className="size-4" /> Add a goal
+          </Button>
+        </div>
+      </section>
       {/* Top Banner Ribbon — rewardsBalance/rewardsTarget are cycle-scoped, so
           show a skeleton while a new cycle's dashboard data is loading rather
           than briefly flashing the previous cycle's numbers. */}
       {isSwitchingCycle ? (
         <CycleSkeleton variant="wishlist" />
       ) : (
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Card
           onClick={() => onNavigateToLedger?.({ category: 'Rewards', showAllCycles: true })}
-          className="p-5 hover:border-blue-500/30 transition-all duration-300 group cursor-pointer flex items-center justify-between"
+          className="group flex cursor-pointer items-center justify-between overflow-hidden p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-500/30 hover:shadow-md"
         >
           <div>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Rewards Balance</span>
             <span className="text-xl font-black text-foreground mt-1 block">{formatSensitive(rewardsBalance)}</span>
-            <span className="text-[9px] text-blue-500 font-semibold mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-0.5">
-              View History in Ledger <ExternalLink className="size-2.5" />
+            <span className="mt-1 flex items-center gap-0.5 text-[9px] font-semibold text-blue-500">
+              View reward history <ArrowUpRight className="size-2.5" />
             </span>
           </div>
           <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform duration-300">
@@ -391,7 +410,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
           </div>
         </Card>
 
-        <Card className="p-5 flex items-center justify-between">
+        <Card className="flex items-center justify-between p-5 transition-transform duration-300 hover:-translate-y-0.5">
           <div>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Total Goals Cost</span>
             <span className="text-xl font-black text-foreground mt-1 block">{formatSensitive(totalCost)}</span>
@@ -401,13 +420,13 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
           </div>
         </Card>
 
-        <div className="p-5 rounded-2xl bg-card border border-border/60 shadow-xs flex items-center justify-between">
+        <div className="flex items-center justify-between rounded-2xl border border-emerald-500/20 bg-linear-to-br from-emerald-500/8 to-card p-5 shadow-xs transition-transform duration-300 hover:-translate-y-0.5">
           <div>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Claimable Goals</span>
             <span className="text-xl font-black text-foreground mt-1 block">{affordableCount} Items</span>
           </div>
-          <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500">
-            <PiggyBank className="size-5" />
+          <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500">
+            <Trophy className="size-5" />
           </div>
         </div>
       </div>
@@ -421,13 +440,13 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
           <div className="flex justify-between items-center px-1">
             <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
               <Target className="size-4 text-blue-500" />
-              Active Goal Focus
+              Your focus
             </h3>
             <motion.button 
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleOpenAddModal}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs font-bold shadow-md shadow-blue-600/10 transition cursor-pointer"
+              className="hidden items-center gap-1.5 rounded-full bg-blue-600 px-4 py-1.5 text-xs font-bold text-white shadow-md shadow-blue-600/10 transition hover:bg-blue-700 sm:flex"
             >
               <Plus className="size-3.5" /> Add Goal
             </motion.button>
@@ -609,7 +628,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
         <div className="lg:col-span-5 space-y-4">
           <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5 px-1">
             <Clock className="size-4 text-blue-500" />
-            Wishlist Queue ({queuedItems.length})
+            Up next <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{queuedItems.length}</span>
           </h3>
 
           <motion.div 
@@ -735,7 +754,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
         <Card>
           <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5 mb-4">
             <CheckCircle2 className="size-4 text-blue-500" />
-            Purchased Rewards History ({purchasedItems.length})
+            Milestones unlocked <span className="ml-1 rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] text-blue-500">{purchasedItems.length}</span>
           </h3>
           <div className="divide-y divide-border/30 text-xs font-semibold">
             {purchasedItems.map(item => (
