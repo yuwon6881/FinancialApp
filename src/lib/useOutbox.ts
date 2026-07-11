@@ -192,6 +192,7 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
 
   useEffect(() => {
     if (!options.token || pendingOps.length === 0) return
+    if (editingPendingId) return
     if (Date.now() < syncBackoffUntil) {
       const timer = window.setTimeout(() => {
         syncBackoffUntilRef.current = 0
@@ -200,7 +201,7 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
       return () => window.clearTimeout(timer)
     }
     void processQueue()
-  }, [options.token, pendingOps, syncBackoffUntil, processQueue])
+  }, [options.token, pendingOps, syncBackoffUntil, editingPendingId, processQueue])
 
   const discardFailedOp = useCallback((id: string) => {
     setFailedOps(previous => previous.filter(op => op.id !== id))

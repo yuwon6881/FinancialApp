@@ -362,7 +362,7 @@ function App() {
     getFailedOps,
     reset: resetOutbox,
   } = useOutbox({
-    token,
+    token: isLocked ? null : token,
     lastUnlockedTimeRef,
     setError,
     showToast,

@@ -196,8 +196,15 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
     deps.onSettled()
     deps.setSyncing(false)
     // Lost-wakeup guard: ops that arrived while the lock was held returned early;
-    // now that it's free, re-trigger once if anything is still waiting.
-    if (deps.getQueue().length > 0) {
+    // now that it's free, re-trigger once if anything is still waiting, and we
+    // are not backed off or editing the next item.
+    const queue = deps.getQueue()
+    const nextOp = queue[0]
+    const editingId = deps.getEditingPendingId()
+    const isEditing = nextOp && (nextOp.targetId === editingId || nextOp.id === editingId)
+    const isBackedOff = deps.now() < deps.getBackoffUntil()
+
+    if (queue.length > 0 && !isEditing && !isBackedOff) {
       deps.reTrigger()
     }
   }

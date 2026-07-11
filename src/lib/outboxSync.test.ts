@@ -40,6 +40,7 @@ function makeHarness(overrides: Partial<DrainQueueDeps> = {}, initialQueue: Queu
   const activeSyncIds: (string | null)[] = []
   const backoffSetTo: number[] = []
   const syncing = { value: false }
+  let backoffUntil = 0
   const calls: Record<string, number> = {
     refresh: 0, onSettled: 0, reTrigger: 0, onAuthError: 0, onLockError: 0, emitFailureToast: 0,
   }
@@ -51,7 +52,7 @@ function makeHarness(overrides: Partial<DrainQueueDeps> = {}, initialQueue: Queu
     now: () => 1_000_000,
     getQueue: () => queue,
     getEditingPendingId: () => null,
-    getBackoffUntil: () => 0,
+    getBackoffUntil: () => backoffUntil,
     getLastUnlockedTime: () => 0,
     isSyncing: () => syncing.value,
     mutateQueue: (updater) => {
@@ -63,7 +64,10 @@ function makeHarness(overrides: Partial<DrainQueueDeps> = {}, initialQueue: Queu
     setSyncing: (v) => { syncing.value = v },
     setActiveSyncId: (id) => { activeSyncIds.push(id) },
     setError: () => {},
-    setBackoff: (until) => { backoffSetTo.push(until) },
+    setBackoff: (until) => {
+      backoffUntil = until
+      backoffSetTo.push(until)
+    },
     addRecentlyCompleted: (o) => { recentlyCompleted.push(o) },
     removeRecentlyCompleted: (ids) => {
       for (let i = recentlyCompleted.length - 1; i >= 0; i--) {
@@ -194,7 +198,7 @@ describe('drainQueue — break conditions', () => {
     await drainQueue(h.deps)
     expect(dispatch).not.toHaveBeenCalled()
     expect(h.queue).toHaveLength(1)
-    expect(h.calls.reTrigger).toBe(1) // queue non-empty at settle
+    expect(h.calls.reTrigger).toBe(0) // queue blocked by editing op, no re-trigger
   })
 
   it('stops while a sync backoff is active', async () => {
@@ -203,6 +207,7 @@ describe('drainQueue — break conditions', () => {
     await drainQueue(h.deps)
     expect(dispatch).not.toHaveBeenCalled()
     expect(h.queue).toHaveLength(1)
+    expect(h.calls.reTrigger).toBe(0) // queue backed off, no re-trigger
   })
 
   it('drops an op with no registered dispatch handler and continues', async () => {
@@ -253,6 +258,7 @@ describe('drainQueue — error taxonomy', () => {
     expect(h.queue[0].retryCount).toBe(2)
     expect(h.backoffSetTo).toEqual([1_000_000 + SERVER_WAKE_BACKOFF_MS])
     expect(h.failedOps).toHaveLength(0)
+    expect(h.calls.reTrigger).toBe(0) // backed off, no re-trigger
     spy.mockRestore()
   })
 
@@ -290,9 +296,17 @@ describe('drainQueue — error taxonomy', () => {
 })
 
 describe('drainQueue — settle', () => {
-  it('re-triggers when ops remain after the drain settles', async () => {
-    // Editing-lock leaves the op in the queue -> reTrigger fires.
+  it('does not re-trigger when queue is blocked by editing lock', async () => {
     const h = makeHarness({ getEditingPendingId: () => 't1' }, [op({ targetId: 't1' })])
+    await drainQueue(h.deps)
+    expect(h.calls.reTrigger).toBe(0)
+  })
+
+  it('re-triggers when a new op is enqueued during refresh', async () => {
+    const h = makeHarness({}, [op({ id: 'a' })])
+    h.deps.refresh = async () => {
+      h.deps.mutateQueue(prev => [...prev, op({ id: 'b' })])
+    }
     await drainQueue(h.deps)
     expect(h.calls.reTrigger).toBe(1)
   })
