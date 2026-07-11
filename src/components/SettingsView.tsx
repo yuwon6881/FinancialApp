@@ -15,6 +15,7 @@ import { ToggleButton } from './ui/ToggleButton'
 import { TwoFactorSection } from './TwoFactorSection'
 import { ChangePasswordSection } from './ChangePasswordSection'
 import { CollapsibleBody } from './ui/CollapsibleBody'
+import { BorderBeam } from './ui/BorderBeam'
 import { getErrorMessage, getErrorName } from '../lib/errors'
 
 const formatRelativeTime = (iso: string | null): string => {
@@ -770,10 +771,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   title={hideSensitive ? 'Unhide balances to review' : 'AI category review'}
                   className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition cursor-pointer ${
                     isReviewingCleanup
-                      ? 'ai-shimmer-border border-blue-500/35 bg-blue-500/5 text-blue-600 dark:text-blue-400'
+                      ? 'ai-border-beam border-blue-500/35 bg-blue-500/5 text-blue-600 dark:text-blue-400'
                       : 'text-blue-600 dark:text-blue-400 bg-blue-500/5 border-blue-500/30 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed'
                   }`}
                 >
+                  {isReviewingCleanup && <BorderBeam />}
                   {isReviewingCleanup ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
                   AI
                 </button>

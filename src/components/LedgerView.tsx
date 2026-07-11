@@ -32,6 +32,7 @@ import { RowSyncBadge } from './ui/RowSyncBadge'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { BottomSheet } from './ui/BottomSheet'
 import { SmartAmountInput } from './ui/SmartAmountInput'
+import { BorderBeam } from './ui/BorderBeam'
 import { lockBodyScroll, unlockBodyScroll } from '../lib/scrollLock'
 import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput, displayLedgerCategory } from '../lib/utils'
 import { getErrorMessage } from '../lib/errors'
@@ -613,9 +614,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1)
   const [categorySuggestions, setCategorySuggestions] = useState<CategorySuggestion[]>([])
   const [isSuggestingCategory, setIsSuggestingCategory] = useState(false)
+  const [categorySuggestionUnavailable, setCategorySuggestionUnavailable] = useState(false)
   const [noteSuggestions, setNoteSuggestions] = useState<TransactionNoteSuggestion[]>([])
   const [showNoteSuggestions, setShowNoteSuggestions] = useState(false)
   const [isSuggestingNote, setIsSuggestingNote] = useState(false)
+  const [noteSuggestionUnavailable, setNoteSuggestionUnavailable] = useState(false)
   const suggestionsRef = useRef<HTMLDivElement>(null)
   const descriptionRef = useRef('')
   const autocompletedDescriptionRef = useRef<string | null>(null)
@@ -726,6 +729,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     const requestSeq = categorySuggestionRequestSeqRef.current + 1
     categorySuggestionRequestSeqRef.current = requestSeq
     setIsSuggestingCategory(true)
+    setCategorySuggestionUnavailable(false)
 
     try {
       const suggestions = await suggestTransactionCategories({
@@ -740,6 +744,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       if (err instanceof DOMException && err.name === 'AbortError') return
       if (categorySuggestionRequestSeqRef.current === requestSeq) {
         setCategorySuggestions([])
+        setCategorySuggestionUnavailable(true)
         lastCategorySuggestionKeyRef.current = null
       }
       console.warn('Failed to suggest transaction categories', err)
@@ -764,6 +769,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setSelectedSuggestionIndex(-1)
     setShowNoteSuggestions(true)
     setIsSuggestingNote(true)
+    setNoteSuggestionUnavailable(false)
 
     try {
       const suggestions = await suggestTransactionNotes({
@@ -780,6 +786,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       if (err instanceof DOMException && err.name === 'AbortError') return
       if (noteSuggestionRequestSeqRef.current === requestSeq) {
         setNoteSuggestions([])
+        setNoteSuggestionUnavailable(true)
       }
       console.warn('Failed to suggest transaction notes', err)
     } finally {
@@ -2101,26 +2108,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     }}
                     className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border transition duration-200 text-xs font-semibold cursor-pointer ${
                       isScanning
-                        ? 'receipt-border-beam border-blue-500/20 bg-blue-500/5 text-blue-600 dark:text-blue-400 cursor-not-allowed'
+                        ? 'ai-border-beam border-blue-500/20 bg-blue-500/5 text-blue-600 dark:text-blue-400 cursor-not-allowed'
                         : 'border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400'
                     }`}
                   >
-                    {isScanning && (
-                      <svg aria-hidden="true" className="pointer-events-none absolute inset-0 size-full overflow-visible" viewBox="0 0 100 40" preserveAspectRatio="none">
-                        <defs>
-                          <linearGradient id="receipt-scan-beam" x1="0" y1="0" x2="1" y2="0">
-                            <stop offset="0" stopColor="var(--ledger-blue-500)" stopOpacity="0" />
-                            <stop offset="0.55" stopColor="var(--ledger-blue-500)" />
-                            <stop offset="1" stopColor="var(--ledger-sky-500)" />
-                          </linearGradient>
-                        </defs>
-                        <rect
-                          className="receipt-border-beam__path"
-                          x="1" y="1" width="98" height="38" rx="11" pathLength="100"
-                          fill="none" stroke="url(#receipt-scan-beam)" strokeWidth="2" vectorEffect="non-scaling-stroke"
-                        />
-                      </svg>
-                    )}
+                    {isScanning && <BorderBeam />}
                     {isScanning ? (
                       <><Loader2 className="size-3.5 animate-spin" /> Scanning receipt...</>
                     ) : (
@@ -2255,8 +2247,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     onClick={() => void requestNoteSuggestions()}
                     disabled={isSuggestingNote || description.trim().length < 2}
                     title={description.trim().length < 2 ? 'Enter a description first' : 'Suggest better notes'}
-                    className="inline-flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/5 px-2 py-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed transition cursor-pointer"
+                    className={`inline-flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/5 px-2 py-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed transition cursor-pointer ${isSuggestingNote ? 'ai-border-beam' : ''}`}
                   >
+                    {isSuggestingNote && <BorderBeam />}
                     {isSuggestingNote ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
                     AI
                   </button>
@@ -2296,9 +2289,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   onKeyDown={handleDescriptionKeyDown}
                   autoComplete="off"
                   className={`w-full px-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                    isSuggestingNote
-                      ? 'ai-shimmer-border'
-                      : errors.description 
+                    errors.description 
                       ? 'border-destructive focus:ring-destructive' 
                       : 'border-border focus:ring-blue-500'
                   }`}
@@ -2329,6 +2320,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                         <span className="text-[10px] text-muted-foreground">{s.reason}</span>
                       </button>
                     ))
+                  ) : noteSuggestionUnavailable ? (
+                    <div className="px-3.5 py-3 text-xs font-semibold text-amber-600 dark:text-amber-500">
+                      AI suggestions are unavailable right now. Please try again.
+                    </div>
                   ) : (
                     <div className="px-3.5 py-3 text-xs font-semibold text-muted-foreground">
                       No better note found for this description.
@@ -2466,11 +2461,15 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 <div className="space-y-1">
                   <div className="flex items-center justify-between gap-2">
                     <label className="text-xs font-semibold text-muted-foreground">Category</label>
-                    {isSuggestingCategory && (
+                    {isSuggestingCategory ? (
                       <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-500">
                         <Loader2 className="size-3 animate-spin" /> Suggesting
                       </span>
-                    )}
+                    ) : categorySuggestionUnavailable ? (
+                      <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-500">
+                        AI suggestions unavailable
+                      </span>
+                    ) : null}
                   </div>
                   <SearchableSelect
                     value={category || (categories[0]?.name || '')}

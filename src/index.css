@@ -413,20 +413,20 @@
 
 /* A short SVG beam travels around the receipt button perimeter. It never paints
    over the interior and is mounted only for the active scanning state. */
-@keyframes receipt-border-beam {
+@keyframes ai-border-beam {
     to { stroke-dashoffset: -100; }
 }
 
-.receipt-border-beam {
+.ai-border-beam {
     position: relative;
 }
 
-.receipt-border-beam__path {
-    stroke-dasharray: 16 84;
+.ai-border-beam__path {
+    stroke-dasharray: 34 66;
     stroke-dashoffset: 0;
     stroke-linecap: round;
     filter: drop-shadow(0 0 3px var(--ledger-sky-500));
-    animation: receipt-border-beam 1.65s linear infinite;
+    animation: ai-border-beam 1.8s linear infinite;
 }
 
 /* Chart craftsmanship: soft glow under the trend line + a smooth path
@@ -461,7 +461,7 @@
     .soft-rise,
     .view-enter,
     .skeleton-shimmer,
-    .receipt-border-beam__path,
+    .ai-border-beam__path,
     .trend-draw,
     .area-fade,
     .press-scale {
