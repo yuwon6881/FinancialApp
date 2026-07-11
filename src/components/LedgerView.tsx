@@ -682,6 +682,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     setShowSuggestions(false)
     setSelectedSuggestionIndex(-1)
     setCategorySuggestions([])
+    setCategorySuggestionUnavailable(false)
+    setNoteSuggestionUnavailable(false)
     setNoteSuggestions([])
     setShowNoteSuggestions(false)
     setIsSuggestingCategory(false)
@@ -822,6 +824,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       descriptionRef.current = ''
       autocompletedDescriptionRef.current = null
       setCategorySuggestions([])
+      setCategorySuggestionUnavailable(false)
+      setNoteSuggestionUnavailable(false)
       setNoteSuggestions([])
       setShowNoteSuggestions(false)
       setIsSuggestingCategory(false)
@@ -1336,6 +1340,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     clearFormDraft()
     setErrors({})
     setCategorySuggestions([])
+    setCategorySuggestionUnavailable(false)
+    setNoteSuggestionUnavailable(false)
     setIsSuggestingCategory(false)
     categorySuggestionAbortRef.current?.abort()
     lastCategorySuggestionKeyRef.current = null
@@ -1369,6 +1375,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     clearFormDraft()
     setErrors({})
     setCategorySuggestions([])
+    setCategorySuggestionUnavailable(false)
+    setNoteSuggestionUnavailable(false)
     setIsSuggestingCategory(false)
     categorySuggestionAbortRef.current?.abort()
     lastCategorySuggestionKeyRef.current = null

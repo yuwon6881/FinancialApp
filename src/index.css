@@ -425,8 +425,41 @@
     stroke-dasharray: 34 66;
     stroke-dashoffset: 0;
     stroke-linecap: round;
-    filter: drop-shadow(0 0 3px var(--ledger-sky-500));
+    /* Soft cyan glow to match the blue-green beam gradient. */
+    filter: drop-shadow(0 0 3px color-mix(in srgb, #36cfc9 70%, transparent));
     animation: ai-border-beam 1.8s linear infinite;
+}
+
+/* A steady gradient ring that glows and gently pulses around a container's
+   border -- used for the Ask AI chatbox while a reply is streaming, instead of
+   a single beam travelling the perimeter. */
+@keyframes ai-glow-pulse {
+    0%, 100% { opacity: 0.55; }
+    50%      { opacity: 1; }
+}
+
+.ai-glow-border {
+    position: relative;
+}
+
+.ai-glow-border::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: linear-gradient(120deg, #1677ff 0%, #36cfc9 52%, #95de64 100%);
+    box-shadow: 0 0 14px color-mix(in srgb, #36cfc9 55%, transparent);
+    pointer-events: none;
+    mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    animation: ai-glow-pulse 1.6s ease-in-out infinite;
 }
 
 /* Chart craftsmanship: soft glow under the trend line + a smooth path
@@ -462,6 +495,7 @@
     .view-enter,
     .skeleton-shimmer,
     .ai-border-beam__path,
+    .ai-glow-border::before,
     .trend-draw,
     .area-fade,
     .press-scale {

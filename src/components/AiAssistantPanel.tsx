@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { Loader2, Send, Sparkles, X } from 'lucide-react'
 import { BottomSheet } from './ui/BottomSheet'
-import { BorderBeam } from './ui/BorderBeam'
 import * as api from '../lib/api'
 
 interface AiAssistantPanelProps {
@@ -123,8 +122,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
       }
     >
       <div className="flex h-[55vh] sm:h-[480px] flex-col gap-3">
-        <div className={`min-h-0 flex-1 space-y-3 rounded-xl border border-border/60 bg-muted/10 p-3 ${isSending ? 'ai-border-beam' : ''} ${messages.length > 0 ? 'overflow-y-auto' : 'overflow-y-hidden'}`}>
-          {isSending && <BorderBeam />}
+        <div className={`min-h-0 flex-1 space-y-3 rounded-xl border border-border/60 bg-muted/10 p-3 ${isSending ? 'ai-glow-border' : ''} ${messages.length > 0 ? 'overflow-y-auto' : 'overflow-y-hidden'}`}>
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center text-center text-xs text-muted-foreground">
               <div className="mb-3 grid size-11 place-items-center rounded-xl border border-border/60 bg-muted/40 shadow-xs">
