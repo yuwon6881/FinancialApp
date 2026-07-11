@@ -577,12 +577,14 @@ export async function chatWithAi(
   message: string,
   history: AiChatMessage[],
   state?: AiConversationState | null,
+  signal?: AbortSignal,
 ): Promise<AiChatResponse> {
   const response = await fetch(`${API_BASE_URL}/ai/chat`, {
     method: 'POST',
     headers: getHeaders({
       'Content-Type': 'application/json',
     }),
+    signal,
     // Backend SanitizeHistory keeps only the last 6 turns; matching that here avoids sending
     // two messages that will just be discarded server-side.
     body: JSON.stringify({ message, history: history.slice(-6), state: state ?? null }),
@@ -803,7 +805,7 @@ export async function exportTransactionsCsv(params: {
   search?: string
   ledgerCategories?: string[]
   categories?: string[]
-  txType?: 'inflow' | 'outflow' | null
+  txType?: 'inflow' | 'outflow' | 'transfer' | null
   startDate?: string
   endDate?: string
 }): Promise<{ blob: Blob; filename: string }> {
@@ -842,7 +844,7 @@ export async function fetchPagedTransactions(params: {
   search?: string
   ledgerCategories?: string[]
   categories?: string[]
-  txType?: 'inflow' | 'outflow' | null
+  txType?: 'inflow' | 'outflow' | 'transfer' | null
   startDate?: string
   endDate?: string
 }): Promise<PagedTransactionResult> {

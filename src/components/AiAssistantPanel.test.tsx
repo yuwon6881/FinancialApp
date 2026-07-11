@@ -46,7 +46,7 @@ afterEach(() => {
 describe('AiAssistantPanel', () => {
   it('shows exactly three prompt suggestions from the curated pool', () => {
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
-    expect(screen.getAllByRole('button').filter(button => button.textContent?.endsWith('?'))).toHaveLength(3)
+    expect(screen.getAllByRole('button').filter(button => !button.getAttribute('title'))).toHaveLength(3)
   })
 
   it('uses hidden overflow when empty and scrollable overflow once messages exist', async () => {
@@ -173,5 +173,33 @@ describe('AiAssistantPanel', () => {
     typeAndSend('add a lunch transaction')
     await waitFor(() => expect(onActions).toHaveBeenCalledTimes(1))
     expect(onClose).toHaveBeenCalled()
+  })
+
+  it('ignores a stale response after the user closes the chat', async () => {
+    let resolve!: (r: AiChatResponse) => void
+    chatWithAi.mockReturnValue(new Promise<AiChatResponse>(r => { resolve = r }))
+    const onActions = vi.fn()
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={onActions} />)
+
+    typeAndSend('delete coffee')
+    fireEvent.click(screen.getByTitle('Close'))
+    resolve(reply({ actions: [{ type: 'requestDeleteLedger', payload: { id: 'coffee' } }] }))
+
+    await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(1))
+    await Promise.resolve()
+    expect(onActions).not.toHaveBeenCalled()
+  })
+
+  it('discloses provider data sharing and sensitive-mode protection', () => {
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} sensitiveMode />)
+    expect(screen.getByText(/sent to the configured AI provider/i)).toBeTruthy()
+    expect(screen.getByText(/disables record changes/i)).toBeTruthy()
+  })
+
+  it('disables prompts and sending while offline', () => {
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} isOffline />)
+    expect(screen.getByText(/requires an internet connection/i)).toBeTruthy()
+    expect((screen.getByLabelText('Ask AI') as HTMLTextAreaElement).disabled).toBe(true)
+    expect((screen.getByTitle('Send') as HTMLButtonElement).disabled).toBe(true)
   })
 })

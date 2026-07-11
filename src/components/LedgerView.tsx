@@ -326,7 +326,7 @@ interface LedgerViewProps {
   incomingCategory: string | null
   incomingSearch?: string | null
   incomingDate?: string | null
-  incomingTxType?: 'inflow' | 'outflow' | null
+  incomingTxType?: 'inflow' | 'outflow' | 'transfer' | null
   highlightedTxId?: string | null
   onClearIncomingFilters?: () => void
   showAllCycles: boolean
@@ -348,7 +348,7 @@ interface LedgerViewProps {
     search?: string
     ledgerCategories?: string[]
     categories?: string[]
-    txType?: 'inflow' | 'outflow' | null
+    txType?: 'inflow' | 'outflow' | 'transfer' | null
     startDate?: string
     endDate?: string
   }) => Promise<PagedTransactionResult>
@@ -357,7 +357,7 @@ interface LedgerViewProps {
     search?: string
     ledgerCategories?: string[]
     categories?: string[]
-    txType?: 'inflow' | 'outflow' | null
+    txType?: 'inflow' | 'outflow' | 'transfer' | null
     startDate?: string
     endDate?: string
   }) => Promise<{ blob: Blob; filename: string }>
@@ -374,8 +374,10 @@ interface LedgerViewProps {
   failedScanJob?: { jobId: string; errorMessage: string } | null
   aiDraft?: { nonce: number; fields: Record<string, unknown> } | null
   aiEditDraft?: { nonce: number; id: string; changes: Record<string, unknown> } | null
+  aiExportRequest?: { nonce: number } | null
   onAiDraftConsumed?: () => void
   onAiEditDraftConsumed?: () => void
+  onAiExportRequestConsumed?: () => void
 }
 
 export const LedgerView: React.FC<LedgerViewProps> = ({
@@ -426,8 +428,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   failedScanJob = null,
   aiDraft = null,
   aiEditDraft = null,
+  aiExportRequest = null,
   onAiDraftConsumed,
-  onAiEditDraftConsumed
+  onAiEditDraftConsumed,
+  onAiExportRequestConsumed
 }) => {
   const isMobile = useIsMobile(768)
   const [showAddForm, setShowAddForm] = useState(false)
@@ -1004,6 +1008,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     if (nextTxType === 'inflow' || nextTxType === 'outflow' || nextTxType === 'transfer') {
       setTxType(nextTxType)
     }
+    const nextTransferSource = getString('transferSource')
+    const nextTransferTarget = getString('transferTarget')
+    if (nextTransferSource && isTransferBucket(nextTransferSource)) setTransferSource(nextTransferSource)
+    if (nextTransferTarget && isTransferBucket(nextTransferTarget)) setTransferTarget(nextTransferTarget)
   }, [])
 
   useEffect(() => {
@@ -1100,7 +1108,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFilters, setSelectedFilters] = useState<string[]>([])
   const [selectedDateFilter, setSelectedDateFilter] = useState<string | null>(null)
-  const [selectedTxTypeFilter, setSelectedTxTypeFilter] = useState<'inflow' | 'outflow' | null>(null)
+  const [selectedTxTypeFilter, setSelectedTxTypeFilter] = useState<'inflow' | 'outflow' | 'transfer' | null>(null)
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false)
 
   // Pagination states (Defaults: page size 10, current page 1)
@@ -1113,13 +1121,18 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const isInitialFetchDone = useRef(false)
   const [showExportModal, setShowExportModal] = useState(false)
   const [exportIsFetching, setExportIsFetching] = useState(false)
+  useEffect(() => {
+    if (!aiExportRequest) return
+    if (!hideSensitive) setShowExportModal(true)
+    onAiExportRequestConsumed?.()
+  }, [aiExportRequest?.nonce])
   // Pending (uncommitted) states -- only applied on Search/Apply button click
   const [pendingSearchTerm, setPendingSearchTerm] = useState('')
   const [pendingFilters, setPendingFilters] = useState<string[]>([])
   // Applied (committed) states -- what the backend has actually received
   const [appliedSearch, setAppliedSearch] = useState('')
   const [appliedFilters, setAppliedFilters] = useState<string[]>([])
-  const [appliedTxTypeFilter, setAppliedTxTypeFilter] = useState<'inflow' | 'outflow' | null>(null)
+  const [appliedTxTypeFilter, setAppliedTxTypeFilter] = useState<'inflow' | 'outflow' | 'transfer' | null>(null)
 
   const ledgerBuckets = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
   const allCyclesRange = useMemo(() => {
@@ -1164,7 +1177,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     page: number
     search: string
     filters: string[]
-    txType: 'inflow' | 'outflow' | null
+    txType: 'inflow' | 'outflow' | 'transfer' | null
     pSize: number
   }) => {
     if (!onFetchPagedTransactions) return
@@ -1650,8 +1663,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
       // Transaction type filter
       if (appliedTxTypeFilter) {
-        if (appliedTxTypeFilter === 'inflow' && t.amount <= 0) return false
+        const isTransfer = t.category === 'Transfer' || t.ledgerCategory.startsWith('Transfer:')
+        if (appliedTxTypeFilter === 'inflow' && (t.amount <= 0 || isTransfer)) return false
         if (appliedTxTypeFilter === 'outflow' && t.amount >= 0) return false
+        if (appliedTxTypeFilter === 'transfer' && !isTransfer) return false
       }
 
       return true
@@ -1697,10 +1712,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
       let matchesTxType = true
       if (selectedTxTypeFilter) {
+        const isTransfer = t.category === 'Transfer' || t.ledgerCategory.startsWith('Transfer:')
         if (selectedTxTypeFilter === 'inflow') {
-          matchesTxType = t.amount > 0
+          matchesTxType = t.amount > 0 && !isTransfer
         } else if (selectedTxTypeFilter === 'outflow') {
           matchesTxType = t.amount < 0
+        } else if (selectedTxTypeFilter === 'transfer') {
+          matchesTxType = isTransfer
         }
       }
       
@@ -1818,7 +1836,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       parts.push(`${label} ${categoryFilters.length > 1 ? 'Categories' : 'Category'}`)
     }
     if (appliedTxTypeFilter) {
-      parts.push(appliedTxTypeFilter === 'inflow' ? 'Inflows' : 'Outflows')
+      parts.push(appliedTxTypeFilter === 'inflow' ? 'Inflows' : appliedTxTypeFilter === 'outflow' ? 'Outflows' : 'Transfers')
     }
     if (appliedSearch) {
       parts.push(`Search ${appliedSearch}`)

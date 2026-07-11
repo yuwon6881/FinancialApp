@@ -202,7 +202,7 @@ function App() {
   const [selectedYear, setSelectedYear] = useState<number>(() => getCachedDashboardPeriod().year || 0)
   const [ledgerIncomingCategory, setLedgerIncomingCategory] = useState<string | null>(null)
   const [ledgerIncomingDate, setLedgerIncomingDate] = useState<string | null>(null)
-  const [ledgerIncomingTxType, setLedgerIncomingTxType] = useState<'inflow' | 'outflow' | null>(null)
+  const [ledgerIncomingTxType, setLedgerIncomingTxType] = useState<'inflow' | 'outflow' | 'transfer' | null>(null)
   const [ledgerShowAllCycles, setLedgerShowAllCycles] = useState(false)
   const [autoOpenLedgerAdd, setAutoOpenLedgerAdd] = useState(false)
   const [autoOpenSubscriptionAdd, setAutoOpenSubscriptionAdd] = useState(false)
@@ -216,6 +216,8 @@ function App() {
   const [aiRecurringEditDraft, setAiRecurringEditDraft] = useState<{ nonce: number; id: string; changes: Record<string, unknown> } | null>(null)
   const [aiWishlistDraft, setAiWishlistDraft] = useState<{ nonce: number; fields: Record<string, unknown> } | null>(null)
   const [aiWishlistEditDraft, setAiWishlistEditDraft] = useState<{ nonce: number; id: number; changes: Record<string, unknown> } | null>(null)
+  const [aiLedgerExportRequest, setAiLedgerExportRequest] = useState<{ nonce: number } | null>(null)
+  const aiActionNonceRef = useRef(0)
   const [hideSensitive, setHideSensitive] = useState<boolean>(() => {
     return localStorage.getItem('hide_sensitive') !== 'false'
   })
@@ -1504,6 +1506,14 @@ function App() {
     } : undefined))
   }
 
+  const handleUnpurchaseWishlistItem = (id: number) => {
+    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
+    const item = allWishlist.find(w => String(w.id) === String(id))
+    mutateQueue(prev => enqueue(prev, 'wishlistItem', 'unpurchase', String(id), item ? {
+      purchaseTransactionId: item.purchaseTransactionId
+    } : undefined))
+  }
+
   // Save pending operations to localStorage whenever they change
   useEffect(() => {
     setCachedJSON(CACHE_KEYS.pendingOperations, pendingOps)
@@ -1943,7 +1953,7 @@ function App() {
     category?: string | null
     search?: string | null
     date?: string | null
-    txType?: 'inflow' | 'outflow' | null
+    txType?: 'inflow' | 'outflow' | 'transfer' | null
     range?: 'monthly' | '3month' | '6month' | 'yearly'
     highlightedTxId?: string | null
     showAllCycles?: boolean
@@ -2013,39 +2023,84 @@ function App() {
     return null
   }
 
+  const nextAiActionNonce = () => {
+    aiActionNonceRef.current += 1
+    return aiActionNonceRef.current
+  }
+
+  const requestAiLedgerDelete = async (id: string) => {
+    let transaction = allTransactions.find(t => String(t.id) === String(id))
+    if (!transaction) {
+      transaction = await api.fetchTransactionById(id).catch(() => undefined)
+    }
+    if (!transaction) {
+      showToast('The transaction could not be found.', 'Delete unavailable', 'warning')
+      return
+    }
+    const deletesSplitGroup = transaction.id.includes('-split-')
+    setConfirmModalData({
+      title: 'Delete Transaction',
+      message: deletesSplitGroup
+        ? `Delete "${transaction.description}"? This is part of an Income Auto-Split, so the main Income record and all related splits will be deleted.`
+        : `Delete "${transaction.description}"? This action will only proceed after you confirm here.`,
+      confirmText: 'Delete',
+      onConfirm: () => handleDeleteTransaction(transaction!.id)
+    })
+  }
+
+  const aiMutationTypes = new Set([
+    'openEditLedgerDraft', 'openEditRecurringDraft', 'openEditWishlistDraft',
+    'requestDeleteLedger', 'requestDeleteRecurring', 'requestDeleteWishlist',
+    'requestConfirmRecurringBill', 'requestDiscardRecurringBill',
+    'requestPurchaseWishlist', 'requestUnpurchaseWishlist', 'toggleRecurring'
+  ])
+
   const handleAiActions = async (actions: api.AiUiAction[]) => {
     for (const action of actions.slice(0, 3)) {
       const payload = (action.payload || {}) as Record<string, unknown>
+      if (hideSensitive && aiMutationTypes.has(action.type)) {
+        showToast('Unhide balances to make record changes.', 'Sensitive mode active', 'warning')
+        continue
+      }
+      if (hideSensitive && action.type === 'openLedgerExport') {
+        showToast('Unhide balances before exporting transactions.', 'Sensitive mode active', 'warning')
+        continue
+      }
       if (action.type === 'openDashboard') {
         setActiveTab('dashboard')
       } else if (action.type === 'openRecurring') {
         setActiveTab('recurring')
       } else if (action.type === 'openWishlist') {
         setActiveTab('wishlist')
-      } else if (action.type === 'openSettings') {
-        setActiveTab('settings')
-      } else if (action.type === 'openLedger') {
+      } else if (action.type === 'openLedger' || action.type === 'openLedgerExport') {
         const month = getPayloadString(payload, 'month')
         const year = getPayloadNumber(payload, 'year')
         if (month && year) {
           await handleSelectPeriod(month, year)
         }
+        const txTypeValue = getPayloadString(payload, 'txType')
+        const txType = txTypeValue === 'inflow' || txTypeValue === 'outflow' || txTypeValue === 'transfer' ? txTypeValue : null
+        const rangeValue = getPayloadString(payload, 'range')
+        const range = rangeValue === '3month' || rangeValue === '6month' || rangeValue === 'yearly' ? rangeValue : 'monthly'
         handleNavigateToLedger({
           category: getPayloadString(payload, 'category') || getPayloadString(payload, 'ledgerCategory'),
-          txType: getPayloadString(payload, 'txType') === 'inflow' ? 'inflow' : getPayloadString(payload, 'txType') === 'outflow' ? 'outflow' : null,
+          txType,
           search: getPayloadString(payload, 'search'),
           date: getPayloadString(payload, 'date'),
-          showAllCycles: payload.allCycles === true,
-          range: payload.allCycles === true ? 'monthly' : 'monthly'
+          showAllCycles: payload.allCycles === true || range !== 'monthly',
+          range
         })
+        if (action.type === 'openLedgerExport') {
+          setAiLedgerExportRequest({ nonce: nextAiActionNonce() })
+        }
       } else if (action.type === 'openAddLedgerDraft') {
-        setAiLedgerDraft({ nonce: Date.now(), fields: payload })
+        setAiLedgerDraft({ nonce: nextAiActionNonce(), fields: payload })
         setActiveTab('ledger')
       } else if (action.type === 'openAddRecurringDraft') {
-        setAiRecurringDraft({ nonce: Date.now(), fields: payload })
+        setAiRecurringDraft({ nonce: nextAiActionNonce(), fields: payload })
         setActiveTab('recurring')
       } else if (action.type === 'openAddWishlistDraft') {
-        setAiWishlistDraft({ nonce: Date.now(), fields: payload })
+        setAiWishlistDraft({ nonce: nextAiActionNonce(), fields: payload })
         setActiveTab('wishlist')
       } else if (action.type === 'openEditLedgerDraft') {
         if (hideSensitive) {
@@ -2055,7 +2110,7 @@ function App() {
         const id = getPayloadString(payload, 'id')
         const changes = payload.changes && typeof payload.changes === 'object' ? payload.changes as Record<string, unknown> : {}
         if (id) {
-          setAiLedgerEditDraft({ nonce: Date.now(), id, changes })
+          setAiLedgerEditDraft({ nonce: nextAiActionNonce(), id, changes })
           setActiveTab('ledger')
         }
       } else if (action.type === 'openEditRecurringDraft') {
@@ -2066,7 +2121,7 @@ function App() {
         const id = getPayloadString(payload, 'id')
         const changes = payload.changes && typeof payload.changes === 'object' ? payload.changes as Record<string, unknown> : {}
         if (id) {
-          setAiRecurringEditDraft({ nonce: Date.now(), id, changes })
+          setAiRecurringEditDraft({ nonce: nextAiActionNonce(), id, changes })
           setActiveTab('recurring')
         }
       } else if (action.type === 'openEditWishlistDraft') {
@@ -2077,9 +2132,64 @@ function App() {
         const id = getPayloadNumber(payload, 'id')
         const changes = payload.changes && typeof payload.changes === 'object' ? payload.changes as Record<string, unknown> : {}
         if (id != null) {
-          setAiWishlistEditDraft({ nonce: Date.now(), id, changes })
+          setAiWishlistEditDraft({ nonce: nextAiActionNonce(), id, changes })
           setActiveTab('wishlist')
         }
+      } else if (action.type === 'requestDeleteLedger') {
+        const id = getPayloadString(payload, 'id')
+        if (id) await requestAiLedgerDelete(id)
+      } else if (action.type === 'requestDeleteRecurring') {
+        const id = getPayloadString(payload, 'id')
+        if (id) requestDeletePayment(id)
+      } else if (action.type === 'requestDeleteWishlist') {
+        const id = getPayloadNumber(payload, 'id')
+        if (id != null) requestDeleteWishlistItem(id)
+      } else if (action.type === 'toggleRecurring') {
+        const id = getPayloadString(payload, 'id')
+        const payment = id ? allRecurringPayments.find(p => String(p.id) === id) : undefined
+        const requestedActive = typeof payload.active === 'boolean' ? payload.active : payment ? !payment.active : null
+        if (payment && requestedActive !== null && payment.active !== requestedActive) {
+          handleToggleActive(payment.id)
+        } else if (payment && payment.active === requestedActive) {
+          showToast(`"${payment.name}" is already ${requestedActive ? 'on' : 'off'}.`, 'No change needed', 'info')
+        }
+      } else if (action.type === 'requestConfirmRecurringBill' || action.type === 'requestDiscardRecurringBill') {
+        const id = getPayloadString(payload, 'id')
+        const requestedDate = getPayloadString(payload, 'date')
+        const pending = optimisticDashboardData?.pendingNotifications?.find(notification =>
+          notification.recurringPaymentId === id && (!requestedDate || notification.billingDate === requestedDate)
+        )
+        if (!pending) {
+          showToast('No matching pending bill was found in the active cycle.', 'Bill action unavailable', 'warning')
+          continue
+        }
+        const isDiscard = action.type === 'requestDiscardRecurringBill'
+        setConfirmModalData({
+          title: isDiscard ? 'Discard Scheduled Bill' : 'Confirm Bill Paid',
+          message: isDiscard
+            ? `Discard "${pending.name}" for ${pending.billingDate}? No expense will be recorded for this cycle.`
+            : `Mark "${pending.name}" as paid on ${requestedDate || pending.billingDate}?`,
+          confirmText: isDiscard ? 'Discard' : 'Confirm Paid',
+          onConfirm: () => isDiscard
+            ? handleDiscardSubscription(pending)
+            : handleConfirmSubscription(pending, requestedDate || pending.billingDate)
+        })
+      } else if (action.type === 'requestPurchaseWishlist' || action.type === 'requestUnpurchaseWishlist') {
+        const id = getPayloadNumber(payload, 'id')
+        const item = id == null ? undefined : allWishlist.find(w => Number(w.id) === id)
+        if (!item) {
+          showToast('The wishlist item could not be found.', 'Wishlist action unavailable', 'warning')
+          continue
+        }
+        const undoPurchase = action.type === 'requestUnpurchaseWishlist'
+        setConfirmModalData({
+          title: undoPurchase ? 'Undo Wishlist Purchase' : 'Claim Wishlist Item',
+          message: undoPurchase
+            ? `Undo the purchase of "${item.name}" and remove its linked ledger transaction?`
+            : `Claim "${item.name}" and create its linked Rewards transaction?`,
+          confirmText: undoPurchase ? 'Undo Purchase' : 'Claim',
+          onConfirm: () => undoPurchase ? handleUnpurchaseWishlistItem(item.id) : handlePurchaseWishlistItem(item.id)
+        })
       }
     }
   }
@@ -2189,6 +2299,8 @@ function App() {
         isOpen={isAiOpen}
         onClose={() => setIsAiOpen(false)}
         onActions={handleAiActions}
+        sensitiveMode={hideSensitive}
+        isOffline={isOffline}
       />
 
       {error && (
@@ -2356,8 +2468,10 @@ function App() {
             failedScanJob={failedScanJob}
             aiDraft={aiLedgerDraft}
             aiEditDraft={aiLedgerEditDraft}
+            aiExportRequest={aiLedgerExportRequest}
             onAiDraftConsumed={() => setAiLedgerDraft(null)}
             onAiEditDraftConsumed={() => setAiLedgerEditDraft(null)}
+            onAiExportRequestConsumed={() => setAiLedgerExportRequest(null)}
           />
         )}
 

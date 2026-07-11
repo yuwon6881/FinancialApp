@@ -8,6 +8,8 @@ interface AiAssistantPanelProps {
   isOpen: boolean
   onClose: () => void
   onActions: (actions: api.AiUiAction[]) => void | Promise<void>
+  sensitiveMode?: boolean
+  isOffline?: boolean
 }
 
 type ChatMessage = api.AiChatMessage
@@ -27,8 +29,17 @@ const SUGGESTED_PROMPTS = [
   'Show my most recent transactions',
 ]
 
-const pickSuggestedPrompts = () => {
-  const prompts = [...SUGGESTED_PROMPTS]
+const SENSITIVE_SUGGESTED_PROMPTS = [
+  'Are there any duplicate transactions this cycle?',
+  'What unusual spending happened this cycle?',
+  'Which subscriptions are due next?',
+  'Which subscriptions are inactive?',
+  'Show my most recent transactions',
+  'Show my transfer transactions this cycle',
+]
+
+const pickSuggestedPrompts = (sensitiveMode: boolean) => {
+  const prompts = [...(sensitiveMode ? SENSITIVE_SUGGESTED_PROMPTS : SUGGESTED_PROMPTS)]
   for (let index = prompts.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(Math.random() * (index + 1))
     ;[prompts[index], prompts[swapIndex]] = [prompts[swapIndex], prompts[index]]
@@ -36,12 +47,14 @@ const pickSuggestedPrompts = () => {
   return prompts.slice(0, 3)
 }
 
-export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onClose, onActions }) => {
+export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onClose, onActions, sensitiveMode = true, isOffline = false }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [isSending, setIsSending] = useState(false)
-  const [suggestedPrompts, setSuggestedPrompts] = useState(pickSuggestedPrompts)
+  const [suggestedPrompts, setSuggestedPrompts] = useState(() => pickSuggestedPrompts(sensitiveMode))
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const activeRequestRef = useRef<AbortController | null>(null)
+  const requestGenerationRef = useRef(0)
   // Structured conversation state from the last reply, echoed on the next request. Kept in a
   // ref (not state) so it never triggers a re-render and is always read fresh at send time.
   const conversationStateRef = useRef<api.AiConversationState | null>(null)
@@ -52,10 +65,30 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
     conversationStateRef.current = null
   }
 
+  const cancelInFlight = () => {
+    requestGenerationRef.current += 1
+    activeRequestRef.current?.abort()
+    activeRequestRef.current = null
+    setIsSending(false)
+  }
+
   useEffect(() => {
-    resetChat()
-    if (isOpen) setSuggestedPrompts(pickSuggestedPrompts())
+    if (isOpen) {
+      resetChat()
+      setSuggestedPrompts(pickSuggestedPrompts(sensitiveMode))
+    } else {
+      cancelInFlight()
+      resetChat()
+    }
   }, [isOpen])
+
+  useEffect(() => {
+    if (isOpen && messages.length === 0) setSuggestedPrompts(pickSuggestedPrompts(sensitiveMode))
+  }, [sensitiveMode])
+
+  useEffect(() => {
+    if (isOffline) cancelInFlight()
+  }, [isOffline])
 
   useEffect(() => {
     if (isOpen) {
@@ -64,6 +97,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
   }, [messages, isOpen])
 
   const handleClose = () => {
+    cancelInFlight()
     resetChat()
     onClose()
   }
@@ -71,23 +105,31 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
   const sendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault()
     const trimmed = input.trim()
-    if (!trimmed || isSending) return
+    if (!trimmed || isSending || isOffline) return
 
     const nextMessages: ChatMessage[] = [...messages, { role: 'user', content: trimmed }]
     setMessages(nextMessages)
     setInput('')
     setIsSending(true)
+    const generation = requestGenerationRef.current + 1
+    requestGenerationRef.current = generation
+    const controller = new AbortController()
+    activeRequestRef.current?.abort()
+    activeRequestRef.current = controller
 
     try {
-      const result = await api.chatWithAi(trimmed, messages, conversationStateRef.current)
+      const result = await api.chatWithAi(trimmed, messages, conversationStateRef.current, controller.signal)
+      if (generation !== requestGenerationRef.current) return
       conversationStateRef.current = result.state ?? null
       setMessages([...nextMessages, { role: 'assistant', content: result.reply || 'Done.' }])
       if (result.actions.length > 0) {
-        const opensModalAction = result.actions.some(action =>
-          action.type.startsWith('openAdd') || action.type.startsWith('openEdit')
+        const requiresPanelClose = result.actions.some(action =>
+          action.type.startsWith('openAdd') || action.type.startsWith('openEdit') ||
+          action.type.startsWith('request') || action.type === 'openLedgerExport'
         )
-        if (opensModalAction) {
-          handleClose()
+        if (requiresPanelClose) {
+          resetChat()
+          onClose()
           await nextFrame()
           await onActions(result.actions)
           return
@@ -100,11 +142,15 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
         }
       }
     } catch (err) {
+      if (controller.signal.aborted || generation !== requestGenerationRef.current) return
       console.warn('Ask AI request failed', err)
       const content = err instanceof Error ? err.message : 'AI is unavailable. Please try again.'
       setMessages([...nextMessages, { role: 'assistant', content }])
     } finally {
-      setIsSending(false)
+      if (generation === requestGenerationRef.current) {
+        activeRequestRef.current = null
+        setIsSending(false)
+      }
     }
   }
 
@@ -133,18 +179,24 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
                 <Sparkles className="size-5 text-muted-foreground" />
               </div>
               <p className="font-medium text-foreground">Ready.</p>
+              {isOffline && <p className="mt-2 text-[11px] font-medium text-orange-500">Ask AI requires an internet connection.</p>}
               <div className="mt-4 flex max-w-md flex-wrap justify-center gap-2">
                 {suggestedPrompts.map(prompt => (
                   <button
                     key={prompt}
                     type="button"
+                    disabled={isOffline}
                     onClick={() => setInput(prompt)}
-                    className="rounded-full border border-border/60 bg-background px-3 py-1.5 text-[11px] text-muted-foreground transition hover:border-primary/50 hover:text-foreground cursor-pointer"
+                    className="rounded-full border border-border/60 bg-background px-3 py-1.5 text-[11px] text-muted-foreground transition hover:border-primary/50 hover:text-foreground cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
                   >
                     {prompt}
                   </button>
                 ))}
               </div>
+              <p className="mt-4 max-w-md text-[10px] leading-relaxed text-muted-foreground/80">
+                Relevant financial details are sent to the configured AI provider.
+                {sensitiveMode ? ' Sensitive mode keeps amounts hidden and disables record changes.' : ' Record changes still require your confirmation, except recurring on/off toggles.'}
+              </p>
             </div>
           ) : (
             messages.map((message, index) => (
@@ -171,6 +223,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
         <form onSubmit={sendMessage} className="flex items-center gap-2 rounded-xl border border-border bg-card p-1.5 focus-within:border-primary/50 transition-colors shadow-xs">
           <textarea
             aria-label="Ask AI"
+            disabled={isOffline}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => {
@@ -179,7 +232,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
                 void sendMessage()
               }
             }}
-            placeholder=""
+            placeholder={isOffline ? 'Offline' : ''}
             rows={1}
             className="h-11 min-h-11 max-h-28 flex-1 resize-none rounded-xl border border-transparent bg-transparent px-3 py-2 text-sm outline-hidden focus:bg-background/40"
           />
@@ -193,7 +246,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
           </button>
           <button
             type="submit"
-            disabled={!input.trim() || isSending}
+            disabled={!input.trim() || isSending || isOffline}
             className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs transition hover:bg-primary/95 disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer"
             title="Send"
           >
