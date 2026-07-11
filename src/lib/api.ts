@@ -482,6 +482,12 @@ export interface AiUiAction {
 // or trusts its contents (the server re-validates everything on the way back in); it only
 // stores the last response's state and echoes it on the next request so short follow-ups
 // ("those", "the previous cycle") resolve. Reset when the chat closes.
+export interface AiAmountThreshold {
+  comparator: string
+  low: number
+  high?: number | null
+}
+
 export interface AiConversationState {
   lastIntent?: string | null
   lastSearchText?: string | null
@@ -491,6 +497,18 @@ export interface AiConversationState {
   lastMatchedTransactionIds?: string[] | null
   lastWishlistItemId?: number | null
   lastCategory?: string | null
+  // Resolved query "frame" fields. The client round-trips them verbatim; the server re-validates
+  // everything (SanitizeConversationState), so this is preserve-not-trust.
+  lastResolvedCycleKeys?: string[] | null
+  lastAmountThreshold?: AiAmountThreshold | null
+  lastExcludeTransfers?: boolean
+  lastExcludedCategories?: string[] | null
+  lastIncludedCategories?: string[] | null
+  lastLedgerCategory?: string | null
+  lastTransactionType?: string | null
+  lastExactDate?: string | null
+  lastComparison?: boolean
+  lastRecurringReference?: string | null
 }
 
 export interface AiChatResponse {
@@ -510,13 +528,30 @@ function normalizeAiConversationState(value: unknown): AiConversationState | nul
   const itemId = typeof candidate.lastWishlistItemId === 'number' && Number.isInteger(candidate.lastWishlistItemId) && candidate.lastWishlistItemId > 0
     ? candidate.lastWishlistItemId
     : null
+  const stringArray = (key: string) => Array.isArray(candidate[key])
+    ? (candidate[key] as unknown[]).filter((v): v is string => typeof v === 'string' && v.trim().length > 0).slice(0, 24)
+    : null
+  const bool = (key: string) => candidate[key] === true
+  const threshold = (() => {
+    const t = candidate.lastAmountThreshold
+    if (!t || typeof t !== 'object') return null
+    const c = t as Record<string, unknown>
+    if (typeof c.comparator !== 'string' || typeof c.low !== 'number') return null
+    return { comparator: c.comparator, low: c.low, high: typeof c.high === 'number' ? c.high : null } as AiAmountThreshold
+  })()
   const state: AiConversationState = {}
-  for (const key of ['lastIntent', 'lastSearchText', 'lastCycleHint', 'lastWishlistReference', 'lastResolvedCycle', 'lastCategory'] as const) {
+  for (const key of ['lastIntent', 'lastSearchText', 'lastCycleHint', 'lastWishlistReference', 'lastResolvedCycle', 'lastCategory', 'lastLedgerCategory', 'lastTransactionType', 'lastExactDate', 'lastRecurringReference'] as const) {
     const value = text(key)
     if (Object.prototype.hasOwnProperty.call(candidate, key)) state[key] = value
   }
   if (Object.prototype.hasOwnProperty.call(candidate, 'lastMatchedTransactionIds')) state.lastMatchedTransactionIds = ids
   if (Object.prototype.hasOwnProperty.call(candidate, 'lastWishlistItemId')) state.lastWishlistItemId = itemId
+  if (Object.prototype.hasOwnProperty.call(candidate, 'lastResolvedCycleKeys')) state.lastResolvedCycleKeys = stringArray('lastResolvedCycleKeys')
+  if (Object.prototype.hasOwnProperty.call(candidate, 'lastExcludedCategories')) state.lastExcludedCategories = stringArray('lastExcludedCategories')
+  if (Object.prototype.hasOwnProperty.call(candidate, 'lastIncludedCategories')) state.lastIncludedCategories = stringArray('lastIncludedCategories')
+  if (Object.prototype.hasOwnProperty.call(candidate, 'lastAmountThreshold')) state.lastAmountThreshold = threshold
+  if (Object.prototype.hasOwnProperty.call(candidate, 'lastExcludeTransfers')) state.lastExcludeTransfers = bool('lastExcludeTransfers')
+  if (Object.prototype.hasOwnProperty.call(candidate, 'lastComparison')) state.lastComparison = bool('lastComparison')
   return state
 }
 
