@@ -1272,15 +1272,34 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   // Toggle filter on or off
   const handleToggleFilter = (filterName: string) => {
+    const ledgerCategories = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income'];
+    const isLedgerCategory = ledgerCategories.includes(filterName);
+    const groupFilters = isLedgerCategory
+      ? ledgerCategories
+      : categories.map(c => c.name);
+
+    const updateFilterList = (prev: string[]) => {
+      let next;
+      if (prev.includes(filterName)) {
+        next = prev.filter(f => f !== filterName);
+      } else {
+        next = [...prev, filterName];
+      }
+
+      // Check if all filters in the group are now selected
+      const groupSelectedCount = next.filter(f => groupFilters.includes(f)).length;
+      if (groupSelectedCount === groupFilters.length) {
+        // Deselect all filters in this group
+        next = next.filter(f => !groupFilters.includes(f));
+      }
+      return next;
+    };
+
     if (showAllCycles) {
       // In server mode: toggle pending filters only
-      setPendingFilters(prev =>
-        prev.includes(filterName) ? prev.filter(f => f !== filterName) : [...prev, filterName]
-      )
+      setPendingFilters(prev => updateFilterList(prev));
     } else {
-      setSelectedFilters(prev =>
-        prev.includes(filterName) ? prev.filter(f => f !== filterName) : [...prev, filterName]
-      )
+      setSelectedFilters(prev => updateFilterList(prev));
     }
   }
 
@@ -1590,7 +1609,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     
     const ledgerBuckets = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
     const selectedBuckets = appliedFilters.filter(f => ledgerBuckets.includes(f))
-    const selectedSubcategories = appliedFilters.filter(f => !ledgerBuckets.includes(f))
+    const selectedCategories = appliedFilters.filter(f => !ledgerBuckets.includes(f))
 
     return pendingTransactions.filter(t => {
       if (t.ledgerCategory === 'Discarded') return false
@@ -1623,9 +1642,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         if (!matchesBucket) return false
       }
 
-      // Subcategories filter
-      if (selectedSubcategories.length > 0) {
-        const matchesSubcat = selectedSubcategories.some(subcat => t.category === subcat)
+      // Categories filter
+      if (selectedCategories.length > 0) {
+        const matchesSubcat = selectedCategories.some(subcat => t.category === subcat)
         if (!matchesSubcat) return false
       }
 
@@ -1645,10 +1664,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   // Filtered transactions
   const filteredTransactions = useMemo(() => {
-    // Group filters by their type (Ledger Buckets vs Subcategories)
+    // Group filters by their type (Ledger Categories vs Categories)
     const ledgerBuckets = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
     const selectedBuckets = selectedFilters.filter(f => ledgerBuckets.includes(f))
-    const selectedSubcategories = selectedFilters.filter(f => !ledgerBuckets.includes(f))
+    const selectedCategories = selectedFilters.filter(f => !ledgerBuckets.includes(f))
 
     return sourceTransactions.filter(t => {
       if (t.ledgerCategory === 'Discarded') return false
@@ -1667,8 +1686,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       }
 
       let matchesSubcat = true
-      if (selectedSubcategories.length > 0) {
-        matchesSubcat = selectedSubcategories.some(subcat => t.category === subcat)
+      if (selectedCategories.length > 0) {
+        matchesSubcat = selectedCategories.some(subcat => t.category === subcat)
       }
 
       let matchesDate = true
@@ -2022,9 +2041,17 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         }
 
         const filterDetails: string[] = []
-        for (const category of activeCategoryFilters) {
-          const isLedgerBucket = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income'].includes(category)
-          filterDetails.push(`${isLedgerBucket ? 'ledger category' : 'category'} "${category}"`)
+        const ledgerCategories = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
+        const selectedBuckets = activeCategoryFilters.filter(f => ledgerCategories.includes(f))
+        const selectedCats = activeCategoryFilters.filter(f => !ledgerCategories.includes(f))
+
+        if (selectedBuckets.length > 0) {
+          const names = selectedBuckets.map(b => `"${b}"`).join(' and ')
+          filterDetails.push(`ledger category ${names}`)
+        }
+        if (selectedCats.length > 0) {
+          const names = selectedCats.map(c => `"${c}"`).join(' and ')
+          filterDetails.push(`category ${names}`)
         }
         if (activeDate) {
           const d = new Date(activeDate)
@@ -2630,8 +2657,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               <Filter className="size-4 md:size-3.5" />
               <span className="hidden md:inline truncate">
                 {showAllCycles
-                  ? (appliedFilters.length === 0 ? 'All Ledger & Subcategories' : `${appliedFilters.length} filter${appliedFilters.length > 1 ? 's' : ''} applied`)
-                  : (selectedFilters.length === 0 ? 'All Ledger & Subcategories' : `${selectedFilters.length} filter${selectedFilters.length > 1 ? 's' : ''} active`)}
+                  ? (appliedFilters.length === 0 ? 'All Ledger Categories & Categories' : `${appliedFilters.length} filter${appliedFilters.length > 1 ? 's' : ''} applied`)
+                  : (selectedFilters.length === 0 ? 'All Ledger Categories & Categories' : `${selectedFilters.length} filter${selectedFilters.length > 1 ? 's' : ''} active`)}
               </span>
             </span>
             <span className="hidden md:inline text-[9px] text-muted-foreground">{'▼'}</span>
@@ -2662,7 +2689,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               <div className="space-y-4 max-h-72 overflow-y-auto pr-1">
                 {/* Section 1: Ledger Allocation Buckets */}
                 <div className="space-y-2">
-                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Ledger Buckets</span>
+                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Ledger Categories</span>
                   <div className="grid grid-cols-1 gap-1.5">
                     {['Essentials', 'Growth', 'Stability', 'Rewards', 'Income'].map(bucket => {
                       const isChecked = (showAllCycles ? pendingFilters : selectedFilters).includes(bucket)
@@ -2685,9 +2712,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   </div>
                 </div>
 
-                {/* Section 2: Transaction Subcategories */}
+                {/* Section 2: Transaction Categories */}
                 <div className="space-y-2">
-                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Subcategories</span>
+                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Categories</span>
                   <div className="grid grid-cols-1 gap-1.5 max-h-40 overflow-y-auto pr-0.5">
                     {categories.map(c => {
                       const isChecked = (showAllCycles ? pendingFilters : selectedFilters).includes(c.name)
@@ -2769,7 +2796,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
                 {/* Section 1: Ledger Allocation Buckets */}
                 <div className="space-y-2">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Ledger Buckets</span>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Ledger Categories</span>
                   <div className="grid grid-cols-1 gap-1.5">
                     {['Essentials', 'Growth', 'Stability', 'Rewards', 'Income'].map(bucket => {
                       const isChecked = (showAllCycles ? pendingFilters : selectedFilters).includes(bucket)
@@ -2792,9 +2819,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   </div>
                 </div>
 
-                {/* Section 2: Transaction Subcategories */}
+                {/* Section 2: Transaction Categories */}
                 <div className="space-y-2">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Subcategories</span>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Categories</span>
                   <div className="grid grid-cols-1 gap-1.5 max-h-52 overflow-y-auto pr-0.5">
                     {categories.map(c => {
                       const isChecked = (showAllCycles ? pendingFilters : selectedFilters).includes(c.name)
