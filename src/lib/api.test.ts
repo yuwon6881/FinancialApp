@@ -115,6 +115,10 @@ describe('chatWithAi state contract', () => {
         lastSearchText: '  coffee  ',
         lastMatchedTransactionIds: ['a', 42, '', ...Array.from({ length: 60 }, (_, i) => `id-${i}`)],
         lastWishlistItemId: -4,
+        lastTopic: 'recurring',
+        lastQueryFacets: ['recurring_cost', 42, '', 'recurring_status'],
+        lastRecurringStatus: 'paid',
+        lastTargetAmount: 5000,
       } }),
       { status: 200 },
     )))
@@ -127,5 +131,9 @@ describe('chatWithAi state contract', () => {
     expect(result.state?.lastSearchText).toBe('coffee')
     expect(result.state?.lastMatchedTransactionIds).toHaveLength(50)
     expect(result.state?.lastWishlistItemId).toBeNull()
+    expect(result.state?.lastTopic).toBe('recurring')
+    expect(result.state?.lastQueryFacets).toEqual(['recurring_cost', 'recurring_status'])
+    expect(result.state?.lastRecurringStatus).toBe('paid')
+    expect(result.state?.lastTargetAmount).toBe(5000)
   })
 })

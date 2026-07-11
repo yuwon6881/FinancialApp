@@ -510,6 +510,11 @@ export interface AiConversationState {
   lastComparison?: boolean
   lastRecurringReference?: string | null
   lastIntents?: string[] | null
+  lastTopic?: 'transactional' | 'wishlist' | 'recurring' | null
+  lastQueryFacets?: string[] | null
+  lastRecurringStatus?: string | null
+  lastWishlistStatus?: string | null
+  lastTargetAmount?: number | null
 }
 
 export interface AiChatResponse {
@@ -541,7 +546,7 @@ function normalizeAiConversationState(value: unknown): AiConversationState | nul
     return { comparator: c.comparator, low: c.low, high: typeof c.high === 'number' ? c.high : null } as AiAmountThreshold
   })()
   const state: AiConversationState = {}
-  for (const key of ['lastIntent', 'lastSearchText', 'lastCycleHint', 'lastWishlistReference', 'lastResolvedCycle', 'lastCategory', 'lastLedgerCategory', 'lastTransactionType', 'lastExactDate', 'lastRecurringReference'] as const) {
+  for (const key of ['lastIntent', 'lastSearchText', 'lastCycleHint', 'lastWishlistReference', 'lastResolvedCycle', 'lastCategory', 'lastLedgerCategory', 'lastTransactionType', 'lastExactDate', 'lastRecurringReference', 'lastRecurringStatus', 'lastWishlistStatus'] as const) {
     const value = text(key)
     if (Object.prototype.hasOwnProperty.call(candidate, key)) state[key] = value
   }
@@ -551,9 +556,20 @@ function normalizeAiConversationState(value: unknown): AiConversationState | nul
   if (Object.prototype.hasOwnProperty.call(candidate, 'lastExcludedCategories')) state.lastExcludedCategories = stringArray('lastExcludedCategories')
   if (Object.prototype.hasOwnProperty.call(candidate, 'lastIncludedCategories')) state.lastIncludedCategories = stringArray('lastIncludedCategories')
   if (Object.prototype.hasOwnProperty.call(candidate, 'lastIntents')) state.lastIntents = stringArray('lastIntents')
+  if (Object.prototype.hasOwnProperty.call(candidate, 'lastQueryFacets')) state.lastQueryFacets = stringArray('lastQueryFacets')
+  if (Object.prototype.hasOwnProperty.call(candidate, 'lastTopic')) {
+    state.lastTopic = candidate.lastTopic === 'transactional' || candidate.lastTopic === 'wishlist' || candidate.lastTopic === 'recurring'
+      ? candidate.lastTopic
+      : null
+  }
   if (Object.prototype.hasOwnProperty.call(candidate, 'lastAmountThreshold')) state.lastAmountThreshold = threshold
   if (Object.prototype.hasOwnProperty.call(candidate, 'lastExcludeTransfers')) state.lastExcludeTransfers = bool('lastExcludeTransfers')
   if (Object.prototype.hasOwnProperty.call(candidate, 'lastComparison')) state.lastComparison = bool('lastComparison')
+  if (Object.prototype.hasOwnProperty.call(candidate, 'lastTargetAmount')) {
+    state.lastTargetAmount = typeof candidate.lastTargetAmount === 'number' && Number.isFinite(candidate.lastTargetAmount) && candidate.lastTargetAmount > 0
+      ? candidate.lastTargetAmount
+      : null
+  }
   return state
 }
 

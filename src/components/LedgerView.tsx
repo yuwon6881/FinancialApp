@@ -32,7 +32,7 @@ import { RowSyncBadge } from './ui/RowSyncBadge'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { BottomSheet } from './ui/BottomSheet'
 import { SmartAmountInput } from './ui/SmartAmountInput'
-import { BorderBeam } from './ui/BorderBeam'
+import { PerimeterBeam } from './ui/PerimeterBeam'
 import { lockBodyScroll, unlockBodyScroll } from '../lib/scrollLock'
 import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput, displayLedgerCategory } from '../lib/utils'
 import { getErrorMessage } from '../lib/errors'
@@ -2122,11 +2122,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     }}
                     className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border transition duration-200 text-xs font-semibold cursor-pointer ${
                       isScanning
-                        ? 'ai-border-beam border-blue-500/20 bg-blue-500/5 text-blue-600 dark:text-blue-400 cursor-not-allowed'
+                        ? 'perimeter-beam-host border-blue-500/20 bg-blue-500/5 text-blue-600 dark:text-blue-400 cursor-not-allowed'
                         : 'border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400'
                     }`}
                   >
-                    {isScanning && <BorderBeam />}
+                    {isScanning && <PerimeterBeam size={104} />}
                     {isScanning ? (
                       <><Loader2 className="size-3.5 animate-spin" /> Scanning receipt...</>
                     ) : (
@@ -2261,9 +2261,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     onClick={() => void requestNoteSuggestions()}
                     disabled={isSuggestingNote || description.trim().length < 2}
                     title={description.trim().length < 2 ? 'Enter a description first' : 'Suggest better notes'}
-                    className={`inline-flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/5 px-2 py-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed transition cursor-pointer ${isSuggestingNote ? 'ai-border-beam' : ''}`}
+                    className={`inline-flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/5 px-2 py-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed transition cursor-pointer ${isSuggestingNote ? 'perimeter-beam-host' : ''}`}
                   >
-                    {isSuggestingNote && <BorderBeam />}
+                    {isSuggestingNote && <PerimeterBeam radius={8} size={52} />}
                     {isSuggestingNote ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
                     AI
                   </button>

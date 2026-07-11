@@ -373,98 +373,64 @@
     animation: skeleton-shimmer 1.5s ease-in-out infinite;
 }
 
-@keyframes ai-border-sweep {
-    from { background-position: 200% 0; }
-    to { background-position: -200% 0; }
+/* A single short color trace travels on the perimeter. The two-layer mask
+   removes the entire content box, so no highlight can beam through a button or
+   card. This mirrors the geometry of Ant Design's BorderBeam without bringing
+   the component library into this app. */
+@keyframes perimeter-beam-travel {
+    from { offset-distance: 0%; }
+    to { offset-distance: 100%; }
 }
 
-.ai-shimmer-border {
+.perimeter-beam-host {
     position: relative;
-    overflow: hidden;
-    border-color: color-mix(in srgb, var(--ledger-blue-500) 55%, transparent) !important;
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--ledger-blue-500) 18%, transparent);
 }
 
-.ai-shimmer-border::after {
-    content: "";
+.perimeter-beam {
+    display: none;
     position: absolute;
     inset: -1px;
-    pointer-events: none;
     border-radius: inherit;
-    background: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in srgb, var(--ledger-sky-500) 38%, transparent) 40%,
-        color-mix(in srgb, var(--ledger-income-500) 30%, transparent) 50%,
-        transparent 62%
-    );
-    background-size: 220% 100%;
-    animation: ai-border-sweep 1.15s linear infinite;
-    mask:
-        linear-gradient(#000 0 0) content-box,
-        linear-gradient(#000 0 0);
-    mask-composite: exclude;
-    -webkit-mask:
-        linear-gradient(#000 0 0) content-box,
-        linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
+    z-index: 1;
+    overflow: hidden;
     padding: 1px;
-}
-
-/* One unified beam travelling around a parent's border. A conic gradient is
-   rotated via an animated custom property and masked to a thin ring, so the
-   beam stays a single continuous arc at any aspect ratio (the old SVG dash
-   fragmented into several segments on long/stretched elements). */
-@property --ai-beam-angle {
-    syntax: "<angle>";
-    initial-value: 0deg;
-    inherits: false;
-}
-
-@keyframes ai-beam-spin {
-    to { --ai-beam-angle: 360deg; }
-}
-
-/* Positioning helper applied to the parent while a beam is mounted. */
-.ai-border-beam {
-    position: relative;
-}
-
-.ai-beam {
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    padding: 2px;
     pointer-events: none;
-    /* A single blue -> cyan -> green arc (~130deg) with a transparent tail,
-       so exactly one beam sweeps the perimeter. */
-    background: conic-gradient(
-        from var(--ai-beam-angle),
-        transparent 0deg,
-        #1677ff 25deg,
-        #36cfc9 70deg,
-        #95de64 115deg,
-        transparent 150deg,
-        transparent 360deg
-    );
-    filter: drop-shadow(0 0 4px color-mix(in srgb, #36cfc9 60%, transparent));
-    mask:
-        linear-gradient(#000 0 0) content-box,
-        linear-gradient(#000 0 0);
-    mask-composite: exclude;
     -webkit-mask:
-        linear-gradient(#000 0 0) content-box,
-        linear-gradient(#000 0 0);
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
-    animation: ai-beam-spin 2.6s linear infinite;
+    mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    mask-composite: exclude;
 }
 
-/* Browsers without @property support can't animate the angle; show a static
-   gradient ring instead of a stuck one. */
-@supports not (background: conic-gradient(from var(--ai-beam-angle), red, blue)) {
-    .ai-beam {
-        background: linear-gradient(120deg, #1677ff 0%, #36cfc9 52%, #95de64 100%);
-        animation: none;
+@supports (offset-path: rect(0 auto auto 0 round 1px)) and ((mask-composite: exclude) or (-webkit-mask-composite: xor)) {
+    .perimeter-beam {
+        display: block;
+    }
+
+    .perimeter-beam::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: var(--perimeter-beam-size, 88px);
+        aspect-ratio: 1;
+        opacity: 0.72;
+        background: linear-gradient(
+            to left,
+            color-mix(in srgb, var(--ledger-blue-500) 78%, transparent) 0%,
+            color-mix(in srgb, var(--ledger-sky-500) 58%, transparent) 42%,
+            color-mix(in srgb, var(--ledger-income-500) 34%, transparent) 68%,
+            transparent 100%
+        );
+        offset-anchor: 90% 50%;
+        offset-distance: 0%;
+        offset-path: rect(0 auto auto 0 round var(--perimeter-beam-radius, 12px));
+        offset-rotate: auto;
+        animation: perimeter-beam-travel var(--perimeter-beam-duration, 5.5s) linear infinite;
+        will-change: offset-distance;
     }
 }
 
@@ -500,7 +466,7 @@
     .soft-rise,
     .view-enter,
     .skeleton-shimmer,
-    .ai-beam,
+    .perimeter-beam::before,
     .trend-draw,
     .area-fade,
     .press-scale {
