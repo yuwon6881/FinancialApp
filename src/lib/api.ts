@@ -509,6 +509,7 @@ export interface AiConversationState {
   lastExactDate?: string | null
   lastComparison?: boolean
   lastRecurringReference?: string | null
+  lastIntents?: string[] | null
 }
 
 export interface AiChatResponse {
@@ -549,6 +550,7 @@ function normalizeAiConversationState(value: unknown): AiConversationState | nul
   if (Object.prototype.hasOwnProperty.call(candidate, 'lastResolvedCycleKeys')) state.lastResolvedCycleKeys = stringArray('lastResolvedCycleKeys')
   if (Object.prototype.hasOwnProperty.call(candidate, 'lastExcludedCategories')) state.lastExcludedCategories = stringArray('lastExcludedCategories')
   if (Object.prototype.hasOwnProperty.call(candidate, 'lastIncludedCategories')) state.lastIncludedCategories = stringArray('lastIncludedCategories')
+  if (Object.prototype.hasOwnProperty.call(candidate, 'lastIntents')) state.lastIntents = stringArray('lastIntents')
   if (Object.prototype.hasOwnProperty.call(candidate, 'lastAmountThreshold')) state.lastAmountThreshold = threshold
   if (Object.prototype.hasOwnProperty.call(candidate, 'lastExcludeTransfers')) state.lastExcludeTransfers = bool('lastExcludeTransfers')
   if (Object.prototype.hasOwnProperty.call(candidate, 'lastComparison')) state.lastComparison = bool('lastComparison')
