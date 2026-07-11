@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Fingerprint, ShieldCheck, Bell, ChevronDown, ChevronUp, Lock, Unlock, MonitorSmartphone, CalendarDays, LogOut, Sparkles, Loader2 } from 'lucide-react'
+import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Bell, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2 } from 'lucide-react'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { SmartAmountInput } from './ui/SmartAmountInput'
@@ -8,30 +8,18 @@ import { RowSyncBadge } from './ui/RowSyncBadge'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { getCycleRangeDates, getStartOfNCyclesAgo, getCurrentCycleYearAndMonth, formatDateForApi } from '../lib/cycle'
 import * as api from '../lib/api'
-import type { CategoryCleanupSuggestion, FingerprintCredentialSummary, SessionSummary } from '../lib/api'
-import { isPlatformAuthenticatorAvailable, createFingerprintCredential, getFriendlyDeviceLabel, base64UrlToHex } from '../lib/webauthn'
+import type { CategoryCleanupSuggestion } from '../lib/api'
 import type { ToastTone } from './ui/ToastViewport'
 import { ToggleButton } from './ui/ToggleButton'
 import { TwoFactorSection } from './TwoFactorSection'
 import { ChangePasswordSection } from './ChangePasswordSection'
 import { CollapsibleBody } from './ui/CollapsibleBody'
 import { PerimeterBeam } from './ui/PerimeterBeam'
-import { getErrorMessage, getErrorName } from '../lib/errors'
+import { getErrorMessage } from '../lib/errors'
 import { rebalanceAllocations, type AllocationKey } from '../lib/allocations'
-
-const formatRelativeTime = (iso: string | null): string => {
-  if (!iso) return 'Never'
-  const diffMs = Date.now() - new Date(iso).getTime()
-  const diffMinutes = Math.round(diffMs / 60000)
-  if (diffMinutes < 1) return 'Just now'
-  if (diffMinutes < 60) return `${diffMinutes}m ago`
-  const diffHours = Math.round(diffMinutes / 60)
-  if (diffHours < 24) return `${diffHours}h ago`
-  const diffDays = Math.round(diffHours / 24)
-  return `${diffDays}d ago`
-}
-
-const DEVICE_CREDENTIAL_ID_KEY = 'fingerprint_credential_id_on_this_device'
+import { useAppContext } from '../contexts/AppContext'
+import { ActiveDevicesSection } from './settings/ActiveDevicesSection'
+import { FingerprintSection } from './settings/FingerprintSection'
 
 // How far back to look when flagging a category as unused/rarely used. Long enough that
 // categories only touched a couple times a year (insurance, annual renewals) aren't
@@ -41,8 +29,8 @@ const USAGE_LOOKBACK_CYCLES = 6
 interface SettingsViewProps {
   dashboardData: DashboardData | null
   categoriesList: TransactionCategory[]
-  darkMode: boolean
-  hideSensitive: boolean
+  darkMode?: boolean
+  hideSensitive?: boolean
   onToggleDarkMode?: () => void
   onToggleHideSensitive?: () => void
   onUpdateSettings: (settings: {
@@ -84,19 +72,25 @@ const getDayWithSuffix = (day: number) => {
 export const SettingsView: React.FC<SettingsViewProps> = ({
   dashboardData,
   categoriesList,
-  darkMode,
-  hideSensitive,
+  darkMode: darkModeProp,
+  hideSensitive: hideSensitiveProp,
   onUpdateSettings,
   onAddCategory,
   onDeleteCategory,
   onApplyCategoryCleanupSuggestion,
   notifyOnLoginEnabled = true,
   onToggleNotifyOnLogin,
-  activeSyncId = null,
-  deletingId = null,
-  onToast,
+  activeSyncId: activeSyncIdProp,
+  deletingId: deletingIdProp,
+  onToast: onToastProp,
   onNavigateToLedger
 }) => {
+  const app = useAppContext()
+  const darkMode = darkModeProp ?? app.darkMode
+  const hideSensitive = hideSensitiveProp ?? app.hideSensitive
+  const activeSyncId = activeSyncIdProp ?? app.activeSyncId
+  const deletingId = deletingIdProp ?? app.deletingId
+  const onToast = onToastProp ?? app.showToast
   const isCatSyncing = (catId: string) => {
     return activeSyncId !== null && activeSyncId !== undefined && String(activeSyncId) === String(catId)
   }
@@ -143,7 +137,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   }
   const [showUsageDetails, setShowUsageDetails] = useState(false)
   const [categoriesOpen, setCategoriesOpen] = useState(false)
-  const [devicesOpen, setDevicesOpen] = useState(false)
   const [usageTransactions, setUsageTransactions] = useState<{ category: string }[] | null>(null)
   const [usageError, setUsageError] = useState<string | null>(null)
   const [cleanupSuggestions, setCleanupSuggestions] = useState<CategoryCleanupSuggestion[]>([])
@@ -180,121 +173,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       })
     return () => { cancelled = true }
   }, [activeSettings.cycleDay])
-
-  // Fingerprint (WebAuthn) state
-  const [fingerprintCredentials, setFingerprintCredentials] = useState<FingerprintCredentialSummary[]>([])
-  const [fingerprintBusy, setFingerprintBusy] = useState(false)
-  const [platformAuthAvailable, setPlatformAuthAvailable] = useState(false)
-
-  // Active Sessions state
-  const [sessions, setSessions] = useState<SessionSummary[]>([])
-
-  const loadFingerprintCredentials = async () => {
-    try {
-      setFingerprintCredentials(await api.listFingerprintCredentials())
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
-  const loadSessions = async () => {
-    try {
-      setSessions(await api.getSessions())
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
-  const handleRevokeSession = async (id: string) => {
-    if (hideSensitive) return
-    try {
-      await api.revokeSession(id)
-      await loadSessions()
-      onToast?.('Session revoked.', 'Session removed', 'success')
-    } catch (err: unknown) {
-      console.error(err)
-      onToast?.(getErrorMessage(err, 'Failed to revoke session.'), 'Error', 'error')
-    }
-  }
-
-  const handleRevokeAllOtherSessions = async () => {
-    if (hideSensitive) return
-    try {
-      const { revokedCount } = await api.revokeAllSessions(true)
-      await loadSessions()
-      onToast?.(`Logged out ${revokedCount} other device(s).`, 'Devices logged out', 'success')
-    } catch (err: unknown) {
-      console.error(err)
-      onToast?.(getErrorMessage(err, 'Failed to log out other devices.'), 'Error', 'error')
-    }
-  }
-
-  useEffect(() => {
-    loadFingerprintCredentials()
-    loadSessions()
-    isPlatformAuthenticatorAvailable().then(setPlatformAuthAvailable)
-  }, [])
-
-  const enrolledOnThisDevice = useMemo(() => {
-    if (fingerprintCredentials.length === 0) return false
-    const storedId = localStorage.getItem(DEVICE_CREDENTIAL_ID_KEY)
-    if (!storedId) return false
-    // Sentinel written when we know this device is enrolled but can't pin down
-    // which specific credential id is ours (e.g. an InvalidStateError recovery).
-    if (storedId === 'already_enrolled') return true
-    // The server lists credentials by uppercase hex id. Historically we stored
-    // the base64url credential id here instead, so match against both forms:
-    // the hex we store now, and the legacy base64url converted to hex.
-    const upper = storedId.toUpperCase()
-    let legacyHex: string | null = null
-    try { legacyHex = base64UrlToHex(storedId) } catch { legacyHex = null }
-    return fingerprintCredentials.some(c => {
-      const serverId = c.id.toUpperCase()
-      return serverId === upper || (legacyHex !== null && serverId === legacyHex)
-    })
-  }, [fingerprintCredentials])
-
-  const handleEnrollFingerprint = async () => {
-    if (hideSensitive) return
-    setFingerprintBusy(true)
-    try {
-      const { challengeId, options } = await api.getFingerprintRegisterOptions()
-      const credential = await createFingerprintCredential(options)
-      await api.verifyFingerprintRegistration(challengeId, credential, getFriendlyDeviceLabel())
-      // Store the same uppercase-hex form the server reports so this device is
-      // recognised as already-enrolled on the next load (see enrolledOnThisDevice).
-      localStorage.setItem(DEVICE_CREDENTIAL_ID_KEY, base64UrlToHex(credential.id))
-      await loadFingerprintCredentials()
-      onToast?.('Fingerprint enabled on this device.', 'Fingerprint enabled', 'success')
-    } catch (err: unknown) {
-      console.error(err)
-      if (getErrorName(err) === 'InvalidStateError') {
-        // The authenticator already holds a credential for this account
-        // (excludeCredentials matched) -- this device is already enrolled, so
-        // reconcile state and tell the user rather than erroring. We can't tell
-        // which stored credential is ours here, so mark it with the sentinel.
-        localStorage.setItem(DEVICE_CREDENTIAL_ID_KEY, 'already_enrolled')
-        await loadFingerprintCredentials()
-        onToast?.('This device already has fingerprint enabled.', 'Already enabled', 'info')
-      } else if (getErrorName(err) !== 'NotAllowedError') {
-        onToast?.(getErrorMessage(err, 'Failed to register fingerprint on this device.'), 'Fingerprint error', 'error')
-      }
-    } finally {
-      setFingerprintBusy(false)
-    }
-  }
-
-  const handleRemoveFingerprint = async (id: string) => {
-    if (hideSensitive) return
-    try {
-      await api.deleteFingerprintCredential(id)
-      await loadFingerprintCredentials()
-      onToast?.('Fingerprint credential removed.', 'Fingerprint removed', 'success')
-    } catch (err: unknown) {
-      console.error(err)
-      onToast?.(getErrorMessage(err, 'Failed to remove fingerprint credential.'), 'Fingerprint error', 'error')
-    }
-  }
 
   useEffect(() => {
     setTargetInput(activeSettings.targetStabilityFund.toString())
@@ -976,81 +854,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </CollapsibleBody>
           </section>
 
-          {/* Active Devices Section */}
-          <section className="app-panel rounded-2xl border border-border/60 bg-card/92 shadow-sm overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setDevicesOpen(o => !o)}
-              aria-expanded={devicesOpen}
-              className="w-full flex items-center gap-3 p-5 text-left cursor-pointer"
-            >
-              <div className="p-2 bg-blue-500/10 rounded-xl shrink-0">
-                <MonitorSmartphone className="size-4 text-blue-500" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-bold text-foreground">Active Devices</h3>
-                <p className="text-[11px] text-muted-foreground">Manage devices currently logged into your account.</p>
-              </div>
-              <span className="shrink-0 text-[10px] font-bold text-muted-foreground">{sessions.length}</span>
-              {devicesOpen ? <ChevronUp className="size-4 text-muted-foreground shrink-0" /> : <ChevronDown className="size-4 text-muted-foreground shrink-0" />}
-            </button>
-
-            <CollapsibleBody open={devicesOpen}>
-            <div className="px-5 pb-5 border-t border-border/40 pt-4 space-y-4">
-
-            <div className="space-y-1.5">
-              {sessions.map(session => (
-                <div key={session.id} className="flex items-center justify-between gap-2 bg-muted/20 border border-border/40 px-3 py-2.5 rounded-xl text-xs">
-                  <div className="flex flex-col gap-0.5 min-w-0">
-                    <span className="flex items-center gap-2 text-foreground font-semibold truncate">
-                      <MonitorSmartphone className="size-3.5 text-blue-500 shrink-0" />
-                      <span className="truncate">{session.deviceName || 'Unknown Device'}</span>
-                      {session.isCurrent && (
-                        <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-500 text-[10px] font-bold uppercase tracking-wider">Current</span>
-                      )}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground flex items-center gap-1.5 flex-wrap">
-                      <span className="flex items-center gap-1">
-                        <CalendarDays className="size-3 opacity-70" />
-                        Logged in: {new Date(session.createdAt).toLocaleDateString()}
-                      </span>
-                      <span>&middot; Last active: {formatRelativeTime(session.lastActiveAt)}</span>
-                    </span>
-                    {session.ipAddress && (
-                      <span className="text-[10px] text-muted-foreground/75 mt-0.5 block">
-                        IP: {session.ipAddress}
-                      </span>
-                    )}
-                  </div>
-                  {!session.isCurrent && (
-                    <button
-                      type="button"
-                      onClick={() => handleRevokeSession(session.id)}
-                      disabled={hideSensitive}
-                      className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg cursor-pointer transition shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
-                      title={hideSensitive ? 'Unhide balances to edit' : 'Log out this device'}
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {sessions.length > 1 && (
-              <button
-                type="button"
-                onClick={handleRevokeAllOtherSessions}
-                disabled={hideSensitive}
-                className="press-scale w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-500 border border-red-500/30 hover:bg-red-500/10 disabled:opacity-40 transition cursor-pointer"
-              >
-                <LogOut className="size-3.5" /> Log out all other devices
-              </button>
-            )}
-
-            </div>
-            </CollapsibleBody>
-          </section>
+          <ActiveDevicesSection />
 
           <TwoFactorSection hideSensitive={hideSensitive} onToast={onToast} />
 
@@ -1076,62 +880,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </section>
 
-          {/* Security & Fingerprint Section */}
-          {platformAuthAvailable && (
-            <section className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5 shadow-sm space-y-4">
-              <div className="flex items-center gap-2.5 pb-3 border-b border-border/40">
-                <ShieldCheck className="size-5 text-emerald-500 shrink-0" />
-                <div>
-                  <h3 className="text-sm font-bold text-foreground">Fingerprint Login</h3>
-                  <p className="text-[11px] text-muted-foreground">Unlock the dashboard with this device's fingerprint or face unlock instead of your password.</p>
-                </div>
-              </div>
-
-              {fingerprintCredentials.length > 0 && (
-                <div className="space-y-1.5">
-                  {fingerprintCredentials.map(cred => (
-                    <div key={cred.id} className="flex items-center justify-between gap-2 bg-muted/20 border border-border/40 px-3 py-2.5 rounded-xl text-xs">
-                      <span className="flex items-center gap-2 text-foreground font-semibold truncate">
-                        <Fingerprint className="size-4 text-emerald-500 shrink-0" />
-                        <span className="truncate">{cred.deviceLabel || 'Registered device'}</span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveFingerprint(cred.id)}
-                        disabled={hideSensitive}
-                        className="p-1.5 text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10 rounded-lg cursor-pointer transition shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
-                        title={hideSensitive ? 'Unhide balances to edit' : 'Remove this fingerprint credential'}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {enrolledOnThisDevice ? (
-                <div className="flex items-center justify-center gap-1.5 px-3.5 py-2 text-[11px] font-semibold text-emerald-500">
-                  <CheckCircle2 className="size-3.5 shrink-0" />
-                  Enabled on this device
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleEnrollFingerprint}
-                  disabled={fingerprintBusy || hideSensitive}
-                  title={hideSensitive ? 'Unhide balances to edit' : undefined}
-                  className="press-scale w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white shadow-md shadow-emerald-600/20"
-                >
-                  {fingerprintBusy ? (
-                    <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                  ) : (
-                    <Fingerprint className="size-3.5" />
-                  )}
-                  {fingerprintCredentials.length > 0 ? 'Add another device' : 'Enable on this device'}
-                </button>
-              )}
-            </section>
-          )}
+          <FingerprintSection />
         </div>
       </div>
     </div>

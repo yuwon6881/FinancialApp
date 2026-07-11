@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense, type ReactNode } from 'react'
-import { App as CapacitorApp } from '@capacitor/app'
 import { AnimatePresence, motion } from 'framer-motion'
 import { SplashScreen } from '@capacitor/splash-screen'
 import TopNav from "./TopNav.tsx"
@@ -25,15 +24,16 @@ import { CustomSelect } from './components/ui/CustomSelect'
 import { PullToRefresh } from './components/ui/PullToRefresh'
 import { ToastViewport, type ToastMessage, type ToastTone, type ToastAction } from './components/ui/ToastViewport'
 import { CardSkeleton, Skeleton } from './components/ui/Skeleton'
-import { CACHE_KEYS, getCachedJSON, getCachedTransactions, getCachedWishlist, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod, getCachedOps, getCachedCycleSnapshot, setCachedCycleSnapshot } from './lib/cache'
+import { CACHE_KEYS, getCachedJSON, getCachedTransactions, getCachedWishlist, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod, getCachedCycleSnapshot, setCachedCycleSnapshot } from './lib/cache'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from './lib/modalDrafts'
-import { enqueue as outboxEnqueue, createFinalId, createLocalWishlistId, DISPATCH, sanitizeQueuedOps, getSyncSuccessToast, type QueuedOp, type EntityKind, type OpType, type OutboxPayload, type DispatchResult } from './lib/outbox'
+import { createFinalId, createLocalWishlistId, sanitizeQueuedOps, type OutboxPayload } from './lib/outbox'
 import { useOptimisticList } from './lib/useOptimisticList'
 import { computeOptimisticDashboard } from './lib/optimisticDashboard'
-import { drainQueue } from './lib/outboxSync'
 import { useVisualViewportVars } from './lib/useVisualViewportVars'
 import { useReceiptScanPolling } from './lib/useReceiptScanPolling'
 import { useAutoLock } from './lib/useAutoLock'
+import { useNativeAppLifecycle } from './lib/useNativeAppLifecycle'
+import { useOutbox } from './lib/useOutbox'
 import { dispatchAiActions, requestAiLedgerDelete } from './lib/aiActions'
 import { PendingSubscriptionsModal } from './components/PendingSubscriptionsModal'
 import { FailedSyncModal } from './components/FailedSyncModal'
@@ -49,8 +49,10 @@ import {
   getCachedFingerprintAssertOptions,
   prefetchFingerprintAssertOptions,
 } from './lib/fingerprintOptionsCache'
-import { initNativeUi, syncStatusBarTheme } from './lib/nativeUi'
+import { syncStatusBarTheme } from './lib/nativeUi'
 import { getCurrentCycleYearAndMonth, MONTH_NAMES } from './lib/cycle'
+import type { AppContextValue } from './contexts/AppContext'
+import { AppProvider } from './contexts/AppProvider'
 
 const createLocalId = (prefix: string, separator = '_') => {
   return `${prefix}${separator}${Date.now()}${separator}${Math.random().toString(36).substring(2, 9)}`
@@ -144,25 +146,7 @@ function App() {
   }, [activeTab])
 
 
-  useEffect(() => {
-    let cleanup: (() => void) | undefined
-
-    // On resume (warm relaunch) the native splash may still be covering the
-    // WebView if the activity was re-created.  Wait for the WebView to paint
-    // a frame then dismiss it.  The window is now guaranteed opaque (via
-    // styles.xml + MainActivity) so the homescreen can never bleed through.
-    void CapacitorApp.addListener('appStateChange', ({ isActive }: { isActive: boolean }) => {
-      if (isActive) void hideNativeSplashAfterPaint()
-    }).then((handle: { remove: () => Promise<void> | void }) => {
-      cleanup = () => { void handle.remove() }
-    })
-
-    return () => cleanup?.()
-  }, [])
-
-  useEffect(() => {
-    void initNativeUi()
-  }, [])
+  useNativeAppLifecycle(hideNativeSplashAfterPaint)
 
   const [transactions, setTransactions] = useState<Transaction[]>(() => getCachedTransactions(CACHE_KEYS.transactions))
   const [recurringPayments, setRecurringPayments] = useState<RecurringPayment[]>(() => getCachedJSON(CACHE_KEYS.recurringPayments, []))
@@ -180,17 +164,6 @@ function App() {
   const [loading, setLoading] = useState<boolean>(() => !hasCachedKey(CACHE_KEYS.dashboardData))
   const [isOffline, setIsOffline] = useState<boolean>(() => typeof navigator !== 'undefined' ? !navigator.onLine : false)
 
-  // Sync Queue States
-  const [pendingOps, setPendingOps] = useState<QueuedOp[]>(() => getCachedOps())
-  const [failedOps, setFailedOps] = useState<QueuedOp[]>(() => getCachedJSON<QueuedOp[]>('failed_operations', []))
-  const [isBackgroundSyncing, setIsBackgroundSyncing] = useState<boolean>(false)
-  const [activeSyncId, setActiveSyncId] = useState<string | null>(null)
-  const [deletingTxId, setDeletingTxId] = useState<string | null>(null)
-  const [syncBackoffUntil, setSyncBackoffUntil] = useState<number>(0)
-  const [syncCountdownMs, setSyncCountdownMs] = useState<number>(0)
-  const [editingPendingId, setEditingPendingId] = useState<string | null>(null)
-  const [recentlyCompletedOps, setRecentlyCompletedOps] = useState<QueuedOp[]>([])
-  const isSyncingRef = useRef<boolean>(false)
   const isServerAwakeRef = useRef<boolean>(false)
   // Bumped on every loadAll() call; a call only commits its fetched data if it's
   // still the most recent one when it resolves. Without this, an older in-flight
@@ -285,156 +258,34 @@ function App() {
     isLedgerAddOpenRef.current = isLedgerAddOpen
   }, [isLedgerAddOpen])
 
-  // Background Sync Queue Worker Refs
-  // Earliest time the next sync-success toast may show, so a burst of ops that
-  // complete within the same tick still stagger visually instead of stacking.
-  const nextToastAtRef = useRef(0)
-  const pendingOpsRef = useRef(pendingOps)
   const draftTxRef = useRef(draftTransactions)
-  const failedOpsRef = useRef(failedOps)
   const usernameRef = useRef(username)
-  const editingPendingIdRef = useRef(editingPendingId)
-
-  useEffect(() => {
-    pendingOpsRef.current = pendingOps
-  }, [pendingOps])
 
   useEffect(() => {
     draftTxRef.current = draftTransactions
   }, [draftTransactions])
 
   useEffect(() => {
-    failedOpsRef.current = failedOps
-  }, [failedOps])
-
-  useEffect(() => {
     usernameRef.current = username
   }, [username])
 
-  useEffect(() => {
-    editingPendingIdRef.current = editingPendingId
-  }, [editingPendingId])
-
-  const enqueue = useCallback((queue: QueuedOp[], entity: EntityKind, type: OpType, targetId: string, payload?: OutboxPayload, isUndo?: boolean) => {
-    const activeSyncOpId = isSyncingRef.current && queue.length > 0 ? queue[0].id : null
-    return outboxEnqueue(queue, entity, type, targetId, payload, isUndo, activeSyncOpId)
-  }, [])
-
-  // Single entry point for every queue mutation. Computes the next queue from the
-  // *ref* (the synchronous source of truth) rather than React state, then writes
-  // ref and state together. This is what makes concurrent mutations safe: an Undo
-  // click that enqueues a compensating op while the drain loop is awaiting a
-  // dispatch reads-and-writes the same ref the loop does, so neither clobbers the
-  // other's change (the earlier plain-value writes lost whichever landed second).
-  const mutateQueue = useCallback((updater: (prev: QueuedOp[]) => QueuedOp[]) => {
-    const next = updater(pendingOpsRef.current)
-    // Deliberate synchronous ref write: this ref *is* the live queue the drain
-    // loop reads mid-await, so it must update now, not after the next render.
-    pendingOpsRef.current = next
-    setPendingOps(next)
-  }, [])
-
-  const showToast = (message: string, title: string = 'Notification', tone: ToastTone = 'info', action?: ToastAction) => {
+  const showToast = useCallback((message: string, title: string = 'Notification', tone: ToastTone = 'info', action?: ToastAction) => {
     const id = Date.now().toString(36) + Math.random().toString(36).substring(2, 7)
     setToasts(prev => [...prev.slice(-3), { id, message, title, tone, action }])
-  }
+  }, [])
+  const guardSensitive = useCallback(() => {
+    if (!hideSensitive) return true
+    showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning')
+    return false
+  }, [hideSensitive, showToast])
 
   // "Before" snapshots for undo, keyed by `${entity}:${targetId}`. Captured at the moment
   // of a reversible update/delete so the drain loop can build a compensating op once the
   // change has synced. First-write-wins per key: if several edits to the same record are
   // coalesced into one queued op (and one toast), undo reverts to the earliest known state.
-  type UndoSnapshot = (Transaction | RecurringPayment | TransactionCategory | WishlistItem) & {
-    isPendingSync?: boolean
-    isPendingDelete?: boolean
-  }
-
   const toOutboxPayload = (value: object): OutboxPayload => ({ ...value })
 
-  const undoSnapshotsRef = useRef<Map<string, UndoSnapshot>>(new Map())
-  const snapshotForUndo = (entity: EntityKind, targetId: string, obj: UndoSnapshot | undefined) => {
-    if (!obj) return
-    const key = `${entity}:${targetId}`
-    if (undoSnapshotsRef.current.has(key)) return
-    // Drop local-only flags so the restored record looks like a clean server payload.
-    const clean = { ...obj }
-    delete clean.isPendingSync
-    delete clean.isPendingDelete
-    undoSnapshotsRef.current.set(key, clean)
-  }
-
-  // Build the "Undo" action for a just-synced op by enqueuing a compensating op. Runs
-  // after sync (that's when the success toast fires), so undo is a real reverse mutation,
-  // not a queue cancellation. Returns undefined for ops that can't be cleanly reversed
-  // (wishlist purchase, settings) or when the needed "before" snapshot is missing.
-  const buildUndoAction = (op: QueuedOp, result: DispatchResult): ToastAction | undefined => {
-    const key = `${op.entity}:${op.targetId}`
-    const before = undoSnapshotsRef.current.get(key)
-    undoSnapshotsRef.current.delete(key) // snapshots are single-use
-
-    switch (`${op.entity}:${op.type}`) {
-      // Adds -> delete the record that was just created.
-      case 'transaction:add':
-        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'transaction', 'delete', String(op.targetId), undefined, true)) }
-      case 'recurringPayment:add':
-        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'recurringPayment', 'delete', String(op.targetId), undefined, true)) }
-      case 'category:add':
-        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'category', 'delete', String(op.targetId), undefined, true)) }
-      case 'wishlistItem:add': {
-        // The server-assigned id only exists post-sync; use it, not the local placeholder.
-        const realId = result && 'id' in result && result.id != null ? String(result.id) : String(op.targetId)
-        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'wishlistItem', 'delete', realId, undefined, true)) }
-      }
-
-      // Deletes -> re-add the captured record (reusing its id where the API accepts one).
-      case 'transaction:delete':
-        if (!before) return undefined
-        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'transaction', 'add', String(before.id), toOutboxPayload(before), true)) }
-      case 'recurringPayment:delete':
-        if (!before) return undefined
-        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'recurringPayment', 'add', String(before.id), toOutboxPayload(before), true)) }
-      case 'category:delete':
-        if (op.payload?.replacementCategoryId) return undefined
-        if (!before) return undefined
-        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'category', 'add', String(before.id), toOutboxPayload(before), true)) }
-      case 'wishlistItem:delete': {
-        if (!before) return undefined
-        // Wishlist ids are server-generated, so a re-add takes a fresh local placeholder id.
-        const placeholderId = String(createLocalWishlistId())
-        const payload = toOutboxPayload(before)
-        delete payload.id
-        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'wishlistItem', 'add', placeholderId, payload, true)) }
-      }
-
-      // Updates -> restore the captured prior values.
-      case 'transaction:update':
-        if (!before) return undefined
-        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'transaction', 'update', String(op.targetId), toOutboxPayload(before), true)) }
-      case 'recurringPayment:update':
-        if (!before) return undefined
-        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'recurringPayment', 'update', String(op.targetId), toOutboxPayload(before), true)) }
-      case 'wishlistItem:update':
-        if (!before) return undefined
-        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'wishlistItem', 'update', String(op.targetId), toOutboxPayload(before), true)) }
-      case 'wishlistItem:purchase': {
-        const purchaseResult = result && 'item' in result ? result : undefined
-        const realId = purchaseResult?.item?.id != null ? String(purchaseResult.item.id) : String(op.targetId)
-        const purchaseTransactionId = purchaseResult?.item?.purchaseTransactionId || purchaseResult?.transaction?.id
-        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'wishlistItem', 'unpurchase', realId, { purchaseTransactionId }, true)) }
-      }
-
-      // Toggle -> flip back to the prior active state.
-      case 'recurringPayment:toggle': {
-        if (!op.payload || typeof op.payload.active !== 'boolean') return undefined
-        const priorActive = !op.payload.active
-        return { label: 'Undo', onAction: () => mutateQueue(prev => enqueue(prev, 'recurringPayment', 'toggle', String(op.targetId), { active: priorActive }, true)) }
-      }
-
       // wishlistItem:purchase and settings:update have no clean reverse — no undo.
-      default:
-        return undefined
-    }
-  }
-
   const dismissToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(toast => toast.id !== id))
   }, [])
@@ -481,17 +332,44 @@ function App() {
   const [isLocked, setIsLocked] = useState<boolean>(() => {
     return sessionStorage.getItem('session_locked') === 'true'
   })
-  const syncBackoffUntilRef = useRef(syncBackoffUntil)
-
   const markSessionLocked = useCallback(() => {
     loadAllAbortRef.current?.abort()
     api.invalidateCache()
     setError(null)
-    setSyncBackoffUntil(0)
-    syncBackoffUntilRef.current = 0
     setIsLocked(true)
     sessionStorage.setItem('session_locked', 'true')
   }, [setIsLocked])
+
+  const {
+    pendingOps,
+    failedOps,
+    activeOps,
+    isBackgroundSyncing,
+    activeSyncId,
+    deletingId: deletingTxId,
+    syncCountdownMs,
+    editingPendingId,
+    enqueue,
+    mutateQueue,
+    snapshotForUndo,
+    processQueue,
+    setBackgroundSyncing: setIsBackgroundSyncing,
+    setDeletingId: setDeletingTxId,
+    setEditingPendingId,
+    discardFailedOp,
+    discardAllFailedOps,
+    getPendingOps,
+    getFailedOps,
+    reset: resetOutbox,
+  } = useOutbox({
+    token,
+    lastUnlockedTimeRef,
+    setError,
+    showToast,
+    onAuthError: handleLogout,
+    onLockError: markSessionLocked,
+    refresh: () => loadAll(selectedMonth || undefined, selectedYear || undefined, true),
+  })
 
 
   // Password Prompt for revealing sensitive information
@@ -550,18 +428,18 @@ function App() {
   const [showFailedOpsModal, setShowFailedOpsModal] = useState<boolean>(false)
 
   const handleDiscardFailedOp = useCallback((id: string) => {
-    setFailedOps(prev => prev.filter(op => op.id !== id))
-  }, [])
+    discardFailedOp(id)
+  }, [discardFailedOp])
 
   const handleDiscardAllFailedOps = useCallback(() => {
-    setFailedOps([])
+    discardAllFailedOps()
     setShowFailedOpsModal(false)
-  }, [setShowFailedOpsModal])
+  }, [discardAllFailedOps, setShowFailedOpsModal])
 
   async function handleLogout() {
-    const currentPending = pendingOpsRef.current;
+    const currentPending = getPendingOps();
     const currentDrafts = draftTxRef.current;
-    const currentFailed = failedOpsRef.current;
+    const currentFailed = getFailedOps();
     const currentOwner = usernameRef.current;
 
     if (currentPending.length > 0) {
@@ -585,15 +463,13 @@ function App() {
     setWalletBalance(null)
     setTransactions([])
     setRecurringPayments([])
-    mutateQueue(() => [])
-    setFailedOps([])
+    resetOutbox()
     setDraftTransactions([])
     setCategoriesList([])
     setWishlist([])
     setSelectedMonth('')
     setSelectedYear(0)
     setLoading(true)
-    setEditingPendingId(null)
     setHasShownModalThisSession(false)
     setShowLoginModal(false)
     setHideSensitive(true)
@@ -889,7 +765,7 @@ function App() {
 
   // Custom Categories & Accounts modifiers
   const handleAddCategory = (newCat: Omit<TransactionCategory, 'id'>) => {
-    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
+    if (!guardSensitive()) return
     const finalId = createFinalId('category')
     mutateQueue(prev => enqueue(prev, 'category', 'add', finalId, { ...newCat, id: finalId }))
   }
@@ -900,7 +776,7 @@ function App() {
   }
 
   const requestDeleteCategory = async (id: string) => {
-    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
+    if (!guardSensitive()) return
     const category = categoriesList.find(cat => cat.id === id)
     if (!category) return
 
@@ -972,7 +848,7 @@ function App() {
   }
 
   const handleApplyCategoryCleanupSuggestion = async (suggestion: CategoryCleanupSuggestion, targetCategoryOverride?: string) => {
-    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
+    if (!guardSensitive()) return
 
     if (suggestion.type === 'consolidate' && !targetCategoryOverride) {
       showToast('Choose a category to move these entries to first.', 'AI Cleanup', 'warning')
@@ -1044,7 +920,7 @@ function App() {
   }
 
   const handleUpdateDraftTransaction = (id: string, updated: Transaction) => {
-    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
+    if (!guardSensitive()) return
     setDraftTransactions(prev => prev.map(t => t.id === id ? updated : t));
     triggerVibration(15);
   };
@@ -1055,7 +931,7 @@ function App() {
   };
 
   const requestDeleteDraftTransaction = (id: string) => {
-    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
+    if (!guardSensitive()) return
     const draft = draftTransactions.find(t => t.id === id)
     setConfirmModalData({
       title: 'Delete Draft',
@@ -1086,7 +962,7 @@ function App() {
   };
 
   const handleDeleteTransaction = (id: string) => {
-    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
+    if (!guardSensitive()) return
     triggerVibration(30)
     let deleteId = id
     if (id.includes('-split-')) {
@@ -1099,7 +975,7 @@ function App() {
   }
 
   const handleUpdateTransaction = (id: string, updatedTx: Omit<Transaction, 'id'>) => {
-    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
+    if (!guardSensitive()) return
     triggerVibration(15)
     snapshotForUndo('transaction', String(id), allTransactions.find(t => String(t.id) === String(id)))
     mutateQueue(prev => enqueue(prev, 'transaction', 'update', id, updatedTx))
@@ -1107,7 +983,7 @@ function App() {
   }
 
   const handleConfirmSubscription = (noti: PendingNotification, paidDate: string) => {
-    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
+    if (!guardSensitive()) return
     const finalId = createFinalId('transaction')
     mutateQueue(prev => enqueue(prev, 'transaction', 'add', finalId, {
       id: finalId,
@@ -1121,7 +997,7 @@ function App() {
   }
 
   const handleDiscardSubscription = (noti: PendingNotification) => {
-    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
+    if (!guardSensitive()) return
     const finalId = createFinalId('transaction')
     mutateQueue(prev => enqueue(prev, 'transaction', 'add', finalId, {
       id: finalId,
@@ -1141,14 +1017,14 @@ function App() {
   }
 
   const handleToggleActive = (id: string) => {
-    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
+    if (!guardSensitive()) return
     const current = allRecurringPayments.find(p => String(p.id) === String(id))
     const payload = current ? { active: !current.active } : undefined
     mutateQueue(prev => enqueue(prev, 'recurringPayment', 'toggle', id, payload))
   }
 
   const handleUpdatePayment = (id: string, payment: RecurringPayment) => {
-    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
+    if (!guardSensitive()) return
     snapshotForUndo('recurringPayment', String(id), allRecurringPayments.find(p => String(p.id) === String(id)))
     mutateQueue(prev => enqueue(prev, 'recurringPayment', 'update', id, toOutboxPayload(payment)))
   }
@@ -1160,7 +1036,7 @@ function App() {
   }
 
   const requestDeletePayment = (id: string) => {
-    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
+    if (!guardSensitive()) return
     const payment = recurringPayments.find(p => p.id === id)
     setConfirmModalData({
       title: 'Delete Subscription',
@@ -1185,7 +1061,7 @@ function App() {
   }
 
   const handleUpdateWishlistItem = (id: number, updatedWish: WishlistItem) => {
-    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
+    if (!guardSensitive()) return
     snapshotForUndo('wishlistItem', String(id), allWishlist.find(w => String(w.id) === String(id)))
     mutateQueue(prev => enqueue(prev, 'wishlistItem', 'update', String(id), toOutboxPayload(updatedWish)))
     // Mirror handleUpdateTransaction: clear the edit-lock so the drain loop can
@@ -1200,7 +1076,7 @@ function App() {
   }
 
   const requestDeleteWishlistItem = (id: number) => {
-    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
+    if (!guardSensitive()) return
     const item = wishlist.find(w => w.id === id)
     setConfirmModalData({
       title: 'Delete Wishlist Item',
@@ -1211,7 +1087,7 @@ function App() {
   }
 
   const handlePurchaseWishlistItem = (id: number) => {
-    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
+    if (!guardSensitive()) return
     const item = allWishlist.find(w => String(w.id) === String(id))
     const now = new Date()
     const date = now.toLocaleDateString('en-CA')
@@ -1224,104 +1100,12 @@ function App() {
   }
 
   const handleUnpurchaseWishlistItem = (id: number) => {
-    if (hideSensitive) { showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning'); return }
+    if (!guardSensitive()) return
     const item = allWishlist.find(w => String(w.id) === String(id))
     mutateQueue(prev => enqueue(prev, 'wishlistItem', 'unpurchase', String(id), item ? {
       purchaseTransactionId: item.purchaseTransactionId
     } : undefined))
   }
-
-  // Save pending operations to localStorage whenever they change
-  useEffect(() => {
-    setCachedJSON(CACHE_KEYS.pendingOperations, pendingOps)
-  }, [pendingOps])
-
-  useEffect(() => {
-    setCachedJSON('failed_operations', failedOps)
-  }, [failedOps])
-
-  useEffect(() => {
-    syncBackoffUntilRef.current = syncBackoffUntil;
-  }, [syncBackoffUntil]);
-
-  useEffect(() => {
-    if (!syncBackoffUntil) {
-      setSyncCountdownMs(0)
-      return
-    }
-
-    const updateCountdown = () => {
-      setSyncCountdownMs(Math.max(0, syncBackoffUntil - Date.now()))
-    }
-
-    updateCountdown()
-    const interval = window.setInterval(updateCountdown, 1000)
-    return () => window.clearInterval(interval)
-  }, [syncBackoffUntil])
-
-  // The drain-loop algorithm lives in lib/outboxSync (drainQueue) so it can be
-  // unit-tested with fakes; here we wire it to this component's state/refs/I-O.
-  const TOAST_STAGGER_MS = 350;
-  // Re-trigger routes through a ref so the loop can recurse without the
-  // self-reference-before-declaration the linter (rightly) rejects.
-  const processQueueRef = useRef<() => void>(() => {});
-  const processQueue = useCallback(async () => {
-    await drainQueue({
-      token,
-      now: () => Date.now(),
-      getQueue: () => pendingOpsRef.current,
-      getEditingPendingId: () => editingPendingIdRef.current,
-      getBackoffUntil: () => syncBackoffUntilRef.current,
-      getLastUnlockedTime: () => lastUnlockedTimeRef.current,
-      isSyncing: () => isSyncingRef.current,
-      mutateQueue,
-      resolveDispatch: (op) => DISPATCH[`${op.entity}:${op.type}`],
-      setSyncing: (v) => { isSyncingRef.current = v; setIsBackgroundSyncing(v); },
-      setActiveSyncId,
-      setError,
-      setBackoff: (until) => { syncBackoffUntilRef.current = until; setSyncBackoffUntil(until); },
-      addRecentlyCompleted: (op) => setRecentlyCompletedOps(prev => [...prev, op]),
-      removeRecentlyCompleted: (ids) => setRecentlyCompletedOps(prev => prev.filter(op => !ids.has(op.id))),
-      addFailedOp: (op) => setFailedOps(prev => [...prev, op]),
-      getSyncSuccessToast,
-      buildUndoAction,
-      emitToast: (copy, action) => {
-        // Stagger bursts of toasts so they don't stack on the same tick.
-        const now = Date.now();
-        const showAt = Math.max(now, nextToastAtRef.current);
-        nextToastAtRef.current = showAt + TOAST_STAGGER_MS;
-        window.setTimeout(() => showToast(copy.message, copy.title, copy.tone, action), showAt - now);
-      },
-      emitFailureToast: (op) => {
-        const opDesc = op.payload?.description || op.payload?.name || op.entity;
-        showToast(`Couldn't sync '${opDesc}' — removed from queue`, 'Sync Failed', 'error');
-      },
-      onAuthError: handleLogout,
-      onLockError: markSessionLocked,
-      refresh: () => loadAll(selectedMonth || undefined, selectedYear || undefined, true),
-      onSettled: () => { setActiveSyncId(null); setDeletingTxId(null); },
-      reTrigger: () => { processQueueRef.current(); },
-    });
-  }, [token, selectedMonth, selectedYear, mutateQueue]);
-
-  useEffect(() => {
-    processQueueRef.current = () => { void processQueue(); };
-  }, [processQueue]);
-
-  useEffect(() => {
-    if (!token || pendingOps.length === 0) return;
-
-    if (Date.now() < syncBackoffUntil) {
-      const remaining = syncBackoffUntil - Date.now();
-      const t = setTimeout(() => {
-        syncBackoffUntilRef.current = 0;
-        setSyncBackoffUntil(0);
-      }, remaining);
-      return () => clearTimeout(t);
-    }
-
-    processQueue();
-  }, [token, pendingOps, syncBackoffUntil, processQueue]);
 
   // Server wake-up and background sync task
   const wakeUpAndSync = useCallback(async () => {
@@ -1387,7 +1171,6 @@ function App() {
   }, [token, wakeUpAndSync])
 
   // Combine synced and pending items for each entity
-  const activeOps = useMemo(() => [...pendingOps, ...recentlyCompletedOps], [pendingOps, recentlyCompletedOps]);
 
   const allTransactions = useOptimisticList(transactions, activeOps, 'transaction');
   const allRecurringPayments = useOptimisticList(recurringPayments, activeOps, 'recurringPayment');
@@ -1443,14 +1226,14 @@ function App() {
 
   const wishlistDashboardData = currentCycleDashboardData || optimisticDashboardData
 
-  const formatSensitive = (val: number) => {
+  const formatSensitive = useCallback((val: number) => {
     const formatted = formatCurrencyVal(val, optimisticDashboardData?.setting?.currency || 'USD')
     return (
       <span className={hideSensitive ? 'inline-block font-mono tracking-wide select-none' : 'transition-[filter] duration-200'}>
         {hideSensitive ? SENSITIVE_AMOUNT_MASK : formatted}
       </span>
     )
-  }
+  }, [hideSensitive, optimisticDashboardData?.setting?.currency])
 
   // Wallet total: always the real current cycle's total (from walletBalance), falling
   // back to the naive all-time sum only until the very first fetch lands.
@@ -1594,6 +1377,36 @@ function App() {
     void triggerHaptic(pattern)
   }
 
+  const requestConfirm = useCallback((request: Parameters<AppContextValue['confirm']>[0]) => {
+    setConfirmModalData(request)
+  }, [])
+  const appContextValue = useMemo<AppContextValue>(() => ({
+    hideSensitive,
+    currency: optimisticDashboardData?.setting?.currency || 'USD',
+    darkMode,
+    activeSyncId,
+    deletingId: deletingTxId,
+    isSyncing: isBackgroundSyncing || pendingOps.length > 0,
+    isOffline,
+    formatSensitive,
+    showToast,
+    guardSensitive,
+    confirm: requestConfirm,
+  }), [
+    hideSensitive,
+    optimisticDashboardData?.setting?.currency,
+    darkMode,
+    activeSyncId,
+    deletingTxId,
+    isBackgroundSyncing,
+    pendingOps.length,
+    isOffline,
+    formatSensitive,
+    showToast,
+    guardSensitive,
+    requestConfirm,
+  ])
+
   if (!token) {
     return (
       <Suspense fallback={<ViewFallback />}>
@@ -1637,6 +1450,7 @@ function App() {
   }
 
   return (
+    <AppProvider value={appContextValue}>
     <div className="app-shell min-h-screen text-foreground flex flex-col selection:bg-blue-500/20 selection:text-blue-500">
       
       <ToastViewport toasts={toasts} onDismiss={dismissToast} />
@@ -1728,7 +1542,6 @@ function App() {
             transactions={allTransactions}
             onSelectPeriod={handleSelectPeriod}
             onNavigate={setActiveTab}
-            hideSensitive={hideSensitive}
             hideBalanceAmounts={hideBalanceAmounts}
             walletBalance={totalBalance}
             onToggleBalanceAmounts={handleToggleBalanceAmounts}
@@ -1745,8 +1558,6 @@ function App() {
           <SettingsView 
             dashboardData={optimisticDashboardData}
             categoriesList={allCategories}
-            darkMode={darkMode}
-            hideSensitive={hideSensitive}
             onToggleDarkMode={handleToggleDarkMode}
             onToggleHideSensitive={handleToggleHideSensitive}
             onUpdateSettings={handleUpdateSettings}
@@ -1759,9 +1570,6 @@ function App() {
               localStorage.setItem('show_notifications_on_login', checked ? 'true' : 'false')
               showToast('Notification preference updated.', 'Settings Saved', 'success')
             }}
-            activeSyncId={activeSyncId}
-            deletingId={deletingTxId}
-            onToast={showToast}
             onNavigateToLedger={handleNavigateToLedger}
           />
         )}
@@ -1778,14 +1586,10 @@ function App() {
             onToggleActive={handleToggleActive}
             onDeletePayment={requestDeletePayment}
             onUpdatePayment={handleUpdatePayment}
-            hideSensitive={hideSensitive}
             categories={allCategories}
-            currency={optimisticDashboardData?.setting?.currency || 'USD'}
             autoOpenAddForm={autoOpenSubscriptionAdd}
             onResetAutoOpen={() => setAutoOpenSubscriptionAdd(false)}
             isSwitchingCycle={isSwitchingCycle}
-            activeSyncId={activeSyncId}
-            deletingId={deletingTxId}
             aiDraft={aiRecurringDraft}
             aiEditDraft={aiRecurringEditDraft}
             onAiDraftConsumed={() => setAiRecurringDraft(null)}
@@ -1800,7 +1604,6 @@ function App() {
             onAddTransaction={handleAddTransaction}
             onDeleteTransaction={handleDeleteTransaction}
             onUpdateTransaction={handleUpdateTransaction}
-            hideSensitive={hideSensitive}
             categories={allCategories}
             selectedMonth={selectedMonth}
             selectedYear={selectedYear}
@@ -1822,7 +1625,6 @@ function App() {
             showAllCycles={ledgerShowAllCycles}
             onClearAllCycles={() => { setLedgerShowAllCycles(false) }}
             cyclesRange={ledgerCyclesRange}
-            currency={optimisticDashboardData?.setting?.currency || 'USD'}
             autoOpenAddForm={autoOpenLedgerAdd}
             onResetAutoOpen={() => setAutoOpenLedgerAdd(false)}
             stabilityBalance={optimisticDashboardData?.categories?.find(c => c.name === 'Stability')?.remaining ?? 0}
@@ -1837,8 +1639,6 @@ function App() {
             onFetchTransactionById={api.fetchTransactionById}
             onExportTransactions={api.exportTransactionsCsv}
             onShowAlert={showAlert}
-            activeSyncId={activeSyncId}
-            deletingTxId={deletingTxId}
             onStartEditPending={setEditingPendingId}
             receiptScanDraft={activeReceiptScanDraft}
             onReceiptScanStarted={handleReceiptScanStarted}
@@ -1862,18 +1662,13 @@ function App() {
             rewardsTarget={wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')?.target ?? 400}
             pastThreeMonthsRewardsAverage={wishlistDashboardData?.stats?.pastThreeMonthsRewardsAverage ?? 0}
             hasRewardsHistory={wishlistDashboardData?.stats?.hasRewardsHistory ?? false}
-            currency={optimisticDashboardData?.setting?.currency || 'USD'}
-            hideSensitive={hideSensitive}
             onAddItem={handleAddWishlistItem}
             onUpdateItem={handleUpdateWishlistItem}
             onDeleteItem={requestDeleteWishlistItem}
             onPurchaseItem={handlePurchaseWishlistItem}
-            formatSensitive={formatSensitive}
             autoOpenAddModal={autoOpenWishlistAdd}
             onResetAutoOpen={() => setAutoOpenWishlistAdd(false)}
             onNavigateToLedger={handleNavigateToLedger}
-            activeSyncId={activeSyncId}
-            deletingId={deletingTxId}
             isSwitchingCycle={isSwitchingCycle}
             onStartEditPending={setEditingPendingId}
             aiDraft={aiWishlistDraft}
@@ -2082,6 +1877,7 @@ function App() {
         </>
       )}
     </div>
+    </AppProvider>
   )
 }
 

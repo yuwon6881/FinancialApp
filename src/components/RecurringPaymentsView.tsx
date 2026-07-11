@@ -25,6 +25,7 @@ import { BillTimeline } from './BillTimeline'
 import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } from '../lib/categoryColors'
 import { useAutoOpenModal } from '../lib/useAutoOpenModal'
 import { useIsMobile } from '../lib/useIsMobile'
+import { useAppContext } from '../contexts/AppContext'
 
 const RECURRING_LEDGER_CATEGORIES = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const
 type RecurringLedgerCategory = typeof RECURRING_LEDGER_CATEGORIES[number]
@@ -44,7 +45,7 @@ interface RecurringPaymentsViewProps {
   onToggleActive: (id: string) => void
   onDeletePayment: (id: string) => void
   onUpdatePayment: (id: string, payment: RecurringPayment) => void
-  hideSensitive: boolean
+  hideSensitive?: boolean
   categories: TransactionCategory[]
   currency?: string
   autoOpenAddForm?: boolean
@@ -69,19 +70,24 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   onToggleActive,
   onDeletePayment,
   onUpdatePayment,
-  hideSensitive,
+  hideSensitive: hideSensitiveProp,
   categories,
-  currency = 'USD',
+  currency: currencyProp,
   autoOpenAddForm,
   onResetAutoOpen,
   isSwitchingCycle = false,
-  activeSyncId = null,
-  deletingId = null,
+  activeSyncId: activeSyncIdProp,
+  deletingId: deletingIdProp,
   aiDraft = null,
   aiEditDraft = null,
   onAiDraftConsumed,
   onAiEditDraftConsumed
 }) => {
+  const app = useAppContext()
+  const hideSensitive = hideSensitiveProp ?? app.hideSensitive
+  const currency = currencyProp ?? app.currency
+  const activeSyncId = activeSyncIdProp ?? app.activeSyncId
+  const deletingId = deletingIdProp ?? app.deletingId
   const isMobile = useIsMobile(640)
   const { isSyncing: isPaymentSyncing, isDeleting: isPaymentDeleting } = useSyncStatus(payments, activeSyncId, deletingId)
   const [showAddForm, setShowAddForm] = useState(false)

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react'
+import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { listContainerVariants, listItemVariants, listItemExit } from '../lib/animations'
 import { Button } from './ui/Button'
@@ -9,10 +9,7 @@ import {
   ArrowDownLeft, 
   Calendar, 
   AlertCircle,
-  TrendingUp as TrendLineIcon,
   PiggyBank,
-  Edit2,
-  Clock,
   Eye,
   EyeOff
 } from 'lucide-react'
@@ -22,28 +19,23 @@ import { SwipeableRow } from './ui/SwipeableRow'
 import { BottomSheet } from './ui/BottomSheet'
 import { CycleSkeleton } from './ui/Skeleton'
 import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
-import { getCategoryBadgeClass, getCategoryChartColor, getCategoryDotClass } from '../lib/categoryColors'
-import { getCycleLabelForDropdown } from '../lib/cycleLabels'
+import { getCategoryBadgeClass } from '../lib/categoryColors'
+import { getCycleLabelForDropdown, ordinal } from '../lib/cycleLabels'
 import { getActiveWishlistItem } from '../lib/wishlist'
 import { AnimatedNumber } from './ui/AnimatedNumber'
 import { SmartAmountInput } from './ui/SmartAmountInput'
-
-const formatOrdinalDay = (day: number) => {
-  if (day >= 11 && day <= 13) return `${day}th`
-  switch (day % 10) {
-    case 1: return `${day}st`
-    case 2: return `${day}nd`
-    case 3: return `${day}rd`
-    default: return `${day}th`
-  }
-}
+import { useAppContext } from '../contexts/AppContext'
+import { CycleCalendar } from './dashboard/CycleCalendar'
+import { TrendLineChart } from './dashboard/TrendLineChart'
+import { DoughnutChart } from './dashboard/DoughnutChart'
+import { CarryoverLedgerTable } from './dashboard/CarryoverLedgerTable'
 
 interface DashboardViewProps {
   dashboardData: DashboardData | null
   transactions: Transaction[]
   onSelectPeriod: (month: string, year: number) => void
   onNavigate: (tab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist' | 'settings') => void
-  hideSensitive: boolean
+  hideSensitive?: boolean
   hideBalanceAmounts: boolean
   walletBalance: number
   onToggleBalanceAmounts: () => void
@@ -63,13 +55,12 @@ interface DashboardViewProps {
   onAddBalanceAdjustment?: (newTx: Omit<Transaction, 'id'>) => Promise<void> | void
   isSwitchingCycle?: boolean
 }
-
 export const DashboardView: React.FC<DashboardViewProps> = ({ 
   dashboardData,
   transactions,
   onSelectPeriod,
   onNavigate,
-  hideSensitive,
+  hideSensitive: hideSensitiveProp,
   hideBalanceAmounts,
   walletBalance,
   onToggleBalanceAmounts,
@@ -81,7 +72,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onAddBalanceAdjustment,
   isSwitchingCycle = false
 }) => {
-  const isHoveringLiquidNetWorth = false
+  const { hideSensitive: contextHideSensitive } = useAppContext()
+  const hideSensitive = hideSensitiveProp ?? contextHideSensitive
   const [notiToDelete, setNotiToDelete] = useState<PendingNotification | null>(null)
 
   // Active wishlist item for dashboard progress display
@@ -100,68 +92,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     diff: number
   } | null>(null)
 
-  // Subcategory Pie Chart States
-  const [chartView, setChartView] = useState<'monthly' | '3month' | '6month' | 'yearly'>('monthly')
-  const [hoveredSlice, setHoveredSlice] = useState<number | null>(null)
-  // Wealth Growth trend view state
-  const [trendView, setTrendView] = useState<'monthly' | '3month' | '6month' | 'yearly'>('yearly')
-  // Trend line tooltip state
-  const [hoveredTrendPoint, setHoveredTrendPoint] = useState<number | null>(null)
-  const svgRef = useRef<SVGSVGElement>(null)
   // Subscription Confirmation States
   const [activeConfirmId, setActiveConfirmId] = useState<string | null>(null)
   const [paidDateInput, setPaidDateInput] = useState('')
-
-  const breakdownData = useMemo(() => {
-    if (chartView === 'yearly') return dashboardData?.yearlyCategoryBreakdown || []
-    if (chartView === '3month') return dashboardData?.last3CategoryBreakdown || []
-    if (chartView === '6month') return dashboardData?.last6CategoryBreakdown || []
-    return dashboardData?.monthlyCategoryBreakdown || []
-  }, [chartView, dashboardData])
-
-  const activeTrendPoints = useMemo(() => {
-    if (trendView === '3month') return dashboardData?.last3TrendPoints || []
-    if (trendView === '6month') return dashboardData?.last6TrendPoints || []
-    // 'monthly' = just the current month point (single dot -- show full year instead)
-    return dashboardData?.trendPoints || []
-  }, [trendView, dashboardData])
-
-  const totalBreakdownAmount = useMemo(() => {
-    return breakdownData.reduce((sum, item) => sum + item.amount, 0)
-  }, [breakdownData])
-
-  const slices = useMemo(() => {
-    let currentAngle = 0
-    const result = []
-    for (const item of breakdownData) {
-      const percentage = totalBreakdownAmount > 0 ? (item.amount / totalBreakdownAmount) : 0
-      const angleSweep = percentage * 360
-      const startAngle = currentAngle
-      const endAngle = Math.min(359.99 + startAngle, startAngle + angleSweep)
-      currentAngle += angleSweep
-      result.push({
-        category: item.category,
-        amount: item.amount,
-        percentage,
-        startAngle,
-        endAngle
-      })
-    }
-    return result
-  }, [breakdownData, totalBreakdownAmount])
 
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   const years = useMemo<number[]>(() => {
     return dashboardData?.availableYears || [new Date().getFullYear()]
   }, [dashboardData])
-
-  const todayStr = useMemo(() => {
-    const d = new Date()
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    const dateStr = String(d.getDate()).padStart(2, '0')
-    return `${y}-${m}-${dateStr}`
-  }, [])
 
   // Extract variables from dashboardData or fall back to defaults
   const activeSettings = dashboardData?.setting || {
@@ -327,24 +265,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     setAdjustingCategory(null)
   }
 
-  // Generate SVG path for trend line
-  const trendLinePoints = useMemo(() => {
-    if (activeTrendPoints.length < 2) return ''
-    const minVal = Math.min(...activeTrendPoints.map(p => p.balance), 0)
-    const maxVal = Math.max(...activeTrendPoints.map(p => p.balance), 1000)
-    const range = maxVal - minVal
-
-    const width = 500
-    const height = 120
-    const padding = 15
-
-    return activeTrendPoints.map((p, index) => {
-      const x = padding + (index / (activeTrendPoints.length - 1)) * (width - padding * 2)
-      const y = height - padding - ((p.balance - minVal) / (range || 1)) * (height - padding * 2)
-      return `${x},${y}`
-    }).join(' ')
-  }, [activeTrendPoints])
-
   if (isSwitchingCycle) {
     return <CycleSkeleton variant="dashboard" />
   }
@@ -409,7 +329,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
               <Calendar className="size-3.5 text-teal-500" />
               <span>Cycle starts on the</span>
-              <span className="font-bold text-foreground">{formatOrdinalDay(activeSettings.cycleDay)}</span>
+              <span className="font-bold text-foreground">{ordinal(activeSettings.cycleDay)}</span>
             </div>
           </div>
         </div>
@@ -602,190 +522,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         onCancel={() => setNotiToDelete(null)}
       />
 
-      {/* Categories Roll Table (Month Sheet Columns B-E) */}
-      <div className="app-panel p-6 bg-card/92 border border-border/60 rounded-2xl">
-        <h3 className="text-base font-bold text-foreground mb-1">Carryover Rolling Ledgers</h3>
-        <p className="text-xs text-muted-foreground mb-4">Starting budget carries forward from previous month's remaining balance.</p>
-        
-        {/* Desktop View */}
-        <div className="hidden md:block overflow-x-auto">
-          <div className="min-w-[800px] text-xs space-y-1">
-            {/* Table Header */}
-            <div className="grid grid-cols-[1.8fr_1fr_1.5fr_2fr_2fr_2fr] items-center gap-4 border-b border-border/50 text-muted-foreground font-semibold pb-2.5 px-4 mb-2">
-              <div>Category</div>
-              <div>Target Alloc.</div>
-              <div className="text-right">Allocated Budget</div>
-              <div className="text-right">Carried Over</div>
-              <div className="text-right">Net Change</div>
-              <div className="text-right">Remaining Balance</div>
-            </div>
-            
-            {/* Table Body */}
-            {categories.map(c => {
-              const isNeg = c.remaining < 0
-              const isHighlighted = isHoveringLiquidNetWorth && c.name !== 'Growth'
-              
-              let highlightClass = 'border-transparent bg-transparent hover:bg-muted/10'
-              let transitionStyles: React.CSSProperties = {
-                transition: 'opacity 300ms, transform 300ms'
-              }
-              
-              if (isHighlighted) {
-                transitionStyles = {
-                  transition: 'opacity 300ms, transform 300ms, border-color 300ms, background-color 300ms, box-shadow 300ms'
-                }
-                if (c.name === 'Essentials') {
-                  highlightClass = 'border-sky-500/50 bg-sky-500/[0.04] shadow-xs'
-                } else if (c.name === 'Stability') {
-                  highlightClass = 'border-teal-500/50 bg-teal-500/[0.04] shadow-xs'
-                } else if (c.name === 'Rewards') {
-                  highlightClass = 'border-pink-500/50 bg-pink-500/[0.04] shadow-xs'
-                }
-              }
-
-              return (
-                <div 
-                  key={c.name} 
-                  className={`grid grid-cols-[1.8fr_1fr_1.5fr_2fr_2fr_2fr] items-center gap-4 py-3 px-4 rounded-xl border ${highlightClass}`}
-                  style={transitionStyles}
-                >
-                  <div className="flex items-center gap-2 font-bold text-foreground">
-                    <span className={`size-2.5 rounded-full ${getCategoryDotClass(c.name)}`} />
-                    {c.name}
-                  </div>
-                  <div className="text-muted-foreground font-medium">{(c.allocation * 100).toFixed(0)}%</div>
-                  <div className="text-right font-medium text-foreground">{areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : formatCurrency(c.target)}</div>
-                  <div className="text-right text-muted-foreground font-medium">{areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : formatCurrency(c.budget)}</div>
-                  <div className={`text-right font-medium ${c.netChange < 0 ? 'text-orange-500' : c.netChange > 0 ? 'text-blue-500' : ''}`}>
-                    <div>{areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : <>{c.netChange > 0 ? '+' : ''}<AnimatedNumber value={c.netChange} formatFn={formatCurrency} /></>}</div>
-                    {pendingDeductionsByCategory[c.name] > 0 && (
-                      <div className="text-[10px] text-yellow-500 font-normal flex items-center justify-end gap-1 mt-0.5">
-                        <Clock className="size-3" />
-                        Pending: -{areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : formatCurrency(pendingDeductionsByCategory[c.name])}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-end gap-1.5 text-right">
-                    <div className="flex min-w-[96px] flex-col items-end gap-1">
-                      <div className={`font-bold ${isNeg ? 'text-orange-500' : 'text-foreground'}`}>
-                        {areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : <AnimatedNumber value={c.remaining} formatFn={formatCurrency} />}
-                      </div>
-                      {pendingDeductionsByCategory[c.name] > 0 && (
-                        <div className={`text-[10px] font-semibold flex items-center justify-end gap-1 mt-0.5 ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
-                          Projected: {areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : formatCurrency(c.remaining - pendingDeductionsByCategory[c.name])}
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => openBalanceAdjustment(c)}
-                      disabled={hideSensitive}
-                      className="inline-flex size-6 shrink-0 items-center justify-center rounded-lg text-muted-foreground/65 hover:bg-muted hover:text-foreground cursor-pointer transition select-none disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                      title={hideSensitive ? 'Unhide balances to edit' : 'Adjust balance'}
-                      aria-label={`Adjust ${c.name} balance`}
-                    >
-                      <Edit2 className="size-3" />
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Mobile View */}
-        <div className="block md:hidden space-y-4">
-          {categories.map(c => {
-            const isNeg = c.remaining < 0
-            const isHighlighted = isHoveringLiquidNetWorth && c.name !== 'Growth'
-            
-            let highlightClass = 'border-border bg-background/50'
-            let transitionStyles: React.CSSProperties = {
-              transition: 'opacity 300ms, transform 300ms'
-            }
-            
-            if (isHighlighted) {
-              transitionStyles = {
-                transition: 'opacity 300ms, transform 300ms, border-color 300ms, background-color 300ms, box-shadow 300ms'
-              }
-              if (c.name === 'Essentials') {
-                highlightClass = 'border-sky-500/60 ring-2 ring-sky-500/20 bg-sky-500/[0.02]'
-              } else if (c.name === 'Stability') {
-                highlightClass = 'border-teal-500/60 ring-2 ring-teal-500/20 bg-teal-500/[0.02]'
-              } else if (c.name === 'Rewards') {
-                highlightClass = 'border-pink-500/60 ring-2 ring-pink-500/20 bg-pink-500/[0.02]'
-              }
-            }
-
-            return (
-              <div 
-                key={c.name} 
-                className={`p-4 rounded-xl border space-y-3 shadow-xs ${highlightClass}`}
-                style={transitionStyles}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-bold text-sm">
-                    <span className={`size-2.5 rounded-full ${getCategoryDotClass(c.name)}`} />
-                    {c.name}
-                  </div>
-                  <span className="text-[10px] font-semibold bg-muted px-2 py-0.5 rounded-md text-muted-foreground">
-                    Target: {(c.allocation * 100).toFixed(0)}%
-                  </span>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 text-xs border-t border-border/30 pt-2.5">
-                  <div>
-                    <span className="text-muted-foreground text-[10px] block mb-0.5">Allocated Budget</span>
-                    <span className="font-semibold text-foreground">{areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : formatCurrency(c.target)}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground text-[10px] block mb-0.5">Carried Over</span>
-                    <span className="font-semibold text-foreground">{areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : formatCurrency(c.budget)}</span>
-                  </div>
-                </div>
- 
-                <div className="grid grid-cols-2 gap-4 text-xs border-t border-border/30 pt-2.5">
-                  <div>
-                    <span className="text-muted-foreground text-[10px] block mb-0.5">Net Change</span>
-                    <span className={`font-semibold ${c.netChange < 0 ? 'text-orange-500' : c.netChange > 0 ? 'text-blue-500' : 'text-foreground'}`}>
-                      {areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : <>{c.netChange > 0 ? '+' : ''}<AnimatedNumber value={c.netChange} formatFn={formatCurrency} /></>}
-                    </span>
-                    {pendingDeductionsByCategory[c.name] > 0 && (
-                      <span className="text-[10px] text-yellow-500 flex items-center gap-1 font-normal mt-0.5">
-                        <Clock className="size-3" />
-                        Pending: -{areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : formatCurrency(pendingDeductionsByCategory[c.name])}
-                      </span>
-                    )}
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground text-[10px] block mb-0.5">Remaining Balance</span>
-                    <div className="flex items-center gap-1.5">
-                      <span className={`font-bold ${isNeg ? 'text-orange-500' : 'text-foreground'}`}>
-                        {areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : <AnimatedNumber value={c.remaining} formatFn={formatCurrency} />}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => openBalanceAdjustment(c)}
-                        disabled={hideSensitive}
-                        className="inline-flex size-6 shrink-0 items-center justify-center rounded-lg text-muted-foreground/65 hover:bg-muted hover:text-foreground cursor-pointer transition select-none disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                        title={hideSensitive ? 'Unhide balances to edit' : 'Adjust balance'}
-                        aria-label={`Adjust ${c.name} balance`}
-                      >
-                        <Edit2 className="size-3" />
-                      </button>
-                    </div>
-                    {pendingDeductionsByCategory[c.name] > 0 && (
-                      <span className={`text-[10px] flex items-center gap-1 mt-0.5 font-semibold ${(c.remaining - pendingDeductionsByCategory[c.name]) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>
-                        Projected: {areBalanceAmountsMasked ? SENSITIVE_AMOUNT_MASK : formatCurrency(c.remaining - pendingDeductionsByCategory[c.name])}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
+      <CarryoverLedgerTable
+        categories={categories}
+        pendingDeductionsByCategory={pendingDeductionsByCategory}
+        amountsMasked={areBalanceAmountsMasked}
+        hideSensitive={hideSensitive}
+        formatCurrency={formatCurrency}
+        onAdjust={openBalanceAdjustment}
+      />
 
       {/* Financial Plan Metric Cards */}
       <div className="app-panel p-6 bg-card/92 border border-border/60 rounded-2xl">
@@ -1030,442 +774,33 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Main Charts & Breakdown Section (2-column layout to prevent horizontally squeezed charts) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        {/* Balance Trend Line */}
-        <div className="app-panel p-6 rounded-2xl bg-card/92 border border-border/60 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <h3 className="text-base font-semibold text-foreground">Total Growth Deposited</h3>
-                <p className="text-[10px] text-muted-foreground">Cumulative Growth category investment balance</p>
-              </div>
-              <TrendLineIcon className="size-4 text-blue-500 shrink-0" />
-            </div>
-            {/* Period Toggle */}
-            <div className="flex items-center bg-muted/40 rounded-lg p-0.5 border border-border/40 text-[9px] mb-3 w-fit">
-              {(['3month', '6month', 'yearly'] as const).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setTrendView(v)}
-                  className={`px-2 py-0.5 rounded-md font-bold transition cursor-pointer ${
-                    trendView === v ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {v === '3month' ? '3M' : v === '6month' ? '6M' : 'Year'}
-                </button>
-              ))}
-            </div>
+        <TrendLineChart
+          dashboardData={dashboardData}
+          growthBalance={categories.find(category => category.name === 'Growth')?.remaining ?? 0}
+        />
 
-            {/* SVG Line Chart Wrapper with container-level hover snapping */}
-            <div
-              onMouseMove={(e) => {
-                if (!svgRef.current || activeTrendPoints.length < 2) return
-                const rect = svgRef.current.getBoundingClientRect()
-                const mouseX = e.clientX - rect.left
-                const pctX = mouseX / rect.width
-                const index = Math.round(pctX * (activeTrendPoints.length - 1))
-                const safeIndex = Math.max(0, Math.min(activeTrendPoints.length - 1, index))
-                setHoveredTrendPoint(safeIndex)
-              }}
-              onMouseLeave={() => setHoveredTrendPoint(null)}
-              onTouchStart={(e) => {
-                if (!svgRef.current || activeTrendPoints.length < 2) return
-                const rect = svgRef.current.getBoundingClientRect()
-                const x = e.touches[0].clientX - rect.left
-                const index = Math.round((x / rect.width) * (activeTrendPoints.length - 1))
-                setHoveredTrendPoint(Math.max(0, Math.min(activeTrendPoints.length - 1, index)))
-              }}
-              onTouchMove={(e) => {
-                if (!svgRef.current || activeTrendPoints.length < 2) return
-                const rect = svgRef.current.getBoundingClientRect()
-                const x = e.touches[0].clientX - rect.left
-                const index = Math.round((x / rect.width) * (activeTrendPoints.length - 1))
-                setHoveredTrendPoint(Math.max(0, Math.min(activeTrendPoints.length - 1, index)))
-              }}
-              className={`h-40 flex flex-col justify-end w-full relative mt-2 transition-all duration-300 ${hideSensitive ? 'blur-xs select-none pointer-events-none' : ''}`}
-            >
-              {trendLinePoints ? (
-                <>
-                  <svg ref={svgRef} className="w-full h-[120px] overflow-visible" viewBox="0 0 500 120" preserveAspectRatio="none">
-                    <defs>
-                      <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="var(--color-chart-line, #3b82f6)" stopOpacity="0.25" />
-                        <stop offset="100%" stopColor="var(--color-chart-line, #3b82f6)" stopOpacity="0.0" />
-                      </linearGradient>
-                    </defs>
-                    
-                    {/* Fill Area -- gradient drop beneath the line, fades in on load */}
-                    <motion.path
-                      key={`area-${trendView}`}
-                      d={`M 15,105 L ${trendLinePoints} L 485,105 Z`}
-                      fill="url(#chartGradient)"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 1 }}
-                    />
-
-                    {/* Stroke Line -- soft glow + smooth path draw-in (re-draws on period switch) */}
-                    <motion.polyline
-                      key={`line-${trendView}`}
-                      fill="none"
-                      stroke="var(--color-chart-line, #4f46e5)"
-                      strokeWidth="2.5"
-                      points={trendLinePoints}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="chart-glow"
-                      initial={{ pathLength: 0, opacity: 0 }}
-                      animate={{ pathLength: 1, opacity: 1 }}
-                      transition={{ duration: 1.2, ease: "easeInOut" }}
-                    />
-                  </svg>
-
-                  {/* HTML absolute-positioned data point dots (avoids aspect squashing) */}
-                  {activeTrendPoints.map((p, i) => {
-                    const minVal = Math.min(...activeTrendPoints.map(pt => pt.balance), 0)
-                    const maxVal = Math.max(...activeTrendPoints.map(pt => pt.balance), 1000)
-                    const range = maxVal - minVal
-                    const x = 15 + (i / (activeTrendPoints.length - 1)) * 470
-                    const y = 120 - 15 - ((p.balance - minVal) / (range || 1)) * 90
-                    
-                    // Convert coordinates to percentages of parent height/width
-                    // SVG viewport is 500x120, but the SVG element itself is height 120px inside the 160px parent
-                    const leftPct = (x / 500) * 100
-                    const topPct = (y / 120) * 100 * (120 / 160) + (40 / 160) * 100 // adjust for offset top
-
-                    return (
-                      <div
-                        key={i}
-                        className="absolute w-1.5 h-1.5 rounded-full bg-blue-500/50 pointer-events-none"
-                        style={{
-                          left: `calc(${leftPct}% - 3px)`,
-                          top: `calc(${topPct}% - 3px)`,
-                        }}
-                      />
-                    )
-                  })}
-
-                  {/* Active Highlight Dot and HTML Tooltip */}
-                  {hoveredTrendPoint !== null && activeTrendPoints[hoveredTrendPoint] && (() => {
-                    const p = activeTrendPoints[hoveredTrendPoint]
-                    const minVal = Math.min(...activeTrendPoints.map(pt => pt.balance), 0)
-                    const maxVal = Math.max(...activeTrendPoints.map(pt => pt.balance), 1000)
-                    const range = maxVal - minVal
-                    const x = 15 + (hoveredTrendPoint / (activeTrendPoints.length - 1)) * 470
-                    const y = 120 - 15 - ((p.balance - minVal) / (range || 1)) * 90
-                    
-                    const leftPct = (x / 500) * 100
-                    const topPct = (y / 120) * 100 * (120 / 160) + (40 / 160) * 100 // adjust for offset top
-
-                    return (
-                      <>
-                        <div
-                          className="absolute w-3.5 h-3.5 rounded-full bg-blue-500 border-2 border-card shadow-md pointer-events-none z-10"
-                          style={{
-                            left: `calc(${leftPct}% - 7px)`,
-                            top: `calc(${topPct}% - 7px)`,
-                          }}
-                        />
-                        <div
-                          className="absolute z-20 bg-card border border-border/80 rounded-xl p-1.5 shadow-2xl flex flex-col items-center pointer-events-none select-none text-center animate-in fade-in zoom-in-95 duration-100"
-                          style={{
-                            left: `clamp(4px, calc(${leftPct}% - 50px), calc(100% - 104px))`,
-                            top: `clamp(4px, calc(${topPct}% - 46px), calc(100% - 40px))`,
-                            width: '100px',
-                          }}
-                        >
-                          <span className="text-[9px] font-bold text-foreground leading-none mb-1">{p.month}</span>
-                          <span className="text-[10px] font-black text-blue-500 leading-none">
-                            {hideSensitive ? SENSITIVE_AMOUNT_MASK : formatCurrency(p.balance)}
-                          </span>
-                        </div>
-                      </>
-                    )
-                  })()}
-                </>
-              ) : (
-                <div className="text-xs text-muted-foreground pb-12 w-full text-center">Calculating trend points...</div>
-              )}
-            </div>
-
-            {/* Native HTML Month Labels Row (Prevents horizontal squeeze/blurriness) */}
-            <div className="flex justify-between px-[3%] mt-1 select-none">
-              {activeTrendPoints.map((p, i) => (
-                <span key={i} className="text-[9px] text-muted-foreground font-bold opacity-60 text-center w-8">
-                  {p.month}
-                </span>
-              ))}
-            </div>
-          </div>
-          
-          <div className="border-t border-border/50 pt-3 mt-3 flex justify-between text-[10px] text-muted-foreground select-none">
-            <span>{trendView === '3month' ? 'Last 3 cycles' : trendView === '6month' ? 'Last 6 cycles' : `${activeSettings.selectedYear} full year`}</span>
-            <span>Growth Savings: {formatSensitive(categories.find(c => c.name === 'Growth')?.remaining ?? 0)}</span>
-          </div>
-        </div>
-
-        {/* Category Expenditures Doughnut Chart */}
-        <div className="app-panel p-6 rounded-2xl bg-card/92 border border-border/60 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4 gap-2">
-              <div>
-                <h3 className="text-base font-semibold text-foreground">Outflow Categories</h3>
-                <p className="text-[10px] text-muted-foreground">Expense breakdown by category</p>
-              </div>
-              <div className="flex items-center bg-muted/40 rounded-lg p-0.5 border border-border/40 text-[9px] shrink-0">
-                {(['monthly', '3month', '6month', 'yearly'] as const).map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => setChartView(v)}
-                    className={`px-2 py-0.5 rounded-md font-bold transition cursor-pointer ${
-                      chartView === v ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    {v === 'monthly' ? '1M' : v === '3month' ? '3M' : v === '6month' ? '6M' : 'Year'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {totalBreakdownAmount > 0 ? (
-              <div className="flex flex-col items-center gap-4 mt-2">
-                {/* SVG Doughnut Chart (Enlarged with custom hover expanding behavior to fit large numbers cleanly) */}
-                <div className="relative size-36 shrink-0">
-                  <svg className="size-full overflow-visible" viewBox="0 0 200 200">
-                    {slices.map((slice, index) => {
-                      const isHovered = hoveredSlice === index
-                      const pathD = getDoughnutPath(
-                        100,
-                        100,
-                        isHovered ? 96 : 90,
-                        isHovered ? 56 : 62,
-                        slice.startAngle,
-                        slice.endAngle
-                      )
-                      return (
-                        <motion.path
-                          key={slice.category}
-                          d={pathD}
-                          fill={getCategoryChartColor(slice.category)}
-                          className="transition-all duration-200 cursor-pointer stroke-card stroke-2 hover:opacity-90"
-                          initial={{ scale: 0.8, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          transition={{ duration: 0.5, delay: index * 0.1, type: "spring" }}
-                          style={{ transformOrigin: '100px 100px' }}
-                          onMouseEnter={() => setHoveredSlice(index)}
-                          onMouseLeave={() => setHoveredSlice(null)}
-                          onClick={() => {
-                            if (hoveredSlice === index) {
-                              onNavigateToLedger?.({ category: slice.category, range: chartView })
-                            } else {
-                              setHoveredSlice(index)
-                            }
-                          }}
-                        />
-                      )
-                    })}
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none text-center p-2">
-                    {hoveredSlice !== null ? (
-                      <>
-                        <span className="text-[10px] text-muted-foreground font-bold truncate max-w-[110px] uppercase">
-                          {slices[hoveredSlice].category}
-                        </span>
-                        <span className="text-sm font-black text-foreground">
-                          {(slices[hoveredSlice].percentage * 100).toFixed(0)}%
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-[10px] text-muted-foreground font-bold uppercase">
-                          Total
-                        </span>
-                        <span className="text-xs font-black text-foreground truncate max-w-[110px]">
-                          {formatSensitive(totalBreakdownAmount)}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Legend List (Refined text styles for HD rendering) */}
-                <div className="w-full space-y-1 max-h-24 overflow-y-auto pr-1">
-                  {slices.map((slice, index) => (
-                    <div
-                      key={slice.category}
-                      className={`flex items-center justify-between text-xs py-1 px-1.5 rounded-md transition-colors duration-150 cursor-pointer ${
-                        hoveredSlice === index ? 'bg-muted/50' : 'hover:bg-muted/30'
-                      }`}
-                      onMouseEnter={() => setHoveredSlice(index)}
-                      onMouseLeave={() => setHoveredSlice(null)}
-                      onClick={() => {
-                        onNavigateToLedger?.({ category: slice.category, range: chartView })
-                      }}
-                    >
-                      <div className="flex items-center gap-1.5 truncate mr-2">
-                        <span
-                          className="size-2 rounded-full shrink-0"
-                          style={{ backgroundColor: getCategoryChartColor(slice.category) }}
-                        />
-                        <span className="font-bold text-foreground truncate max-w-[85px]">
-                          {slice.category}
-                        </span>
-                      </div>
-                      <span className="text-foreground/90 font-extrabold shrink-0">
-                        {formatSensitive(slice.amount)} ({(slice.percentage * 100).toFixed(0)}%)
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="h-40 flex flex-col items-center justify-center text-center p-4">
-                <span className="text-[10px] text-muted-foreground">No outflows logged.</span>
-              </div>
-            )}
-          </div>
-          <div className="border-t border-border/50 pt-3 mt-3 text-[10px] text-muted-foreground text-center">
-            {chartView === 'monthly' ? 'Selected Cycle Outflow Share'
-              : chartView === '3month' ? 'Last 3 Cycles Outflow Share'
-              : chartView === '6month' ? 'Last 6 Cycles Outflow Share'
-              : `Full ${activeSettings.selectedYear} Outflow Share`}
-          </div>
-        </div>
+        <DoughnutChart
+          dashboardData={dashboardData}
+          selectedYear={activeSettings.selectedYear}
+          onNavigateToLedger={onNavigateToLedger}
+        />
 
       </div>
 
       {/* Calendar & Subscriptions Section (Calendar spans 2 columns, Subscriptions timeline spans 1) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Daily Cycle Heatmap Calendar (Spans 2 columns) */}
         <div className="lg:col-span-2">
-          {(() => {
-            const cycleDay = activeSettings.cycleDay
-            const monthIdxMap: Record<string, number> = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 }
-            const selectedMonthIdx = (monthIdxMap[activeSettings.selectedMonth] ?? 0) + 1
-            const selectedYear = activeSettings.selectedYear
-
-            // Compute cycle start and end dates same as backend logic
-            const startDayActual = Math.min(cycleDay, new Date(selectedYear, selectedMonthIdx, 0).getDate())
-            const cycleStart = new Date(selectedYear, selectedMonthIdx - 1, startDayActual)
-            const cycleEnd = new Date(cycleStart)
-            cycleEnd.setMonth(cycleEnd.getMonth() + 1)
-            cycleEnd.setDate(cycleEnd.getDate() - 1)
-
-            const formatDate = (d: Date) => {
-              const y = d.getFullYear()
-              const m = String(d.getMonth() + 1).padStart(2, '0')
-              const dd = String(d.getDate()).padStart(2, '0')
-              return `${y}-${m}-${dd}`
-            }
-
-            const cycleStartStr = formatDate(cycleStart)
-            const cycleEndStr = formatDate(cycleEnd)
-
-            // Build days array
-            const days: Date[] = []
-            const cursor = new Date(cycleStart)
-            while (cursor <= cycleEnd) {
-              days.push(new Date(cursor))
-              cursor.setDate(cursor.getDate() + 1)
-            }
-
-            // Net per day from transactions (contains ALL transactions in the active cycle)
-            const netByDay: Record<string, number> = {}
-            transactions.forEach((t: Transaction) => {
-              if (t.date >= cycleStartStr && t.date <= cycleEndStr) {
-                // Internal transfers are neutral and do not affect total net activity
-                if (t.ledgerCategory && t.ledgerCategory.startsWith('Transfer:')) {
-                  return
-                }
-                netByDay[t.date] = (netByDay[t.date] || 0) + t.amount
-              }
-            })
-
-            // Recurring bills by day
-            const recurringByDay: Record<string, string[]> = {}
-            activeRecurring.forEach((rp: ActiveRecurringPayment) => {
-              if (rp.dueDate >= cycleStartStr && rp.dueDate <= cycleEndStr) {
-                if (!recurringByDay[rp.dueDate]) recurringByDay[rp.dueDate] = []
-                recurringByDay[rp.dueDate].push(rp.name)
-              }
-            })
-
-            // Start day of week for the grid (0=Sun)
-            const startDow = cycleStart.getDay()
-
-            const formatDisplayDate = (d: Date) => {
-              const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-              return `${monthNames[d.getMonth()]} ${d.getDate()}`
-            }
-
-            return (
-              <div className="app-panel p-6 rounded-2xl bg-card/92 border border-border/60 h-full">
-                <div className="mb-4">
-                  <h3 className="text-base font-semibold text-foreground">Cycle Calendar</h3>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{cycleLabel}</p>
-                </div>
-                <div className="overflow-x-auto pb-4 -mx-6 px-6 sm:mx-0 sm:px-0 sm:overflow-visible [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                  <div className="grid grid-cols-7 gap-1.5 sm:gap-2 text-center min-w-[420px] sm:min-w-0">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-                      <div key={d} className="text-[10px] md:text-xs text-muted-foreground font-bold pb-2">{d}</div>
-                    ))}
-                    {/* Empty cells before start */}
-                    {Array.from({ length: startDow }).map((_, i) => (
-                      <div key={`empty-${i}`} />
-                    ))}
-                    {days.map((day, idx) => {
-                      const ds = formatDate(day)
-                      const net = netByDay[ds]
-                      const recs = recurringByDay[ds] || []
-                      const hasNet = net !== undefined
-                      const isPositive = hasNet && net >= 0
-                      const isToday = ds === todayStr
-
-                      let cellClass = "relative h-12 xs:h-14 md:h-16 w-full rounded-xl flex flex-col items-center justify-center gap-0.5 md:gap-1 transition-all duration-200 border text-[10px] md:text-xs cursor-pointer"
-                      if (isToday) {
-                        cellClass += " ring-2 ring-blue-500 ring-offset-2 ring-offset-card bg-blue-500/10 border-blue-500/30"
-                      } else if (hasNet) {
-                        if (isPositive) {
-                          cellClass += " bg-blue-500/8 dark:bg-blue-950/20 border-blue-500/20 hover:border-blue-500/40 hover:bg-blue-500/12 hover:shadow-lg hover:shadow-blue-500/10"
-                        } else {
-                          cellClass += " bg-orange-500/8 dark:bg-orange-950/20 border-orange-500/20 hover:border-orange-500/40 hover:bg-orange-500/12 hover:shadow-lg hover:shadow-orange-500/10"
-                        }
-                      } else {
-                        cellClass += " bg-muted/5 dark:bg-muted/10 border-border/40 hover:bg-muted/20"
-                      }
-
-                      return (
-                        <motion.div
-                          key={ds}
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ duration: 0.3, delay: idx * 0.01 }}
-                          whileTap={{ scale: 0.95 }}
-                          title={hasNet
-                            ? `${formatDisplayDate(day)}: ${net >= 0 ? '+' : ''}${net.toFixed(2)}${recs.length ? '\nBills: ' + recs.join(', ') : ''}`
-                            : recs.length ? `${formatDisplayDate(day)}\nBills: ${recs.join(', ')}` : formatDisplayDate(day)}
-                          className={cellClass}
-                          onClick={() => onNavigateToLedger?.({ date: ds })}
-                        >
-                          <span className={`leading-none text-xs md:text-sm font-bold ${isToday ? 'text-blue-500' : 'text-foreground/90'}`}>
-                            {day.getDate()}
-                          </span>
-                          {hasNet && (
-                            <span className={`text-[8px] xs:text-[9px] sm:text-[10px] md:text-xs font-black leading-none mt-0.5 ${isPositive ? 'text-blue-500 dark:text-blue-400' : 'text-orange-500 dark:text-orange-400'}`}>
-                              {formatCompactSensitive(net)}
-                            </span>
-                          )}
-                          {recs.length > 0 && (
-                            <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                          )}
-                        </motion.div>
-                      )
-                    })}
-                  </div>
-                </div>
-              </div>
-            )
-          })()}
+          <CycleCalendar
+            selectedMonth={activeSettings.selectedMonth}
+            selectedYear={activeSettings.selectedYear}
+            cycleDay={activeSettings.cycleDay}
+            cycleLabel={cycleLabel}
+            transactions={transactions}
+            recurringPayments={activeRecurring}
+            formatNet={formatCompactSensitive}
+            onSelectDate={date => onNavigateToLedger?.({ date })}
+          />
         </div>
 
         {/* Active Month Recurring Payments Timeline (Spans 1 column) */}
@@ -1685,36 +1020,4 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       />
     </div>
   )
-}
-
-function getDoughnutPath(
-  cx: number,
-  cy: number,
-  rOuter: number,
-  rInner: number,
-  startAngleDeg: number,
-  endAngleDeg: number
-): string {
-  const startAngleRad = ((startAngleDeg - 90) * Math.PI) / 180
-  const endAngleRad = ((endAngleDeg - 90) * Math.PI) / 180
-
-  const x1_outer = cx + rOuter * Math.cos(startAngleRad)
-  const y1_outer = cy + rOuter * Math.sin(startAngleRad)
-  const x2_outer = cx + rOuter * Math.cos(endAngleRad)
-  const y2_outer = cy + rOuter * Math.sin(endAngleRad)
-
-  const x1_inner = cx + rInner * Math.cos(startAngleRad)
-  const y1_inner = cy + rInner * Math.sin(startAngleRad)
-  const x2_inner = cx + rInner * Math.cos(endAngleRad)
-  const y2_inner = cy + rInner * Math.sin(endAngleRad)
-
-  const largeArcFlag = endAngleDeg - startAngleDeg > 180 ? 1 : 0
-
-  return `
-    M ${x1_outer} ${y1_outer}
-    A ${rOuter} ${rOuter} 0 ${largeArcFlag} 1 ${x2_outer} ${y2_outer}
-    L ${x2_inner} ${y2_inner}
-    A ${rInner} ${rInner} 0 ${largeArcFlag} 0 ${x1_inner} ${y1_inner}
-    Z
-  `
 }

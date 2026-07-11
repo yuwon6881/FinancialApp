@@ -1,20 +1,19 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { listContainerVariants, listItemVariants } from '../lib/animations'
 import type { WishlistItem } from '../types'
-import { CustomSelect } from './ui/CustomSelect'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { BottomSheet } from './ui/BottomSheet'
 import { CycleSkeleton } from './ui/Skeleton'
 import { Card } from './ui/Card'
 import { RowSyncBadge } from './ui/RowSyncBadge'
-import { formatCurrencyVal, maskCurrencyInput } from '../lib/utils'
-import { useFormDraft } from '../lib/useFormDraft'
-import { useAutoOpenModal } from '../lib/useAutoOpenModal'
+import { formatCurrencyVal } from '../lib/utils'
 import { useSyncStatus } from '../lib/useOptimisticList'
 import { getActiveWishlistItem } from '../lib/wishlist'
 import { Button } from './ui/Button'
-import { SmartAmountInput } from './ui/SmartAmountInput'
+import { useAppContext } from '../contexts/AppContext'
+import { useWishlistForm } from './wishlist/useWishlistForm'
+import { WishlistItemForm } from './wishlist/WishlistItemForm'
 import {
   Wallet,
   PiggyBank,
@@ -34,13 +33,13 @@ interface WishlistViewProps {
   rewardsTarget: number
   pastThreeMonthsRewardsAverage: number
   hasRewardsHistory: boolean
-  currency: string
-  hideSensitive: boolean
+  currency?: string
+  hideSensitive?: boolean
   onAddItem: (item: Partial<WishlistItem>) => Promise<void> | void
   onUpdateItem: (id: number, item: WishlistItem) => Promise<void> | void
   onDeleteItem: (id: number) => Promise<void> | void
   onPurchaseItem: (id: number) => Promise<void> | void
-  formatSensitive: (val: number) => React.ReactNode
+  formatSensitive?: (val: number) => React.ReactNode
   autoOpenAddModal?: boolean
   onResetAutoOpen?: () => void
   onNavigateToLedger?: (options: {
@@ -69,18 +68,18 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   rewardsTarget,
   pastThreeMonthsRewardsAverage,
   hasRewardsHistory,
-  currency,
-  hideSensitive,
+  currency: currencyProp,
+  hideSensitive: hideSensitiveProp,
   onAddItem,
   onUpdateItem,
   onDeleteItem,
   onPurchaseItem,
-  formatSensitive,
+  formatSensitive: formatSensitiveProp,
   autoOpenAddModal,
   onResetAutoOpen,
   onNavigateToLedger,
-  activeSyncId = null,
-  deletingId = null,
+  activeSyncId: activeSyncIdProp,
+  deletingId: deletingIdProp,
   isSwitchingCycle = false,
   onStartEditPending,
   aiDraft = null,
@@ -88,116 +87,47 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   onAiDraftConsumed,
   onAiEditDraftConsumed
 }) => {
+  const app = useAppContext()
+  const currency = currencyProp ?? app.currency
+  const hideSensitive = hideSensitiveProp ?? app.hideSensitive
+  const formatSensitive = formatSensitiveProp ?? app.formatSensitive
+  const activeSyncId = activeSyncIdProp ?? app.activeSyncId
+  const deletingId = deletingIdProp ?? app.deletingId
   const { isSyncing: isItemSyncing, isDeleting: isItemDeleting } = useSyncStatus(wishlist, activeSyncId, deletingId)
 
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [showEditModal, setShowEditModal] = useState(false)
-  const [editingItem, setEditingItem] = useState<WishlistItem | null>(null)
-  const [errors, setErrors] = useState<Record<string, string>>({})
-
-  // Form states
-  const [nameInput, setNameInput] = useState('')
-  const [priceInput, setPriceInput] = useState('')
-
-  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPriceInput(maskCurrencyInput(e.target.value, priceInput));
-  };
-  const [priorityInput, setPriorityInput] = useState('Medium')
-  const [isActiveInput, setIsActiveInput] = useState(false)
-
-  const applyAiWishlistFields = (fields: Record<string, unknown>) => {
-    const getString = (key: string) => {
-      const value = fields[key]
-      return typeof value === 'string' && value.trim() ? value.trim() : null
-    }
-    const getNumber = (key: string) => {
-      const value = fields[key]
-      if (typeof value === 'number' && Number.isFinite(value)) return value
-      if (typeof value === 'string' && value.trim()) {
-        const parsed = Number(value)
-        return Number.isFinite(parsed) ? parsed : null
-      }
-      return null
-    }
-
-    const nextName = getString('name')
-    if (nextName !== null) setNameInput(nextName)
-    const nextPrice = getNumber('price')
-    if (nextPrice !== null) setPriceInput(Math.abs(nextPrice).toFixed(2))
-    const nextPriority = getString('priority')
-    if (nextPriority === 'High' || nextPriority === 'Medium' || nextPriority === 'Low') setPriorityInput(nextPriority)
-    if (typeof fields.isActive === 'boolean') setIsActiveInput(fields.isActive)
-  }
-
-  useEffect(() => {
-    if (!aiDraft) return
-    setEditingItem(null)
-    setNameInput('')
-    setPriceInput('')
-    setPriorityInput('Medium')
-    setIsActiveInput(wishlist.filter(w => !w.isPurchased).length === 0)
-    applyAiWishlistFields(aiDraft.fields)
-    setShowAddModal(true)
-    onAiDraftConsumed?.()
-  }, [aiDraft?.nonce])
-
-  useEffect(() => {
-    if (!aiEditDraft) return
-    if (hideSensitive) {
-      onAiEditDraftConsumed?.()
-      return
-    }
-    const item = wishlist.find(w => Number(w.id) === Number(aiEditDraft.id))
-    if (!item) {
-      onAiEditDraftConsumed?.()
-      return
-    }
-    setEditingItem(item)
-    setNameInput(item.name)
-    setPriceInput(item.price.toFixed(2))
-    setPriorityInput(item.priority)
-    setIsActiveInput(item.isActive)
-    applyAiWishlistFields(aiEditDraft.changes)
-    onStartEditPending?.(String(item.id))
-    setShowEditModal(true)
-    onAiEditDraftConsumed?.()
-  }, [aiEditDraft?.nonce])
-
-  // Keep in-progress modal fields across an interrupted session (see
-  // useFormDraft) -- reopens the right modal with what the user had typed.
-  const { clearDraft: clearAddDraft } = useFormDraft(
-    'wishlist-add',
+  const {
     showAddModal,
-    { nameInput, priceInput, priorityInput, isActiveInput },
-    (draft) => {
-      setNameInput(draft.nameInput)
-      setPriceInput(draft.priceInput)
-      setPriorityInput(draft.priorityInput)
-      setIsActiveInput(draft.isActiveInput)
-      setShowAddModal(true)
-    }
-  )
-
-  const { clearDraft: clearEditDraft } = useFormDraft(
-    'wishlist-edit',
     showEditModal,
-    { editingItemId: editingItem?.id ?? null, nameInput, priceInput, priorityInput, isActiveInput },
-    (draft) => {
-      if (draft.editingItemId == null) return
-      // If the item was deleted elsewhere while this device was logged out,
-      // just skip reopening -- the stale entry is harmless and gets
-      // overwritten the next time this modal opens for any item.
-      const found = wishlist.find(w => String(w.id) === String(draft.editingItemId))
-      if (!found) return
-      setEditingItem(found)
-      setNameInput(draft.nameInput)
-      setPriceInput(draft.priceInput)
-      setPriorityInput(draft.priorityInput)
-      setIsActiveInput(draft.isActiveInput)
-      onStartEditPending?.(String(draft.editingItemId))
-      setShowEditModal(true)
-    }
-  )
+    editingItem,
+    errors,
+    setErrors,
+    nameInput,
+    setNameInput,
+    priceInput,
+    priorityInput,
+    setPriorityInput,
+    isActiveInput,
+    setIsActiveInput,
+    handlePriceChange,
+    handleOpenAddModal,
+    handleOpenEditModal,
+    closeAddModal,
+    closeEditModal,
+    handleSaveAdd,
+    handleSaveEdit,
+  } = useWishlistForm({
+    wishlist,
+    hideSensitive,
+    autoOpenAddModal,
+    onResetAutoOpen,
+    onAddItem,
+    onUpdateItem,
+    onStartEditPending,
+    aiDraft,
+    aiEditDraft,
+    onAiDraftConsumed,
+    onAiEditDraftConsumed,
+  })
 
   // Separate active (hero) item and queued items
   const activeItem = useMemo(() => getActiveWishlistItem(wishlist), [wishlist])
@@ -242,119 +172,6 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     }
     const roundedMonths = (days / 30).toFixed(1)
     return `~${roundedMonths} Months (${formattedDate})`
-  }
-
-   const handleOpenAddModal = () => {
-    setNameInput('')
-    setPriceInput('')
-    setPriorityInput('Medium')
-    setIsActiveInput(wishlist.filter(w => !w.isPurchased).length === 0)
-    setShowAddModal(true)
-  }
-
-  // Deferred so the sheet's entrance animation doesn't start on the contended
-  // tab-switch/mount frame (which made the slide occasionally skip). See
-  // lib/useAutoOpenModal.
-  useAutoOpenModal(autoOpenAddModal, handleOpenAddModal, onResetAutoOpen)
-
-  const handleOpenEditModal = (item: WishlistItem) => {
-    if (hideSensitive) return
-    setEditingItem(item)
-    setNameInput(item.name)
-    setPriceInput(item.price.toFixed(2))
-    setPriorityInput(item.priority)
-    setIsActiveInput(item.isActive)
-    // Notify the parent drain loop so this item's queued op is held until the
-    // modal closes (mirrors the protection transaction edits already have).
-    onStartEditPending?.(String(item.id))
-    setShowEditModal(true)
-  }
-
-  const closeAddModal = () => {
-    setShowAddModal(false)
-    setNameInput('')
-    setPriceInput('')
-    setPriorityInput('Medium')
-    setIsActiveInput(false)
-    clearAddDraft()
-    setErrors({})
-  }
-
-  const closeEditModal = () => {
-    setShowEditModal(false)
-    setEditingItem(null)
-    setNameInput('')
-    setPriceInput('')
-    setPriorityInput('Medium')
-    setIsActiveInput(false)
-    clearEditDraft()
-    setErrors({})
-    // Release the drain-loop hold now that the user has finished (or cancelled)
-    // editing.
-    onStartEditPending?.(null)
-  }
-
-  const handleSaveAdd = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const newErrors: Record<string, string> = {}
-    if (!nameInput.trim()) {
-      newErrors.name = 'Goal name is required.'
-    }
-    const price = parseFloat(priceInput)
-    if (!priceInput.trim()) {
-      newErrors.price = 'Price is required.'
-    } else if (isNaN(price) || price <= 0) {
-      newErrors.price = 'Please enter a valid price greater than 0.'
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors)
-      return
-    }
-    setErrors({})
-
-    const newGoal = {
-      name: nameInput,
-      price,
-      priority: priorityInput,
-      isActive: isActiveInput
-    }
-    closeAddModal()
-    await onAddItem(newGoal)
-  }
-
-  const handleSaveEdit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!editingItem) return
-    const newErrors: Record<string, string> = {}
-    if (!nameInput.trim()) {
-      newErrors.name = 'Goal name is required.'
-    }
-    const price = parseFloat(priceInput)
-    if (!priceInput.trim()) {
-      newErrors.price = 'Price is required.'
-    } else if (isNaN(price) || price <= 0) {
-      newErrors.price = 'Please enter a valid price greater than 0.'
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors)
-      return
-    }
-    setErrors({})
-
-    const cleanItem: Omit<WishlistItem, 'isPendingSync'> & { isPendingSync?: boolean } = { ...editingItem }
-    delete cleanItem.isPendingSync
-    const updatedGoal = {
-      ...cleanItem,
-      name: nameInput,
-      price,
-      priority: priorityInput,
-      isActive: isActiveInput
-    }
-    const targetId = editingItem.id
-    closeEditModal()
-    await onUpdateItem(targetId, updatedGoal)
   }
 
   const handleToggleActive = async (item: WishlistItem) => {
@@ -767,103 +584,22 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
           onClose={closeAddModal}
           maxWidthClassName="max-w-md"
         >
-            <form noValidate onSubmit={handleSaveAdd} className="space-y-4 text-xs font-semibold">
-              <div>
-                <label className="text-muted-foreground block mb-1">Goal Name *</label>
-                <input 
-                  type="text" 
-                  value={nameInput}
-                  onChange={e => {
-                    setNameInput(e.target.value)
-                    if (errors.name) {
-                      setErrors(prev => ({ ...prev, name: '' }))
-                    }
-                  }}
-                  placeholder="e.g. Mechanical Keyboard, Weekend Trip"
-                  className={`w-full px-3.5 py-2 bg-background border rounded-xl focus:outline-none focus:ring-1 transition font-medium ${
-                    errors.name 
-                      ? 'border-destructive focus:ring-destructive' 
-                      : 'border-border focus:ring-blue-500'
-                  }`}
-                />
-                {errors.name && (
-                  <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                    {errors.name}
-                  </p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-muted-foreground block mb-1">Price ({currency}) *</label>
-                  <SmartAmountInput 
-                    type="text" 
-                    value={priceInput}
-                    onChange={e => {
-                      handlePriceChange(e)
-                      if (errors.price) {
-                        setErrors(prev => ({ ...prev, price: '' }))
-                      }
-                    }}
-                    placeholder="0.00"
-                    className={`w-full px-3.5 py-2 bg-background border rounded-xl focus:outline-none focus:ring-1 transition font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                      errors.price 
-                        ? 'border-destructive focus:ring-destructive' 
-                        : 'border-border focus:ring-blue-500'
-                    }`}
-                  />
-                  {errors.price && (
-                    <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                      {errors.price}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-muted-foreground block mb-1">Priority</label>
-                  <CustomSelect 
-                    value={priorityInput}
-                    onChange={val => setPriorityInput(val)}
-                    options={[
-                      { value: 'High', label: 'High' },
-                      { value: 'Medium', label: 'Medium' },
-                      { value: 'Low', label: 'Low' }
-                    ]}
-                    className="w-full"
-                  />
-                </div>
-              </div>
-
-
-
-              <div className="flex items-center gap-2 py-1 select-none">
-                <input 
-                  type="checkbox" 
-                  id="isActive"
-                  checked={isActiveInput}
-                  onChange={e => setIsActiveInput(e.target.checked)}
-                  className="size-3.5 border-border rounded focus:ring-blue-500"
-                />
-                <label htmlFor="isActive" className="text-muted-foreground font-medium cursor-pointer">Set as Active Focus Goal</label>
-              </div>
-
-              <div className="flex items-center gap-3 border-t border-border/30 pt-4 mt-6">
-                <button
-                  type="button"
-                  onClick={closeAddModal}
-                  className="flex-1 py-2.5 bg-muted hover:bg-muted/80 text-muted-foreground rounded-xl font-bold transition cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  type="submit"
-                  className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full font-bold shadow-lg shadow-blue-500/25 transition cursor-pointer"
-                >
-                  Add Goal
-                </motion.button>
-              </div>
-            </form>
+          <WishlistItemForm
+            mode="add"
+            currency={currency}
+            name={nameInput}
+            price={priceInput}
+            priority={priorityInput}
+            isActive={isActiveInput}
+            errors={errors}
+            onNameChange={setNameInput}
+            onPriceChange={handlePriceChange}
+            onPriorityChange={setPriorityInput}
+            onActiveChange={setIsActiveInput}
+            onClearError={field => setErrors(previous => ({ ...previous, [field]: '' }))}
+            onCancel={closeAddModal}
+            onSubmit={handleSaveAdd}
+          />
         </BottomSheet>
       )}
 
@@ -875,99 +611,22 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
           onClose={closeEditModal}
           maxWidthClassName="max-w-md"
         >
-            <form noValidate onSubmit={handleSaveEdit} className="space-y-4 text-xs font-semibold">
-              <div>
-                <label className="text-muted-foreground block mb-1">Goal Name *</label>
-                <input 
-                  type="text" 
-                  value={nameInput}
-                  onChange={e => {
-                    setNameInput(e.target.value)
-                    if (errors.name) {
-                      setErrors(prev => ({ ...prev, name: '' }))
-                    }
-                  }}
-                  className={`w-full px-3.5 py-2 bg-background border rounded-xl focus:outline-none focus:ring-1 transition font-medium ${
-                    errors.name 
-                      ? 'border-destructive focus:ring-destructive' 
-                      : 'border-border focus:ring-blue-500'
-                  }`}
-                />
-                {errors.name && (
-                  <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                    {errors.name}
-                  </p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-muted-foreground block mb-1">Price ({currency}) *</label>
-                  <SmartAmountInput 
-                    type="text" 
-                    value={priceInput}
-                    onChange={e => {
-                      handlePriceChange(e)
-                      if (errors.price) {
-                        setErrors(prev => ({ ...prev, price: '' }))
-                      }
-                    }}
-                    className={`w-full px-3.5 py-2 bg-background border rounded-xl focus:outline-none focus:ring-1 transition font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                      errors.price 
-                        ? 'border-destructive focus:ring-destructive' 
-                        : 'border-border focus:ring-blue-500'
-                    }`}
-                  />
-                  {errors.price && (
-                    <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                      {errors.price}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-muted-foreground block mb-1">Priority</label>
-                  <CustomSelect 
-                    value={priorityInput}
-                    onChange={val => setPriorityInput(val)}
-                    options={[
-                      { value: 'High', label: 'High' },
-                      { value: 'Medium', label: 'Medium' },
-                      { value: 'Low', label: 'Low' }
-                    ]}
-                    className="w-full"
-                  />
-                </div>
-              </div>
-
-
-
-              <div className="flex items-center gap-2 py-1 select-none">
-                <input 
-                  type="checkbox" 
-                  id="isActiveEdit"
-                  checked={isActiveInput}
-                  onChange={e => setIsActiveInput(e.target.checked)}
-                  className="size-3.5 border-border rounded focus:ring-blue-500"
-                />
-                <label htmlFor="isActiveEdit" className="text-muted-foreground font-medium cursor-pointer">Set as Active Focus Goal</label>
-              </div>
-
-              <div className="flex items-center gap-3 border-t border-border/30 pt-4 mt-6">
-                <button
-                  type="button"
-                  onClick={closeEditModal}
-                  className="flex-1 py-2.5 bg-muted hover:bg-muted/80 text-muted-foreground rounded-xl font-bold transition cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md shadow-blue-600/10 transition cursor-pointer"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </form>
+          <WishlistItemForm
+            mode="edit"
+            currency={currency}
+            name={nameInput}
+            price={priceInput}
+            priority={priorityInput}
+            isActive={isActiveInput}
+            errors={errors}
+            onNameChange={setNameInput}
+            onPriceChange={handlePriceChange}
+            onPriorityChange={setPriorityInput}
+            onActiveChange={setIsActiveInput}
+            onClearError={field => setErrors(previous => ({ ...previous, [field]: '' }))}
+            onCancel={closeEditModal}
+            onSubmit={handleSaveEdit}
+          />
         </BottomSheet>
       )}
     </div>
