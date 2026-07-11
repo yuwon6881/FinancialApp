@@ -40,6 +40,33 @@ describe('applyOpsToList', () => {
     expect(result[0]).toMatchObject({ id: 'local-1', name: 'New tx', isPendingSync: true })
   })
 
+  it('gives an optimistic transaction the queued time on its selected date for sorting', () => {
+    const createdAt = Date.parse('2026-07-11T05:06:07.890Z')
+    const ops = [makeOp({
+      type: 'add',
+      targetId: 'local-1',
+      createdAt,
+      payload: { name: 'Backdated tx', date: '2026-06-10' }
+    })]
+
+    const result = applyOpsToList([] as TestItem[], ops, 'transaction')
+
+    expect(result[0].postedAt).toBe('2026-06-10T05:06:07.890Z')
+  })
+
+  it('preserves an explicitly supplied transaction timestamp', () => {
+    const ops = [makeOp({
+      type: 'add',
+      targetId: 'local-1',
+      createdAt: Date.parse('2026-07-11T05:06:07.890Z'),
+      payload: { name: 'Timestamped tx', date: '2026-06-10', postedAt: '2026-06-10T01:02:03.000Z' }
+    })]
+
+    const result = applyOpsToList([] as TestItem[], ops, 'transaction')
+
+    expect(result[0].postedAt).toBe('2026-06-10T01:02:03.000Z')
+  })
+
   it('does not mark an add as pending once the op is flagged completed', () => {
     const ops = [makeOp({ type: 'add', targetId: 'local-1', payload: { name: 'New tx' }, isCompleted: true })]
     const result = applyOpsToList([] as TestItem[], ops, 'transaction')

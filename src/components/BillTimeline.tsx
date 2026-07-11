@@ -3,6 +3,7 @@ import type { ActiveRecurringPayment, RecurringPayment, Transaction } from '../t
 import { Calendar, CheckCircle2, AlertCircle, Ban, List, ChevronDown, ChevronUp } from 'lucide-react'
 import { formatCurrencyVal } from '../lib/utils'
 import { getCategoryBadgeClass, getCategoryDotClass } from '../lib/categoryColors'
+import { ordinalSuffix } from '../lib/cycleLabels'
 import { BottomSheet } from './ui/BottomSheet'
 import { Card } from './ui/Card'
 
@@ -49,15 +50,6 @@ function getCycleRangeDates(year: number, monthIndex: number, cycleDay: number):
   return { start, end }
 }
 
-function getDaySuffix(d: number) {
-  if (d >= 11 && d <= 13) return 'th'
-  switch (d % 10) {
-    case 1: return 'st'
-    case 2: return 'nd'
-    case 3: return 'rd'
-    default: return 'th'
-  }
-}
 
 export const BillTimeline: React.FC<BillTimelineProps> = ({
   activeRecurringPayments,
@@ -96,8 +88,8 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
   // Format date labels
   const startMonthStr = MONTH_NAMES[cycleStart.getMonth()]
   const endMonthStr = MONTH_NAMES[cycleEnd.getMonth()]
-  const startLabel = `${startMonthStr} ${cycleStart.getDate()}${getDaySuffix(cycleStart.getDate())}`
-  const endLabel = `${endMonthStr} ${cycleEnd.getDate()}${getDaySuffix(cycleEnd.getDate())}`
+  const startLabel = `${startMonthStr} ${cycleStart.getDate()}${ordinalSuffix(cycleStart.getDate())}`
+  const endLabel = `${endMonthStr} ${cycleEnd.getDate()}${ordinalSuffix(cycleEnd.getDate())}`
 
   const formatCurrency = (val: number) => {
     return formatCurrencyVal(val, currency)
@@ -379,7 +371,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
             else if (!anyPending) dotColor = 'bg-green-500'
 
             const d = new Date(node.dueDate)
-            const dateLabel = `${MONTH_NAMES[d.getMonth()]} ${d.getDate()}${getDaySuffix(d.getDate())}`
+            const dateLabel = `${MONTH_NAMES[d.getMonth()]} ${d.getDate()}${ordinalSuffix(d.getDate())}`
             const nameLabel = node.bills.length === 1
               ? node.bills[0].name
               : node.bills.length === 2

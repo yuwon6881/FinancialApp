@@ -12,6 +12,7 @@ import { formatCurrencyVal, maskCurrencyInput } from '../lib/utils'
 import { useFormDraft } from '../lib/useFormDraft'
 import { useAutoOpenModal } from '../lib/useAutoOpenModal'
 import { useSyncStatus } from '../lib/useOptimisticList'
+import { getActiveWishlistItem } from '../lib/wishlist'
 import { Button } from './ui/Button'
 import { SmartAmountInput } from './ui/SmartAmountInput'
 import {
@@ -199,10 +200,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   )
 
   // Separate active (hero) item and queued items
-  const activeItem = useMemo(() => {
-    return wishlist.find(w => w.isActive && !w.isPurchased) || 
-           wishlist.filter(w => !w.isPurchased).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
-  }, [wishlist])
+  const activeItem = useMemo(() => getActiveWishlistItem(wishlist), [wishlist])
 
   const queuedItems = useMemo(() => {
     if (!activeItem) return wishlist.filter(w => !w.isPurchased)

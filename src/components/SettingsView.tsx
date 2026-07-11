@@ -17,6 +17,7 @@ import { ChangePasswordSection } from './ChangePasswordSection'
 import { CollapsibleBody } from './ui/CollapsibleBody'
 import { PerimeterBeam } from './ui/PerimeterBeam'
 import { getErrorMessage, getErrorName } from '../lib/errors'
+import { rebalanceAllocations, type AllocationKey } from '../lib/allocations'
 
 const formatRelativeTime = (iso: string | null): string => {
   if (!iso) return 'Never'
@@ -31,7 +32,6 @@ const formatRelativeTime = (iso: string | null): string => {
 }
 
 const DEVICE_CREDENTIAL_ID_KEY = 'fingerprint_credential_id_on_this_device'
-type AllocationKey = 'essentials' | 'growth' | 'stability' | 'rewards'
 
 // How far back to look when flagging a category as unused/rarely used. Long enough that
 // categories only touched a couple times a year (insurance, annual renewals) aren't
@@ -326,53 +326,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   }, [essentialsAllocInput, growthAllocInput, stabilityAllocInput, rewardsAllocInput])
 
   const handleAllocationChange = (changedKey: AllocationKey, newValue: number) => {
-    if (lockedAllocations.includes(changedKey)) return
-
     const current = {
       essentials: parseFloat(essentialsAllocInput) || 0,
       growth: parseFloat(growthAllocInput) || 0,
       stability: parseFloat(stabilityAllocInput) || 0,
       rewards: parseFloat(rewardsAllocInput) || 0
     }
-    
-    newValue = Math.round(Math.max(0, Math.min(100, newValue)) / 5) * 5
-    const diff = newValue - current[changedKey]
-    if (diff === 0) return
 
-    const otherKeys = (['essentials', 'growth', 'stability', 'rewards'] as const).filter(k => k !== changedKey && !lockedAllocations.includes(k))
-
-    if (otherKeys.length === 0) return
-
-    const newAlloc = { ...current, [changedKey]: newValue }
-
-    let remainingDiff = Math.round(diff)
-    let startIdx = 0
-    while (remainingDiff !== 0) {
-      let adjusted = false
-      const step = Math.min(5, Math.abs(remainingDiff))
-      const sign = Math.sign(remainingDiff)
-      
-      for (let i = 0; i < otherKeys.length; i++) {
-        const k = otherKeys[(startIdx + i) % otherKeys.length]
-        if (sign > 0 && newAlloc[k] >= step) {
-          newAlloc[k] -= step
-          remainingDiff -= step
-          adjusted = true
-          startIdx = (startIdx + i + 1) % otherKeys.length
-          break
-        } else if (sign < 0 && newAlloc[k] <= 100 - step) {
-          newAlloc[k] += step
-          remainingDiff += step
-          adjusted = true
-          startIdx = (startIdx + i + 1) % otherKeys.length
-          break
-        }
-      }
-      if (!adjusted) {
-        newAlloc[changedKey] -= remainingDiff
-        break
-      }
-    }
+    const newAlloc = rebalanceAllocations(current, changedKey, newValue, lockedAllocations)
+    if (!newAlloc) return
 
     setEssentialsAllocInput(newAlloc.essentials.toString())
     setGrowthAllocInput(newAlloc.growth.toString())

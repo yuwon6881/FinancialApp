@@ -389,11 +389,11 @@
 .perimeter-beam {
     display: none;
     position: absolute;
-    inset: -1px;
+    inset: -2px;
     border-radius: inherit;
     z-index: 1;
     overflow: hidden;
-    padding: 1px;
+    padding: 2px;
     pointer-events: none;
     -webkit-mask:
         linear-gradient(#fff 0 0) content-box,

@@ -23,6 +23,8 @@ import { BottomSheet } from './ui/BottomSheet'
 import { CycleSkeleton } from './ui/Skeleton'
 import { formatCurrencyVal, getCurrencySymbol, maskCurrencyInput, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
 import { getCategoryBadgeClass, getCategoryChartColor, getCategoryDotClass } from '../lib/categoryColors'
+import { getCycleLabelForDropdown } from '../lib/cycleLabels'
+import { getActiveWishlistItem } from '../lib/wishlist'
 import { AnimatedNumber } from './ui/AnimatedNumber'
 import { SmartAmountInput } from './ui/SmartAmountInput'
 
@@ -83,10 +85,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [notiToDelete, setNotiToDelete] = useState<PendingNotification | null>(null)
 
   // Active wishlist item for dashboard progress display
-  const activeWishlistItem = useMemo(() => {
-    return wishlist.find(w => w.isActive && !w.isPurchased) || 
-           wishlist.filter(w => !w.isPurchased).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
-  }, [wishlist])
+  const activeWishlistItem = useMemo(() => getActiveWishlistItem(wishlist), [wishlist])
   
   // Balance adjustment modal state
   const [adjustingCategory, setAdjustingCategory] = useState<CategorySummary | null>(null)
@@ -1686,38 +1685,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       />
     </div>
   )
-}
-
-function getCycleLabelForDropdown(month: string, year: number, cycleDay: number): string {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  const monthIdx = months.indexOf(month)
-  if (monthIdx === -1) return month
-
-  const getSuffix = (d: number) => {
-    if (d >= 11 && d <= 13) return `${d}th`
-    switch (d % 10) {
-      case 1: return `${d}st`
-      case 2: return `${d}nd`
-      case 3: return `${d}rd`
-      default: return `${d}th`
-    }
-  }
-
-  if (cycleDay === 1) {
-    const days = new Date(year, monthIdx + 1, 0).getDate()
-    return `${month} 1st ~ ${month} ${getSuffix(days)}`
-  }
-
-  const startDayActual = Math.min(cycleDay, new Date(year, monthIdx + 1, 0).getDate())
-  const startDate = new Date(year, monthIdx, startDayActual)
-  const endDate = new Date(startDate)
-  endDate.setMonth(endDate.getMonth() + 1)
-  endDate.setDate(endDate.getDate() - 1)
-
-  const startMonthStr = months[startDate.getMonth()]
-  const endMonthStr = months[endDate.getMonth()]
-
-  return `${startMonthStr} ${getSuffix(startDate.getDate())} ~ ${endMonthStr} ${getSuffix(endDate.getDate())}`
 }
 
 function getDoughnutPath(

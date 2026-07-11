@@ -42,6 +42,9 @@ import { useFormDraft } from '../lib/useFormDraft'
 import { useAutoOpenModal } from '../lib/useAutoOpenModal'
 import { useIsMobile } from '../lib/useIsMobile'
 import { getCycleRangeDates, getStartOfNCyclesAgo, formatDateForApi } from '../lib/cycle'
+import { getCycleLabelForDropdown, ordinal } from '../lib/cycleLabels'
+import { computeIncomeLedgerCategory } from '../lib/incomeSplit'
+import { matchesTransactionFilters, splitFilterSelections } from '../lib/transactionFilters'
 import { calculateLedgerTotals } from '../lib/ledgerTotals'
 
 const transactionSortKey = (t: Transaction) => t.postedAt || `${t.date}T00:00:00.000Z`
@@ -54,7 +57,6 @@ type SelectableLedgerCategory = typeof SELECTABLE_LEDGER_CATEGORIES[number]
 function isTransferBucket(value: string): value is TransferBucket {
   return (TRANSFER_BUCKETS as readonly string[]).includes(value)
 }
-
 function isSelectableLedgerCategory(value: string): value is SelectableLedgerCategory {
   return (SELECTABLE_LEDGER_CATEGORIES as readonly string[]).includes(value)
 }
@@ -1510,55 +1512,18 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }
 
     const isIncome = txType === 'inflow' && ledgerCategory === 'Income'
-    const isCapReached = stabilityBalance >= stabilityTarget
-    const defaultStabilityContribution = finalAmount * stabilityAlloc
-    const isCapReachedMidDeposit = !isCapReached && (stabilityBalance + defaultStabilityContribution > stabilityTarget)
 
-    if (isIncome && (isCapReached || isCapReachedMidDeposit)) {
-      let redirectTargets = ['Growth', 'Rewards']
-      if (stabilityOverflowRedirect === 'Growth 100%') redirectTargets = ['Growth']
-      else if (stabilityOverflowRedirect === 'Rewards 100%') redirectTargets = ['Rewards']
-      else if (stabilityOverflowRedirect === 'Essentials 100%') redirectTargets = ['Essentials']
-
-      let ess = essentialsAlloc
-      let gro = growthAlloc
-      let rew = rewardsAlloc
-
-      let actualStabilityShare = 0
-      if (!isCapReached) {
-        const stabilityNeeded = Math.max(0, stabilityTarget - stabilityBalance)
-        if (defaultStabilityContribution > stabilityNeeded) {
-          actualStabilityShare = stabilityNeeded / finalAmount
-        } else {
-          actualStabilityShare = stabilityAlloc
-        }
-      }
-
-      const redirectShare = stabilityAlloc - actualStabilityShare
-      let sta = actualStabilityShare
-
-      if (redirectShare > 0 && redirectTargets.length > 0) {
-        const N = redirectTargets.length
-        const baseSharePerTarget = Math.floor((redirectShare / N) * 10000) / 10000
-        const sumOfShares = baseSharePerTarget * N
-        const remainder = redirectShare - sumOfShares
-
-        redirectTargets.forEach((target, index) => {
-          let addedShare = baseSharePerTarget
-          if (index === 0) addedShare += remainder
-
-          if (target === 'Essentials') ess += addedShare
-          if (target === 'Growth') gro += addedShare
-          if (target === 'Rewards') rew += addedShare
-        })
-      }
-
-      ess = Math.round(ess * 10000) / 10000
-      gro = Math.round(gro * 10000) / 10000
-      sta = Math.round(sta * 10000) / 10000
-      rew = Math.round(rew * 10000) / 10000
-
-      finalLedgerCategory = `IncomeSplit:${(ess * 100).toFixed(4)},${(gro * 100).toFixed(4)},${(sta * 100).toFixed(4)},${(rew * 100).toFixed(4)}`
+    if (isIncome) {
+      finalLedgerCategory = computeIncomeLedgerCategory({
+        amount: finalAmount,
+        essentialsAlloc,
+        growthAlloc,
+        stabilityAlloc,
+        rewardsAlloc,
+        stabilityBalance,
+        stabilityTarget,
+        stabilityOverflowRedirect,
+      })
     }
 
     if (editingTxId) {
@@ -1620,13 +1585,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const filteredPendingTransactions = useMemo(() => {
     if (!showAllCycles) return []
     
-    const ledgerBuckets = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
-    const selectedBuckets = appliedFilters.filter(f => ledgerBuckets.includes(f))
-    const selectedCategories = appliedFilters.filter(f => !ledgerBuckets.includes(f))
+    const { buckets: selectedBuckets, categories: selectedCategories } = splitFilterSelections(appliedFilters)
 
     return pendingTransactions.filter(t => {
-      if (t.ledgerCategory === 'Discarded') return false
-      // Date range filter
+      // Date range filter (specific to the all-cycles list)
       if (allCyclesRange) {
         const txDate = new Date(t.date)
         const startLimit = new Date(allCyclesRange.startDate)
@@ -1636,40 +1598,12 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         if (txDate < startLimit || txDate > endLimit) return false
       }
 
-      // Search term filter
-      if (appliedSearch) {
-        const matchesSearch = (t.description || '').toLowerCase().includes(appliedSearch.toLowerCase()) ||
-                              (t.ledgerCategory || '').toLowerCase().includes(appliedSearch.toLowerCase()) ||
-                              (t.category || '').toLowerCase().includes(appliedSearch.toLowerCase())
-        if (!matchesSearch) return false
-      }
-
-      // Buckets filter
-      if (selectedBuckets.length > 0) {
-        const matchesBucket = selectedBuckets.some(bucket => {
-          if (bucket === 'Income') {
-            return t.ledgerCategory === 'Income' || (t.ledgerCategory || '').startsWith('IncomeSplit:')
-          }
-          return t.ledgerCategory === bucket || (t.ledgerCategory || '').includes(bucket)
-        })
-        if (!matchesBucket) return false
-      }
-
-      // Categories filter
-      if (selectedCategories.length > 0) {
-        const matchesSubcat = selectedCategories.some(subcat => t.category === subcat)
-        if (!matchesSubcat) return false
-      }
-
-      // Transaction type filter
-      if (appliedTxTypeFilter) {
-        const isTransfer = t.category === 'Transfer' || t.ledgerCategory.startsWith('Transfer:')
-        if (appliedTxTypeFilter === 'inflow' && (t.amount <= 0 || isTransfer)) return false
-        if (appliedTxTypeFilter === 'outflow' && t.amount >= 0) return false
-        if (appliedTxTypeFilter === 'transfer' && !isTransfer) return false
-      }
-
-      return true
+      return matchesTransactionFilters(t, {
+        search: appliedSearch,
+        buckets: selectedBuckets,
+        categories: selectedCategories,
+        txType: appliedTxTypeFilter,
+      })
     }).sort((a, b) => {
       const dateDiff = transactionSortKey(b).localeCompare(transactionSortKey(a))
       if (dateDiff !== 0) return dateDiff
@@ -1680,49 +1614,18 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   // Filtered transactions
   const filteredTransactions = useMemo(() => {
     // Group filters by their type (Ledger Categories vs Categories)
-    const ledgerBuckets = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
-    const selectedBuckets = selectedFilters.filter(f => ledgerBuckets.includes(f))
-    const selectedCategories = selectedFilters.filter(f => !ledgerBuckets.includes(f))
+    const { buckets: selectedBuckets, categories: selectedCategories } = splitFilterSelections(selectedFilters)
 
     return sourceTransactions.filter(t => {
-      if (t.ledgerCategory === 'Discarded') return false
-      const matchesSearch = (t.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            (t.ledgerCategory || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            (t.category || '').toLowerCase().includes(searchTerm.toLowerCase())
+      // Exact-day date filter (specific to the current-cycle list)
+      if (selectedDateFilter && t.date !== selectedDateFilter) return false
 
-      let matchesBucket = true
-      if (selectedBuckets.length > 0) {
-        matchesBucket = selectedBuckets.some(bucket => {
-          if (bucket === 'Income') {
-            return t.ledgerCategory === 'Income' || (t.ledgerCategory || '').startsWith('IncomeSplit:')
-          }
-          return t.ledgerCategory === bucket || (t.ledgerCategory || '').includes(bucket)
-        })
-      }
-
-      let matchesSubcat = true
-      if (selectedCategories.length > 0) {
-        matchesSubcat = selectedCategories.some(subcat => t.category === subcat)
-      }
-
-      let matchesDate = true
-      if (selectedDateFilter) {
-        matchesDate = t.date === selectedDateFilter
-      }
-
-      let matchesTxType = true
-      if (selectedTxTypeFilter) {
-        const isTransfer = t.category === 'Transfer' || t.ledgerCategory.startsWith('Transfer:')
-        if (selectedTxTypeFilter === 'inflow') {
-          matchesTxType = t.amount > 0 && !isTransfer
-        } else if (selectedTxTypeFilter === 'outflow') {
-          matchesTxType = t.amount < 0
-        } else if (selectedTxTypeFilter === 'transfer') {
-          matchesTxType = isTransfer
-        }
-      }
-      
-      return matchesSearch && matchesBucket && matchesSubcat && matchesDate && matchesTxType
+      return matchesTransactionFilters(t, {
+        search: searchTerm,
+        buckets: selectedBuckets,
+        categories: selectedCategories,
+        txType: selectedTxTypeFilter,
+      })
     }).sort((a, b) => {
       const dateDiff = transactionSortKey(b).localeCompare(transactionSortKey(a))
       if (dateDiff !== 0) return dateDiff
@@ -2074,7 +1977,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         if (activeDate) {
           const d = new Date(activeDate)
           const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-          const formattedDate = isNaN(d.getTime()) ? activeDate : `${monthNames[d.getMonth()]} ${d.getDate()}${getSuffix(d.getDate())}, ${d.getFullYear()}`
+          const formattedDate = isNaN(d.getTime()) ? activeDate : `${monthNames[d.getMonth()]} ${ordinal(d.getDate())}, ${d.getFullYear()}`
           filterDetails.push(`date ${formattedDate}`)
         }
         if (activeTxType) {
@@ -3217,36 +3120,4 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       )}
     </div>
   )
-}
-
-function getSuffix(d: number): string {
-  if (d >= 11 && d <= 13) return 'th'
-  switch (d % 10) {
-    case 1: return 'st'
-    case 2: return 'nd'
-    case 3: return 'rd'
-    default: return 'th'
-  }
-}
-
-function getCycleLabelForDropdown(month: string, year: number, cycleDay: number): string {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  const monthIdx = months.indexOf(month)
-  if (monthIdx === -1) return month
-
-  if (cycleDay === 1) {
-    const days = new Date(year, monthIdx + 1, 0).getDate()
-    return `${month} 1st ~ ${month} ${days}${getSuffix(days)}`
-  }
-
-  const startDayActual = Math.min(cycleDay, new Date(year, monthIdx + 1, 0).getDate())
-  const startDate = new Date(year, monthIdx, startDayActual)
-  const endDate = new Date(startDate)
-  endDate.setMonth(endDate.getMonth() + 1)
-  endDate.setDate(endDate.getDate() - 1)
-
-  const startMonthStr = months[startDate.getMonth()]
-  const endMonthStr = months[endDate.getMonth()]
-
-  return `${startMonthStr} ${startDate.getDate()}${getSuffix(startDate.getDate())} ~ ${endMonthStr} ${endDate.getDate()}${getSuffix(endDate.getDate())}`
 }

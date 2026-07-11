@@ -29,6 +29,13 @@ export type DispatchResult =
   | { item: WishlistItem; transaction: Transaction; id?: undefined }
   | void
 
+function getOptimisticTransactionPostedAt(date: unknown, createdAt: number): string {
+  const queuedAt = new Date(createdAt).toISOString()
+  return typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)
+    ? `${date}T${queuedAt.slice(11)}`
+    : queuedAt
+}
+
 export interface QueuedOp {
   id: string
   entity: EntityKind
@@ -285,6 +292,9 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
       const parsedId = entity === 'wishlistItem' ? Number(op.targetId) : op.targetId
       const newItem = {
         ...op.payload,
+        ...(entity === 'transaction' && !op.payload?.postedAt
+          ? { postedAt: getOptimisticTransactionPostedAt(op.payload?.date, op.createdAt) }
+          : {}),
         id: parsedId,
         isPendingSync: !op.isCompleted
       } as T

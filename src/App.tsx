@@ -6,7 +6,7 @@ import TopNav from "./TopNav.tsx"
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { APP_TABS, type AppTab, type Transaction, type RecurringPayment, type DashboardData, type TransactionCategory, type WishlistItem, type PendingNotification } from './types'
 import * as api from './lib/api'
-import type { CategoryCleanupSuggestion, ReceiptScanResult } from './lib/api'
+import type { CategoryCleanupSuggestion } from './lib/api'
 import { Loader2, Plus, Wallet, CreditCard, PiggyBank, Upload } from 'lucide-react'
 
 // Every view is code-split so the initial bundle only ships the shell. Each
@@ -29,6 +29,12 @@ import { CACHE_KEYS, getCachedJSON, getCachedTransactions, getCachedWishlist, sa
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from './lib/modalDrafts'
 import { enqueue as outboxEnqueue, createFinalId, createLocalWishlistId, DISPATCH, sanitizeQueuedOps, getSyncSuccessToast, type QueuedOp, type EntityKind, type OpType, type OutboxPayload, type DispatchResult } from './lib/outbox'
 import { useOptimisticList } from './lib/useOptimisticList'
+import { computeOptimisticDashboard } from './lib/optimisticDashboard'
+import { drainQueue } from './lib/outboxSync'
+import { useVisualViewportVars } from './lib/useVisualViewportVars'
+import { useReceiptScanPolling } from './lib/useReceiptScanPolling'
+import { useAutoLock } from './lib/useAutoLock'
+import { dispatchAiActions, requestAiLedgerDelete } from './lib/aiActions'
 import { PendingSubscriptionsModal } from './components/PendingSubscriptionsModal'
 import { FailedSyncModal } from './components/FailedSyncModal'
 import { PasswordPromptModal } from './components/PasswordPromptModal'
@@ -260,22 +266,6 @@ function App() {
     onConfirm: () => void
   } | null>(null)
   const [toasts, setToasts] = useState<ToastMessage[]>([])
-  const [receiptScanJobIds, setReceiptScanJobIds] = useState<string[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem('receipt_scan_job_ids') || '[]')
-    } catch {
-      return []
-    }
-  })
-  const [notifiedReceiptScanJobIds, setNotifiedReceiptScanJobIds] = useState<string[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem('receipt_scan_notified_ids') || '[]')
-    } catch {
-      return []
-    }
-  })
-  const [activeReceiptScanDraft, setActiveReceiptScanDraft] = useState<{ jobId: string; result: ReceiptScanResult } | null>(null)
-  const [failedScanJob, setFailedScanJob] = useState<{ jobId: string; errorMessage: string } | null>(null)
   const [isLedgerAddOpen, setIsLedgerAddOpen] = useState(false)
   const isMountedRef = useRef(true)
   useEffect(() => {
@@ -453,100 +443,21 @@ function App() {
     showToast(message, title, title.toLowerCase().includes('error') ? 'error' : 'info')
   }
 
-  useEffect(() => {
-    localStorage.setItem('receipt_scan_job_ids', JSON.stringify(receiptScanJobIds))
-  }, [receiptScanJobIds])
-
-  useEffect(() => {
-    localStorage.setItem('receipt_scan_notified_ids', JSON.stringify(notifiedReceiptScanJobIds))
-  }, [notifiedReceiptScanJobIds])
-
-  const handleReceiptScanStarted = useCallback((scanId: string) => {
-    setReceiptScanJobIds(prev => prev.includes(scanId) ? prev : [...prev, scanId])
-  }, [])
-
-  const clearReceiptScanJob = useCallback(async (scanId: string) => {
-    setReceiptScanJobIds(prev => prev.filter(id => id !== scanId))
-    setNotifiedReceiptScanJobIds(prev => prev.filter(id => id !== scanId))
-    setActiveReceiptScanDraft(prev => prev?.jobId === scanId ? null : prev)
-    setFailedScanJob(prev => prev?.jobId === scanId ? null : prev)
-
-    try {
-      await api.deleteReceiptScanJob(scanId)
-    } catch (err) {
-      console.warn('Failed to delete receipt scan job', err)
-    }
-  }, [])
-
-  const receiptScanPollInFlightRef = useRef(false)
-
-  useEffect(() => {
-    if (!token || receiptScanJobIds.length === 0) return
-
-    let cancelled = false
-
-    const pollReceiptScans = async () => {
-      if (receiptScanPollInFlightRef.current) return
-      receiptScanPollInFlightRef.current = true
-
-      try {
-        for (const scanId of receiptScanJobIds) {
-          if (cancelled || activeReceiptScanDraft?.jobId === scanId) continue
-
-          try {
-            const job = await api.fetchReceiptScanJob(scanId)
-
-            if (job.status === 'failed') {
-              const errMsg = job.errorMessage || 'Receipt scan failed. Please try again.'
-              setFailedScanJob({ jobId: scanId, errorMessage: errMsg })
-
-              const isInModal = activeTabRef.current === 'ledger' && isLedgerAddOpenRef.current
-              if (!isInModal) {
-                showToast(errMsg, 'Receipt Scan Failed', 'error')
-              }
-              await clearReceiptScanJob(scanId)
-              continue
-            }
-
-            if (job.status === 'completed' && job.result) {
-              setActiveReceiptScanDraft({ jobId: scanId, result: job.result })
-
-              const isInModal = activeTabRef.current === 'ledger' && isLedgerAddOpenRef.current
-              if (!isInModal) {
-                if (!notifiedReceiptScanJobIds.includes(scanId)) {
-                  setNotifiedReceiptScanJobIds(prev => prev.includes(scanId) ? prev : [...prev, scanId])
-                  showToast('Your receipt has been scanned successfully.', 'Receipt Scan Complete', 'success')
-                }
-
-                window.setTimeout(() => {
-                  if (!isMountedRef.current) return
-                  setActiveTab('ledger')
-                  setAutoOpenLedgerAdd(true)
-                }, 1000)
-              }
-            }
-          } catch (err: unknown) {
-            if (errorMessageIncludes(err, '401') || errorMessageIncludes(err, '423')) {
-              continue
-            }
-            if (errorMessageIncludesLower(err, 'not found')) {
-              setReceiptScanJobIds(prev => prev.filter(id => id !== scanId))
-            }
-          }
-        }
-      } finally {
-        receiptScanPollInFlightRef.current = false
-      }
-    }
-
-    pollReceiptScans()
-    const interval = window.setInterval(pollReceiptScans, 3000)
-
-    return () => {
-      cancelled = true
-      window.clearInterval(interval)
-    }
-  }, [token, receiptScanJobIds, notifiedReceiptScanJobIds, activeReceiptScanDraft, clearReceiptScanJob])
+  const {
+    activeReceiptScanDraft,
+    failedScanJob,
+    receiptScanJobIds,
+    handleReceiptScanStarted,
+    clearReceiptScanJob,
+  } = useReceiptScanPolling({
+    token,
+    activeTabRef,
+    isLedgerAddOpenRef,
+    isMountedRef,
+    setActiveTab,
+    setAutoOpenLedgerAdd,
+    showToast,
+  })
 
   // Shadow the global alert function
   const alert = (message: string) => showAlert(message, 'Notification')
@@ -561,138 +472,12 @@ function App() {
   }, [darkMode])
 
   // Keep visual viewport CSS vars in sync so fixed bottom-sheet modals stay
-  // pinned to the visible area while the mobile keyboard opens, closes, or
-  // pans the layout viewport.
-  useEffect(() => {
-    const vv = window.visualViewport
-    const root = document.documentElement
-    let viewportRaf = 0
-    let activeFocusEl: HTMLElement | null = null
-    let activeFocusPanel: HTMLElement | null = null
-    let focusSettleTimer = 0
-    let focusMaxTimer = 0
-    const viewportVars = new Map<string, string>()
+  // pinned to the visible area while the mobile keyboard opens/closes/pans.
+  useVisualViewportVars()
 
-    const setViewportVar = (name: string, value: number) => {
-      const next = `${value.toFixed(2)}px`
-      if (viewportVars.get(name) === next) return
-      viewportVars.set(name, next)
-      root.style.setProperty(name, next)
-    }
-
-    const applyViewport = () => {
-      const h = vv ? vv.height : window.innerHeight
-      const w = vv ? vv.width : window.innerWidth
-      const top = vv ? vv.offsetTop : 0
-      const left = vv ? vv.offsetLeft : 0
-      setViewportVar('--app-vvh', h)
-      setViewportVar('--app-vvw', w)
-      setViewportVar('--app-vv-top', top)
-      setViewportVar('--app-vv-left', left)
-    }
-
-    const scheduleViewport = () => {
-      if (viewportRaf) return
-      viewportRaf = window.requestAnimationFrame(() => {
-        viewportRaf = 0
-        applyViewport()
-      })
-    }
-
-    const ensureFocusedFieldVisible = (el: HTMLElement, panel: HTMLElement) => {
-      if (document.activeElement !== el || !panel.contains(el)) return
-      const panelRect = panel.getBoundingClientRect()
-      const elRect = el.getBoundingClientRect()
-      const topPadding = 18
-      const bottomPadding = 40
-
-      if (elRect.bottom > panelRect.bottom - bottomPadding) {
-        panel.scrollTop += elRect.bottom - panelRect.bottom + bottomPadding
-      } else if (elRect.top < panelRect.top + topPadding) {
-        panel.scrollTop -= panelRect.top + topPadding - elRect.top
-      }
-    }
-
-    const clearFocusCorrection = () => {
-      if (focusSettleTimer) window.clearTimeout(focusSettleTimer)
-      if (focusMaxTimer) window.clearTimeout(focusMaxTimer)
-      focusSettleTimer = 0
-      focusMaxTimer = 0
-    }
-
-    const runFocusCorrection = () => {
-      clearFocusCorrection()
-      const el = activeFocusEl
-      const panel = activeFocusPanel
-      if (!el || !panel || document.activeElement !== el || !panel.contains(el)) return
-      window.requestAnimationFrame(() => ensureFocusedFieldVisible(el, panel))
-    }
-
-    const scheduleFocusCorrection = (delay: number, withMaxTimer = false) => {
-      if (!activeFocusEl || !activeFocusPanel) return
-      if (focusSettleTimer) window.clearTimeout(focusSettleTimer)
-      focusSettleTimer = window.setTimeout(runFocusCorrection, delay)
-      if (withMaxTimer && !focusMaxTimer) {
-        focusMaxTimer = window.setTimeout(runFocusCorrection, 720)
-      }
-    }
-
-    const isSheetLayout = () => window.matchMedia('(max-width: 639px)').matches
-    const handleFocusIn = (e: FocusEvent) => {
-      if (!isSheetLayout()) return
-      const el = e.target as HTMLElement | null
-      if (!el || !el.matches?.('input, textarea, select')) return
-      const panel = el.closest('.sheet-panel') as HTMLElement | null
-      if (!panel) return
-
-      activeFocusEl = el
-      activeFocusPanel = panel
-      root.classList.add('sheet-keyboard-focus')
-      scheduleFocusCorrection(260, true)
-    }
-
-    const handleFocusOut = () => {
-      window.setTimeout(() => {
-        const active = document.activeElement as HTMLElement | null
-        if (active?.closest?.('.sheet-panel')) return
-        activeFocusEl = null
-        activeFocusPanel = null
-        clearFocusCorrection()
-        root.classList.remove('sheet-keyboard-focus')
-      }, 0)
-    }
-
-    const handleViewportChange = () => {
-      scheduleViewport()
-      if (activeFocusEl && activeFocusPanel) {
-        scheduleFocusCorrection(140)
-      }
-    }
-
-    applyViewport()
-    vv?.addEventListener('resize', handleViewportChange)
-    vv?.addEventListener('scroll', handleViewportChange)
-    window.addEventListener('resize', handleViewportChange)
-    document.addEventListener('focusin', handleFocusIn)
-    document.addEventListener('focusout', handleFocusOut)
-
-    return () => {
-      vv?.removeEventListener('resize', handleViewportChange)
-      vv?.removeEventListener('scroll', handleViewportChange)
-      window.removeEventListener('resize', handleViewportChange)
-      document.removeEventListener('focusin', handleFocusIn)
-      document.removeEventListener('focusout', handleFocusOut)
-      if (viewportRaf) window.cancelAnimationFrame(viewportRaf)
-      clearFocusCorrection()
-      root.classList.remove('sheet-keyboard-focus')
-    }
-  }, [])
-
-  // Inactivity Auto-Lock
-  const LOCK_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
-  const UNLOCK_CHALLENGE_PREFETCH_WINDOW_MS = 30 * 1000
+  // Inactivity Auto-Lock — cross-cutting lock state stays here (login/sync/
+  // heartbeat all touch it); the timers/listeners live in useAutoLock below.
   const lastUnlockedTimeRef = useRef<number>(0)
-  const unlockChallengePrefetchedForIdleRef = useRef(false)
   const [isLocked, setIsLocked] = useState<boolean>(() => {
     return sessionStorage.getItem('session_locked') === 'true'
   })
@@ -708,44 +493,6 @@ function App() {
     sessionStorage.setItem('session_locked', 'true')
   }, [setIsLocked])
 
-  useEffect(() => {
-    if (!token) return
-
-    const handleSessionLocked = () => markSessionLocked()
-    window.addEventListener(api.SESSION_LOCKED_EVENT, handleSessionLocked)
-    return () => window.removeEventListener(api.SESSION_LOCKED_EVENT, handleSessionLocked)
-  }, [token, markSessionLocked])
-
-  // Inactivity tracking - update last_active_time in localStorage
-  useEffect(() => {
-    if (!token || isLocked) return
-    localStorage.setItem('last_active_time', Date.now().toString())
-    void api.sendSessionHeartbeat()
-    const updateActivity = () => {
-      localStorage.setItem('last_active_time', Date.now().toString())
-    }
-    // Throttle to once per 5 seconds
-    let lastUpdate = 0
-    // Longer, separate throttle for the network heartbeat (this is what makes "Active Devices"
-    // in Settings show real last-used time instead of just session creation time) -- no need to
-    // hit the server anywhere near as often as we update the local inactivity-lock timestamp.
-    let lastHeartbeat = 0
-    const throttled = () => {
-      const now = Date.now()
-      if (now - lastUpdate > 5000) {
-        lastUpdate = now
-        unlockChallengePrefetchedForIdleRef.current = false
-        updateActivity()
-      }
-      if (now - lastHeartbeat > 60000) {
-        lastHeartbeat = now
-        void api.sendSessionHeartbeat()
-      }
-    }
-    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart']
-    events.forEach(e => window.addEventListener(e, throttled, { passive: true }))
-    return () => events.forEach(e => window.removeEventListener(e, throttled))
-  }, [token, isLocked])
 
   // Password Prompt for revealing sensitive information
   const [showPasswordPrompt, setShowPasswordPrompt] = useState<boolean>(false)
@@ -870,37 +617,7 @@ function App() {
     setIsLocked(false)
   }
 
-  // Check inactivity every 15 seconds and lock if exceeded
-  useEffect(() => {
-    if (!token || isLocked) return
-    const interval = setInterval(() => {
-      const lastActive = Number(localStorage.getItem('last_active_time') || Date.now())
-      const idleFor = Date.now() - lastActive
-      if (
-        hasFingerprintSetup &&
-        !unlockChallengePrefetchedForIdleRef.current &&
-        idleFor > LOCK_TIMEOUT_MS - UNLOCK_CHALLENGE_PREFETCH_WINDOW_MS
-      ) {
-        unlockChallengePrefetchedForIdleRef.current = true
-        void prefetchFingerprintAssertOptions().catch(() => undefined)
-      }
-      if (idleFor > LOCK_TIMEOUT_MS) {
-        api.lockSession()
-          .then(() => {
-            void prefetchFingerprintAssertOptions().catch(() => undefined)
-            markSessionLocked()
-          })
-          .catch(err => {
-            if (err?.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
-              handleLogout()
-            } else {
-              console.warn('Failed to lock session on server, bypassing local lock to prevent fake lock state:', err)
-            }
-          })
-      }
-    }, 15000)
-    return () => clearInterval(interval)
-  }, [token, isLocked, markSessionLocked, hasFingerprintSetup])
+  useAutoLock({ token, isLocked, hasFingerprintSetup, markSessionLocked, onAuthError: handleLogout })
 
   // Fetch initial ledger and dashboard statistics
   async function loadAll(month?: string, year?: number, isBackground = false) {
@@ -1542,173 +1259,54 @@ function App() {
     return () => window.clearInterval(interval)
   }, [syncBackoffUntil])
 
+  // The drain-loop algorithm lives in lib/outboxSync (drainQueue) so it can be
+  // unit-tested with fakes; here we wire it to this component's state/refs/I-O.
+  const TOAST_STAGGER_MS = 350;
+  // Re-trigger routes through a ref so the loop can recurse without the
+  // self-reference-before-declaration the linter (rightly) rejects.
+  const processQueueRef = useRef<() => void>(() => {});
   const processQueue = useCallback(async () => {
-    if (!token || isSyncingRef.current) return;
-    isSyncingRef.current = true;
-    setIsBackgroundSyncing(true);
-
-    let processedAny = false;
-    const successfulOps: Array<{ op: QueuedOp; result: DispatchResult }> = [];
-    const TOAST_STAGGER_MS = 350;
-
-    try {
-      while (true) {
-        const queue = pendingOpsRef.current;
-        const nextOp = queue[0];
-        if (!nextOp) break;
-
-        if (nextOp.targetId === editingPendingIdRef.current || nextOp.id === editingPendingIdRef.current) {
-          break;
-        }
-
-        if (Date.now() < syncBackoffUntilRef.current) {
-          break;
-        }
-
-        setActiveSyncId(nextOp.targetId);
-
-        try {
-          const key = `${nextOp.entity}:${nextOp.type}`;
-          const dispatchFn = DISPATCH[key];
-          if (!dispatchFn) {
-            console.error(`No dispatch handler for ${key}`);
-            // Drop just this op by id (never by index): a concurrent enqueue may
-            // have shifted positions while we were in this iteration.
-            mutateQueue(prev => prev.filter(item => item.id !== nextOp.id));
-            continue;
-          }
-
-          const result = await dispatchFn(nextOp);
-
-          // Functional removal keyed off the live queue, so any op enqueued during
-          // the await above (e.g. an Undo tap) is preserved rather than clobbered.
-          mutateQueue(prev => {
-            let next = prev.filter(item => item.id !== nextOp.id);
-            if (nextOp.entity === 'wishlistItem' && nextOp.type === 'add' && result && result.id) {
-              const realIdStr = String(result.id);
-              next = next.map(op => (op.entity === 'wishlistItem' && op.targetId === nextOp.targetId)
-                ? { ...op, targetId: realIdStr }
-                : op);
-            }
-            return next;
-          });
-
-          // Kept in the merge buffer (isPendingSync flips false, but the item stays
-          // rendered with its confirmed values) until the loadAll() below actually
-          // lands -- see the cleanup next to that call for why a fixed timer here
-          // was wrong.
-          setRecentlyCompletedOps(prev => [...prev, { ...nextOp, isCompleted: true }]);
-
-          setError(null);
-          processedAny = true;
-          successfulOps.push({ op: nextOp, result });
-
-          // This op's own PUT/DELETE/POST already succeeded -- clear its row's
-          // "syncing" badge now rather than leaving it lit until the trailing
-          // loadAll() refetch (recurring payments/categories/wishlist/etc.) below
-          // finishes. If there's a next op, the top of the next loop iteration
-          // immediately overwrites this with that op's id in the same tick, so
-          // this only actually shows once the drained op was the last (or only)
-          // one. The top-nav background-sync indicator (isBackgroundSyncing)
-          // still stays lit until the refetch completes.
-          setActiveSyncId(null);
-
-          // Fire this op's toast as soon as its own dispatch resolves, not after the
-          // whole queue drains -- otherwise toggling several cards in quick succession
-          // (each picked up by the same continuing while-loop iteration) delays every
-          // toast until the last one finishes. Undo actions are still built eagerly,
-          // right here, so the snapshot read/delete in buildUndoAction happens before a
-          // later action in this same batch can overwrite the same key in undoSnapshotsRef.
-          const toastMsg = getSyncSuccessToast(nextOp);
-          if (toastMsg) {
-            const undoAction = nextOp.isUndo ? undefined : buildUndoAction(nextOp, result);
-            const now = Date.now();
-            const showAt = Math.max(now, nextToastAtRef.current);
-            nextToastAtRef.current = showAt + TOAST_STAGGER_MS;
-            window.setTimeout(() => {
-              showToast(toastMsg.message, toastMsg.title, toastMsg.tone, undoAction);
-            }, showAt - now);
-          }
-        } catch (err: unknown) {
-          console.error(`Failed to sync ${nextOp.entity}:${nextOp.type}:`, err);
-          const isAuthError = errorMessageIncludes(err, '401') || errorMessageIncludesLower(err, 'unauthorized');
-          const isLockError = errorMessageIncludes(err, '423');
-          const isJustLoggedIn = Date.now() - lastUnlockedTimeRef.current < 10000;
-
-          if (isAuthError && !isJustLoggedIn) {
-            handleLogout();
-            break;
-          } else if (isLockError) {
-            markSessionLocked();
-            break;
-          } else if (isAuthError) {
-            // A spurious 401 can race a fresh login -- wait it out without
-            // burning a retry or moving the op to failedOps.
-            setError('Sync pending: reconnecting...');
-            const backoff = Date.now() + 3000;
-            syncBackoffUntilRef.current = backoff;
-            setSyncBackoffUntil(backoff);
-            break;
-          } else {
-            const updatedRetryCount = (nextOp.retryCount || 0) + 1;
-            if (updatedRetryCount >= 5) {
-              const opDesc = nextOp.payload?.description || nextOp.payload?.name || nextOp.entity;
-              showToast(`Couldn't sync '${opDesc}' — removed from queue`, 'Sync Failed', 'error');
-
-              mutateQueue(prev => prev.filter(item => item.id !== nextOp.id));
-              setFailedOps(prev => [...prev, { ...nextOp, retryCount: updatedRetryCount, lastError: getErrorMessage(err, String(err)) }]);
-              continue;
-            } else {
-              // Bump retry on this op by id (not index 0) so a concurrently
-              // enqueued op that jumped ahead doesn't get the retry count instead.
-              mutateQueue(prev => prev.map(item =>
-                item.id === nextOp.id ? { ...item, retryCount: updatedRetryCount } : item
-              ));
-
-              setError('Sync pending: Server is offline or waking up...');
-              const backoff = Date.now() + 15000;
-              syncBackoffUntilRef.current = backoff;
-              setSyncBackoffUntil(backoff);
-              break;
-            }
-          }
-        }
-      }
-
-      if (processedAny) {
-        try {
-          await loadAll(selectedMonth || undefined, selectedYear || undefined, true);
-        } catch (refreshErr) {
-          console.error('Post-sync dashboard refresh failed:', refreshErr);
-        }
-
-        // Only now -- once `transactions` has actually been refreshed (or we've
-        // given up trying) -- is it safe to drop these ops from the "recently
-        // completed" merge buffer. The previous approach cleared each op on a
-        // fixed 3s timer instead, which raced this refresh: if loadAll() took
-        // longer than the timer (e.g. a Cloud Run cold start), the op fell out of
-        // every buffer before the fresh data landed, and the merged list briefly
-        // reflected neither the optimistic nor the server-confirmed state -- an
-        // add would vanish and an edit would revert to its pre-edit value until
-        // the next render after `transactions` caught up.
-        const completedIds = new Set(successfulOps.map(({ op }) => op.id));
-        setRecentlyCompletedOps(prev => prev.filter(op => !completedIds.has(op.id)));
-      }
-    } finally {
-      setActiveSyncId(null);
-      setDeletingTxId(null);
-      setIsBackgroundSyncing(false);
-      isSyncingRef.current = false;
-      // Lost-wakeup guard: ops that arrived while the lock was held triggered the
-      // edge-triggered effect, but isSyncingRef.current was true so processQueue()
-      // returned immediately.  Now that the lock is free, check if any ops are still
-      // waiting and re-trigger once — the recursive call starts with the same guard
-      // so concurrent executions remain impossible.
-      if (pendingOpsRef.current.length > 0) {
-        void processQueue();
-      }
-    }
+    await drainQueue({
+      token,
+      now: () => Date.now(),
+      getQueue: () => pendingOpsRef.current,
+      getEditingPendingId: () => editingPendingIdRef.current,
+      getBackoffUntil: () => syncBackoffUntilRef.current,
+      getLastUnlockedTime: () => lastUnlockedTimeRef.current,
+      isSyncing: () => isSyncingRef.current,
+      mutateQueue,
+      resolveDispatch: (op) => DISPATCH[`${op.entity}:${op.type}`],
+      setSyncing: (v) => { isSyncingRef.current = v; setIsBackgroundSyncing(v); },
+      setActiveSyncId,
+      setError,
+      setBackoff: (until) => { syncBackoffUntilRef.current = until; setSyncBackoffUntil(until); },
+      addRecentlyCompleted: (op) => setRecentlyCompletedOps(prev => [...prev, op]),
+      removeRecentlyCompleted: (ids) => setRecentlyCompletedOps(prev => prev.filter(op => !ids.has(op.id))),
+      addFailedOp: (op) => setFailedOps(prev => [...prev, op]),
+      getSyncSuccessToast,
+      buildUndoAction,
+      emitToast: (copy, action) => {
+        // Stagger bursts of toasts so they don't stack on the same tick.
+        const now = Date.now();
+        const showAt = Math.max(now, nextToastAtRef.current);
+        nextToastAtRef.current = showAt + TOAST_STAGGER_MS;
+        window.setTimeout(() => showToast(copy.message, copy.title, copy.tone, action), showAt - now);
+      },
+      emitFailureToast: (op) => {
+        const opDesc = op.payload?.description || op.payload?.name || op.entity;
+        showToast(`Couldn't sync '${opDesc}' — removed from queue`, 'Sync Failed', 'error');
+      },
+      onAuthError: handleLogout,
+      onLockError: markSessionLocked,
+      refresh: () => loadAll(selectedMonth || undefined, selectedYear || undefined, true),
+      onSettled: () => { setActiveSyncId(null); setDeletingTxId(null); },
+      reTrigger: () => { processQueueRef.current(); },
+    });
   }, [token, selectedMonth, selectedYear, mutateQueue]);
+
+  useEffect(() => {
+    processQueueRef.current = () => { void processQueue(); };
+  }, [processQueue]);
 
   useEffect(() => {
     if (!token || pendingOps.length === 0) return;
@@ -1797,78 +1395,12 @@ function App() {
   const allCategories = useOptimisticList(categoriesList, activeOps, 'category');
 
   // Create optimistic dashboardData from server data + pending queue
-  const optimisticDashboardData = useMemo(() => {
-    if (!dashboardData) return null;
-    
-    const data = { ...dashboardData };
-    data.setting = { ...data.setting };
-    data.stats = { ...data.stats };
-    data.categories = data.categories.map(c => ({ ...c }));
-
-    // Check if settings op queued
-    const settingsOps = activeOps.filter(o => o.entity === 'settings' && o.type === 'update');
-    settingsOps.forEach(op => {
-      if (op.payload) {
-        data.setting = { ...data.setting, ...op.payload };
-      }
-    });
-
-    const txOps = pendingOps.filter(o => o.entity === 'transaction');
-    txOps.forEach(op => {
-      if (op.type === 'add' && op.payload) {
-        const amount = op.payload.amount || 0;
-        data.stats.totalBalance += amount;
-        const catName = op.payload.category || op.payload.ledgerCategory || '';
-        const cat = data.categories.find(c => c.name.toLowerCase() === catName.toLowerCase());
-        if (cat) {
-          cat.netChange += amount;
-          cat.remaining += amount;
-        }
-        if (amount > 0) {
-          data.stats.monthlyInflow += amount;
-          if ((op.payload.ledgerCategory || '').startsWith('IncomeSplit:')) {
-            data.stats.monthlyIncome += amount;
-          }
-        } else {
-          data.stats.monthlyExpenses += Math.abs(amount);
-        }
-      } else if (op.type === 'update' && op.payload) {
-        const orig = transactions.find(t => String(t.id) === String(op.targetId));
-        const oldAmount = orig ? orig.amount : 0;
-        const newAmount = op.payload.amount !== undefined ? op.payload.amount : oldAmount;
-        const diff = newAmount - oldAmount;
-        data.stats.totalBalance += diff;
-        const catName = op.payload.category || op.payload.ledgerCategory || (orig ? (orig.category || orig.ledgerCategory) : '');
-        const cat = data.categories.find(c => c.name.toLowerCase() === catName.toLowerCase());
-        if (cat) {
-          cat.netChange += diff;
-          cat.remaining += diff;
-        }
-        if (diff > 0) {
-          data.stats.monthlyInflow += diff;
-        } else if (diff < 0) {
-          data.stats.monthlyExpenses += Math.abs(diff);
-        }
-      } else if (op.type === 'delete') {
-        const orig = transactions.find(t => String(t.id) === String(op.targetId));
-        const oldAmount = orig ? orig.amount : 0;
-        data.stats.totalBalance -= oldAmount;
-        const catName = orig ? (orig.category || orig.ledgerCategory) : '';
-        const cat = data.categories.find(c => c.name.toLowerCase() === catName.toLowerCase());
-        if (cat) {
-          cat.netChange -= oldAmount;
-          cat.remaining -= oldAmount;
-        }
-        if (oldAmount > 0) {
-          data.stats.monthlyInflow -= oldAmount;
-        } else {
-          data.stats.monthlyExpenses -= Math.abs(oldAmount);
-        }
-      }
-    });
-
-    return data;
-  }, [dashboardData, pendingOps, transactions, allTransactions]);
+  const optimisticDashboardData = useMemo(
+    () => computeOptimisticDashboard(dashboardData, { activeOps, pendingOps, transactions }),
+    // NB: deps preserved verbatim from pre-extraction to keep memoization identical
+    // (activeOps is derived from pendingOps; allTransactions is a legacy dep).
+    [dashboardData, pendingOps, transactions, allTransactions]
+  );
 
   useEffect(() => {
     if (!token || !dashboardData) return
@@ -2008,191 +1540,39 @@ function App() {
     }
   }
 
-  const getPayloadString = (payload: Record<string, unknown>, key: string) => {
-    const value = payload[key]
-    return typeof value === 'string' && value.trim() ? value.trim() : null
-  }
-
-  const getPayloadNumber = (payload: Record<string, unknown>, key: string) => {
-    const value = payload[key]
-    if (typeof value === 'number' && Number.isFinite(value)) return value
-    if (typeof value === 'string' && value.trim()) {
-      const parsed = Number(value)
-      return Number.isFinite(parsed) ? parsed : null
-    }
-    return null
-  }
-
   const nextAiActionNonce = () => {
     aiActionNonceRef.current += 1
     return aiActionNonceRef.current
   }
 
-  const requestAiLedgerDelete = async (id: string) => {
-    let transaction = allTransactions.find(t => String(t.id) === String(id))
-    if (!transaction) {
-      transaction = await api.fetchTransactionById(id).catch(() => undefined)
-    }
-    if (!transaction) {
-      showToast('The transaction could not be found.', 'Delete unavailable', 'warning')
-      return
-    }
-    const deletesSplitGroup = transaction.id.includes('-split-')
-    setConfirmModalData({
-      title: 'Delete Transaction',
-      message: deletesSplitGroup
-        ? `Delete "${transaction.description}"? This is part of an Income Auto-Split, so the main Income record and all related splits will be deleted.`
-        : `Delete "${transaction.description}"? This action will only proceed after you confirm here.`,
-      confirmText: 'Delete',
-      onConfirm: () => handleDeleteTransaction(transaction!.id)
+  const handleAiActions = (actions: api.AiUiAction[]) =>
+    dispatchAiActions(actions, {
+      hideSensitive,
+      showToast,
+      setActiveTab,
+      handleSelectPeriod,
+      handleNavigateToLedger,
+      nextNonce: nextAiActionNonce,
+      setAiLedgerDraft,
+      setAiRecurringDraft,
+      setAiWishlistDraft,
+      setAiLedgerEditDraft,
+      setAiRecurringEditDraft,
+      setAiWishlistEditDraft,
+      setAiLedgerExportRequest,
+      requestDeleteLedger: (id) => requestAiLedgerDelete(id, { showToast, setConfirmModalData, allTransactions, handleDeleteTransaction }),
+      requestDeletePayment,
+      requestDeleteWishlistItem,
+      allRecurringPayments,
+      allWishlist,
+      handleToggleActive,
+      getPendingNotifications: () => optimisticDashboardData?.pendingNotifications || [],
+      setConfirmModalData,
+      handleDiscardSubscription,
+      handleConfirmSubscription,
+      handlePurchaseWishlistItem,
+      handleUnpurchaseWishlistItem,
     })
-  }
-
-  const aiMutationTypes = new Set([
-    'openEditLedgerDraft', 'openEditRecurringDraft', 'openEditWishlistDraft',
-    'requestDeleteLedger', 'requestDeleteRecurring', 'requestDeleteWishlist',
-    'requestConfirmRecurringBill', 'requestDiscardRecurringBill',
-    'requestPurchaseWishlist', 'requestUnpurchaseWishlist', 'toggleRecurring'
-  ])
-
-  const handleAiActions = async (actions: api.AiUiAction[]) => {
-    for (const action of actions.slice(0, 3)) {
-      const payload = (action.payload || {}) as Record<string, unknown>
-      if (hideSensitive && aiMutationTypes.has(action.type)) {
-        showToast('Unhide balances to make record changes.', 'Sensitive mode active', 'warning')
-        continue
-      }
-      if (hideSensitive && action.type === 'openLedgerExport') {
-        showToast('Unhide balances before exporting transactions.', 'Sensitive mode active', 'warning')
-        continue
-      }
-      if (action.type === 'openDashboard') {
-        setActiveTab('dashboard')
-      } else if (action.type === 'openRecurring') {
-        setActiveTab('recurring')
-      } else if (action.type === 'openWishlist') {
-        setActiveTab('wishlist')
-      } else if (action.type === 'openLedger' || action.type === 'openLedgerExport') {
-        const month = getPayloadString(payload, 'month')
-        const year = getPayloadNumber(payload, 'year')
-        if (month && year) {
-          await handleSelectPeriod(month, year)
-        }
-        const txTypeValue = getPayloadString(payload, 'txType')
-        const txType = txTypeValue === 'inflow' || txTypeValue === 'outflow' || txTypeValue === 'transfer' ? txTypeValue : null
-        const rangeValue = getPayloadString(payload, 'range')
-        const range = rangeValue === '3month' || rangeValue === '6month' || rangeValue === 'yearly' ? rangeValue : 'monthly'
-        handleNavigateToLedger({
-          category: getPayloadString(payload, 'category') || getPayloadString(payload, 'ledgerCategory'),
-          txType,
-          search: getPayloadString(payload, 'search'),
-          date: getPayloadString(payload, 'date'),
-          showAllCycles: payload.allCycles === true || range !== 'monthly',
-          range
-        })
-        if (action.type === 'openLedgerExport') {
-          setAiLedgerExportRequest({ nonce: nextAiActionNonce() })
-        }
-      } else if (action.type === 'openAddLedgerDraft') {
-        setAiLedgerDraft({ nonce: nextAiActionNonce(), fields: payload })
-        setActiveTab('ledger')
-      } else if (action.type === 'openAddRecurringDraft') {
-        setAiRecurringDraft({ nonce: nextAiActionNonce(), fields: payload })
-        setActiveTab('recurring')
-      } else if (action.type === 'openAddWishlistDraft') {
-        setAiWishlistDraft({ nonce: nextAiActionNonce(), fields: payload })
-        setActiveTab('wishlist')
-      } else if (action.type === 'openEditLedgerDraft') {
-        if (hideSensitive) {
-          showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning')
-          continue
-        }
-        const id = getPayloadString(payload, 'id')
-        const changes = payload.changes && typeof payload.changes === 'object' ? payload.changes as Record<string, unknown> : {}
-        if (id) {
-          setAiLedgerEditDraft({ nonce: nextAiActionNonce(), id, changes })
-          setActiveTab('ledger')
-        }
-      } else if (action.type === 'openEditRecurringDraft') {
-        if (hideSensitive) {
-          showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning')
-          continue
-        }
-        const id = getPayloadString(payload, 'id')
-        const changes = payload.changes && typeof payload.changes === 'object' ? payload.changes as Record<string, unknown> : {}
-        if (id) {
-          setAiRecurringEditDraft({ nonce: nextAiActionNonce(), id, changes })
-          setActiveTab('recurring')
-        }
-      } else if (action.type === 'openEditWishlistDraft') {
-        if (hideSensitive) {
-          showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning')
-          continue
-        }
-        const id = getPayloadNumber(payload, 'id')
-        const changes = payload.changes && typeof payload.changes === 'object' ? payload.changes as Record<string, unknown> : {}
-        if (id != null) {
-          setAiWishlistEditDraft({ nonce: nextAiActionNonce(), id, changes })
-          setActiveTab('wishlist')
-        }
-      } else if (action.type === 'requestDeleteLedger') {
-        const id = getPayloadString(payload, 'id')
-        if (id) await requestAiLedgerDelete(id)
-      } else if (action.type === 'requestDeleteRecurring') {
-        const id = getPayloadString(payload, 'id')
-        if (id) requestDeletePayment(id)
-      } else if (action.type === 'requestDeleteWishlist') {
-        const id = getPayloadNumber(payload, 'id')
-        if (id != null) requestDeleteWishlistItem(id)
-      } else if (action.type === 'toggleRecurring') {
-        const id = getPayloadString(payload, 'id')
-        const payment = id ? allRecurringPayments.find(p => String(p.id) === id) : undefined
-        const requestedActive = typeof payload.active === 'boolean' ? payload.active : payment ? !payment.active : null
-        if (payment && requestedActive !== null && payment.active !== requestedActive) {
-          handleToggleActive(payment.id)
-        } else if (payment && payment.active === requestedActive) {
-          showToast(`"${payment.name}" is already ${requestedActive ? 'on' : 'off'}.`, 'No change needed', 'info')
-        }
-      } else if (action.type === 'requestConfirmRecurringBill' || action.type === 'requestDiscardRecurringBill') {
-        const id = getPayloadString(payload, 'id')
-        const requestedDate = getPayloadString(payload, 'date')
-        const pending = optimisticDashboardData?.pendingNotifications?.find(notification =>
-          notification.recurringPaymentId === id && (!requestedDate || notification.billingDate === requestedDate)
-        )
-        if (!pending) {
-          showToast('No matching pending bill was found in the active cycle.', 'Bill action unavailable', 'warning')
-          continue
-        }
-        const isDiscard = action.type === 'requestDiscardRecurringBill'
-        setConfirmModalData({
-          title: isDiscard ? 'Discard Scheduled Bill' : 'Confirm Bill Paid',
-          message: isDiscard
-            ? `Discard "${pending.name}" for ${pending.billingDate}? No expense will be recorded for this cycle.`
-            : `Mark "${pending.name}" as paid on ${requestedDate || pending.billingDate}?`,
-          confirmText: isDiscard ? 'Discard' : 'Confirm Paid',
-          onConfirm: () => isDiscard
-            ? handleDiscardSubscription(pending)
-            : handleConfirmSubscription(pending, requestedDate || pending.billingDate)
-        })
-      } else if (action.type === 'requestPurchaseWishlist' || action.type === 'requestUnpurchaseWishlist') {
-        const id = getPayloadNumber(payload, 'id')
-        const item = id == null ? undefined : allWishlist.find(w => Number(w.id) === id)
-        if (!item) {
-          showToast('The wishlist item could not be found.', 'Wishlist action unavailable', 'warning')
-          continue
-        }
-        const undoPurchase = action.type === 'requestUnpurchaseWishlist'
-        setConfirmModalData({
-          title: undoPurchase ? 'Undo Wishlist Purchase' : 'Claim Wishlist Item',
-          message: undoPurchase
-            ? `Undo the purchase of "${item.name}" and remove its linked ledger transaction?`
-            : `Claim "${item.name}" and create its linked Rewards transaction?`,
-          confirmText: undoPurchase ? 'Undo Purchase' : 'Claim',
-          onConfirm: () => undoPurchase ? handleUnpurchaseWishlistItem(item.id) : handlePurchaseWishlistItem(item.id)
-        })
-      }
-    }
-  }
 
   const handleToggleBalanceAmounts = () => {
     const nextHidden = !hideBalanceAmounts

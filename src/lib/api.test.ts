@@ -137,3 +137,82 @@ describe('chatWithAi state contract', () => {
     expect(result.state?.lastTargetAmount).toBe(5000)
   })
 })
+
+describe('split API client compatibility', () => {
+  it('adds the bearer token to authenticated resource requests', async () => {
+    localStorage.setItem('auth_token', 'test-token')
+    const fetchMock = vi.fn(() => Promise.resolve(new Response('[]', { status: 200 })))
+    vi.stubGlobal('fetch', fetchMock)
+    Object.defineProperty(window, 'fetch', { value: fetchMock, configurable: true })
+
+    const api = await import('./api')
+    await api.fetchTransactions()
+
+    expect(fetchMock).toHaveBeenCalledOnce()
+    const [, requestInit] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(requestInit.headers).toMatchObject({ Authorization: 'Bearer test-token' })
+  })
+
+  it('evicts a rejected cached request so the next call can retry', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('{}', { status: 500 }))
+      .mockResolvedValueOnce(new Response('[]', { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    Object.defineProperty(window, 'fetch', { value: fetchMock, configurable: true })
+
+    const api = await import('./api')
+    await expect(api.fetchTransactions()).rejects.toThrow('Failed to fetch transactions')
+    await expect(api.fetchTransactions()).resolves.toEqual([])
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('invalidates cached reads after a successful mutation', async () => {
+    const fetchMock = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === 'PUT') return Promise.resolve(new Response(null, { status: 204 }))
+      return Promise.resolve(new Response(JSON.stringify(dashboardPayload), { status: 200 }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    Object.defineProperty(window, 'fetch', { value: fetchMock, configurable: true })
+
+    const api = await import('./api')
+    await api.fetchDashboard()
+    await api.fetchDashboard()
+    await api.updateSettings({
+      targetStabilityFund: 1_000,
+      essentialsAlloc: 0.5,
+      growthAlloc: 0.25,
+      stabilityAlloc: 0.15,
+      rewardsAlloc: 0.1,
+      cycleDay: 28,
+    })
+    await api.fetchDashboard()
+
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('dispatches the session-locked event for protected 423 responses', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(new Response('{}', { status: 423 })))
+    vi.stubGlobal('fetch', fetchMock)
+    Object.defineProperty(window, 'fetch', { value: fetchMock, configurable: true })
+    const onLocked = vi.fn()
+
+    const api = await import('./api')
+    window.addEventListener(api.SESSION_LOCKED_EVENT, onLocked, { once: true })
+    await expect(api.fetchTransactions()).rejects.toThrow('423 Locked')
+
+    expect(onLocked).toHaveBeenCalledOnce()
+  })
+
+  it('preserves server error messages for endpoints that expose them', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(new Response(
+      JSON.stringify({ message: 'Category already exists' }),
+      { status: 409 },
+    )))
+    vi.stubGlobal('fetch', fetchMock)
+    Object.defineProperty(window, 'fetch', { value: fetchMock, configurable: true })
+
+    const api = await import('./api')
+    await expect(api.addCategory({ name: 'Food' }))
+      .rejects.toThrow('Category already exists')
+  })
+})

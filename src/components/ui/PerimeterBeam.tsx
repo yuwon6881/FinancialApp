@@ -15,7 +15,7 @@ type PerimeterBeamStyle = CSSProperties & {
 
 /**
  * A quiet, border-only activity indicator. The moving color segment is clipped
- * to a one-pixel perimeter and never paints or glows through the host content.
+ * to a two-pixel perimeter and never paints or glows through the host content.
  * The host must use `perimeter-beam-host` while this element is mounted.
  */
 export function PerimeterBeam({
