@@ -2153,7 +2153,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                         : 'border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400'
                     }`}
                   >
-                    {isScanning && <PerimeterBeam size={104} />}
+                    {isScanning && <PerimeterBeam size={40} />}
                     {isScanning ? (
                       <><Loader2 className="size-3.5 animate-spin" /> Scanning receipt...</>
                     ) : (
