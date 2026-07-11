@@ -2067,7 +2067,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         }
 
         const label = filterDetails.length > 0
-          ? `Showing ${parts.join(', ')} — filtered by ${filterDetails.join(' and ')}`
+          ? `Showing ${parts.join(', ')} — filtered by ${filterDetails.join(' & ')}`
           : `Showing ${parts.join(', ')}`
 
         return (
@@ -2657,8 +2657,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               <Filter className="size-4 md:size-3.5" />
               <span className="hidden md:inline truncate">
                 {showAllCycles
-                  ? (appliedFilters.length === 0 ? 'All Ledger Categories & Categories' : `${appliedFilters.length} filter${appliedFilters.length > 1 ? 's' : ''} applied`)
-                  : (selectedFilters.length === 0 ? 'All Ledger Categories & Categories' : `${selectedFilters.length} filter${selectedFilters.length > 1 ? 's' : ''} active`)}
+                  ? (appliedFilters.length === 0 ? 'Filters' : `${appliedFilters.length} filter${appliedFilters.length > 1 ? 's' : ''} applied`)
+                  : (selectedFilters.length === 0 ? 'Filters' : `${selectedFilters.length} filter${selectedFilters.length > 1 ? 's' : ''} active`)}
               </span>
             </span>
             <span className="hidden md:inline text-[9px] text-muted-foreground">{'▼'}</span>
