@@ -411,46 +411,43 @@
     padding: 1px;
 }
 
-/* A short SVG beam travels around the receipt button perimeter. It never paints
-   over the interior and is mounted only for the active scanning state. */
-@keyframes ai-border-beam {
-    to { stroke-dashoffset: -100; }
+/* One unified beam travelling around a parent's border. A conic gradient is
+   rotated via an animated custom property and masked to a thin ring, so the
+   beam stays a single continuous arc at any aspect ratio (the old SVG dash
+   fragmented into several segments on long/stretched elements). */
+@property --ai-beam-angle {
+    syntax: "<angle>";
+    initial-value: 0deg;
+    inherits: false;
 }
 
+@keyframes ai-beam-spin {
+    to { --ai-beam-angle: 360deg; }
+}
+
+/* Positioning helper applied to the parent while a beam is mounted. */
 .ai-border-beam {
     position: relative;
 }
 
-.ai-border-beam__path {
-    stroke-dasharray: 34 66;
-    stroke-dashoffset: 0;
-    stroke-linecap: round;
-    /* Soft cyan glow to match the blue-green beam gradient. */
-    filter: drop-shadow(0 0 3px color-mix(in srgb, #36cfc9 70%, transparent));
-    animation: ai-border-beam 1.8s linear infinite;
-}
-
-/* A steady gradient ring that glows and gently pulses around a container's
-   border -- used for the Ask AI chatbox while a reply is streaming, instead of
-   a single beam travelling the perimeter. */
-@keyframes ai-glow-pulse {
-    0%, 100% { opacity: 0.55; }
-    50%      { opacity: 1; }
-}
-
-.ai-glow-border {
-    position: relative;
-}
-
-.ai-glow-border::before {
-    content: "";
+.ai-beam {
     position: absolute;
-    inset: -1px;
+    inset: 0;
     border-radius: inherit;
-    padding: 1.5px;
-    background: linear-gradient(120deg, #1677ff 0%, #36cfc9 52%, #95de64 100%);
-    box-shadow: 0 0 14px color-mix(in srgb, #36cfc9 55%, transparent);
+    padding: 2px;
     pointer-events: none;
+    /* A single blue -> cyan -> green arc (~130deg) with a transparent tail,
+       so exactly one beam sweeps the perimeter. */
+    background: conic-gradient(
+        from var(--ai-beam-angle),
+        transparent 0deg,
+        #1677ff 25deg,
+        #36cfc9 70deg,
+        #95de64 115deg,
+        transparent 150deg,
+        transparent 360deg
+    );
+    filter: drop-shadow(0 0 4px color-mix(in srgb, #36cfc9 60%, transparent));
     mask:
         linear-gradient(#000 0 0) content-box,
         linear-gradient(#000 0 0);
@@ -459,7 +456,16 @@
         linear-gradient(#000 0 0) content-box,
         linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
-    animation: ai-glow-pulse 1.6s ease-in-out infinite;
+    animation: ai-beam-spin 2.6s linear infinite;
+}
+
+/* Browsers without @property support can't animate the angle; show a static
+   gradient ring instead of a stuck one. */
+@supports not (background: conic-gradient(from var(--ai-beam-angle), red, blue)) {
+    .ai-beam {
+        background: linear-gradient(120deg, #1677ff 0%, #36cfc9 52%, #95de64 100%);
+        animation: none;
+    }
 }
 
 /* Chart craftsmanship: soft glow under the trend line + a smooth path
@@ -494,8 +500,7 @@
     .soft-rise,
     .view-enter,
     .skeleton-shimmer,
-    .ai-border-beam__path,
-    .ai-glow-border::before,
+    .ai-beam,
     .trend-draw,
     .area-fade,
     .press-scale {
