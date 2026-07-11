@@ -23,7 +23,6 @@ import {
   CheckCircle2,
   Target,
   Edit2,
-  Sparkles,
   Trophy,
   ArrowUpRight
 } from 'lucide-react'
@@ -370,23 +369,6 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
 
   return (
     <div className="space-y-6 soft-rise">
-      <section className="relative overflow-hidden rounded-3xl border border-blue-500/15 bg-card px-5 py-6 shadow-sm sm:px-7">
-        <div className="pointer-events-none absolute -right-16 -top-20 size-56 rounded-full bg-blue-500/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 left-1/3 size-48 rounded-full bg-violet-500/10 blur-3xl" />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div className="max-w-xl">
-            <div className="mb-3 flex size-11 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/10 text-blue-500">
-              <Sparkles className="size-5" />
-            </div>
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-blue-500">Reward roadmap</p>
-            <h2 className="mt-1 text-2xl font-black tracking-tight text-foreground sm:text-3xl">Turn saved rewards into something memorable.</h2>
-            <p className="mt-2 max-w-lg text-xs leading-relaxed text-muted-foreground">Choose one goal to focus on, see what is within reach, and keep everything else in a clear priority queue.</p>
-          </div>
-          <Button onClick={handleOpenAddModal} className="w-full justify-center rounded-xl px-5 py-2.5 sm:w-auto">
-            <Plus className="size-4" /> Add a goal
-          </Button>
-        </div>
-      </section>
       {/* Top Banner Ribbon — rewardsBalance/rewardsTarget are cycle-scoped, so
           show a skeleton while a new cycle's dashboard data is loading rather
           than briefly flashing the previous cycle's numbers. */}

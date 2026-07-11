@@ -632,7 +632,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   // Build unique suggestion entries from past transactions (most recent first, deduped by description)
   const activeSuggestionEntries = useMemo(() => {
     if (txType === 'transfer') return []
-    return autocompleteSuggestions.filter(s => s.txType === txType)
+    return autocompleteSuggestions.filter(s =>
+      s.txType === txType && !s.ledgerCategory.toLowerCase().startsWith('transfer:income->')
+    )
   }, [autocompleteSuggestions, txType])
 
   // Filter suggestions based on current description input
@@ -2099,10 +2101,26 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     }}
                     className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border transition duration-200 text-xs font-semibold cursor-pointer ${
                       isScanning
-                        ? 'ai-orbit-border border-transparent bg-blue-500/5 text-blue-600 dark:text-blue-400 cursor-not-allowed'
+                        ? 'receipt-border-beam border-blue-500/20 bg-blue-500/5 text-blue-600 dark:text-blue-400 cursor-not-allowed'
                         : 'border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400'
                     }`}
                   >
+                    {isScanning && (
+                      <svg aria-hidden="true" className="pointer-events-none absolute inset-0 size-full overflow-visible" viewBox="0 0 100 40" preserveAspectRatio="none">
+                        <defs>
+                          <linearGradient id="receipt-scan-beam" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0" stopColor="var(--ledger-blue-500)" stopOpacity="0" />
+                            <stop offset="0.55" stopColor="var(--ledger-blue-500)" />
+                            <stop offset="1" stopColor="var(--ledger-sky-500)" />
+                          </linearGradient>
+                        </defs>
+                        <rect
+                          className="receipt-border-beam__path"
+                          x="1" y="1" width="98" height="38" rx="11" pathLength="100"
+                          fill="none" stroke="url(#receipt-scan-beam)" strokeWidth="2" vectorEffect="non-scaling-stroke"
+                        />
+                      </svg>
+                    )}
                     {isScanning ? (
                       <><Loader2 className="size-3.5 animate-spin" /> Scanning receipt...</>
                     ) : (
