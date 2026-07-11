@@ -779,7 +779,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         category,
         ledgerCategory,
         txType,
-        historyDescriptions: activeSuggestionEntries.map(s => s.description)
+        // Keep within the API's history limits (<=10 entries, each non-blank and
+        // <=150 chars) so the request isn't rejected before it reaches the model.
+        historyDescriptions: activeSuggestionEntries
+          .map(s => s.description?.trim())
+          .filter((d): d is string => !!d)
+          .map(d => d.length > 150 ? d.slice(0, 150) : d)
+          .slice(0, 10)
       }, controller.signal)
 
       if (noteSuggestionRequestSeqRef.current !== requestSeq) return
