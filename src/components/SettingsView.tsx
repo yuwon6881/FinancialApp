@@ -609,13 +609,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   onClick={e => { e.stopPropagation(); void handleAiCleanupReview() }}
                   disabled={hideSensitive || isReviewingCleanup || visibleCategories.length === 0}
                   title={hideSensitive ? 'Unhide balances to review' : 'AI category review'}
-                  className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition cursor-pointer ${
-                    isReviewingCleanup
-                      ? 'perimeter-beam-host border-blue-500/35 bg-blue-500/5 text-blue-600 dark:text-blue-400'
-                      : 'text-blue-600 dark:text-blue-400 bg-blue-500/5 border-blue-500/30 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed'
-                  }`}
+                  className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border text-blue-600 dark:text-blue-400 bg-blue-500/5 border-blue-500/30 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed transition cursor-pointer"
                 >
-                  {isReviewingCleanup && <PerimeterBeam radius={8} size={52} />}
                   {isReviewingCleanup ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
                   AI
                 </button>
@@ -634,7 +629,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             )}
 
             {(cleanupReviewOpen || cleanupReviewError) && (
-              <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 space-y-2">
+              <div className={`rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 space-y-2 relative ${isReviewingCleanup ? 'perimeter-beam-host' : ''}`}>
+                {isReviewingCleanup && <PerimeterBeam radius={12} size={104} />}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
                     <Sparkles className="size-3.5 text-blue-500" />

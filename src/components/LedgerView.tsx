@@ -1776,6 +1776,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           isOpen={showAddForm}
           onClose={handleCloseForm}
           maxWidthClassName="max-w-xl"
+          isBeaming={isScanning}
           title={
             <span className="flex items-center gap-2">
               <PlusCircle className="size-4 text-blue-500" /> {editingTxId ? 'Edit Ledger Entry' : 'Post New Ledger Entry'}
@@ -1822,11 +1823,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     }}
                     className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border transition duration-200 text-xs font-semibold cursor-pointer ${
                       isScanning
-                        ? 'perimeter-beam-host border-blue-500/20 bg-blue-500/5 text-blue-600 dark:text-blue-400 cursor-not-allowed'
+                        ? 'border-blue-500/20 bg-blue-500/5 text-blue-600 dark:text-blue-400 cursor-not-allowed'
                         : 'border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400'
                     }`}
                   >
-                    {isScanning && <PerimeterBeam size={40} />}
                     {isScanning ? (
                       <><Loader2 className="size-3.5 animate-spin" /> Scanning receipt...</>
                     ) : (
@@ -1961,15 +1961,15 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     onClick={() => void requestNoteSuggestions()}
                     disabled={isSuggestingNote || description.trim().length < 2}
                     title={description.trim().length < 2 ? 'Enter a description first' : 'Suggest better notes'}
-                    className={`inline-flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/5 px-2 py-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed transition cursor-pointer ${isSuggestingNote ? 'perimeter-beam-host' : ''}`}
+                    className="inline-flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/5 px-2 py-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed transition cursor-pointer"
                   >
-                    {isSuggestingNote && <PerimeterBeam radius={8} size={52} />}
                     {isSuggestingNote ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
                     AI
                   </button>
                 )}
               </div>
-              <div className="relative">
+              <div className={`relative ${isSuggestingNote ? 'perimeter-beam-host' : ''}`}>
+                {isSuggestingNote && <PerimeterBeam radius={12} size={40} />}
                 <input
                   ref={firstInputRef}
                   type="text"

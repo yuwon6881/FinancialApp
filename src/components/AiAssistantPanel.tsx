@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { Loader2, Send, Sparkles, X } from 'lucide-react'
 import { BottomSheet } from './ui/BottomSheet'
-import { PerimeterBeam } from './ui/PerimeterBeam'
 import * as api from '../lib/api'
 
 interface AiAssistantPanelProps {
@@ -161,6 +160,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
       isOpen={isOpen}
       onClose={handleClose}
       maxWidthClassName="max-w-2xl"
+      isBeaming={isSending}
       title={
         <span className="flex items-center gap-2">
           <Sparkles className="size-4 text-primary" />
@@ -170,8 +170,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
     >
       <div className="flex h-[55vh] sm:h-[480px] flex-col gap-3">
         {/* The non-scrolling wrapper owns a subtle perimeter-only activity trace. */}
-        <div className={`relative min-h-0 flex-1 rounded-xl ${isSending ? 'perimeter-beam-host' : ''}`}>
-          {isSending && <PerimeterBeam size={132} duration={7} />}
+        <div className="relative min-h-0 flex-1 rounded-xl">
           <div className={`h-full space-y-3 rounded-xl border border-border/60 bg-muted/10 p-3 ${messages.length > 0 ? 'overflow-y-auto' : 'overflow-y-hidden'}`}>
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center text-center text-xs text-muted-foreground">

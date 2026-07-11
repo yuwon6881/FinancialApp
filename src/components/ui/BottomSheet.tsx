@@ -4,6 +4,7 @@ import { motion, AnimatePresence, useDragControls, type PanInfo } from 'framer-m
 import { useDialog } from '../../lib/useDialog'
 import { useIsMobile } from '../../lib/useIsMobile'
 import { lockBodyScroll, unlockBodyScroll } from '../../lib/scrollLock'
+import { PerimeterBeam } from './PerimeterBeam'
 
 interface BottomSheetProps {
   isOpen: boolean
@@ -14,6 +15,7 @@ interface BottomSheetProps {
   footer?: React.ReactNode
   /** Accessible name when `title` is not plain text. */
   ariaLabel?: string
+  isBeaming?: boolean
 }
 
 export const BottomSheet: React.FC<BottomSheetProps> = ({
@@ -23,7 +25,8 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   onClose,
   maxWidthClassName = 'max-w-md',
   footer,
-  ariaLabel
+  ariaLabel,
+  isBeaming = false
 }) => {
   const panelRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
@@ -298,8 +301,9 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             // touchmove listener above preventDefaults only the dismiss gesture,
             // so the drag still engages reliably over scrollable content.
             style={{ touchAction: 'pan-y' }}
-            className={`sheet-panel w-full bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto focus:outline-none`}
+            className={`sheet-panel w-full bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto focus:outline-none ${isBeaming ? 'perimeter-beam-host' : ''}`}
           >
+            {isBeaming && <PerimeterBeam radius={16} size={132} />}
             <div
               style={{ touchAction: 'none' }}
               className="pb-3 shrink-0"
