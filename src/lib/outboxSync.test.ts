@@ -269,6 +269,24 @@ describe('drainQueue — error taxonomy', () => {
     expect(h.queue).toHaveLength(0)
     spy.mockRestore()
   })
+
+  it('moves an op immediately to failedOps on a permanent 400 error and continues without retry', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const err = new Error('Bad Request') as Error & { status?: number }
+    err.status = 400
+    const dispatch = vi.fn(async (): Promise<DispatchResult> => { throw err })
+    const h = makeHarness(
+      { resolveDispatch: () => dispatch },
+      [op({ id: 'a', retryCount: 0 }), op({ id: 'b', retryCount: 0 })]
+    )
+    await drainQueue(h.deps)
+    expect(dispatch).toHaveBeenCalledTimes(2) // both are processed because 'a' doesn't block the queue
+    expect(h.calls.emitFailureToast).toBe(2)
+    expect(h.failedOps.map(o => o.id)).toEqual(['a', 'b'])
+    expect(h.failedOps[0].retryCount).toBe(1)
+    expect(h.queue).toHaveLength(0)
+    spy.mockRestore()
+  })
 })
 
 describe('drainQueue — settle', () => {

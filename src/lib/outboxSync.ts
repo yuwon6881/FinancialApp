@@ -139,6 +139,8 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
         const isAuthError = errorMessageIncludes(err, '401') || errorMessageIncludesLower(err, 'unauthorized')
         const isLockError = errorMessageIncludes(err, '423')
         const isJustLoggedIn = deps.now() - deps.getLastUnlockedTime() < JUST_LOGGED_IN_WINDOW_MS
+        const status = err && typeof err === 'object' && 'status' in err && typeof err.status === 'number' ? err.status : undefined
+        const isPermanentError = status !== undefined && status >= 400 && status < 500 && status !== 401 && status !== 423
 
         if (isAuthError && !isJustLoggedIn) {
           deps.onAuthError()
@@ -152,6 +154,13 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
           deps.setError('Sync pending: reconnecting...')
           deps.setBackoff(deps.now() + AUTH_RACE_BACKOFF_MS)
           break
+        } else if (isPermanentError) {
+          // Permanent validation/logic error (e.g. 400 Bad Request) -- do not retry.
+          // Move the op to failedOps immediately and continue the queue.
+          deps.emitFailureToast(nextOp, err)
+          deps.mutateQueue(prev => prev.filter(item => item.id !== nextOp.id))
+          deps.addFailedOp({ ...nextOp, retryCount: (nextOp.retryCount || 0) + 1, lastError: getErrorMessage(err, String(err)) })
+          continue
         } else {
           const updatedRetryCount = (nextOp.retryCount || 0) + 1
           if (updatedRetryCount >= MAX_RETRIES) {

@@ -1,5 +1,14 @@
 export const SESSION_LOCKED_EVENT = 'financialapp:session-locked'
 
+export class ApiError extends Error {
+  status: number
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
+
 const getApiBaseUrl = (): string => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL
   if (import.meta.env.DEV) {
@@ -67,11 +76,11 @@ window.fetch = async (...args: Parameters<typeof fetch>) => {
       || url.includes('/auth/status')
       || url.includes('/auth/webauthn')
     if (response.status === 401 && !isAuthBootstrap) {
-      throw new Error('401 Unauthorized')
+      throw new ApiError('401 Unauthorized', 401)
     }
     if (response.status === 423 && !isAuthBootstrap) {
       window.dispatchEvent(new CustomEvent(SESSION_LOCKED_EVENT, { detail: { url } }))
-      throw new Error('423 Locked')
+      throw new ApiError('423 Locked', 423)
     }
   }
   return response
@@ -105,7 +114,7 @@ export async function throwApiError(
 ): Promise<never> {
   const body = await response.json().catch(() => ({})) as Record<string, unknown>
   const message = body[messageField]
-  throw new Error(typeof message === 'string' && message ? message : fallbackMessage)
+  throw new ApiError(typeof message === 'string' && message ? message : fallbackMessage, response.status)
 }
 
 interface RequestOptions extends RequestInit {
