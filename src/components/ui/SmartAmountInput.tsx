@@ -35,13 +35,17 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
   const publishValue = (nextValue: string) => {
     const input = inputRef.current
     if (!input) return
-    // Set the value through the prototype setter, then dispatch a real `input`
-    // event so React's own onChange pipeline runs (and any currency mask the
-    // consumer applies re-runs). Hand-calling the onChange prop with a fabricated
-    // event object did not reliably update the controlled value.
+    // Set the DOM value, then invoke the onChange prop directly with a
+    // synthetic-shaped event. We deliberately do NOT dispatch a native `input`
+    // event: this field is rendered inside a modal that is portaled to
+    // document.body, so a native event bubbles to body and never reaches
+    // React's delegated listener on the app root -- onChange would silently
+    // never fire (breaking the = button and blur evaluation). Calling the prop
+    // directly is portal-safe. The consumer re-runs its currency mask on the
+    // value we pass, so keeping exactly two decimals (see evaluate) is required.
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set
     setter?.call(input, nextValue)
-    input.dispatchEvent(new Event('input', { bubbles: true }))
+    onChange?.({ target: input, currentTarget: input } as React.ChangeEvent<HTMLInputElement>)
   }
 
   const evaluate = () => {

@@ -295,7 +295,7 @@ export function TransactionFormFields({
       <div className="space-y-1 sm:col-span-2">
         <label className="flex items-center h-5 text-xs font-semibold text-muted-foreground">Amount ({getCurrencySymbol(currency)})</label>
         <div className="relative flex items-center">
-          <span className="absolute left-3.5 z-10 text-xs font-semibold text-muted-foreground pointer-events-none select-none">
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 z-10 text-sm font-semibold text-muted-foreground pointer-events-none select-none leading-none">
             {getCurrencySymbol(currency)}
           </span>
           <SmartAmountInput

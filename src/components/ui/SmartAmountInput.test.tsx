@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { SmartAmountInput } from './SmartAmountInput'
 import { maskCurrencyInput } from '../../lib/utils'
 
@@ -15,14 +16,18 @@ beforeAll(() => {
 
 // Mirrors how the ledger amount field wires the input: every change runs
 // through the cents mask, so the calculator result must survive that round-trip.
+// Rendered through a portal to document.body to reproduce the real modal --
+// a native `input` event would not reach React's root listener from there, so
+// this guards against relying on dispatchEvent.
 function MaskedWrapper() {
   const [value, setValue] = useState('')
-  return (
+  return createPortal(
     <SmartAmountInput
       aria-label="amount"
       value={value}
       onChange={e => setValue(maskCurrencyInput(e.target.value, value))}
-    />
+    />,
+    document.body
   )
 }
 
