@@ -112,10 +112,15 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
 
         // Functional removal keyed off the live queue, so any op enqueued during
         // the await above (e.g. an Undo tap) is preserved rather than clobbered.
+        let completedOp = nextOp
         deps.mutateQueue(prev => {
           let next = prev.filter(item => item.id !== nextOp.id)
           if (nextOp.entity === 'wishlistItem' && nextOp.type === 'add' && result && 'id' in result && result.id) {
             const realIdStr = String(result.id)
+            // The completed add remains in the optimistic projection until refresh
+            // finishes. Give that temporary row its server id too, otherwise a user
+            // action during this window can enqueue a DELETE for the negative local id.
+            completedOp = { ...nextOp, targetId: realIdStr }
             next = next.map(op => (op.entity === 'wishlistItem' && op.targetId === nextOp.targetId)
               ? { ...op, targetId: realIdStr }
               : op)
@@ -123,7 +128,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
           return next
         })
 
-        deps.addRecentlyCompleted({ ...nextOp, isCompleted: true })
+        deps.addRecentlyCompleted({ ...completedOp, isCompleted: true })
 
         deps.setError(null)
         processedAny = true

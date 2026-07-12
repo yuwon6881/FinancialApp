@@ -165,6 +165,22 @@ describe('drainQueue — success path', () => {
     expect(h.queue).toHaveLength(0)
   })
 
+  it('projects a completed wishlist add with its server id while refresh is pending', async () => {
+    let resolveRefresh!: () => void
+    const refreshPending = new Promise<void>(resolve => { resolveRefresh = resolve })
+    const h = makeHarness({
+      resolveDispatch: () => vi.fn(async (): Promise<DispatchResult> => ({ id: 99 } as unknown as DispatchResult)),
+      refresh: () => refreshPending,
+    }, [op({ id: 'add', entity: 'wishlistItem', type: 'add', targetId: '-42', payload: { name: 'Camera' } })])
+
+    const draining = drainQueue(h.deps)
+    await vi.waitFor(() => expect(h.recentlyCompleted).toHaveLength(1))
+    expect(h.recentlyCompleted[0]).toMatchObject({ targetId: '99', isCompleted: true })
+
+    resolveRefresh()
+    await draining
+  })
+
   it('drains multiple ops in queue order', async () => {
     const order: string[] = []
     const dispatch = vi.fn(async (o: QueuedOp): Promise<DispatchResult> => { order.push(o.id); return undefined })

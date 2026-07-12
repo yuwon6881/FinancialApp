@@ -198,7 +198,7 @@ const TopNav: React.FC<TopNavProps> = ({
             <div
               onClick={() => onOpenFailedOps?.()}
               className="ml-2 flex items-center gap-1 px-2 py-0.5 bg-destructive/10 border border-destructive/20 rounded-md text-[10px] font-bold text-destructive cursor-pointer select-none shrink-0 hover:bg-destructive/20 transition duration-150"
-              title="Operations that failed to sync after 5 attempts and were removed from active queue — click to view and discard"
+              title="Operations that failed to sync and were removed from the active queue — click to view details"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
               <span>{failedOpsCount} failed</span>

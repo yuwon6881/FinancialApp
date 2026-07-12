@@ -49,6 +49,11 @@ function getPayloadEntries(op: QueuedOp): Array<[string, unknown]> {
 export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDiscardAll }: FailedSyncModalProps) {
   if (failedOps.length === 0) return null
 
+  const hasImmediateFailures = failedOps.some(op => op.retryCount < 5)
+  const failureSummary = hasImmediateFailures
+    ? "These changes couldn't be synced to the server and were removed from the active queue. Permanent client errors are stopped immediately; temporary failures are retried up to 5 times. They were never saved — discard them to clear this notice, or note them down to re-enter manually."
+    : "These changes couldn't be synced to the server after 5 attempts and were removed from the active queue. They were never saved — discard them to clear this notice, or note them down to re-enter manually."
+
   return (
     <BottomSheet
       isOpen={isOpen}
@@ -78,7 +83,7 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
       }
     >
       <div className="text-xs text-muted-foreground">
-        These changes couldn't be synced to the server after 5 attempts and were removed from the active queue. They were never saved — discard them to clear this notice, or note them down to re-enter manually.
+        {failureSummary}
       </div>
 
       <div className="space-y-3 overflow-y-auto max-h-80 pr-1 py-1 mt-2">
@@ -94,7 +99,9 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
                   <span className="inline-block text-[9px] px-1.5 py-0.5 font-bold rounded border border-border/40 bg-muted/40 text-muted-foreground">
                     {TYPE_LABELS[op.type] || op.type}
                   </span>
-                  <span className="text-[10px] text-muted-foreground">{op.retryCount} attempts</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {op.retryCount} {op.retryCount === 1 ? 'attempt' : 'attempts'}
+                  </span>
                 </div>
               </div>
             </div>
