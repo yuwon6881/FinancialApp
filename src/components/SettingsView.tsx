@@ -2,7 +2,6 @@ import React from 'react'
 import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Bell, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap } from 'lucide-react'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
-import { SmartAmountInput } from './ui/SmartAmountInput'
 import { RowSyncBadge } from './ui/RowSyncBadge'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { PerimeterBeam } from './ui/PerimeterBeam'
@@ -36,7 +35,7 @@ interface SettingsViewProps {
     stabilityOverflowRedirect?: string
   }) => void
   onAddCategory: (category: Omit<TransactionCategory, 'id'>) => void
-  onDeleteCategory: (id: string) => void
+  onDeleteCategory: (id: string) => void | Promise<void>
   onApplyCategoryCleanupSuggestion?: (suggestion: CategoryCleanupSuggestion, targetCategoryOverride?: string) => Promise<void> | void
   notifyOnLoginEnabled?: boolean
   onToggleNotifyOnLogin?: (checked: boolean) => void
@@ -96,12 +95,15 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <label className="space-y-1 block">
               <span className="text-xs font-semibold text-muted-foreground block">Target Stability Fund Limit</span>
-              <SmartAmountInput
+              <input
                 type="text"
+                inputMode="decimal"
                 disabled={hideSensitive}
                 value={view.targetInput}
                 onChange={e => {
-                  view.setTargetInput(e.target.value)
+                  const val = e.target.value
+                  if (!/^\d*\.?\d{0,2}$/.test(val)) return
+                  view.setTargetInput(val)
                   if (view.errors.target) {
                     view.setErrors(prev => {
                       const next = { ...prev }
@@ -347,59 +349,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             </div>
 
             <CollapsibleBody open={view.categoriesOpen}>
-              <div className="space-y-4 pt-1 animate-in fade-in duration-200">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="New Category Name"
-                    disabled={hideSensitive}
-                    value={view.newCatName}
-                    onChange={e => view.setNewCatName(e.target.value)}
-                    className="flex-1 px-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
-                  />
-                  <button
-                    type="button"
-                    disabled={!view.isCatValid}
-                    onClick={view.handleAddCategory}
-                    className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none hover:shadow-lg hover:shadow-blue-500/10 transition cursor-pointer"
-                  >
-                    <Plus className="size-3.5" />
-                  </button>
-                </div>
-                {view.isCatDuplicate && (
-                  <p className="text-[10px] text-destructive font-semibold mt-0.5">Category name already exists.</p>
-                )}
-                {view.isCatReserved && (
-                  <p className="text-[10px] text-destructive font-semibold mt-0.5">Name is a reserved word.</p>
-                )}
-
-                <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1 select-none">
-                  {view.visibleCategories.map(cat => {
-                    const isSyncing = view.isCatSyncing(cat.id)
-                    const isDeleting = view.isCatDeleting(cat.id)
-                    return (
-                      <div
-                        key={cat.id}
-                        className="flex items-center justify-between gap-2 bg-background border border-border/50 px-2.5 py-2 rounded-lg text-xs"
-                      >
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded border font-semibold ${getCategoryBadgeClass(cat.name)}`}>{cat.name}</span>
-                        {(isSyncing || isDeleting) && (
-                          <RowSyncBadge state={isSyncing ? 'syncing' : 'deleting'} entityLabel="category" />
-                        )}
-                        {!isSyncing && !isDeleting && (
-                          <button
-                            type="button"
-                            onClick={() => view.handleDeleteCategory(cat.id)}
-                            className="text-muted-foreground hover:text-destructive transition cursor-pointer"
-                          >
-                            <Trash2 className="size-3" />
-                          </button>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-
+              <div className="space-y-4 px-0.5 pt-1 animate-in fade-in duration-200">
                 {(view.cleanupReviewOpen || view.cleanupReviewError) && (
                   <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 space-y-2">
                     <div className="flex items-center justify-between gap-2">
@@ -528,6 +478,60 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                     )}
                   </div>
                 )}
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="New Category Name"
+                    disabled={hideSensitive}
+                    value={view.newCatName}
+                    onChange={e => view.setNewCatName(e.target.value)}
+                    className="flex-1 px-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+                  />
+                  <button
+                    type="button"
+                    disabled={!view.isCatValid}
+                    onClick={view.handleAddCategory}
+                    className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none hover:shadow-lg hover:shadow-blue-500/10 transition cursor-pointer"
+                  >
+                    <Plus className="size-3.5" />
+                  </button>
+                </div>
+                {view.isCatDuplicate && (
+                  <p className="text-[10px] text-destructive font-semibold mt-0.5">Category name already exists.</p>
+                )}
+                {view.isCatReserved && (
+                  <p className="text-[10px] text-destructive font-semibold mt-0.5">Name is a reserved word.</p>
+                )}
+
+                <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1 select-none">
+                  {view.visibleCategories.map(cat => {
+                    const isSyncing = view.isCatSyncing(cat.id)
+                    const isDeleting = view.isCatDeleting(cat.id)
+                    return (
+                      <div
+                        key={cat.id}
+                        className="flex items-center justify-between gap-2 bg-background border border-border/50 px-2.5 py-2 rounded-lg text-xs"
+                      >
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded border font-semibold ${getCategoryBadgeClass(cat.name)}`}>{cat.name}</span>
+                        {(isSyncing || isDeleting) && (
+                          <RowSyncBadge state={isSyncing ? 'syncing' : 'deleting'} entityLabel="category" />
+                        )}
+                        {!isSyncing && !isDeleting && (
+                          <button
+                            type="button"
+                            disabled={view.checkingDeleteId !== null}
+                            onClick={() => view.handleDeleteCategory(cat.id)}
+                            title={view.checkingDeleteId === cat.id ? 'Checking usage…' : 'Delete category'}
+                            className="text-muted-foreground hover:text-destructive transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {view.checkingDeleteId === cat.id ? <Loader2 className="size-3 animate-spin text-destructive" /> : <Trash2 className="size-3" />}
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             </CollapsibleBody>
           </div>

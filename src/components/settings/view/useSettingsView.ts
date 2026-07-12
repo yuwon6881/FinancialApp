@@ -13,7 +13,7 @@ export interface UseSettingsViewOptions {
   hideSensitive: boolean
   onUpdateSettings: (settings: any) => void
   onAddCategory: (category: any) => void
-  onDeleteCategory: (id: string) => void
+  onDeleteCategory: (id: string) => void | Promise<void>
   onApplyCategoryCleanupSuggestion?: (suggestion: any, targetCategoryOverride?: string) => Promise<void> | void
   onToast: (message: string, title?: string, tone?: any) => void
   activeSyncId?: string | null
@@ -228,9 +228,17 @@ export function useSettingsView(options: UseSettingsViewOptions) {
 
   const isCatValid = !isCatEmpty && !isCatDuplicate && !isCatReserved && !hideSensitive
 
-  const handleDeleteCategory = (id: string) => {
-    if (hideSensitive) return
-    onDeleteCategory(id)
+  const [checkingDeleteId, setCheckingDeleteId] = useState<string | null>(null)
+  const handleDeleteCategory = async (id: string) => {
+    if (hideSensitive || checkingDeleteId) return
+    // requestDeleteCategory looks up transaction usage before opening the
+    // confirm modal, so surface a spinner on the row while that check runs.
+    setCheckingDeleteId(id)
+    try {
+      await onDeleteCategory(id)
+    } finally {
+      setCheckingDeleteId(null)
+    }
   }
 
   const handleAiCleanupReview = async () => {
@@ -340,6 +348,7 @@ export function useSettingsView(options: UseSettingsViewOptions) {
     isCatDuplicate,
     isCatReserved,
     handleDeleteCategory,
+    checkingDeleteId,
     handleAiCleanupReview,
     handleApplyCleanupSuggestion,
     visibleCategories,

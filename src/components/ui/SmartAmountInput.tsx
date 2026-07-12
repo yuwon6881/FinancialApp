@@ -27,7 +27,10 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
     return () => ro.disconnect()
   }, [])
 
-  const allowCalculator = inputWidth >= 220
+  // Only surface the calculator toolbar on a comfortably wide field. Below this
+  // the ~150px toolbar would cover most of the input, so we hide it and let the
+  // field behave as a plain amount entry (math via the =/Enter key still works).
+  const allowCalculator = inputWidth >= 260
 
   const publishValue = (nextValue: string) => {
     const input = inputRef.current
@@ -41,7 +44,12 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
     const expression = inputRef.current?.value.trim() ?? ''
     if (!expression) return
     const result = evaluateMathString(expression)
-    if (result !== null) publishValue(Number(result.toFixed(2)).toString())
+    // Publish a fixed 2-decimal string ("12.30", not "12.3"). Consumers that
+    // re-run the value through a currency mask (the ledger amount field) treat
+    // digits as cents, so a dropped trailing zero would be re-parsed as a
+    // different number ("12.3" -> "1.23"). Keeping exactly two decimals is
+    // stable through that round-trip and correct for plain consumers too.
+    if (result !== null) publishValue(result.toFixed(2))
   }
 
   const appendOperator = (operator: string) => {
