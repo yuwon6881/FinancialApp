@@ -3,6 +3,7 @@ import type { DashboardData, TransactionCategory } from '../../../types'
 import { rebalanceAllocations, type AllocationKey } from '../../../lib/allocations'
 import { getStartOfNCyclesAgo, getCycleRangeDates, formatDateForApi, getCurrentCycleYearAndMonth } from '../../../lib/cycle'
 import * as api from '../../../lib/api'
+import type { CategoryCleanupSuggestion } from '../../../lib/api'
 import { getErrorMessage } from '../../../lib/errors'
 
 export interface UseSettingsViewOptions {
@@ -85,7 +86,7 @@ export function useSettingsView(options: UseSettingsViewOptions) {
   const [categoriesOpen, setCategoriesOpen] = useState(false)
   const [usageTransactions, setUsageTransactions] = useState<{ category: string }[] | null>(null)
   const [usageError, setUsageError] = useState<string | null>(null)
-  const [cleanupSuggestions, setCleanupSuggestions] = useState<any[]>([])
+  const [cleanupSuggestions, setCleanupSuggestions] = useState<CategoryCleanupSuggestion[]>([])
   const [cleanupReviewOpen, setCleanupReviewOpen] = useState(false)
   const [isReviewingCleanup, setIsReviewingCleanup] = useState(false)
   const [applyingCleanupId, setApplyingCleanupId] = useState<string | null>(null)
@@ -253,7 +254,7 @@ export function useSettingsView(options: UseSettingsViewOptions) {
     }
   }
 
-  const handleApplyCleanupSuggestion = async (suggestion: any) => {
+  const handleApplyCleanupSuggestion = async (suggestion: CategoryCleanupSuggestion) => {
     if (hideSensitive || applyingCleanupId) return
     if (suggestion.type === 'consolidate' && !consolidateTargets[suggestion.id]) return
     setApplyingCleanupId(suggestion.id)
@@ -344,6 +345,7 @@ export function useSettingsView(options: UseSettingsViewOptions) {
     visibleCategories,
     categoryUsage,
     unusedCategoryCount,
+    USAGE_LOOKBACK_CYCLES,
     isCatSyncing,
     isCatDeleting,
     setEssentialsAllocInput,

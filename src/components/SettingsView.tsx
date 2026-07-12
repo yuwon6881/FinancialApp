@@ -5,6 +5,7 @@ import { CustomSelect } from './ui/CustomSelect'
 import { SmartAmountInput } from './ui/SmartAmountInput'
 import { RowSyncBadge } from './ui/RowSyncBadge'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
+import { PerimeterBeam } from './ui/PerimeterBeam'
 import type { CategoryCleanupSuggestion } from '../lib/api'
 import type { ToastTone } from './ui/ToastViewport'
 import { ToggleButton } from './ui/ToggleButton'
@@ -257,25 +258,92 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
           </div>
 
           <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-border/40 pb-2">
-              <button
-                type="button"
+            <div className="border-b border-border/40 pb-2">
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={() => view.setCategoriesOpen(!view.categoriesOpen)}
-                className="w-full text-left flex items-center justify-between gap-2 text-sm font-bold text-foreground cursor-pointer"
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); view.setCategoriesOpen(!view.categoriesOpen) } }}
+                aria-expanded={view.categoriesOpen}
+                className="flex items-center justify-between gap-3 cursor-pointer"
               >
-                <span className="min-w-0">
-                  <span className="block">Transaction Categories ({view.visibleCategories.length})</span>
-                  <span className="block text-[11px] font-normal text-muted-foreground mt-0.5">Manage categories and review their usage.</span>
-                </span>
-                <span className="flex items-center gap-2 shrink-0">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold text-foreground">Transaction Categories</h3>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    {view.visibleCategories.length} active categories.
+                    {view.categoryUsage && view.unusedCategoryCount > 0 && (
+                      <> · <span className="text-orange-500 font-semibold">{view.unusedCategoryCount} unused in last {view.USAGE_LOOKBACK_CYCLES} cycles</span></>
+                    )}
+                    {view.categoryUsage && view.unusedCategoryCount === 0 && view.visibleCategories.length > 0 && (
+                      <> · <span className="text-emerald-500 font-semibold">all used recently</span></>
+                    )}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
                   {view.categoryUsage && view.visibleCategories.length > 0 && (
-                    <span role="button" tabIndex={0} onClick={e => { e.stopPropagation(); view.setShowUsageDetails(!view.showUsageDetails) }} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); view.setShowUsageDetails(!view.showUsageDetails) } }} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-muted-foreground bg-background border border-border/60 hover:text-foreground hover:bg-muted transition cursor-pointer">
-                      Usage {view.showUsageDetails ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
-                    </span>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); view.setShowUsageDetails(!view.showUsageDetails) }}
+                        className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-muted-foreground bg-background border border-border/60 hover:text-foreground hover:bg-muted transition cursor-pointer"
+                      >
+                        Usage
+                        {view.showUsageDetails ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+                      </button>
+
+                      {view.showUsageDetails && (
+                        <div
+                          onClick={e => e.stopPropagation()}
+                          className="absolute right-[-80px] sm:right-0 top-full mt-2 w-72 max-w-[calc(100vw-32px)] md:w-80 z-50 bg-card border border-border/80 shadow-lg rounded-xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-150"
+                        >
+                          <p className="text-[10px] text-muted-foreground leading-relaxed">
+                            Usage over the last {view.USAGE_LOOKBACK_CYCLES} cycles, least used first. Categories with no recent activity are good candidates to remove.
+                          </p>
+                          {view.usageError ? (
+                            <p className="text-[10px] font-medium text-destructive">{view.usageError}</p>
+                          ) : (
+                            <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                              {view.categoryUsage.map(({ category, count }) => (
+                                <div
+                                  key={category.id}
+                                  className={`flex items-center justify-between gap-2 border px-2.5 py-1.5 rounded-lg text-[11px] ${
+                                    count === 0 ? 'bg-orange-500/5 border-orange-500/25' : 'bg-background border-border/50'
+                                  }`}
+                                >
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded border font-semibold ${getCategoryBadgeClass(category.name)}`}>
+                                    {category.name}
+                                  </span>
+                                  {count === 0 ? (
+                                    <span className="text-orange-500 font-semibold text-right text-[10px]">No activity in last {view.USAGE_LOOKBACK_CYCLES} cycles</span>
+                                  ) : (
+                                    <span className="text-muted-foreground font-semibold text-[10px]">{count}&times; in {view.USAGE_LOOKBACK_CYCLES} cycles</span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   )}
+                  <button
+                    type="button"
+                    onClick={e => { e.stopPropagation(); void view.handleAiCleanupReview() }}
+                    disabled={hideSensitive || view.isReviewingCleanup || view.visibleCategories.length === 0}
+                    title={hideSensitive ? 'Unhide balances to review' : 'AI category review'}
+                    className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition cursor-pointer ${
+                      view.isReviewingCleanup
+                        ? 'perimeter-beam-host border-blue-500/35 bg-blue-500/5 text-blue-600 dark:text-blue-400'
+                        : 'text-blue-600 dark:text-blue-400 bg-blue-500/5 border-blue-500/30 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed'
+                    }`}
+                  >
+                    {view.isReviewingCleanup && <PerimeterBeam radius={8} size={52} />}
+                    {view.isReviewingCleanup ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
+                    AI
+                  </button>
                   {view.categoriesOpen ? <ChevronUp className="size-4 text-muted-foreground" /> : <ChevronDown className="size-4 text-muted-foreground" />}
-                </span>
-              </button>
+                </div>
+              </div>
             </div>
 
             <CollapsibleBody open={view.categoriesOpen}>
@@ -332,124 +400,134 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   })}
                 </div>
 
-                <div className="border-t border-border/40 pt-3 space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-xs font-bold text-foreground">AI Category Cleanup</span>
-                      <span className="text-[10px] text-muted-foreground">Consolidate unused or duplicate categories.</span>
+                {(view.cleanupReviewOpen || view.cleanupReviewError) && (
+                  <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+                        <Sparkles className="size-3.5 text-blue-500" />
+                        AI Category Review
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { view.setCleanupReviewOpen(false) }}
+                        className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-background transition cursor-pointer"
+                        aria-label="Close AI category review"
+                      >
+                        <ChevronUp className="size-3.5" />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={view.handleAiCleanupReview}
-                      disabled={view.isReviewingCleanup || hideSensitive}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 text-[10px] font-bold text-blue-600 dark:text-blue-400 disabled:opacity-45 disabled:cursor-not-allowed transition cursor-pointer"
-                    >
-                      {view.isReviewingCleanup ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
-                      AI Review
-                    </button>
-                  </div>
 
-                  <CollapsibleBody open={view.cleanupReviewOpen}>
-                    <div className="space-y-2 pt-1 border-t border-border/20">
-                      {view.isReviewingCleanup ? (
-                        <div className="flex items-center gap-2 py-1.5 text-xs text-muted-foreground font-semibold">
-                          <Loader2 className="size-3.5 animate-spin text-blue-500" /> Checking categories...
-                        </div>
-                      ) : view.cleanupReviewError ? (
-                        <div className="text-[11px] text-destructive font-semibold flex items-center gap-1.5">
-                          <AlertCircle className="size-3.5 shrink-0" /> {view.cleanupReviewError}
-                        </div>
-                      ) : view.cleanupSuggestions.length > 0 ? (
-                        <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-                          {view.cleanupSuggestions.map(s => {
-                            const isApplying = view.applyingCleanupId === s.id
-                            const consolidateTarget = view.consolidateTargets[s.id] || ''
-                            return (
-                              <div key={s.id} className="p-3 rounded-xl border border-blue-500/15 bg-blue-500/5 space-y-2 relative overflow-hidden">
-                                {isApplying && (
-                                  <div className="absolute inset-0 bg-background/50 backdrop-blur-xs z-10 flex items-center justify-center">
-                                    <Loader2 className="size-4 animate-spin text-blue-500" />
-                                  </div>
-                                )}
-                                <div className="flex items-start gap-1.5 text-xs font-semibold text-foreground leading-relaxed">
-                                  <Sparkles className="size-3.5 text-blue-500 shrink-0 mt-0.5" />
-                                  <span>{s.description}</span>
+                    {view.isReviewingCleanup && (
+                      <div className="flex items-center gap-2 text-[11px] font-semibold text-muted-foreground">
+                        <Loader2 className="size-3.5 animate-spin text-blue-500" />
+                        Reviewing category usage...
+                      </div>
+                    )}
+
+                    {view.cleanupReviewError && (
+                      <p className="text-[11px] font-semibold text-orange-500 flex items-center gap-1">
+                        <AlertCircle className="size-3 shrink-0" />
+                        {view.cleanupReviewError}
+                      </p>
+                    )}
+
+                    {!view.isReviewingCleanup && !view.cleanupReviewError && view.cleanupSuggestions.length === 0 && (
+                      <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                        <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
+                        No cleanup proposals right now.
+                      </p>
+                    )}
+
+                    {!view.isReviewingCleanup && view.cleanupSuggestions.length > 0 && (
+                      <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                        {view.cleanupSuggestions.map(suggestion => {
+                          const confidence = Math.round(Math.max(0, Math.min(1, suggestion.confidence)) * 100)
+                          const consolidateOptions = view.visibleCategories.filter(cat =>
+                            !suggestion.categories.some(name => name.toLowerCase() === cat.name.toLowerCase())
+                          )
+                          const consolidateTarget = view.consolidateTargets[suggestion.id] || ''
+                          const isApplyingThis = view.applyingCleanupId === suggestion.id
+                          const isConsolidateDisabled = suggestion.type === 'consolidate' && !consolidateTarget
+
+                          return (
+                            <div key={suggestion.id} className="rounded-lg border border-border/60 bg-background p-2.5 space-y-2">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <div className="text-xs font-bold text-foreground">{suggestion.title}</div>
+                                  <div className="text-[11px] text-muted-foreground leading-relaxed">{suggestion.summary}</div>
                                 </div>
-                                {s.type === 'consolidate' && (
-                                  <div className="space-y-1 pt-1">
-                                    <label className="text-[10px] font-bold text-muted-foreground">Select Consolidate Target</label>
+                                <span className="shrink-0 rounded-md border border-blue-500/25 bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-blue-600 dark:text-blue-400">
+                                  Confidence {confidence}%
+                                </span>
+                              </div>
+
+                              {suggestion.categories.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {suggestion.categories.map(name => (
+                                    <button
+                                      key={name}
+                                      type="button"
+                                      onClick={() => props.onNavigateToLedger?.({ category: name, showAllCycles: true })}
+                                      title={`Filter ledger by ${name}`}
+                                      className={`press-scale inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-semibold cursor-pointer hover:opacity-85 transition ${getCategoryBadgeClass(name)}`}
+                                    >
+                                      {name}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+
+                              {suggestion.type === 'consolidate' && (
+                                <div className="space-y-1">
+                                  <span className="text-[10px] font-semibold text-muted-foreground">Move its entries to:</span>
+                                  <div>
                                     <CustomSelect
                                       value={consolidateTarget}
-                                      onChange={val => view.setConsolidateTargets(prev => ({ ...prev, [s.id]: String(val) }))}
+                                      onChange={val => view.setConsolidateTargets(prev => ({ ...prev, [suggestion.id]: String(val) }))}
                                       options={[
-                                        { value: '', label: 'Select Target Category...' },
-                                        ...props.categoriesList.filter(c => !c.isPendingDelete && !s.categories.includes(c.name) && c.name.toLowerCase() !== 'transfer' && c.name.toLowerCase() !== 'adjustment').map(c => ({
-                                          value: c.name,
-                                          label: c.name
-                                        }))
+                                        { value: '', label: 'Choose a category' },
+                                        ...consolidateOptions.map(cat => ({ value: cat.name, label: cat.name }))
                                       ]}
-                                      className="w-full text-xs"
+                                      className="max-w-full"
                                     />
                                   </div>
-                                )}
-                                <div className="flex justify-end pt-1">
+                                </div>
+                              )}
+
+                              <div className="flex items-center justify-between gap-2">
+                                {suggestion.affectedTransactionCount > 0 && suggestion.categories.length > 0 ? (
                                   <button
                                     type="button"
-                                    onClick={() => view.handleApplyCleanupSuggestion(s)}
-                                    disabled={s.type === 'consolidate' && !consolidateTarget}
-                                    className="px-2 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-[10px] font-semibold text-white disabled:bg-muted disabled:text-muted-foreground transition cursor-pointer"
+                                    onClick={() => props.onNavigateToLedger?.({ category: suggestion.categories[0], showAllCycles: true })}
+                                    title="View entries in ledger"
+                                    className="press-scale inline-flex h-8 min-w-0 items-center px-2.5 rounded-full border border-orange-500/20 bg-orange-500/10 text-[9px] font-bold uppercase text-orange-600 dark:text-orange-400 hover:bg-orange-500/20 transition cursor-pointer select-none"
                                   >
-                                    Apply Cleanup
+                                    <span className="truncate">{suggestion.affectedTransactionCount} ledger {suggestion.affectedTransactionCount === 1 ? 'entry' : 'entries'} need validation</span>
                                   </button>
-                                </div>
+                                ) : (
+                                  <span className="inline-flex h-8 min-w-0 items-center px-2.5 rounded-full border border-border bg-muted/30 text-[9px] font-bold uppercase text-muted-foreground select-none">
+                                    {suggestion.affectedTransactionCount > 0
+                                      ? `${suggestion.affectedTransactionCount} ledger entr${suggestion.affectedTransactionCount === 1 ? 'y' : 'ies'} need validation`
+                                      : 'No ledger entries affected'}
+                                  </span>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => void view.handleApplyCleanupSuggestion(suggestion)}
+                                  disabled={!props.onApplyCategoryCleanupSuggestion || view.applyingCleanupId !== null || isConsolidateDisabled}
+                                  title={!props.onApplyCategoryCleanupSuggestion ? 'Category cleanup is unavailable' : isConsolidateDisabled ? 'Choose a category first' : 'Accept'}
+                                  className="inline-flex h-8 w-20 shrink-0 items-center justify-center rounded-lg border border-blue-500/30 bg-blue-500/5 px-3 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {isApplyingThis ? <Loader2 className="size-3 animate-spin" /> : 'Accept'}
+                                </button>
                               </div>
-                            )
-                          })}
-                        </div>
-                      ) : (
-                        <div className="text-[11px] text-muted-foreground font-semibold flex items-center gap-1.5">
-                          <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
-                          Category naming and usage is clean.
-                        </div>
-                      )}
-                    </div>
-                  </CollapsibleBody>
-
-                  <div className="pt-2 flex items-center justify-between border-t border-border/20">
-                    <button
-                      type="button"
-                      onClick={() => view.setShowUsageDetails(!view.showUsageDetails)}
-                      className="hidden text-[10px] font-bold text-muted-foreground hover:text-foreground items-center gap-1.5 transition cursor-pointer"
-                    >
-                      {view.showUsageDetails ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
-                      {view.showUsageDetails ? 'Hide' : 'Show'} Category Usage details
-                    </button>
-                    {view.unusedCategoryCount > 0 && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-500 font-bold">
-                        {view.unusedCategoryCount} unused
-                      </span>
+                            </div>
+                          )
+                        })}
+                      </div>
                     )}
                   </div>
-
-                  <CollapsibleBody open={view.showUsageDetails}>
-                    <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 pt-1.5 border-t border-border/20">
-                      {view.usageError ? (
-                        <div className="text-[10px] font-medium text-destructive">{view.usageError}</div>
-                      ) : view.categoryUsage ? (
-                        view.categoryUsage.map(cu => (
-                          <div key={cu.category.id} className="flex items-center justify-between py-1 border-b border-border/10 last:border-0 text-xs">
-                            <span className="font-medium text-foreground">{cu.category.name}</span>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${cu.count === 0 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-500' : 'bg-slate-500/10 text-muted-foreground'}`}>
-                              {cu.count} transaction{cu.count === 1 ? '' : 's'}
-                            </span>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-[10px] text-muted-foreground animate-pulse">Calculating usage statistics...</div>
-                      )}
-                    </div>
-                  </CollapsibleBody>
-                </div>
+                )}
               </div>
             </CollapsibleBody>
           </div>
@@ -459,28 +537,6 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
           <TwoFactorSection hideSensitive={hideSensitive} />
 
           <ChangePasswordSection hideSensitive={hideSensitive} />
-
-          <section className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5 shadow-sm space-y-3">
-            <div className="flex items-center gap-2.5 pb-3 border-b border-border/40">
-              <DatabaseZap className="size-5 text-orange-500 shrink-0" />
-              <div>
-                <h3 className="text-sm font-bold text-foreground">Local financial data</h3>
-                <p className="text-[11px] text-muted-foreground">Cached amounts are privacy-masked, not encrypted, and expire after 7 days.</p>
-              </div>
-            </div>
-            <button type="button" onClick={props.onClearLocalFinancialData} className="px-4 py-2 rounded-full text-xs font-bold border border-orange-500/30 text-orange-600 hover:bg-orange-500/10 transition cursor-pointer">Clear local financial data</button>
-          </section>
-
-          <section className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5 shadow-sm space-y-3">
-            <div className="flex items-center gap-2.5 pb-3 border-b border-border/40">
-              <Bell className="size-5 text-blue-500 shrink-0" />
-              <div>
-                <h3 className="text-sm font-bold text-foreground">Notifications</h3>
-                <p className="text-[11px] text-muted-foreground">Automatically show subscription reminders upon launching the application.</p>
-              </div>
-            </div>
-            <div className="flex items-center justify-between text-sm"><span className="font-medium text-foreground">Notify bills on Login</span><ToggleButton active={props.notifyOnLoginEnabled || false} onClick={() => props.onToggleNotifyOnLogin?.(!props.notifyOnLoginEnabled)} /></div>
-          </section>
 
           <FingerprintSection />
         </div>

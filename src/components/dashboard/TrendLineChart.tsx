@@ -51,7 +51,7 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
         </div>
         <div className="flex items-center bg-muted/40 rounded-lg p-0.5 border border-border/40 text-[9px] mb-3 w-fit">
           {(['3month', '6month', 'yearly'] as const).map(value => (
-            <button key={value} onClick={() => setRange(value)} className={`px-2 py-0.5 rounded-md font-bold ${range === value ? 'bg-background shadow-xs' : 'text-muted-foreground'}`}>
+            <button key={value} onClick={() => setRange(value)} className={`px-2 py-0.5 rounded-md font-bold transition cursor-pointer ${range === value ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}>
               {value === '3month' ? '3M' : value === '6month' ? '6M' : 'Year'}
             </button>
           ))}

@@ -4,6 +4,7 @@ import { PerimeterBeam } from '../../ui/PerimeterBeam'
 import { CustomSelect } from '../../ui/CustomSelect'
 import { SearchableSelect } from '../../ui/SearchableSelect'
 import { SmartAmountInput } from '../../ui/SmartAmountInput'
+import { maskCurrencyInput } from '../../../lib/utils'
 import type { TransactionFormState, TransferBucket, SelectableLedgerCategory } from './transactionFormReducer'
 
 interface TransactionFormFieldsProps {
@@ -291,8 +292,8 @@ export function TransactionFormFields({
         )}
       </div>
 
-      <div className="space-y-1">
-        <label className="text-xs font-semibold text-muted-foreground">Amount ({getCurrencySymbol(currency)})</label>
+      <div className="space-y-1 sm:col-span-2">
+        <label className="flex items-center h-5 text-xs font-semibold text-muted-foreground">Amount ({getCurrencySymbol(currency)})</label>
         <div className="relative flex items-center">
           <span className="absolute left-3.5 z-10 text-xs font-semibold text-muted-foreground pointer-events-none select-none">
             {getCurrencySymbol(currency)}
@@ -302,7 +303,7 @@ export function TransactionFormFields({
             placeholder="0.00"
             value={state.amount}
             onChange={e => {
-              onSetField('amount', e.target.value)
+              onSetField('amount', maskCurrencyInput(e.target.value, state.amount))
             }}
             className={`w-full h-10 pr-3.5 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
               getCurrencySymbol(currency).length > 2 ? 'pl-11' : getCurrencySymbol(currency).length > 1 ? 'pl-9' : 'pl-7'
@@ -323,7 +324,7 @@ export function TransactionFormFields({
       {state.transactionType === 'transfer' ? (
         <>
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-muted-foreground">Source Category (From)</label>
+            <label className="flex items-center h-5 text-xs font-semibold text-muted-foreground">Source Category (From)</label>
             <CustomSelect
               value={state.transferSource}
               onChange={val => onSetField('transferSource', val as TransferBucket)}
@@ -338,7 +339,7 @@ export function TransactionFormFields({
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-muted-foreground">Target Category (To)</label>
+            <label className="flex items-center h-5 text-xs font-semibold text-muted-foreground">Target Category (To)</label>
             <CustomSelect
               value={state.transferTarget}
               onChange={val => onSetField('transferTarget', val as TransferBucket)}
@@ -355,15 +356,15 @@ export function TransactionFormFields({
       ) : (
         <>
           <div className="space-y-1">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-2 h-5">
               <label className="text-xs font-semibold text-muted-foreground">Category</label>
               {suggestions.isSuggestingCategory ? (
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-500">
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-500 whitespace-nowrap shrink-0">
                   <Loader2 className="size-3 animate-spin" /> Suggesting
                 </span>
               ) : suggestions.categorySuggestionUnavailable ? (
-                <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-500">
-                  AI suggestions unavailable
+                <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-500 whitespace-nowrap shrink-0">
+                  AI unavailable
                 </span>
               ) : null}
             </div>
@@ -376,7 +377,7 @@ export function TransactionFormFields({
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-muted-foreground">Ledger Category</label>
+            <label className="flex items-center h-5 text-xs font-semibold text-muted-foreground">Ledger Category</label>
             <CustomSelect
               value={state.ledgerCategory}
               onChange={val => onSetField('ledgerCategory', val as SelectableLedgerCategory)}

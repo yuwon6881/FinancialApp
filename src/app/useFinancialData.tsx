@@ -10,6 +10,7 @@ import { createFinalId, createLocalWishlistId, sanitizeQueuedOps, type OutboxPay
 import { triggerHaptic } from '../lib/haptics'
 import { getErrorMessage, getErrorName } from '../lib/errors'
 import { formatCurrencyVal } from '../lib/utils'
+import { CategoryReplacementSelect } from '../components/ui/CategoryReplacementSelect'
 
 const errorMessageIncludes = (err: unknown, sub: string) => {
   if (!err) return false
@@ -484,21 +485,41 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       !payment.isPendingDelete && payment.category.trim().toLowerCase() === category.name.trim().toLowerCase()
     ).length
     const requiresReplacement = usageLookupFailed || transactionCount > 0 || recurringPaymentCount > 0
+    let selectedReplacementId = ''
     setConfirmModalData({
       title: 'Delete Category',
-      message: usageLookupFailed
-        ? `Delete “${category.name}”? We could not verify whether transactions or recurring payments still use this category, so deleting it may affect existing records.`
-        : transactionCount > 0 || recurringPaymentCount > 0
-          ? `Delete “${category.name}”? It is currently used by ${transactionCount} transaction${transactionCount === 1 ? '' : 's'} and ${recurringPaymentCount} recurring payment${recurringPaymentCount === 1 ? '' : 's'}. Existing records may need to be reassigned.`
-          : `Delete “${category.name}”? This category has no recent transaction or recurring-payment usage.`,
-      requiresReplacement,
-      replacementOptions,
-      categoryName: category.name,
-      transactionCount,
-      usageLookupFailed,
-      recurringPaymentCount,
-      onConfirm: (replacementId: string) => {
-        handleDeleteCategory(id, replacementId || undefined)
+      message: (
+        <div className={`space-y-3 ${requiresReplacement ? 'pb-36' : ''}`}>
+          <p>Delete "{category.name}"?</p>
+          {requiresReplacement ? (
+            <>
+              <p>
+                This category is used by {usageLookupFailed ? 'existing ledger transactions' : `${transactionCount} ledger transaction${transactionCount === 1 ? '' : 's'}`}
+                {recurringPaymentCount > 0 ? ` and ${recurringPaymentCount} recurring payment${recurringPaymentCount === 1 ? '' : 's'}` : ''}.
+                Choose a replacement category before deleting it.
+              </p>
+              <CategoryReplacementSelect
+                options={replacementOptions}
+                onChange={selected => {
+                  selectedReplacementId = selected
+                  setConfirmModalData((prev: any) => prev ? { ...prev, confirmDisabled: selectedReplacementId.length === 0 } : prev)
+                }}
+              />
+              {replacementOptions.length === 0 && (
+                <p className="text-[11px] font-semibold text-orange-500">
+                  Add another category before deleting this one.
+                </p>
+              )}
+            </>
+          ) : (
+            <p>No ledger transactions or recurring payments currently use this category.</p>
+          )}
+        </div>
+      ),
+      confirmText: requiresReplacement ? 'Transfer and Delete' : 'Delete',
+      confirmDisabled: requiresReplacement,
+      onConfirm: () => {
+        handleDeleteCategory(id, selectedReplacementId || undefined)
       }
     })
   }

@@ -85,6 +85,7 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
           <TransactionTypeFields
             txType={form.state.transactionType}
             onChangeTxType={(type: TransactionType) => form.changeTransactionType(type)}
+            disabled={form.state.mode === 'edit'}
           />
 
           <TransactionFormFields
