@@ -355,7 +355,7 @@ export function TransactionFormFields({
         </>
       ) : (
         <>
-          <div className="space-y-1">
+          <div className="space-y-1 sm:col-span-2">
             <div className="flex items-center justify-between gap-2 h-5">
               <label className="text-xs font-semibold text-muted-foreground">Category</label>
               {suggestions.isSuggestingCategory ? (
@@ -395,7 +395,7 @@ export function TransactionFormFields({
       )}
 
       <div className="space-y-1">
-        <label className="text-xs font-semibold text-muted-foreground">Posting Date</label>
+        <label className="flex items-center h-5 text-xs font-semibold text-muted-foreground">Posting Date</label>
         <input
           type="date"
           value={state.date}

@@ -35,9 +35,13 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
   const publishValue = (nextValue: string) => {
     const input = inputRef.current
     if (!input) return
+    // Set the value through the prototype setter, then dispatch a real `input`
+    // event so React's own onChange pipeline runs (and any currency mask the
+    // consumer applies re-runs). Hand-calling the onChange prop with a fabricated
+    // event object did not reliably update the controlled value.
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set
     setter?.call(input, nextValue)
-    onChange?.({ target: input, currentTarget: input } as React.ChangeEvent<HTMLInputElement>)
+    input.dispatchEvent(new Event('input', { bubbles: true }))
   }
 
   const evaluate = () => {
@@ -71,12 +75,18 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
         value={value}
         type="text"
         inputMode="decimal"
-        className={`${className ?? ''} text-right transition-all duration-200 ${showCalculator ? 'pr-36' : ''}`}
+        className={`${className ?? ''} text-left transition-all duration-200 ${showCalculator ? 'pr-36' : ''}`}
         onChange={event => {
           if (/^-?[0-9.()+\-*/×÷\s]*$/.test(event.target.value)) onChange?.(event)
         }}
         onFocus={event => { setFocused(true); onFocus?.(event) }}
-        onBlur={event => { setFocused(false); onBlur?.(event) }}
+        onBlur={event => {
+          // Resolve any pending expression (e.g. "12.00×5.00") when leaving the
+          // field, matching the =/Enter behaviour.
+          evaluate()
+          setFocused(false)
+          onBlur?.(event)
+        }}
         onKeyDown={event => {
           if (event.key === 'Enter' || event.key === '=') {
             event.preventDefault()
