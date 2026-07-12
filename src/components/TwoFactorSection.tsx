@@ -125,8 +125,6 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
     setRecoveryCodes(codes)
   }
 
-  if (!loaded) return null
-
   return (
     <section className="app-panel rounded-2xl border border-border/60 bg-card/92 shadow-sm overflow-hidden">
       <button
@@ -135,13 +133,13 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
         aria-expanded={open}
         className="w-full flex items-center gap-2.5 p-5 text-left cursor-pointer"
       >
-        {enabled ? <ShieldCheck className="size-5 text-emerald-500 shrink-0" /> : <ShieldOff className="size-5 text-muted-foreground shrink-0" />}
+        {loaded && enabled ? <ShieldCheck className="size-5 text-emerald-500 shrink-0" /> : <ShieldOff className="size-5 text-muted-foreground shrink-0" />}
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-bold text-foreground">Two-Factor Authentication</h3>
           <p className="text-[11px] text-muted-foreground">Require a code from an authenticator app (e.g. Microsoft Authenticator) at login.</p>
         </div>
-        <span className={`shrink-0 text-[10px] font-bold uppercase tracking-wider ${enabled ? 'text-emerald-500' : 'text-muted-foreground'}`}>
-          {enabled ? 'Enabled' : 'Disabled'}
+        <span className={`shrink-0 text-[10px] font-bold uppercase tracking-wider ${loaded && enabled ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+          {loaded ? (enabled ? 'Enabled' : 'Disabled') : 'Checking…'}
         </span>
         {open ? <ChevronUp className="size-4 text-muted-foreground shrink-0" /> : <ChevronDown className="size-4 text-muted-foreground shrink-0" />}
       </button>
@@ -149,7 +147,11 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
       <CollapsibleBody open={open}>
       <div className="px-5 pb-5 space-y-4 border-t border-border/40 pt-4">
 
-      {enabled && !showDisableForm && (
+      {!loaded && (
+        <p className="text-xs text-muted-foreground animate-pulse">Checking two-factor status…</p>
+      )}
+
+      {loaded && enabled && !showDisableForm && (
         <div className="space-y-2">
           <button
             type="button"
@@ -170,7 +172,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
         </div>
       )}
 
-      {enabled && showDisableForm && (
+      {loaded && enabled && showDisableForm && (
         <form noValidate onSubmit={handleDisable} className="space-y-2.5">
           <div className="space-y-1">
             <input
@@ -219,7 +221,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
         </form>
       )}
 
-      {!enabled && !setupSecret && (
+      {loaded && !enabled && !setupSecret && (
         <button
           type="button"
           onClick={handleStartSetup}
@@ -236,7 +238,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
         </button>
       )}
 
-      {!enabled && setupSecret && (
+      {loaded && !enabled && setupSecret && (
         <div className="space-y-3">
           <p className="text-[11px] text-muted-foreground">
             Scan this QR code with Microsoft Authenticator (or any TOTP app), then enter the 6-digit code it shows.

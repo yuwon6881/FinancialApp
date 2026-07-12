@@ -603,7 +603,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
               title="Filter Categories"
               onClose={() => setIsFilterDropdownOpen(false)}
             >
-              <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+              <div className="no-scrollbar space-y-4 max-h-[60vh] overflow-x-hidden overflow-y-auto pr-1">
                 {selectedCategories.length > 0 && (
                   <div className="flex justify-end">
                     <button

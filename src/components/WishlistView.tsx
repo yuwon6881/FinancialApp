@@ -243,7 +243,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleOpenAddModal}
-              className="hidden items-center gap-1.5 rounded-full bg-blue-600 px-4 py-1.5 text-xs font-bold text-white shadow-md shadow-blue-600/10 transition hover:bg-blue-700 sm:flex"
+              className="hidden items-center gap-1.5 rounded-full bg-blue-600 px-4 py-1.5 text-xs font-bold text-white shadow-md shadow-blue-600/10 transition hover:bg-blue-700 cursor-pointer sm:flex"
             >
               <Plus className="size-3.5" /> Add Goal
             </motion.button>

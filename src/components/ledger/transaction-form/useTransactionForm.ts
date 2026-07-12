@@ -307,6 +307,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   const changeTransactionType = (type: 'inflow' | 'outflow' | 'transfer') => {
     if (state.mode === 'create') {
       dispatch({ type: 'RESET', todayDate, defaultCategory })
+      dispatch({ type: 'SET_FIELD', field: 'showAddForm', value: true })
     }
     dispatch({ type: 'SET_FIELD', field: 'transactionType', value: type })
   }

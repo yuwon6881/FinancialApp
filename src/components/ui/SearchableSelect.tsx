@@ -69,7 +69,7 @@ export function SearchableSelect<T extends string | number>({
       <button
         type="button"
         onClick={() => setIsOpen(prev => !prev)}
-        className="w-full flex items-center justify-between gap-1.5 sm:gap-2.5 px-2.5 sm:px-3.5 py-2 text-xs bg-background border border-border rounded-xl text-foreground font-semibold shadow-xs hover:bg-muted/30 transition duration-150 cursor-pointer text-left select-none"
+        className="w-full h-10 flex items-center justify-between gap-1.5 sm:gap-2.5 px-2.5 sm:px-3.5 text-xs bg-background border border-border rounded-xl text-foreground font-semibold shadow-xs hover:bg-muted/30 transition duration-150 cursor-pointer text-left select-none"
       >
         <span className="truncate">{selectedOption?.label ?? value}</span>
         <ChevronDown

@@ -61,7 +61,7 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
           onMouseLeave={() => setHoveredIndex(null)}
           onTouchStart={event => selectNearest(event.touches[0].clientX)}
           onTouchMove={event => selectNearest(event.touches[0].clientX)}
-          className={`h-40 flex flex-col justify-end w-full relative mt-2 ${hideSensitive ? 'blur-xs pointer-events-none' : ''}`}
+          className={`h-40 flex flex-col justify-end w-full relative mt-2 cursor-pointer ${hideSensitive ? 'blur-xs pointer-events-none' : ''}`}
         >
           {polyline ? (
             <>

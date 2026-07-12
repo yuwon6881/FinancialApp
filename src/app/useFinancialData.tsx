@@ -486,6 +486,11 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     const requiresReplacement = usageLookupFailed || transactionCount > 0 || recurringPaymentCount > 0
     setConfirmModalData({
       title: 'Delete Category',
+      message: usageLookupFailed
+        ? `Delete “${category.name}”? We could not verify whether transactions or recurring payments still use this category, so deleting it may affect existing records.`
+        : transactionCount > 0 || recurringPaymentCount > 0
+          ? `Delete “${category.name}”? It is currently used by ${transactionCount} transaction${transactionCount === 1 ? '' : 's'} and ${recurringPaymentCount} recurring payment${recurringPaymentCount === 1 ? '' : 's'}. Existing records may need to be reassigned.`
+          : `Delete “${category.name}”? This category has no recent transaction or recurring-payment usage.`,
       requiresReplacement,
       replacementOptions,
       categoryName: category.name,

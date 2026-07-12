@@ -298,7 +298,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             // touchmove listener above preventDefaults only the dismiss gesture,
             // so the drag still engages reliably over scrollable content.
             style={{ touchAction: 'pan-y' }}
-            className={`sheet-panel w-full bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto focus:outline-none`}
+            className={`sheet-panel no-scrollbar w-full bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 max-h-[90vh] overflow-x-hidden overflow-y-auto focus:outline-none`}
           >
             <div
               style={{ touchAction: 'none' }}

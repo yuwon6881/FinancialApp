@@ -304,7 +304,7 @@ export function TransactionFormFields({
             onChange={e => {
               onSetField('amount', e.target.value)
             }}
-            className={`w-full pr-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+            className={`w-full h-10 pr-3.5 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
               getCurrencySymbol(currency).length > 2 ? 'pl-11' : getCurrencySymbol(currency).length > 1 ? 'pl-9' : 'pl-7'
             } ${
               errors.amount

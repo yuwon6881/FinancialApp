@@ -178,7 +178,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
               <button
                 type="button"
                 onClick={() => view.setGlobalAllocLock(!view.globalAllocLock)}
-                className="inline-flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground transition cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/60 bg-secondary/60 text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer"
               >
                 {view.globalAllocLock ? <Lock className="size-3" /> : <Unlock className="size-3" />}
                 {view.globalAllocLock ? 'Locked' : 'Unlocked'}
@@ -263,8 +263,18 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                 onClick={() => view.setCategoriesOpen(!view.categoriesOpen)}
                 className="w-full text-left flex items-center justify-between gap-2 text-sm font-bold text-foreground cursor-pointer"
               >
-                <span>Transaction Categories ({view.visibleCategories.length})</span>
-                {view.categoriesOpen ? <ChevronUp className="size-4 text-muted-foreground" /> : <ChevronDown className="size-4 text-muted-foreground" />}
+                <span className="min-w-0">
+                  <span className="block">Transaction Categories ({view.visibleCategories.length})</span>
+                  <span className="block text-[11px] font-normal text-muted-foreground mt-0.5">Manage categories and review their usage.</span>
+                </span>
+                <span className="flex items-center gap-2 shrink-0">
+                  {view.categoryUsage && view.visibleCategories.length > 0 && (
+                    <span role="button" tabIndex={0} onClick={e => { e.stopPropagation(); view.setShowUsageDetails(!view.showUsageDetails) }} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); view.setShowUsageDetails(!view.showUsageDetails) } }} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-muted-foreground bg-background border border-border/60 hover:text-foreground hover:bg-muted transition cursor-pointer">
+                      Usage {view.showUsageDetails ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+                    </span>
+                  )}
+                  {view.categoriesOpen ? <ChevronUp className="size-4 text-muted-foreground" /> : <ChevronDown className="size-4 text-muted-foreground" />}
+                </span>
               </button>
             </div>
 
@@ -295,18 +305,16 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   <p className="text-[10px] text-destructive font-semibold mt-0.5">Name is a reserved word.</p>
                 )}
 
-                <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto pr-1">
+                <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1 select-none">
                   {view.visibleCategories.map(cat => {
                     const isSyncing = view.isCatSyncing(cat.id)
                     const isDeleting = view.isCatDeleting(cat.id)
                     return (
-                      <span
+                      <div
                         key={cat.id}
-                        className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border text-xs font-medium ${getCategoryBadgeClass(
-                          cat.name
-                        )}`}
+                        className="flex items-center justify-between gap-2 bg-background border border-border/50 px-2.5 py-2 rounded-lg text-xs"
                       >
-                        <span>{cat.name}</span>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded border font-semibold ${getCategoryBadgeClass(cat.name)}`}>{cat.name}</span>
                         {(isSyncing || isDeleting) && (
                           <RowSyncBadge state={isSyncing ? 'syncing' : 'deleting'} entityLabel="category" />
                         )}
@@ -319,7 +327,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                             <Trash2 className="size-3" />
                           </button>
                         )}
-                      </span>
+                      </div>
                     )
                   })}
                 </div>
@@ -411,7 +419,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                     <button
                       type="button"
                       onClick={() => view.setShowUsageDetails(!view.showUsageDetails)}
-                      className="text-[10px] font-bold text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition cursor-pointer"
+                      className="hidden text-[10px] font-bold text-muted-foreground hover:text-foreground items-center gap-1.5 transition cursor-pointer"
                     >
                       {view.showUsageDetails ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
                       {view.showUsageDetails ? 'Hide' : 'Show'} Category Usage details
@@ -446,13 +454,35 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             </CollapsibleBody>
           </div>
 
-          <ChangePasswordSection hideSensitive={hideSensitive} />
+          <ActiveDevicesSection />
 
           <TwoFactorSection hideSensitive={hideSensitive} />
 
-          <FingerprintSection />
+          <ChangePasswordSection hideSensitive={hideSensitive} />
 
-          <ActiveDevicesSection />
+          <section className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5 shadow-sm space-y-3">
+            <div className="flex items-center gap-2.5 pb-3 border-b border-border/40">
+              <DatabaseZap className="size-5 text-orange-500 shrink-0" />
+              <div>
+                <h3 className="text-sm font-bold text-foreground">Local financial data</h3>
+                <p className="text-[11px] text-muted-foreground">Cached amounts are privacy-masked, not encrypted, and expire after 7 days.</p>
+              </div>
+            </div>
+            <button type="button" onClick={props.onClearLocalFinancialData} className="px-4 py-2 rounded-full text-xs font-bold border border-orange-500/30 text-orange-600 hover:bg-orange-500/10 transition cursor-pointer">Clear local financial data</button>
+          </section>
+
+          <section className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5 shadow-sm space-y-3">
+            <div className="flex items-center gap-2.5 pb-3 border-b border-border/40">
+              <Bell className="size-5 text-blue-500 shrink-0" />
+              <div>
+                <h3 className="text-sm font-bold text-foreground">Notifications</h3>
+                <p className="text-[11px] text-muted-foreground">Automatically show subscription reminders upon launching the application.</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between text-sm"><span className="font-medium text-foreground">Notify bills on Login</span><ToggleButton active={props.notifyOnLoginEnabled || false} onClick={() => props.onToggleNotifyOnLogin?.(!props.notifyOnLoginEnabled)} /></div>
+          </section>
+
+          <FingerprintSection />
         </div>
       </div>
     </div>

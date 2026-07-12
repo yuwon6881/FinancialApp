@@ -1,128 +1,85 @@
-import React, { type InputHTMLAttributes, useState, useRef, useEffect } from 'react'
+import React, { type InputHTMLAttributes, useRef, useState } from 'react'
 import { evaluateMathString } from '../../lib/math'
 
-export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>((props, ref) => {
-  const { onBlur, onFocus, onKeyDown, value, className, ...rest } = props
-  const [isFocused, setIsFocused] = useState(false)
-  const [inputWidth, setInputWidth] = useState(0)
-  const internalRef = useRef<HTMLInputElement>(null)
+export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>((props, forwardedRef) => {
+  const { className, onChange, onKeyDown, onFocus, onBlur, value, ...inputProps } = props
+  const inputRef = useRef<HTMLInputElement | null>(null)
+  const [focused, setFocused] = useState(false)
 
-  useEffect(() => {
-    if (typeof ref === 'function') {
-      ref(internalRef.current)
-    } else if (ref) {
-      ref.current = internalRef.current
-    }
-  }, [ref])
-
-  useEffect(() => {
-    if (!internalRef.current) return
-    const ro = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        setInputWidth(entry.target.getBoundingClientRect().width)
-      }
-    })
-    ro.observe(internalRef.current)
-    return () => ro.disconnect()
-  }, [])
-
-  const allowCalculator = inputWidth >= 220
-
-  const handleEvaluate = (e: React.FocusEvent<HTMLInputElement> | React.KeyboardEvent<HTMLInputElement> | { target: HTMLInputElement }) => {
-    const input = e.target as HTMLInputElement
-    const val = input.value
-    // If empty or already a valid pure number with max 2 decimals, skip evaluation to save ops
-    if (!val || /^\d+(\.\d{1,2})?$/.test(val)) return
-
-    const evaluated = evaluateMathString(val)
-    if (evaluated !== null) {
-      const fixedVal = evaluated.toFixed(2)
-      if (val !== fixedVal) {
-        // Use native setter to trigger React's synthetic onChange event
-        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set
-        nativeInputValueSetter?.call(input, fixedVal)
-        input.dispatchEvent(new Event('input', { bubbles: true }))
-      }
-    }
+  const setRef = (node: HTMLInputElement | null) => {
+    inputRef.current = node
+    if (typeof forwardedRef === 'function') forwardedRef(node)
+    else if (forwardedRef) forwardedRef.current = node
   }
 
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    setIsFocused(false)
-    handleEvaluate(e)
-    if (onBlur) onBlur(e)
+  const publishValue = (nextValue: string) => {
+    const input = inputRef.current
+    if (!input) return
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set
+    setter?.call(input, nextValue)
+    onChange?.({ target: input, currentTarget: input } as React.ChangeEvent<HTMLInputElement>)
   }
 
-  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    setIsFocused(true)
-    if (onFocus) onFocus(e)
+  const evaluate = () => {
+    const expression = inputRef.current?.value.trim() ?? ''
+    if (!expression) return
+    const result = evaluateMathString(expression)
+    if (result !== null) publishValue(Number(result.toFixed(2)).toString())
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (allowCalculator && (e.key === 'Enter' || e.key === '=')) {
-      if (e.key === '=') {
-        e.preventDefault() // prevent typing '='
-      }
-      handleEvaluate(e)
-    }
-    if (onKeyDown) onKeyDown(e)
+  const appendOperator = (operator: string) => {
+    const current = inputRef.current?.value ?? ''
+    if (!current) return
+    const next = /[+\-*/]$/.test(current)
+      ? `${current.slice(0, -1)}${operator}`
+      : `${current}${operator}`
+    publishValue(next)
   }
-
-  const appendOperator = (op: string) => {
-    if (!internalRef.current) return
-    const input = internalRef.current
-    let val = input.value || ''
-    
-    // If the last character is already an operator, replace it
-    if (/[+\-×÷]$/.test(val)) {
-      val = val.slice(0, -1) + op
-    } else {
-      val += op
-    }
-
-    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set
-    nativeInputValueSetter?.call(input, val)
-    input.dispatchEvent(new Event('input', { bubbles: true }))
-  }
-
-  // To prevent text from being hidden under the buttons, we conditionally add right padding when focused.
-  const conditionalPadding = isFocused && allowCalculator ? 'pr-[160px]' : ''
 
   return (
     <div className="relative w-full">
       <input
-        ref={internalRef}
+        {...inputProps}
+        ref={setRef}
         value={value}
-        onBlur={handleBlur}
-        onFocus={handleFocus}
-        onKeyDown={handleKeyDown}
-        className={`${className} ${conditionalPadding} transition-all duration-200`}
+        type="text"
         inputMode="decimal"
-        {...rest}
+        className={`${className ?? ''} text-right ${focused ? 'pr-36' : ''}`}
+        onChange={event => {
+          if (/^-?[0-9.()+\-*/\s]*$/.test(event.target.value)) onChange?.(event)
+        }}
+        onFocus={event => { setFocused(true); onFocus?.(event) }}
+        onBlur={event => { setFocused(false); onBlur?.(event) }}
+        onKeyDown={event => {
+          if (event.key === 'Enter' || event.key === '=') {
+            event.preventDefault()
+            evaluate()
+          }
+          onKeyDown?.(event)
+        }}
       />
-      {isFocused && allowCalculator && (
-        <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center bg-card/95 backdrop-blur-sm border border-border/80 shadow-sm rounded-lg overflow-hidden animate-in zoom-in-95 duration-150 z-50">
-          {['+', '-', '×', '÷'].map(op => (
+
+      {focused && (
+        <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex overflow-hidden rounded-lg border border-border/80 bg-card/95 shadow-sm">
+          {[
+            ['+', '+'],
+            ['−', '-'],
+            ['×', '*'],
+            ['÷', '/'],
+          ].map(([label, operator]) => (
             <button
-              key={op}
+              key={operator}
               type="button"
-              onMouseDown={e => {
-                e.preventDefault()
-                appendOperator(op)
-              }}
-              className="px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted/80 active:bg-muted border-r border-border/50 transition cursor-pointer"
+              onMouseDown={event => { event.preventDefault(); appendOperator(operator) }}
+              className="border-r border-border/50 px-2 py-1.5 text-xs font-semibold hover:bg-muted/80"
             >
-              {op}
+              {label}
             </button>
           ))}
           <button
             type="button"
-            onMouseDown={e => {
-              e.preventDefault()
-              if (internalRef.current) {
-                handleEvaluate({ target: internalRef.current })
-              }
-            }}
-            className="px-2.5 py-1.5 text-xs font-bold text-blue-600 bg-blue-500/10 hover:bg-blue-500/20 active:bg-blue-500/30 transition cursor-pointer"
+            onMouseDown={event => { event.preventDefault(); evaluate() }}
+            className="bg-blue-500/10 px-2.5 py-1.5 text-xs font-bold text-blue-600 hover:bg-blue-500/20"
           >
             =
           </button>
