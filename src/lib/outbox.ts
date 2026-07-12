@@ -429,9 +429,9 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
   'recurringPayment:add': (op) => api.addRecurringPayment({ ...(op.payload as Partial<RecurringPayment>), id: op.targetId } as Omit<RecurringPayment, 'id'> & { id?: string }),
   'recurringPayment:update': (op) => api.updateRecurringPayment(op.targetId, op.payload as unknown as RecurringPayment),
   'recurringPayment:delete': (op) => api.deleteRecurringPayment(op.targetId),
-  'recurringPayment:toggle': (op) => api.toggleRecurringPayment(op.targetId),
+  'recurringPayment:toggle': (op) => api.toggleRecurringPayment(op.targetId, typeof op.payload?.active === 'boolean' ? op.payload.active : undefined),
 
-  'wishlistItem:add': (op) => api.addWishlistItem(op.payload as Partial<WishlistItem>),
+  'wishlistItem:add': (op) => api.addWishlistItem(op.payload as Partial<WishlistItem>, op.id),
   'wishlistItem:update': (op) => api.updateWishlistItem(Number(op.targetId), op.payload as unknown as WishlistItem),
   'wishlistItem:delete': (op) => api.deleteWishlistItem(Number(op.targetId)),
   'wishlistItem:purchase': (op) => api.purchaseWishlistItem(Number(op.targetId)),

@@ -23,9 +23,13 @@ export async function addRecurringPayment(payment: Omit<RecurringPayment, 'id'> 
   return deobfuscateRecurringPayment(data)
 }
 
-export async function toggleRecurringPayment(id: string): Promise<RecurringPayment> {
+export async function toggleRecurringPayment(id: string, active?: boolean): Promise<RecurringPayment> {
   const data = await request<WireRecurringPayment>(`/recurring-payments/${id}/toggle`, {
     method: 'PUT',
+    // Send the absolute desired state so a coalesced/retried toggle from the offline outbox
+    // is idempotent (the server sets the value rather than flipping it). Omitted only for
+    // any legacy caller with no known target state (server falls back to a relative flip).
+    ...(typeof active === 'boolean' ? jsonBody({ active }) : {}),
     errorMessage: 'Failed to toggle recurring payment',
   })
   invalidateCache()

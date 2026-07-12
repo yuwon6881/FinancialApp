@@ -210,11 +210,14 @@ describe('drainQueue — break conditions', () => {
     expect(h.calls.reTrigger).toBe(0) // queue backed off, no re-trigger
   })
 
-  it('drops an op with no registered dispatch handler and continues', async () => {
+  it('surfaces an op with no registered dispatch handler to failedOps instead of dropping it', async () => {
     const h = makeHarness({ resolveDispatch: () => undefined }, [op({ id: 'a' }), op({ id: 'b' })])
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
     await drainQueue(h.deps)
-    expect(h.queue).toHaveLength(0) // both dropped
+    expect(h.queue).toHaveLength(0) // removed from the live queue
+    expect(h.calls.emitFailureToast).toBe(2) // but the user is told, not silently dropped
+    expect(h.failedOps.map(o => o.id)).toEqual(['a', 'b'])
+    expect(h.failedOps[0].lastError).toContain('No sync handler')
     spy.mockRestore()
   })
 })

@@ -330,7 +330,15 @@ function App() {
   // heartbeat all touch it); the timers/listeners live in useAutoLock below.
   const lastUnlockedTimeRef = useRef<number>(0)
   const [isLocked, setIsLocked] = useState<boolean>(() => {
-    return sessionStorage.getItem('session_locked') === 'true'
+    // This tab's own record wins if present (it went through login/unlock/lock here).
+    const tabState = sessionStorage.getItem('session_locked')
+    if (tabState === 'true') return true
+    if (tabState === 'false') return false
+    // Fresh tab / PWA relaunch with no in-tab record: fail safe to the last known
+    // cross-tab lock state. Without this, a new tab starts with empty sessionStorage
+    // (isLocked=false) and — while offline, where no 423 ever arrives to re-lock it —
+    // boots straight into cached financial data, bypassing a locked session.
+    return !!localStorage.getItem('auth_token') && localStorage.getItem('session_locked_global') === 'true'
   })
   const markSessionLocked = useCallback(() => {
     loadAllAbortRef.current?.abort()
@@ -338,7 +346,37 @@ function App() {
     setError(null)
     setIsLocked(true)
     sessionStorage.setItem('session_locked', 'true')
+    // Mirror to localStorage so the lock propagates to other open tabs (storage event
+    // below) and so a future fresh tab initializes as locked.
+    localStorage.setItem('session_locked_global', 'true')
   }, [setIsLocked])
+
+  const handleUnlocked = useCallback(() => {
+    lastUnlockedTimeRef.current = Date.now()
+    localStorage.setItem('last_active_time', Date.now().toString())
+    sessionStorage.setItem('session_locked', 'false')
+    localStorage.setItem('session_locked_global', 'false')
+    setIsLocked(false)
+    const hasCache = hasCachedKey(CACHE_KEYS.dashboardData)
+    const { month: cachedMonth, year: cachedYear } = getCachedDashboardPeriod()
+    loadAll(cachedMonth, cachedYear, hasCache)
+  }, [loadAll])
+
+  // Propagate a lock across open tabs. Locking is safe to mirror; unlocking is NOT —
+  // it requires this tab's own successful auth, so another tab unlocking must not
+  // silently unlock this one. This tab unlocks only via its own handleUnlocked.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      // Guard on this tab's own state: markSessionLocked re-writes the global flag, so acting
+      // when already locked could ping-pong storage events between tabs.
+      if (e.key === 'session_locked_global' && e.newValue === 'true'
+        && sessionStorage.getItem('session_locked') !== 'true') {
+        markSessionLocked()
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [markSessionLocked])
 
   const {
     pendingOps,
@@ -477,6 +515,7 @@ function App() {
     // Clear LocalStorage cache
     localStorage.removeItem('auth_username')
     sessionStorage.removeItem('session_locked')
+    localStorage.removeItem('session_locked_global')
     localStorage.removeItem('last_active_time')
     localStorage.removeItem(CACHE_KEYS.dashboardData)
     localStorage.removeItem(CACHE_KEYS.transactions)
@@ -573,6 +612,7 @@ function App() {
       isServerAwakeRef.current = true
       setIsLocked(false)
       sessionStorage.setItem('session_locked', 'false')
+      localStorage.setItem('session_locked_global', 'false')
 
       // Save to localStorage cache
       setCachedJSON(CACHE_KEYS.dashboardData, mergedDashboard)
@@ -636,6 +676,7 @@ function App() {
     localStorage.setItem('auth_token', newToken)
     localStorage.setItem('auth_username', newUsername)
     sessionStorage.setItem('session_locked', 'false')
+    localStorage.setItem('session_locked_global', 'false')
     const now = getCurrentTimeMs()
     localStorage.setItem('last_active_time', now.toString())
     lastUnlockedTimeRef.current = now
@@ -648,9 +689,11 @@ function App() {
     // belongs to the account that's actually logging in now.
     const cachedOpsBackup = localStorage.getItem('pending_operations_backup') || localStorage.getItem('pending_transactions_backup');
     if (cachedOpsBackup) {
+      let consumedOrCorrupt = false;
       try {
         const parsed = JSON.parse(cachedOpsBackup);
         if (parsed && parsed.owner === newUsername) {
+          consumedOrCorrupt = true;
           const backedUpOps = sanitizeQueuedOps(parsed.ops || parsed.transactions);
           if (backedUpOps.length > 0) {
             mutateQueue(() => backedUpOps);
@@ -659,17 +702,25 @@ function App() {
         }
       } catch (e) {
         console.error('Failed to parse backed up pending operations:', e);
+        consumedOrCorrupt = true; // corrupt backup is unrecoverable for any account
       }
-      localStorage.removeItem('pending_operations_backup');
-      localStorage.removeItem('pending_transactions_backup');
+      // Only clear a backup we actually consumed (owner match) or one that's corrupt. A backup
+      // owned by a *different* account is left in place so that account can restore its queued
+      // offline writes on its next login, instead of us silently discarding them here.
+      if (consumedOrCorrupt) {
+        localStorage.removeItem('pending_operations_backup');
+        localStorage.removeItem('pending_transactions_backup');
+      }
     }
 
     // Restore any backed up drafts the same way, gated on the same owner check.
     const cachedDraftBackup = localStorage.getItem('draft_transactions_backup');
     if (cachedDraftBackup) {
+      let consumedOrCorrupt = false;
       try {
         const parsed = JSON.parse(cachedDraftBackup);
         if (parsed && parsed.owner === newUsername) {
+          consumedOrCorrupt = true;
           const backedUpDrafts = sanitizeTransactions(parsed.transactions);
           if (backedUpDrafts.length > 0) {
             setDraftTransactions(backedUpDrafts);
@@ -678,8 +729,11 @@ function App() {
         }
       } catch (e) {
         console.error('Failed to parse backed up draft transactions:', e);
+        consumedOrCorrupt = true;
       }
-      localStorage.removeItem('draft_transactions_backup');
+      if (consumedOrCorrupt) {
+        localStorage.removeItem('draft_transactions_backup');
+      }
     }
 
     // Ops that had already exhausted their retries before the logout get
@@ -688,9 +742,11 @@ function App() {
     // to fail is presumably fixed now that the user has logged back in.
     const cachedFailedBackup = localStorage.getItem('failed_operations_backup');
     if (cachedFailedBackup) {
+      let consumedOrCorrupt = false;
       try {
         const parsed = JSON.parse(cachedFailedBackup);
         if (parsed && parsed.owner === newUsername) {
+          consumedOrCorrupt = true;
           const backedUpFailed = sanitizeQueuedOps(parsed.ops).map(op => ({ ...op, retryCount: 0 }));
           if (backedUpFailed.length > 0) {
             mutateQueue(prev => {
@@ -702,8 +758,11 @@ function App() {
         }
       } catch (e) {
         console.error('Failed to parse backed up failed operations:', e);
+        consumedOrCorrupt = true;
       }
-      localStorage.removeItem('failed_operations_backup');
+      if (consumedOrCorrupt) {
+        localStorage.removeItem('failed_operations_backup');
+      }
     }
 
     // Restore any modal that was mid-edit when the session was interrupted --
@@ -1449,13 +1508,29 @@ function App() {
     )
   }
 
+  // When locked, render ONLY the lock screen. The previous design layered the lock as a
+  // blur overlay while the entire app tree (TopNav, balances, every transaction) stayed
+  // mounted in the DOM — readable via devtools, the accessibility tree, or automation
+  // despite the "lock". Not mounting the sensitive tree at all is the actual protection.
+  // App-level hooks (outbox, auto-lock, heartbeat) live above this return and keep running.
+  if (isLocked && !!token) {
+    return (
+      <AppProvider value={appContextValue}>
+        <div className="app-shell min-h-screen text-foreground flex flex-col selection:bg-blue-500/20 selection:text-blue-500">
+          <ToastViewport toasts={toasts} onDismiss={dismissToast} />
+          <LockScreen isOpen onUnlocked={handleUnlocked} onSignOut={handleLogout} />
+        </div>
+      </AppProvider>
+    )
+  }
+
   return (
     <AppProvider value={appContextValue}>
     <div className="app-shell min-h-screen text-foreground flex flex-col selection:bg-blue-500/20 selection:text-blue-500">
-      
+
       <ToastViewport toasts={toasts} onDismiss={dismissToast} />
 
-      <TopNav 
+      <TopNav
         activeTab={activeTab} 
         onTabChange={setActiveTab} 
         onQuickAction={handleQuickAction}
@@ -1742,15 +1817,7 @@ function App() {
 
       <LockScreen
         isOpen={isLocked && !!token}
-        onUnlocked={() => {
-          lastUnlockedTimeRef.current = Date.now()
-          localStorage.setItem('last_active_time', Date.now().toString())
-          sessionStorage.setItem('session_locked', 'false')
-          setIsLocked(false)
-          const hasCache = hasCachedKey(CACHE_KEYS.dashboardData);
-          const { month: cachedMonth, year: cachedYear } = getCachedDashboardPeriod();
-          loadAll(cachedMonth, cachedYear, hasCache);
-        }}
+        onUnlocked={handleUnlocked}
         onSignOut={handleLogout}
       />
 
