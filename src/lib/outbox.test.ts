@@ -1,5 +1,14 @@
-import { describe, it, expect } from 'vitest'
-import { applyOpsToList, enqueue, type QueuedOp } from './outbox'
+import { describe, it, expect, vi } from 'vitest'
+
+// Mock the API layer so we can assert exactly what each DISPATCH handler forwards
+// (and to avoid api/client.ts's window.fetch import side effect under jsdom).
+vi.mock('./api', () => ({
+  toggleRecurringPayment: vi.fn(async () => ({})),
+  addWishlistItem: vi.fn(async () => ({ id: 1 })),
+}))
+
+import { applyOpsToList, enqueue, DISPATCH, type QueuedOp } from './outbox'
+import * as api from './api'
 
 interface TestItem {
   id: string | number
@@ -30,6 +39,29 @@ function makeOp(overrides: Partial<QueuedOp>): QueuedOp {
     ...overrides,
   }
 }
+
+describe('DISPATCH idempotency wiring', () => {
+  it('forwards the absolute active state for a recurring toggle so retries are idempotent', async () => {
+    await DISPATCH['recurringPayment:toggle'](makeOp({
+      entity: 'recurringPayment', type: 'toggle', targetId: 'rec-1', payload: { active: false },
+    }))
+    expect(api.toggleRecurringPayment).toHaveBeenCalledWith('rec-1', false)
+  })
+
+  it('omits the active arg for a legacy toggle op with no payload (server relative-flips)', async () => {
+    await DISPATCH['recurringPayment:toggle'](makeOp({
+      entity: 'recurringPayment', type: 'toggle', targetId: 'rec-1', payload: undefined,
+    }))
+    expect(api.toggleRecurringPayment).toHaveBeenCalledWith('rec-1', undefined)
+  })
+
+  it('passes the stable op id as the wishlist add idempotency key', async () => {
+    await DISPATCH['wishlistItem:add'](makeOp({
+      id: 'op-stable-1', entity: 'wishlistItem', type: 'add', targetId: '-42', payload: { name: 'Camera' },
+    }))
+    expect(api.addWishlistItem).toHaveBeenCalledWith({ name: 'Camera' }, 'op-stable-1')
+  })
+})
 
 describe('applyOpsToList', () => {
   it('prepends a new item for an add op and marks it pending while uncompleted', () => {

@@ -97,9 +97,14 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
         const dispatchFn = deps.resolveDispatch(nextOp)
         if (!dispatchFn) {
           console.error(`No dispatch handler for ${nextOp.entity}:${nextOp.type}`)
-          // Drop just this op by id (never by index): a concurrent enqueue may
-          // have shifted positions while we were in this iteration.
+          // No handler exists for this entity/type (e.g. a corrupted or migrated cache entry).
+          // Surface it as a failed op with a toast rather than silently dropping it -- a silent
+          // drop is invisible data loss, and it hides a real enqueue/migration bug from us.
+          // Remove by id (never index): a concurrent enqueue may have shifted positions.
+          const err = new Error(`No sync handler for ${nextOp.entity}:${nextOp.type}`)
+          deps.emitFailureToast(nextOp, err)
           deps.mutateQueue(prev => prev.filter(item => item.id !== nextOp.id))
+          deps.addFailedOp({ ...nextOp, lastError: getErrorMessage(err, String(err)) })
           continue
         }
 

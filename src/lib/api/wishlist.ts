@@ -13,10 +13,12 @@ export function fetchWishlist(signal?: AbortSignal): Promise<WishlistItem[]> {
   }, { signal, staleTime: 120_000 })
 }
 
-export async function addWishlistItem(item: Partial<WishlistItem>): Promise<WishlistItem> {
+export async function addWishlistItem(item: Partial<WishlistItem>, clientKey?: string): Promise<WishlistItem> {
   const data = await request<WireWishlistItem>('/wishlist', {
     method: 'POST',
-    ...jsonBody({ ...item, price: obfuscateAmount(item.price ?? 0) }),
+    // clientKey is the stable outbox op id: sending it lets the server dedupe a lost-response
+    // retry to the already-created row instead of inserting a duplicate wishlist item.
+    ...jsonBody({ ...item, price: obfuscateAmount(item.price ?? 0), ...(clientKey ? { clientKey } : {}) }),
     errorMessage: 'Failed to create wishlist item',
   })
   invalidateCache()
