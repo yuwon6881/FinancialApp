@@ -1,5 +1,9 @@
 export const evaluateMathString = (input: string): number | null => {
   try {
+    // Accept both the intended calculator glyphs and their legacy mojibake forms.
+    input = input
+      .replace(/\u00d7|\u00c3\u2014/g, '*')
+      .replace(/\u00f7|\u00c3\u00b7/g, '/')
     // Replace nice symbols back to standard ones for JS evaluation
     let sanitized = input.replace(/×/g, '*').replace(/÷/g, '/')
     
