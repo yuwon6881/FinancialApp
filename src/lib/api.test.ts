@@ -39,6 +39,7 @@ function mockDashboardFetch() {
 beforeEach(() => {
   vi.resetModules()
   localStorage.clear()
+  sessionStorage.clear()
 })
 
 afterEach(() => {
@@ -139,8 +140,7 @@ describe('chatWithAi state contract', () => {
 })
 
 describe('split API client compatibility', () => {
-  it('adds the bearer token to authenticated resource requests', async () => {
-    localStorage.setItem('auth_token', 'test-token')
+  it('does not attach a bearer header on the web (cookie-authenticated)', async () => {
     const fetchMock = vi.fn(() => Promise.resolve(new Response('[]', { status: 200 })))
     vi.stubGlobal('fetch', fetchMock)
     Object.defineProperty(window, 'fetch', { value: fetchMock, configurable: true })
@@ -148,9 +148,31 @@ describe('split API client compatibility', () => {
     const api = await import('./api')
     await api.fetchTransactions()
 
-    expect(fetchMock).toHaveBeenCalledOnce()
     const [, requestInit] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
-    expect(requestInit.headers).toMatchObject({ Authorization: 'Bearer test-token' })
+    const headers = new Headers(requestInit.headers)
+    expect(headers.get('Authorization')).toBeNull()
+  })
+
+  it('adds the bearer token to authenticated requests on native', async () => {
+    vi.doMock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => true } }))
+    const secureStore = new Map<string, string>([['auth_token', 'test-token']])
+    vi.doMock('@aparajita/capacitor-secure-storage', () => ({
+      SecureStorage: {
+        get: vi.fn(async (key: string) => secureStore.get(key) ?? null),
+        set: vi.fn(async (key: string, value: string) => { secureStore.set(key, value) }),
+        remove: vi.fn(async (key: string) => { secureStore.delete(key) }),
+      },
+    }))
+    const fetchMock = vi.fn(() => Promise.resolve(new Response('[]', { status: 200 })))
+    vi.stubGlobal('fetch', fetchMock)
+    Object.defineProperty(window, 'fetch', { value: fetchMock, configurable: true })
+
+    const api = await import('./api')
+    await api.fetchTransactions()
+
+    const [, requestInit] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    const headers = new Headers(requestInit.headers)
+    expect(headers.get('Authorization')).toBe('Bearer test-token')
   })
 
   it('evicts a rejected cached request so the next call can retry', async () => {

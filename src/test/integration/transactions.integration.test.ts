@@ -29,13 +29,20 @@ describe('transactions integration (wire contract)', () => {
     expect(deobfuscateAmount(body.amount as string)).toBe(-42.5)
   })
 
-  it('injects the bearer token from localStorage into the request headers', async () => {
-    localStorage.setItem('auth_token', 'test-token-abc')
+  it('does not send a bearer Authorization header on the web (cookie-authenticated)', async () => {
+    await addTransaction(draftTx())
+
+    const headers = lastRequest['POST /transactions'].headers
+    expect(headers.get('Authorization')).toBeNull()
+  })
+
+  it('echoes the csrf_token cookie in the X-CSRF-Token header on mutations', async () => {
+    document.cookie = 'csrf_token=csrf-abc-123'
 
     await addTransaction(draftTx())
 
     const headers = lastRequest['POST /transactions'].headers
-    expect(headers.get('Authorization')).toBe('Bearer test-token-abc')
+    expect(headers.get('X-CSRF-Token')).toBe('csrf-abc-123')
   })
 
   it('round-trips a created transaction through the paged listing', async () => {

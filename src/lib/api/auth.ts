@@ -1,6 +1,7 @@
 import type { AssertionOptionsJson, CreateOptionsJson } from '../webauthn'
 import type { LoginCredentials, RegisterCredentials } from '../apiTypes'
 import { apiFetch, invalidateCache, jsonBody, request, requestVoid } from './client'
+import { tokenStore } from '../auth'
 
 export function getDeviceInfo(): { deviceId: string; deviceName: string } {
   let deviceId = localStorage.getItem('deviceId')
@@ -46,7 +47,7 @@ export async function login(credentials: LoginCredentials): Promise<LoginResult>
     errorMessage: 'Invalid credentials',
   })
   if (!('requiresTwoFactor' in data)) {
-    localStorage.setItem('auth_token', data.token)
+    await tokenStore.setToken(data.token)
     invalidateCache()
   }
   return data
@@ -59,7 +60,7 @@ export async function verifyTwoFactorLogin(pendingToken: string, code: string): 
     authenticated: false,
     errorMessage: 'Invalid code',
   })
-  localStorage.setItem('auth_token', data.token)
+  await tokenStore.setToken(data.token)
   invalidateCache()
   return data
 }
@@ -79,7 +80,8 @@ export async function logout(): Promise<void> {
   } catch (error) {
     console.error('Logout request failed', error)
   } finally {
-    localStorage.removeItem('auth_token')
+    await tokenStore.clearToken()
+    sessionStorage.removeItem('csrf_token')
     invalidateCache()
   }
 }
@@ -165,7 +167,7 @@ export async function verifyFingerprintLogin(challengeId: string, credential: un
     authenticated: false,
     errorMessage: 'Verification failed',
   })
-  localStorage.setItem('auth_token', data.token)
+  await tokenStore.setToken(data.token)
   invalidateCache()
   return data
 }

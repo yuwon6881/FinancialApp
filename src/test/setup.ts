@@ -11,6 +11,7 @@ server.listen({ onUnhandledRequest: 'bypass' })
 beforeEach(() => {
   resetBackend()
   localStorage.clear()
+  sessionStorage.clear()
 })
 
 afterEach(() => {

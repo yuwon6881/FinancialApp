@@ -1,30 +1,21 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { motion } from 'framer-motion'
+import React from 'react'
 import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Bell, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap } from 'lucide-react'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { SmartAmountInput } from './ui/SmartAmountInput'
 import { RowSyncBadge } from './ui/RowSyncBadge'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
-import { getCycleRangeDates, getStartOfNCyclesAgo, getCurrentCycleYearAndMonth, formatDateForApi } from '../lib/cycle'
-import * as api from '../lib/api'
 import type { CategoryCleanupSuggestion } from '../lib/api'
 import type { ToastTone } from './ui/ToastViewport'
 import { ToggleButton } from './ui/ToggleButton'
 import { TwoFactorSection } from './TwoFactorSection'
 import { ChangePasswordSection } from './ChangePasswordSection'
 import { CollapsibleBody } from './ui/CollapsibleBody'
-import { PerimeterBeam } from './ui/PerimeterBeam'
-import { getErrorMessage } from '../lib/errors'
-import { rebalanceAllocations, type AllocationKey } from '../lib/allocations'
 import { useAppContext } from '../contexts/AppContext'
 import { ActiveDevicesSection } from './settings/ActiveDevicesSection'
 import { FingerprintSection } from './settings/FingerprintSection'
 
-// How far back to look when flagging a category as unused/rarely used. Long enough that
-// categories only touched a couple times a year (insurance, annual renewals) aren't
-// mislabeled after one quiet cycle, short enough to reflect current habits.
-const USAGE_LOOKBACK_CYCLES = 6
+import { useSettingsView } from './settings/view/useSettingsView'
 
 interface SettingsViewProps {
   dashboardData: DashboardData | null
@@ -51,14 +42,7 @@ interface SettingsViewProps {
   activeSyncId?: string | null
   deletingId?: string | null
   onToast?: (message: string, title?: string, tone?: ToastTone) => void
-  onNavigateToLedger?: (options: {
-    category?: string | null
-    date?: string | null
-    txType?: 'inflow' | 'outflow' | null
-    range?: 'monthly' | '3month' | '6month' | 'yearly'
-    highlightedTxId?: string | null
-    showAllCycles?: boolean
-  }) => void
+  onNavigateToLedger?: (options: any) => void
   onClearLocalFinancialData?: () => void
 }
 
@@ -70,295 +54,22 @@ const getDayWithSuffix = (day: number) => {
   return 'th'
 }
 
-export const SettingsView: React.FC<SettingsViewProps> = ({
-  dashboardData,
-  categoriesList,
-  darkMode: darkModeProp,
-  hideSensitive: hideSensitiveProp,
-  onUpdateSettings,
-  onAddCategory,
-  onDeleteCategory,
-  onApplyCategoryCleanupSuggestion,
-  notifyOnLoginEnabled = true,
-  onToggleNotifyOnLogin,
-  activeSyncId: activeSyncIdProp,
-  deletingId: deletingIdProp,
-  onToast: onToastProp,
-  onNavigateToLedger,
-  onClearLocalFinancialData
-}) => {
+export const SettingsView: React.FC<SettingsViewProps> = (props) => {
   const app = useAppContext()
-  const darkMode = darkModeProp ?? app.darkMode
-  const hideSensitive = hideSensitiveProp ?? app.hideSensitive
-  const activeSyncId = activeSyncIdProp ?? app.activeSyncId
-  const deletingId = deletingIdProp ?? app.deletingId
-  const onToast = onToastProp ?? app.showToast
-  const isCatSyncing = (catId: string) => {
-    return activeSyncId !== null && activeSyncId !== undefined && String(activeSyncId) === String(catId)
-  }
+  const darkMode = props.darkMode ?? app.darkMode
+  const hideSensitive = props.hideSensitive ?? app.hideSensitive
+  const activeSyncId = props.activeSyncId ?? app.activeSyncId
+  const deletingId = props.deletingId ?? app.deletingId
+  const onToast = props.onToast ?? app.showToast
 
-  const isCatDeleting = (catId: string) => {
-    if (deletingId && String(deletingId) === String(catId)) return true
-    const found = categoriesList.find(c => String(c.id) === String(catId))
-    return Boolean(found?.isPendingDelete)
-  }
-
-  const activeSettings = dashboardData?.setting || {
-    targetStabilityFund: 10000,
-    selectedMonth: 'Jun',
-    selectedYear: 2026,
-    essentialsAlloc: 0.5,
-    growthAlloc: 0.25,
-    stabilityAlloc: 0.15,
-    rewardsAlloc: 0.1,
-    cycleDay: 28,
+  const view = useSettingsView({
+    ...props,
     darkMode,
     hideSensitive,
-    currency: 'USD'
-  }
-
-  const [targetInput, setTargetInput] = useState('')
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [essentialsAllocInput, setEssentialsAllocInput] = useState('')
-  const [growthAllocInput, setGrowthAllocInput] = useState('')
-  const [stabilityAllocInput, setStabilityAllocInput] = useState('')
-  const [rewardsAllocInput, setRewardsAllocInput] = useState('')
-  const [stabilityOverflowRedirectInput, setStabilityOverflowRedirectInput] = useState('Split: Growth 50%, Rewards 50%')
-  const [cycleDayInput, setCycleDayInput] = useState('28')
-  const [currencyInput, setCurrencyInput] = useState('USD')
-  const [newCatName, setNewCatName] = useState('')
-  const [lockedAllocations, setLockedAllocations] = useState<AllocationKey[]>([])
-  const [globalAllocLock, setGlobalAllocLock] = useState(true)
-
-  const toggleLock = (key: AllocationKey) => {
-    setLockedAllocations(prev => {
-      if (prev.includes(key)) return prev.filter(k => k !== key)
-      if (prev.length >= 2) return prev
-      return [...prev, key]
-    })
-  }
-  const [showUsageDetails, setShowUsageDetails] = useState(false)
-  const [categoriesOpen, setCategoriesOpen] = useState(false)
-  const [usageTransactions, setUsageTransactions] = useState<{ category: string }[] | null>(null)
-  const [usageError, setUsageError] = useState<string | null>(null)
-  const [cleanupSuggestions, setCleanupSuggestions] = useState<CategoryCleanupSuggestion[]>([])
-  const [cleanupReviewOpen, setCleanupReviewOpen] = useState(false)
-  const [isReviewingCleanup, setIsReviewingCleanup] = useState(false)
-  const [applyingCleanupId, setApplyingCleanupId] = useState<string | null>(null)
-  const [cleanupReviewError, setCleanupReviewError] = useState<string | null>(null)
-  const [consolidateTargets, setConsolidateTargets] = useState<Record<string, string>>({})
-
-  useEffect(() => {
-    let cancelled = false
-    // Anchored to today's real cycle, not activeSettings.selectedMonth/selectedYear --
-    // that field tracks whatever cycle was last navigated to on the Dashboard/Ledger,
-    // which is a different concept ("last viewed") and would otherwise make this
-    // "recent usage" window silently drift to a stale period if the user had been
-    // browsing an old month elsewhere before opening Settings.
-    const { year: activeYear, monthIndex: activeMonthIdx } = getCurrentCycleYearAndMonth(activeSettings.cycleDay)
-
-    const startDate = getStartOfNCyclesAgo(activeYear, activeMonthIdx, activeSettings.cycleDay, USAGE_LOOKBACK_CYCLES)
-    const endDate = getCycleRangeDates(activeYear, activeMonthIdx, activeSettings.cycleDay).end
-
-    // pageSize is clamped to 500 server-side; comfortably covers 6 cycles for normal usage volumes.
-    api.fetchPagedTransactions({
-      page: 1,
-      pageSize: 500,
-      startDate: formatDateForApi(startDate),
-      endDate: formatDateForApi(endDate)
-    })
-      .then(result => {
-        if (!cancelled) setUsageTransactions(result.items.filter(t => !t.isPendingDelete))
-      })
-      .catch(() => {
-        if (!cancelled) setUsageError('Could not load category usage.')
-      })
-    return () => { cancelled = true }
-  }, [activeSettings.cycleDay])
-
-  useEffect(() => {
-    setTargetInput(activeSettings.targetStabilityFund.toString())
-    setEssentialsAllocInput((activeSettings.essentialsAlloc * 100).toString())
-    setGrowthAllocInput((activeSettings.growthAlloc * 100).toString())
-    setStabilityAllocInput((activeSettings.stabilityAlloc * 100).toString())
-    setRewardsAllocInput((activeSettings.rewardsAlloc * 100).toString())
-    setCycleDayInput(activeSettings.cycleDay.toString())
-    setStabilityOverflowRedirectInput(activeSettings.stabilityOverflowRedirect || 'Split: Growth 50%, Rewards 50%')
-    setCurrencyInput(activeSettings.currency || 'USD')
-  }, [
-    activeSettings.targetStabilityFund,
-    activeSettings.essentialsAlloc,
-    activeSettings.growthAlloc,
-    activeSettings.stabilityAlloc,
-    activeSettings.rewardsAlloc,
-    activeSettings.cycleDay,
-    activeSettings.stabilityOverflowRedirect,
-    activeSettings.currency
-  ])
-
-  // Rounded to avoid IEEE-754 float noise
-  const allocSum = useMemo(() => {
-    const e = parseFloat(essentialsAllocInput) || 0
-    const g = parseFloat(growthAllocInput) || 0
-    const s = parseFloat(stabilityAllocInput) || 0
-    const r = parseFloat(rewardsAllocInput) || 0
-    return Math.round(e + g + s + r)
-  }, [essentialsAllocInput, growthAllocInput, stabilityAllocInput, rewardsAllocInput])
-
-  const handleAllocationChange = (changedKey: AllocationKey, newValue: number) => {
-    const current = {
-      essentials: parseFloat(essentialsAllocInput) || 0,
-      growth: parseFloat(growthAllocInput) || 0,
-      stability: parseFloat(stabilityAllocInput) || 0,
-      rewards: parseFloat(rewardsAllocInput) || 0
-    }
-
-    const newAlloc = rebalanceAllocations(current, changedKey, newValue, lockedAllocations)
-    if (!newAlloc) return
-
-    setEssentialsAllocInput(newAlloc.essentials.toString())
-    setGrowthAllocInput(newAlloc.growth.toString())
-    setStabilityAllocInput(newAlloc.stability.toString())
-    setRewardsAllocInput(newAlloc.rewards.toString())
-  }
-
-  const handleSaveSettings = (e: React.FormEvent) => {
-    e.preventDefault()
-    const newErrors: Record<string, string> = {}
-    
-    const target = parseFloat(targetInput)
-    if (!targetInput.trim()) {
-      newErrors.target = 'Target Stability Fund Limit is required.'
-    } else if (isNaN(target) || target < 0) {
-      newErrors.target = 'Please enter a valid target limit.'
-    }
-
-    if (!essentialsAllocInput.trim()) newErrors.essentials = 'Essentials allocation is required.'
-    if (!growthAllocInput.trim()) newErrors.growth = 'Growth allocation is required.'
-    if (!stabilityAllocInput.trim()) newErrors.stability = 'Stability allocation is required.'
-    if (!rewardsAllocInput.trim()) newErrors.rewards = 'Rewards allocation is required.'
-
-    if (allocSum !== 100) {
-      newErrors.allocationSum = `Allocations must total exactly 100% (currently ${allocSum}%).`
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors)
-      return
-    }
-    setErrors({})
-
-    const cycle = parseInt(cycleDayInput)
-    if (isNaN(cycle)) return
-
-    onUpdateSettings({
-      targetStabilityFund: target,
-      essentialsAlloc: (parseFloat(essentialsAllocInput) || 0) / 100,
-      growthAlloc: (parseFloat(growthAllocInput) || 0) / 100,
-      stabilityAlloc: (parseFloat(stabilityAllocInput) || 0) / 100,
-      rewardsAlloc: (parseFloat(rewardsAllocInput) || 0) / 100,
-      stabilityOverflowRedirect: stabilityOverflowRedirectInput,
-      cycleDay: cycle,
-      currency: currencyInput
-    })
-  }
-
-  const handleAddCategory = () => {
-    if (hideSensitive) return
-    const trimmed = newCatName.trim()
-    if (!trimmed) return
-
-    const lower = trimmed.toLowerCase()
-    if (lower === 'transfer' || lower === 'adjustment') return
-    if (categoriesList.some(c => c.name.trim().toLowerCase() === lower)) return
-
-    onAddCategory({ name: trimmed })
-    setNewCatName('')
-  }
-
-  const trimmedCatName = newCatName.trim()
-  const isCatEmpty = trimmedCatName.length === 0
-  const isCatDuplicate = useMemo(() => {
-    if (isCatEmpty) return false
-    return categoriesList.some(c => c.name.trim().toLowerCase() === trimmedCatName.toLowerCase())
-  }, [categoriesList, trimmedCatName, isCatEmpty])
-
-  const isCatReserved = useMemo(() => {
-    const lower = trimmedCatName.toLowerCase()
-    return lower === 'transfer' || lower === 'adjustment'
-  }, [trimmedCatName])
-
-  const isCatValid = !isCatEmpty && !isCatDuplicate && !isCatReserved && !hideSensitive
-
-  const handleDeleteCategory = (id: string) => {
-    if (hideSensitive) return
-    onDeleteCategory(id)
-  }
-
-  const handleAiCleanupReview = async () => {
-    if (hideSensitive || isReviewingCleanup) return
-    setCategoriesOpen(true)
-    setCleanupReviewOpen(true)
-    setCleanupReviewError(null)
-    setIsReviewingCleanup(true)
-    try {
-      const result = await api.reviewCategoryCleanup()
-      setCleanupSuggestions(result.suggestions)
-      if (result.suggestions.length === 0) {
-        onToast?.('AI did not find category cleanup changes worth proposing.', 'AI Review Complete', 'info')
-      }
-    } catch (err: unknown) {
-      console.error(err)
-      setCleanupReviewError(getErrorMessage(err, 'Could not review categories.'))
-      onToast?.(getErrorMessage(err, 'Could not review categories.'), 'AI Review Failed', 'error')
-    } finally {
-      setIsReviewingCleanup(false)
-    }
-  }
-
-  const handleApplyCleanupSuggestion = async (suggestion: CategoryCleanupSuggestion) => {
-    if (hideSensitive || applyingCleanupId) return
-    if (suggestion.type === 'consolidate' && !consolidateTargets[suggestion.id]) return
-    setApplyingCleanupId(suggestion.id)
-    try {
-      await onApplyCategoryCleanupSuggestion?.(suggestion, consolidateTargets[suggestion.id])
-      setCleanupSuggestions(prev => prev.filter(item => item.id !== suggestion.id))
-      setConsolidateTargets(prev => {
-        const next = { ...prev }
-        delete next[suggestion.id]
-        return next
-      })
-    } finally {
-      setApplyingCleanupId(null)
-    }
-  }
-
-  const visibleCategories = categoriesList.filter(cat => {
-    const lower = cat.name.toLowerCase()
-    return lower !== 'transfer' && lower !== 'adjustment'
+    activeSyncId,
+    deletingId,
+    onToast,
   })
-
-  const categoryUsage = useMemo(() => {
-    if (!usageTransactions) return null
-
-    // usageTransactions is already fetched bounded to the lookback window, so every
-    // entry here counts toward that window's usage -- no per-tx date check needed.
-    const countByName = new Map<string, number>()
-    for (const cat of visibleCategories) {
-      countByName.set(cat.name.trim().toLowerCase(), 0)
-    }
-
-    for (const tx of usageTransactions) {
-      const key = tx.category.trim().toLowerCase()
-      if (countByName.has(key)) countByName.set(key, countByName.get(key)! + 1)
-    }
-
-    return visibleCategories
-      .map(cat => ({ category: cat, count: countByName.get(cat.name.trim().toLowerCase())! }))
-      .sort((a, b) => a.count - b.count)
-  }, [usageTransactions, visibleCategories])
-
-  const unusedCategoryCount = categoryUsage ? categoryUsage.filter(c => c.count === 0).length : 0
 
   return (
     <div className="space-y-6 soft-rise">
@@ -373,7 +84,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.65fr)] gap-6">
-        <form noValidate onSubmit={handleSaveSettings} className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-5">
+        <form noValidate onSubmit={view.handleSaveSettings} className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-5">
           <div className="flex items-center justify-between gap-3 border-b border-border/40 pb-3">
             <div>
               <h3 className="text-sm font-bold text-foreground">Financial Model</h3>
@@ -387,514 +98,388 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <SmartAmountInput
                 type="text"
                 disabled={hideSensitive}
-                value={targetInput}
+                value={view.targetInput}
                 onChange={e => {
-                  setTargetInput(e.target.value)
-                  if (errors.target) {
-                    setErrors(prev => ({ ...prev, target: '' }))
+                  view.setTargetInput(e.target.value)
+                  if (view.errors.target) {
+                    view.setErrors(prev => {
+                      const next = { ...prev }
+                      delete next.target
+                      return next
+                    })
                   }
                 }}
                 className={`w-full px-3 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
                   hideSensitive 
                     ? 'border-transparent text-transparent blur-sm select-none pointer-events-none' 
-                    : errors.target 
+                    : view.errors.target 
                       ? 'border-destructive focus:ring-destructive' 
                       : 'border-border focus:ring-blue-500'
                 }`}
               />
-              {errors.target && (
-                <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                  {errors.target}
-                </p>
+              {view.errors.target && (
+                <p className="text-[10px] text-destructive font-medium mt-1">{view.errors.target}</p>
               )}
             </label>
 
-            <label className="space-y-1">
-              <span className="text-xs font-semibold text-muted-foreground">Dashboard Currency</span>
+            <label className="space-y-1 block">
+              <span className="text-xs font-semibold text-muted-foreground block">Ledger Cycle Day</span>
               <CustomSelect
-                value={currencyInput}
-                onChange={val => setCurrencyInput(val)}
+                value={view.cycleDayInput}
+                onChange={val => view.setCycleDayInput(String(val))}
+                options={Array.from({ length: 28 }, (_, i) => ({
+                  value: (i + 1).toString(),
+                  label: `${i + 1}${getDayWithSuffix(i + 1)} of month`
+                }))}
+                className="w-full"
+              />
+            </label>
+
+            <label className="space-y-1 block">
+              <span className="text-xs font-semibold text-muted-foreground block">Default Account Currency</span>
+              <CustomSelect
+                value={view.currencyInput}
+                onChange={val => view.setCurrencyInput(String(val))}
                 options={[
                   { value: 'USD', label: 'USD ($)' },
-                  { value: 'MYR', label: 'MYR (RM)' },
-                  { value: 'CNY', label: 'CNY' },
-                  { value: 'EUR', label: 'EUR' },
-                  { value: 'GBP', label: 'GBP' },
-                  { value: 'SGD', label: 'SGD (S$)' }
+                  { value: 'EUR', label: 'EUR (€)' },
+                  { value: 'GBP', label: 'GBP (£)' }
                 ]}
                 className="w-full"
               />
             </label>
 
-            <label className="space-y-1 md:col-span-2">
-              <span className="text-xs font-semibold text-muted-foreground">Cycle Start Date</span>
+            <label className="space-y-1 block">
+              <span className="text-xs font-semibold text-muted-foreground block">Stability Fund Overflow Redirect</span>
               <CustomSelect
-                value={Number(cycleDayInput)}
-                onChange={val => setCycleDayInput(val.toString())}
-                options={Array.from({ length: 31 }, (_, i) => {
-                  const d = i + 1
-                  return { value: d, label: `${d}${getDayWithSuffix(d)}` }
-                })}
+                value={view.stabilityOverflowRedirectInput}
+                onChange={val => view.setStabilityOverflowRedirectInput(String(val))}
+                options={[
+                  { value: 'Split: Growth 50%, Rewards 50%', label: 'Split between Growth and Rewards' },
+                  { value: 'Redirect: Growth', label: 'All to Growth' },
+                  { value: 'Redirect: Rewards', label: 'All to Rewards' }
+                ]}
                 className="w-full"
               />
             </label>
           </div>
 
-          <div className="space-y-4 border-t border-border/30 pt-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="text-xs font-bold text-foreground">Allocation Split</h4>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Interact with sliders to auto-balance (total 100%).</p>
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between border-b border-border/40 pb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-foreground">Income Allocations</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${view.allocSum === 100 ? 'bg-blue-500/10 text-blue-500' : 'bg-destructive/15 text-destructive animate-pulse'}`}>
+                  {view.allocSum}%
+                </span>
               </div>
               <button
                 type="button"
-                onClick={() => setGlobalAllocLock(prev => !prev)}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                  globalAllocLock 
-                    ? 'text-blue-500 bg-blue-500/10 border border-blue-500/20' 
-                    : 'text-muted-foreground hover:bg-muted border border-border/40'
-                }`}
+                onClick={() => view.setGlobalAllocLock(!view.globalAllocLock)}
+                className="inline-flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground transition cursor-pointer"
               >
-                {globalAllocLock ? <Lock className="size-3.5" /> : <Unlock className="size-3.5" />}
-                {globalAllocLock ? 'Locked' : 'Unlocked'}
+                {view.globalAllocLock ? <Lock className="size-3" /> : <Unlock className="size-3" />}
+                {view.globalAllocLock ? 'Locked' : 'Unlocked'}
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-              {([
-                ['Essentials', essentialsAllocInput, 'essentials', 'accent-blue-500'],
-                ['Growth', growthAllocInput, 'growth', 'accent-green-500'],
-                ['Stability', stabilityAllocInput, 'stability', 'accent-purple-500'],
-                ['Rewards', rewardsAllocInput, 'rewards', 'accent-amber-500'],
-              ] satisfies Array<[string, string, AllocationKey, string]>).map(([label, value, key, accentClass]) => (
-                <label key={label} className="space-y-2 block">
-                  <div className="flex justify-between items-center text-[11px] font-bold">
-                    <span className="text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                      {label}
-                      <button 
-                        type="button"
-                        onClick={(e) => { e.preventDefault(); toggleLock(key); }}
-                        className={`p-1.5 rounded-md transition ${lockedAllocations.includes(key) ? 'text-blue-500 bg-blue-500/10 border border-blue-500/20 shadow-sm shadow-blue-500/10' : 'text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent hover:border-border/50'}`}
-                        title={lockedAllocations.includes(key) ? 'Unlock' : lockedAllocations.length >= 2 ? 'Max 2 locks reached' : 'Lock'}
-                      >
-                        {lockedAllocations.includes(key) ? <Lock className="size-3.5" /> : <Unlock className="size-3.5" />}
-                      </button>
-                    </span>
-                    <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md">{Number(value).toFixed(0)}%</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {(['essentials', 'growth', 'stability', 'rewards'] as const).map(key => {
+                const isLocked = view.lockedAllocations.includes(key)
+                const isMaxLocks = view.lockedAllocations.length >= 2 && !isLocked
+                const val = key === 'essentials' ? view.essentialsAllocInput : key === 'growth' ? view.growthAllocInput : key === 'stability' ? view.stabilityAllocInput : view.rewardsAllocInput
+                const setter = key === 'essentials' ? view.setEssentialsAllocInput : key === 'growth' ? view.setGrowthAllocInput : key === 'stability' ? view.setStabilityAllocInput : view.setRewardsAllocInput
+                return (
+                  <div key={key} className="space-y-1">
+                    <div className="flex items-center justify-between gap-1 text-[11px] font-semibold text-muted-foreground">
+                      <span className="capitalize">{key}</span>
+                      {!view.globalAllocLock && (
+                        <button
+                          type="button"
+                          disabled={isMaxLocks}
+                          onClick={() => view.toggleLock(key)}
+                          className="hover:text-foreground transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          {isLocked ? <Lock className="size-3 text-blue-500" /> : <Unlock className="size-3" />}
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative flex items-center">
+                      <input
+                        type="number"
+                        disabled={view.globalAllocLock}
+                        value={val}
+                        onChange={e => {
+                          const num = parseFloat(e.target.value) || 0
+                          if (num >= 0 && num <= 100) {
+                            setter(e.target.value)
+                            if (!view.globalAllocLock) {
+                              view.handleAllocationChange(key, num)
+                            }
+                          }
+                        }}
+                        className="w-full pr-7 px-3 py-1.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+                      />
+                      <span className="absolute right-3 text-xs font-semibold text-muted-foreground select-none pointer-events-none">%</span>
+                    </div>
                   </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    step="5"
-                    disabled={globalAllocLock || lockedAllocations.includes(key)}
-                    value={value}
-                    onChange={e => handleAllocationChange(key, parseFloat(e.target.value))}
-                    className={`w-full h-2 rounded-full cursor-pointer ${accentClass} bg-border disabled:opacity-50 disabled:cursor-not-allowed`}
-                  />
-                </label>
-              ))}
+                )
+              })}
             </div>
-            {errors.allocationSum && (
-              <p className="text-xs text-destructive font-medium mt-2 animate-in fade-in slide-in-from-top-1 duration-150">
-                {errors.allocationSum}
-              </p>
+            {view.errors.allocationSum && (
+              <p className="text-[10px] text-destructive font-semibold">{view.errors.allocationSum}</p>
             )}
           </div>
 
-          <div className="space-y-3 border-t border-border/30 pt-4 pb-2">
-            <div>
-              <h4 className="text-xs font-bold text-foreground">Stability Overflow Redirection</h4>
-              <p className="text-[11px] text-muted-foreground mt-0.5">When Stability limit is reached, overflow goes here.</p>
-            </div>
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mt-2">
-              {[
-                { value: 'Essentials 100%', label: '100% Essential' },
-                { value: 'Growth 100%', label: '100% Growth' },
-                { value: 'Rewards 100%', label: '100% Reward' },
-                { value: 'Split: Essentials 50%, Growth 50%', label: '50% Essential / 50% Growth' },
-                { value: 'Split: Essentials 50%, Rewards 50%', label: '50% Essential / 50% Reward' },
-                { value: 'Split: Growth 50%, Rewards 50%', label: '50% Growth / 50% Reward' }
-              ].map(opt => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setStabilityOverflowRedirectInput(opt.value)}
-                  className={`flex items-center justify-center text-center w-full h-full min-h-[48px] px-3 py-2 text-xs font-semibold rounded-xl border transition-all duration-200 ${
-                    stabilityOverflowRedirectInput === opt.value
-                      ? 'border-blue-500 bg-blue-500/10 text-blue-600 shadow-sm shadow-blue-500/10 ring-1 ring-blue-500/20'
-                      : 'border-border bg-background hover:border-border/80 text-muted-foreground hover:bg-muted/50'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+          <div className="flex justify-end pt-3">
+            <button
+              type="submit"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-xl shadow-lg shadow-blue-500/10 hover:shadow-blue-500/20 transition cursor-pointer"
+            >
+              <Save className="size-3.5" /> Save Rules
+            </button>
           </div>
-
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            type="submit"
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 text-white cursor-pointer transition duration-150"
-          >
-            <Save className="size-3.5" />
-            Save Configuration
-          </motion.button>
         </form>
 
         <div className="space-y-6">
-
-          <section className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs">
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => setCategoriesOpen(o => !o)}
-              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCategoriesOpen(o => !o) } }}
-              aria-expanded={categoriesOpen}
-              className="flex items-center justify-between gap-3 cursor-pointer"
-            >
-              <div className="min-w-0">
-                <h3 className="text-sm font-bold text-foreground">Transaction Categories</h3>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
-                  {visibleCategories.length} active categories.
-                  {categoryUsage && unusedCategoryCount > 0 && (
-                    <> · <span className="text-orange-500 font-semibold">{unusedCategoryCount} unused in last {USAGE_LOOKBACK_CYCLES} cycles</span></>
-                  )}
-                  {categoryUsage && unusedCategoryCount === 0 && visibleCategories.length > 0 && (
-                    <> · <span className="text-emerald-500 font-semibold">all used recently</span></>
-                  )}
-                </p>
+          <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-foreground">App Preferences</h3>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Customize display options.</p>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {categoryUsage && visibleCategories.length > 0 && (
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={e => { e.stopPropagation(); setShowUsageDetails(v => !v) }}
-                      className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-muted-foreground bg-background border border-border/60 hover:text-foreground hover:bg-muted transition cursor-pointer"
-                    >
-                      Usage
-                      {showUsageDetails ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
-                    </button>
-
-                    {showUsageDetails && (
-                      <div className="absolute right-[-80px] sm:right-0 top-full mt-2 w-72 max-w-[calc(100vw-32px)] md:w-80 z-50 bg-card border border-border/80 shadow-lg rounded-xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-150">
-                        <p className="text-[10px] text-muted-foreground leading-relaxed">
-                          Usage over the last {USAGE_LOOKBACK_CYCLES} cycles, least used first. Categories with no recent activity are good candidates to remove.
-                        </p>
-                        <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                          {categoryUsage.map(({ category, count }) => (
-                            <div
-                              key={category.id}
-                              className={`flex items-center justify-between gap-2 border px-2.5 py-1.5 rounded-lg text-[11px] ${
-                                count === 0 ? 'bg-orange-500/5 border-orange-500/25' : 'bg-background border-border/50'
-                              }`}
-                            >
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded border font-semibold ${getCategoryBadgeClass(category.name)}`}>
-                                {category.name}
-                              </span>
-                              {count === 0 ? (
-                                <span className="text-orange-500 font-semibold text-right text-[10px]">No activity in last {USAGE_LOOKBACK_CYCLES} cycles</span>
-                              ) : (
-                                <span className="text-muted-foreground font-semibold text-[10px]">{count}&times; in {USAGE_LOOKBACK_CYCLES} cycles</span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
+                <span className="font-medium text-foreground">Dark Mode</span>
+                <ToggleButton active={darkMode} onClick={props.onToggleDarkMode || (() => {})} />
+              </div>
+              <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
+                <span className="font-medium text-foreground">Sensitive Mode (Blur)</span>
+                <ToggleButton active={hideSensitive} onClick={props.onToggleHideSensitive || (() => {})} />
+              </div>
+              <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
+                <div className="flex items-center gap-2">
+                  <Bell className="size-4 text-muted-foreground" />
+                  <span className="font-medium text-foreground">Notify bills on Login</span>
+                </div>
+                <ToggleButton active={props.notifyOnLoginEnabled || false} onClick={() => props.onToggleNotifyOnLogin?.(!props.notifyOnLoginEnabled)} />
+              </div>
+              <div className="flex items-center justify-between text-sm py-1">
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-medium text-foreground">Local Device Cache</span>
+                  <span className="text-[10px] text-muted-foreground">Clear cached data on this device.</span>
+                </div>
                 <button
                   type="button"
-                  onClick={e => { e.stopPropagation(); void handleAiCleanupReview() }}
-                  disabled={hideSensitive || isReviewingCleanup || visibleCategories.length === 0}
-                  title={hideSensitive ? 'Unhide balances to review' : 'AI category review'}
-                  className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border text-blue-600 dark:text-blue-400 bg-blue-500/5 border-blue-500/30 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed transition cursor-pointer"
+                  onClick={props.onClearLocalFinancialData}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-xs font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer"
                 >
-                  {isReviewingCleanup ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
-                  AI
+                  <DatabaseZap className="size-3.5 text-muted-foreground" /> Clear
                 </button>
-                {categoriesOpen ? <ChevronUp className="size-4 text-muted-foreground shrink-0" /> : <ChevronDown className="size-4 text-muted-foreground shrink-0" />}
               </div>
             </div>
+          </div>
 
-            <CollapsibleBody open={categoriesOpen}>
-            <div className="space-y-4 pt-4">
+          <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-border/40 pb-2">
+              <button
+                type="button"
+                onClick={() => view.setCategoriesOpen(!view.categoriesOpen)}
+                className="w-full text-left flex items-center justify-between gap-2 text-sm font-bold text-foreground cursor-pointer"
+              >
+                <span>Transaction Categories ({view.visibleCategories.length})</span>
+                {view.categoriesOpen ? <ChevronUp className="size-4 text-muted-foreground" /> : <ChevronDown className="size-4 text-muted-foreground" />}
+              </button>
+            </div>
 
-            {usageError && (
-              <p className="text-[10px] font-semibold text-orange-500 flex items-center gap-1">
-                <AlertCircle className="size-3 shrink-0" />
-                {usageError}
-              </p>
-            )}
-
-            {(cleanupReviewOpen || cleanupReviewError) && (
-              <div className={`rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 space-y-2 relative ${isReviewingCleanup ? 'perimeter-beam-host' : ''}`}>
-                {isReviewingCleanup && <PerimeterBeam radius={12} size={104} />}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
-                    <Sparkles className="size-3.5 text-blue-500" />
-                    AI Category Review
-                  </div>
+            <CollapsibleBody open={view.categoriesOpen}>
+              <div className="space-y-4 pt-1 animate-in fade-in duration-200">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="New Category Name"
+                    disabled={hideSensitive}
+                    value={view.newCatName}
+                    onChange={e => view.setNewCatName(e.target.value)}
+                    className="flex-1 px-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+                  />
                   <button
                     type="button"
-                    onClick={() => { setCleanupReviewOpen(false); setCleanupReviewError(null) }}
-                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-background transition cursor-pointer"
-                    aria-label="Close AI category review"
+                    disabled={!view.isCatValid}
+                    onClick={view.handleAddCategory}
+                    className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none hover:shadow-lg hover:shadow-blue-500/10 transition cursor-pointer"
                   >
-                    <ChevronUp className="size-3.5" />
+                    <Plus className="size-3.5" />
                   </button>
                 </div>
+                {view.isCatDuplicate && (
+                  <p className="text-[10px] text-destructive font-semibold mt-0.5">Category name already exists.</p>
+                )}
+                {view.isCatReserved && (
+                  <p className="text-[10px] text-destructive font-semibold mt-0.5">Name is a reserved word.</p>
+                )}
 
-                {isReviewingCleanup && (
-                  <div className="flex items-center gap-2 text-[11px] font-semibold text-muted-foreground">
-                    <Loader2 className="size-3.5 animate-spin text-blue-500" />
-                    Reviewing category usage...
+                <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto pr-1">
+                  {view.visibleCategories.map(cat => {
+                    const isSyncing = view.isCatSyncing(cat.id)
+                    const isDeleting = view.isCatDeleting(cat.id)
+                    return (
+                      <span
+                        key={cat.id}
+                        className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border text-xs font-medium ${getCategoryBadgeClass(
+                          cat.name
+                        )}`}
+                      >
+                        <span>{cat.name}</span>
+                        {(isSyncing || isDeleting) && (
+                          <RowSyncBadge state={isSyncing ? 'syncing' : 'deleting'} entityLabel="category" />
+                        )}
+                        {!isSyncing && !isDeleting && (
+                          <button
+                            type="button"
+                            onClick={() => view.handleDeleteCategory(cat.id)}
+                            className="text-muted-foreground hover:text-destructive transition cursor-pointer"
+                          >
+                            <Trash2 className="size-3" />
+                          </button>
+                        )}
+                      </span>
+                    )
+                  })}
+                </div>
+
+                <div className="border-t border-border/40 pt-3 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs font-bold text-foreground">AI Category Cleanup</span>
+                      <span className="text-[10px] text-muted-foreground">Consolidate unused or duplicate categories.</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={view.handleAiCleanupReview}
+                      disabled={view.isReviewingCleanup || hideSensitive}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 text-[10px] font-bold text-blue-600 dark:text-blue-400 disabled:opacity-45 disabled:cursor-not-allowed transition cursor-pointer"
+                    >
+                      {view.isReviewingCleanup ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
+                      AI Review
+                    </button>
                   </div>
-                )}
 
-                {cleanupReviewError && (
-                  <p className="text-[11px] font-semibold text-orange-500 flex items-center gap-1">
-                    <AlertCircle className="size-3 shrink-0" />
-                    {cleanupReviewError}
-                  </p>
-                )}
+                  <CollapsibleBody open={view.cleanupReviewOpen}>
+                    <div className="space-y-2 pt-1 border-t border-border/20">
+                      {view.isReviewingCleanup ? (
+                        <div className="flex items-center gap-2 py-1.5 text-xs text-muted-foreground font-semibold">
+                          <Loader2 className="size-3.5 animate-spin text-blue-500" /> Checking categories...
+                        </div>
+                      ) : view.cleanupReviewError ? (
+                        <div className="text-[11px] text-destructive font-semibold flex items-center gap-1.5">
+                          <AlertCircle className="size-3.5 shrink-0" /> {view.cleanupReviewError}
+                        </div>
+                      ) : view.cleanupSuggestions.length > 0 ? (
+                        <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                          {view.cleanupSuggestions.map(s => {
+                            const isApplying = view.applyingCleanupId === s.id
+                            const consolidateTarget = view.consolidateTargets[s.id] || ''
+                            return (
+                              <div key={s.id} className="p-3 rounded-xl border border-blue-500/15 bg-blue-500/5 space-y-2 relative overflow-hidden">
+                                {isApplying && (
+                                  <div className="absolute inset-0 bg-background/50 backdrop-blur-xs z-10 flex items-center justify-center">
+                                    <Loader2 className="size-4 animate-spin text-blue-500" />
+                                  </div>
+                                )}
+                                <div className="flex items-start gap-1.5 text-xs font-semibold text-foreground leading-relaxed">
+                                  <Sparkles className="size-3.5 text-blue-500 shrink-0 mt-0.5" />
+                                  <span>{s.description}</span>
+                                </div>
+                                {s.type === 'consolidate' && (
+                                  <div className="space-y-1 pt-1">
+                                    <label className="text-[10px] font-bold text-muted-foreground">Select Consolidate Target</label>
+                                    <CustomSelect
+                                      value={consolidateTarget}
+                                      onChange={val => view.setConsolidateTargets(prev => ({ ...prev, [s.id]: String(val) }))}
+                                      options={[
+                                        { value: '', label: 'Select Target Category...' },
+                                        ...props.categoriesList.filter(c => !c.isPendingDelete && !s.categories.includes(c.name) && c.name.toLowerCase() !== 'transfer' && c.name.toLowerCase() !== 'adjustment').map(c => ({
+                                          value: c.name,
+                                          label: c.name
+                                        }))
+                                      ]}
+                                      className="w-full text-xs"
+                                    />
+                                  </div>
+                                )}
+                                <div className="flex justify-end pt-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => view.handleApplyCleanupSuggestion(s)}
+                                    disabled={s.type === 'consolidate' && !consolidateTarget}
+                                    className="px-2 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-[10px] font-semibold text-white disabled:bg-muted disabled:text-muted-foreground transition cursor-pointer"
+                                  >
+                                    Apply Cleanup
+                                  </button>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-[11px] text-muted-foreground font-semibold flex items-center gap-1.5">
+                          <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
+                          Category naming and usage is clean.
+                        </div>
+                      )}
+                    </div>
+                  </CollapsibleBody>
 
-                {!isReviewingCleanup && !cleanupReviewError && cleanupSuggestions.length === 0 && (
-                  <p className="text-[11px] text-muted-foreground">
-                    No cleanup proposals right now.
-                  </p>
-                )}
+                  <div className="pt-2 flex items-center justify-between border-t border-border/20">
+                    <button
+                      type="button"
+                      onClick={() => view.setShowUsageDetails(!view.showUsageDetails)}
+                      className="text-[10px] font-bold text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition cursor-pointer"
+                    >
+                      {view.showUsageDetails ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+                      {view.showUsageDetails ? 'Hide' : 'Show'} Category Usage details
+                    </button>
+                    {view.unusedCategoryCount > 0 && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-500 font-bold">
+                        {view.unusedCategoryCount} unused
+                      </span>
+                    )}
+                  </div>
 
-                {!isReviewingCleanup && cleanupSuggestions.length > 0 && (
-                  <div className="space-y-2">
-                    {cleanupSuggestions.map(suggestion => {
-                      const confidence = Math.round(Math.max(0, Math.min(1, suggestion.confidence)) * 100)
-                      const consolidateOptions = visibleCategories.filter(cat =>
-                        !suggestion.categories.some(name => name.toLowerCase() === cat.name.toLowerCase())
-                      )
-                      const consolidateTarget = consolidateTargets[suggestion.id] || ''
-                      const isApplyingThis = applyingCleanupId === suggestion.id
-                      const isConsolidateDisabled = suggestion.type === 'consolidate' && !consolidateTarget
-
-                      return (
-                        <div key={suggestion.id} className="rounded-lg border border-border/60 bg-background p-2.5 space-y-2">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="text-xs font-bold text-foreground">{suggestion.title}</div>
-                              <div className="text-[11px] text-muted-foreground leading-relaxed">{suggestion.summary}</div>
-                            </div>
-                            <span className="shrink-0 rounded-md border border-blue-500/25 bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase text-blue-600 dark:text-blue-400">
-                              Confidence {confidence}%
+                  <CollapsibleBody open={view.showUsageDetails}>
+                    <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 pt-1.5 border-t border-border/20">
+                      {view.usageError ? (
+                        <div className="text-[10px] font-medium text-destructive">{view.usageError}</div>
+                      ) : view.categoryUsage ? (
+                        view.categoryUsage.map(cu => (
+                          <div key={cu.category.id} className="flex items-center justify-between py-1 border-b border-border/10 last:border-0 text-xs">
+                            <span className="font-medium text-foreground">{cu.category.name}</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${cu.count === 0 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-500' : 'bg-slate-500/10 text-muted-foreground'}`}>
+                              {cu.count} transaction{cu.count === 1 ? '' : 's'}
                             </span>
                           </div>
-
-                          {suggestion.categories.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {suggestion.categories.map(name => (
-                                <button
-                                  key={name}
-                                  type="button"
-                                  onClick={() => onNavigateToLedger?.({ category: name, showAllCycles: true })}
-                                  title={`Filter ledger by ${name}`}
-                                  className={`press-scale inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-semibold cursor-pointer hover:opacity-85 transition ${getCategoryBadgeClass(name)}`}
-                                >
-                                  {name}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-
-                          {suggestion.type === 'consolidate' && (
-                            <div className="space-y-1">
-                              <span className="text-[10px] font-semibold text-muted-foreground">Move its entries to:</span>
-                              <div>
-                                <CustomSelect
-                                  value={consolidateTarget}
-                                  onChange={val => setConsolidateTargets(prev => ({ ...prev, [suggestion.id]: String(val) }))}
-                                  options={[
-                                    { value: '', label: 'Choose a category' },
-                                    ...consolidateOptions.map(cat => ({ value: cat.name, label: cat.name }))
-                                  ]}
-                                  className="max-w-full"
-                                />
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="flex items-center justify-between gap-2">
-                            {suggestion.affectedTransactionCount > 0 && suggestion.categories.length > 0 ? (
-                              <button
-                                type="button"
-                                onClick={() => onNavigateToLedger?.({ category: suggestion.categories[0], showAllCycles: true })}
-                                title="View entries in ledger"
-                                className="press-scale inline-flex h-8 min-w-0 items-center px-2.5 rounded-full border border-orange-500/20 bg-orange-500/10 text-[9px] font-bold uppercase text-orange-600 dark:text-orange-400 hover:bg-orange-500/20 transition cursor-pointer select-none"
-                              >
-                                <span className="truncate">{suggestion.affectedTransactionCount} ledger {suggestion.affectedTransactionCount === 1 ? 'entry' : 'entries'} need validation</span>
-                              </button>
-                            ) : (
-                              <span className="inline-flex h-8 min-w-0 items-center px-2.5 rounded-full border border-border bg-muted/30 text-[9px] font-bold uppercase text-muted-foreground select-none">
-                                {suggestion.affectedTransactionCount > 0
-                                  ? `${suggestion.affectedTransactionCount} ledger entr${suggestion.affectedTransactionCount === 1 ? 'y' : 'ies'} need validation`
-                                  : 'No ledger entries affected'}
-                              </span>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => void handleApplyCleanupSuggestion(suggestion)}
-                              disabled={!onApplyCategoryCleanupSuggestion || applyingCleanupId !== null || isConsolidateDisabled}
-                              title={!onApplyCategoryCleanupSuggestion ? 'Category cleanup is unavailable' : isConsolidateDisabled ? 'Choose a category first' : 'Accept'}
-                              className="inline-flex h-8 w-20 shrink-0 items-center justify-center rounded-lg border border-blue-500/30 bg-blue-500/5 px-3 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {isApplyingThis ? <Loader2 className="size-3 animate-spin" /> : 'Accept'}
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1 select-none">
-              {visibleCategories.map(cat => {
-                const isBusy = isCatDeleting(cat.id) || isCatSyncing(cat.id) || cat.isPendingSync
-                return (
-                <div key={cat.id} className="flex items-center justify-between gap-2 bg-background border border-border/50 px-2.5 py-2 rounded-lg text-xs">
-                  <span className="flex items-center gap-1.5">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded border font-semibold ${getCategoryBadgeClass(cat.name)}`}>
-                      {cat.name}
-                    </span>
-                    {isCatDeleting(cat.id) ? (
-                      <RowSyncBadge state="deleting" entityLabel="category" />
-                    ) : (isCatSyncing(cat.id) || cat.isPendingSync) ? (
-                      <RowSyncBadge state={isCatSyncing(cat.id) ? 'syncing' : 'pending'} entityLabel="category" />
-                    ) : null}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteCategory(cat.id)}
-                    disabled={isBusy || hideSensitive}
-                    className="p-1.5 text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10 rounded-lg cursor-pointer transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
-                    title={hideSensitive ? 'Unhide balances to edit' : 'Delete category'}
-                  >
-                    <Trash2 className="size-3.5" />
-                  </button>
+                        ))
+                      ) : (
+                        <div className="text-[10px] text-muted-foreground animate-pulse">Calculating usage statistics...</div>
+                      )}
+                    </div>
+                  </CollapsibleBody>
                 </div>
-              )})}
-            </div>
-
-            <div className="space-y-1.5 pt-1 px-px pb-px">
-              <div className="flex gap-2 items-center">
-                <input
-                  type="text"
-                  placeholder="New category name"
-                  value={newCatName}
-                  onChange={e => setNewCatName(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      if (isCatValid) handleAddCategory()
-                    }
-                  }}
-                  className={`flex-1 min-w-0 px-3 py-2 text-xs bg-background border rounded-lg focus:outline-none focus:ring-1 transition duration-150 ${
-                    !isCatEmpty && (isCatDuplicate || isCatReserved)
-                      ? 'border-orange-500/60 focus:ring-orange-500'
-                      : !isCatEmpty && isCatValid
-                      ? 'border-emerald-500/60 focus:ring-emerald-500'
-                      : 'border-border focus:ring-blue-500'
-                  }`}
-                />
-                <motion.button
-                  whileHover={isCatValid ? { scale: 1.02 } : undefined}
-                  whileTap={isCatValid ? { scale: 0.98 } : undefined}
-                  type="button"
-                  onClick={handleAddCategory}
-                  disabled={!isCatValid}
-                  title={hideSensitive ? 'Unhide balances to edit' : undefined}
-                  className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition duration-200 select-none ${
-                    isCatValid
-                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 cursor-pointer'
-                      : 'bg-blue-600/50 text-white/50 shadow-none cursor-not-allowed'
-                  }`}
-                >
-                  <Plus className="size-3.5" />
-                  Add
-                </motion.button>
               </div>
-
-              {!isCatEmpty && isCatDuplicate && (
-                <p className="text-[10px] font-semibold text-orange-500 flex items-center gap-1 animate-in fade-in duration-150">
-                  <AlertCircle className="size-3 shrink-0" />
-                  Category "{trimmedCatName}" already exists.
-                </p>
-              )}
-
-              {!isCatEmpty && isCatReserved && (
-                <p className="text-[10px] font-semibold text-orange-500 flex items-center gap-1 animate-in fade-in duration-150">
-                  <AlertCircle className="size-3 shrink-0" />
-                  "Transfer" and "Adjustment" are reserved system categories.
-                </p>
-              )}
-
-              {!isCatEmpty && isCatValid && (
-                <p className="text-[10px] font-semibold text-emerald-500 flex items-center gap-1 animate-in fade-in duration-150">
-                  <CheckCircle2 className="size-3 shrink-0" />
-                  Category name is available.
-                </p>
-              )}
-            </div>
-
-            </div>
             </CollapsibleBody>
-          </section>
+          </div>
 
-          <ActiveDevicesSection />
+          <ChangePasswordSection hideSensitive={hideSensitive} />
 
-          <TwoFactorSection hideSensitive={hideSensitive} onToast={onToast} />
-
-          <ChangePasswordSection hideSensitive={hideSensitive} onToast={onToast} />
-
-          <section className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5 shadow-sm space-y-3">
-            <div className="flex items-center gap-2.5 pb-3 border-b border-border/40">
-              <DatabaseZap className="size-5 text-orange-500 shrink-0" />
-              <div>
-                <h3 className="text-sm font-bold text-foreground">Local financial data</h3>
-                <p className="text-[11px] text-muted-foreground">Cached amounts are privacy-masked, not encrypted, and expire after 7 days.</p>
-              </div>
-            </div>
-            <button type="button" onClick={onClearLocalFinancialData}
-              className="px-4 py-2 rounded-full text-xs font-bold border border-orange-500/30 text-orange-600 hover:bg-orange-500/10 transition cursor-pointer">
-              Clear local financial data
-            </button>
-          </section>
-
-          {/* Notifications Section */}
-          <section className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5 shadow-sm space-y-3">
-            <div className="flex items-center gap-2.5 pb-3 border-b border-border/40">
-              <Bell className="size-5 text-blue-500 shrink-0" />
-              <div>
-                <h3 className="text-sm font-bold text-foreground">Notifications</h3>
-                <p className="text-[11px] text-muted-foreground">Automatically show subscription reminders upon launching the application.</p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-xs font-medium text-foreground">Show subscription reminders automatically on startup</span>
-              <ToggleButton
-                active={notifyOnLoginEnabled}
-                onClick={() => onToggleNotifyOnLogin?.(!notifyOnLoginEnabled)}
-                className="size-6 shrink-0"
-              />
-            </div>
-          </section>
+          <TwoFactorSection hideSensitive={hideSensitive} />
 
           <FingerprintSection />
+
+          <ActiveDevicesSection />
         </div>
       </div>
     </div>
   )
 }
+export default SettingsView

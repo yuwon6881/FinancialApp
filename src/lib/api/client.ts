@@ -1,4 +1,5 @@
 export const SESSION_LOCKED_EVENT = 'financialapp:session-locked'
+import { hasWebSessionFlag, tokenStore, usesCookieAuth } from '../auth'
 
 export class ApiError extends Error {
   status: number
@@ -77,8 +78,8 @@ function handleApiResponse(response: Response, url: string): Response {
   return response
 }
 
-export function getHeaders(additionalHeaders: HeadersInit = {}): HeadersInit {
-  const token = localStorage.getItem('auth_token')
+export async function getHeadersAsync(additionalHeaders: HeadersInit = {}): Promise<HeadersInit> {
+  const token = await tokenStore.getToken()
   return {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...additionalHeaders,
@@ -91,12 +92,61 @@ export function apiUrl(path: string): string {
     : `${API_BASE_URL}${path}`
 }
 
+const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
+const CSRF_HEADER_NAME = 'X-CSRF-Token'
+const CSRF_SESSION_KEY = 'csrf_token'
+let csrfBootstrapPromise: Promise<string | null> | null = null
+
+// Backs the double-submit CSRF defence: the server issues a readable `csrf_token` cookie alongside
+// the HttpOnly auth cookie, and browser mutations must echo it in the X-CSRF-Token header. Native
+// clients authenticate with a bearer header and no cookie, so this returns null and is a no-op there.
+function readCsrfToken(): string | null {
+  const stored = sessionStorage.getItem(CSRF_SESSION_KEY)
+  if (stored) return stored
+  if (typeof document === 'undefined') return null
+  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/)
+  return match ? decodeURIComponent(match[1]) : null
+}
+
+function rememberCsrfToken(response: Response): void {
+  const token = response.headers.get(CSRF_HEADER_NAME)
+  if (token) sessionStorage.setItem(CSRF_SESSION_KEY, token)
+}
+
+async function ensureCsrfToken(): Promise<string | null> {
+  const existing = readCsrfToken()
+  // Avoid a needless bootstrap request for anonymous calls (login, registration,
+  // and tests). A cookie-authenticated session always has this non-secret marker.
+  if (existing || !usesCookieAuth || !hasWebSessionFlag()) return existing
+
+  csrfBootstrapPromise ??= fetch(apiUrl('/auth/csrf'), {
+    credentials: 'include',
+  })
+    .then(response => {
+      rememberCsrfToken(response)
+      return response.ok ? readCsrfToken() : null
+    })
+    .catch(() => null)
+    .finally(() => { csrfBootstrapPromise = null })
+
+  return csrfBootstrapPromise
+}
+
 export async function apiFetch(path: string, init: RequestInit = {}, authenticated = true): Promise<Response> {
   const url = apiUrl(path)
+  const headers = new Headers(authenticated ? await getHeadersAsync(init.headers) : init.headers)
+  if (!usesCookieAuth) headers.set('X-FinancialApp-Client', 'native')
+  const method = (init.method ?? 'GET').toUpperCase()
+  if (UNSAFE_METHODS.has(method)) {
+    const csrfToken = await ensureCsrfToken()
+    if (csrfToken) headers.set('X-CSRF-Token', csrfToken)
+  }
   const response = await fetch(url, {
     ...init,
-    headers: authenticated ? getHeaders(init.headers) : init.headers,
+    credentials: usesCookieAuth ? 'include' : 'omit',
+    headers,
   })
+  rememberCsrfToken(response)
   return handleApiResponse(response, url)
 }
 

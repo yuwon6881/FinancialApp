@@ -3,10 +3,9 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { SplashScreen } from '@capacitor/splash-screen'
 import TopNav from "./TopNav.tsx"
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { APP_TABS, type AppTab, type Transaction, type RecurringPayment, type DashboardData, type TransactionCategory, type WishlistItem, type PendingNotification } from './types'
+import { type DashboardData } from './types'
 import * as api from './lib/api'
-import type { CategoryCleanupSuggestion } from './lib/api'
-import { Loader2, Plus, Wallet, CreditCard, PiggyBank, Upload } from 'lucide-react'
+import { Loader2, Plus, Upload } from 'lucide-react'
 
 // Every view is code-split so the initial bundle only ships the shell. Each
 // chunk loads on demand behind an instant blank-shell fallback (no flash).
@@ -17,46 +16,37 @@ const LedgerView = lazy(() => import('./components/LedgerView').then(m => ({ def
 const WishlistView = lazy(() => import('./components/WishlistView').then(m => ({ default: m.WishlistView })))
 const SettingsView = lazy(() => import('./components/SettingsView').then(m => ({ default: m.SettingsView })))
 const DraftStagingView = lazy(() => import('./components/DraftStagingView').then(m => ({ default: m.DraftStagingView })))
-import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from './lib/utils'
+
 import { CustomAlertModal } from './components/ui/CustomAlertModal'
 import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
-import { CustomSelect } from './components/ui/CustomSelect'
 import { PullToRefresh } from './components/ui/PullToRefresh'
-import { ToastViewport, type ToastMessage, type ToastTone, type ToastAction } from './components/ui/ToastViewport'
+import { ToastViewport } from './components/ui/ToastViewport'
 import { CardSkeleton, Skeleton } from './components/ui/Skeleton'
-import { CACHE_KEYS, clearLocalFinancialData, getCachedJSON, getCachedTransactions, getCachedWishlist, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod, getCachedCycleSnapshot, setCachedCycleSnapshot } from './lib/cache'
-import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from './lib/modalDrafts'
-import { createFinalId, createLocalWishlistId, sanitizeQueuedOps, type OutboxPayload } from './lib/outbox'
-import { useOptimisticList } from './lib/useOptimisticList'
-import { computeOptimisticDashboard } from './lib/optimisticDashboard'
+import { clearLocalFinancialData } from './lib/cache'
 import { useVisualViewportVars } from './lib/useVisualViewportVars'
 import { useReceiptScanPolling } from './lib/useReceiptScanPolling'
-import { useAutoLock } from './lib/useAutoLock'
 import { useNativeAppLifecycle } from './lib/useNativeAppLifecycle'
-import { useOutbox } from './lib/useOutbox'
-import { dispatchAiActions, requestAiLedgerDelete } from './lib/aiActions'
 import { PendingSubscriptionsModal } from './components/PendingSubscriptionsModal'
 import { FailedSyncModal } from './components/FailedSyncModal'
 import { PasswordPromptModal } from './components/PasswordPromptModal'
 import { LockScreen } from './components/LockScreen'
 import { AiAssistantPanel } from './components/AiAssistantPanel'
 import { AppLogo } from './components/ui/AppLogo'
-import { errorMessageIncludes, errorMessageIncludesLower, getErrorMessage, getErrorName } from './lib/errors'
-import { triggerHaptic } from './lib/haptics'
-import { isPlatformAuthenticatorAvailable, getFingerprintAssertion } from './lib/webauthn'
-import {
-  clearCachedFingerprintAssertOptions,
-  getCachedFingerprintAssertOptions,
-  prefetchFingerprintAssertOptions,
-} from './lib/fingerprintOptionsCache'
 import { syncStatusBarTheme } from './lib/nativeUi'
 import { getCurrentCycleYearAndMonth, MONTH_NAMES } from './lib/cycle'
 import type { AppContextValue } from './contexts/AppContext'
 import { AppProvider } from './contexts/AppProvider'
 
-const createLocalId = (prefix: string, separator = '_') => {
-  return `${prefix}${separator}${Date.now()}${separator}${Math.random().toString(36).substring(2, 9)}`
-}
+// Domain Hooks
+import { useAppPreferences } from './app/useAppPreferences'
+import { useAppSession } from './app/useAppSession'
+import { useFinancialData } from './app/useFinancialData'
+import { useCycleNavigation } from './app/useCycleNavigation'
+import { useAiActionRouter } from './app/useAiActionRouter'
+import { useAppDialogs } from './app/useAppDialogs'
+import { buildAppContextValue } from './app/buildAppContextValue'
+import { getErrorName } from './lib/errors'
+import { prefetchFingerprintAssertOptions } from './lib/fingerprintOptionsCache'
 
 // Instant, flash-free placeholder while a lazily-loaded chunk is fetched at the root level.
 const ViewFallback = () => <div className="app-shell min-h-screen" />
@@ -72,16 +62,7 @@ const ContentViewFallback = () => (
 
 const nextPaint = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
 const wait = (ms: number) => new Promise<void>(resolve => window.setTimeout(resolve, ms))
-const getCurrentTimeMs = () => Date.now()
 
-// On a warm reopen (cached data already in localStorage) the app skips the
-// lightweight skeleton and mounts the full dashboard tree on its very first
-// render, on a cold JS engine. Two RAF ticks can elapse before the WebView's
-// compositor has actually presented a frame to the screen in that case, so
-// hiding the native splash then briefly reveals whatever is behind the
-// WebView (the launcher) until the real frame lands. A couple of extra RAFs
-// plus a short floor give the compositor room to catch up; this adds
-// negligible, imperceptible delay on the already-fast cold-launch path.
 const hideNativeSplashAfterPaint = async () => {
   await nextPaint()
   await nextPaint()
@@ -94,31 +75,6 @@ const finishLaunchHandoff = async () => {
   await hideNativeSplashAfterPaint()
 }
 
-const CategoryReplacementSelect = ({
-  options,
-  onChange,
-}: {
-  options: Array<{ id: string; name: string }>
-  onChange: (value: string) => void
-}) => {
-  const [value, setValue] = useState('')
-  return (
-    <CustomSelect
-      value={value}
-      onChange={nextValue => {
-        const selected = String(nextValue)
-        setValue(selected)
-        onChange(selected)
-      }}
-      options={[
-        { value: '', label: 'Choose replacement category' },
-        ...options.map(option => ({ value: option.id, label: option.name }))
-      ]}
-      className="w-full"
-    />
-  )
-}
-
 const LaunchReady = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     void finishLaunchHandoff()
@@ -127,120 +83,10 @@ const LaunchReady = ({ children }: { children: ReactNode }) => {
   return <>{children}</>
 }
 
-const isSessionLockedError = (err: unknown) => {
-  return errorMessageIncludes(err, '423')
-}
-
 function App() {
-  const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'))
-  const [username, setUsername] = useState<string>(localStorage.getItem('auth_username') || '')
-  const [isFabOpen, setIsFabOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<AppTab>(() => {
-    const cached = localStorage.getItem('active_tab')
-    return APP_TABS.includes(cached as AppTab) ? cached as AppTab : 'dashboard'
-  })
-
-  useEffect(() => {
-    localStorage.setItem('active_tab', activeTab)
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
-  }, [activeTab])
-
-
-  useNativeAppLifecycle(hideNativeSplashAfterPaint)
-
-  const [transactions, setTransactions] = useState<Transaction[]>(() => getCachedTransactions(CACHE_KEYS.transactions))
-  const [recurringPayments, setRecurringPayments] = useState<RecurringPayment[]>(() => getCachedJSON(CACHE_KEYS.recurringPayments, []))
-  const [categoriesList, setCategoriesList] = useState<TransactionCategory[]>(() => getCachedJSON(CACHE_KEYS.categories, []))
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(() => getCachedJSON(CACHE_KEYS.dashboardData, null))
-  const [currentCycleDashboardData, setCurrentCycleDashboardData] = useState<DashboardData | null>(null)
-  // Always the real current cycle's wallet total (see fetchWalletBalance) -- deliberately NOT
-  // derived from dashboardData/optimisticDashboardData, since those track whatever cycle the
-  // Dashboard/Ledger has navigated to and the navbar wallet must not follow that navigation.
-  const [walletBalance, setWalletBalance] = useState<number | null>(() => getCachedJSON<number | null>(CACHE_KEYS.walletBalance, null))
-  const [wishlist, setWishlist] = useState<WishlistItem[]>(() => getCachedWishlist(CACHE_KEYS.wishlist))
-  const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<import('./types').AutocompleteSuggestion[]>([])
-
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState<boolean>(() => !hasCachedKey(CACHE_KEYS.dashboardData))
-  const [isOffline, setIsOffline] = useState<boolean>(() => typeof navigator !== 'undefined' ? !navigator.onLine : false)
-
-  const isServerAwakeRef = useRef<boolean>(false)
-  // Bumped on every loadAll() call; a call only commits its fetched data if it's
-  // still the most recent one when it resolves. Without this, an older in-flight
-  // request (e.g. the initial-mount load of the last-viewed cycle) can resolve
-  // after the user has already switched cycles and clobber the newer selection.
-  const loadAllSeqRef = useRef(0)
-  const selectPeriodSeqRef = useRef(0)
-  // Aborts the previous loadAll()'s in-flight requests whenever a newer one starts,
-  // so switching cycles repeatedly doesn't leave superseded fetches running to completion.
   const loadAllAbortRef = useRef<AbortController | null>(null)
-
-
-
-  const [selectedMonth, setSelectedMonth] = useState<string>(() => getCachedDashboardPeriod().month || '')
-  const [selectedYear, setSelectedYear] = useState<number>(() => getCachedDashboardPeriod().year || 0)
-  const [ledgerIncomingCategory, setLedgerIncomingCategory] = useState<string | null>(null)
-  const [ledgerIncomingDate, setLedgerIncomingDate] = useState<string | null>(null)
-  const [ledgerIncomingTxType, setLedgerIncomingTxType] = useState<'inflow' | 'outflow' | 'transfer' | null>(null)
-  const [ledgerShowAllCycles, setLedgerShowAllCycles] = useState(false)
-  const [autoOpenLedgerAdd, setAutoOpenLedgerAdd] = useState(false)
-  const [autoOpenSubscriptionAdd, setAutoOpenSubscriptionAdd] = useState(false)
-  const [autoOpenWishlistAdd, setAutoOpenWishlistAdd] = useState(false)
-  const [highlightedTxId, setHighlightedTxId] = useState<string | null>(null)
-  const [isAiOpen, setIsAiOpen] = useState(false)
-  const [ledgerIncomingSearch, setLedgerIncomingSearch] = useState<string | null>(null)
-  const [aiLedgerDraft, setAiLedgerDraft] = useState<{ nonce: number; fields: Record<string, unknown> } | null>(null)
-  const [aiLedgerEditDraft, setAiLedgerEditDraft] = useState<{ nonce: number; id: string; changes: Record<string, unknown> } | null>(null)
-  const [aiRecurringDraft, setAiRecurringDraft] = useState<{ nonce: number; fields: Record<string, unknown> } | null>(null)
-  const [aiRecurringEditDraft, setAiRecurringEditDraft] = useState<{ nonce: number; id: string; changes: Record<string, unknown> } | null>(null)
-  const [aiWishlistDraft, setAiWishlistDraft] = useState<{ nonce: number; fields: Record<string, unknown> } | null>(null)
-  const [aiWishlistEditDraft, setAiWishlistEditDraft] = useState<{ nonce: number; id: number; changes: Record<string, unknown> } | null>(null)
-  const [aiLedgerExportRequest, setAiLedgerExportRequest] = useState<{ nonce: number } | null>(null)
-  const aiActionNonceRef = useRef(0)
-  const [hideSensitive, setHideSensitive] = useState<boolean>(() => {
-    return localStorage.getItem('hide_sensitive') !== 'false'
-  })
-  const [hideBalanceAmounts, setHideBalanceAmounts] = useState<boolean>(() => {
-    return localStorage.getItem('hide_balance_amounts') === 'true'
-  })
-
-  // Dark mode — initialize from localStorage immediately, sync with server after load
-  const [darkMode, setDarkMode] = useState<boolean>(() => {
-    return localStorage.getItem('dark_mode') === 'true'
-  })
-
-  const [draftTransactions, setDraftTransactions] = useState<Transaction[]>(() => {
-    try {
-      const stored = localStorage.getItem('draft_transactions')
-      return sanitizeTransactions(stored ? JSON.parse(stored) : [])
-    } catch {
-      return []
-    }
-  })
-
-  // Redirect from drafts tab if queue is empty
-  useEffect(() => {
-    if (activeTab === 'drafts' && draftTransactions.length === 0) {
-      setActiveTab('ledger')
-    }
-  }, [activeTab, draftTransactions])
-
-  // Persist draft transactions to localStorage
-  useEffect(() => {
-    localStorage.setItem('draft_transactions', JSON.stringify(draftTransactions))
-  }, [draftTransactions])
-
-  const [customAlert, setCustomAlert] = useState<{ message: string; title: string } | null>(null)
-  const [confirmModalData, setConfirmModalData] = useState<{
-    title: string
-    message: React.ReactNode
-    confirmText?: string
-    confirmDisabled?: boolean
-    onConfirm: () => void
-  } | null>(null)
-  const [toasts, setToasts] = useState<ToastMessage[]>([])
-  const [isLedgerAddOpen, setIsLedgerAddOpen] = useState(false)
   const isMountedRef = useRef(true)
+
   useEffect(() => {
     isMountedRef.current = true
     return () => {
@@ -248,52 +94,79 @@ function App() {
     }
   }, [])
 
-  const activeTabRef = useRef(activeTab)
-  useEffect(() => {
-    activeTabRef.current = activeTab
-  }, [activeTab])
+  useNativeAppLifecycle(hideNativeSplashAfterPaint)
 
+  // 1. Preferences
+  const prefs = useAppPreferences()
+
+  // 2. Dialogs
+  const dialogs = useAppDialogs()
+
+  const [hasShownModalThisSession, setHasShownModalThisSession] = useState(false)
+
+  const guardSensitive = useCallback(() => {
+    if (!prefs.hideSensitive) return true
+    dialogs.showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning')
+    return false
+  }, [prefs.hideSensitive, dialogs.showToast])
+
+  // 3. Session
+  const session = useAppSession({
+    hideSensitive: prefs.hideSensitive,
+    setHideSensitive: prefs.setHideSensitive,
+    loadAllAbortRef,
+    loadAll: (m, y, b) => financial.loadAll(m, y, b),
+    onLogoutBackupAndCleanup: (username) => financial.handleLogoutCleanup(username),
+    onLoginSuccessRestore: (username) => financial.handleLoginSuccessRestore(username),
+  })
+
+  // 4. Cycle Navigation
+  const nav = useCycleNavigation({
+    loadAll: (m, y, b) => financial.loadAll(m, y, b),
+    handleLogout: session.handleLogout,
+    markSessionLocked: session.markSessionLocked,
+    setDashboardData: (d) => financial.setDashboardData(d),
+    setTransactions: (t) => financial.setTransactions(t),
+    setActiveTab: prefs.setActiveTab,
+    setLedgerCyclesRange: prefs.setLedgerCyclesRange,
+  })
+
+  // 5. Financial Data
+  const financial = useFinancialData({
+    token: session.token,
+    lastUnlockedTimeRef: session.lastUnlockedTimeRef,
+    isLocked: session.isLocked,
+    markSessionLocked: session.markSessionLocked,
+    handleLogout: session.handleLogout,
+    hideSensitive: prefs.hideSensitive,
+    darkMode: prefs.darkMode,
+    showToast: dialogs.showToast,
+    guardSensitive,
+    setConfirmModalData: dialogs.setConfirmModalData,
+    setHideSensitive: prefs.setHideSensitive,
+    setDarkMode: prefs.setDarkMode,
+    loadAllAbortRef,
+    selectedMonth: nav.selectedMonth,
+    setSelectedMonth: nav.setSelectedMonth,
+    selectedYear: nav.selectedYear,
+    setSelectedYear: nav.setSelectedYear,
+    setHasShownModalThisSession,
+    hasShownModalThisSession,
+    setShowLoginModal: dialogs.setShowLoginModal,
+  })
+
+  const [isLedgerAddOpen, setIsLedgerAddOpen] = useState(false)
   const isLedgerAddOpenRef = useRef(isLedgerAddOpen)
   useEffect(() => {
     isLedgerAddOpenRef.current = isLedgerAddOpen
   }, [isLedgerAddOpen])
 
-  const draftTxRef = useRef(draftTransactions)
-  const usernameRef = useRef(username)
-
+  const activeTabRef = useRef(prefs.activeTab)
   useEffect(() => {
-    draftTxRef.current = draftTransactions
-  }, [draftTransactions])
+    activeTabRef.current = prefs.activeTab
+  }, [prefs.activeTab])
 
-  useEffect(() => {
-    usernameRef.current = username
-  }, [username])
-
-  const showToast = useCallback((message: string, title: string = 'Notification', tone: ToastTone = 'info', action?: ToastAction) => {
-    const id = Date.now().toString(36) + Math.random().toString(36).substring(2, 7)
-    setToasts(prev => [...prev.slice(-3), { id, message, title, tone, action }])
-  }, [])
-  const guardSensitive = useCallback(() => {
-    if (!hideSensitive) return true
-    showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning')
-    return false
-  }, [hideSensitive, showToast])
-
-  // "Before" snapshots for undo, keyed by `${entity}:${targetId}`. Captured at the moment
-  // of a reversible update/delete so the drain loop can build a compensating op once the
-  // change has synced. First-write-wins per key: if several edits to the same record are
-  // coalesced into one queued op (and one toast), undo reverts to the earliest known state.
-  const toOutboxPayload = (value: object): OutboxPayload => ({ ...value })
-
-      // wishlistItem:purchase and settings:update have no clean reverse — no undo.
-  const dismissToast = useCallback((id: string) => {
-    setToasts(prev => prev.filter(toast => toast.id !== id))
-  }, [])
-
-  const showAlert = (message: string, title: string = 'Notification') => {
-    showToast(message, title, title.toLowerCase().includes('error') ? 'error' : 'info')
-  }
-
+  // 6. Receipt scanning
   const {
     activeReceiptScanDraft,
     failedScanJob,
@@ -301,957 +174,74 @@ function App() {
     handleReceiptScanStarted,
     clearReceiptScanJob,
   } = useReceiptScanPolling({
-    token,
+    token: session.token,
     activeTabRef,
     isLedgerAddOpenRef,
     isMountedRef,
-    setActiveTab,
-    setAutoOpenLedgerAdd,
-    showToast,
+    setActiveTab: prefs.setActiveTab,
+    setAutoOpenLedgerAdd: nav.setAutoOpenLedgerAdd,
+    showToast: dialogs.showToast,
   })
 
-  // Shadow the global alert function
-  const alert = (message: string) => showAlert(message, 'Notification')
+  // 7. AI action router
+  const aiRouter = useAiActionRouter({
+    hideSensitive: prefs.hideSensitive,
+    showToast: dialogs.showToast,
+    setActiveTab: prefs.setActiveTab,
+    handleSelectPeriod: nav.handleSelectPeriod,
+    handleNavigateToLedger: nav.handleNavigateToLedger,
+    setConfirmModalData: dialogs.setConfirmModalData,
+    allTransactions: financial.allTransactions,
+    handleDeleteTransaction: financial.handleDeleteTransaction,
+    allRecurringPayments: financial.allRecurringPayments,
+    allWishlist: financial.allWishlist,
+    handleToggleActive: financial.handleToggleActive,
+    optimisticDashboardData: financial.optimisticDashboardData,
+    handleDiscardSubscription: financial.handleDiscardSubscription,
+    handleConfirmSubscription: financial.handleConfirmSubscription,
+    handlePurchaseWishlistItem: financial.handlePurchaseWishlistItem,
+    handleUnpurchaseWishlistItem: financial.handleUnpurchaseWishlistItem,
+    requestDeletePayment: financial.requestDeletePayment,
+    requestDeleteWishlistItem: financial.requestDeleteWishlistItem,
+  })
 
-  // Apply/remove the 'dark' class on <html> whenever darkMode changes,
-  // and keep the PWA/browser chrome (theme-color) in sync with the active theme.
+  // Shadow global alert
+  const alert = (message: string) => dialogs.showAlert(message, 'Notification')
+
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', darkMode)
+    document.documentElement.classList.toggle('dark', prefs.darkMode)
     const meta = document.querySelector('meta[name="theme-color"]')
-    if (meta) meta.setAttribute('content', darkMode ? '#0a0d14' : '#f6f8fc')
-    void syncStatusBarTheme(darkMode)
-  }, [darkMode])
+    if (meta) meta.setAttribute('content', prefs.darkMode ? '#0a0d14' : '#f6f8fc')
+    void syncStatusBarTheme(prefs.darkMode)
+  }, [prefs.darkMode])
 
-  // Keep visual viewport CSS vars in sync so fixed bottom-sheet modals stay
-  // pinned to the visible area while the mobile keyboard opens/closes/pans.
   useVisualViewportVars()
 
-  // Inactivity Auto-Lock — cross-cutting lock state stays here (login/sync/
-  // heartbeat all touch it); the timers/listeners live in useAutoLock below.
-  const lastUnlockedTimeRef = useRef<number>(0)
-  const [isLocked, setIsLocked] = useState<boolean>(() => {
-    // This tab's own record wins if present (it went through login/unlock/lock here).
-    const tabState = sessionStorage.getItem('session_locked')
-    if (tabState === 'true') return true
-    if (tabState === 'false') return false
-    // Fresh tab / PWA relaunch with no in-tab record: fail safe to the last known
-    // cross-tab lock state. Without this, a new tab starts with empty sessionStorage
-    // (isLocked=false) and — while offline, where no 423 ever arrives to re-lock it —
-    // boots straight into cached financial data, bypassing a locked session.
-    return !!localStorage.getItem('auth_token') && localStorage.getItem('session_locked_global') === 'true'
-  })
-  const markSessionLocked = useCallback(() => {
-    loadAllAbortRef.current?.abort()
-    api.invalidateCache()
-    setError(null)
-    setIsLocked(true)
-    sessionStorage.setItem('session_locked', 'true')
-    // Mirror to localStorage so the lock propagates to other open tabs (storage event
-    // below) and so a future fresh tab initializes as locked.
-    localStorage.setItem('session_locked_global', 'true')
-  }, [setIsLocked])
+  const [isAiOpen, setIsAiOpen] = useState(false)
 
-  const handleUnlocked = useCallback(() => {
-    lastUnlockedTimeRef.current = Date.now()
-    localStorage.setItem('last_active_time', Date.now().toString())
-    sessionStorage.setItem('session_locked', 'false')
-    localStorage.setItem('session_locked_global', 'false')
-    setIsLocked(false)
-    const hasCache = hasCachedKey(CACHE_KEYS.dashboardData)
-    const { month: cachedMonth, year: cachedYear } = getCachedDashboardPeriod()
-    loadAll(cachedMonth, cachedYear, hasCache)
-  }, [loadAll])
-
-  // Propagate a lock across open tabs. Locking is safe to mirror; unlocking is NOT —
-  // it requires this tab's own successful auth, so another tab unlocking must not
-  // silently unlock this one. This tab unlocks only via its own handleUnlocked.
+  // Redirect from drafts if empty
   useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      // Guard on this tab's own state: markSessionLocked re-writes the global flag, so acting
-      // when already locked could ping-pong storage events between tabs.
-      if (e.key === 'session_locked_global' && e.newValue === 'true'
-        && sessionStorage.getItem('session_locked') !== 'true') {
-        markSessionLocked()
-      }
+    if (prefs.activeTab === 'drafts' && financial.draftTransactions.length === 0) {
+      prefs.setActiveTab('ledger')
     }
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
-  }, [markSessionLocked])
-
-  const {
-    pendingOps,
-    failedOps,
-    activeOps,
-    isBackgroundSyncing,
-    activeSyncId,
-    deletingId: deletingTxId,
-    syncCountdownMs,
-    editingPendingId,
-    enqueue,
-    mutateQueue,
-    snapshotForUndo,
-    processQueue,
-    setBackgroundSyncing: setIsBackgroundSyncing,
-    setDeletingId: setDeletingTxId,
-    setEditingPendingId,
-    discardFailedOp,
-    discardAllFailedOps,
-    getPendingOps,
-    getFailedOps,
-    reset: resetOutbox,
-  } = useOutbox({
-    token: isLocked ? null : token,
-    lastUnlockedTimeRef,
-    setError,
-    showToast,
-    onAuthError: handleLogout,
-    onLockError: markSessionLocked,
-    refresh: () => loadAll(selectedMonth || undefined, selectedYear || undefined, true),
-  })
-
-
-  // Password Prompt for revealing sensitive information
-  const [showPasswordPrompt, setShowPasswordPrompt] = useState<boolean>(false)
-  const [hasFingerprintSetup, setHasFingerprintSetup] = useState<boolean>(false)
+  }, [prefs.activeTab, financial.draftTransactions, prefs])
 
   useEffect(() => {
-    if (!token) {
-      setHasFingerprintSetup(false)
-      clearCachedFingerprintAssertOptions()
-      return
+    if (prefs.activeTab !== 'ledger') {
+      nav.clearIncomingFilters()
+      prefs.setLedgerCyclesRange('monthly')
     }
+  }, [prefs.activeTab, nav, prefs])
 
-    let cancelled = false
-    ;(async () => {
-      const platformAvailable = await isPlatformAuthenticatorAvailable().catch(() => false)
-      if (cancelled) return
-
-      if (!platformAvailable) {
-        setHasFingerprintSetup(false)
-        clearCachedFingerprintAssertOptions()
-        return
-      }
-
-      const status = await api.fetchAuthStatus().catch(() => null)
-      if (cancelled) return
-
-      const hasFingerprint = !!status?.hasFingerprint
-      setHasFingerprintSetup(hasFingerprint)
-      if (!hasFingerprint) {
-        clearCachedFingerprintAssertOptions()
-      }
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [token])
-
+  const [currentCycleDashboardData, setCurrentCycleDashboardData] = useState<DashboardData | null>(null)
   useEffect(() => {
-    if (!token || isLocked || !hideSensitive || !hasFingerprintSetup) return
-    void prefetchFingerprintAssertOptions().catch(() => undefined)
-  }, [token, isLocked, hideSensitive, hasFingerprintSetup])
+    if (!session.token || !financial.dashboardData) return
 
-  // Cycle switching state for skeleton loader
-  const [isSwitchingCycle, setIsSwitchingCycle] = useState<boolean>(false)
-
-  // Login Notification Modal States
-  const [showLoginModal, setShowLoginModal] = useState<boolean>(false)
-  const [hasShownModalThisSession, setHasShownModalThisSession] = useState<boolean>(false)
-  const [modalCheckbox, setModalCheckbox] = useState<boolean>(
-    localStorage.getItem('show_notifications_on_login') !== 'false'
-  )
-
-  // Failed Sync Items Modal State
-  const [showFailedOpsModal, setShowFailedOpsModal] = useState<boolean>(false)
-
-  const handleDiscardFailedOp = useCallback((id: string) => {
-    discardFailedOp(id)
-  }, [discardFailedOp])
-
-  const handleDiscardAllFailedOps = useCallback(() => {
-    discardAllFailedOps()
-    setShowFailedOpsModal(false)
-  }, [discardAllFailedOps, setShowFailedOpsModal])
-
-  async function handleLogout() {
-    const currentPending = getPendingOps();
-    const currentDrafts = draftTxRef.current;
-    const currentFailed = getFailedOps();
-    const currentOwner = usernameRef.current;
-
-    if (currentPending.length > 0) {
-      localStorage.setItem('pending_operations_backup', JSON.stringify({ owner: currentOwner, ops: currentPending }));
-    }
-
-    if (currentDrafts.length > 0) {
-      localStorage.setItem('draft_transactions_backup', JSON.stringify({ owner: currentOwner, transactions: currentDrafts }));
-    }
-
-    if (currentFailed.length > 0) {
-      localStorage.setItem('failed_operations_backup', JSON.stringify({ owner: currentOwner, ops: currentFailed }));
-    }
-
-    backupModalDraftsOnLogout(currentOwner);
-
-    await api.logout()
-    setToken(null)
-    setUsername('')
-    setDashboardData(null)
-    setWalletBalance(null)
-    setTransactions([])
-    setRecurringPayments([])
-    resetOutbox()
-    setDraftTransactions([])
-    setCategoriesList([])
-    setWishlist([])
-    setSelectedMonth('')
-    setSelectedYear(0)
-    setLoading(true)
-    setHasShownModalThisSession(false)
-    setShowLoginModal(false)
-    setHideSensitive(true)
-
-    // Clear LocalStorage cache
-    localStorage.removeItem('auth_username')
-    sessionStorage.removeItem('session_locked')
-    localStorage.removeItem('session_locked_global')
-    localStorage.removeItem('last_active_time')
-    localStorage.removeItem(CACHE_KEYS.dashboardData)
-    localStorage.removeItem(CACHE_KEYS.transactions)
-    localStorage.removeItem(CACHE_KEYS.recurringPayments)
-    localStorage.removeItem(CACHE_KEYS.categories)
-    localStorage.removeItem(CACHE_KEYS.wishlist)
-    localStorage.removeItem(CACHE_KEYS.walletBalance)
-    localStorage.removeItem(CACHE_KEYS.pendingTransactions)
-    localStorage.removeItem(CACHE_KEYS.pendingOperations)
-    localStorage.removeItem('failed_operations')
-    localStorage.removeItem('draft_transactions')
-    clearAllModalDrafts()
-    clearCachedFingerprintAssertOptions()
-    setIsLocked(false)
-  }
-
-  useAutoLock({ token, isLocked, hasFingerprintSetup, markSessionLocked, onAuthError: handleLogout })
-
-  // Fetch initial ledger and dashboard statistics
-  async function loadAll(month?: string, year?: number, isBackground = false) {
-    if (!token) return
-    const requestSeq = ++loadAllSeqRef.current
-    const isStale = () => requestSeq !== loadAllSeqRef.current
-    loadAllAbortRef.current?.abort()
-    const ac = new AbortController()
-    loadAllAbortRef.current = ac
-    if (!isBackground) {
-      setLoading(true)
-    } else {
-      setIsBackgroundSyncing(true)
-    }
-    try {
-      // fetchTransactions only needs to wait on the dashboard response when the
-      // caller doesn't already know which cycle is active (the very first load
-      // with no cached period yet) -- the backend resolves an omitted month/year
-      // to the persisted "selected period" itself, and writes that resolution
-      // back to the DB, so reading it via a second un-parameterized call could
-      // race that write. Once month/year are known they're passed to both calls
-      // directly, sidestepping that lookup entirely, so there's nothing to wait
-      // on. Everything else here (recurring payments, categories, wishlist,
-      // autocomplete, wallet balance) never depended on the dashboard response
-      // at all, so it was needlessly serialized behind it before.
-      const dashboardPromise = api.fetchDashboard(month, year, ac.signal)
-      const transactionsPromise = (month && year !== undefined)
-        ? api.fetchTransactions(month, year, undefined, ac.signal)
-        : dashboardPromise.then(d => api.fetchTransactions(d.setting.selectedMonth, d.setting.selectedYear, undefined, ac.signal))
-      // The expensive historical breakdowns (yearly/last3/last6 + rewards average) live behind
-      // their own endpoint now -- see FinancialService.GetDashboardInsightsAsync -- so they're
-      // fetched in parallel with everything else instead of adding ~24 sequential queries to
-      // every dashboard load. Merged back into a full DashboardData below.
-      const insightsPromise = (month && year !== undefined)
-        ? api.fetchDashboardInsights(month, year, ac.signal)
-        : dashboardPromise.then(d => api.fetchDashboardInsights(d.setting.selectedMonth, d.setting.selectedYear, ac.signal))
-
-      const [dbData, txs, recs, cats, wishes, autoSuggests, wallet, insights] = await Promise.all([
-        dashboardPromise,
-        transactionsPromise,
-        api.fetchRecurringPayments(ac.signal),
-        api.fetchCategories(ac.signal),
-        api.fetchWishlist(ac.signal).catch(() => []),
-        api.fetchAutocompleteSuggestions(ac.signal).catch(() => []),
-        api.fetchWalletBalance(ac.signal).catch(() => null),
-        insightsPromise
-      ])
-      // A newer loadAll() was kicked off (e.g. the user switched cycles again)
-      // while this one was in flight -- discard this now-stale response instead
-      // of clobbering the newer cycle's data.
-      if (isStale()) return
-      if (wallet !== null) {
-        setWalletBalance(wallet)
-        setCachedJSON(CACHE_KEYS.walletBalance, wallet)
-      }
-      const mergedDashboard: DashboardData = {
-        ...dbData,
-        last3CategoryBreakdown: insights.last3CategoryBreakdown,
-        last6CategoryBreakdown: insights.last6CategoryBreakdown,
-        yearlyCategoryBreakdown: insights.yearlyCategoryBreakdown,
-        availableYears: insights.availableYears,
-        stats: {
-          ...dbData.stats,
-          pastThreeMonthsRewardsAverage: insights.pastThreeMonthsRewardsAverage,
-          hasRewardsHistory: insights.hasRewardsHistory
-        }
-      }
-      setSelectedMonth(dbData.setting.selectedMonth)
-      setSelectedYear(dbData.setting.selectedYear)
-      setDashboardData(mergedDashboard)
-      setTransactions(txs)
-      setRecurringPayments(recs)
-      setCategoriesList(cats)
-      setWishlist(wishes)
-      setAutocompleteSuggestions(autoSuggests)
-      setError(null)
-      isServerAwakeRef.current = true
-      setIsLocked(false)
-      sessionStorage.setItem('session_locked', 'false')
-      localStorage.setItem('session_locked_global', 'false')
-
-      // Save to localStorage cache
-      setCachedJSON(CACHE_KEYS.dashboardData, mergedDashboard)
-      setCachedJSON(CACHE_KEYS.transactions, txs)
-      setCachedJSON(CACHE_KEYS.recurringPayments, recs)
-      setCachedJSON(CACHE_KEYS.categories, cats)
-      setCachedJSON(CACHE_KEYS.wishlist, wishes)
-      setCachedCycleSnapshot(dbData.setting.selectedMonth, dbData.setting.selectedYear, mergedDashboard, txs)
-
-      // Sync dark mode from server preference (server wins over localStorage)
-      const serverDark = dbData.setting.darkMode ?? false
-      setDarkMode(serverDark)
-      localStorage.setItem('dark_mode', serverDark.toString())
-
-      // Sync hide sensitive from server preference (server wins over localStorage)
-      const serverHideSensitive = dbData.setting.hideSensitive ?? true
-      setHideSensitive(serverHideSensitive)
-      localStorage.setItem('hide_sensitive', serverHideSensitive.toString())
-
-
-
-      if (dbData.pendingNotifications && dbData.pendingNotifications.length > 0 && !hasShownModalThisSession) {
-        if (localStorage.getItem('show_notifications_on_login') !== 'false') {
-          setShowLoginModal(true)
-        }
-        setHasShownModalThisSession(true)
-      }
-    } catch (err: unknown) {
-      if (getErrorName(err) === 'AbortError' || isStale()) return
-      console.error(err)
-      const isJustLoggedIn = Date.now() - lastUnlockedTimeRef.current < 10000
-      if (errorMessageIncludes(err, '401') || errorMessageIncludesLower(err, 'unauthorized')) {
-        if (!isJustLoggedIn) {
-          handleLogout()
-        } else {
-          setError(null)
-        }
-      } else if (isSessionLockedError(err)) {
-        markSessionLocked()
-      } else {
-        setError('Could not connect to the database API server. Running in offline view mode.')
-        isServerAwakeRef.current = false
-      }
-    } finally {
-      if (!isStale()) {
-        setLoading(false)
-        setIsBackgroundSyncing(false)
-      }
-    }
-  }
-
-  useEffect(() => {
-    if (token) {
-      const hasCache = hasCachedKey(CACHE_KEYS.dashboardData);
-      const { month: cachedMonth, year: cachedYear } = getCachedDashboardPeriod();
-      loadAll(cachedMonth, cachedYear, hasCache);
-    }
-  }, [token])
-
-  const handleLoginSuccess = (newToken: string, newUsername: string) => {
-    localStorage.setItem('auth_token', newToken)
-    localStorage.setItem('auth_username', newUsername)
-    sessionStorage.setItem('session_locked', 'false')
-    localStorage.setItem('session_locked_global', 'false')
-    const now = getCurrentTimeMs()
-    localStorage.setItem('last_active_time', now.toString())
-    lastUnlockedTimeRef.current = now
-    setIsLocked(false)
-    api.invalidateCache()
-    setToken(newToken)
-    setUsername(newUsername)
-
-    // Restore any backed up pending operations -- only if this backup
-    // belongs to the account that's actually logging in now.
-    const cachedOpsBackup = localStorage.getItem('pending_operations_backup') || localStorage.getItem('pending_transactions_backup');
-    if (cachedOpsBackup) {
-      let consumedOrCorrupt = false;
-      try {
-        const parsed = JSON.parse(cachedOpsBackup);
-        if (parsed && parsed.owner === newUsername) {
-          consumedOrCorrupt = true;
-          const backedUpOps = sanitizeQueuedOps(parsed.ops || parsed.transactions);
-          if (backedUpOps.length > 0) {
-            mutateQueue(() => backedUpOps);
-            setCachedJSON(CACHE_KEYS.pendingOperations, backedUpOps);
-          }
-        }
-      } catch (e) {
-        console.error('Failed to parse backed up pending operations:', e);
-        consumedOrCorrupt = true; // corrupt backup is unrecoverable for any account
-      }
-      // Only clear a backup we actually consumed (owner match) or one that's corrupt. A backup
-      // owned by a *different* account is left in place so that account can restore its queued
-      // offline writes on its next login, instead of us silently discarding them here.
-      if (consumedOrCorrupt) {
-        localStorage.removeItem('pending_operations_backup');
-        localStorage.removeItem('pending_transactions_backup');
-      }
-    }
-
-    // Restore any backed up drafts the same way, gated on the same owner check.
-    const cachedDraftBackup = localStorage.getItem('draft_transactions_backup');
-    if (cachedDraftBackup) {
-      let consumedOrCorrupt = false;
-      try {
-        const parsed = JSON.parse(cachedDraftBackup);
-        if (parsed && parsed.owner === newUsername) {
-          consumedOrCorrupt = true;
-          const backedUpDrafts = sanitizeTransactions(parsed.transactions);
-          if (backedUpDrafts.length > 0) {
-            setDraftTransactions(backedUpDrafts);
-            localStorage.setItem('draft_transactions', JSON.stringify(backedUpDrafts));
-          }
-        }
-      } catch (e) {
-        console.error('Failed to parse backed up draft transactions:', e);
-        consumedOrCorrupt = true;
-      }
-      if (consumedOrCorrupt) {
-        localStorage.removeItem('draft_transactions_backup');
-      }
-    }
-
-    // Ops that had already exhausted their retries before the logout get
-    // folded back into the live queue (with a clean retry count) instead of
-    // staying stranded in "failed" -- the session/network that caused them
-    // to fail is presumably fixed now that the user has logged back in.
-    const cachedFailedBackup = localStorage.getItem('failed_operations_backup');
-    if (cachedFailedBackup) {
-      let consumedOrCorrupt = false;
-      try {
-        const parsed = JSON.parse(cachedFailedBackup);
-        if (parsed && parsed.owner === newUsername) {
-          consumedOrCorrupt = true;
-          const backedUpFailed = sanitizeQueuedOps(parsed.ops).map(op => ({ ...op, retryCount: 0 }));
-          if (backedUpFailed.length > 0) {
-            mutateQueue(prev => {
-              const merged = [...prev, ...backedUpFailed];
-              setCachedJSON(CACHE_KEYS.pendingOperations, merged);
-              return merged;
-            });
-          }
-        }
-      } catch (e) {
-        console.error('Failed to parse backed up failed operations:', e);
-        consumedOrCorrupt = true;
-      }
-      if (consumedOrCorrupt) {
-        localStorage.removeItem('failed_operations_backup');
-      }
-    }
-
-    // Restore any modal that was mid-edit when the session was interrupted --
-    // the owning view reopens it and repopulates its fields once mounted
-    // (see useFormDraft). Gated on the same owner check as everything else.
-    restoreModalDraftsOnLogin(newUsername);
-  }
-
-  // Period / Settings changes
-  const handleSelectPeriod = async (month: string, year: number) => {
-    // Guards against an older switch's cleanup firing after a newer one has
-    // already taken over (e.g. the user taps two different cycles in quick
-    // succession) and prematurely clearing the "switching" skeleton state.
-    const requestSeq = ++selectPeriodSeqRef.current
-    // If we've visited this cycle before, show its last-known data immediately
-    // (stale-while-revalidate) instead of a skeleton, then refresh quietly.
-    const cachedSnapshot = getCachedCycleSnapshot(month, year)
-    if (cachedSnapshot) {
-      setDashboardData(cachedSnapshot.dashboardData)
-      setTransactions(cachedSnapshot.transactions)
-      setSelectedMonth(month)
-      setSelectedYear(year)
-    } else {
-      setIsSwitchingCycle(true)
-    }
-    try {
-      await api.selectPeriod(month, year)
-      await loadAll(month, year, true)
-    } catch (err: unknown) {
-      if (requestSeq !== selectPeriodSeqRef.current) return
-      console.error(err)
-      if (errorMessageIncludes(err, '401') || errorMessageIncludesLower(err, 'unauthorized')) {
-        handleLogout()
-      } else if (isSessionLockedError(err)) {
-        markSessionLocked()
-      } else {
-        alert('Error updating active month.')
-      }
-    } finally {
-      if (requestSeq === selectPeriodSeqRef.current) {
-        setIsSwitchingCycle(false)
-      }
-    }
-  }
-
-  const handleUpdateSettings = (settings: {
-    targetStabilityFund: number
-    essentialsAlloc: number
-    growthAlloc: number
-    stabilityAlloc: number
-    rewardsAlloc: number
-    cycleDay: number
-    currency?: string
-    stabilityOverflowRedirect?: string
-  }) => {
-    const payload = { ...settings, darkMode, hideSensitive }
-    mutateQueue(prev => enqueue(prev, 'settings', 'update', 'settings', payload))
-  }
-
-  // Custom Categories & Accounts modifiers
-  const handleAddCategory = (newCat: Omit<TransactionCategory, 'id'>) => {
-    if (!guardSensitive()) return
-    const finalId = createFinalId('category')
-    mutateQueue(prev => enqueue(prev, 'category', 'add', finalId, { ...newCat, id: finalId }))
-  }
-
-  const handleDeleteCategory = (id: string, replacementCategoryId?: string) => {
-    snapshotForUndo('category', String(id), allCategories.find(cat => String(cat.id) === String(id)))
-    mutateQueue(prev => enqueue(prev, 'category', 'delete', id, replacementCategoryId ? { replacementCategoryId } : undefined))
-  }
-
-  const requestDeleteCategory = async (id: string) => {
-    if (!guardSensitive()) return
-    const category = categoriesList.find(cat => cat.id === id)
-    if (!category) return
-
-    const replacementOptions = categoriesList.filter(cat => {
-      const lower = cat.name.toLowerCase()
-      return cat.id !== id &&
-        lower !== 'transfer' &&
-        lower !== 'adjustment' &&
-        !cat.isPendingDelete
-    })
-
-    let transactionCount = 0
-    let usageLookupFailed = false
-    try {
-      const usage = await api.fetchPagedTransactions({
-        page: 1,
-        pageSize: 1,
-        categories: [category.name]
-      })
-      transactionCount = usage.total
-    } catch (err) {
-      console.error(err)
-      usageLookupFailed = true
-    }
-
-    const recurringPaymentCount = allRecurringPayments.filter(payment =>
-      !payment.isPendingDelete &&
-      payment.category.trim().toLowerCase() === category.name.trim().toLowerCase()
-    ).length
-    const requiresReplacement = usageLookupFailed || transactionCount > 0 || recurringPaymentCount > 0
-    let selectedReplacementId = ''
-
-    setConfirmModalData({
-      title: 'Delete Category',
-      message: (
-        <div className={`space-y-3 ${requiresReplacement ? 'pb-36' : ''}`}>
-          <p>
-            Delete "{category.name}"?
-          </p>
-          {requiresReplacement ? (
-            <>
-              <p>
-                This category is used by {usageLookupFailed ? 'existing ledger transactions' : `${transactionCount} ledger transaction${transactionCount === 1 ? '' : 's'}`}
-                {recurringPaymentCount > 0 ? ` and ${recurringPaymentCount} recurring payment${recurringPaymentCount === 1 ? '' : 's'}` : ''}.
-                Choose a replacement category before deleting it.
-              </p>
-              <CategoryReplacementSelect
-                options={replacementOptions}
-                onChange={e => {
-                  selectedReplacementId = e
-                  setConfirmModalData(prev => prev ? { ...prev, confirmDisabled: selectedReplacementId.length === 0 } : prev)
-                }}
-              />
-              {replacementOptions.length === 0 && (
-                <p className="text-[11px] font-semibold text-orange-500">
-                  Add another category before deleting this one.
-                </p>
-              )}
-            </>
-          ) : (
-            <p>No ledger transactions or recurring payments currently use this category.</p>
-          )}
-        </div>
-      ),
-      confirmText: requiresReplacement ? 'Transfer and Delete' : 'Delete',
-      confirmDisabled: requiresReplacement,
-      onConfirm: () => { handleDeleteCategory(id, selectedReplacementId || undefined) }
-    })
-  }
-
-  const handleApplyCategoryCleanupSuggestion = async (suggestion: CategoryCleanupSuggestion, targetCategoryOverride?: string) => {
-    if (!guardSensitive()) return
-
-    if (suggestion.type === 'consolidate' && !targetCategoryOverride) {
-      showToast('Choose a category to move these entries to first.', 'AI Cleanup', 'warning')
-      return
-    }
-
-    const actions = suggestion.type === 'add'
-      ? [{ type: 'add' as const, newCategoryName: suggestion.newCategoryName || undefined }]
-      : suggestion.type === 'merge'
-      ? [{ type: 'merge' as const, categories: suggestion.categories, targetCategory: suggestion.targetCategory || undefined }]
-      : suggestion.type === 'consolidate'
-      ? [{ type: 'merge' as const, categories: suggestion.categories, targetCategory: targetCategoryOverride }]
-      : [{ type: 'delete' as const, categories: suggestion.categories }]
-
-    try {
-      const result = await api.applyCategoryCleanup(actions)
-      await loadAll(selectedMonth, selectedYear, true)
-      if (result.appliedCount === 0) {
-        showToast('No category changes were applied.', 'AI Cleanup', 'info')
-        return
-      }
-
-      const undoAction = result.undoActions.length > 0
-        ? {
-            label: 'Undo',
-            onAction: () => {
-              void (async () => {
-                try {
-                  await api.applyCategoryCleanup(result.undoActions)
-                  await loadAll(selectedMonth, selectedYear, true)
-                  showToast('AI cleanup was undone.', 'Undo successful', 'success')
-                } catch (err: unknown) {
-                  showToast(getErrorMessage(err, 'Could not undo AI cleanup.'), 'Undo failed', 'error')
-                }
-              })()
-            }
-          }
-        : undefined
-
-      showToast(
-        `${result.appliedCount} AI category cleanup action${result.appliedCount === 1 ? '' : 's'} applied.`,
-        'AI Cleanup Applied',
-        'success',
-        undoAction
-      )
-    } catch (err: unknown) {
-      showToast(getErrorMessage(err, 'Could not apply AI category cleanup.'), 'AI Cleanup Failed', 'error')
-    }
-  }
-
-  // Transaction modifiers
-  const handleAddTransaction = (newTx: Omit<Transaction, 'id'>) => {
-    const draftId = createLocalId('draft');
-    const draftTx: Transaction = {
-      ...newTx,
-      id: draftId,
-      isPendingSync: true
-    };
-
-    setDraftTransactions(prev => [...prev, draftTx]);
-    triggerVibration(15);
-    setActiveTab('drafts');
-  }
-
-  const handleAddBalanceAdjustment = (newTx: Omit<Transaction, 'id'>) => {
-    const finalId = createFinalId('transaction')
-    triggerVibration(20)
-    mutateQueue(prev => enqueue(prev, 'transaction', 'add', finalId, { ...newTx, id: finalId }))
-  }
-
-  const handleUpdateDraftTransaction = (id: string, updated: Transaction) => {
-    if (!guardSensitive()) return
-    setDraftTransactions(prev => prev.map(t => t.id === id ? updated : t));
-    triggerVibration(15);
-  };
-
-  const handleDeleteDraftTransaction = (id: string) => {
-    setDraftTransactions(prev => prev.filter(t => t.id !== id));
-    triggerVibration(30);
-  };
-
-  const requestDeleteDraftTransaction = (id: string) => {
-    if (!guardSensitive()) return
-    const draft = draftTransactions.find(t => t.id === id)
-    setConfirmModalData({
-      title: 'Delete Draft',
-      message: `Delete draft "${draft?.description || 'transaction'}"? This removes it from the draft queue before it is synced.`,
-      confirmText: 'Delete',
-      onConfirm: () => handleDeleteDraftTransaction(id)
-    })
-  }
-
-  const handleSyncDraftBatch = () => {
-    if (draftTransactions.length === 0) return;
-
-    const drafts = draftTransactions;
-    setDraftTransactions([]);
-    triggerVibration([25, 45, 25]);
-    // Build off the live queue via mutateQueue so a drain in progress can't drop
-    // these adds (previously seeded from possibly-stale `pendingOps` state).
-    mutateQueue(prev => {
-      let nextQueue = prev;
-      drafts.forEach(d => {
-        const finalId = createFinalId('transaction');
-        const payload = { ...d, id: finalId };
-        delete payload.isPendingSync;
-        nextQueue = enqueue(nextQueue, 'transaction', 'add', finalId, payload);
-      });
-      return nextQueue;
-    });
-  };
-
-  const handleDeleteTransaction = (id: string) => {
-    if (!guardSensitive()) return
-    triggerVibration(30)
-    let deleteId = id
-    if (id.includes('-split-')) {
-      deleteId = id.split('-split-')[0]
-    }
-    setDeletingTxId(deleteId)
-    snapshotForUndo('transaction', deleteId, allTransactions.find(t => String(t.id) === deleteId))
-    mutateQueue(prev => enqueue(prev, 'transaction', 'delete', deleteId))
-    if (deleteId === editingPendingId) setEditingPendingId(null)
-  }
-
-  const handleUpdateTransaction = (id: string, updatedTx: Omit<Transaction, 'id'>) => {
-    if (!guardSensitive()) return
-    triggerVibration(15)
-    snapshotForUndo('transaction', String(id), allTransactions.find(t => String(t.id) === String(id)))
-    mutateQueue(prev => enqueue(prev, 'transaction', 'update', id, updatedTx))
-    if (id === editingPendingId) setEditingPendingId(null)
-  }
-
-  const handleConfirmSubscription = (noti: PendingNotification, paidDate: string) => {
-    if (!guardSensitive()) return
-    const finalId = createFinalId('transaction')
-    mutateQueue(prev => enqueue(prev, 'transaction', 'add', finalId, {
-      id: finalId,
-      date: paidDate,
-      description: noti.name,
-      amount: -Math.abs(noti.amount),
-      category: noti.category,
-      ledgerCategory: noti.ledgerCategory,
-      recurringPaymentId: noti.recurringPaymentId
-    }))
-  }
-
-  const handleDiscardSubscription = (noti: PendingNotification) => {
-    if (!guardSensitive()) return
-    const finalId = createFinalId('transaction')
-    mutateQueue(prev => enqueue(prev, 'transaction', 'add', finalId, {
-      id: finalId,
-      date: noti.billingDate,
-      description: `[Discarded] ${noti.name}`,
-      amount: 0,
-      category: noti.category,
-      ledgerCategory: 'Discarded',
-      recurringPaymentId: noti.recurringPaymentId
-    }))
-  }
-
-  // Recurring payment modifiers
-  const handleAddPayment = (newPay: Omit<RecurringPayment, 'id'>) => {
-    const finalId = createFinalId('recurringPayment')
-    mutateQueue(prev => enqueue(prev, 'recurringPayment', 'add', finalId, { ...newPay, id: finalId, active: true }))
-  }
-
-  const handleToggleActive = (id: string) => {
-    if (!guardSensitive()) return
-    const current = allRecurringPayments.find(p => String(p.id) === String(id))
-    const payload = current ? { active: !current.active } : undefined
-    mutateQueue(prev => enqueue(prev, 'recurringPayment', 'toggle', id, payload))
-  }
-
-  const handleUpdatePayment = (id: string, payment: RecurringPayment) => {
-    if (!guardSensitive()) return
-    snapshotForUndo('recurringPayment', String(id), allRecurringPayments.find(p => String(p.id) === String(id)))
-    mutateQueue(prev => enqueue(prev, 'recurringPayment', 'update', id, toOutboxPayload(payment)))
-  }
-
-  const handleDeletePayment = (id: string) => {
-    triggerVibration(30)
-    snapshotForUndo('recurringPayment', String(id), allRecurringPayments.find(p => String(p.id) === String(id)))
-    mutateQueue(prev => enqueue(prev, 'recurringPayment', 'delete', id))
-  }
-
-  const requestDeletePayment = (id: string) => {
-    if (!guardSensitive()) return
-    const payment = recurringPayments.find(p => p.id === id)
-    setConfirmModalData({
-      title: 'Delete Subscription',
-      message: `Delete "${payment?.name || 'this recurring subscription'}"? This will cancel all future notifications for this subscription.`,
-      confirmText: 'Delete',
-      onConfirm: () => { handleDeletePayment(id) }
-    })
-  }
-
-  // Wish List modifiers
-  const handleAddWishlistItem = (newWish: Partial<WishlistItem>) => {
-    const placeholderId = String(createLocalWishlistId())
-    const payload = {
-      name: newWish.name || '',
-      price: newWish.price || 0,
-      priority: newWish.priority || 'Medium',
-      isPurchased: false,
-      createdAt: new Date().toISOString(),
-      isActive: newWish.isActive ?? false
-    }
-    mutateQueue(prev => enqueue(prev, 'wishlistItem', 'add', placeholderId, payload))
-  }
-
-  const handleUpdateWishlistItem = (id: number, updatedWish: WishlistItem) => {
-    if (!guardSensitive()) return
-    snapshotForUndo('wishlistItem', String(id), allWishlist.find(w => String(w.id) === String(id)))
-    mutateQueue(prev => enqueue(prev, 'wishlistItem', 'update', String(id), toOutboxPayload(updatedWish)))
-    // Mirror handleUpdateTransaction: clear the edit-lock so the drain loop can
-    // dispatch this op once the modal closes.
-    if (String(id) === editingPendingId) setEditingPendingId(null)
-  }
-
-  const handleDeleteWishlistItem = (id: number) => {
-    triggerVibration(30)
-    snapshotForUndo('wishlistItem', String(id), allWishlist.find(w => String(w.id) === String(id)))
-    mutateQueue(prev => enqueue(prev, 'wishlistItem', 'delete', String(id)))
-  }
-
-  const requestDeleteWishlistItem = (id: number) => {
-    if (!guardSensitive()) return
-    const item = wishlist.find(w => w.id === id)
-    setConfirmModalData({
-      title: 'Delete Wishlist Item',
-      message: `Delete "${item?.name || 'this wishlist item'}"? This removes the savings goal from your wishlist.`,
-      confirmText: 'Delete',
-      onConfirm: () => { handleDeleteWishlistItem(id) }
-    })
-  }
-
-  const handlePurchaseWishlistItem = (id: number) => {
-    if (!guardSensitive()) return
-    const item = allWishlist.find(w => String(w.id) === String(id))
-    const now = new Date()
-    const date = now.toLocaleDateString('en-CA')
-    mutateQueue(prev => enqueue(prev, 'wishlistItem', 'purchase', String(id), item ? {
-      name: item.name,
-      price: item.price,
-      date,
-      postedAt: now.toISOString()
-    } : undefined))
-  }
-
-  const handleUnpurchaseWishlistItem = (id: number) => {
-    if (!guardSensitive()) return
-    const item = allWishlist.find(w => String(w.id) === String(id))
-    mutateQueue(prev => enqueue(prev, 'wishlistItem', 'unpurchase', String(id), item ? {
-      purchaseTransactionId: item.purchaseTransactionId
-    } : undefined))
-  }
-
-  // Server wake-up and background sync task
-  const wakeUpAndSync = useCallback(async () => {
-    if (!token) return
-
-    let attempts = 0
-    const maxAttempts = 15 // try for 75 seconds
-
-    const runPing = async () => {
-      if (!token || isServerAwakeRef.current) return
-
-      try {
-        const res = await api.pingServer()
-        if (res && res.status !== 'waking_up') {
-          console.log('Server is awake! Performing initial load and processing queue...')
-          isServerAwakeRef.current = true
-          const { month: cachedMonth, year: cachedYear } = getCachedDashboardPeriod();
-          await loadAll(cachedMonth, cachedYear, true)
-          processQueue()
-          return
-        }
-      } catch (err) {
-        console.log('Wake-up ping failed:', err)
-      }
-
-      attempts++
-      if (attempts < maxAttempts) {
-        setTimeout(runPing, 5000)
-      }
-    }
-
-    runPing()
-  }, [token, processQueue])
-
-  // Proactively reflect browser connectivity instead of only inferring it
-  // from failed fetches after the fact.
-  useEffect(() => {
-    const handleConnectivityOnline = () => setIsOffline(false)
-    const handleConnectivityOffline = () => setIsOffline(true)
-    window.addEventListener('online', handleConnectivityOnline)
-    window.addEventListener('offline', handleConnectivityOffline)
-    return () => {
-      window.removeEventListener('online', handleConnectivityOnline)
-      window.removeEventListener('offline', handleConnectivityOffline)
-    }
-  }, [])
-
-  // Trigger wakeUpAndSync on mount or online status change
-  useEffect(() => {
-    if (token) {
-      wakeUpAndSync()
-
-      const handleOnline = () => {
-        console.log('Browser went online, starting wake-up ping...')
-        wakeUpAndSync()
-      }
-
-      window.addEventListener('online', handleOnline)
-      return () => {
-        window.removeEventListener('online', handleOnline)
-      }
-    }
-  }, [token, wakeUpAndSync])
-
-  // Combine synced and pending items for each entity
-
-  const allTransactions = useOptimisticList(transactions, activeOps, 'transaction');
-  const allRecurringPayments = useOptimisticList(recurringPayments, activeOps, 'recurringPayment');
-  const allWishlist = useOptimisticList(wishlist, activeOps, 'wishlistItem');
-  const allCategories = useOptimisticList(categoriesList, activeOps, 'category');
-
-  // Create optimistic dashboardData from server data + pending queue
-  const optimisticDashboardData = useMemo(
-    () => computeOptimisticDashboard(dashboardData, { activeOps, pendingOps, transactions }),
-    // NB: deps preserved verbatim from pre-extraction to keep memoization identical
-    // (activeOps is derived from pendingOps; allTransactions is a legacy dep).
-    [dashboardData, pendingOps, transactions, allTransactions]
-  );
-
-  useEffect(() => {
-    if (!token || !dashboardData) return
-
-    const cycleDay = dashboardData.setting.cycleDay || 28
+    const cycleDay = financial.dashboardData.setting.cycleDay || 28
     const { year, monthIndex } = getCurrentCycleYearAndMonth(cycleDay)
     const month = MONTH_NAMES[monthIndex - 1]
 
-    if (dashboardData.setting.selectedMonth === month && dashboardData.setting.selectedYear === year) {
+    if (financial.dashboardData.setting.selectedMonth === month && financial.dashboardData.setting.selectedYear === year) {
       setCurrentCycleDashboardData(null)
       return
     }
@@ -1281,202 +271,90 @@ function App() {
     })
 
     return () => ac.abort()
-  }, [token, dashboardData])
+  }, [session.token, financial.dashboardData])
 
-  const wishlistDashboardData = currentCycleDashboardData || optimisticDashboardData
-
-  const formatSensitive = useCallback((val: number) => {
-    const formatted = formatCurrencyVal(val, optimisticDashboardData?.setting?.currency || 'USD')
-    return (
-      <span className={hideSensitive ? 'inline-block font-mono tracking-wide select-none' : 'transition-[filter] duration-200'}>
-        {hideSensitive ? SENSITIVE_AMOUNT_MASK : formatted}
-      </span>
-    )
-  }, [hideSensitive, optimisticDashboardData?.setting?.currency])
-
-  // Wallet total: always the real current cycle's total (from walletBalance), falling
-  // back to the naive all-time sum only until the very first fetch lands.
-  const totalBalance = walletBalance ?? allTransactions.reduce((acc, t) => acc + t.amount, 0)
-
-  const [ledgerCyclesRange, setLedgerCyclesRange] = useState<'monthly' | '3month' | '6month' | 'yearly'>('monthly')
-
-  const handleQuickAction = (action: 'transaction' | 'subscription' | 'wishlist') => {
-    if (action === 'transaction') {
-      setActiveTab('ledger')
-      setAutoOpenLedgerAdd(true)
-    } else if (action === 'subscription') {
-      setActiveTab('recurring')
-      setAutoOpenSubscriptionAdd(true)
-    } else if (action === 'wishlist') {
-      setActiveTab('wishlist')
-      setAutoOpenWishlistAdd(true)
-    }
-  }
-  useEffect(() => {
-    if (activeTab !== 'ledger') {
-      setLedgerIncomingCategory(null)
-      setLedgerIncomingSearch(null)
-      setLedgerIncomingDate(null)
-      setLedgerIncomingTxType(null)
-      setLedgerCyclesRange('monthly')
-      setLedgerShowAllCycles(false)
-    }
-  }, [activeTab])
-
-  const handleNavigateToLedger = (options: {
-    category?: string | null
-    search?: string | null
-    date?: string | null
-    txType?: 'inflow' | 'outflow' | 'transfer' | null
-    range?: 'monthly' | '3month' | '6month' | 'yearly'
-    highlightedTxId?: string | null
-    showAllCycles?: boolean
-  }) => {
-    setLedgerIncomingCategory(options.category || null)
-    setLedgerIncomingSearch(options.search || null)
-    setLedgerIncomingDate(options.date || null)
-    setLedgerIncomingTxType(options.txType || null)
-    const range = options.range || 'monthly'
-    setLedgerCyclesRange(range)
-    const showAll = options.showAllCycles !== undefined ? options.showAllCycles : (range !== 'monthly')
-    setLedgerShowAllCycles(showAll)
-    if (options.highlightedTxId) {
-      setHighlightedTxId(options.highlightedTxId)
-    }
-    setActiveTab('ledger')
-  }
-
-  const revealSensitiveWithFingerprint = async (): Promise<boolean> => {
-    if (!hasFingerprintSetup) return false
-    let verified = false
-    try {
-      const { challengeId, options } = await getCachedFingerprintAssertOptions()
-      const credential = await getFingerprintAssertion(options)
-      await api.verifyFingerprintAssert(challengeId, credential)
-      setHideSensitive(false)
-      localStorage.setItem('hide_sensitive', 'false')
-      mutateQueue(prev => enqueue(prev, 'settings', 'update', 'hideSensitive', { hideSensitive: false }))
-      verified = true
-      return true
-    } catch (err) {
-      console.warn('Fingerprint prompt failed/cancelled:', err)
-      return false
-    } finally {
-      clearCachedFingerprintAssertOptions()
-      if (!verified && token && !isLocked && hideSensitive) {
-        void prefetchFingerprintAssertOptions().catch(() => undefined)
-      }
-    }
-  }
+  const wishlistDashboardData = currentCycleDashboardData || financial.optimisticDashboardData
 
   const handleToggleHideSensitive = async () => {
-    if (hideSensitive) {
-      setShowPasswordPrompt(true)
+    if (prefs.hideSensitive) {
+      session.setShowPasswordPrompt(true)
     } else {
-      setHideSensitive(true)
+      prefs.setHideSensitive(true)
       localStorage.setItem('hide_sensitive', 'true')
-      if (hasFingerprintSetup) {
+      if (session.hasFingerprintSetup) {
         void prefetchFingerprintAssertOptions().catch(() => undefined)
       }
-      mutateQueue(prev => enqueue(prev, 'settings', 'update', 'hideSensitive', { hideSensitive: true }))
+      financial.handleUpdateSettings({
+        targetStabilityFund: Number(financial.optimisticDashboardData?.setting?.targetStabilityFund || 10000),
+        essentialsAlloc: financial.optimisticDashboardData?.setting?.essentialsAlloc ?? 0.5,
+        growthAlloc: financial.optimisticDashboardData?.setting?.growthAlloc ?? 0.25,
+        stabilityAlloc: financial.optimisticDashboardData?.setting?.stabilityAlloc ?? 0.15,
+        rewardsAlloc: financial.optimisticDashboardData?.setting?.rewardsAlloc ?? 0.1,
+        cycleDay: financial.optimisticDashboardData?.setting?.cycleDay ?? 28,
+        currency: financial.optimisticDashboardData?.setting?.currency || 'USD',
+        stabilityOverflowRedirect: financial.optimisticDashboardData?.setting?.stabilityOverflowRedirect
+      })
     }
   }
 
-  const nextAiActionNonce = () => {
-    aiActionNonceRef.current += 1
-    return aiActionNonceRef.current
-  }
-
-  const handleAiActions = (actions: api.AiUiAction[]) =>
-    dispatchAiActions(actions, {
-      hideSensitive,
-      showToast,
-      setActiveTab,
-      handleSelectPeriod,
-      handleNavigateToLedger,
-      nextNonce: nextAiActionNonce,
-      setAiLedgerDraft,
-      setAiRecurringDraft,
-      setAiWishlistDraft,
-      setAiLedgerEditDraft,
-      setAiRecurringEditDraft,
-      setAiWishlistEditDraft,
-      setAiLedgerExportRequest,
-      requestDeleteLedger: (id) => requestAiLedgerDelete(id, { showToast, setConfirmModalData, allTransactions, handleDeleteTransaction }),
-      requestDeletePayment,
-      requestDeleteWishlistItem,
-      allRecurringPayments,
-      allWishlist,
-      handleToggleActive,
-      getPendingNotifications: () => optimisticDashboardData?.pendingNotifications || [],
-      setConfirmModalData,
-      handleDiscardSubscription,
-      handleConfirmSubscription,
-      handlePurchaseWishlistItem,
-      handleUnpurchaseWishlistItem,
-    })
-
   const handleToggleBalanceAmounts = () => {
-    const nextHidden = !hideBalanceAmounts
-    setHideBalanceAmounts(nextHidden)
-    localStorage.setItem('hide_balance_amounts', nextHidden.toString())
+    const nextHidden = !prefs.hideBalanceAmounts
+    prefs.setHideBalanceAmounts(nextHidden)
   }
 
   const handleToggleDarkMode = () => {
-    const newDark = !darkMode
-    setDarkMode(newDark)
-    localStorage.setItem('dark_mode', newDark.toString())
-    mutateQueue(prev => enqueue(prev, 'settings', 'update', 'darkMode', { darkMode: newDark }))
+    const newDark = !prefs.darkMode
+    prefs.setDarkMode(newDark)
+    financial.handleUpdateSettings({
+      targetStabilityFund: Number(financial.optimisticDashboardData?.setting?.targetStabilityFund || 10000),
+      essentialsAlloc: financial.optimisticDashboardData?.setting?.essentialsAlloc ?? 0.5,
+      growthAlloc: financial.optimisticDashboardData?.setting?.growthAlloc ?? 0.25,
+      stabilityAlloc: financial.optimisticDashboardData?.setting?.stabilityAlloc ?? 0.15,
+      rewardsAlloc: financial.optimisticDashboardData?.setting?.rewardsAlloc ?? 0.1,
+      cycleDay: financial.optimisticDashboardData?.setting?.cycleDay ?? 28,
+      currency: financial.optimisticDashboardData?.setting?.currency || 'USD',
+      stabilityOverflowRedirect: financial.optimisticDashboardData?.setting?.stabilityOverflowRedirect
+    })
   }
 
-  // Delegate to the shared haptics helper which tries the Capacitor native
-  // Haptics plugin first (works on Firefox mobile and all Capacitor targets)
-  // then falls back to navigator.vibrate() for plain browser contexts.
-  const triggerVibration = (pattern: number | number[] = 15) => {
-    void triggerHaptic(pattern)
-  }
-
-  const requestConfirm = useCallback((request: Parameters<AppContextValue['confirm']>[0]) => {
-    setConfirmModalData(request)
-  }, [])
-  const appContextValue = useMemo<AppContextValue>(() => ({
-    hideSensitive,
-    currency: optimisticDashboardData?.setting?.currency || 'USD',
-    darkMode,
-    activeSyncId,
-    deletingId: deletingTxId,
-    isSyncing: isBackgroundSyncing || pendingOps.length > 0,
-    isOffline,
-    formatSensitive,
-    showToast,
-    guardSensitive,
-    confirm: requestConfirm,
+  const appContextValue = useMemo<AppContextValue>(() => buildAppContextValue({
+    hideSensitive: prefs.hideSensitive,
+    currency: financial.optimisticDashboardData?.setting?.currency || 'USD',
+    darkMode: prefs.darkMode,
+    activeSyncId: financial.activeSyncId,
+    deletingId: financial.deletingTxId,
+    isSyncing: financial.isBackgroundSyncing || financial.pendingOps.length > 0,
+    isOffline: financial.isOffline,
+    formatSensitive: financial.formatSensitive,
+    showToast: dialogs.showToast,
+    guardSensitive: guardSensitive,
+    confirm: dialogs.setConfirmModalData,
   }), [
-    hideSensitive,
-    optimisticDashboardData?.setting?.currency,
-    darkMode,
-    activeSyncId,
-    deletingTxId,
-    isBackgroundSyncing,
-    pendingOps.length,
-    isOffline,
-    formatSensitive,
-    showToast,
+    prefs.hideSensitive,
+    financial.optimisticDashboardData?.setting?.currency,
+    prefs.darkMode,
+    financial.activeSyncId,
+    financial.deletingTxId,
+    financial.isBackgroundSyncing,
+    financial.pendingOps.length,
+    financial.isOffline,
+    financial.formatSensitive,
+    dialogs.showToast,
     guardSensitive,
-    requestConfirm,
+    dialogs.setConfirmModalData,
   ])
 
-  if (!token) {
+  if (!session.token) {
     return (
       <Suspense fallback={<ViewFallback />}>
         <LaunchReady>
-          <LoginView onLoginSuccess={handleLoginSuccess} />
+          <LoginView onLoginSuccess={session.handleLoginSuccess} />
         </LaunchReady>
       </Suspense>
     )
   }
 
-  if (loading && !optimisticDashboardData) {
+  if (financial.loading && !financial.optimisticDashboardData) {
     return (
       <LaunchReady>
         <div className="app-shell min-h-screen text-foreground p-4">
@@ -1508,17 +386,12 @@ function App() {
     )
   }
 
-  // When locked, render ONLY the lock screen. The previous design layered the lock as a
-  // blur overlay while the entire app tree (TopNav, balances, every transaction) stayed
-  // mounted in the DOM — readable via devtools, the accessibility tree, or automation
-  // despite the "lock". Not mounting the sensitive tree at all is the actual protection.
-  // App-level hooks (outbox, auto-lock, heartbeat) live above this return and keep running.
-  if (isLocked && !!token) {
+  if (session.isLocked && !!session.token) {
     return (
       <AppProvider value={appContextValue}>
         <div className="app-shell min-h-screen text-foreground flex flex-col selection:bg-blue-500/20 selection:text-blue-500">
-          <ToastViewport toasts={toasts} onDismiss={dismissToast} />
-          <LockScreen isOpen onUnlocked={handleUnlocked} onSignOut={handleLogout} />
+          <ToastViewport toasts={dialogs.toasts} onDismiss={dialogs.dismissToast} />
+          <LockScreen isOpen onUnlocked={session.handleUnlocked} onSignOut={session.handleLogout} />
         </div>
       </AppProvider>
     )
@@ -1526,437 +399,374 @@ function App() {
 
   return (
     <AppProvider value={appContextValue}>
-    <div className="app-shell min-h-screen text-foreground flex flex-col selection:bg-blue-500/20 selection:text-blue-500">
+      <div className="app-shell min-h-screen text-foreground flex flex-col selection:bg-blue-500/20 selection:text-blue-500">
+        <ToastViewport toasts={dialogs.toasts} onDismiss={dialogs.dismissToast} />
 
-      <ToastViewport toasts={toasts} onDismiss={dismissToast} />
-
-      <TopNav
-        activeTab={activeTab} 
-        onTabChange={setActiveTab} 
-        onQuickAction={handleQuickAction}
-        onAskAI={() => setIsAiOpen(true)}
-        hideSensitive={hideSensitive}
-        onToggleHideSensitive={handleToggleHideSensitive}
-        onLogout={handleLogout}
-        username={username}
-        pendingNotifications={optimisticDashboardData?.pendingNotifications || []}
-        onConfirmSubscription={handleConfirmSubscription}
-        onDeletePayment={handleDeletePayment}
-        darkMode={darkMode}
-        onToggleDarkMode={handleToggleDarkMode}
-        currency={optimisticDashboardData?.setting?.currency || 'USD'}
-        isSyncing={isBackgroundSyncing || pendingOps.length > 0}
-        isOffline={isOffline}
-        syncLabel={
-          syncCountdownMs > 0
-            ? `Retrying ${Math.ceil(syncCountdownMs / 1000)}s`
-            : activeSyncId
-              ? 'Syncing...'
-              : pendingOps.length > 0
-                ? `${pendingOps.length} queued`
-                : isBackgroundSyncing
-                  ? 'Refreshing'
-                  : undefined
-        }
-        failedOpsCount={failedOps.length}
-        onOpenFailedOps={() => setShowFailedOpsModal(true)}
-        onDiscardSubscription={handleDiscardSubscription}
-        draftCount={draftTransactions.length}
-      />
-
-      <AiAssistantPanel
-        isOpen={isAiOpen}
-        onClose={() => setIsAiOpen(false)}
-        onActions={handleAiActions}
-        sensitiveMode={hideSensitive}
-        isOffline={isOffline}
-      />
-
-      {error && (
-        <div className="bg-destructive/15 border-b border-destructive/30 text-destructive px-4 py-2 text-xs flex items-center justify-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-destructive animate-pulse select-none" />
-          <span className="select-none">{error}</span>
-          <button
-            type="button"
-            onClick={() => loadAll(selectedMonth || undefined, selectedYear || undefined, true)}
-            disabled={isBackgroundSyncing}
-            className="ml-1 font-bold underline underline-offset-2 hover:text-destructive/80 disabled:opacity-60 disabled:cursor-default cursor-pointer"
-          >
-            {isBackgroundSyncing ? 'Retrying…' : 'Retry'}
-          </button>
-        </div>
-      )}
-
-      {/* Main Content Area */}
-      <PullToRefresh
-        onRefresh={() => loadAll(selectedMonth || undefined, selectedYear || undefined, true)}
-        disabled={loading || isLocked}
-      >
-      <main className="flex-1 container mx-auto px-4 py-6 sm:py-8 pb-24 md:pb-8 max-w-7xl relative">
-        <ErrorBoundary variant="inline" resetKey={activeTab}>
-        <Suspense fallback={<ContentViewFallback />}>
-        <LaunchReady>
-        {/* Keyed on the active tab so every view change replays the gentle
-            slide entrance instead of hard-swapping content. Deliberately NOT
-            wrapped in <AnimatePresence mode="wait">: gating the incoming view on
-            the outgoing one's exit animation could deadlock (an interrupted or
-            never-completing exit left the new view unmounted, so the nav showed
-            the new tab as active while the old content stayed on screen and
-            tapping again was a no-op). Remounting on key change replays the
-            entrance without any exit-completion dependency. */}
-        <motion.div
-          key={activeTab}
-          initial={{ opacity: 0, y: 5 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 400, damping: 30, mass: 1 }}
-          className="w-full gpu-layer"
-        >
-        {activeTab === 'dashboard' && (
-          <DashboardView
-            dashboardData={optimisticDashboardData}
-            transactions={allTransactions}
-            onSelectPeriod={handleSelectPeriod}
-            onNavigate={setActiveTab}
-            hideBalanceAmounts={hideBalanceAmounts}
-            walletBalance={totalBalance}
-            onToggleBalanceAmounts={handleToggleBalanceAmounts}
-            onConfirmSubscription={handleConfirmSubscription}
-            onDeletePayment={handleDeletePayment}
-            onNavigateToLedger={handleNavigateToLedger}
-            wishlist={allWishlist}
-            onDiscardSubscription={handleDiscardSubscription}
-            onAddTransaction={handleAddTransaction}
-            onAddBalanceAdjustment={handleAddBalanceAdjustment}
-            isSwitchingCycle={isSwitchingCycle}
-          />
-        )}        {activeTab === 'settings' && (
-          <SettingsView 
-            dashboardData={optimisticDashboardData}
-            categoriesList={allCategories}
-            onToggleDarkMode={handleToggleDarkMode}
-            onToggleHideSensitive={handleToggleHideSensitive}
-            onUpdateSettings={handleUpdateSettings}
-            onAddCategory={handleAddCategory}
-            onDeleteCategory={requestDeleteCategory}
-            onApplyCategoryCleanupSuggestion={handleApplyCategoryCleanupSuggestion}
-            notifyOnLoginEnabled={modalCheckbox}
-            onToggleNotifyOnLogin={(checked) => {
-              setModalCheckbox(checked)
-              localStorage.setItem('show_notifications_on_login', checked ? 'true' : 'false')
-              showToast('Notification preference updated.', 'Settings Saved', 'success')
-            }}
-            onNavigateToLedger={handleNavigateToLedger}
-            onClearLocalFinancialData={() => {
-              clearLocalFinancialData()
-              setDashboardData(null)
-              setWalletBalance(null)
-              setTransactions([])
-              setRecurringPayments([])
-              setCategoriesList([])
-              setWishlist([])
-              resetOutbox()
-              setDraftTransactions([])
-              showToast('Cached financial data and offline drafts were removed from this device.', 'Local Data Cleared', 'success')
-              void loadAll(selectedMonth, selectedYear, true)
-            }}
-          />
-        )}
-
-        {activeTab === 'recurring' && (
-          <RecurringPaymentsView 
-            payments={allRecurringPayments}
-            activeRecurringPayments={optimisticDashboardData?.activeRecurringPayments || []}
-            transactions={allTransactions}
-            selectedMonth={selectedMonth}
-            selectedYear={selectedYear}
-            cycleDay={optimisticDashboardData?.setting?.cycleDay || 28}
-            onAddPayment={handleAddPayment}
-            onToggleActive={handleToggleActive}
-            onDeletePayment={requestDeletePayment}
-            onUpdatePayment={handleUpdatePayment}
-            categories={allCategories}
-            autoOpenAddForm={autoOpenSubscriptionAdd}
-            onResetAutoOpen={() => setAutoOpenSubscriptionAdd(false)}
-            isSwitchingCycle={isSwitchingCycle}
-            aiDraft={aiRecurringDraft}
-            aiEditDraft={aiRecurringEditDraft}
-            onAiDraftConsumed={() => setAiRecurringDraft(null)}
-            onAiEditDraftConsumed={() => setAiRecurringEditDraft(null)}
-          />
-        )}
-
-        {activeTab === 'ledger' && (
-          <LedgerView 
-            transactions={allTransactions}
-            autocompleteSuggestions={autocompleteSuggestions}
-            onAddTransaction={handleAddTransaction}
-            onDeleteTransaction={handleDeleteTransaction}
-            onUpdateTransaction={handleUpdateTransaction}
-            categories={allCategories}
-            selectedMonth={selectedMonth}
-            selectedYear={selectedYear}
-            availableYears={optimisticDashboardData?.availableYears || [selectedYear || new Date().getFullYear()]}
-            cycleDay={optimisticDashboardData?.setting?.cycleDay || 28}
-            onSelectPeriod={handleSelectPeriod}
-            incomingCategory={ledgerIncomingCategory}
-            incomingSearch={ledgerIncomingSearch}
-            incomingDate={ledgerIncomingDate}
-            incomingTxType={ledgerIncomingTxType}
-            highlightedTxId={highlightedTxId}
-            onClearIncomingFilters={() => {
-              setLedgerIncomingCategory(null)
-              setLedgerIncomingSearch(null)
-              setLedgerIncomingDate(null)
-              setLedgerIncomingTxType(null)
-              setHighlightedTxId(null)
-            }}
-            showAllCycles={ledgerShowAllCycles}
-            onClearAllCycles={() => { setLedgerShowAllCycles(false) }}
-            cyclesRange={ledgerCyclesRange}
-            autoOpenAddForm={autoOpenLedgerAdd}
-            onResetAutoOpen={() => setAutoOpenLedgerAdd(false)}
-            stabilityBalance={optimisticDashboardData?.categories?.find(c => c.name === 'Stability')?.remaining ?? 0}
-            isSwitchingCycle={isSwitchingCycle}
-            stabilityTarget={optimisticDashboardData?.setting?.targetStabilityFund ?? 10000}
-            essentialsAlloc={optimisticDashboardData?.setting?.essentialsAlloc ?? 0.5}
-            growthAlloc={optimisticDashboardData?.setting?.growthAlloc ?? 0.25}
-            stabilityAlloc={optimisticDashboardData?.setting?.stabilityAlloc ?? 0.15}
-            rewardsAlloc={optimisticDashboardData?.setting?.rewardsAlloc ?? 0.1}
-            stabilityOverflowRedirect={optimisticDashboardData?.setting?.stabilityOverflowRedirect}
-            onFetchPagedTransactions={api.fetchPagedTransactions}
-            onFetchTransactionById={api.fetchTransactionById}
-            onExportTransactions={api.exportTransactionsCsv}
-            onShowAlert={showAlert}
-            onStartEditPending={setEditingPendingId}
-            receiptScanDraft={activeReceiptScanDraft}
-            onReceiptScanStarted={handleReceiptScanStarted}
-            onReceiptScanCleared={clearReceiptScanJob}
-            onAddFormOpenChange={setIsLedgerAddOpen}
-            activeScanJobIds={receiptScanJobIds}
-            failedScanJob={failedScanJob}
-            aiDraft={aiLedgerDraft}
-            aiEditDraft={aiLedgerEditDraft}
-            aiExportRequest={aiLedgerExportRequest}
-            onAiDraftConsumed={() => setAiLedgerDraft(null)}
-            onAiEditDraftConsumed={() => setAiLedgerEditDraft(null)}
-            onAiExportRequestConsumed={() => setAiLedgerExportRequest(null)}
-          />
-        )}
-
-        {activeTab === 'wishlist' && (
-          <WishlistView 
-            wishlist={allWishlist}
-            rewardsBalance={wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')?.remaining ?? 0}
-            rewardsTarget={wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')?.target ?? 400}
-            pastThreeMonthsRewardsAverage={wishlistDashboardData?.stats?.pastThreeMonthsRewardsAverage ?? 0}
-            hasRewardsHistory={wishlistDashboardData?.stats?.hasRewardsHistory ?? false}
-            onAddItem={handleAddWishlistItem}
-            onUpdateItem={handleUpdateWishlistItem}
-            onDeleteItem={requestDeleteWishlistItem}
-            onPurchaseItem={handlePurchaseWishlistItem}
-            autoOpenAddModal={autoOpenWishlistAdd}
-            onResetAutoOpen={() => setAutoOpenWishlistAdd(false)}
-            onNavigateToLedger={handleNavigateToLedger}
-            isSwitchingCycle={isSwitchingCycle}
-            onStartEditPending={setEditingPendingId}
-            aiDraft={aiWishlistDraft}
-            aiEditDraft={aiWishlistEditDraft}
-            onAiDraftConsumed={() => setAiWishlistDraft(null)}
-            onAiEditDraftConsumed={() => setAiWishlistEditDraft(null)}
-          />
-        )}
-
-        {activeTab === 'drafts' && draftTransactions.length > 0 && (
-          <DraftStagingView 
-            draftTransactions={draftTransactions}
-            onUpdateDraftTransaction={handleUpdateDraftTransaction}
-            onDeleteDraftTransaction={requestDeleteDraftTransaction}
-            hideSensitive={hideSensitive}
-            currency={optimisticDashboardData?.setting?.currency || 'USD'}
-            onCancel={() => setActiveTab('ledger')}
-            onAddAnother={() => {
-              setActiveTab('ledger')
-              setAutoOpenLedgerAdd(true)
-            }}
-          />
-        )}
-        </motion.div>
-        </LaunchReady>
-        </Suspense>
-        </ErrorBoundary>
-      </main>
-      </PullToRefresh>
-
-      <PendingSubscriptionsModal
-        isOpen={showLoginModal}
-        pendingNotifications={optimisticDashboardData?.pendingNotifications || []}
-        currency={optimisticDashboardData?.setting?.currency || 'USD'}
-        hideSensitive={hideSensitive}
-        showOnLoginChecked={modalCheckbox}
-        onToggleShowOnLogin={(checked) => {
-          setModalCheckbox(checked)
-          localStorage.setItem('show_notifications_on_login', checked ? 'true' : 'false')
-        }}
-        onClose={() => setShowLoginModal(false)}
-        onConfirmSubscription={handleConfirmSubscription}
-        onDiscardSubscription={handleDiscardSubscription}
-        onRemoveSubscription={(recurringPaymentId) => setConfirmModalData({
-          title: 'Remove Subscription',
-          message: 'Are you sure you want to delete this recurring subscription? This will cancel all future notifications for this subscription.',
-          confirmText: 'Remove',
-          onConfirm: () => handleDeletePayment(recurringPaymentId)
-        })}
-      />
-
-      <FailedSyncModal
-        isOpen={showFailedOpsModal}
-        failedOps={failedOps}
-        onClose={() => setShowFailedOpsModal(false)}
-        onDiscard={handleDiscardFailedOp}
-        onDiscardAll={handleDiscardAllFailedOps}
-      />
-
-      <PasswordPromptModal
-        isOpen={showPasswordPrompt}
-        onClose={() => setShowPasswordPrompt(false)}
-        onVerified={() => {
-          setHideSensitive(false)
-          localStorage.setItem('hide_sensitive', 'false')
-          setShowPasswordPrompt(false)
-          mutateQueue(prev => enqueue(prev, 'settings', 'update', 'hideSensitive', { hideSensitive: false }))
-        }}
-        onTryFingerprint={hasFingerprintSetup ? revealSensitiveWithFingerprint : undefined}
-      />
-
-      <LockScreen
-        isOpen={isLocked && !!token}
-        onUnlocked={handleUnlocked}
-        onSignOut={handleLogout}
-      />
-
-      {/* Footer */}
-      <footer className="border-t border-border/40 py-6 pb-24 md:pb-6 bg-background/45 backdrop-blur select-none">
-        <div className="container mx-auto px-4 text-center text-xs text-muted-foreground">
-          &copy; {new Date().getFullYear()} FinancialApp. All rights reserved.
-        </div>
-      </footer>
-      <CustomAlertModal
-        isOpen={!!customAlert}
-        title={customAlert?.title || 'Notification'}
-        message={customAlert?.message || ''}
-        onClose={() => setCustomAlert(null)}
-      />
-
-      <CustomConfirmModal
-        isOpen={!!confirmModalData}
-        title={confirmModalData?.title || 'Confirmation'}
-        message={confirmModalData?.message || ''}
-        confirmText={confirmModalData?.confirmText || 'Confirm'}
-        cancelText="Cancel"
-        confirmDisabled={confirmModalData?.confirmDisabled || false}
-        onConfirm={() => {
-          if (confirmModalData) {
-            confirmModalData.onConfirm()
-            setConfirmModalData(null)
+        <TopNav
+          activeTab={prefs.activeTab}
+          onTabChange={prefs.setActiveTab}
+          onQuickAction={nav.handleQuickAction}
+          onAskAI={() => setIsAiOpen(true)}
+          hideSensitive={prefs.hideSensitive}
+          onToggleHideSensitive={handleToggleHideSensitive}
+          onLogout={session.handleLogout}
+          username={session.username}
+          pendingNotifications={financial.optimisticDashboardData?.pendingNotifications || []}
+          onConfirmSubscription={financial.handleConfirmSubscription}
+          onDeletePayment={financial.handleDeletePayment}
+          darkMode={prefs.darkMode}
+          onToggleDarkMode={handleToggleDarkMode}
+          currency={financial.optimisticDashboardData?.setting?.currency || 'USD'}
+          isSyncing={financial.isBackgroundSyncing || financial.pendingOps.length > 0}
+          isOffline={financial.isOffline}
+          syncLabel={
+            financial.syncCountdownMs > 0
+              ? `Retrying ${Math.ceil(financial.syncCountdownMs / 1000)}s`
+              : financial.activeSyncId
+                ? 'Syncing...'
+                : financial.pendingOps.length > 0
+                  ? `${financial.pendingOps.length} queued`
+                  : financial.isBackgroundSyncing
+                    ? 'Refreshing'
+                    : undefined
           }
-        }}
-        onCancel={() => setConfirmModalData(null)}
-      />
+          failedOpsCount={financial.failedOps.length}
+          onOpenFailedOps={() => dialogs.setShowFailedOpsModal(true)}
+          onDiscardSubscription={financial.handleDiscardSubscription}
+          draftCount={financial.draftTransactions.length}
+        />
 
-      {/* Mobile Floating Action Button (FAB) & Speed Dial Menu */}
-      {token && (
-        <>
-          {/* Backdrop Blur Overlay when speed dial is open */}
-          <AnimatePresence>
-          {isFabOpen && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsFabOpen(false)}
-              className="md:hidden fixed inset-0 z-30 bg-background/60 backdrop-blur-xs"
-            />
-          )}
-          </AnimatePresence>
+        <AiAssistantPanel
+          isOpen={isAiOpen}
+          onClose={() => setIsAiOpen(false)}
+          onActions={aiRouter.handleAiActions}
+          sensitiveMode={prefs.hideSensitive}
+          isOffline={financial.isOffline}
+        />
 
-          {/* Speed Dial Menu Items — staggered so they cascade out from the
-              FAB (nearest first) and collapse back together instantly. */}
-          <AnimatePresence>
-          {isFabOpen && (
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
-            variants={{
-              visible: { opacity: 1, transition: { staggerChildren: 0.05, staggerDirection: -1 } },
-              hidden: { opacity: 0, transition: { staggerChildren: 0.05, staggerDirection: 1, delayChildren: 0.1 } }
-            }}
-            style={{ bottom: 'calc(148px + env(safe-area-inset-bottom, 0px))' }}
-            className="md:hidden fixed right-8 z-40 flex flex-col gap-3.5 items-end pointer-events-auto"
-          >
-            {([
-              { key: 'wishlist' as const, label: 'Add Wish Goal', Icon: PiggyBank, circleClass: 'bg-pink-500 group-hover:bg-pink-600' },
-              { key: 'subscription' as const, label: 'New Subscription', Icon: CreditCard, circleClass: 'bg-violet-500 group-hover:bg-violet-600' },
-              { key: 'transaction' as const, label: 'Post Transaction', Icon: Wallet, circleClass: 'bg-emerald-500 group-hover:bg-emerald-600' },
-            ]).map(({ key, label, Icon, circleClass }) => (
-              <motion.button
-                key={key}
-                variants={{
-                  visible: { opacity: 1, y: 0, scale: 1 },
-                  hidden: { opacity: 0, y: 15, scale: 0.9 }
-                }}
-                whileTap={{ scale: 0.92 }}
-                onClick={() => {
-                  handleQuickAction(key)
-                  setIsFabOpen(false)
-                }}
-                className="flex items-center gap-2.5 group cursor-pointer focus:outline-none"
-              >
-                <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-foreground shadow-xs select-none group-hover:bg-muted transition duration-150">
-                  {label}
-                </span>
-                <div className={`size-11 rounded-full ${circleClass} text-white flex items-center justify-center shadow-lg transition`}>
-                  <Icon className="size-5" />
-                </div>
-              </motion.button>
-            ))}
-          </motion.div>
-          )}
-          </AnimatePresence>
+        {financial.error && (
+          <div className="bg-destructive/15 border-b border-destructive/30 text-destructive px-4 py-2 text-xs flex items-center justify-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-destructive animate-pulse select-none" />
+            <span className="select-none">{financial.error}</span>
+            <button
+              type="button"
+              onClick={() => financial.loadAll(nav.selectedMonth || undefined, nav.selectedYear || undefined, true)}
+              disabled={financial.isBackgroundSyncing}
+              className="ml-1 font-bold underline underline-offset-2 hover:text-destructive/80 disabled:opacity-60 disabled:cursor-default cursor-pointer"
+            >
+              {financial.isBackgroundSyncing ? 'Retrying…' : 'Retry'}
+            </button>
+          </div>
+        )}
 
-          {/* Main FAB Toggle Button */}
-          <motion.button
-            whileTap={{ scale: 0.92 }}
-            animate={{
-              rotate: (activeTab !== 'drafts' && isFabOpen) ? 135 : 0
-            }}
-            transition={{ type: "spring", stiffness: 260, damping: 20 }}
-            onClick={() => {
-              if (activeTab === 'drafts') {
-                handleSyncDraftBatch()
-              } else {
-                setIsFabOpen(prev => !prev)
-              }
-            }}
-            className={`fixed right-6 flex items-center justify-center size-14 rounded-full text-white shadow-xl cursor-pointer ${
-              activeTab === 'drafts'
-                ? 'bg-gradient-to-tr from-emerald-600 to-green-500 shadow-emerald-500/20 z-40'
-                : 'bg-gradient-to-tr from-blue-600 to-sky-500 shadow-blue-500/10 z-40 md:hidden'
-            }`}
-            style={{
-              bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))'
-            }}
-            title={activeTab === 'drafts' ? 'Sync Batch to Server' : 'Open Menu'}
-          >
-            {activeTab === 'drafts' ? (
-              <Upload className="size-6" />
-            ) : (
-              <Plus className="size-6" />
-            )}
-          </motion.button>
-        </>
-      )}
-    </div>
+        <PullToRefresh
+          onRefresh={() => financial.loadAll(nav.selectedMonth || undefined, nav.selectedYear || undefined, true)}
+          disabled={financial.loading || session.isLocked}
+        >
+          <main className="flex-1 container mx-auto px-4 py-6 sm:py-8 pb-24 md:pb-8 max-w-7xl relative">
+            <ErrorBoundary variant="inline" resetKey={prefs.activeTab}>
+              <Suspense fallback={<ContentViewFallback />}>
+                <LaunchReady>
+                  <motion.div
+                    key={prefs.activeTab}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 30, mass: 1 }}
+                    className="w-full gpu-layer"
+                  >
+                    {prefs.activeTab === 'dashboard' && (
+                      <DashboardView
+                        dashboardData={financial.optimisticDashboardData}
+                        transactions={financial.allTransactions}
+                        onSelectPeriod={nav.handleSelectPeriod}
+                        onNavigate={prefs.setActiveTab}
+                        hideBalanceAmounts={prefs.hideBalanceAmounts}
+                        walletBalance={financial.totalBalance}
+                        onToggleBalanceAmounts={handleToggleBalanceAmounts}
+                        onConfirmSubscription={financial.handleConfirmSubscription}
+                        onDeletePayment={financial.handleDeletePayment}
+                        onNavigateToLedger={nav.handleNavigateToLedger}
+                        wishlist={financial.allWishlist}
+                        onDiscardSubscription={financial.handleDiscardSubscription}
+                        onAddTransaction={(tx) => financial.handleAddTransaction(tx, prefs.setActiveTab)}
+                        onAddBalanceAdjustment={financial.handleAddBalanceAdjustment}
+                        isSwitchingCycle={nav.isSwitchingCycle}
+                      />
+                    )}
+
+                    {prefs.activeTab === 'settings' && (
+                      <SettingsView 
+                        dashboardData={financial.optimisticDashboardData}
+                        categoriesList={financial.allCategories}
+                        onToggleDarkMode={handleToggleDarkMode}
+                        onToggleHideSensitive={handleToggleHideSensitive}
+                        onUpdateSettings={financial.handleUpdateSettings}
+                        onAddCategory={financial.handleAddCategory}
+                        onDeleteCategory={financial.requestDeleteCategory}
+                        onApplyCategoryCleanupSuggestion={financial.handleApplyCategoryCleanupSuggestion}
+                        notifyOnLoginEnabled={prefs.notifyOnLogin}
+                        onToggleNotifyOnLogin={(checked) => {
+                          prefs.setNotifyOnLogin(checked)
+                          dialogs.showToast('Notification preference updated.', 'Settings Saved', 'success')
+                        }}
+                        onNavigateToLedger={nav.handleNavigateToLedger}
+                        onClearLocalFinancialData={() => {
+                          clearLocalFinancialData()
+                          void financial.handleLogoutCleanup(session.username)
+                          void financial.loadAll(nav.selectedMonth, nav.selectedYear, true)
+                          dialogs.showToast('Cached financial data and offline drafts were removed from this device.', 'Local Data Cleared', 'success')
+                        }}
+                      />
+                    )}
+
+                    {prefs.activeTab === 'recurring' && (
+                      <RecurringPaymentsView 
+                        payments={financial.allRecurringPayments}
+                        activeRecurringPayments={financial.optimisticDashboardData?.activeRecurringPayments || []}
+                        transactions={financial.allTransactions}
+                        selectedMonth={nav.selectedMonth}
+                        selectedYear={nav.selectedYear}
+                        cycleDay={financial.optimisticDashboardData?.setting?.cycleDay || 28}
+                        onAddPayment={financial.handleAddPayment}
+                        onToggleActive={financial.handleToggleActive}
+                        onDeletePayment={financial.requestDeletePayment}
+                        onUpdatePayment={financial.handleUpdatePayment}
+                        categories={financial.allCategories}
+                        autoOpenAddForm={nav.autoOpenSubscriptionAdd}
+                        onResetAutoOpen={() => nav.setAutoOpenSubscriptionAdd(false)}
+                        isSwitchingCycle={nav.isSwitchingCycle}
+                        aiDraft={aiRouter.state.aiRecurringDraft}
+                        aiEditDraft={aiRouter.state.aiRecurringEditDraft}
+                        onAiDraftConsumed={() => aiRouter.dispatch({ type: 'CONSUME_RECURRING_DRAFT' })}
+                        onAiEditDraftConsumed={() => aiRouter.dispatch({ type: 'CONSUME_RECURRING_EDIT_DRAFT' })}
+                      />
+                    )}
+
+                    {prefs.activeTab === 'ledger' && (
+                      <LedgerView 
+                        transactions={financial.allTransactions}
+                        autocompleteSuggestions={financial.autocompleteSuggestions}
+                        onAddTransaction={(tx) => financial.handleAddTransaction(tx, prefs.setActiveTab)}
+                        onDeleteTransaction={financial.handleDeleteTransaction}
+                        onUpdateTransaction={financial.handleUpdateTransaction}
+                        categories={financial.allCategories}
+                        selectedMonth={nav.selectedMonth}
+                        selectedYear={nav.selectedYear}
+                        availableYears={financial.optimisticDashboardData?.availableYears || [nav.selectedYear || new Date().getFullYear()]}
+                        cycleDay={financial.optimisticDashboardData?.setting?.cycleDay || 28}
+                        onSelectPeriod={nav.handleSelectPeriod}
+                        incomingCategory={nav.ledgerIncomingCategory}
+                        incomingSearch={nav.ledgerIncomingSearch}
+                        incomingDate={nav.ledgerIncomingDate}
+                        incomingTxType={nav.ledgerIncomingTxType}
+                        highlightedTxId={nav.highlightedTxId}
+                        onClearIncomingFilters={nav.clearIncomingFilters}
+                        showAllCycles={nav.ledgerShowAllCycles}
+                        onClearAllCycles={() => { nav.setLedgerShowAllCycles(false) }}
+                        cyclesRange={prefs.ledgerCyclesRange}
+                        autoOpenAddForm={nav.autoOpenLedgerAdd}
+                        onResetAutoOpen={() => nav.setAutoOpenLedgerAdd(false)}
+                        stabilityBalance={financial.optimisticDashboardData?.categories?.find(c => c.name === 'Stability')?.remaining ?? 0}
+                        isSwitchingCycle={nav.isSwitchingCycle}
+                        stabilityTarget={financial.optimisticDashboardData?.setting?.targetStabilityFund ?? 10000}
+                        essentialsAlloc={financial.optimisticDashboardData?.setting?.essentialsAlloc ?? 0.5}
+                        growthAlloc={financial.optimisticDashboardData?.setting?.growthAlloc ?? 0.25}
+                        stabilityAlloc={financial.optimisticDashboardData?.setting?.stabilityAlloc ?? 0.15}
+                        rewardsAlloc={financial.optimisticDashboardData?.setting?.rewardsAlloc ?? 0.1}
+                        stabilityOverflowRedirect={financial.optimisticDashboardData?.setting?.stabilityOverflowRedirect}
+                        onFetchPagedTransactions={api.fetchPagedTransactions}
+                        onFetchTransactionById={api.fetchTransactionById}
+                        onExportTransactions={api.exportTransactionsCsv}
+                        onShowAlert={alert}
+                        onStartEditPending={financial.setEditingPendingId}
+                        receiptScanDraft={activeReceiptScanDraft}
+                        onReceiptScanStarted={handleReceiptScanStarted}
+                        onReceiptScanCleared={clearReceiptScanJob}
+                        onAddFormOpenChange={setIsLedgerAddOpen}
+                        activeScanJobIds={receiptScanJobIds}
+                        failedScanJob={failedScanJob}
+                        aiDraft={aiRouter.state.aiLedgerDraft}
+                        aiEditDraft={aiRouter.state.aiLedgerEditDraft}
+                        aiExportRequest={aiRouter.state.aiLedgerExportRequest}
+                        onAiDraftConsumed={() => aiRouter.dispatch({ type: 'CONSUME_LEDGER_DRAFT' })}
+                        onAiEditDraftConsumed={() => aiRouter.dispatch({ type: 'CONSUME_LEDGER_EDIT_DRAFT' })}
+                        onAiExportRequestConsumed={() => aiRouter.dispatch({ type: 'CONSUME_EXPORT_REQUEST' })}
+                      />
+                    )}
+
+                    {prefs.activeTab === 'wishlist' && (
+                      <WishlistView 
+                        wishlist={financial.allWishlist}
+                        rewardsBalance={wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')?.remaining ?? 0}
+                        rewardsTarget={wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')?.target ?? 400}
+                        pastThreeMonthsRewardsAverage={wishlistDashboardData?.stats?.pastThreeMonthsRewardsAverage ?? 0}
+                        hasRewardsHistory={wishlistDashboardData?.stats?.hasRewardsHistory ?? false}
+                        onAddItem={financial.handleAddWishlistItem}
+                        onUpdateItem={financial.handleUpdateWishlistItem}
+                        onDeleteItem={financial.requestDeleteWishlistItem}
+                        onPurchaseItem={financial.handlePurchaseWishlistItem}
+                        autoOpenAddModal={nav.autoOpenWishlistAdd}
+                        onResetAutoOpen={() => nav.setAutoOpenWishlistAdd(false)}
+                        onNavigateToLedger={nav.handleNavigateToLedger}
+                        isSwitchingCycle={nav.isSwitchingCycle}
+                        onStartEditPending={financial.setEditingPendingId}
+                        aiDraft={aiRouter.state.aiWishlistDraft}
+                        aiEditDraft={aiRouter.state.aiWishlistEditDraft}
+                        onAiDraftConsumed={() => aiRouter.dispatch({ type: 'CONSUME_WISHLIST_DRAFT' })}
+                        onAiEditDraftConsumed={() => aiRouter.dispatch({ type: 'CONSUME_WISHLIST_EDIT_DRAFT' })}
+                      />
+                    )}
+
+                    {prefs.activeTab === 'drafts' && financial.draftTransactions.length > 0 && (
+                      <DraftStagingView 
+                        draftTransactions={financial.draftTransactions}
+                        onUpdateDraftTransaction={financial.handleUpdateDraftTransaction}
+                        onDeleteDraftTransaction={financial.requestDeleteDraftTransaction}
+                        hideSensitive={prefs.hideSensitive}
+                        currency={financial.optimisticDashboardData?.setting?.currency || 'USD'}
+                        onCancel={() => prefs.setActiveTab('ledger')}
+                        onAddAnother={() => {
+                          prefs.setActiveTab('ledger')
+                          nav.setAutoOpenLedgerAdd(true)
+                        }}
+                      />
+                    )}
+                  </motion.div>
+                </LaunchReady>
+              </Suspense>
+            </ErrorBoundary>
+          </main>
+        </PullToRefresh>
+
+        <PendingSubscriptionsModal
+          isOpen={dialogs.showLoginModal}
+          pendingNotifications={financial.optimisticDashboardData?.pendingNotifications || []}
+          currency={financial.optimisticDashboardData?.setting?.currency || 'USD'}
+          hideSensitive={prefs.hideSensitive}
+          showOnLoginChecked={prefs.notifyOnLogin}
+          onToggleShowOnLogin={(checked) => {
+            prefs.setNotifyOnLogin(checked)
+          }}
+          onClose={() => dialogs.setShowLoginModal(false)}
+          onConfirmSubscription={financial.handleConfirmSubscription}
+          onDiscardSubscription={financial.handleDiscardSubscription}
+          onRemoveSubscription={(recurringPaymentId) => dialogs.setConfirmModalData({
+            title: 'Remove Subscription',
+            message: 'Are you sure you want to delete this recurring subscription? This will cancel all future notifications for this subscription.',
+            confirmText: 'Remove',
+            onConfirm: () => financial.handleDeletePayment(recurringPaymentId)
+          })}
+        />
+
+        <FailedSyncModal
+          isOpen={dialogs.showFailedOpsModal}
+          failedOps={financial.failedOps}
+          onClose={() => dialogs.setShowFailedOpsModal(false)}
+          onDiscard={financial.discardFailedOp}
+          onDiscardAll={financial.discardAllFailedOps}
+        />
+
+        <PasswordPromptModal
+          isOpen={session.showPasswordPrompt}
+          onClose={() => session.setShowPasswordPrompt(false)}
+          onVerified={() => {
+            prefs.setHideSensitive(false)
+            session.setShowPasswordPrompt(false)
+            financial.handleUpdateSettings({
+              targetStabilityFund: Number(financial.optimisticDashboardData?.setting?.targetStabilityFund || 10000),
+              essentialsAlloc: financial.optimisticDashboardData?.setting?.essentialsAlloc ?? 0.5,
+              growthAlloc: financial.optimisticDashboardData?.setting?.growthAlloc ?? 0.25,
+              stabilityAlloc: financial.optimisticDashboardData?.setting?.stabilityAlloc ?? 0.15,
+              rewardsAlloc: financial.optimisticDashboardData?.setting?.rewardsAlloc ?? 0.1,
+              cycleDay: financial.optimisticDashboardData?.setting?.cycleDay ?? 28,
+              currency: financial.optimisticDashboardData?.setting?.currency || 'USD',
+              stabilityOverflowRedirect: financial.optimisticDashboardData?.setting?.stabilityOverflowRedirect
+            })
+          }}
+          onTryFingerprint={session.hasFingerprintSetup ? session.revealSensitiveWithFingerprint : undefined}
+        />
+
+        <LockScreen
+          isOpen={session.isLocked && !!session.token}
+          onUnlocked={session.handleUnlocked}
+          onSignOut={session.handleLogout}
+        />
+
+        <footer className="border-t border-border/40 py-6 pb-24 md:pb-6 bg-background/45 backdrop-blur select-none">
+          <div className="container mx-auto px-4 text-center text-xs text-muted-foreground">
+            &copy; {new Date().getFullYear()} FinancialApp. All rights reserved.
+          </div>
+        </footer>
+
+        <CustomAlertModal
+          isOpen={!!dialogs.customAlert}
+          title={dialogs.customAlert?.title || 'Notification'}
+          message={dialogs.customAlert?.message || ''}
+          onClose={() => dialogs.setCustomAlert(null)}
+        />
+
+        <CustomConfirmModal
+          isOpen={!!dialogs.confirmModalData}
+          title={dialogs.confirmModalData?.title || 'Confirmation'}
+          message={dialogs.confirmModalData?.message || ''}
+          confirmText={dialogs.confirmModalData?.confirmText || 'Confirm'}
+          cancelText="Cancel"
+          confirmDisabled={dialogs.confirmModalData?.confirmDisabled || false}
+          onConfirm={() => {
+            if (dialogs.confirmModalData) {
+              dialogs.confirmModalData.onConfirm()
+              dialogs.setConfirmModalData(null)
+            }
+          }}
+          onCancel={() => dialogs.setConfirmModalData(null)}
+        />
+
+        {session.token && (
+          <>
+            <AnimatePresence>
+              {financial.isBackgroundSyncing && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="md:hidden fixed inset-0 z-30 bg-background/60 backdrop-blur-xs"
+                />
+              )}
+            </AnimatePresence>
+
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              animate={{
+                rotate: (prefs.activeTab !== 'drafts' && financial.isBackgroundSyncing) ? 135 : 0
+              }}
+              transition={{ type: "spring", stiffness: 260, damping: 20 }}
+              onClick={() => {
+                if (prefs.activeTab === 'drafts') {
+                  financial.handleSyncDraftBatch()
+                } else {
+                  // toggle background sync/refresh
+                  void financial.wakeUpAndSync()
+                }
+              }}
+              className={`fixed right-6 flex items-center justify-center size-14 rounded-full text-white shadow-xl cursor-pointer ${
+                prefs.activeTab === 'drafts'
+                  ? 'bg-gradient-to-tr from-emerald-600 to-green-500 shadow-emerald-500/20 z-40'
+                  : 'bg-gradient-to-tr from-blue-600 to-sky-500 shadow-blue-500/10 z-40 md:hidden'
+              }`}
+              style={{
+                bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))'
+              }}
+              title={prefs.activeTab === 'drafts' ? 'Sync Batch to Server' : 'Open Menu'}
+            >
+              {prefs.activeTab === 'drafts' ? (
+                <Upload className="size-6" />
+              ) : (
+                <Plus className="size-6" />
+              )}
+            </motion.button>
+          </>
+        )}
+      </div>
     </AppProvider>
   )
 }
