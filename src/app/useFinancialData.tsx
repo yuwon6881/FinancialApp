@@ -441,8 +441,14 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     cycleDay: number
     currency?: string
     stabilityOverflowRedirect?: string
+    darkMode?: boolean
+    hideSensitive?: boolean
   }) => {
-    const payload = { ...settings, darkMode, hideSensitive }
+    const payload = {
+      ...settings,
+      darkMode: settings.darkMode ?? darkMode,
+      hideSensitive: settings.hideSensitive ?? hideSensitive,
+    }
     mutateQueue(prev => enqueue(prev, 'settings', 'update', 'settings', payload))
   }
 
