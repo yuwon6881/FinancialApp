@@ -49,6 +49,14 @@ describe('SmartAmountInput calculator', () => {
     expect(input.value).toBe('15.00')
   })
 
+  it('leaves an incomplete expression (trailing operator) untouched on blur', () => {
+    render(<MaskedWrapper />)
+    const input = screen.getByLabelText('amount') as HTMLInputElement
+    fireEvent.change(input, { target: { value: '12.00+' } })
+    fireEvent.blur(input)
+    expect(input.value).toBe('12.00+')
+  })
+
   it('leaves a plain amount untouched', () => {
     render(<MaskedWrapper />)
     const input = screen.getByLabelText('amount') as HTMLInputElement

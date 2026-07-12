@@ -306,7 +306,7 @@ export function TransactionFormFields({
               onSetField('amount', maskCurrencyInput(e.target.value, state.amount))
             }}
             className={`w-full h-10 pr-3.5 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-              getCurrencySymbol(currency).length > 2 ? 'pl-11' : getCurrencySymbol(currency).length > 1 ? 'pl-9' : 'pl-7'
+              getCurrencySymbol(currency).length > 2 ? 'pl-12' : getCurrencySymbol(currency).length > 1 ? 'pl-10' : 'pl-8'
             } ${
               errors.amount
                 ? 'border-destructive focus:ring-destructive'
