@@ -155,16 +155,19 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                 value={view.stabilityOverflowRedirectInput}
                 onChange={val => view.setStabilityOverflowRedirectInput(String(val))}
                 options={[
-                  { value: 'Split: Growth 50%, Rewards 50%', label: 'Split between Growth and Rewards' },
-                  { value: 'Redirect: Growth', label: 'All to Growth' },
-                  { value: 'Redirect: Rewards', label: 'All to Rewards' }
+                  { value: 'Essentials 100%', label: '100% Essentials' },
+                  { value: 'Growth 100%', label: '100% Growth' },
+                  { value: 'Rewards 100%', label: '100% Rewards' },
+                  { value: 'Split: Essentials 50%, Growth 50%', label: '50% Essentials / 50% Growth' },
+                  { value: 'Split: Essentials 50%, Rewards 50%', label: '50% Essentials / 50% Rewards' },
+                  { value: 'Split: Growth 50%, Rewards 50%', label: '50% Growth / 50% Rewards' }
                 ]}
                 className="w-full"
               />
             </label>
           </div>
 
-          <div className="space-y-3 pt-2">
+          <div className="space-y-4 border-t border-border/30 pt-4">
             <div className="flex items-center justify-between border-b border-border/40 pb-2">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-foreground">Income Allocations</span>
@@ -182,48 +185,21 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {(['essentials', 'growth', 'stability', 'rewards'] as const).map(key => {
-                const isLocked = view.lockedAllocations.includes(key)
-                const isMaxLocks = view.lockedAllocations.length >= 2 && !isLocked
-                const val = key === 'essentials' ? view.essentialsAllocInput : key === 'growth' ? view.growthAllocInput : key === 'stability' ? view.stabilityAllocInput : view.rewardsAllocInput
-                const setter = key === 'essentials' ? view.setEssentialsAllocInput : key === 'growth' ? view.setGrowthAllocInput : key === 'stability' ? view.setStabilityAllocInput : view.setRewardsAllocInput
-                return (
-                  <div key={key} className="space-y-1">
-                    <div className="flex items-center justify-between gap-1 text-[11px] font-semibold text-muted-foreground">
-                      <span className="capitalize">{key}</span>
-                      {!view.globalAllocLock && (
-                        <button
-                          type="button"
-                          disabled={isMaxLocks}
-                          onClick={() => view.toggleLock(key)}
-                          className="hover:text-foreground transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                        >
-                          {isLocked ? <Lock className="size-3 text-blue-500" /> : <Unlock className="size-3" />}
-                        </button>
-                      )}
-                    </div>
-                    <div className="relative flex items-center">
-                      <input
-                        type="number"
-                        disabled={view.globalAllocLock}
-                        value={val}
-                        onChange={e => {
-                          const num = parseFloat(e.target.value) || 0
-                          if (num >= 0 && num <= 100) {
-                            setter(e.target.value)
-                            if (!view.globalAllocLock) {
-                              view.handleAllocationChange(key, num)
-                            }
-                          }
-                        }}
-                        className="w-full pr-7 px-3 py-1.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
-                      />
-                      <span className="absolute right-3 text-xs font-semibold text-muted-foreground select-none pointer-events-none">%</span>
-                    </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+              {([
+                ['Essentials', view.essentialsAllocInput, 'essentials', 'accent-blue-500'],
+                ['Growth', view.growthAllocInput, 'growth', 'accent-green-500'],
+                ['Stability', view.stabilityAllocInput, 'stability', 'accent-purple-500'],
+                ['Rewards', view.rewardsAllocInput, 'rewards', 'accent-amber-500'],
+              ] as const).map(([label, value, key, accentClass]) => (
+                <label key={label} className="space-y-2 block">
+                  <div className="flex justify-between items-center text-[11px] font-bold">
+                    <span className="text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">{label}<button type="button" onClick={() => view.toggleLock(key)} className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer" title={view.lockedAllocations.includes(key) ? 'Unlock' : 'Lock'}>{view.lockedAllocations.includes(key) ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</button></span>
+                    <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md">{Number(value).toFixed(0)}%</span>
                   </div>
-                )
-              })}
+                  <input type="range" min="0" max="100" step="5" disabled={view.globalAllocLock || view.lockedAllocations.includes(key)} value={value} onChange={e => view.handleAllocationChange(key, parseFloat(e.target.value))} className={`w-full h-2 rounded-full cursor-pointer ${accentClass} bg-border disabled:opacity-50 disabled:cursor-not-allowed`} />
+                </label>
+              ))}
             </div>
             {view.errors.allocationSum && (
               <p className="text-[10px] text-destructive font-semibold">{view.errors.allocationSum}</p>

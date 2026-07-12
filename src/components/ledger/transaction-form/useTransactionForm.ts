@@ -304,6 +304,13 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     openTransactionForm()
   }
 
+  const changeTransactionType = (type: 'inflow' | 'outflow' | 'transfer') => {
+    if (state.mode === 'create') {
+      dispatch({ type: 'RESET', todayDate, defaultCategory })
+    }
+    dispatch({ type: 'SET_FIELD', field: 'transactionType', value: type })
+  }
+
   const handleCloseForm = () => {
     const scanJobToClear = scanner.activeReceiptScanJobId
     dispatch({ type: 'CLOSE' })
@@ -371,6 +378,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     handleCloseForm,
     handleStartEdit,
     handleSubmit,
+    changeTransactionType,
     scanner,
     suggestions,
     filteredSuggestions,

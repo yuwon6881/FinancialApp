@@ -84,7 +84,7 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
 
           <TransactionTypeFields
             txType={form.state.transactionType}
-            onChangeTxType={(type: TransactionType) => form.dispatch({ type: 'SET_FIELD', field: 'transactionType', value: type })}
+            onChangeTxType={(type: TransactionType) => form.changeTransactionType(type)}
           />
 
           <TransactionFormFields
@@ -98,6 +98,10 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
             onSetField={(field: any, val: any) => form.dispatch({ type: 'SET_FIELD', field, value: val })}
             onSelectSuggestion={form.handleSelectSuggestion}
             onSuggestNotes={() => form.suggestions.requestNoteSuggestions(form.state.description.trim())}
+            onSuggestCategory={() => form.suggestions.requestCategorySuggestions(
+              form.descriptionRef.current,
+              form.autocompletedDescriptionRef.current,
+            )}
             filteredSuggestions={form.filteredSuggestions}
             quickSuggestionEntries={form.quickSuggestionEntries}
             suggestions={form.suggestions}

@@ -14,7 +14,7 @@ export function TransactionTypeFields({ txType, onChangeTxType }: TransactionTyp
         <button
           type="button"
           onClick={() => onChangeTxType('outflow')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-semibold rounded-xl border transition cursor-pointer ${
+          className={`min-w-0 flex-1 flex items-center justify-center gap-1 px-1 py-2 text-[9px] sm:text-[10px] whitespace-nowrap font-semibold rounded-xl border transition cursor-pointer ${
             txType === 'outflow'
               ? 'bg-orange-500/10 border-orange-500/30 text-orange-500'
               : 'border-border hover:bg-muted/50 text-muted-foreground'
@@ -25,7 +25,7 @@ export function TransactionTypeFields({ txType, onChangeTxType }: TransactionTyp
         <button
           type="button"
           onClick={() => onChangeTxType('inflow')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-semibold rounded-xl border transition cursor-pointer ${
+          className={`min-w-0 flex-1 flex items-center justify-center gap-1 px-1 py-2 text-[9px] sm:text-[10px] whitespace-nowrap font-semibold rounded-xl border transition cursor-pointer ${
             txType === 'inflow'
               ? 'bg-blue-500/10 border-blue-500/30 text-blue-500'
               : 'border-border hover:bg-muted/50 text-muted-foreground'
@@ -36,7 +36,7 @@ export function TransactionTypeFields({ txType, onChangeTxType }: TransactionTyp
         <button
           type="button"
           onClick={() => onChangeTxType('transfer')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-semibold rounded-xl border transition cursor-pointer ${
+          className={`min-w-0 flex-1 flex items-center justify-center gap-1 px-1 py-2 text-[9px] sm:text-[10px] whitespace-nowrap font-semibold rounded-xl border transition cursor-pointer ${
             txType === 'transfer'
               ? 'bg-blue-500/10 border-blue-500/30 text-blue-500'
               : 'border-border hover:bg-muted/50 text-muted-foreground'

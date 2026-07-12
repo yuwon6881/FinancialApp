@@ -5,7 +5,7 @@ import TopNav from "./TopNav.tsx"
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { type DashboardData } from './types'
 import * as api from './lib/api'
-import { Loader2, Plus, Upload } from 'lucide-react'
+import { Loader2, Plus, Upload, Wallet, CreditCard, PiggyBank } from 'lucide-react'
 
 // Every view is code-split so the initial bundle only ships the shell. Each
 // chunk loads on demand behind an instant blank-shell fallback (no flash).
@@ -218,6 +218,7 @@ function App() {
   useVisualViewportVars()
 
   const [isAiOpen, setIsAiOpen] = useState(false)
+  const [isFabOpen, setIsFabOpen] = useState(false)
 
   // Redirect from drafts if empty
   useEffect(() => {
@@ -292,7 +293,8 @@ function App() {
         rewardsAlloc: financial.optimisticDashboardData?.setting?.rewardsAlloc ?? 0.1,
         cycleDay: financial.optimisticDashboardData?.setting?.cycleDay ?? 28,
         currency: financial.optimisticDashboardData?.setting?.currency || 'USD',
-        stabilityOverflowRedirect: financial.optimisticDashboardData?.setting?.stabilityOverflowRedirect
+        stabilityOverflowRedirect: financial.optimisticDashboardData?.setting?.stabilityOverflowRedirect,
+        hideSensitive: true
       })
     }
   }
@@ -313,7 +315,8 @@ function App() {
       rewardsAlloc: financial.optimisticDashboardData?.setting?.rewardsAlloc ?? 0.1,
       cycleDay: financial.optimisticDashboardData?.setting?.cycleDay ?? 28,
       currency: financial.optimisticDashboardData?.setting?.currency || 'USD',
-      stabilityOverflowRedirect: financial.optimisticDashboardData?.setting?.stabilityOverflowRedirect
+      stabilityOverflowRedirect: financial.optimisticDashboardData?.setting?.stabilityOverflowRedirect,
+      darkMode: newDark
     })
   }
 
@@ -680,7 +683,8 @@ function App() {
               rewardsAlloc: financial.optimisticDashboardData?.setting?.rewardsAlloc ?? 0.1,
               cycleDay: financial.optimisticDashboardData?.setting?.cycleDay ?? 28,
               currency: financial.optimisticDashboardData?.setting?.currency || 'USD',
-              stabilityOverflowRedirect: financial.optimisticDashboardData?.setting?.stabilityOverflowRedirect
+              stabilityOverflowRedirect: financial.optimisticDashboardData?.setting?.stabilityOverflowRedirect,
+              hideSensitive: false
             })
           }}
           onTryFingerprint={session.hasFingerprintSetup ? session.revealSensitiveWithFingerprint : undefined}
@@ -734,18 +738,37 @@ function App() {
               )}
             </AnimatePresence>
 
+            <AnimatePresence>
+              {isFabOpen && prefs.activeTab !== 'drafts' && (
+                <motion.div
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="md:hidden fixed right-8 z-40 flex flex-col gap-3.5 items-end pointer-events-auto"
+                  style={{ bottom: 'calc(148px + env(safe-area-inset-bottom, 0px))' }}
+                >
+                  {([
+                    { key: 'wishlist' as const, label: 'Add Wish Goal', Icon: PiggyBank, color: 'bg-pink-500' },
+                    { key: 'subscription' as const, label: 'New Subscription', Icon: CreditCard, color: 'bg-violet-500' },
+                    { key: 'transaction' as const, label: 'Post Transaction', Icon: Wallet, color: 'bg-emerald-500' },
+                  ]).map(({ key, label, Icon, color }) => (
+                    <motion.button key={key} whileTap={{ scale: 0.92 }} onClick={() => { nav.handleQuickAction(key); setIsFabOpen(false) }} className="flex items-center gap-2.5 group cursor-pointer">
+                      <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-foreground shadow-xs">{label}</span>
+                      <span className={`size-11 rounded-full ${color} text-white flex items-center justify-center shadow-lg`}><Icon className="size-5" /></span>
+                    </motion.button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
             <motion.button
               whileTap={{ scale: 0.92 }}
               animate={{
-                rotate: (prefs.activeTab !== 'drafts' && financial.isBackgroundSyncing) ? 135 : 0
+                rotate: (prefs.activeTab !== 'drafts' && isFabOpen) ? 135 : 0
               }}
               transition={{ type: "spring", stiffness: 260, damping: 20 }}
               onClick={() => {
                 if (prefs.activeTab === 'drafts') {
                   financial.handleSyncDraftBatch()
                 } else {
-                  // toggle background sync/refresh
-                  void financial.wakeUpAndSync()
+                  setIsFabOpen(prev => !prev)
                 }
               }}
               className={`fixed right-6 flex items-center justify-center size-14 rounded-full text-white shadow-xl cursor-pointer ${

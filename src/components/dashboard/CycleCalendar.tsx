@@ -55,7 +55,7 @@ export function CycleCalendar(props: CycleCalendarProps) {
                 transition={{ duration: 0.3, delay: index * 0.01 }}
                 whileTap={{ scale: 0.95 }}
                 title={`${label}${hasNet ? `: ${day.net! >= 0 ? '+' : ''}${day.net!.toFixed(2)}` : ''}${day.recurringNames.length ? `\nBills: ${day.recurringNames.join(', ')}` : ''}`}
-                className={`relative h-12 xs:h-14 md:h-16 rounded-xl flex flex-col items-center justify-center border text-[10px] ${color}`}
+                className={`relative h-12 xs:h-14 md:h-16 rounded-xl flex flex-col items-center justify-center border text-[10px] cursor-pointer ${color}`}
                 onClick={() => props.onSelectDate?.(day.dateKey)}
               >
                 <span className={`text-xs md:text-sm font-bold ${isToday ? 'text-blue-500' : 'text-foreground/90'}`}>{day.date.getDate()}</span>

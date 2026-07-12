@@ -65,8 +65,8 @@ export function DeleteTransactionModal({
             This is the <span className="font-semibold text-foreground">main Income Auto-Split record</span>. Deleting it will delete all its associated category sub-split records as well.
           </p>
         ) : (
-          <p>
-            Are you sure you want to delete this transaction: <span className="font-semibold text-foreground">"{transaction.description}"</span> of <span className="font-bold text-foreground">{formatSensitive(transaction.amount)}</span>?
+          <p className="flex flex-wrap items-baseline gap-x-1">
+            <span>Are you sure you want to delete this transaction:</span> <span className="font-semibold text-foreground break-words">"{transaction.description}"</span> <span>of</span> <span className="font-bold text-foreground whitespace-nowrap">{formatSensitive(transaction.amount)}</span><span>?</span>
           </p>
         )}
         <p className="text-[10px] text-orange-500/90 font-medium bg-orange-500/5 p-2 rounded-lg border border-orange-500/10">

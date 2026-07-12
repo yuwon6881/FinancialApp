@@ -17,9 +17,11 @@ interface TransactionFormFieldsProps {
   onSetField: (field: keyof TransactionFormState, value: any) => void
   onSelectSuggestion: (s: any) => void
   onSuggestNotes: () => Promise<void>
+  onSuggestCategory: () => Promise<void>
   filteredSuggestions: any[]
   quickSuggestionEntries: any[]
   suggestions: {
+    categorySuggestions: any[]
     isSuggestingCategory: boolean
     categorySuggestionUnavailable: boolean
     isSuggestingNote: boolean
@@ -43,6 +45,7 @@ export function TransactionFormFields({
   onSetField,
   onSelectSuggestion,
   onSuggestNotes,
+  onSuggestCategory,
   filteredSuggestions,
   quickSuggestionEntries,
   suggestions,
@@ -55,6 +58,7 @@ export function TransactionFormFields({
     // Keep suggestions open if clicking inside them
     window.setTimeout(() => {
       setShowSuggestions(false)
+      void onSuggestCategory()
     }, 200)
   }
 
@@ -103,17 +107,30 @@ export function TransactionFormFields({
   }
 
   const categorySelectOptions = React.useMemo(() => {
-    return categories
+    const categoryByName = new Map(categories.map(cat => [cat.name.toLowerCase(), cat.name]))
+    const suggestedNames = new Set<string>()
+    const suggestedOptions = suggestions.categorySuggestions.map((suggestion: any) => {
+      const canonicalName = categoryByName.get(String(suggestion.category).toLowerCase())
+      if (!canonicalName || suggestedNames.has(canonicalName.toLowerCase())) return null
+      suggestedNames.add(canonicalName.toLowerCase())
+      const confidence = Number.isFinite(suggestion.confidence)
+        ? `Suggested ${Math.round(Math.max(0, Math.min(1, suggestion.confidence)) * 100)}%`
+        : 'Suggested'
+      return { value: canonicalName, label: canonicalName, badge: confidence }
+    }).filter((option): option is { value: string; label: string; badge: string } => option !== null)
+    return [
+      ...suggestedOptions,
+      ...categories
       .filter(cat => !cat.isPendingDelete)
+      .filter(cat => !suggestedNames.has(cat.name.toLowerCase()))
       .map(cat => {
-        const hasAIPrediction = false // no prediction badge required here
         return {
           value: cat.name,
           label: cat.name,
-          badge: hasAIPrediction ? 'AI Pred' : undefined
         }
-      })
-  }, [categories])
+      }),
+    ]
+  }, [categories, suggestions.categorySuggestions])
 
   return (
     <>
