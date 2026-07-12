@@ -61,16 +61,7 @@ export function cachedGet<T>(
   return promise
 }
 
-const originalFetch = window.fetch
-window.fetch = async (...args: Parameters<typeof fetch>) => {
-  const response = await originalFetch(...args)
-  const request = args[0]
-  const url = typeof request === 'string'
-    ? request
-    : request instanceof URL
-      ? request.toString()
-      : request.url
-
+function handleApiResponse(response: Response, url: string): Response {
   if (!response.ok) {
     const isAuthBootstrap = url.includes('/auth/login')
       || url.includes('/auth/status')
@@ -100,11 +91,13 @@ export function apiUrl(path: string): string {
     : `${API_BASE_URL}${path}`
 }
 
-export function apiFetch(path: string, init: RequestInit = {}, authenticated = true): Promise<Response> {
-  return fetch(apiUrl(path), {
+export async function apiFetch(path: string, init: RequestInit = {}, authenticated = true): Promise<Response> {
+  const url = apiUrl(path)
+  const response = await fetch(url, {
     ...init,
     headers: authenticated ? getHeaders(init.headers) : init.headers,
   })
+  return handleApiResponse(response, url)
 }
 
 export async function throwApiError(

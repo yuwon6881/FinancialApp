@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 
 // Mock the API layer so we can assert exactly what each DISPATCH handler forwards
-// (and to avoid api/client.ts's window.fetch import side effect under jsdom).
+// without loading the API client in this unit test.
 vi.mock('./api', () => ({
   toggleRecurringPayment: vi.fn(async () => ({})),
   addWishlistItem: vi.fn(async () => ({ id: 1 })),

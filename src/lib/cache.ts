@@ -14,8 +14,26 @@ export const CACHE_KEYS = {
   walletBalance: 'cached_wallet_balance',
 } as const
 
+// Local amount masking only discourages casual inspection. It is deliberately
+// not described as encryption: code running in this origin can reverse it.
+export const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
+const CACHE_TIMESTAMP_SUFFIX = ':cached_at'
+const EXPIRING_CACHE_KEYS = new Set<string>(Object.values(CACHE_KEYS))
+
+function removeCachedKey(key: string): void {
+  localStorage.removeItem(key)
+  localStorage.removeItem(`${key}${CACHE_TIMESTAMP_SUFFIX}`)
+}
+
 export function getCachedJSON<T>(key: string, fallback: T): T {
   try {
+    if (EXPIRING_CACHE_KEYS.has(key) || key === CYCLE_SNAPSHOTS_KEY) {
+      const timestamp = Number(localStorage.getItem(`${key}${CACHE_TIMESTAMP_SUFFIX}`))
+      if (timestamp > 0 && Date.now() - timestamp > CACHE_TTL_MS) {
+        removeCachedKey(key)
+        return fallback
+      }
+    }
     const cached = localStorage.getItem(key)
     return cached ? JSON.parse(cached) : fallback
   } catch {
@@ -49,6 +67,8 @@ export function getCachedTransactions(key: string): Transaction[] {
   return sanitizeTransactions(getCachedJSON<unknown>(key, []))
 }
 
+// Privacy/display masking only. This fixed-key encoding is NOT encryption and
+// must never be relied upon to protect data from scripts or device access.
 const OBFUSCATION_KEY = "FinancialAppObfuscationKey"
 
 function decodeCachedAmount(value: unknown): number {
@@ -101,10 +121,21 @@ export function getCachedWishlist(key: string): WishlistItem[] {
 
 export function setCachedJSON(key: string, value: unknown): void {
   localStorage.setItem(key, JSON.stringify(value))
+  if (EXPIRING_CACHE_KEYS.has(key) || key === CYCLE_SNAPSHOTS_KEY) {
+    localStorage.setItem(`${key}${CACHE_TIMESTAMP_SUFFIX}`, Date.now().toString())
+  }
 }
 
 export function hasCachedKey(key: string): boolean {
-  return localStorage.getItem(key) !== null
+  return getCachedJSON<unknown>(key, null) !== null
+}
+
+export function clearLocalFinancialData(): void {
+  for (const key of [...Object.values(CACHE_KEYS), CYCLE_SNAPSHOTS_KEY]) removeCachedKey(key)
+  for (const key of [
+    'draft_transactions', 'pending_operations_backup', 'pending_transactions_backup',
+    'draft_transactions_backup', 'failed_operations', 'failed_operations_backup',
+  ]) localStorage.removeItem(key)
 }
 
 // The dashboard cache is the source of truth for which month/year was last active,

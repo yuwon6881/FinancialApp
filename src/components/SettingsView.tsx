@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Bell, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2 } from 'lucide-react'
+import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Bell, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap } from 'lucide-react'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { SmartAmountInput } from './ui/SmartAmountInput'
@@ -59,6 +59,7 @@ interface SettingsViewProps {
     highlightedTxId?: string | null
     showAllCycles?: boolean
   }) => void
+  onClearLocalFinancialData?: () => void
 }
 
 const getDayWithSuffix = (day: number) => {
@@ -83,7 +84,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   activeSyncId: activeSyncIdProp,
   deletingId: deletingIdProp,
   onToast: onToastProp,
-  onNavigateToLedger
+  onNavigateToLedger,
+  onClearLocalFinancialData
 }) => {
   const app = useAppContext()
   const darkMode = darkModeProp ?? app.darkMode
@@ -855,6 +857,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <TwoFactorSection hideSensitive={hideSensitive} onToast={onToast} />
 
           <ChangePasswordSection hideSensitive={hideSensitive} onToast={onToast} />
+
+          <section className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5 shadow-sm space-y-3">
+            <div className="flex items-center gap-2.5 pb-3 border-b border-border/40">
+              <DatabaseZap className="size-5 text-orange-500 shrink-0" />
+              <div>
+                <h3 className="text-sm font-bold text-foreground">Local financial data</h3>
+                <p className="text-[11px] text-muted-foreground">Cached amounts are privacy-masked, not encrypted, and expire after 7 days.</p>
+              </div>
+            </div>
+            <button type="button" onClick={onClearLocalFinancialData}
+              className="px-4 py-2 rounded-full text-xs font-bold border border-orange-500/30 text-orange-600 hover:bg-orange-500/10 transition cursor-pointer">
+              Clear local financial data
+            </button>
+          </section>
 
           {/* Notifications Section */}
           <section className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5 shadow-sm space-y-3">

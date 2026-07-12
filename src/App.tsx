@@ -24,7 +24,7 @@ import { CustomSelect } from './components/ui/CustomSelect'
 import { PullToRefresh } from './components/ui/PullToRefresh'
 import { ToastViewport, type ToastMessage, type ToastTone, type ToastAction } from './components/ui/ToastViewport'
 import { CardSkeleton, Skeleton } from './components/ui/Skeleton'
-import { CACHE_KEYS, getCachedJSON, getCachedTransactions, getCachedWishlist, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod, getCachedCycleSnapshot, setCachedCycleSnapshot } from './lib/cache'
+import { CACHE_KEYS, clearLocalFinancialData, getCachedJSON, getCachedTransactions, getCachedWishlist, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod, getCachedCycleSnapshot, setCachedCycleSnapshot } from './lib/cache'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from './lib/modalDrafts'
 import { createFinalId, createLocalWishlistId, sanitizeQueuedOps, type OutboxPayload } from './lib/outbox'
 import { useOptimisticList } from './lib/useOptimisticList'
@@ -1646,6 +1646,19 @@ function App() {
               showToast('Notification preference updated.', 'Settings Saved', 'success')
             }}
             onNavigateToLedger={handleNavigateToLedger}
+            onClearLocalFinancialData={() => {
+              clearLocalFinancialData()
+              setDashboardData(null)
+              setWalletBalance(null)
+              setTransactions([])
+              setRecurringPayments([])
+              setCategoriesList([])
+              setWishlist([])
+              resetOutbox()
+              setDraftTransactions([])
+              showToast('Cached financial data and offline drafts were removed from this device.', 'Local Data Cleared', 'success')
+              void loadAll(selectedMonth, selectedYear, true)
+            }}
           />
         )}
 
