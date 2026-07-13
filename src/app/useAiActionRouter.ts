@@ -1,9 +1,9 @@
 import { useReducer, useRef, useCallback } from 'react'
 import * as api from '../lib/api'
 import { dispatchAiActions, requestAiLedgerDelete } from '../lib/aiActions'
+import type { Transaction, TransactionCategory } from '../types'
 
 export interface AiActionRouterState {
-  aiLedgerDraft: { nonce: number; fields: Record<string, unknown> } | null
   aiLedgerEditDraft: { nonce: number; id: string; changes: Record<string, unknown> } | null
   aiRecurringDraft: { nonce: number; fields: Record<string, unknown> } | null
   aiRecurringEditDraft: { nonce: number; id: string; changes: Record<string, unknown> } | null
@@ -13,14 +13,12 @@ export interface AiActionRouterState {
 }
 
 type AiActionRouterAction =
-  | { type: 'SET_LEDGER_DRAFT'; payload: Record<string, unknown>; nonce: number }
   | { type: 'SET_LEDGER_EDIT_DRAFT'; id: string; changes: Record<string, unknown>; nonce: number }
   | { type: 'SET_RECURRING_DRAFT'; payload: Record<string, unknown>; nonce: number }
   | { type: 'SET_RECURRING_EDIT_DRAFT'; id: string; changes: Record<string, unknown>; nonce: number }
   | { type: 'SET_WISHLIST_DRAFT'; payload: Record<string, unknown>; nonce: number }
   | { type: 'SET_WISHLIST_EDIT_DRAFT'; id: number; changes: Record<string, unknown>; nonce: number }
   | { type: 'SET_EXPORT_REQUEST'; nonce: number }
-  | { type: 'CONSUME_LEDGER_DRAFT' }
   | { type: 'CONSUME_LEDGER_EDIT_DRAFT' }
   | { type: 'CONSUME_RECURRING_DRAFT' }
   | { type: 'CONSUME_RECURRING_EDIT_DRAFT' }
@@ -29,7 +27,6 @@ type AiActionRouterAction =
   | { type: 'CONSUME_EXPORT_REQUEST' }
 
 const initialState: AiActionRouterState = {
-  aiLedgerDraft: null,
   aiLedgerEditDraft: null,
   aiRecurringDraft: null,
   aiRecurringEditDraft: null,
@@ -40,8 +37,6 @@ const initialState: AiActionRouterState = {
 
 function aiActionRouterReducer(state: AiActionRouterState, action: AiActionRouterAction): AiActionRouterState {
   switch (action.type) {
-    case 'SET_LEDGER_DRAFT':
-      return { ...state, aiLedgerDraft: { nonce: action.nonce, fields: action.payload } }
     case 'SET_LEDGER_EDIT_DRAFT':
       return { ...state, aiLedgerEditDraft: { nonce: action.nonce, id: action.id, changes: action.changes } }
     case 'SET_RECURRING_DRAFT':
@@ -54,8 +49,6 @@ function aiActionRouterReducer(state: AiActionRouterState, action: AiActionRoute
       return { ...state, aiWishlistEditDraft: { nonce: action.nonce, id: action.id, changes: action.changes } }
     case 'SET_EXPORT_REQUEST':
       return { ...state, aiLedgerExportRequest: { nonce: action.nonce } }
-    case 'CONSUME_LEDGER_DRAFT':
-      return { ...state, aiLedgerDraft: null }
     case 'CONSUME_LEDGER_EDIT_DRAFT':
       return { ...state, aiLedgerEditDraft: null }
     case 'CONSUME_RECURRING_DRAFT':
@@ -92,6 +85,8 @@ export interface UseAiActionRouterOptions {
   handleUnpurchaseWishlistItem: (id: number) => void
   requestDeletePayment: (id: string) => void
   requestDeleteWishlistItem: (id: number) => void
+  allCategories: TransactionCategory[]
+  handleStageDraftTransactions: (drafts: Omit<Transaction, 'id'>[]) => void
 }
 
 export function useAiActionRouter(options: UseAiActionRouterOptions) {
@@ -114,6 +109,8 @@ export function useAiActionRouter(options: UseAiActionRouterOptions) {
     handleUnpurchaseWishlistItem,
     requestDeletePayment,
     requestDeleteWishlistItem,
+    allCategories,
+    handleStageDraftTransactions,
   } = options
 
   const [state, dispatch] = useReducer(aiActionRouterReducer, initialState)
@@ -132,7 +129,8 @@ export function useAiActionRouter(options: UseAiActionRouterOptions) {
       handleSelectPeriod,
       handleNavigateToLedger,
       nextNonce: nextAiActionNonce,
-      setAiLedgerDraft: (v: any) => dispatch({ type: 'SET_LEDGER_DRAFT', payload: v.fields, nonce: v.nonce }),
+      transactionCategories: allCategories,
+      stageAiLedgerDrafts: handleStageDraftTransactions,
       setAiRecurringDraft: (v: any) => dispatch({ type: 'SET_RECURRING_DRAFT', payload: v.fields, nonce: v.nonce }),
       setAiWishlistDraft: (v: any) => dispatch({ type: 'SET_WISHLIST_DRAFT', payload: v.fields, nonce: v.nonce }),
       setAiLedgerEditDraft: (v: any) => dispatch({ type: 'SET_LEDGER_EDIT_DRAFT', id: v.id, changes: v.changes, nonce: v.nonce }),
@@ -172,6 +170,8 @@ export function useAiActionRouter(options: UseAiActionRouterOptions) {
     handlePurchaseWishlistItem,
     handleUnpurchaseWishlistItem,
     setConfirmModalData,
+    allCategories,
+    handleStageDraftTransactions,
   ])
 
   return {

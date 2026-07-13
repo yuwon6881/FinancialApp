@@ -32,9 +32,7 @@ export interface UseTransactionFormOptions {
   onReceiptScanCleared?: (scanId: string) => void | Promise<void>
   activeScanJobIds?: string[]
   failedScanJob?: any
-  aiDraft?: any
   aiEditDraft?: any
-  onAiDraftConsumed?: () => void
   onAiEditDraftConsumed?: () => void
   onFetchTransactionById?: (id: string) => Promise<Transaction>
   onShowAlert?: (message: string, title?: string) => void
@@ -61,9 +59,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     onReceiptScanCleared,
     activeScanJobIds,
     failedScanJob,
-    aiDraft,
     aiEditDraft,
-    onAiDraftConsumed,
     onAiEditDraftConsumed,
     onFetchTransactionById,
     onShowAlert,
@@ -200,15 +196,6 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       }
     }
   }, [state.transactionType, suggestions])
-
-  // AI draft states application
-  useEffect(() => {
-    if (!aiDraft) return
-    dispatch({ type: 'RESET', todayDate, defaultCategory })
-    dispatch({ type: 'APPLY_AI_DRAFT', payload: { fields: aiDraft.fields }, todayDate })
-    openTransactionForm()
-    onAiDraftConsumed?.()
-  }, [aiDraft?.nonce, todayDate, defaultCategory, onAiDraftConsumed, openTransactionForm])
 
   const handleStartEdit = useCallback((t: Transaction) => {
     if (hideSensitive) return

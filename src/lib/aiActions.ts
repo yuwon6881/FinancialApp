@@ -9,7 +9,7 @@
 import type { ReactNode } from 'react'
 import type { AiUiAction } from './api'
 import * as api from './api'
-import type { PendingNotification, RecurringPayment, WishlistItem } from '../types'
+import type { PendingNotification, RecurringPayment, Transaction, TransactionCategory, WishlistItem } from '../types'
 
 /** Trim-and-return a string payload field, or null if absent/blank. */
 export function getPayloadString(payload: Record<string, unknown>, key: string): string | null {
@@ -30,7 +30,7 @@ export function getPayloadNumber(payload: Record<string, unknown>, key: string):
 
 /** Action types that mutate records — blocked while sensitive mode is active. */
 export const AI_MUTATION_TYPES = new Set<string>([
-  'openEditLedgerDraft', 'openEditRecurringDraft', 'openEditWishlistDraft',
+  'openAddLedgerDraft', 'openEditLedgerDraft', 'openEditRecurringDraft', 'openEditWishlistDraft',
   'requestDeleteLedger', 'requestDeleteRecurring', 'requestDeleteWishlist',
   'requestConfirmRecurringBill', 'requestDiscardRecurringBill',
   'requestPurchaseWishlist', 'requestUnpurchaseWishlist', 'toggleRecurring',
@@ -44,7 +44,7 @@ type ToastFn = (message: string, title?: string, tone?: 'info' | 'success' | 'wa
 export interface AiActionsDeps {
   hideSensitive: boolean
   showToast: ToastFn
-  setActiveTab: (tab: 'dashboard' | 'recurring' | 'wishlist' | 'ledger') => void
+  setActiveTab: (tab: 'dashboard' | 'recurring' | 'wishlist' | 'ledger' | 'drafts') => void
   handleSelectPeriod: (month: string, year: number) => Promise<void> | void
   handleNavigateToLedger: (options: {
     category?: string | null
@@ -56,7 +56,8 @@ export interface AiActionsDeps {
     showAllCycles?: boolean
   }) => void
   nextNonce: () => number
-  setAiLedgerDraft: (v: NonceDraft) => void
+  transactionCategories: TransactionCategory[]
+  stageAiLedgerDrafts: (drafts: Omit<Transaction, 'id'>[]) => void
   setAiRecurringDraft: (v: NonceDraft) => void
   setAiWishlistDraft: (v: NonceDraft) => void
   setAiLedgerEditDraft: (v: NonceEditDraft<string>) => void
@@ -152,8 +153,14 @@ export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDe
         deps.setAiLedgerExportRequest({ nonce: deps.nextNonce() })
       }
     } else if (action.type === 'openAddLedgerDraft') {
-      deps.setAiLedgerDraft({ nonce: deps.nextNonce(), fields: payload })
-      deps.setActiveTab('ledger')
+      const { buildAiLedgerDraftTransactions } = await import('./aiLedgerDrafts')
+      const drafts = buildAiLedgerDraftTransactions(payload, deps.transactionCategories)
+      if (drafts.length === 0) {
+        deps.showToast('No valid ledger transactions were found in the AI response.', 'Drafts not created', 'warning')
+        continue
+      }
+      deps.stageAiLedgerDrafts(drafts)
+      deps.setActiveTab('drafts')
     } else if (action.type === 'openAddRecurringDraft') {
       deps.setAiRecurringDraft({ nonce: deps.nextNonce(), fields: payload })
       deps.setActiveTab('recurring')

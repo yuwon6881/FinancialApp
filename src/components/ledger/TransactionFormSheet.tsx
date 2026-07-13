@@ -32,9 +32,7 @@ export interface TransactionFormSheetProps {
   onReceiptScanCleared?: (scanId: string) => void | Promise<void>
   activeScanJobIds?: string[]
   failedScanJob?: any
-  aiDraft?: any
   aiEditDraft?: any
-  onAiDraftConsumed?: () => void
   onAiEditDraftConsumed?: () => void
   onFetchTransactionById?: (id: string) => Promise<Transaction>
   onShowAlert?: (message: string, title?: string) => void
@@ -99,10 +97,12 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
             onSetField={(field: any, val: any) => form.dispatch({ type: 'SET_FIELD', field, value: val })}
             onSelectSuggestion={form.handleSelectSuggestion}
             onSuggestNotes={() => form.suggestions.requestNoteSuggestions(form.state.description.trim())}
-            onSuggestCategory={() => form.suggestions.requestCategorySuggestions(
-              form.descriptionRef.current,
-              form.autocompletedDescriptionRef.current,
-            )}
+            onSuggestCategory={async () => {
+              await form.suggestions.requestCategorySuggestions(
+                form.descriptionRef.current,
+                form.autocompletedDescriptionRef.current,
+              )
+            }}
             filteredSuggestions={form.filteredSuggestions}
             quickSuggestionEntries={form.quickSuggestionEntries}
             suggestions={form.suggestions}

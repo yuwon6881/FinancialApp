@@ -35,7 +35,12 @@ function makeDeps(overrides: Partial<AiActionsDeps> = {}): AiActionsDeps {
     handleSelectPeriod: vi.fn(),
     handleNavigateToLedger: vi.fn(),
     nextNonce: () => ++nonce,
-    setAiLedgerDraft: vi.fn(),
+    transactionCategories: [
+      { id: 'food', name: 'Food' },
+      { id: 'transport', name: 'Transport' },
+      { id: 'other', name: 'Other' },
+    ],
+    stageAiLedgerDrafts: vi.fn(),
     setAiRecurringDraft: vi.fn(),
     setAiWishlistDraft: vi.fn(),
     setAiLedgerEditDraft: vi.fn(),
@@ -80,11 +85,39 @@ describe('dispatchAiActions — navigation', () => {
     expect(d.setActiveTab).not.toHaveBeenCalledWith('ledger')
   })
 
-  it('prefills a ledger draft with a fresh nonce and opens the tab', async () => {
+  it('stages every ledger record and opens the draft transactions tab', async () => {
     const d = makeDeps()
-    await dispatchAiActions([{ type: 'openAddLedgerDraft', payload: { amount: 5 } }], d)
-    expect(d.setAiLedgerDraft).toHaveBeenCalledWith({ nonce: 1, fields: { amount: 5 } })
-    expect(d.setActiveTab).toHaveBeenCalledWith('ledger')
+    await dispatchAiActions([{ type: 'openAddLedgerDraft', payload: {
+      transactions: [
+        { description: 'Nasi Lemak', amount: 12, txType: 'outflow', category: 'Food', ledgerCategory: 'Essentials' },
+        { description: 'Car Fuel', amount: 30, txType: 'outflow', category: 'Transport', ledgerCategory: 'Growth', ledgerCategorySpecified: true },
+      ],
+    } }], d)
+    expect(d.stageAiLedgerDrafts).toHaveBeenCalledWith([
+      expect.objectContaining({ description: 'Nasi Lemak', amount: -12, category: 'Food', ledgerCategory: 'Essentials' }),
+      expect.objectContaining({ description: 'Car Fuel', amount: -30, category: 'Transport', ledgerCategory: 'Growth' }),
+    ])
+    expect(d.setActiveTab).toHaveBeenCalledWith('drafts')
+  })
+
+  it('defaults ledger category to Essentials and preserves valid AI category choices', async () => {
+    const d = makeDeps()
+    await dispatchAiActions([{ type: 'openAddLedgerDraft', payload: {
+      transactions: [{ description: 'Lunch', amount: 9, txType: 'outflow', category: 'Food', ledgerCategory: 'Growth', ledgerCategorySpecified: false }],
+    } }], d)
+    expect(d.stageAiLedgerDrafts).toHaveBeenCalledWith([
+      expect.objectContaining({ category: 'Food', ledgerCategory: 'Essentials' }),
+    ])
+  })
+
+  it('maps an explicitly requested reward ledger to Rewards', async () => {
+    const d = makeDeps()
+    await dispatchAiActions([{ type: 'openAddLedgerDraft', payload: {
+      transactions: [{ description: 'Movie', amount: 20, txType: 'outflow', category: 'Other', ledgerCategory: 'Reward', ledgerCategorySpecified: true }],
+    } }], d)
+    expect(d.stageAiLedgerDrafts).toHaveBeenCalledWith([
+      expect.objectContaining({ ledgerCategory: 'Rewards' }),
+    ])
   })
 })
 

@@ -11,6 +11,19 @@ export interface UseTransactionSuggestionsOptions {
   ledgerCategory: string
 }
 
+interface CategoryLike {
+  name?: string
+  isPendingDelete?: boolean
+}
+
+export function getSelectableCategoryNames(categories: CategoryLike[]): string[] {
+  return categories
+    .filter(category => !category.isPendingDelete)
+    .map(category => category.name?.trim())
+    .filter((name): name is string => !!name)
+    .filter(name => name.toLowerCase() !== 'transfer' && name.toLowerCase() !== 'adjustment')
+}
+
 export function useTransactionSuggestions(options: UseTransactionSuggestionsOptions) {
   const { categories, editingTxId, showAddForm, txType, activeSuggestionEntries, category, ledgerCategory } = options
 
@@ -43,7 +56,11 @@ export function useTransactionSuggestions(options: UseTransactionSuggestionsOpti
     noteSuggestionAbortRef.current?.abort()
   }, [])
 
-  const requestCategorySuggestions = useCallback(async (trimmedDescription: string, autocompletedDescription: string | null) => {
+  const requestCategorySuggestions = useCallback(async (
+    trimmedDescription: string,
+    autocompletedDescription: string | null,
+  ): Promise<CategorySuggestion[]> => {
+    const requestedTxType = txType === 'inflow' ? 'inflow' : 'outflow'
     if (
       !showAddForm ||
       editingTxId ||
@@ -52,12 +69,14 @@ export function useTransactionSuggestions(options: UseTransactionSuggestionsOpti
       categories.length === 0 ||
       (autocompletedDescription && autocompletedDescription.trim() === trimmedDescription)
     ) {
-      return
+      return []
     }
 
-    const categoryNames = categories.map(c => c.name).filter(Boolean)
-    const requestKey = JSON.stringify([trimmedDescription.toLowerCase(), txType, categoryNames])
-    if (lastCategorySuggestionKeyRef.current === requestKey) return
+    const categoryNames = getSelectableCategoryNames(categories)
+    if (categoryNames.length === 0) return []
+    const requestKey = JSON.stringify([trimmedDescription.toLowerCase(), requestedTxType, categoryNames])
+    if (lastCategorySuggestionKeyRef.current === requestKey && categorySuggestions.length > 0) return categorySuggestions
+    if (lastCategorySuggestionKeyRef.current === requestKey) return []
     lastCategorySuggestionKeyRef.current = requestKey
 
     categorySuggestionAbortRef.current?.abort()
@@ -71,26 +90,28 @@ export function useTransactionSuggestions(options: UseTransactionSuggestionsOpti
     try {
       const suggestions = await suggestTransactionCategories({
         description: trimmedDescription,
-        txType,
+        txType: requestedTxType,
         categories: categoryNames,
       }, controller.signal)
 
-      if (categorySuggestionRequestSeqRef.current !== requestSeq) return
+      if (categorySuggestionRequestSeqRef.current !== requestSeq) return []
       setCategorySuggestions(suggestions)
+      return suggestions
     } catch (err: unknown) {
-      if (err instanceof DOMException && err.name === 'AbortError') return
+      if (err instanceof DOMException && err.name === 'AbortError') return []
       if (categorySuggestionRequestSeqRef.current === requestSeq) {
         setCategorySuggestions([])
         setCategorySuggestionUnavailable(true)
         lastCategorySuggestionKeyRef.current = null
       }
       console.warn('Failed to suggest transaction categories', err)
+      return []
     } finally {
       if (categorySuggestionRequestSeqRef.current === requestSeq) {
         setIsSuggestingCategory(false)
       }
     }
-  }, [categories, editingTxId, showAddForm, txType])
+  }, [categories, categorySuggestions, editingTxId, showAddForm, txType])
 
   const requestNoteSuggestions = useCallback(async (trimmedDescription: string) => {
     if (!showAddForm || txType === 'transfer' || trimmedDescription.length < 2) return

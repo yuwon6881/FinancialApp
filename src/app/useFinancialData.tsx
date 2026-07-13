@@ -591,11 +591,19 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   }
 
   const handleAddTransaction = (newTx: Omit<Transaction, 'id'>, setActiveTab: any) => {
-    const draftId = createLocalId('draft')
-    const draftTx: Transaction = { ...newTx, id: draftId, isPendingSync: true }
-    setDraftTransactions(prev => [...prev, draftTx])
-    void triggerHaptic(15)
+    handleStageDraftTransactions([newTx])
     setActiveTab('drafts')
+  }
+
+  const handleStageDraftTransactions = (newTransactions: Omit<Transaction, 'id'>[]) => {
+    if (newTransactions.length === 0) return
+    const drafts = newTransactions.map(transaction => ({
+      ...transaction,
+      id: createLocalId('draft'),
+      isPendingSync: true,
+    }))
+    setDraftTransactions(prev => [...prev, ...drafts])
+    void triggerHaptic(15)
   }
 
   const handleAddBalanceAdjustment = (newTx: Omit<Transaction, 'id'>) => {
@@ -838,6 +846,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     requestDeleteCategory,
     handleApplyCategoryCleanupSuggestion,
     handleAddTransaction,
+    handleStageDraftTransactions,
     handleAddBalanceAdjustment,
     handleUpdateDraftTransaction,
     handleDeleteDraftTransaction,

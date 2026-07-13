@@ -227,6 +227,8 @@ function App() {
     handleUnpurchaseWishlistItem: financial.handleUnpurchaseWishlistItem,
     requestDeletePayment: financial.requestDeletePayment,
     requestDeleteWishlistItem: financial.requestDeleteWishlistItem,
+    allCategories: financial.allCategories,
+    handleStageDraftTransactions: financial.handleStageDraftTransactions,
   })
 
   // Shadow global alert
@@ -625,10 +627,8 @@ function App() {
                         onAddFormOpenChange={setIsLedgerAddOpen}
                         activeScanJobIds={receiptScanJobIds}
                         failedScanJob={failedScanJob}
-                        aiDraft={aiRouter.state.aiLedgerDraft}
                         aiEditDraft={aiRouter.state.aiLedgerEditDraft}
                         aiExportRequest={aiRouter.state.aiLedgerExportRequest}
-                        onAiDraftConsumed={() => aiRouter.dispatch({ type: 'CONSUME_LEDGER_DRAFT' })}
                         onAiEditDraftConsumed={() => aiRouter.dispatch({ type: 'CONSUME_LEDGER_EDIT_DRAFT' })}
                         onAiExportRequestConsumed={() => aiRouter.dispatch({ type: 'CONSUME_EXPORT_REQUEST' })}
                       />

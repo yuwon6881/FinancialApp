@@ -67,10 +67,8 @@ interface LedgerViewProps {
   onAddFormOpenChange?: (open: boolean) => void
   activeScanJobIds?: string[]
   failedScanJob?: { jobId: string; errorMessage: string } | null
-  aiDraft?: { nonce: number; fields: Record<string, unknown> } | null
   aiEditDraft?: { nonce: number; id: string; changes: Record<string, unknown> } | null
   aiExportRequest?: { nonce: number } | null
-  onAiDraftConsumed?: () => void
   onAiEditDraftConsumed?: () => void
   onAiExportRequestConsumed?: () => void
 }
@@ -225,9 +223,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         onReceiptScanCleared={props.onReceiptScanCleared}
         activeScanJobIds={props.activeScanJobIds}
         failedScanJob={props.failedScanJob}
-        aiDraft={props.aiDraft}
         aiEditDraft={props.aiEditDraft}
-        onAiDraftConsumed={props.onAiDraftConsumed}
         onAiEditDraftConsumed={props.onAiEditDraftConsumed}
         onFetchTransactionById={props.onFetchTransactionById}
         onShowAlert={props.onShowAlert}
