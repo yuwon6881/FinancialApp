@@ -60,6 +60,30 @@ const ContentViewFallback = () => (
   </div>
 )
 
+const fabMenuVariants = {
+  hidden: {
+    transition: { staggerChildren: 0.06 },
+  },
+  visible: {
+    transition: {
+      delayChildren: 0.08,
+      staggerChildren: 0.12,
+      // Reveal from the action nearest the FAB and work upwards.
+      staggerDirection: -1,
+    },
+  },
+}
+
+const fabActionVariants = {
+  hidden: { opacity: 0, scale: 0.7, y: 18 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: { type: 'spring' as const, stiffness: 240, damping: 19 },
+  },
+}
+
 const nextPaint = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
 const wait = (ms: number) => new Promise<void>(resolve => window.setTimeout(resolve, ms))
 
@@ -219,6 +243,19 @@ function App() {
 
   const [isAiOpen, setIsAiOpen] = useState(false)
   const [isFabOpen, setIsFabOpen] = useState(false)
+
+  useEffect(() => {
+    setIsFabOpen(false)
+  }, [prefs.activeTab])
+
+  useEffect(() => {
+    if (!isFabOpen) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsFabOpen(false)
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [isFabOpen])
 
   // Redirect from drafts if empty
   useEffect(() => {
@@ -728,12 +765,15 @@ function App() {
         {session.token && (
           <>
             <AnimatePresence>
-              {financial.isBackgroundSyncing && (
+              {isFabOpen && prefs.activeTab !== 'drafts' && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="md:hidden fixed inset-0 z-30 bg-background/60 backdrop-blur-xs"
+                  transition={{ duration: 0.25 }}
+                  className="md:hidden fixed inset-0 z-30 bg-background/45 backdrop-blur-sm cursor-pointer"
+                  onClick={() => setIsFabOpen(false)}
+                  aria-hidden="true"
                 />
               )}
             </AnimatePresence>
@@ -741,7 +781,10 @@ function App() {
             <AnimatePresence>
               {isFabOpen && prefs.activeTab !== 'drafts' && (
                 <motion.div
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  variants={fabMenuVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="hidden"
                   className="md:hidden fixed right-8 z-40 flex flex-col gap-3.5 items-end pointer-events-auto"
                   style={{ bottom: 'calc(148px + env(safe-area-inset-bottom, 0px))' }}
                 >
@@ -750,7 +793,13 @@ function App() {
                     { key: 'subscription' as const, label: 'New Subscription', Icon: CreditCard, color: 'bg-violet-500' },
                     { key: 'transaction' as const, label: 'Post Transaction', Icon: Wallet, color: 'bg-emerald-500' },
                   ]).map(({ key, label, Icon, color }) => (
-                    <motion.button key={key} whileTap={{ scale: 0.92 }} onClick={() => { nav.handleQuickAction(key); setIsFabOpen(false) }} className="flex items-center gap-2.5 group cursor-pointer">
+                    <motion.button
+                      key={key}
+                      variants={fabActionVariants}
+                      whileTap={{ scale: 0.92 }}
+                      onClick={() => { nav.handleQuickAction(key); setIsFabOpen(false) }}
+                      className="flex items-center gap-2.5 group cursor-pointer"
+                    >
                       <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-foreground shadow-xs">{label}</span>
                       <span className={`size-11 rounded-full ${color} text-white flex items-center justify-center shadow-lg`}><Icon className="size-5" /></span>
                     </motion.button>

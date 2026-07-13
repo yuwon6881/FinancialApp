@@ -5,9 +5,9 @@ import tailwindcss from "@tailwindcss/vite"
 import path from "path"
 import { VitePWA } from 'vite-plugin-pwa'
 
-// Inject a Content-Security-Policy <meta> at build time. This is defense-in-depth for the
-// Bearer token in localStorage: `connect-src` restricts where script can send data, so even
-// an injected script can't exfiltrate the token to an attacker's host; `script-src 'self'`
+// Inject a Content-Security-Policy <meta> at build time. This is defense-in-depth for both
+// cookie-authenticated web clients and native clients using a secure-storage bearer token:
+// `connect-src` restricts where script can send data and `script-src 'self'`
 // (no 'unsafe-inline') stops injected inline script from running in the first place.
 //
 // connect-src is derived from the SAME VITE_API_URL the app uses (client.ts), so the policy

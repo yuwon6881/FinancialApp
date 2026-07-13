@@ -11,6 +11,12 @@ export class ApiError extends Error {
 }
 
 const getApiBaseUrl = (): string => {
+  // Browser clients use the Vercel same-origin proxy in production. Keeping the
+  // auth cookie first-party prevents installed mobile PWAs from losing access to
+  // a cross-site Cloud Run cookie when the standalone app process is restarted.
+  // Native Capacitor builds continue to call Cloud Run directly and authenticate
+  // with the bearer token held in secure storage.
+  if (!import.meta.env.DEV && usesCookieAuth) return '/api'
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL
   if (import.meta.env.DEV) {
     const host = typeof window !== 'undefined' && window.location.hostname
