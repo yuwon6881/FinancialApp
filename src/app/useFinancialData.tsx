@@ -243,6 +243,14 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
   // Backup outbox/drafts on logout
   const handleLogoutCleanup = useCallback(async (currentOwner: string) => {
+    // A new login must perform its own wake-up and initial fetch. Also invalidate
+    // the outgoing session's request so its finally block cannot hide the next
+    // session's loading skeleton after logout.
+    loadAllSeqRef.current += 1
+    loadAllAbortRef.current?.abort()
+    loadAllAbortRef.current = null
+    isServerAwakeRef.current = false
+
     const currentPending = getPendingOps()
     const currentDrafts = draftTransactions
     const currentFailed = getFailedOps()
@@ -287,6 +295,13 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
   // Restore backups on login
   const handleLoginSuccessRestore = useCallback((newUsername: string) => {
+    // The token state update causes wakeUpAndSync to run on the next render. Reset
+    // the previous session's wake state and show the foreground skeleton until
+    // that first dashboard payload arrives.
+    isServerAwakeRef.current = false
+    setLoading(true)
+    setError(null)
+
     const cachedOpsBackup = localStorage.getItem('pending_operations_backup') || localStorage.getItem('pending_transactions_backup')
     if (cachedOpsBackup) {
       let consumedOrCorrupt = false
@@ -402,16 +417,19 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
   // Trigger wakeUpAndSync on mount or online status change
   useEffect(() => {
-    if (token) {
+    if (!token) {
+      isServerAwakeRef.current = false
+      return
+    }
+
+    void wakeUpAndSync()
+    const handleOnline = () => {
+      console.log('Browser went online, starting wake-up ping...')
       void wakeUpAndSync()
-      const handleOnline = () => {
-        console.log('Browser went online, starting wake-up ping...')
-        void wakeUpAndSync()
-      }
-      window.addEventListener('online', handleOnline)
-      return () => {
-        window.removeEventListener('online', handleOnline)
-      }
+    }
+    window.addEventListener('online', handleOnline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
     }
   }, [token, wakeUpAndSync])
 

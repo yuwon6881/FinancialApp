@@ -397,7 +397,7 @@ function App() {
   if (financial.loading && !financial.optimisticDashboardData) {
     return (
       <LaunchReady>
-        <div className="app-shell min-h-screen text-foreground p-4">
+        <div data-testid="app-loading-skeleton" className="app-shell min-h-screen text-foreground p-4">
           <div className="container mx-auto max-w-7xl py-6 space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">

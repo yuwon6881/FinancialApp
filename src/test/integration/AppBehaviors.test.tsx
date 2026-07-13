@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor, cleanup } from '@testing-library/react'
+import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react'
 import App from '@/App'
 import * as api from '@/lib/api'
 
@@ -79,6 +79,27 @@ describe('App behaviors', () => {
 
     // Should load the dashboard instead of login view
     await waitFor(() => {
+      expect(screen.getByTestId('dashboard-view')).toBeDefined()
+    })
+  })
+
+  it('shows the skeleton and fetches data immediately after login', async () => {
+    let releasePing!: (value: { status: string }) => void
+    const pendingPing = new Promise<{ status: string }>(resolve => { releasePing = resolve })
+    vi.mocked(api.pingServer).mockReturnValueOnce(pendingPing)
+
+    render(<App />)
+    fireEvent.click(screen.getByText('Log In'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('app-loading-skeleton')).toBeDefined()
+    })
+    expect(api.fetchDashboard).not.toHaveBeenCalled()
+
+    releasePing({ status: 'healthy' })
+
+    await waitFor(() => {
+      expect(api.fetchDashboard).toHaveBeenCalled()
       expect(screen.getByTestId('dashboard-view')).toBeDefined()
     })
   })
