@@ -1,5 +1,6 @@
 import React from 'react'
 import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Bell, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap } from 'lucide-react'
+import { motion } from 'framer-motion'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { RowSyncBadge } from './ui/RowSyncBadge'
@@ -71,6 +72,8 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
     onToast,
   })
 
+  const [activeTab, setActiveTab] = React.useState<'financial-preferences' | 'categories' | 'security'>('financial-preferences')
+
   return (
     <div className="space-y-6 soft-rise">
       <div className="flex flex-col gap-2 p-4 sm:p-6 bg-card rounded-2xl border border-border/60">
@@ -83,184 +86,219 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.65fr)] gap-6">
-        <form noValidate onSubmit={view.handleSaveSettings} className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-5">
-          <div className="flex items-center justify-between gap-3 border-b border-border/40 pb-3">
-            <div>
-              <h3 className="text-sm font-bold text-foreground">Financial Model</h3>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Controls budget targets and cycle calculations.</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label className="space-y-1 block">
-              <span className="text-xs font-semibold text-muted-foreground block">Target Stability Fund Limit</span>
-              <input
-                type="text"
-                inputMode="decimal"
-                disabled={hideSensitive}
-                value={view.targetInput}
-                onChange={e => {
-                  const val = e.target.value
-                  if (!/^\d*\.?\d{0,2}$/.test(val)) return
-                  view.setTargetInput(val)
-                  if (view.errors.target) {
-                    view.setErrors(prev => {
-                      const next = { ...prev }
-                      delete next.target
-                      return next
-                    })
-                  }
-                }}
-                className={`w-full px-3 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                  hideSensitive 
-                    ? 'border-transparent text-transparent blur-sm select-none pointer-events-none' 
-                    : view.errors.target 
-                      ? 'border-destructive focus:ring-destructive' 
-                      : 'border-border focus:ring-blue-500'
-                }`}
+      {/* Tabs Control */}
+      <div className="flex border-b border-border/30 gap-6 select-none overflow-x-auto no-scrollbar pb-1">
+        {([
+          ['financial-preferences', 'Financial Model & Preferences'],
+          ['categories', 'Transaction Categories'],
+          ['security', 'Security & Devices']
+        ] as const).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setActiveTab(id)}
+            className={`pb-3 text-xs font-bold transition relative cursor-pointer whitespace-nowrap px-1 ${
+              activeTab === id
+                ? 'text-blue-500 font-extrabold'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {label}
+            {activeTab === id && (
+              <motion.div
+                layoutId="activeSettingsTabLine"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"
+                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
               />
-              {view.errors.target && (
-                <p className="text-[10px] text-destructive font-medium mt-1">{view.errors.target}</p>
-              )}
-            </label>
-
-            <label className="space-y-1 block">
-              <span className="text-xs font-semibold text-muted-foreground block">Ledger Cycle Day</span>
-              <CustomSelect
-                value={view.cycleDayInput}
-                onChange={val => view.setCycleDayInput(String(val))}
-                options={Array.from({ length: 28 }, (_, i) => ({
-                  value: (i + 1).toString(),
-                  label: `${i + 1}${getDayWithSuffix(i + 1)} of month`
-                }))}
-                className="w-full"
-              />
-            </label>
-
-            <label className="space-y-1 block">
-              <span className="text-xs font-semibold text-muted-foreground block">Default Account Currency</span>
-              <CustomSelect
-                value={view.currencyInput}
-                onChange={val => view.setCurrencyInput(String(val))}
-                options={[
-                  { value: 'USD', label: 'USD ($)' },
-                  { value: 'EUR', label: 'EUR (€)' },
-                  { value: 'GBP', label: 'GBP (£)' }
-                ]}
-                className="w-full"
-              />
-            </label>
-
-            <label className="space-y-1 block">
-              <span className="text-xs font-semibold text-muted-foreground block">Stability Fund Overflow Redirect</span>
-              <CustomSelect
-                value={view.stabilityOverflowRedirectInput}
-                onChange={val => view.setStabilityOverflowRedirectInput(String(val))}
-                options={[
-                  { value: 'Essentials 100%', label: '100% Essentials' },
-                  { value: 'Growth 100%', label: '100% Growth' },
-                  { value: 'Rewards 100%', label: '100% Rewards' },
-                  { value: 'Split: Essentials 50%, Growth 50%', label: '50% Essentials / 50% Growth' },
-                  { value: 'Split: Essentials 50%, Rewards 50%', label: '50% Essentials / 50% Rewards' },
-                  { value: 'Split: Growth 50%, Rewards 50%', label: '50% Growth / 50% Rewards' }
-                ]}
-                className="w-full"
-              />
-            </label>
-          </div>
-
-          <div className="space-y-4 border-t border-border/30 pt-4">
-            <div className="flex items-center justify-between border-b border-border/40 pb-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-foreground">Income Allocations</span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${view.allocSum === 100 ? 'bg-blue-500/10 text-blue-500' : 'bg-destructive/15 text-destructive animate-pulse'}`}>
-                  {view.allocSum}%
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => view.setGlobalAllocLock(!view.globalAllocLock)}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/60 bg-secondary/60 text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer"
-              >
-                {view.globalAllocLock ? <Lock className="size-3" /> : <Unlock className="size-3" />}
-                {view.globalAllocLock ? 'Locked' : 'Unlocked'}
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-              {([
-                ['Essentials', view.essentialsAllocInput, 'essentials', 'accent-blue-500'],
-                ['Growth', view.growthAllocInput, 'growth', 'accent-green-500'],
-                ['Stability', view.stabilityAllocInput, 'stability', 'accent-purple-500'],
-                ['Rewards', view.rewardsAllocInput, 'rewards', 'accent-amber-500'],
-              ] as const).map(([label, value, key, accentClass]) => (
-                <label key={label} className="space-y-2 block">
-                  <div className="flex justify-between items-center text-[11px] font-bold">
-                    <span className="text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">{label}<button type="button" onClick={() => view.toggleLock(key)} className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer" title={view.lockedAllocations.includes(key) ? 'Unlock' : 'Lock'}>{view.lockedAllocations.includes(key) ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</button></span>
-                    <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md">{Number(value).toFixed(0)}%</span>
-                  </div>
-                  <input type="range" min="0" max="100" step="5" disabled={view.globalAllocLock || view.lockedAllocations.includes(key)} value={value} onChange={e => view.handleAllocationChange(key, parseFloat(e.target.value))} className={`w-full h-2 rounded-full cursor-pointer ${accentClass} bg-border disabled:opacity-50 disabled:cursor-not-allowed`} />
-                </label>
-              ))}
-            </div>
-            {view.errors.allocationSum && (
-              <p className="text-[10px] text-destructive font-semibold">{view.errors.allocationSum}</p>
             )}
-          </div>
+          </button>
+        ))}
+      </div>
 
-          <div className="flex justify-end pt-3">
-            <button
-              type="submit"
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-xl shadow-lg shadow-blue-500/10 hover:shadow-blue-500/20 transition cursor-pointer"
-            >
-              <Save className="size-3.5" /> Save Rules
-            </button>
-          </div>
-        </form>
-
-        <div className="space-y-6">
-          <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-border/40 pb-3">
+      {activeTab === 'financial-preferences' && (
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.65fr)] gap-6 animate-in fade-in duration-200">
+          <form noValidate onSubmit={view.handleSaveSettings} className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-5">
+            <div className="flex items-center justify-between gap-3 border-b border-border/40 pb-3">
               <div>
-                <h3 className="text-sm font-bold text-foreground">App Preferences</h3>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Customize display options.</p>
+                <h3 className="text-sm font-bold text-foreground">Financial Model</h3>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Controls budget targets and cycle calculations.</p>
               </div>
             </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
-                <span className="font-medium text-foreground">Dark Mode</span>
-                <ToggleButton active={darkMode} onClick={props.onToggleDarkMode || (() => {})} />
-              </div>
-              <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
-                <span className="font-medium text-foreground">Sensitive Mode (Blur)</span>
-                <ToggleButton active={hideSensitive} onClick={props.onToggleHideSensitive || (() => {})} />
-              </div>
-              <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="space-y-1 block">
+                <span className="text-xs font-semibold text-muted-foreground block">Target Stability Fund Limit</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  disabled={hideSensitive}
+                  value={view.targetInput}
+                  onChange={e => {
+                    const val = e.target.value
+                    if (!/^\d*\.?\d{0,2}$/.test(val)) return
+                    view.setTargetInput(val)
+                    if (view.errors.target) {
+                      view.setErrors(prev => {
+                        const next = { ...prev }
+                        delete next.target
+                        return next
+                      })
+                    }
+                  }}
+                  className={`w-full px-3 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                    hideSensitive 
+                      ? 'border-transparent text-transparent blur-sm select-none pointer-events-none' 
+                      : view.errors.target 
+                        ? 'border-destructive focus:ring-destructive' 
+                        : 'border-border focus:ring-blue-500'
+                  }`}
+                />
+                {view.errors.target && (
+                  <p className="text-[10px] text-destructive font-medium mt-1">{view.errors.target}</p>
+                )}
+              </label>
+
+              <label className="space-y-1 block">
+                <span className="text-xs font-semibold text-muted-foreground block">Ledger Cycle Day</span>
+                <CustomSelect
+                  value={view.cycleDayInput}
+                  onChange={val => view.setCycleDayInput(String(val))}
+                  options={Array.from({ length: 28 }, (_, i) => ({
+                    value: (i + 1).toString(),
+                    label: `${i + 1}${getDayWithSuffix(i + 1)} of month`
+                  }))}
+                  className="w-full"
+                />
+              </label>
+
+              <label className="space-y-1 block">
+                <span className="text-xs font-semibold text-muted-foreground block">Default Account Currency</span>
+                <CustomSelect
+                  value={view.currencyInput}
+                  onChange={val => view.setCurrencyInput(String(val))}
+                  options={[
+                    { value: 'USD', label: 'USD ($)' },
+                    { value: 'EUR', label: 'EUR (€)' },
+                    { value: 'GBP', label: 'GBP (£)' }
+                  ]}
+                  className="w-full"
+                />
+              </label>
+
+              <label className="space-y-1 block">
+                <span className="text-xs font-semibold text-muted-foreground block">Stability Fund Overflow Redirect</span>
+                <CustomSelect
+                  value={view.stabilityOverflowRedirectInput}
+                  onChange={val => view.setStabilityOverflowRedirectInput(String(val))}
+                  options={[
+                    { value: 'Essentials 100%', label: '100% Essentials' },
+                    { value: 'Growth 100%', label: '100% Growth' },
+                    { value: 'Rewards 100%', label: '100% Rewards' },
+                    { value: 'Split: Essentials 50%, Growth 50%', label: '50% Essentials / 50% Growth' },
+                    { value: 'Split: Essentials 50%, Rewards 50%', label: '50% Essentials / 50% Rewards' },
+                    { value: 'Split: Growth 50%, Rewards 50%', label: '50% Growth / 50% Rewards' }
+                  ]}
+                  className="w-full"
+                />
+              </label>
+            </div>
+
+            <div className="space-y-4 border-t border-border/30 pt-4">
+              <div className="flex items-center justify-between border-b border-border/40 pb-2">
                 <div className="flex items-center gap-2">
-                  <Bell className="size-4 text-muted-foreground" />
-                  <span className="font-medium text-foreground">Notify bills on Login</span>
-                </div>
-                <ToggleButton active={props.notifyOnLoginEnabled || false} onClick={() => props.onToggleNotifyOnLogin?.(!props.notifyOnLoginEnabled)} />
-              </div>
-              <div className="flex items-center justify-between text-sm py-1">
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-medium text-foreground">Local Device Cache</span>
-                  <span className="text-[10px] text-muted-foreground">Clear cached data on this device.</span>
+                  <span className="text-xs font-bold text-foreground">Income Allocations</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${view.allocSum === 100 ? 'bg-blue-500/10 text-blue-500' : 'bg-destructive/15 text-destructive animate-pulse'}`}>
+                    {view.allocSum}%
+                  </span>
                 </div>
                 <button
                   type="button"
-                  onClick={props.onClearLocalFinancialData}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-xs font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer"
+                  onClick={() => view.setGlobalAllocLock(!view.globalAllocLock)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/60 bg-secondary/60 text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer"
                 >
-                  <DatabaseZap className="size-3.5 text-muted-foreground" /> Clear
+                  {view.globalAllocLock ? <Lock className="size-3" /> : <Unlock className="size-3" />}
+                  {view.globalAllocLock ? 'Locked' : 'Unlocked'}
                 </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                {([
+                  ['Essentials', view.essentialsAllocInput, 'essentials', 'accent-blue-500'],
+                  ['Growth', view.growthAllocInput, 'growth', 'accent-green-500'],
+                  ['Stability', view.stabilityAllocInput, 'stability', 'accent-purple-500'],
+                  ['Rewards', view.rewardsAllocInput, 'rewards', 'accent-amber-500'],
+                ] as const).map(([label, value, key, accentClass]) => (
+                  <label key={label} className="space-y-2 block">
+                    <div className="flex justify-between items-center text-[11px] font-bold">
+                      <span className="text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">{label}<button type="button" onClick={() => view.toggleLock(key)} className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer" title={view.lockedAllocations.includes(key) ? 'Unlock' : 'Lock'}>{view.lockedAllocations.includes(key) ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</button></span>
+                      <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md">{Number(value).toFixed(0)}%</span>
+                    </div>
+                    <input type="range" min="0" max="100" step="5" disabled={view.globalAllocLock || view.lockedAllocations.includes(key)} value={value} onChange={e => view.handleAllocationChange(key, parseFloat(e.target.value))} className={`w-full h-2 rounded-full cursor-pointer ${accentClass} bg-border disabled:opacity-50 disabled:cursor-not-allowed`} />
+                  </label>
+                ))}
+              </div>
+              {view.errors.allocationSum && (
+                <p className="text-[10px] text-destructive font-semibold">{view.errors.allocationSum}</p>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-3">
+              <button
+                type="submit"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-xl shadow-lg shadow-blue-500/10 hover:shadow-blue-500/20 transition cursor-pointer"
+              >
+                <Save className="size-3.5" /> Save Rules
+              </button>
+            </div>
+          </form>
+
+          <div className="space-y-6">
+            <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">App Preferences</h3>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Customize display options.</p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
+                  <span className="font-medium text-foreground">Dark Mode</span>
+                  <ToggleButton active={darkMode} onClick={props.onToggleDarkMode || (() => {})} />
+                </div>
+                <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
+                  <span className="font-medium text-foreground">Sensitive Mode (Blur)</span>
+                  <ToggleButton active={hideSensitive} onClick={props.onToggleHideSensitive || (() => {})} />
+                </div>
+                <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
+                  <div className="flex items-center gap-2">
+                    <Bell className="size-4 text-muted-foreground" />
+                    <span className="font-medium text-foreground">Notify bills on Login</span>
+                  </div>
+                  <ToggleButton active={props.notifyOnLoginEnabled || false} onClick={() => props.onToggleNotifyOnLogin?.(!props.notifyOnLoginEnabled)} />
+                </div>
+                <div className="flex items-center justify-between text-sm py-1">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-medium text-foreground">Local Device Cache</span>
+                    <span className="text-[10px] text-muted-foreground">Clear cached data on this device.</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={props.onClearLocalFinancialData}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-xs font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer"
+                  >
+                    <DatabaseZap className="size-3.5 text-muted-foreground" /> Clear
+                  </button>
+                </div>
               </div>
             </div>
           </div>
+        </div>
+      )}
 
+      {activeTab === 'categories' && (
+        <div className="max-w-2xl mx-auto w-full animate-in fade-in duration-200">
           <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
-            <div className={view.categoriesOpen ? 'border-b border-border/40 pb-2' : ''}>
+            <div className="border-b border-border/40 pb-2">
               <div
                 role="button"
                 tabIndex={0}
@@ -271,15 +309,19 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
               >
                 <div className="min-w-0">
                   <h3 className="text-sm font-bold text-foreground">Transaction Categories</h3>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    {view.visibleCategories.length} active categories.
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    <div>{view.visibleCategories.length} active categories.</div>
                     {view.categoryUsage && view.unusedCategoryCount > 0 && (
-                      <> · <span className="text-orange-500 font-semibold">{view.unusedCategoryCount} unused in last {view.USAGE_LOOKBACK_CYCLES} cycles</span></>
+                      <div className="text-orange-500 font-semibold mt-0.5">
+                        {view.unusedCategoryCount} unused in last {view.USAGE_LOOKBACK_CYCLES} cycles
+                      </div>
                     )}
                     {view.categoryUsage && view.unusedCategoryCount === 0 && view.visibleCategories.length > 0 && (
-                      <> · <span className="text-emerald-500 font-semibold whitespace-nowrap">all used recently</span></>
+                      <div className="text-emerald-500 font-semibold mt-0.5">
+                        all used recently
+                      </div>
                     )}
-                  </p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {view.categoryUsage && view.visibleCategories.length > 0 && (
@@ -535,16 +577,17 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
               </div>
             </CollapsibleBody>
           </div>
+        </div>
+      )}
 
+      {activeTab === 'security' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in duration-200">
           <ActiveDevicesSection />
-
           <TwoFactorSection hideSensitive={hideSensitive} />
-
           <ChangePasswordSection hideSensitive={hideSensitive} />
-
           <FingerprintSection />
         </div>
-      </div>
+      )}
     </div>
   )
 }
