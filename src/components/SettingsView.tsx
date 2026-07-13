@@ -296,7 +296,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       )}
 
       {activeTab === 'categories' && (
-        <div className="max-w-2xl mx-auto w-full animate-in fade-in duration-200">
+        <div className="w-full animate-in fade-in duration-200">
           <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
             <div className="border-b border-border/40 pb-2">
               <div
@@ -581,11 +581,15 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       )}
 
       {activeTab === 'security' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in duration-200">
-          <ActiveDevicesSection />
-          <TwoFactorSection hideSensitive={hideSensitive} />
-          <ChangePasswordSection hideSensitive={hideSensitive} />
-          <FingerprintSection />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start animate-in fade-in duration-200">
+          <div className="space-y-6">
+            <ActiveDevicesSection />
+            <ChangePasswordSection hideSensitive={hideSensitive} />
+          </div>
+          <div className="space-y-6">
+            <TwoFactorSection hideSensitive={hideSensitive} />
+            <FingerprintSection />
+          </div>
         </div>
       )}
     </div>
