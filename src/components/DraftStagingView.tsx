@@ -10,6 +10,8 @@ import { CustomSelect } from './ui/CustomSelect'
 import { DatePicker } from './ui/DatePicker'
 import { LedgerAllocationBadge } from './ledger/LedgerAllocationBadge'
 
+const TRANSFER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards']
+
 interface DraftStagingViewProps {
   draftTransactions: Transaction[]
   onUpdateDraftTransaction: (id: string, updated: Transaction) => void
@@ -40,6 +42,8 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
   const [date, setDate] = useState('')
   const [category, setCategory] = useState('')
   const [ledgerCategory, setLedgerCategory] = useState('Essentials')
+  const [transferSource, setTransferSource] = useState('Essentials')
+  const [transferTarget, setTransferTarget] = useState('Growth')
 
   const normalCategoryOptions = categories
     .filter(item => !item.isPendingDelete && !['transfer', 'adjustment'].includes(item.name.trim().toLowerCase()))
@@ -66,6 +70,11 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
     setDate(draft.date)
     setCategory(draft.category)
     setLedgerCategory(draft.ledgerCategory)
+    if (draft.ledgerCategory.startsWith('Transfer:')) {
+      const [source, target] = draft.ledgerCategory.substring('Transfer:'.length).split('->')
+      setTransferSource(source?.trim() || 'Essentials')
+      setTransferTarget(target?.trim() || 'Growth')
+    }
     setErrors({})
   }
 
@@ -104,7 +113,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
       amount: parsedAmount * sign,
       date,
       category: isTransferDraft ? draft.category : category,
-      ledgerCategory: isTransferDraft ? draft.ledgerCategory : ledgerCategory,
+      ledgerCategory: isTransferDraft ? `Transfer:${transferSource}->${transferTarget}` : ledgerCategory,
     })
     setEditingDraftId(null)
   }
@@ -232,7 +241,40 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                   </div>
                 </div>
 
-                {!isTransferDraft && (
+                {isTransferDraft ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                        Source (From)
+                      </label>
+                      <CustomSelect
+                        value={transferSource}
+                        onChange={value => {
+                          setTransferSource(value)
+                          // Keep source and target distinct, mirroring the ledger transfer form.
+                          if (value === transferTarget) {
+                            const fallback = TRANSFER_BUCKETS.find(bucket => bucket !== value)
+                            if (fallback) setTransferTarget(fallback)
+                          }
+                        }}
+                        options={TRANSFER_BUCKETS.map(option => ({ value: option, label: option }))}
+                        className="w-full"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                        Target (To)
+                      </label>
+                      <CustomSelect
+                        value={transferTarget}
+                        onChange={value => setTransferTarget(value)}
+                        options={TRANSFER_BUCKETS.filter(option => option !== transferSource).map(option => ({ value: option, label: option }))}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+                ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">

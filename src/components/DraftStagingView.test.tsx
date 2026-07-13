@@ -50,4 +50,44 @@ describe('DraftStagingView', () => {
       ledgerCategory: 'Growth',
     }))
   })
+
+  it('allows editing a transfer draft source and target', () => {
+    vi.stubGlobal('ResizeObserver', class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    })
+    const onUpdateDraftTransaction = vi.fn()
+    render(
+      <DraftStagingView
+        draftTransactions={[{
+          id: 'draft-transfer-1',
+          description: 'Move to savings',
+          amount: 50,
+          date: '2026-07-13',
+          category: 'Transfer',
+          ledgerCategory: 'Transfer:Essentials->Growth',
+          isPendingSync: true,
+        }]}
+        categories={[{ id: 'other', name: 'Other' }]}
+        onUpdateDraftTransaction={onUpdateDraftTransaction}
+        onDeleteDraftTransaction={vi.fn()}
+        hideSensitive={false}
+        onCancel={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByTitle('Edit draft item'))
+
+    // Source is a CustomSelect showing the current bucket; retarget it.
+    fireEvent.click(screen.getByRole('button', { name: 'Essentials' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Stability' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(onUpdateDraftTransaction).toHaveBeenCalledWith('draft-transfer-1', expect.objectContaining({
+      category: 'Transfer',
+      ledgerCategory: 'Transfer:Stability->Growth',
+    }))
+  })
 })
