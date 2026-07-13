@@ -29,17 +29,21 @@ export function toFilename(value: string): string {
 }
 
 export function buildCsvContent(rows: Transaction[]): string {
-  const headers = ['Date', 'Description', 'Category', 'Ledger Category', 'Debit (Outflow)', 'Credit (Inflow)']
+  const headers = ['Date', 'Description', 'Category', 'Ledger Allocation', 'Debit (Outflow)', 'Credit (Inflow)', 'Internal Movement']
   const dataRows = rows.map(t => {
     const isOutflow = t.amount < 0
     const isTransfer = (t.ledgerCategory || '').startsWith('Transfer:')
+    const ledgerAllocation = isTransfer
+      ? t.ledgerCategory.substring('Transfer:'.length).replace('->', ' -> ')
+      : displayLedgerCategory(t.ledgerCategory)
     return [
       escapeCsvField(t.date),
       escapeCsvTextField(t.description),
       escapeCsvTextField(t.category),
-      escapeCsvField(displayLedgerCategory(t.ledgerCategory)),
-      isTransfer ? escapeCsvField(t.amount.toFixed(2)) : (isOutflow ? escapeCsvField(Math.abs(t.amount).toFixed(2)) : ''),
-      isTransfer ? escapeCsvField(t.amount.toFixed(2)) : (!isOutflow ? escapeCsvField(t.amount.toFixed(2)) : '')
+      escapeCsvField(ledgerAllocation),
+      !isTransfer && isOutflow ? escapeCsvField(Math.abs(t.amount).toFixed(2)) : '',
+      !isTransfer && !isOutflow ? escapeCsvField(t.amount.toFixed(2)) : '',
+      isTransfer ? escapeCsvField(Math.abs(t.amount).toFixed(2)) : '',
     ]
   })
   return [headers.join(','), ...dataRows.map(e => e.join(','))].join('\n')

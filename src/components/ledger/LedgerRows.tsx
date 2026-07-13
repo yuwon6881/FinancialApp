@@ -37,12 +37,21 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
       <td className="p-4 font-medium text-muted-foreground">{transaction.date}</td>
       <td className="p-4 font-semibold text-foreground flex items-center gap-2"><span>{transaction.description}</span>{props.isDeleting ? <RowSyncBadge state="deleting" entityLabel="transaction" /> : (props.isSyncing || transaction.isPendingSync) ? <RowSyncBadge state={props.isSyncing ? 'syncing' : 'pending'} entityLabel="transaction" /> : null}</td>
       <td className="p-4"><span className={`inline-block text-[10px] px-2 py-0.5 font-semibold rounded-md border ${getCategoryBadgeClass(transaction.category)}`}>{transaction.category}</span></td>
-      <td className="p-4"><LedgerAllocationBadge ledgerCategory={transaction.ledgerCategory} transactionId={transaction.id} /></td>
-      <td className="p-4 text-right font-medium">
-        {income || split ? <span className="text-muted-foreground/30">-</span> : transfer || outflow ? <span className="inline-block px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-500 font-bold text-xs">{money(transfer ? transaction.amount : Math.abs(transaction.amount))}</span> : <span className="text-muted-foreground/30">-</span>}
+      <td className="p-4">
+        <span className="inline-flex flex-col items-start gap-1">
+          <LedgerAllocationBadge ledgerCategory={transaction.ledgerCategory} transactionId={transaction.id} />
+          {transfer && (
+            <span className="text-[10px] font-semibold text-blue-500 whitespace-nowrap">
+              {split ? 'Allocated' : 'Moved'} {money(Math.abs(transaction.amount))}
+            </span>
+          )}
+        </span>
       </td>
       <td className="p-4 text-right font-medium">
-        {income || split || transfer || !outflow ? <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-xs">{money(transaction.amount)}</span> : <span className="text-muted-foreground/30">-</span>}
+        {income || transfer ? <span className="text-muted-foreground/30">-</span> : outflow ? <span className="inline-block px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-500 font-bold text-xs">{money(Math.abs(transaction.amount))}</span> : <span className="text-muted-foreground/30">-</span>}
+      </td>
+      <td className="p-4 text-right font-medium">
+        {!transfer && (income || !outflow) ? <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-xs">{money(transaction.amount)}</span> : <span className="text-muted-foreground/30">-</span>}
       </td>
       <td className="p-4 text-center flex items-center justify-center gap-2">
         <Button variant="ghost" size="sm" onClick={split ? props.onSplitEditBlocked : () => props.onStartEdit(transaction)} disabled={!split && (props.isDeleting || props.hideSensitive)}>Edit</Button>
