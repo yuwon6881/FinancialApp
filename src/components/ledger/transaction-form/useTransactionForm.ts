@@ -332,6 +332,9 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       description: state.description,
       amount: state.amount,
       date: state.date,
+      transactionType: state.transactionType,
+      transferSource: state.transferSource,
+      transferTarget: state.transferTarget,
     })
 
     if (Object.keys(validationErrors).length > 0) {

@@ -78,9 +78,15 @@ describe('matchesTransactionFilters', () => {
     ).toBe(false)
   })
 
-  it('applies the outflow type filter (negative)', () => {
+  it('applies the outflow type filter (negative, non-transfer)', () => {
     expect(matchesTransactionFilters(tx({ amount: -5 }), { txType: 'outflow' })).toBe(true)
     expect(matchesTransactionFilters(tx({ amount: 5 }), { txType: 'outflow' })).toBe(false)
+    expect(
+      matchesTransactionFilters(
+        tx({ amount: -5, category: 'Transfer', ledgerCategory: 'Transfer:Rewards->Growth' }),
+        { txType: 'outflow' },
+      ),
+    ).toBe(false)
   })
 
   it('applies the transfer type filter', () => {

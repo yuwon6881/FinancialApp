@@ -79,7 +79,7 @@ export function matchesTransactionFilters(t: Transaction, criteria: TransactionF
   if (txType) {
     const isTransfer = isTransferTx(t)
     if (txType === 'inflow' && !(t.amount > 0 && !isTransfer)) return false
-    if (txType === 'outflow' && !(t.amount < 0)) return false
+    if (txType === 'outflow' && !(t.amount < 0 && !isTransfer)) return false
     if (txType === 'transfer' && !isTransfer) return false
   }
 

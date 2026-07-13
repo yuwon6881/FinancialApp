@@ -2,6 +2,9 @@ export function validateTransactionForm(state: {
   description: string
   amount: string
   date: string
+  transactionType?: string
+  transferSource?: string
+  transferTarget?: string
 }) {
   const errors: Record<string, string> = {}
   if (!state.description.trim()) {
@@ -15,6 +18,9 @@ export function validateTransactionForm(state: {
   }
   if (!state.date) {
     errors.date = 'Posting date is required.'
+  }
+  if (state.transactionType === 'transfer' && state.transferSource === state.transferTarget) {
+    errors.transferTarget = 'Choose a different target category.'
   }
   return errors
 }

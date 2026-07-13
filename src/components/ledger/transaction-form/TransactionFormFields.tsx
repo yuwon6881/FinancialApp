@@ -348,9 +348,12 @@ export function TransactionFormFields({
                 { value: 'Growth', label: 'Growth' },
                 { value: 'Stability', label: 'Stability' },
                 { value: 'Rewards', label: 'Rewards' }
-              ]}
+              ].filter(option => option.value !== state.transferSource)}
               className="w-full"
             />
+            {errors.transferTarget && (
+              <p className="text-[11px] text-destructive font-medium mt-1">{errors.transferTarget}</p>
+            )}
           </div>
         </>
       ) : (
