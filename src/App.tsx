@@ -660,6 +660,7 @@ function App() {
                     {prefs.activeTab === 'drafts' && financial.draftTransactions.length > 0 && (
                       <DraftStagingView 
                         draftTransactions={financial.draftTransactions}
+                        categories={financial.allCategories}
                         onUpdateDraftTransaction={financial.handleUpdateDraftTransaction}
                         onDeleteDraftTransaction={financial.requestDeleteDraftTransaction}
                         hideSensitive={prefs.hideSensitive}

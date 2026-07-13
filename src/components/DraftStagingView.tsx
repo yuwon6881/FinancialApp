@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import type { Transaction } from '../types'
+import type { Transaction, TransactionCategory } from '../types'
 import { FileText, Edit2, Trash2, ArrowLeft, Plus } from 'lucide-react'
 import { formatCurrencyVal } from '../lib/utils'
 import { SwipeableRow } from './ui/SwipeableRow'
@@ -10,6 +10,7 @@ interface DraftStagingViewProps {
   draftTransactions: Transaction[]
   onUpdateDraftTransaction: (id: string, updated: Transaction) => void
   onDeleteDraftTransaction: (id: string) => void
+  categories: TransactionCategory[]
   hideSensitive: boolean
   currency?: string
   onCancel: () => void
@@ -20,6 +21,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
   draftTransactions,
   onUpdateDraftTransaction,
   onDeleteDraftTransaction,
+  categories,
   hideSensitive,
   currency = 'USD',
   onCancel,
@@ -32,6 +34,13 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState('')
+  const [category, setCategory] = useState('')
+  const [ledgerCategory, setLedgerCategory] = useState('Essentials')
+
+  const normalCategoryOptions = categories
+    .filter(item => !item.isPendingDelete && !['transfer', 'adjustment'].includes(item.name.trim().toLowerCase()))
+    .map(item => item.name.trim())
+    .filter((name, index, names) => !!name && names.findIndex(candidate => candidate.toLowerCase() === name.toLowerCase()) === index)
 
   const formatCurrency = (val: number) => {
     return formatCurrencyVal(val, currency)
@@ -51,6 +60,8 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
     setDescription(draft.description)
     setAmount(Math.abs(draft.amount).toString())
     setDate(draft.date)
+    setCategory(draft.category)
+    setLedgerCategory(draft.ledgerCategory)
     setErrors({})
   }
 
@@ -68,6 +79,13 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
     if (!date) {
       newErrors.date = 'Date is required.'
     }
+    const isTransferDraft = draft.ledgerCategory.startsWith('Transfer:')
+    if (!isTransferDraft && !category) {
+      newErrors.category = 'Category is required.'
+    }
+    if (!isTransferDraft && !ledgerCategory) {
+      newErrors.ledgerCategory = 'Ledger category is required.'
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
@@ -80,7 +98,9 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
       ...draft,
       description: description.trim(),
       amount: parsedAmount * sign,
-      date
+      date,
+      category: isTransferDraft ? draft.category : category,
+      ledgerCategory: isTransferDraft ? draft.ledgerCategory : ledgerCategory,
     })
     setEditingDraftId(null)
   }
@@ -113,6 +133,11 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
           const isEditing = editingDraftId === draft.id
 
           if (isEditing) {
+            const isTransferDraft = draft.ledgerCategory.startsWith('Transfer:')
+            const ledgerOptions = [
+              ...(draft.amount > 0 ? ['Income'] : []),
+              'Essentials', 'Growth', 'Stability', 'Rewards'
+            ]
             return (
               <div
                 key={draft.id}
@@ -191,6 +216,50 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                     )}
                   </div>
                 </div>
+
+                {!isTransferDraft && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label htmlFor="draft-category" className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                        Category
+                      </label>
+                      <select
+                        id="draft-category"
+                        value={category}
+                        onChange={event => {
+                          setCategory(event.target.value)
+                          if (errors.category) setErrors(previous => ({ ...previous, category: '' }))
+                        }}
+                        className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                          errors.category ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-blue-500'
+                        }`}
+                      >
+                        {normalCategoryOptions.map(option => <option key={option} value={option}>{option}</option>)}
+                      </select>
+                      {errors.category && <p className="text-[10px] text-destructive font-medium">{errors.category}</p>}
+                    </div>
+
+                    <div className="space-y-1">
+                      <label htmlFor="draft-ledger-category" className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                        Ledger Category
+                      </label>
+                      <select
+                        id="draft-ledger-category"
+                        value={ledgerCategory}
+                        onChange={event => {
+                          setLedgerCategory(event.target.value)
+                          if (errors.ledgerCategory) setErrors(previous => ({ ...previous, ledgerCategory: '' }))
+                        }}
+                        className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                          errors.ledgerCategory ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-blue-500'
+                        }`}
+                      >
+                        {ledgerOptions.map(option => <option key={option} value={option}>{option}</option>)}
+                      </select>
+                      {errors.ledgerCategory && <p className="text-[10px] text-destructive font-medium">{errors.ledgerCategory}</p>}
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex gap-2 justify-end">
                   <button
