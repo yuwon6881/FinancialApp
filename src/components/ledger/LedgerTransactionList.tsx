@@ -49,7 +49,7 @@ export function LedgerTransactionList({
                 <th className="p-4">Date</th>
                 <th className="p-4">Description</th>
                 <th className="p-4">Category</th>
-                <th className="p-4">Ledger Category</th>
+                <th className="p-4">Ledger Allocation</th>
                 <th className="p-4 text-right text-orange-500/90 font-bold">Debit (Outflow)</th>
                 <th className="p-4 text-right text-emerald-500/90 font-bold">Credit (Inflow)</th>
                 <th className="p-4 text-center">Actions</th>

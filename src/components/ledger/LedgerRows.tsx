@@ -3,11 +3,12 @@ import { motion } from 'framer-motion'
 import { Edit2, Trash2 } from 'lucide-react'
 import type { Transaction } from '../../types'
 import { rowFadeVariants } from '../../lib/animations'
-import { displayLedgerCategory, formatCurrencyVal } from '../../lib/utils'
+import { formatCurrencyVal } from '../../lib/utils'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
 import { RowSyncBadge } from '../ui/RowSyncBadge'
 import { SwipeableRow } from '../ui/SwipeableRow'
 import { Button } from '../ui/Button'
+import { LedgerAllocationBadge } from './LedgerAllocationBadge'
 
 export interface LedgerRowProps {
   transaction: Transaction
@@ -36,7 +37,7 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
       <td className="p-4 font-medium text-muted-foreground">{transaction.date}</td>
       <td className="p-4 font-semibold text-foreground flex items-center gap-2"><span>{transaction.description}</span>{props.isDeleting ? <RowSyncBadge state="deleting" entityLabel="transaction" /> : (props.isSyncing || transaction.isPendingSync) ? <RowSyncBadge state={props.isSyncing ? 'syncing' : 'pending'} entityLabel="transaction" /> : null}</td>
       <td className="p-4"><span className={`inline-block text-[10px] px-2 py-0.5 font-semibold rounded-md border ${getCategoryBadgeClass(transaction.category)}`}>{transaction.category}</span></td>
-      <td className="p-4"><span className={`inline-block text-[10px] px-2 py-0.5 font-semibold rounded-md border ${getCategoryBadgeClass(transaction.ledgerCategory)}`}>{displayLedgerCategory(transaction.ledgerCategory)}</span></td>
+      <td className="p-4"><LedgerAllocationBadge ledgerCategory={transaction.ledgerCategory} transactionId={transaction.id} /></td>
       <td className="p-4 text-right font-medium">
         {income || split ? <span className="text-muted-foreground/30">-</span> : transfer || outflow ? <span className="inline-block px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-500 font-bold text-xs">{money(transfer ? transaction.amount : Math.abs(transaction.amount))}</span> : <span className="text-muted-foreground/30">-</span>}
       </td>
@@ -71,7 +72,7 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
         <div className="p-4 space-y-3">
           <div className="flex items-center justify-between"><span className="text-[10px] text-muted-foreground font-mono">{transaction.date}</span><span className={`text-[10px] px-2 py-0.5 font-semibold rounded-full border ${getCategoryBadgeClass(transaction.category)}`}>{transaction.category}</span></div>
           <div className="flex items-center justify-between gap-3"><div className="flex-1 flex items-center gap-1.5 min-w-0"><h4 className="text-sm font-bold truncate">{transaction.description}</h4>{props.isDeleting ? <RowSyncBadge state="deleting" entityLabel="transaction" /> : (props.isSyncing || transaction.isPendingSync) ? <RowSyncBadge state={props.isSyncing ? 'syncing' : 'pending'} entityLabel="transaction" /> : null}</div><span className={`${props.hideSensitive ? 'blur-sm' : ''} text-sm font-bold ${transfer ? 'text-blue-400' : outflow ? 'text-orange-400' : 'text-emerald-400'}`}>{transfer ? '' : outflow ? '-' : '+'}{formatted}</span></div>
-          <div className="flex items-center justify-between pt-2 border-t border-border/30"><span className="text-[10px] text-muted-foreground flex items-center gap-1.5">Ledger:<span className={`px-1.5 py-0.5 rounded-md border font-semibold ${getCategoryBadgeClass(transaction.ledgerCategory)}`}>{displayLedgerCategory(transaction.ledgerCategory)}</span></span></div>
+          <div className="flex items-center justify-between pt-2 border-t border-border/30"><span className="text-[10px] text-muted-foreground flex items-center gap-1.5">Ledger:<LedgerAllocationBadge ledgerCategory={transaction.ledgerCategory} transactionId={transaction.id} compact /></span></div>
         </div>
       </SwipeableRow>
     </motion.div>
