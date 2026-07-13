@@ -112,6 +112,10 @@ export default defineConfig(({ mode }) => {
             if (id.includes('framer-motion')) return 'vendor-motion'
             if (id.includes('radix-ui') || id.includes('@radix-ui')) return 'vendor-radix'
           }
+          // DatePicker is shared between the eager app shell (TopNav bell) and
+          // several lazy views; keep it in its own parallel-loaded chunk instead
+          // of pinning it into the main bundle (mirrors CustomSelect/SearchableSelect).
+          if (id.includes('components/ui/DatePicker') || id.includes('components\\ui\\DatePicker')) return 'DatePicker'
         },
       },
     },

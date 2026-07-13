@@ -14,6 +14,7 @@ import {
   EyeOff
 } from 'lucide-react'
 import { CustomSelect } from './ui/CustomSelect'
+import { DatePicker } from './ui/DatePicker'
 import { CustomConfirmModal } from './ui/CustomConfirmModal'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { BottomSheet } from './ui/BottomSheet'
@@ -462,11 +463,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       {notificationBody}
                       <label className="text-[10px] font-bold text-muted-foreground">Select Paid Date:</label>
                       <div className="flex flex-col sm:flex-row gap-2">
-                        <input
-                          type="date"
+                        <DatePicker
                           value={paidDateInput}
-                          onChange={(e) => setPaidDateInput(e.target.value)}
-                          className="w-full sm:flex-1 px-2.5 py-1 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          onChange={setPaidDateInput}
+                          className="w-full sm:flex-1"
                         />
                         <div className="flex gap-2 w-full sm:w-auto">
                           <Button

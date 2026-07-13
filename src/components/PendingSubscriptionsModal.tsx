@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import type { PendingNotification } from '../types'
 import { formatCurrencyVal } from '../lib/utils'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { BottomSheet } from './ui/BottomSheet'
 import { ToggleButton } from './ui/ToggleButton'
+import { DatePicker } from './ui/DatePicker'
 
 interface PendingSubscriptionsModalProps {
   isOpen: boolean
@@ -29,6 +31,8 @@ export function PendingSubscriptionsModal({
   onDiscardSubscription,
   onRemoveSubscription
 }: PendingSubscriptionsModalProps) {
+  const [paidDates, setPaidDates] = useState<Record<string, string>>({})
+
   if (pendingNotifications.length === 0) return null
 
   return (
@@ -88,19 +92,19 @@ export function PendingSubscriptionsModal({
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 border-t border-border/20 pt-2.5">
               <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:justify-end">
-                <div className="flex items-center gap-1.5 flex-1 sm:flex-initial min-w-[140px]">
+                <div className="flex items-center gap-1.5 flex-1 sm:flex-initial min-w-[160px]">
                   <span className="text-[9px] font-bold text-muted-foreground shrink-0">Paid Date:</span>
-                  <input
-                    type="date"
-                    defaultValue={noti.billingDate}
-                    id={`modal-date-${noti.id}`}
-                    className="w-full px-2 py-1 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  <DatePicker
+                    value={paidDates[noti.id] ?? noti.billingDate}
+                    onChange={value => setPaidDates(prev => ({ ...prev, [noti.id]: value }))}
+                    align="right"
+                    className="flex-1"
                   />
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
                   <button
                     onClick={() => {
-                      const dateVal = (document.getElementById(`modal-date-${noti.id}`) as HTMLInputElement)?.value || noti.billingDate
+                      const dateVal = paidDates[noti.id] ?? noti.billingDate
                       onConfirmSubscription(noti, dateVal)
                     }}
                     className="flex-1 sm:flex-initial px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition shadow-sm whitespace-nowrap text-center"

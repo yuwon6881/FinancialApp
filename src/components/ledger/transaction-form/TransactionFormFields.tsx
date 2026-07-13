@@ -3,6 +3,7 @@ import { Sparkles, Loader2 } from 'lucide-react'
 import { PerimeterBeam } from '../../ui/PerimeterBeam'
 import { CustomSelect } from '../../ui/CustomSelect'
 import { SearchableSelect } from '../../ui/SearchableSelect'
+import { DatePicker } from '../../ui/DatePicker'
 import { SmartAmountInput } from '../../ui/SmartAmountInput'
 import { maskCurrencyInput } from '../../../lib/utils'
 import type { TransactionFormState, TransferBucket, SelectableLedgerCategory } from './transactionFormReducer'
@@ -399,17 +400,13 @@ export function TransactionFormFields({
 
       <div className="space-y-1">
         <label className="flex items-center h-5 text-xs font-semibold text-muted-foreground">Posting Date</label>
-        <input
-          type="date"
+        <DatePicker
           value={state.date}
-          onChange={e => {
-            onSetField('date', e.target.value)
+          onChange={value => {
+            onSetField('date', value)
           }}
-          className={`w-full px-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-            errors.date
-              ? 'border-destructive focus:ring-destructive'
-              : 'border-border focus:ring-blue-500'
-          }`}
+          error={!!errors.date}
+          className="w-full"
         />
         {errors.date && (
           <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">

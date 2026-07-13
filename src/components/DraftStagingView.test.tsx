@@ -33,8 +33,16 @@ describe('DraftStagingView', () => {
     )
 
     fireEvent.click(screen.getByTitle('Edit draft item'))
-    fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'Transport' } })
-    fireEvent.change(screen.getByLabelText('Ledger Category'), { target: { value: 'Growth' } })
+
+    // Category is a SearchableSelect: open its trigger (shows the current value)
+    // then pick the desired option from the panel.
+    fireEvent.click(screen.getByRole('button', { name: 'Other' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Transport' }))
+
+    // Ledger Category is a CustomSelect: trigger shows the current value.
+    fireEvent.click(screen.getByRole('button', { name: 'Essentials' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Growth' }))
+
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     expect(onUpdateDraftTransaction).toHaveBeenCalledWith('draft-1', expect.objectContaining({

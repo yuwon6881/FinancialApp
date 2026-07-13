@@ -16,6 +16,7 @@ import { useSyncStatus } from '../lib/useOptimisticList'
 import { Button } from './ui/Button'
 import { Card } from './ui/Card'
 import { CustomSelect } from './ui/CustomSelect'
+import { DatePicker } from './ui/DatePicker'
 import { BottomSheet } from './ui/BottomSheet'
 import { CycleSkeleton } from './ui/Skeleton'
 import { RowSyncBadge } from './ui/RowSyncBadge'
@@ -473,20 +474,16 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
 
             <div className="space-y-1">
               <label className="text-xs font-semibold text-muted-foreground">Start Billing Date</label>
-              <input
-                type="date"
+              <DatePicker
                 value={startDateInput}
-                onChange={e => {
-                  setStartDateInput(e.target.value)
+                onChange={value => {
+                  setStartDateInput(value)
                   if (errors.startDate) {
                     setErrors(prev => ({ ...prev, startDate: '' }))
                   }
                 }}
-                className={`w-full px-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                  errors.startDate 
-                    ? 'border-destructive focus:ring-destructive' 
-                    : 'border-border focus:ring-blue-500'
-                }`}
+                error={!!errors.startDate}
+                className="w-full"
               />
               {errors.startDate && (
                 <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
@@ -512,11 +509,11 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
 
             <div className="space-y-1">
               <label className="text-xs font-semibold text-muted-foreground">End Billing Date (Optional)</label>
-              <input
-                type="date"
+              <DatePicker
                 value={endDateInput}
-                onChange={e => setEndDateInput(e.target.value)}
-                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
+                onChange={value => setEndDateInput(value)}
+                placeholder="No end date"
+                className="w-full"
               />
             </div>
 

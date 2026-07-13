@@ -5,6 +5,9 @@ import { formatCurrencyVal } from '../lib/utils'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { SmartAmountInput } from './ui/SmartAmountInput'
+import { SearchableSelect } from './ui/SearchableSelect'
+import { CustomSelect } from './ui/CustomSelect'
+import { DatePicker } from './ui/DatePicker'
 
 interface DraftStagingViewProps {
   draftTransactions: Transaction[]
@@ -141,34 +144,42 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
             return (
               <div
                 key={draft.id}
-                className="p-4 rounded-2xl bg-card border border-blue-500/30 shadow-md space-y-3 animate-in zoom-in-95 duration-150"
+                className="p-4 sm:p-5 rounded-2xl bg-card border border-blue-500/30 shadow-md space-y-4 animate-in zoom-in-95 duration-150"
               >
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="space-y-1 block">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Description</label>
-                    <input
-                      type="text"
-                      required
-                      value={description}
-                      onChange={e => {
-                        setDescription(e.target.value)
-                        if (errors.description) {
-                          setErrors(prev => ({ ...prev, description: '' }))
-                        }
-                      }}
-                      className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                        errors.description 
-                          ? 'border-destructive focus:ring-destructive' 
-                          : 'border-border focus:ring-blue-500'
-                      }`}
-                    />
-                    {errors.description && (
-                      <p className="text-[10px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                        {errors.description}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-1 block">
+                <div className="flex items-center gap-2 pb-1">
+                  <Edit2 className="size-3.5 text-blue-500" />
+                  <span className="text-[11px] font-bold text-foreground uppercase tracking-wider">Edit Entry</span>
+                </div>
+
+                {/* Description — full width */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Description</label>
+                  <input
+                    type="text"
+                    required
+                    value={description}
+                    onChange={e => {
+                      setDescription(e.target.value)
+                      if (errors.description) {
+                        setErrors(prev => ({ ...prev, description: '' }))
+                      }
+                    }}
+                    className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                      errors.description
+                        ? 'border-destructive focus:ring-destructive'
+                        : 'border-border focus:ring-blue-500'
+                    }`}
+                  />
+                  {errors.description && (
+                    <p className="text-[10px] text-destructive font-medium animate-in fade-in slide-in-from-top-1 duration-150">
+                      {errors.description}
+                    </p>
+                  )}
+                </div>
+
+                {/* Amount + Date */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Amount</label>
                     <SmartAmountInput
                       type="text"
@@ -180,37 +191,32 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                         }
                       }}
                       className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                        errors.amount 
-                          ? 'border-destructive focus:ring-destructive' 
+                        errors.amount
+                          ? 'border-destructive focus:ring-destructive'
                           : 'border-border focus:ring-blue-500'
                       }`}
                     />
                     {errors.amount && (
-                      <p className="text-[10px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                      <p className="text-[10px] text-destructive font-medium animate-in fade-in slide-in-from-top-1 duration-150">
                         {errors.amount}
                       </p>
                     )}
                   </div>
-                  <div className="space-y-1 block">
+                  <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Date</label>
-                    <input
-                      type="date"
-                      required
+                    <DatePicker
                       value={date}
-                      onChange={e => {
-                        setDate(e.target.value)
+                      onChange={value => {
+                        setDate(value)
                         if (errors.date) {
                           setErrors(prev => ({ ...prev, date: '' }))
                         }
                       }}
-                      className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                        errors.date 
-                          ? 'border-destructive focus:ring-destructive' 
-                          : 'border-border focus:ring-blue-500'
-                      }`}
+                      error={!!errors.date}
+                      className="w-full"
                     />
                     {errors.date && (
-                      <p className="text-[10px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                      <p className="text-[10px] text-destructive font-medium animate-in fade-in slide-in-from-top-1 duration-150">
                         {errors.date}
                       </p>
                     )}
@@ -219,49 +225,42 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
 
                 {!isTransferDraft && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label htmlFor="draft-category" className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
                         Category
                       </label>
-                      <select
-                        id="draft-category"
+                      <SearchableSelect
                         value={category}
-                        onChange={event => {
-                          setCategory(event.target.value)
+                        onChange={value => {
+                          setCategory(value)
                           if (errors.category) setErrors(previous => ({ ...previous, category: '' }))
                         }}
-                        className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                          errors.category ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-blue-500'
-                        }`}
-                      >
-                        {normalCategoryOptions.map(option => <option key={option} value={option}>{option}</option>)}
-                      </select>
+                        options={normalCategoryOptions.map(option => ({ value: option, label: option }))}
+                        className="w-full"
+                        placeholder="Search categories…"
+                      />
                       {errors.category && <p className="text-[10px] text-destructive font-medium">{errors.category}</p>}
                     </div>
 
-                    <div className="space-y-1">
-                      <label htmlFor="draft-ledger-category" className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
                         Ledger Category
                       </label>
-                      <select
-                        id="draft-ledger-category"
+                      <CustomSelect
                         value={ledgerCategory}
-                        onChange={event => {
-                          setLedgerCategory(event.target.value)
+                        onChange={value => {
+                          setLedgerCategory(value)
                           if (errors.ledgerCategory) setErrors(previous => ({ ...previous, ledgerCategory: '' }))
                         }}
-                        className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                          errors.ledgerCategory ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-blue-500'
-                        }`}
-                      >
-                        {ledgerOptions.map(option => <option key={option} value={option}>{option}</option>)}
-                      </select>
+                        options={ledgerOptions.map(option => ({ value: option, label: option }))}
+                        className="w-full"
+                      />
                       {errors.ledgerCategory && <p className="text-[10px] text-destructive font-medium">{errors.ledgerCategory}</p>}
                     </div>
                   </div>
                 )}
 
-                <div className="flex gap-2 justify-end">
+                <div className="flex gap-2 justify-end pt-1">
                   <button
                     onClick={() => setEditingDraftId(null)}
                     className="px-3.5 py-1.5 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-xs rounded-xl transition duration-150 cursor-pointer"

@@ -28,6 +28,7 @@ import { triggerHaptic } from './lib/haptics'
 import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 import { SwipeableRow } from './components/ui/SwipeableRow'
 import { AppLogo } from './components/ui/AppLogo'
+import { DatePicker } from './components/ui/DatePicker'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from './lib/utils'
 import type { AppTab, PendingNotification } from './types'
 
@@ -371,11 +372,11 @@ const TopNav: React.FC<TopNavProps> = ({
                             {notificationBody}
                             <label className="text-[8px] font-bold text-muted-foreground">Paid Date:</label>
                             <div className="flex flex-col sm:flex-row gap-1.5">
-                              <input
-                                type="date"
+                              <DatePicker
                                 value={paidDate}
-                                onChange={e => setPaidDate(e.target.value)}
-                                className="w-full sm:flex-1 px-1.5 py-0.5 text-[10px] bg-background border border-border rounded focus:outline-none"
+                                onChange={setPaidDate}
+                                align="right"
+                                className="w-full sm:flex-1"
                               />
                               <div className="flex gap-1.5 w-full sm:w-auto">
                                 <button
