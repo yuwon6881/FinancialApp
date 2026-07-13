@@ -113,9 +113,31 @@ export async function requestAiLedgerDelete(
   })
 }
 
-/** Route up to the first three AI UI actions to their app handlers. */
+/** Route AI UI actions, allowing a ledger-only batch while retaining the normal three-action cap. */
 export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDeps): Promise<void> {
-  for (const action of actions.slice(0, 3)) {
+  const candidates = actions.slice(0, 50)
+  const containsOnlyLedgerDrafts = candidates.length > 0 && candidates.every(action => action.type === 'openAddLedgerDraft')
+  const selectedActions = containsOnlyLedgerDrafts ? candidates : actions.slice(0, 3)
+
+  if (containsOnlyLedgerDrafts) {
+    if (deps.hideSensitive) {
+      deps.showToast('Unhide balances to make record changes.', 'Sensitive mode active', 'warning')
+      return
+    }
+    const { buildAiLedgerDraftTransactions } = await import('./aiLedgerDrafts')
+    const drafts = selectedActions.flatMap(action =>
+      buildAiLedgerDraftTransactions((action.payload || {}) as Record<string, unknown>, deps.transactionCategories)
+    )
+    if (drafts.length === 0) {
+      deps.showToast('No valid ledger transactions were found in the AI response.', 'Drafts not created', 'warning')
+      return
+    }
+    deps.stageAiLedgerDrafts(drafts)
+    deps.setActiveTab('drafts')
+    return
+  }
+
+  for (const action of selectedActions) {
     const payload = (action.payload || {}) as Record<string, unknown>
     if (deps.hideSensitive && AI_MUTATION_TYPES.has(action.type)) {
       deps.showToast('Unhide balances to make record changes.', 'Sensitive mode active', 'warning')

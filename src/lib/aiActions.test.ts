@@ -87,12 +87,10 @@ describe('dispatchAiActions — navigation', () => {
 
   it('stages every ledger record and opens the draft transactions tab', async () => {
     const d = makeDeps()
-    await dispatchAiActions([{ type: 'openAddLedgerDraft', payload: {
-      transactions: [
-        { description: 'Nasi Lemak', amount: 12, txType: 'outflow', category: 'Food', ledgerCategory: 'Essentials' },
-        { description: 'Car Fuel', amount: 30, txType: 'outflow', category: 'Transport', ledgerCategory: 'Growth', ledgerCategorySpecified: true },
-      ],
-    } }], d)
+    await dispatchAiActions([
+      { type: 'openAddLedgerDraft', payload: { description: 'Nasi Lemak', amount: 12, txType: 'outflow', category: 'Food', ledgerCategory: 'Essentials', ledgerCategorySpecified: false } },
+      { type: 'openAddLedgerDraft', payload: { description: 'Car Fuel', amount: 30, txType: 'outflow', category: 'Transport', ledgerCategory: 'Growth', ledgerCategorySpecified: true } },
+    ], d)
     expect(d.stageAiLedgerDrafts).toHaveBeenCalledWith([
       expect.objectContaining({ description: 'Nasi Lemak', amount: -12, category: 'Food', ledgerCategory: 'Essentials' }),
       expect.objectContaining({ description: 'Car Fuel', amount: -30, category: 'Transport', ledgerCategory: 'Growth' }),
@@ -103,7 +101,7 @@ describe('dispatchAiActions — navigation', () => {
   it('defaults ledger category to Essentials and preserves valid AI category choices', async () => {
     const d = makeDeps()
     await dispatchAiActions([{ type: 'openAddLedgerDraft', payload: {
-      transactions: [{ description: 'Lunch', amount: 9, txType: 'outflow', category: 'Food', ledgerCategory: 'Growth', ledgerCategorySpecified: false }],
+      description: 'Lunch', amount: 9, txType: 'outflow', category: 'Food', ledgerCategory: 'Growth', ledgerCategorySpecified: false,
     } }], d)
     expect(d.stageAiLedgerDrafts).toHaveBeenCalledWith([
       expect.objectContaining({ category: 'Food', ledgerCategory: 'Essentials' }),
@@ -113,11 +111,34 @@ describe('dispatchAiActions — navigation', () => {
   it('maps an explicitly requested reward ledger to Rewards', async () => {
     const d = makeDeps()
     await dispatchAiActions([{ type: 'openAddLedgerDraft', payload: {
-      transactions: [{ description: 'Movie', amount: 20, txType: 'outflow', category: 'Other', ledgerCategory: 'Reward', ledgerCategorySpecified: true }],
+      description: 'Movie', amount: 20, txType: 'outflow', category: 'Other', ledgerCategory: 'Reward', ledgerCategorySpecified: true,
     } }], d)
     expect(d.stageAiLedgerDrafts).toHaveBeenCalledWith([
       expect.objectContaining({ ledgerCategory: 'Rewards' }),
     ])
+  })
+
+  it('stages more than three flat ledger actions as one batch', async () => {
+    const d = makeDeps()
+    const actions = Array.from({ length: 4 }, (_, index) => ({
+      type: 'openAddLedgerDraft' as const,
+      payload: {
+        description: `Item ${index + 1}`,
+        amount: index + 1,
+        txType: 'outflow',
+        category: 'Other',
+        ledgerCategory: 'Essentials',
+        ledgerCategorySpecified: false,
+      },
+    }))
+
+    await dispatchAiActions(actions, d)
+
+    expect(d.stageAiLedgerDrafts).toHaveBeenCalledOnce()
+    expect(d.stageAiLedgerDrafts).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ description: 'Item 1' }),
+      expect.objectContaining({ description: 'Item 4' }),
+    ]))
   })
 })
 
