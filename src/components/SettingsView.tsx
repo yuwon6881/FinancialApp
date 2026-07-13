@@ -260,7 +260,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
           </div>
 
           <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
-            <div className="border-b border-border/40 pb-2">
+            <div className={view.categoriesOpen ? 'border-b border-border/40 pb-2' : ''}>
               <div
                 role="button"
                 tabIndex={0}
@@ -277,7 +277,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                       <> · <span className="text-orange-500 font-semibold">{view.unusedCategoryCount} unused in last {view.USAGE_LOOKBACK_CYCLES} cycles</span></>
                     )}
                     {view.categoryUsage && view.unusedCategoryCount === 0 && view.visibleCategories.length > 0 && (
-                      <> · <span className="text-emerald-500 font-semibold">all used recently</span></>
+                      <> · <span className="text-emerald-500 font-semibold whitespace-nowrap">all used recently</span></>
                     )}
                   </p>
                 </div>
@@ -486,13 +486,13 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                     disabled={hideSensitive}
                     value={view.newCatName}
                     onChange={e => view.setNewCatName(e.target.value)}
-                    className="flex-1 px-3 py-1.5 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+                    className="flex-1 h-9 px-3 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
                   />
                   <button
                     type="button"
                     disabled={!view.isCatValid}
                     onClick={view.handleAddCategory}
-                    className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none hover:shadow-lg hover:shadow-blue-500/10 transition cursor-pointer"
+                    className="w-9 h-9 flex items-center justify-center rounded-lg text-white bg-blue-600 hover:bg-blue-500 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none hover:shadow-lg hover:shadow-blue-500/10 transition cursor-pointer shrink-0"
                   >
                     <Plus className="size-3.5" />
                   </button>
