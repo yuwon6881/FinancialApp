@@ -1,13 +1,14 @@
 import React, { useState } from 'react'
 import type { Transaction, TransactionCategory } from '../types'
 import { FileText, Edit2, Trash2, ArrowLeft, Plus } from 'lucide-react'
-import { formatCurrencyVal } from '../lib/utils'
+import { formatCurrencyVal, maskCurrencyInput, getCurrencySymbol } from '../lib/utils'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { SmartAmountInput } from './ui/SmartAmountInput'
 import { SearchableSelect } from './ui/SearchableSelect'
 import { CustomSelect } from './ui/CustomSelect'
 import { DatePicker } from './ui/DatePicker'
+import { LedgerAllocationBadge } from './ledger/LedgerAllocationBadge'
 
 interface DraftStagingViewProps {
   draftTransactions: Transaction[]
@@ -61,7 +62,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
     if (hideSensitive) return
     setEditingDraftId(draft.id)
     setDescription(draft.description)
-    setAmount(Math.abs(draft.amount).toString())
+    setAmount(Math.abs(draft.amount).toFixed(2))
     setDate(draft.date)
     setCategory(draft.category)
     setLedgerCategory(draft.ledgerCategory)
@@ -180,22 +181,30 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                 {/* Amount + Date */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Amount</label>
-                    <SmartAmountInput
-                      type="text"
-                      value={amount}
-                      onChange={e => {
-                        setAmount(e.target.value)
-                        if (errors.amount) {
-                          setErrors(prev => ({ ...prev, amount: '' }))
-                        }
-                      }}
-                      className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                        errors.amount
-                          ? 'border-destructive focus:ring-destructive'
-                          : 'border-border focus:ring-blue-500'
-                      }`}
-                    />
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Amount ({getCurrencySymbol(currency)})</label>
+                    <div className="relative flex items-center">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 z-10 text-xs font-semibold text-muted-foreground pointer-events-none select-none leading-none">
+                        {getCurrencySymbol(currency)}
+                      </span>
+                      <SmartAmountInput
+                        type="text"
+                        placeholder="0.00"
+                        value={amount}
+                        onChange={e => {
+                          setAmount(maskCurrencyInput(e.target.value, amount))
+                          if (errors.amount) {
+                            setErrors(prev => ({ ...prev, amount: '' }))
+                          }
+                        }}
+                        className={`w-full pr-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                          getCurrencySymbol(currency).length > 2 ? 'pl-11' : getCurrencySymbol(currency).length > 1 ? 'pl-9' : 'pl-7'
+                        } ${
+                          errors.amount
+                            ? 'border-destructive focus:ring-destructive'
+                            : 'border-border focus:ring-blue-500'
+                        }`}
+                      />
+                    </div>
                     {errors.amount && (
                       <p className="text-[10px] text-destructive font-medium animate-in fade-in slide-in-from-top-1 duration-150">
                         {errors.amount}
@@ -279,11 +288,14 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
           }
 
           const rawLedgerCat = draft.ledgerCategory || ''
-          const ledgerLabel = rawLedgerCat.startsWith('Transfer:')
-            ? 'Transfer'
-            : rawLedgerCat.startsWith('IncomeSplit:')
-            ? 'Income'
-            : rawLedgerCat
+          const isTransfer = rawLedgerCat.startsWith('Transfer:')
+          const outflow = draft.amount < 0
+          // Mirror the ledger row: transfers are neither an in- nor out-flow, so
+          // they carry no +/- sign and use the neutral blue accent; expenses are
+          // orange, income is emerald.
+          const amountColor = isTransfer ? 'text-blue-500' : outflow ? 'text-orange-500' : 'text-emerald-500'
+          const amountSign = isTransfer ? '' : outflow ? '-' : '+'
+          const displayAmount = outflow ? Math.abs(draft.amount) : draft.amount
 
           return (
             <SwipeableRow
@@ -338,17 +350,17 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                   <div className="font-bold text-foreground text-sm truncate">{draft.description}</div>
                   <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground mt-1">
                     <span>{draft.date}</span>
-                    <span className={`inline-block px-1.5 py-0.5 rounded-md border font-semibold ${getCategoryBadgeClass(draft.ledgerCategory)}`}>
-                      {ledgerLabel}
-                    </span>
-                    <span className={`inline-block px-1.5 py-0.5 rounded-md border font-semibold ${getCategoryBadgeClass(draft.category)}`}>
-                      {draft.category}
-                    </span>
+                    <LedgerAllocationBadge ledgerCategory={draft.ledgerCategory} transactionId={draft.id} compact />
+                    {!isTransfer && (
+                      <span className={`inline-block px-1.5 py-0.5 rounded-md border font-semibold ${getCategoryBadgeClass(draft.category)}`}>
+                        {draft.category}
+                      </span>
+                    )}
                   </div>
                 </div>
-                <span className={`shrink-0 font-extrabold text-sm ${draft.amount < 0 ? 'text-orange-500' : 'text-blue-500'}`}>
-                  {draft.amount > 0 ? '+' : ''}
-                  {formatSensitive(draft.amount)}
+                <span className={`shrink-0 font-extrabold text-sm ${amountColor}`}>
+                  {amountSign}
+                  {formatSensitive(displayAmount)}
                 </span>
               </div>
             </SwipeableRow>
