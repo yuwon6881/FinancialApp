@@ -389,11 +389,11 @@
 .perimeter-beam {
     display: none;
     position: absolute;
-    inset: -3px;
+    inset: -1px;
     border-radius: inherit;
     z-index: 1;
     overflow: hidden;
-    padding: 3px;
+    padding: 1px;
     pointer-events: none;
     -webkit-mask:
         linear-gradient(#fff 0 0) content-box,
@@ -420,9 +420,9 @@
         opacity: 0.72;
         background: linear-gradient(
             to left,
-            color-mix(in srgb, var(--ledger-blue-500) 78%, transparent) 0%,
-            color-mix(in srgb, var(--ledger-sky-500) 58%, transparent) 42%,
-            color-mix(in srgb, var(--ledger-income-500) 34%, transparent) 68%,
+            color-mix(in srgb, var(--ledger-purple-500) 82%, transparent) 0%,
+            color-mix(in srgb, var(--ledger-blue-500) 62%, transparent) 45%,
+            color-mix(in srgb, var(--ledger-sky-500) 40%, transparent) 70%,
             transparent 100%
         );
         offset-anchor: 90% 50%;

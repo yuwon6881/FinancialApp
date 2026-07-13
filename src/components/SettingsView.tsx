@@ -335,11 +335,10 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                     title={hideSensitive ? 'Unhide balances to review' : 'AI category review'}
                     className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition cursor-pointer ${
                       view.isReviewingCleanup
-                        ? 'perimeter-beam-host border-blue-500/35 bg-blue-500/5 text-blue-600 dark:text-blue-400'
+                        ? 'border-blue-500/35 bg-blue-500/5 text-blue-600 dark:text-blue-400'
                         : 'text-blue-600 dark:text-blue-400 bg-blue-500/5 border-blue-500/30 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed'
                     }`}
                   >
-                    {view.isReviewingCleanup && <PerimeterBeam radius={8} size={52} />}
                     {view.isReviewingCleanup ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
                     AI
                   </button>
@@ -351,7 +350,8 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             <CollapsibleBody open={view.categoriesOpen}>
               <div className="space-y-4 px-0.5 pt-1 animate-in fade-in duration-200">
                 {(view.cleanupReviewOpen || view.cleanupReviewError) && (
-                  <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 space-y-2">
+                  <div className={`rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 space-y-2 ${view.isReviewingCleanup ? 'perimeter-beam-host' : ''}`}>
+                    {view.isReviewingCleanup && <PerimeterBeam radius={12} size={120} />}
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
                         <Sparkles className="size-3.5 text-blue-500" />
