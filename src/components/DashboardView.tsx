@@ -31,6 +31,13 @@ import { TrendLineChart } from './dashboard/TrendLineChart'
 import { DoughnutChart } from './dashboard/DoughnutChart'
 import { CarryoverLedgerTable } from './dashboard/CarryoverLedgerTable'
 
+const activateOnKeyboard = (event: React.KeyboardEvent, action: () => void) => {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    action()
+  }
+}
+
 interface DashboardViewProps {
   dashboardData: DashboardData | null
   transactions: Transaction[]
@@ -560,6 +567,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             return (
               <div 
                 onClick={() => onNavigateToLedger?.({ category: 'Growth', showAllCycles: true })}
+                onKeyDown={(event) => activateOnKeyboard(event, () => onNavigateToLedger?.({ category: 'Growth', showAllCycles: true }))}
+                role="button"
+                tabIndex={0}
                 className="interactive-card space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-violet-500/40 shadow-xs hover:shadow-lg hover:shadow-violet-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
               >
                 <div className="flex justify-between text-xs font-semibold">
@@ -606,6 +616,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             return (
               <div 
                 onClick={() => onNavigateToLedger?.({ category: 'Essentials', showAllCycles: false })}
+                onKeyDown={(event) => activateOnKeyboard(event, () => onNavigateToLedger?.({ category: 'Essentials', showAllCycles: false }))}
+                role="button"
+                tabIndex={0}
                 className="interactive-card space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-sky-500/40 shadow-xs hover:shadow-lg hover:shadow-sky-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
               >
                 <div className="flex justify-between text-xs font-semibold">
@@ -653,6 +666,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             return (
               <div 
                 onClick={() => onNavigateToLedger?.({ category: 'Stability', showAllCycles: true })}
+                onKeyDown={(event) => activateOnKeyboard(event, () => onNavigateToLedger?.({ category: 'Stability', showAllCycles: true }))}
+                role="button"
+                tabIndex={0}
                 className="interactive-card space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-emerald-500/40 shadow-xs hover:shadow-lg hover:shadow-emerald-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
               >
                 <div className="flex justify-between text-xs font-semibold">
@@ -694,6 +710,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Inflow Card */}
         <div 
           onClick={() => onNavigateToLedger?.({ txType: 'inflow' })}
+          onKeyDown={(event) => activateOnKeyboard(event, () => onNavigateToLedger?.({ txType: 'inflow' }))}
+          role="button"
+          tabIndex={0}
           className="metric-card interactive-card app-panel p-6 rounded-2xl bg-card/92 border border-border/60 hover:border-teal-500/30 transition-all duration-300 group cursor-pointer"
         >
           <div className="flex items-center justify-between mb-2">
@@ -713,6 +732,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Expenses Card */}
         <div 
           onClick={() => onNavigateToLedger?.({ txType: 'outflow' })}
+          onKeyDown={(event) => activateOnKeyboard(event, () => onNavigateToLedger?.({ txType: 'outflow' }))}
+          role="button"
+          tabIndex={0}
           className="metric-card interactive-card app-panel p-6 rounded-2xl bg-card/92 border border-border/60 hover:border-orange-500/30 transition-all duration-300 group cursor-pointer"
         >
           <div className="flex items-center justify-between mb-2">
@@ -739,6 +761,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           return (
             <div 
               onClick={() => onNavigate('wishlist')}
+              onKeyDown={(event) => activateOnKeyboard(event, () => onNavigate('wishlist'))}
+              role="button"
+              tabIndex={0}
               className={`metric-card interactive-card app-panel p-6 rounded-2xl bg-card/92 border transition-all duration-300 group cursor-pointer ${
                 canAfford 
                   ? 'border-blue-500/50 hover:border-blue-500/70 shadow-md shadow-blue-500/5 ring-1 ring-blue-500/10' 

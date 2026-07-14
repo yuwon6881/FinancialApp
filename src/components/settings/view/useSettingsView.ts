@@ -186,7 +186,8 @@ export function useSettingsView(options: UseSettingsViewOptions) {
     }
     setErrors({})
 
-    const cycle = parseInt(cycleDayInput)
+    const parsedCycle = Number.parseInt(cycleDayInput, 10)
+    const cycle = Number.isFinite(parsedCycle) ? Math.min(31, Math.max(1, parsedCycle)) : Number.NaN
     if (isNaN(cycle)) return
 
     onUpdateSettings({

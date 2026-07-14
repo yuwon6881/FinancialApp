@@ -1,4 +1,5 @@
 import type { ActiveRecurringPayment, Transaction } from '../types'
+import { getCycleRangeDates } from './cycle'
 
 const MONTH_INDEX: Record<string, number> = {
   Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
@@ -27,11 +28,7 @@ export function buildCycleCalendar(options: {
   recurringPayments: ActiveRecurringPayment[]
 }): { startDayOfWeek: number; days: CycleCalendarDay[] } {
   const monthIndex = MONTH_INDEX[options.selectedMonth] ?? 0
-  const actualStartDay = Math.min(options.cycleDay, new Date(options.selectedYear, monthIndex + 1, 0).getDate())
-  const start = new Date(options.selectedYear, monthIndex, actualStartDay)
-  const end = new Date(start)
-  end.setMonth(end.getMonth() + 1)
-  end.setDate(end.getDate() - 1)
+  const { start, end } = getCycleRangeDates(options.selectedYear, monthIndex + 1, options.cycleDay)
   const startKey = formatCalendarDate(start)
   const endKey = formatCalendarDate(end)
 

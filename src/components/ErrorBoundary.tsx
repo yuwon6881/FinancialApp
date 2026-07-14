@@ -20,6 +20,7 @@ interface ErrorBoundaryState {
 }
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  private static readonly chunkReloadKey = 'chunk-load-reload-attempted'
   state: ErrorBoundaryState = { error: null }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
@@ -43,8 +44,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       (error.message.includes('Failed to fetch dynamically imported module') ||
        error.message.includes('Importing a module script failed'))
     ) {
-      console.warn('Chunk load error detected, triggering hard reload...')
-      window.location.reload()
+      if (sessionStorage.getItem(ErrorBoundary.chunkReloadKey) !== '1') {
+        sessionStorage.setItem(ErrorBoundary.chunkReloadKey, '1')
+        console.warn('Chunk load error detected, triggering one hard reload...')
+        window.location.reload()
+      } else {
+        console.error('Chunk load error persisted after the automatic reload.')
+      }
     }
   }
 

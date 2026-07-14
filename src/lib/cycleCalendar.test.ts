@@ -29,4 +29,13 @@ describe('buildCycleCalendar', () => {
     })
     expect(result.days.find(day => day.dateKey === '2026-07-01')?.recurringNames).toEqual(['Cloud'])
   })
+
+  it('does not overflow a January day-31 boundary into March', () => {
+    const result = buildCycleCalendar({
+      selectedMonth: 'Jan', selectedYear: 2025, cycleDay: 31, transactions: [], recurringPayments: [],
+    })
+
+    expect(result.days[0].dateKey).toBe('2025-01-31')
+    expect(result.days.at(-1)?.dateKey).toBe('2025-02-27')
+  })
 })

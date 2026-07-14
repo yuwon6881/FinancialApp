@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useOutbox } from './useOutbox'
 
@@ -47,5 +47,29 @@ describe('useOutbox', () => {
     expect(result.current.pendingOps).toEqual([])
     expect(result.current.editingPendingId).toBeNull()
     expect(result.current.deletingId).toBeNull()
+  })
+
+  it('surfaces an outbox storage failure without throwing from the effect', async () => {
+    const showToast = vi.fn()
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Quota exceeded', 'QuotaExceededError')
+    })
+
+    renderHook(() => useOutbox({
+      token: null,
+      lastUnlockedTimeRef: { current: 0 },
+      setError: vi.fn(),
+      showToast,
+      onAuthError: vi.fn(),
+      onLockError: vi.fn(),
+      refresh: vi.fn(async () => undefined),
+    }))
+
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith(
+      expect.stringContaining('could not be saved'),
+      'Storage Full',
+      'error',
+    ))
+    setItem.mockRestore()
   })
 })

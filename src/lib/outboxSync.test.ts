@@ -312,6 +312,23 @@ describe('drainQueue — error taxonomy', () => {
     expect(h.queue).toHaveLength(0)
     spy.mockRestore()
   })
+
+  it.each(['delete', 'unpurchase'] as const)('treats a replayed %s 404 as success', async type => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const err = new Error('Not Found') as Error & { status?: number }
+    err.status = 404
+    const h = makeHarness(
+      { resolveDispatch: () => async () => { throw err } },
+      [op({ id: 'gone', type })],
+    )
+
+    await drainQueue(h.deps)
+
+    expect(h.queue).toEqual([])
+    expect(h.failedOps).toEqual([])
+    expect(h.calls.emitFailureToast).toBe(0)
+    spy.mockRestore()
+  })
 })
 
 describe('drainQueue — settle', () => {

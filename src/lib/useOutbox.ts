@@ -83,12 +83,24 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
 
   useEffect(() => {
     pendingOpsRef.current = pendingOps
-    setCachedJSON(CACHE_KEYS.pendingOperations, pendingOps)
+    if (!setCachedJSON(CACHE_KEYS.pendingOperations, pendingOps)) {
+      optionsRef.current.showToast(
+        'Pending changes could not be saved on this device. Free some storage and try again.',
+        'Storage Full',
+        'error',
+      )
+    }
   }, [pendingOps])
 
   useEffect(() => {
     failedOpsRef.current = failedOps
-    setCachedJSON('failed_operations', failedOps)
+    if (!setCachedJSON('failed_operations', failedOps)) {
+      optionsRef.current.showToast(
+        'Failed sync items could not be saved on this device. Free some storage and try again.',
+        'Storage Full',
+        'error',
+      )
+    }
   }, [failedOps])
 
   useEffect(() => {

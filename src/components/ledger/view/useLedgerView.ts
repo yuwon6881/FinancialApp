@@ -79,6 +79,8 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   const [serverResult, setServerResult] = useState<PagedTransactionResult | null>(null)
   const [serverIsFetching, setServerIsFetching] = useState(false)
   const isInitialFetchDone = useRef(false)
+  const fetchSequenceRef = useRef(0)
+  const fetchAbortRef = useRef<AbortController | null>(null)
   const [showExportModal, setShowExportModal] = useState(false)
   const [exportIsFetching, setExportIsFetching] = useState(false)
 
@@ -139,6 +141,10 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     pSize: number
   }) => {
     if (!onFetchPagedTransactions) return
+    const sequence = ++fetchSequenceRef.current
+    fetchAbortRef.current?.abort()
+    const controller = new AbortController()
+    fetchAbortRef.current = controller
     setServerIsFetching(true)
     try {
       const buckets = opts.filters.filter(f => LEDGER_BUCKETS.includes(f))
@@ -151,14 +157,20 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         categories: cats.length > 0 ? cats : undefined,
         txType: opts.txType || null,
         startDate: allCyclesRange?.startDate,
-        endDate: allCyclesRange?.endDate
+        endDate: allCyclesRange?.endDate,
+        signal: controller.signal,
       })
+      if (sequence !== fetchSequenceRef.current || controller.signal.aborted) return
       setServerResult(result)
       setRecentlySyncedIds(new Set())
+    } catch (error) {
+      if (!controller.signal.aborted) throw error
     } finally {
-      setServerIsFetching(false)
+      if (sequence === fetchSequenceRef.current) setServerIsFetching(false)
     }
   }, [onFetchPagedTransactions, allCyclesRange])
+
+  useEffect(() => () => fetchAbortRef.current?.abort(), [])
 
   // Trigger initial server fetch when entering all-cycles mode
   useEffect(() => {
@@ -269,7 +281,6 @@ export function useLedgerView(options: UseLedgerViewOptions) {
       setPendingFilters([])
       setAppliedFilters([])
       setCurrentPage(1)
-      runServerFetch({ page: 1, search: appliedSearch, filters: [], txType: appliedTxTypeFilter, pSize: pageSize })
     } else {
       setSelectedFilters([])
     }
@@ -279,13 +290,11 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     setAppliedFilters(pendingFilters)
     setCurrentPage(1)
     setIsFilterDropdownOpen(false)
-    runServerFetch({ page: 1, search: appliedSearch, filters: pendingFilters, txType: appliedTxTypeFilter, pSize: pageSize })
   }
 
   const handleServerSearch = () => {
     setAppliedSearch(pendingSearchTerm)
     setCurrentPage(1)
-    runServerFetch({ page: 1, search: pendingSearchTerm, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
   }
 
   useEffect(() => {
@@ -438,19 +447,24 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         const targetPage = Math.floor(index / pageSize) + 1
         setCurrentPage(targetPage)
 
+        let clearTimer: ReturnType<typeof setTimeout> | undefined
         const timer = setTimeout(() => {
           const rowEl = document.getElementById(`tx-row-${highlightedTxId}`)
           if (rowEl) {
             rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
             rowEl.classList.add('bg-blue-500/10', 'ring-2', 'ring-blue-500/30', 'dark:bg-blue-500/20')
-            const clearTimer = setTimeout(() => {
+            clearTimer = setTimeout(() => {
               rowEl.classList.remove('bg-blue-500/10', 'ring-2', 'ring-blue-500/30', 'dark:bg-blue-500/20')
               onClearIncomingFilters?.()
             }, 3000)
-            return () => clearTimeout(clearTimer)
           }
         }, 300)
-        return () => clearTimeout(timer)
+        return () => {
+          clearTimeout(timer)
+          if (clearTimer) clearTimeout(clearTimer)
+          const rowEl = document.getElementById(`tx-row-${highlightedTxId}`)
+          rowEl?.classList.remove('bg-blue-500/10', 'ring-2', 'ring-blue-500/30', 'dark:bg-blue-500/20')
+        }
       }
     }
   }, [highlightedTxId, filteredTransactions, pageSize, onClearIncomingFilters])

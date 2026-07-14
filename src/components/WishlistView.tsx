@@ -27,6 +27,13 @@ import {
   ArrowUpRight
 } from 'lucide-react'
 
+const activateOnKeyboard = (event: React.KeyboardEvent, action: () => void) => {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    action()
+  }
+}
+
 interface WishlistViewProps {
   wishlist: WishlistItem[]
   rewardsBalance: number
@@ -193,6 +200,9 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Card
           onClick={() => onNavigateToLedger?.({ category: 'Rewards', showAllCycles: true })}
+          onKeyDown={(event) => activateOnKeyboard(event, () => onNavigateToLedger?.({ category: 'Rewards', showAllCycles: true }))}
+          role="button"
+          tabIndex={0}
           className="group flex cursor-pointer items-center justify-between overflow-hidden p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-500/30 hover:shadow-md"
         >
           <div>

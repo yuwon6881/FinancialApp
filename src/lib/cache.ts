@@ -18,7 +18,17 @@ export const CACHE_KEYS = {
 // not described as encryption: code running in this origin can reverse it.
 export const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 const CACHE_TIMESTAMP_SUFFIX = ':cached_at'
-const EXPIRING_CACHE_KEYS = new Set<string>(Object.values(CACHE_KEYS))
+const CYCLE_SNAPSHOTS_KEY = 'cached_cycle_snapshots'
+const DISPOSABLE_CACHE_KEYS = new Set<string>([
+  CACHE_KEYS.dashboardData,
+  CACHE_KEYS.transactions,
+  CACHE_KEYS.recurringPayments,
+  CACHE_KEYS.categories,
+  CACHE_KEYS.wishlist,
+  CACHE_KEYS.walletBalance,
+  CYCLE_SNAPSHOTS_KEY,
+])
+const EXPIRING_CACHE_KEYS = DISPOSABLE_CACHE_KEYS
 
 function removeCachedKey(key: string): void {
   localStorage.removeItem(key)
@@ -119,10 +129,35 @@ export function getCachedWishlist(key: string): WishlistItem[] {
   return sanitizeWishlist(getCachedJSON<unknown>(key, []))
 }
 
-export function setCachedJSON(key: string, value: unknown): void {
-  localStorage.setItem(key, JSON.stringify(value))
-  if (EXPIRING_CACHE_KEYS.has(key) || key === CYCLE_SNAPSHOTS_KEY) {
-    localStorage.setItem(`${key}${CACHE_TIMESTAMP_SUFFIX}`, Date.now().toString())
+export function setCachedJSON(key: string, value: unknown): boolean {
+  const serialized = JSON.stringify(value)
+  const write = () => {
+    localStorage.setItem(key, serialized)
+    if (EXPIRING_CACHE_KEYS.has(key)) {
+      localStorage.setItem(`${key}${CACHE_TIMESTAMP_SUFFIX}`, Date.now().toString())
+    }
+  }
+
+  try {
+    write()
+    return true
+  } catch {
+    // Pending/failed operation queues are user data. Only stale-while-revalidate
+    // caches may be sacrificed to make room for an outbox write.
+    for (const disposableKey of DISPOSABLE_CACHE_KEYS) {
+      try {
+        removeCachedKey(disposableKey)
+      } catch {
+        // Storage can also reject removals (private mode / disabled storage).
+      }
+    }
+
+    try {
+      write()
+      return true
+    } catch {
+      return false
+    }
   }
 }
 
@@ -156,7 +191,6 @@ export function getCachedDashboardPeriod(): { month?: string; year?: number } {
 // always showing a skeleton while loadAll() re-fetches. Capped at
 // MAX_CYCLE_SNAPSHOTS, evicting the least-recently-cached entry, so this
 // can't grow unbounded across a long-lived session.
-const CYCLE_SNAPSHOTS_KEY = 'cached_cycle_snapshots'
 const MAX_CYCLE_SNAPSHOTS = 6
 
 interface CycleSnapshot {

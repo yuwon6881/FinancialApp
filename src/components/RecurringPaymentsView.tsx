@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { listContainerVariants, listItemVariants, listItemExit } from '../lib/animations'
-import type { RecurringPayment, TransactionCategory, ActiveRecurringPayment, Transaction } from '../types'
+import type { RecurringPayment, RecurringFrequency, TransactionCategory, ActiveRecurringPayment, Transaction } from '../types'
 import {
   Plus,
   Trash2,
@@ -27,6 +27,7 @@ import { getCategoryBadgeClass, getCategoryDotClass, getCategoryFilterClass } fr
 import { useAutoOpenModal } from '../lib/useAutoOpenModal'
 import { useIsMobile } from '../lib/useIsMobile'
 import { useAppContext } from '../contexts/AppContext'
+import { normalizeRecurringFrequency } from '../lib/recurringPayments'
 
 const RECURRING_LEDGER_CATEGORIES = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const
 type RecurringLedgerCategory = typeof RECURRING_LEDGER_CATEGORIES[number]
@@ -102,6 +103,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     setAmount(maskCurrencyInput(e.target.value, amount));
   };
   const [ledgerCategory, setLedgerCategory] = useState<RecurringLedgerCategory>('Essentials')
+  const [frequency, setFrequency] = useState<RecurringFrequency>('Monthly')
   const [startDateInput, setStartDateInput] = useState('')
   const [endDateInput, setEndDateInput] = useState('')
 
@@ -130,6 +132,8 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     if (nextCategory !== null) setCategory(nextCategory)
     const nextLedgerCategory = getString('ledgerCategory')
     if (nextLedgerCategory && isRecurringLedgerCategory(nextLedgerCategory)) setLedgerCategory(nextLedgerCategory)
+    const nextFrequency = getString('frequency')
+    if (nextFrequency !== null) setFrequency(normalizeRecurringFrequency(nextFrequency))
     const nextStartDate = getString('startDate')
     if (nextStartDate !== null) setStartDateInput(nextStartDate)
     const nextEndDate = getString('endDate')
@@ -143,6 +147,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     setAmount('')
     setCategory(categories.length > 0 ? categories[0].name : '')
     setLedgerCategory('Essentials')
+    setFrequency('Monthly')
     setStartDateInput('')
     setEndDateInput('')
     applyAiRecurringFields(aiDraft.fields)
@@ -165,6 +170,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     setAmount(Math.abs(payment.amount).toFixed(2))
     setCategory(payment.category)
     setLedgerCategory(isRecurringLedgerCategory(payment.ledgerCategory) ? payment.ledgerCategory : 'Essentials')
+    setFrequency(normalizeRecurringFrequency(payment.frequency))
     setStartDateInput(payment.startDate)
     setEndDateInput(payment.endDate || '')
     setEditingPayment(payment)
@@ -238,7 +244,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
 
   const totalCommittedMonthly = payments
     .filter(p => p.active)
-    .reduce((acc, p) => acc + Math.abs(p.amount), 0)
+    .reduce((acc, p) => acc + Math.abs(p.amount) / (normalizeRecurringFrequency(p.frequency) === 'Annually' ? 12 : 1), 0)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -267,12 +273,13 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     // Parse the start date to extract the day of the month as DueDate
     // HTML date inputs are yyyy-MM-dd
     const dateParts = startDateInput.split('-')
-    const dueDay = dateParts.length === 3 ? parseInt(dateParts[2]) : 15
+    const parsedDueDay = dateParts.length === 3 ? Number.parseInt(dateParts[2], 10) : Number.NaN
+    const dueDay = Number.isFinite(parsedDueDay) ? Math.min(31, Math.max(1, parsedDueDay)) : 1
 
     const paymentData = {
       name,
       amount: -Math.abs(parsedAmount), // Excel outlays are stored as negative
-      frequency: 'Monthly' as const,
+      frequency,
       category,
       ledgerCategory,
       nextDueDate: startDateInput,
@@ -300,6 +307,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     setStartDateInput('')
     setEndDateInput('')
     setLedgerCategory('Essentials')
+    setFrequency('Monthly')
     setCategory(categories.length > 0 ? categories[0].name : '')
     setEditingPayment(null)
     setShowAddForm(false)
@@ -312,6 +320,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     setStartDateInput('')
     setEndDateInput('')
     setLedgerCategory('Essentials')
+    setFrequency('Monthly')
     setCategory(categories.length > 0 ? categories[0].name : '')
     setEditingPayment(null)
     setShowAddForm(false)
@@ -473,7 +482,20 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-muted-foreground">Start Billing Date</label>
+              <label className="text-xs font-semibold text-muted-foreground">Frequency</label>
+              <CustomSelect
+                value={frequency}
+                onChange={setFrequency}
+                options={[
+                  { value: 'Monthly', label: 'Monthly' },
+                  { value: 'Annually', label: 'Annually' }
+                ]}
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-muted-foreground">Recurring Start Date</label>
               <DatePicker
                 value={startDateInput}
                 onChange={value => {
@@ -490,6 +512,9 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                   {errors.startDate}
                 </p>
               )}
+              <p className="text-[10px] leading-relaxed text-muted-foreground">
+                Your start date sets the recurring payment date — monthly bills recur on this day each cycle; annual bills recur on this date each year.
+              </p>
             </div>
 
             <div className="space-y-1">
@@ -745,6 +770,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                       setAmount(Math.abs(rp.amount).toFixed(2))
                       setCategory(rp.category)
                       setLedgerCategory(isRecurringLedgerCategory(rp.ledgerCategory) ? rp.ledgerCategory : 'Essentials')
+                      setFrequency(normalizeRecurringFrequency(rp.frequency))
                       setStartDateInput(rp.startDate)
                       setEndDateInput(rp.endDate || '')
                       setEditingPayment(rp)

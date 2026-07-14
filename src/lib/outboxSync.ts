@@ -150,9 +150,19 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
         const isLockError = errorMessageIncludes(err, '423')
         const isJustLoggedIn = deps.now() - deps.getLastUnlockedTime() < JUST_LOGGED_IN_WINDOW_MS
         const status = err && typeof err === 'object' && 'status' in err && typeof err.status === 'number' ? err.status : undefined
+        const isIdempotentMissingDelete = status === 404 &&
+          (nextOp.type === 'delete' || nextOp.type === 'unpurchase')
         const isPermanentError = status !== undefined && status >= 400 && status < 500 && status !== 401 && status !== 423
 
-        if (isAuthError && !isJustLoggedIn) {
+        if (isIdempotentMissingDelete) {
+          deps.mutateQueue(prev => prev.filter(item => item.id !== nextOp.id))
+          deps.addRecentlyCompleted({ ...nextOp, isCompleted: true })
+          deps.setError(null)
+          deps.setActiveSyncId(null)
+          processedAny = true
+          successfulOps.push({ op: nextOp, result: undefined })
+          continue
+        } else if (isAuthError && !isJustLoggedIn) {
           deps.onAuthError()
           break
         } else if (isLockError) {

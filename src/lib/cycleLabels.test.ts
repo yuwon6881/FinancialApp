@@ -52,6 +52,10 @@ describe('getCycleLabelForDropdown', () => {
     expect(getCycleLabelForDropdown('Feb', 2026, 31)).toBe('Feb 28th ~ Mar 27th')
   })
 
+  it('clamps AddMonths when a day-31 cycle enters February', () => {
+    expect(getCycleLabelForDropdown('Jan', 2025, 31)).toBe('Jan 31st ~ Feb 27th')
+  })
+
   it('rolls the end month across a year boundary', () => {
     // Dec 15 -> Jan 14 of the following year (label omits the year).
     expect(getCycleLabelForDropdown('Dec', 2026, 15)).toBe('Dec 15th ~ Jan 14th')

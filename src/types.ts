@@ -20,11 +20,13 @@ export interface Transaction {
   wishlistItemId?: number | null
 }
 
+export type RecurringFrequency = 'Monthly' | 'Annually'
+
 export interface RecurringPayment {
   id: string
   name: string
   amount: number
-  frequency: "Weekly" | "Monthly" | "Annually"
+  frequency: RecurringFrequency
   category: string
   ledgerCategory: string
   nextDueDate: string

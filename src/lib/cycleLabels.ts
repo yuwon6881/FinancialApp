@@ -3,6 +3,8 @@
 // BillTimeline (getDaySuffix). Kept as pure string/date math so it is trivially
 // unit-testable and shared from one place.
 
+import { getCycleRangeDates } from './cycle'
+
 const MONTH_ABBREVS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 /** Ordinal suffix for a day-of-month, e.g. 1 -> "st", 2 -> "nd", 11 -> "th". */
@@ -36,11 +38,7 @@ export function getCycleLabelForDropdown(month: string, year: number, cycleDay: 
     return `${month} 1st ~ ${month} ${ordinal(days)}`
   }
 
-  const startDayActual = Math.min(cycleDay, new Date(year, monthIdx + 1, 0).getDate())
-  const startDate = new Date(year, monthIdx, startDayActual)
-  const endDate = new Date(startDate)
-  endDate.setMonth(endDate.getMonth() + 1)
-  endDate.setDate(endDate.getDate() - 1)
+  const { start: startDate, end: endDate } = getCycleRangeDates(year, monthIdx + 1, cycleDay)
 
   const startMonthStr = MONTH_ABBREVS[startDate.getMonth()]
   const endMonthStr = MONTH_ABBREVS[endDate.getMonth()]

@@ -89,7 +89,7 @@ export interface PagedTransactionResult {
   pageSize: number
 }
 
-export async function fetchPagedTransactions(params: TransactionQuery & { page: number; pageSize: number }): Promise<PagedTransactionResult> {
+export async function fetchPagedTransactions(params: TransactionQuery & { page: number; pageSize: number; signal?: AbortSignal }): Promise<PagedTransactionResult> {
   const query = new URLSearchParams({
     all: 'true',
     page: params.page.toString(),
@@ -97,6 +97,7 @@ export async function fetchPagedTransactions(params: TransactionQuery & { page: 
   })
   appendTransactionQuery(query, params)
   const data = await request<WirePagedTransactionResult>(`/transactions?${query}`, {
+    signal: params.signal,
     errorMessage: 'Failed to fetch paged transactions',
   })
   return {

@@ -6,6 +6,7 @@ import { getCategoryBadgeClass, getCategoryDotClass } from '../lib/categoryColor
 import { ordinalSuffix } from '../lib/cycleLabels'
 import { BottomSheet } from './ui/BottomSheet'
 import { Card } from './ui/Card'
+import { getCycleRangeDates } from '../lib/cycle'
 
 interface BillTimelineProps {
   activeRecurringPayments: ActiveRecurringPayment[]
@@ -27,29 +28,6 @@ interface TimelineNode {
 }
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-function getCycleRangeDates(year: number, monthIndex: number, cycleDay: number): { start: Date; end: Date } {
-  if (cycleDay === 1) {
-    const start = new Date(year, monthIndex - 1, 1)
-    const end = new Date(year, monthIndex, 0)
-    return { start, end }
-  }
-  // Clamp to the target month's actual length -- passing e.g. day 31 into a
-  // 28/30-day month straight into `new Date(...)` silently overflows into
-  // the following month (Date auto-normalizes), shifting the whole cycle by
-  // several days instead of clamping it. End is derived relative to the
-  // clamped start (one month later, minus a day) to match the backend's
-  // GetCycleRange, rather than re-clamping cycleDay independently against
-  // next month's length.
-  const daysInMonth = new Date(year, monthIndex, 0).getDate()
-  const startDay = Math.min(cycleDay, daysInMonth)
-  const start = new Date(year, monthIndex - 1, startDay)
-  const end = new Date(start)
-  end.setMonth(end.getMonth() + 1)
-  end.setDate(end.getDate() - 1)
-  return { start, end }
-}
-
 
 export const BillTimeline: React.FC<BillTimelineProps> = ({
   activeRecurringPayments,

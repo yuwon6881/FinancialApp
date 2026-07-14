@@ -5,14 +5,15 @@ const OBFUSCATION_KEY = 'FinancialAppObfuscationKey'
 
 export function deobfuscateAmount(obfuscated: string | number | undefined | null): number {
   if (obfuscated === undefined || obfuscated === null) return 0
-  if (typeof obfuscated === 'number') return obfuscated
+  if (typeof obfuscated === 'number') return Number.isFinite(obfuscated) ? obfuscated : 0
   try {
     const binaryString = atob(obfuscated)
     const bytes = new Uint8Array(binaryString.length)
     for (let i = 0; i < binaryString.length; i++) {
       bytes[i] = binaryString.charCodeAt(i) ^ OBFUSCATION_KEY.charCodeAt(i % OBFUSCATION_KEY.length)
     }
-    return parseFloat(new TextDecoder().decode(bytes))
+    const decoded = Number(new TextDecoder().decode(bytes))
+    return Number.isFinite(decoded) ? decoded : 0
   } catch (error) {
     console.error('Failed to deobfuscate value:', obfuscated, error)
     return 0
@@ -20,7 +21,9 @@ export function deobfuscateAmount(obfuscated: string | number | undefined | null
 }
 
 export function obfuscateAmount(value: number | string): string {
-  const input = typeof value === 'number' ? value.toFixed(2) : parseFloat(value).toFixed(2)
+  const numeric = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(numeric)) throw new TypeError('Amount must be a finite number.')
+  const input = numeric.toFixed(2)
   const bytes = new TextEncoder().encode(input)
   let binaryString = ''
   for (let i = 0; i < bytes.length; i++) {

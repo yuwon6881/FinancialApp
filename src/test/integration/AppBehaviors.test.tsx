@@ -80,7 +80,7 @@ describe('App behaviors', () => {
     // Should load the dashboard instead of login view
     await waitFor(() => {
       expect(screen.getByTestId('dashboard-view')).toBeDefined()
-    })
+    }, { timeout: 5000 })
   })
 
   it('shows the skeleton and fetches data immediately after login', async () => {

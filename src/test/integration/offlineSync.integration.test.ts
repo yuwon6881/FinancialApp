@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { drainQueue, type DrainQueueDeps } from '@/lib/outboxSync'
 import { enqueue, DISPATCH, type QueuedOp } from '@/lib/outbox'
 import { state, lastRequest } from '@/test/msw/backend'
-import { deobfuscateAmount } from '@/lib/api/amounts'
+import { deobfuscateAmount, obfuscateAmount } from '@/lib/api/amounts'
 
 /**
  * Exercises the full offline-create-then-sync workflow with the REAL sync engine and REAL
@@ -97,13 +97,22 @@ describe('offline transaction sync (real drainQueue ↔ mock backend)', () => {
     localStorage.setItem('auth_token', 'test-token-abc')
     const failed: QueuedOp[] = []
     let queue: QueuedOp[] = []
-    // Deleting a non-existent transaction yields a 404 from the backend — a permanent 4xx.
-    queue = enqueue(queue, 'transaction', 'delete', 'tx-nonexistent')
+    // Purchasing an already-purchased item is a genuine permanent 400.
+    state.wishlist.push({
+      id: 1,
+      name: 'Already purchased',
+      price: obfuscateAmount(10),
+      priority: 'Medium',
+      isPurchased: true,
+      createdAt: new Date().toISOString(),
+      isActive: false,
+    })
+    queue = enqueue(queue, 'wishlistItem', 'purchase', '1')
 
     await drainQueue(makeDeps(queue, { addFailedOp: (op) => failed.push(op) }))
 
     expect(queue).toHaveLength(0)
     expect(failed).toHaveLength(1)
-    expect(failed[0].targetId).toBe('tx-nonexistent')
+    expect(failed[0].targetId).toBe('1')
   })
 })
