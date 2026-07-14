@@ -98,6 +98,30 @@ describe('dispatchAiActions — navigation', () => {
     expect(d.setActiveTab).toHaveBeenCalledWith('drafts')
   })
 
+  it('capitalizes each word of an AI-added ledger description', async () => {
+    const d = makeDeps()
+    await dispatchAiActions([{ type: 'openAddLedgerDraft', payload: {
+      description: 'nasi lemak', amount: 12, txType: 'outflow', category: 'Food', ledgerCategory: 'Essentials', ledgerCategorySpecified: false,
+    } }], d)
+    expect(d.stageAiLedgerDrafts).toHaveBeenCalledWith([
+      expect.objectContaining({ description: 'Nasi Lemak' }),
+    ])
+  })
+
+  it('capitalizes AI-added recurring and wishlist names', async () => {
+    const d = makeDeps()
+    await dispatchAiActions([
+      { type: 'openAddRecurringDraft', payload: { name: 'netflix subscription', amount: 15 } },
+      { type: 'openAddWishlistDraft', payload: { name: 'new headphones', price: 200 } },
+    ], d)
+    expect(d.setAiRecurringDraft).toHaveBeenCalledWith(
+      expect.objectContaining({ fields: expect.objectContaining({ name: 'Netflix Subscription' }) })
+    )
+    expect(d.setAiWishlistDraft).toHaveBeenCalledWith(
+      expect.objectContaining({ fields: expect.objectContaining({ name: 'New Headphones' }) })
+    )
+  })
+
   it('defaults ledger category to Essentials and preserves valid AI category choices', async () => {
     const d = makeDeps()
     await dispatchAiActions([{ type: 'openAddLedgerDraft', payload: {

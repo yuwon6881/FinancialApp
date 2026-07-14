@@ -7,6 +7,15 @@ export function cn(...inputs: ClassValue[]) {
 
 export const SENSITIVE_AMOUNT_MASK = '......'
 
+/**
+ * Capitalize the first letter of each whitespace-separated word, leaving the
+ * remaining characters untouched so existing casing/acronyms (e.g. "HDMI") are
+ * preserved. Used to tidy free-text names/descriptions from the AI assistant's
+ * add actions, e.g. "nasi lemak" → "Nasi Lemak", "bills" → "Bills".
+ */
+export const capitalizeWords = (value: string): string =>
+  value.replace(/(^|\s)(\p{L})/gu, (_match, boundary, letter) => boundary + letter.toUpperCase())
+
 export const formatCurrencyVal = (val: number, currencyCode: string = 'USD') => {
   const code = currencyCode.toUpperCase()
   const isoCode = code === 'RM' ? 'MYR' : code

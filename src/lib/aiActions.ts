@@ -9,12 +9,24 @@
 import type { ReactNode } from 'react'
 import type { AiUiAction } from './api'
 import * as api from './api'
+import { capitalizeWords } from './utils'
 import type { PendingNotification, RecurringPayment, Transaction, TransactionCategory, WishlistItem } from '../types'
 
 /** Trim-and-return a string payload field, or null if absent/blank. */
 export function getPayloadString(payload: Record<string, unknown>, key: string): string | null {
   const value = payload[key]
   return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
+/**
+ * Return a copy of an AI add payload with the given free-text field title-cased,
+ * so assistant-added records read cleanly (e.g. "bills" → "Bills"). Non-string or
+ * blank values are left untouched.
+ */
+export function capitalizePayloadField(payload: Record<string, unknown>, key: string): Record<string, unknown> {
+  const value = payload[key]
+  if (typeof value !== 'string' || !value.trim()) return payload
+  return { ...payload, [key]: capitalizeWords(value) }
 }
 
 /** Coerce a numeric payload field (number or numeric string), or null. */
@@ -184,10 +196,10 @@ export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDe
       deps.stageAiLedgerDrafts(drafts)
       deps.setActiveTab('drafts')
     } else if (action.type === 'openAddRecurringDraft') {
-      deps.setAiRecurringDraft({ nonce: deps.nextNonce(), fields: payload })
+      deps.setAiRecurringDraft({ nonce: deps.nextNonce(), fields: capitalizePayloadField(payload, 'name') })
       deps.setActiveTab('recurring')
     } else if (action.type === 'openAddWishlistDraft') {
-      deps.setAiWishlistDraft({ nonce: deps.nextNonce(), fields: payload })
+      deps.setAiWishlistDraft({ nonce: deps.nextNonce(), fields: capitalizePayloadField(payload, 'name') })
       deps.setActiveTab('wishlist')
     } else if (action.type === 'openEditLedgerDraft') {
       if (deps.hideSensitive) {

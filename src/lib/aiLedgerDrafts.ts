@@ -1,4 +1,5 @@
 import type { Transaction, TransactionCategory } from '../types'
+import { capitalizeWords } from './utils'
 
 const LEDGERS = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const
 
@@ -33,9 +34,10 @@ export function buildAiLedgerDraftTransactions(
   return rawRecords.flatMap(raw => {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return []
     const fields = raw as Record<string, unknown>
-    const description = text(fields, 'description')
+    const rawDescription = text(fields, 'description')
     const magnitude = number(fields, 'amount')
-    if (!description || magnitude == null || magnitude <= 0) return []
+    if (!rawDescription || magnitude == null || magnitude <= 0) return []
+    const description = capitalizeWords(rawDescription)
 
     const rawType = text(fields, 'txType')?.toLowerCase()
     const txType = rawType === 'inflow' || rawType === 'transfer' ? rawType : 'outflow'

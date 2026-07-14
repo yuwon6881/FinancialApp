@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import type { Transaction, TransactionCategory } from '../types'
-import { FileText, Edit2, Trash2, ArrowLeft, Plus } from 'lucide-react'
+import { FileText, Edit2, Trash2, ArrowLeft, Plus, Sparkles, Loader2 } from 'lucide-react'
 import { formatCurrencyVal, maskCurrencyInput, getCurrencySymbol } from '../lib/utils'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
@@ -8,7 +8,9 @@ import { SmartAmountInput } from './ui/SmartAmountInput'
 import { SearchableSelect } from './ui/SearchableSelect'
 import { CustomSelect } from './ui/CustomSelect'
 import { DatePicker } from './ui/DatePicker'
+import { PerimeterBeam } from './ui/PerimeterBeam'
 import { LedgerAllocationBadge } from './ledger/LedgerAllocationBadge'
+import { useTransactionSuggestions } from './ledger/transaction-form/useTransactionSuggestions'
 
 const TRANSFER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards']
 
@@ -50,6 +52,47 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
     .map(item => item.name.trim())
     .filter((name, index, names) => !!name && names.findIndex(candidate => candidate.toLowerCase() === name.toLowerCase()) === index)
 
+  // Mirror the ledger add-entry form's AI helpers (note clean-up + suggested
+  // category) for the draft being edited. `editingTxId` is left null so the
+  // hook enables category suggestions, which it skips while editing a saved tx.
+  const editingDraft = draftTransactions.find(draft => draft.id === editingDraftId) ?? null
+  const editingIsTransfer = editingDraft?.ledgerCategory.startsWith('Transfer:') ?? false
+  const editTxType: 'inflow' | 'outflow' | 'transfer' = editingIsTransfer
+    ? 'transfer'
+    : editingDraft && editingDraft.amount > 0 ? 'inflow' : 'outflow'
+
+  const suggestions = useTransactionSuggestions({
+    categories,
+    editingTxId: null,
+    showAddForm: true,
+    txType: editTxType,
+    activeSuggestionEntries: [],
+    category,
+    ledgerCategory,
+  })
+
+  // Merge AI-suggested categories (with a confidence badge) ahead of the full
+  // list, mirroring TransactionFormFields' category select.
+  const categorySelectOptions = useMemo(() => {
+    const canonicalByName = new Map(normalCategoryOptions.map(name => [name.toLowerCase(), name]))
+    const suggestedNames = new Set<string>()
+    const suggestedOptions = suggestions.categorySuggestions.map(suggestion => {
+      const canonicalName = canonicalByName.get(String(suggestion.category).toLowerCase())
+      if (!canonicalName || suggestedNames.has(canonicalName.toLowerCase())) return null
+      suggestedNames.add(canonicalName.toLowerCase())
+      const badge = Number.isFinite(suggestion.confidence)
+        ? `Suggested ${Math.round(Math.max(0, Math.min(1, suggestion.confidence)) * 100)}%`
+        : 'Suggested'
+      return { value: canonicalName, label: canonicalName, badge }
+    }).filter((option): option is { value: string; label: string; badge: string } => option !== null)
+    return [
+      ...suggestedOptions,
+      ...normalCategoryOptions
+        .filter(name => !suggestedNames.has(name.toLowerCase()))
+        .map(name => ({ value: name, label: name })),
+    ]
+  }, [normalCategoryOptions, suggestions.categorySuggestions])
+
   const formatCurrency = (val: number) => {
     return formatCurrencyVal(val, currency)
   }
@@ -76,6 +119,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
       setTransferTarget(target?.trim() || 'Growth')
     }
     setErrors({})
+    suggestions.clearSuggestions()
   }
 
   const handleSaveEdit = (draft: Transaction) => {
@@ -116,6 +160,12 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
       ledgerCategory: isTransferDraft ? `Transfer:${transferSource}->${transferTarget}` : ledgerCategory,
     })
     setEditingDraftId(null)
+    suggestions.clearSuggestions()
+  }
+
+  const handleCancelEdit = () => {
+    setEditingDraftId(null)
+    suggestions.clearSuggestions()
   }
 
   return (
@@ -162,28 +212,86 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                 </div>
 
                 {/* Description — full width */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Description</label>
-                  <input
-                    type="text"
-                    required
-                    value={description}
-                    onChange={e => {
-                      setDescription(e.target.value)
-                      if (errors.description) {
-                        setErrors(prev => ({ ...prev, description: '' }))
-                      }
-                    }}
-                    className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                      errors.description
-                        ? 'border-destructive focus:ring-destructive'
-                        : 'border-border focus:ring-blue-500'
-                    }`}
-                  />
+                <div className="space-y-1.5 relative">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Description</label>
+                    {!isTransferDraft && (
+                      <button
+                        type="button"
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={() => void suggestions.requestNoteSuggestions(description.trim())}
+                        disabled={suggestions.isSuggestingNote || description.trim().length < 2}
+                        title={description.trim().length < 2 ? 'Enter a description first' : 'Suggest cleaner notes'}
+                        className="inline-flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/5 px-2 py-0.5 text-[9px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed transition cursor-pointer"
+                      >
+                        {suggestions.isSuggestingNote ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
+                        AI
+                      </button>
+                    )}
+                  </div>
+                  <div className={`relative ${suggestions.isSuggestingNote ? 'perimeter-beam-host' : ''}`}>
+                    {suggestions.isSuggestingNote && <PerimeterBeam radius={12} size={40} />}
+                    <input
+                      type="text"
+                      required
+                      value={description}
+                      onChange={e => {
+                        setDescription(e.target.value)
+                        suggestions.setShowNoteSuggestions(false)
+                        suggestions.setNoteSuggestions([])
+                        suggestions.setIsSuggestingNote(false)
+                        if (errors.description) {
+                          setErrors(prev => ({ ...prev, description: '' }))
+                        }
+                      }}
+                      onBlur={() => { if (!isTransferDraft) void suggestions.requestCategorySuggestions(description.trim(), null) }}
+                      className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                        errors.description
+                          ? 'border-destructive focus:ring-destructive'
+                          : 'border-border focus:ring-blue-500'
+                      }`}
+                    />
+                  </div>
                   {errors.description && (
                     <p className="text-[10px] text-destructive font-medium animate-in fade-in slide-in-from-top-1 duration-150">
                       {errors.description}
                     </p>
+                  )}
+
+                  {suggestions.showNoteSuggestions && (
+                    <div className="absolute z-50 w-full mt-1 overflow-hidden bg-card border border-blue-500/25 rounded-xl shadow-xl animate-in fade-in slide-in-from-top-2 duration-150">
+                      {suggestions.isSuggestingNote ? (
+                        <div className="flex items-center gap-2 px-3 py-2.5 text-xs font-semibold text-muted-foreground">
+                          <Loader2 className="size-3.5 animate-spin text-blue-500" />
+                          Suggesting cleaner notes...
+                        </div>
+                      ) : suggestions.noteSuggestions.length > 0 ? (
+                        suggestions.noteSuggestions.map(s => (
+                          <button
+                            key={s.note}
+                            type="button"
+                            onMouseDown={e => e.preventDefault()}
+                            onClick={() => {
+                              setDescription(s.note)
+                              suggestions.setShowNoteSuggestions(false)
+                              if (errors.description) setErrors(prev => ({ ...prev, description: '' }))
+                            }}
+                            className="w-full text-left px-3 py-2 text-xs flex flex-col gap-0.5 cursor-pointer transition duration-100 hover:bg-blue-500/10 first:rounded-t-xl last:rounded-b-xl"
+                          >
+                            <span className="font-semibold text-foreground">{s.note}</span>
+                            <span className="text-[10px] text-muted-foreground">{s.reason}</span>
+                          </button>
+                        ))
+                      ) : suggestions.noteSuggestionUnavailable ? (
+                        <div className="px-3 py-2.5 text-xs font-semibold text-amber-600 dark:text-amber-500">
+                          AI suggestions are unavailable right now. Please try again.
+                        </div>
+                      ) : (
+                        <div className="px-3 py-2.5 text-xs font-semibold text-muted-foreground">
+                          No better note found for this description.
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
 
@@ -277,16 +385,27 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-                        Category
-                      </label>
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                          Category
+                        </label>
+                        {suggestions.isSuggestingCategory ? (
+                          <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-blue-500 whitespace-nowrap shrink-0">
+                            <Loader2 className="size-3 animate-spin" /> Suggesting
+                          </span>
+                        ) : suggestions.categorySuggestionUnavailable ? (
+                          <span className="text-[9px] font-semibold text-amber-600 dark:text-amber-500 whitespace-nowrap shrink-0">
+                            AI unavailable
+                          </span>
+                        ) : null}
+                      </div>
                       <SearchableSelect
                         value={category}
                         onChange={value => {
                           setCategory(value)
                           if (errors.category) setErrors(previous => ({ ...previous, category: '' }))
                         }}
-                        options={normalCategoryOptions.map(option => ({ value: option, label: option }))}
+                        options={categorySelectOptions}
                         className="w-full"
                         placeholder="Search categories…"
                       />
@@ -313,7 +432,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
 
                 <div className="flex gap-2 justify-end pt-1">
                   <button
-                    onClick={() => setEditingDraftId(null)}
+                    onClick={handleCancelEdit}
                     className="px-3.5 py-1.5 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-xs rounded-xl transition duration-150 cursor-pointer"
                   >
                     Cancel
