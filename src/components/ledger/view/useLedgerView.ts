@@ -6,6 +6,7 @@ import { getCycleLabelForDropdown } from '../../../lib/cycleLabels'
 import { matchesTransactionFilters, splitFilterSelections } from '../../../lib/transactionFilters'
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../../../lib/csvExport'
 import { lockBodyScroll, unlockBodyScroll } from '../../../lib/scrollLock'
+import { compareTransactionsNewestFirst, mergeTransactionsNewestFirst } from '../../../lib/transactionOrdering'
 
 export interface UseLedgerViewOptions {
   transactions: Transaction[]
@@ -382,13 +383,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         categories: selectedCategories,
         txType: appliedTxTypeFilter,
       })
-    }).sort((a, b) => {
-      const dateA = a.postedAt || `${a.date}T00:00:00.000Z`
-      const dateB = b.postedAt || `${b.date}T00:00:00.000Z`
-      const dateDiff = dateB.localeCompare(dateA)
-      if (dateDiff !== 0) return dateDiff
-      return b.id.localeCompare(a.id)
-    })
+    }).sort(compareTransactionsNewestFirst)
   }, [pendingTransactions, showAllCycles, appliedSearch, appliedFilters, appliedTxTypeFilter, allCyclesRange])
 
   const filteredTransactions = useMemo(() => {
@@ -403,20 +398,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         categories: selectedCategories,
         txType: selectedTxTypeFilter,
       })
-    }).sort((a, b) => {
-      const dateA = a.postedAt || `${a.date}T00:00:00.000Z`
-      const dateB = b.postedAt || `${b.date}T00:00:00.000Z`
-      const dateDiff = dateB.localeCompare(dateA)
-      if (dateDiff !== 0) return dateDiff
-
-      const aPending = a.isPendingSync ? 1 : 0
-      const bPending = b.isPendingSync ? 1 : 0
-      if (bPending !== aPending) {
-        return bPending - aPending
-      }
-
-      return b.id.localeCompare(a.id)
-    })
+    }).sort(compareTransactionsNewestFirst)
   }, [transactions, searchTerm, selectedFilters, selectedDateFilter, selectedTxTypeFilter])
 
   const paginatedTransactions = useMemo(() => {
@@ -426,7 +408,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
 
   const displayTransactions = useMemo(() => {
     if (showAllCycles && serverResult) {
-      return [...filteredPendingTransactions, ...serverResult.items]
+      return mergeTransactionsNewestFirst(serverResult.items, filteredPendingTransactions)
     }
     return paginatedTransactions
   }, [showAllCycles, serverResult, filteredPendingTransactions, paginatedTransactions])
@@ -547,7 +529,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
 
   const handleExportPage = () => {
     if (hideSensitive) return
-    const rows = showAllCycles && serverResult ? [...filteredPendingTransactions, ...(serverResult.items || [])] : paginatedTransactions
+    const rows = showAllCycles && serverResult ? displayTransactions : paginatedTransactions
     downloadCsvRows(rows, getPageExportFilename(rows))
     setShowExportModal(false)
   }
