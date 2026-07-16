@@ -1,15 +1,21 @@
 import type { Transaction } from '../types'
 
-function transactionTime(transaction: Transaction): number {
-  const postedAt = transaction.postedAt ? Date.parse(transaction.postedAt) : NaN
-  if (Number.isFinite(postedAt)) return postedAt
-
+function transactionDay(transaction: Transaction): number {
   const calendarDate = Date.parse(`${transaction.date}T00:00:00.000Z`)
   return Number.isFinite(calendarDate) ? calendarDate : 0
 }
 
-/** Newest transaction first, using the persisted posting timestamp when available. */
+function transactionTime(transaction: Transaction): number {
+  const postedAt = transaction.postedAt ? Date.parse(transaction.postedAt) : NaN
+  if (Number.isFinite(postedAt)) return postedAt
+  return transactionDay(transaction)
+}
+
+/** Newest calendar date first, then newest creation timestamp within that date. */
 export function compareTransactionsNewestFirst(a: Transaction, b: Transaction): number {
+  const dayDiff = transactionDay(b) - transactionDay(a)
+  if (dayDiff !== 0) return dayDiff
+
   const timeDiff = transactionTime(b) - transactionTime(a)
   if (timeDiff !== 0) return timeDiff
 

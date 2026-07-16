@@ -1,9 +1,7 @@
 // Shared transaction filter predicate. LedgerView carried two near-identical
 // copies of this matching logic (one for the current-cycle list, one for the
-// all-cycles pending list); the only real difference between them was the date
-// filter (exact-day vs. range), which stays at each call site. Everything else
-// -- search, ledger-bucket, sub-category and transaction-type matching -- lives
-// here so the rules exist in exactly one place.
+// all-cycles pending list). Search, category, date, amount, recurring and
+// transaction-type matching live here so the rules exist in exactly one place.
 
 import type { Transaction } from '../types'
 
@@ -21,6 +19,14 @@ export interface TransactionFilterCriteria {
   categories?: string[]
   /** Transaction-type filter; empty/undefined matches everything. */
   txType?: TxTypeFilter
+  /** Inclusive transaction date bounds in yyyy-MM-dd format. */
+  startDate?: string
+  endDate?: string
+  /** Inclusive absolute amount bounds, so they work with either inflows or outflows. */
+  minAmount?: number
+  maxAmount?: number
+  /** Only transactions generated from a recurring payment. */
+  recurringOnly?: boolean
 }
 
 /**
@@ -46,13 +52,21 @@ export function isIncomeLedgerCategory(ledgerCategory: string | null | undefined
 
 /**
  * Core transaction matcher shared by LedgerView's list memos. Excludes
- * Discarded rows, then applies search / bucket / sub-category / type filters.
- * Date filtering is intentionally left to the caller.
+ * Discarded rows, then applies all active ledger filters.
  */
 export function matchesTransactionFilters(t: Transaction, criteria: TransactionFilterCriteria): boolean {
   if (t.ledgerCategory === 'Discarded') return false
 
-  const { search, buckets, categories, txType } = criteria
+  const { search, buckets, categories, txType, startDate, endDate, minAmount, maxAmount, recurringOnly } = criteria
+
+  if (startDate && t.date < startDate) return false
+  if (endDate && t.date > endDate) return false
+
+  const absoluteAmount = Math.abs(t.amount)
+  if (minAmount !== undefined && absoluteAmount < minAmount) return false
+  if (maxAmount !== undefined && absoluteAmount > maxAmount) return false
+
+  if (recurringOnly && !t.recurringPaymentId) return false
 
   if (search) {
     const q = search.toLowerCase()

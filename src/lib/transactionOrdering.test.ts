@@ -47,4 +47,22 @@ describe('transaction ordering', () => {
     expect([older, newer].sort(compareTransactionsNewestFirst).map(item => item.id))
       .toEqual(['newer', 'older'])
   })
+
+  it('keeps the selected calendar date primary over the creation timestamp', () => {
+    const backdatedButNewlyCreated = transaction({
+      id: 'backdated',
+      date: '2026-07-15',
+      postedAt: '2026-07-16T10:00:00.000Z',
+    })
+    const july16Transaction = transaction({
+      id: 'july-16',
+      date: '2026-07-16',
+      postedAt: '2026-07-16T09:00:00.000Z',
+    })
+
+    expect([backdatedButNewlyCreated, july16Transaction]
+      .sort(compareTransactionsNewestFirst)
+      .map(item => item.id))
+      .toEqual(['july-16', 'backdated'])
+  })
 })

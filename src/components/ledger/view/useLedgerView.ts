@@ -36,6 +36,25 @@ export interface UseLedgerViewOptions {
 }
 
 const LEDGER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
+type LedgerTxType = 'inflow' | 'outflow' | 'transfer' | null
+
+const parseAmountFilter = (value: string): number | undefined => {
+  if (!value.trim()) return undefined
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined
+}
+
+const laterDate = (first?: string | null, second?: string | null) => {
+  if (!first) return second || undefined
+  if (!second) return first
+  return first > second ? first : second
+}
+
+const earlierDate = (first?: string | null, second?: string | null) => {
+  if (!first) return second || undefined
+  if (!second) return first
+  return first < second ? first : second
+}
 
 export function useLedgerView(options: UseLedgerViewOptions) {
   const {
@@ -68,8 +87,12 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFilters, setSelectedFilters] = useState<string[]>([])
-  const [selectedDateFilter, setSelectedDateFilter] = useState<string | null>(null)
-  const [selectedTxTypeFilter, setSelectedTxTypeFilter] = useState<'inflow' | 'outflow' | 'transfer' | null>(null)
+  const [selectedStartDate, setSelectedStartDate] = useState('')
+  const [selectedEndDate, setSelectedEndDate] = useState('')
+  const [selectedMinAmount, setSelectedMinAmount] = useState('')
+  const [selectedMaxAmount, setSelectedMaxAmount] = useState('')
+  const [selectedRecurringOnly, setSelectedRecurringOnly] = useState(false)
+  const [selectedTxTypeFilter, setSelectedTxTypeFilter] = useState<LedgerTxType>(null)
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false)
 
   // Pagination states
@@ -87,9 +110,20 @@ export function useLedgerView(options: UseLedgerViewOptions) {
 
   const [pendingSearchTerm, setPendingSearchTerm] = useState('')
   const [pendingFilters, setPendingFilters] = useState<string[]>([])
+  const [pendingStartDate, setPendingStartDate] = useState('')
+  const [pendingEndDate, setPendingEndDate] = useState('')
+  const [pendingMinAmount, setPendingMinAmount] = useState('')
+  const [pendingMaxAmount, setPendingMaxAmount] = useState('')
+  const [pendingRecurringOnly, setPendingRecurringOnly] = useState(false)
+  const [pendingTxTypeFilter, setPendingTxTypeFilter] = useState<LedgerTxType>(null)
   const [appliedSearch, setAppliedSearch] = useState('')
   const [appliedFilters, setAppliedFilters] = useState<string[]>([])
-  const [appliedTxTypeFilter, setAppliedTxTypeFilter] = useState<'inflow' | 'outflow' | 'transfer' | null>(null)
+  const [appliedStartDate, setAppliedStartDate] = useState('')
+  const [appliedEndDate, setAppliedEndDate] = useState('')
+  const [appliedMinAmount, setAppliedMinAmount] = useState('')
+  const [appliedMaxAmount, setAppliedMaxAmount] = useState('')
+  const [appliedRecurringOnly, setAppliedRecurringOnly] = useState(false)
+  const [appliedTxTypeFilter, setAppliedTxTypeFilter] = useState<LedgerTxType>(null)
 
   // Delete transaction state
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -138,7 +172,12 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     page: number
     search: string
     filters: string[]
-    txType: 'inflow' | 'outflow' | 'transfer' | null
+    txType: LedgerTxType
+    startDate: string
+    endDate: string
+    minAmount: string
+    maxAmount: string
+    recurringOnly: boolean
     pSize: number
   }) => {
     if (!onFetchPagedTransactions) return
@@ -157,8 +196,11 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         ledgerCategories: buckets.length > 0 ? buckets : undefined,
         categories: cats.length > 0 ? cats : undefined,
         txType: opts.txType || null,
-        startDate: allCyclesRange?.startDate,
-        endDate: allCyclesRange?.endDate,
+        startDate: laterDate(allCyclesRange?.startDate, opts.startDate),
+        endDate: earlierDate(allCyclesRange?.endDate, opts.endDate),
+        minAmount: parseAmountFilter(opts.minAmount),
+        maxAmount: parseAmountFilter(opts.maxAmount),
+        recurringOnly: opts.recurringOnly,
         signal: controller.signal,
       })
       if (sequence !== fetchSequenceRef.current || controller.signal.aborted) return
@@ -179,16 +221,40 @@ export function useLedgerView(options: UseLedgerViewOptions) {
       const initialFilters = incomingCategory ? [incomingCategory] : []
       const initialTxType = incomingTxType || null
       const initialSearch = incomingSearch || ''
+      const initialStartDate = incomingDate || ''
+      const initialEndDate = incomingDate || ''
 
       setPendingSearchTerm(initialSearch)
       setPendingFilters(initialFilters)
+      setPendingStartDate(initialStartDate)
+      setPendingEndDate(initialEndDate)
+      setPendingMinAmount('')
+      setPendingMaxAmount('')
+      setPendingRecurringOnly(false)
+      setPendingTxTypeFilter(initialTxType)
       setAppliedSearch(initialSearch)
       setAppliedFilters(initialFilters)
+      setAppliedStartDate(initialStartDate)
+      setAppliedEndDate(initialEndDate)
+      setAppliedMinAmount('')
+      setAppliedMaxAmount('')
+      setAppliedRecurringOnly(false)
       setAppliedTxTypeFilter(initialTxType)
       setCurrentPage(1)
       setPageSize(100)
       isInitialFetchDone.current = false
-      runServerFetch({ page: 1, search: initialSearch, filters: initialFilters, txType: initialTxType, pSize: 100 })
+      runServerFetch({
+        page: 1,
+        search: initialSearch,
+        filters: initialFilters,
+        txType: initialTxType,
+        startDate: initialStartDate,
+        endDate: initialEndDate,
+        minAmount: '',
+        maxAmount: '',
+        recurringOnly: false,
+        pSize: 100,
+      })
         .finally(() => {
           isInitialFetchDone.current = true
         })
@@ -201,9 +267,20 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   // Re-fetch when page changes in server mode
   useEffect(() => {
     if (showAllCycles && onFetchPagedTransactions && isInitialFetchDone.current) {
-      runServerFetch({ page: currentPage, search: appliedSearch, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
+      runServerFetch({
+        page: currentPage,
+        search: appliedSearch,
+        filters: appliedFilters,
+        txType: appliedTxTypeFilter,
+        startDate: appliedStartDate,
+        endDate: appliedEndDate,
+        minAmount: appliedMinAmount,
+        maxAmount: appliedMaxAmount,
+        recurringOnly: appliedRecurringOnly,
+        pSize: pageSize,
+      })
     }
-  }, [currentPage, pageSize, showAllCycles, onFetchPagedTransactions, runServerFetch, appliedSearch, appliedFilters, appliedTxTypeFilter, allCyclesRange])
+  }, [currentPage, pageSize, showAllCycles, onFetchPagedTransactions, runServerFetch, appliedSearch, appliedFilters, appliedTxTypeFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringOnly, allCyclesRange])
 
   // Re-fetch server result when activeSyncId transitions from non-null to null (sync completed)
   const prevActiveSyncId = useRef<string | null>(null)
@@ -217,15 +294,26 @@ export function useLedgerView(options: UseLedgerViewOptions) {
       })
     }
     if (showAllCycles && prevActiveSyncId.current !== null && activeSyncId === null && onFetchPagedTransactions && isInitialFetchDone.current) {
-      runServerFetch({ page: currentPage, search: appliedSearch, filters: appliedFilters, txType: appliedTxTypeFilter, pSize: pageSize })
+      runServerFetch({
+        page: currentPage,
+        search: appliedSearch,
+        filters: appliedFilters,
+        txType: appliedTxTypeFilter,
+        startDate: appliedStartDate,
+        endDate: appliedEndDate,
+        minAmount: appliedMinAmount,
+        maxAmount: appliedMaxAmount,
+        recurringOnly: appliedRecurringOnly,
+        pSize: pageSize,
+      })
     }
     prevActiveSyncId.current = activeSyncId || null
-  }, [activeSyncId, showAllCycles, currentPage, appliedSearch, appliedFilters, appliedTxTypeFilter, pageSize, onFetchPagedTransactions, runServerFetch])
+  }, [activeSyncId, showAllCycles, currentPage, appliedSearch, appliedFilters, appliedTxTypeFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringOnly, pageSize, onFetchPagedTransactions, runServerFetch])
 
   // Reset back to page 1 when search inputs or active filters are updated (client-side mode only)
   useEffect(() => {
     if (!showAllCycles) setCurrentPage(1)
-  }, [searchTerm, selectedFilters, selectedDateFilter, selectedTxTypeFilter, showAllCycles])
+  }, [searchTerm, selectedFilters, selectedStartDate, selectedEndDate, selectedMinAmount, selectedMaxAmount, selectedRecurringOnly, selectedTxTypeFilter, showAllCycles])
 
   // Synchronize incoming filters from props
   useEffect(() => {
@@ -241,7 +329,8 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   }, [incomingSearch])
 
   useEffect(() => {
-    setSelectedDateFilter(incomingDate || null)
+    setSelectedStartDate(incomingDate || '')
+    setSelectedEndDate(incomingDate || '')
   }, [incomingDate])
 
   useEffect(() => {
@@ -280,15 +369,39 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   const handleClearFilters = () => {
     if (showAllCycles) {
       setPendingFilters([])
+      setPendingStartDate('')
+      setPendingEndDate('')
+      setPendingMinAmount('')
+      setPendingMaxAmount('')
+      setPendingRecurringOnly(false)
+      setPendingTxTypeFilter(null)
       setAppliedFilters([])
+      setAppliedStartDate('')
+      setAppliedEndDate('')
+      setAppliedMinAmount('')
+      setAppliedMaxAmount('')
+      setAppliedRecurringOnly(false)
+      setAppliedTxTypeFilter(null)
       setCurrentPage(1)
     } else {
       setSelectedFilters([])
+      setSelectedStartDate('')
+      setSelectedEndDate('')
+      setSelectedMinAmount('')
+      setSelectedMaxAmount('')
+      setSelectedRecurringOnly(false)
+      setSelectedTxTypeFilter(null)
     }
   }
 
   const handleApplyFilters = () => {
     setAppliedFilters(pendingFilters)
+    setAppliedStartDate(pendingStartDate)
+    setAppliedEndDate(pendingEndDate)
+    setAppliedMinAmount(pendingMinAmount)
+    setAppliedMaxAmount(pendingMaxAmount)
+    setAppliedRecurringOnly(pendingRecurringOnly)
+    setAppliedTxTypeFilter(pendingTxTypeFilter)
     setCurrentPage(1)
     setIsFilterDropdownOpen(false)
   }
@@ -368,38 +481,35 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     const { buckets: selectedBuckets, categories: selectedCategories } = splitFilterSelections(appliedFilters)
 
     return pendingTransactions.filter(t => {
-      if (allCyclesRange) {
-        const txDate = new Date(t.date)
-        const startLimit = new Date(allCyclesRange.startDate)
-        const endLimit = new Date(allCyclesRange.endDate)
-        startLimit.setHours(0, 0, 0, 0)
-        endLimit.setHours(23, 59, 59, 999)
-        if (txDate < startLimit || txDate > endLimit) return false
-      }
-
       return matchesTransactionFilters(t, {
         search: appliedSearch,
         buckets: selectedBuckets,
         categories: selectedCategories,
         txType: appliedTxTypeFilter,
+        startDate: laterDate(allCyclesRange?.startDate, appliedStartDate),
+        endDate: earlierDate(allCyclesRange?.endDate, appliedEndDate),
+        minAmount: parseAmountFilter(appliedMinAmount),
+        maxAmount: parseAmountFilter(appliedMaxAmount),
+        recurringOnly: appliedRecurringOnly,
       })
     }).sort(compareTransactionsNewestFirst)
-  }, [pendingTransactions, showAllCycles, appliedSearch, appliedFilters, appliedTxTypeFilter, allCyclesRange])
+  }, [pendingTransactions, showAllCycles, appliedSearch, appliedFilters, appliedTxTypeFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringOnly, allCyclesRange])
 
   const filteredTransactions = useMemo(() => {
     const { buckets: selectedBuckets, categories: selectedCategories } = splitFilterSelections(selectedFilters)
 
-    return transactions.filter(t => {
-      if (selectedDateFilter && t.date !== selectedDateFilter) return false
-
-      return matchesTransactionFilters(t, {
+    return transactions.filter(t => matchesTransactionFilters(t, {
         search: searchTerm,
         buckets: selectedBuckets,
         categories: selectedCategories,
         txType: selectedTxTypeFilter,
-      })
-    }).sort(compareTransactionsNewestFirst)
-  }, [transactions, searchTerm, selectedFilters, selectedDateFilter, selectedTxTypeFilter])
+        startDate: selectedStartDate,
+        endDate: selectedEndDate,
+        minAmount: parseAmountFilter(selectedMinAmount),
+        maxAmount: parseAmountFilter(selectedMaxAmount),
+        recurringOnly: selectedRecurringOnly,
+      })).sort(compareTransactionsNewestFirst)
+  }, [transactions, searchTerm, selectedFilters, selectedStartDate, selectedEndDate, selectedMinAmount, selectedMaxAmount, selectedRecurringOnly, selectedTxTypeFilter])
 
   const paginatedTransactions = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize
@@ -463,11 +573,26 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     onClearIncomingFilters?.()
     onClearAllCycles()
     setSelectedFilters([])
-    setSelectedDateFilter(null)
+    setSelectedStartDate('')
+    setSelectedEndDate('')
+    setSelectedMinAmount('')
+    setSelectedMaxAmount('')
+    setSelectedRecurringOnly(false)
     setSelectedTxTypeFilter(null)
     setSearchTerm('')
     setPendingFilters([])
+    setPendingStartDate('')
+    setPendingEndDate('')
+    setPendingMinAmount('')
+    setPendingMaxAmount('')
+    setPendingRecurringOnly(false)
+    setPendingTxTypeFilter(null)
     setAppliedFilters([])
+    setAppliedStartDate('')
+    setAppliedEndDate('')
+    setAppliedMinAmount('')
+    setAppliedMaxAmount('')
+    setAppliedRecurringOnly(false)
     setAppliedSearch('')
     setAppliedTxTypeFilter(null)
     setCurrentPage(1)
@@ -492,6 +617,13 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     if (appliedTxTypeFilter) {
       parts.push(appliedTxTypeFilter === 'inflow' ? 'Inflows' : appliedTxTypeFilter === 'outflow' ? 'Outflows' : 'Transfers')
     }
+    if (appliedStartDate || appliedEndDate) {
+      parts.push(`Dates ${appliedStartDate || 'Any'} to ${appliedEndDate || 'Any'}`)
+    }
+    if (appliedMinAmount || appliedMaxAmount) {
+      parts.push(`Amounts ${appliedMinAmount || '0'} to ${appliedMaxAmount || 'Any'}`)
+    }
+    if (appliedRecurringOnly) parts.push('Recurring')
     if (appliedSearch) {
       parts.push(`Search ${appliedSearch}`)
     }
@@ -546,8 +678,11 @@ export function useLedgerView(options: UseLedgerViewOptions) {
           ledgerCategories: buckets.length > 0 ? buckets : undefined,
           categories: cats.length > 0 ? cats : undefined,
           txType: appliedTxTypeFilter || null,
-          startDate: allCyclesRange?.startDate,
-          endDate: allCyclesRange?.endDate
+          startDate: laterDate(allCyclesRange?.startDate, appliedStartDate),
+          endDate: earlierDate(allCyclesRange?.endDate, appliedEndDate),
+          minAmount: parseAmountFilter(appliedMinAmount),
+          maxAmount: parseAmountFilter(appliedMaxAmount),
+          recurringOnly: appliedRecurringOnly,
         })
         downloadCsvBlob(result.blob, getExportAllFilename())
         setShowExportModal(false)
@@ -568,8 +703,16 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     setSearchTerm,
     selectedFilters,
     setSelectedFilters,
-    selectedDateFilter,
-    setSelectedDateFilter,
+    selectedStartDate,
+    setSelectedStartDate,
+    selectedEndDate,
+    setSelectedEndDate,
+    selectedMinAmount,
+    setSelectedMinAmount,
+    selectedMaxAmount,
+    setSelectedMaxAmount,
+    selectedRecurringOnly,
+    setSelectedRecurringOnly,
     selectedTxTypeFilter,
     setSelectedTxTypeFilter,
     isFilterDropdownOpen,
@@ -587,8 +730,25 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     setPendingSearchTerm,
     pendingFilters,
     setPendingFilters,
+    pendingStartDate,
+    setPendingStartDate,
+    pendingEndDate,
+    setPendingEndDate,
+    pendingMinAmount,
+    setPendingMinAmount,
+    pendingMaxAmount,
+    setPendingMaxAmount,
+    pendingRecurringOnly,
+    setPendingRecurringOnly,
+    pendingTxTypeFilter,
+    setPendingTxTypeFilter,
     appliedSearch,
     appliedFilters,
+    appliedStartDate,
+    appliedEndDate,
+    appliedMinAmount,
+    appliedMaxAmount,
+    appliedRecurringOnly,
     appliedTxTypeFilter,
     showDeleteModal,
     txToDelete,

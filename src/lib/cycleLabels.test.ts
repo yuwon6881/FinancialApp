@@ -48,8 +48,9 @@ describe('getCycleLabelForDropdown', () => {
   })
 
   it('clamps the start day to the anchor month length', () => {
-    // Feb has no 31st: start clamps to Feb 28 (2026), end is one month later minus a day.
-    expect(getCycleLabelForDropdown('Feb', 2026, 31)).toBe('Feb 28th ~ Mar 27th')
+    // Feb has no 31st: start clamps to Feb 28. The next cycle starts Mar 31,
+    // so this cycle continues through Mar 30 without leaving a gap.
+    expect(getCycleLabelForDropdown('Feb', 2026, 31)).toBe('Feb 28th ~ Mar 30th')
   })
 
   it('clamps AddMonths when a day-31 cycle enters February', () => {

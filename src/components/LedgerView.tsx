@@ -12,7 +12,6 @@ import { TransactionFormSheet, type TransactionFormSheetRef } from './ledger/Tra
 import { calculateLedgerTotals } from '../lib/ledgerTotals'
 import { useIsMobile } from '../lib/useIsMobile'
 import { formatCurrencyVal } from '../lib/utils'
-import { ordinal } from '../lib/cycleLabels'
 import { X } from 'lucide-react'
 
 // Hooks and sub-components
@@ -110,6 +109,16 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
 
   const pageTotals = React.useMemo(() => calculateLedgerTotals(ledger.displayTransactions), [ledger.displayTransactions])
   const isServerMode = props.showAllCycles && !!ledger.serverResult
+  const activeStartDate = props.showAllCycles ? ledger.appliedStartDate : ledger.selectedStartDate
+  const activeEndDate = props.showAllCycles ? ledger.appliedEndDate : ledger.selectedEndDate
+  const activeMinAmount = props.showAllCycles ? ledger.appliedMinAmount : ledger.selectedMinAmount
+  const activeMaxAmount = props.showAllCycles ? ledger.appliedMaxAmount : ledger.selectedMaxAmount
+  const activeRecurringOnly = props.showAllCycles ? ledger.appliedRecurringOnly : ledger.selectedRecurringOnly
+  const activeAdvancedFilterCount =
+    (activeStartDate || activeEndDate ? 1 : 0) +
+    (activeMinAmount || activeMaxAmount ? 1 : 0) +
+    (activeRecurringOnly ? 1 : 0) +
+    ((props.showAllCycles ? ledger.appliedTxTypeFilter : ledger.selectedTxTypeFilter) ? 1 : 0)
 
   if (props.isSwitchingCycle) {
     return <CycleSkeleton variant="ledger" />
@@ -139,8 +148,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         const activeCategoryFilters = props.showAllCycles ? ledger.appliedFilters : ledger.selectedFilters
         const activeTxType = props.showAllCycles ? ledger.appliedTxTypeFilter : ledger.selectedTxTypeFilter
         const activeSearch = props.showAllCycles ? ledger.appliedSearch : ledger.searchTerm
-        const activeDate = ledger.selectedDateFilter
-        const hasAnyFilter = activeCategoryFilters.length > 0 || !!activeTxType || !!activeSearch || !!activeDate
+        const hasAnyFilter = activeCategoryFilters.length > 0 || !!activeTxType || !!activeSearch || activeAdvancedFilterCount > 0
         if (!props.showAllCycles && !hasAnyFilter) return null
 
         const parts: string[] = []
@@ -165,15 +173,20 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
           const names = selectedCats.map(c => `"${c}"`).join(' and ')
           filterDetails.push(`category ${names}`)
         }
-        if (activeDate) {
-          const d = new Date(activeDate)
-          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-          const formattedDate = isNaN(d.getTime()) ? activeDate : `${monthNames[d.getMonth()]} ${ordinal(d.getDate())}, ${d.getFullYear()}`
-          filterDetails.push(`date ${formattedDate}`)
+        if (activeStartDate || activeEndDate) {
+          if (activeStartDate && activeEndDate && activeStartDate === activeEndDate) {
+            filterDetails.push(`date ${activeStartDate}`)
+          } else {
+            filterDetails.push(`dates ${activeStartDate || 'any'} to ${activeEndDate || 'any'}`)
+          }
+        }
+        if (activeMinAmount || activeMaxAmount) {
+          filterDetails.push(`absolute amount ${activeMinAmount || '0'} to ${activeMaxAmount || 'any'}`)
         }
         if (activeTxType) {
-          filterDetails.push(activeTxType === 'inflow' ? "inflows only" : "outflows only")
+          filterDetails.push(activeTxType === 'inflow' ? "inflows only" : activeTxType === 'outflow' ? "outflows only" : "transfers only")
         }
+        if (activeRecurringOnly) filterDetails.push('recurring transactions only')
         if (activeSearch) {
           filterDetails.push(`search "${activeSearch}"`)
         }
@@ -245,6 +258,19 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         pendingFilters={ledger.pendingFilters}
         selectedFilters={ledger.selectedFilters}
         onToggleFilter={ledger.handleToggleFilter}
+        startDate={props.showAllCycles ? ledger.pendingStartDate : ledger.selectedStartDate}
+        onStartDateChange={props.showAllCycles ? ledger.setPendingStartDate : ledger.setSelectedStartDate}
+        endDate={props.showAllCycles ? ledger.pendingEndDate : ledger.selectedEndDate}
+        onEndDateChange={props.showAllCycles ? ledger.setPendingEndDate : ledger.setSelectedEndDate}
+        minAmount={props.showAllCycles ? ledger.pendingMinAmount : ledger.selectedMinAmount}
+        onMinAmountChange={props.showAllCycles ? ledger.setPendingMinAmount : ledger.setSelectedMinAmount}
+        maxAmount={props.showAllCycles ? ledger.pendingMaxAmount : ledger.selectedMaxAmount}
+        onMaxAmountChange={props.showAllCycles ? ledger.setPendingMaxAmount : ledger.setSelectedMaxAmount}
+        recurringOnly={props.showAllCycles ? ledger.pendingRecurringOnly : ledger.selectedRecurringOnly}
+        onRecurringOnlyChange={props.showAllCycles ? ledger.setPendingRecurringOnly : ledger.setSelectedRecurringOnly}
+        txType={props.showAllCycles ? ledger.pendingTxTypeFilter : ledger.selectedTxTypeFilter}
+        onTxTypeChange={props.showAllCycles ? ledger.setPendingTxTypeFilter : ledger.setSelectedTxTypeFilter}
+        activeAdvancedFilterCount={activeAdvancedFilterCount}
         onClearFilters={ledger.handleClearFilters}
         onApplyFilters={ledger.handleApplyFilters}
       />

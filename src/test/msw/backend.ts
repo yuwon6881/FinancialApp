@@ -212,7 +212,12 @@ export const handlers = [
   http.post(`${API}/wishlist/:id/purchase`, ({ params }) => {
     const item = state.wishlist.find(w => w.id === Number(params.id))
     if (!item) return HttpResponse.json({ message: 'Not found' }, { status: 404 })
-    if (item.isPurchased) return HttpResponse.json({ message: 'Item is already purchased.' }, { status: 400 })
+    if (item.isPurchased) {
+      const existing = [...state.transactions.values()].find(tx => tx.wishlistItemId === item.id)
+      return existing
+        ? HttpResponse.json({ item, transaction: existing })
+        : HttpResponse.json({ message: 'Item is already purchased.' }, { status: 400 })
+    }
 
     const price = parseFloat(atob0(item.price))
     const txId = `tx-wish-${item.id}`

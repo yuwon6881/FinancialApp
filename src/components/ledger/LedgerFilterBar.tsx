@@ -1,4 +1,4 @@
-import { Search, Filter, X, Loader2 } from 'lucide-react'
+import { Search, Filter, X, Loader2, CalendarDays, Banknote, Repeat2 } from 'lucide-react'
 import type { TransactionCategory } from '../../types'
 import { BottomSheet } from '../ui/BottomSheet'
 import { getCategoryDotClass, getCategoryFilterClass } from '../../lib/categoryColors'
@@ -25,6 +25,19 @@ interface LedgerFilterBarProps {
   pendingFilters: string[]
   selectedFilters: string[]
   onToggleFilter: (filterName: string) => void
+  startDate: string
+  onStartDateChange: (value: string) => void
+  endDate: string
+  onEndDateChange: (value: string) => void
+  minAmount: string
+  onMinAmountChange: (value: string) => void
+  maxAmount: string
+  onMaxAmountChange: (value: string) => void
+  recurringOnly: boolean
+  onRecurringOnlyChange: (value: boolean) => void
+  txType: 'inflow' | 'outflow' | 'transfer' | null
+  onTxTypeChange: (value: 'inflow' | 'outflow' | 'transfer' | null) => void
+  activeAdvancedFilterCount: number
   onClearFilters: () => void
   onApplyFilters: () => void
 }
@@ -48,12 +61,142 @@ export function LedgerFilterBar({
   pendingFilters,
   selectedFilters,
   onToggleFilter,
+  startDate,
+  onStartDateChange,
+  endDate,
+  onEndDateChange,
+  minAmount,
+  onMinAmountChange,
+  maxAmount,
+  onMaxAmountChange,
+  recurringOnly,
+  onRecurringOnlyChange,
+  txType,
+  onTxTypeChange,
+  activeAdvancedFilterCount,
   onClearFilters,
   onApplyFilters,
 }: LedgerFilterBarProps) {
   // Which selection set is authoritative for the checkbox state depends on mode.
   const checkboxFilters = showAllCycles ? pendingFilters : selectedFilters
-  const activeFilterCount = showAllCycles ? appliedFilters.length : selectedFilters.length
+  const activeFilterCount = (showAllCycles ? appliedFilters.length : selectedFilters.length) + activeAdvancedFilterCount
+  const draftAdvancedFilterCount =
+    (startDate || endDate ? 1 : 0) +
+    (minAmount || maxAmount ? 1 : 0) +
+    (recurringOnly ? 1 : 0) +
+    (txType ? 1 : 0)
+  const draftFilterCount = checkboxFilters.length + draftAdvancedFilterCount
+  const parsedMin = minAmount === '' ? undefined : Number(minAmount)
+  const parsedMax = maxAmount === '' ? undefined : Number(maxAmount)
+  const hasInvalidAmountRange = parsedMin !== undefined && parsedMax !== undefined && parsedMin > parsedMax
+  const hasInvalidDateRange = !!startDate && !!endDate && startDate > endDate
+  const hasInvalidRange = hasInvalidAmountRange || hasInvalidDateRange
+
+  const advancedFilterControls = (
+    <div className="space-y-4 border-t border-border/40 pt-4">
+      <div className="space-y-2">
+        <span className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+          <CalendarDays className="size-3" /> Date range
+        </span>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="space-y-1 text-[10px] font-semibold text-muted-foreground">
+            From
+            <input
+              type="date"
+              value={startDate}
+              max={endDate || undefined}
+              onChange={event => onStartDateChange(event.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-2 py-2 text-xs text-foreground outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+            />
+          </label>
+          <label className="space-y-1 text-[10px] font-semibold text-muted-foreground">
+            To
+            <input
+              type="date"
+              value={endDate}
+              min={startDate || undefined}
+              onChange={event => onEndDateChange(event.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-2 py-2 text-xs text-foreground outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+            />
+          </label>
+        </div>
+        {hasInvalidDateRange && <p className="text-[10px] font-semibold text-red-500">Start date must be before the end date.</p>}
+      </div>
+
+      <div className="space-y-2">
+        <span className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+          <Banknote className="size-3" /> Amount range
+        </span>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="space-y-1 text-[10px] font-semibold text-muted-foreground">
+            Minimum
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              placeholder="0.00"
+              value={minAmount}
+              onChange={event => onMinAmountChange(event.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+            />
+          </label>
+          <label className="space-y-1 text-[10px] font-semibold text-muted-foreground">
+            Maximum
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              placeholder="Any"
+              value={maxAmount}
+              onChange={event => onMaxAmountChange(event.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+            />
+          </label>
+        </div>
+        <p className="text-[9px] text-muted-foreground">Uses the absolute amount for both inflows and outflows.</p>
+        {hasInvalidAmountRange && <p className="text-[10px] font-semibold text-red-500">Minimum amount cannot exceed maximum amount.</p>}
+      </div>
+
+      <div className="space-y-2">
+        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Transaction type</span>
+        <div className="grid grid-cols-2 gap-1.5">
+          {([
+            [null, 'All types'],
+            ['inflow', 'Inflow'],
+            ['outflow', 'Outflow'],
+            ['transfer', 'Transfer'],
+          ] as const).map(([value, label]) => (
+            <button
+              type="button"
+              key={label}
+              onClick={() => onTxTypeChange(value)}
+              className={`rounded-lg border px-2 py-2 text-[10px] font-semibold transition cursor-pointer ${
+                txType === value
+                  ? 'border-blue-500/50 bg-blue-500/10 text-blue-500'
+                  : 'border-border bg-background text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <label className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2.5 cursor-pointer">
+        <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
+          <Repeat2 className="size-3.5 text-blue-500" /> Recurring transactions only
+        </span>
+        <input
+          type="checkbox"
+          checked={recurringOnly}
+          onChange={event => onRecurringOnlyChange(event.target.checked)}
+          className="size-4 rounded border-border text-blue-500 focus:ring-blue-500"
+        />
+      </label>
+    </div>
+  )
 
   return (
     <div
@@ -144,11 +287,11 @@ export function LedgerFilterBar({
 
         {/* Desktop Filter Popover */}
         {isFilterDropdownOpen && (
-          <div className="hidden md:block absolute right-0 top-full mt-1.5 w-64 bg-card border border-border rounded-2xl shadow-xl p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+          <div className="hidden md:block absolute right-0 top-full mt-1.5 w-80 bg-card border border-border rounded-2xl shadow-xl p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3">
               <span className="text-xs font-bold text-foreground">Filter Ledger Entries</span>
-              {checkboxFilters.length > 0 && (
+              {draftFilterCount > 0 && (
                 <button
                   onClick={onClearFilters}
                   className="text-[9px] font-bold text-orange-500 hover:underline cursor-pointer whitespace-nowrap"
@@ -159,7 +302,7 @@ export function LedgerFilterBar({
             </div>
 
             {/* Scrollable sections */}
-            <div className="space-y-4 max-h-72 overflow-y-auto pr-1">
+            <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
               {/* Section 1: Ledger Allocation Buckets */}
               <div className="space-y-2">
                 <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Ledger Categories</span>
@@ -209,6 +352,8 @@ export function LedgerFilterBar({
                   })}
                 </div>
               </div>
+
+              {advancedFilterControls}
             </div>
 
             {/* Apply button -- only in server mode */}
@@ -216,7 +361,7 @@ export function LedgerFilterBar({
               <div className="pt-3 mt-3 border-t border-border/40">
                 <button
                   onClick={onApplyFilters}
-                  disabled={serverIsFetching}
+                  disabled={serverIsFetching || hasInvalidRange}
                   className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-xs cursor-pointer transition duration-200 disabled:opacity-50
                     bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600
                     text-white shadow-md shadow-blue-600/20 hover:shadow-blue-600/30"
@@ -243,7 +388,7 @@ export function LedgerFilterBar({
                   onApplyFilters()
                   onFilterDropdownOpenChange(false)
                 }}
-                disabled={serverIsFetching}
+                disabled={serverIsFetching || hasInvalidRange}
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-xs cursor-pointer transition duration-200 disabled:opacity-50
                   bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600
                   text-white shadow-md shadow-blue-600/20 hover:shadow-blue-600/30"
@@ -256,7 +401,7 @@ export function LedgerFilterBar({
             ) : undefined}
           >
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-              {checkboxFilters.length > 0 && (
+              {draftFilterCount > 0 && (
                 <div className="flex justify-end">
                   <button
                     onClick={onClearFilters}
@@ -316,6 +461,8 @@ export function LedgerFilterBar({
                   })}
                 </div>
               </div>
+
+              {advancedFilterControls}
             </div>
           </BottomSheet>
         )}

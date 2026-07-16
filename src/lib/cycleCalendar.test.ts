@@ -16,7 +16,7 @@ describe('buildCycleCalendar', () => {
 
     expect(result.days[0].dateKey).toBe('2026-02-28')
     expect(result.days[0].net).toBe(100)
-    expect(result.days.at(-1)?.dateKey).toBe('2026-03-27')
+    expect(result.days.at(-1)?.dateKey).toBe('2026-03-30')
   })
 
   it('groups recurring-payment names by due date', () => {

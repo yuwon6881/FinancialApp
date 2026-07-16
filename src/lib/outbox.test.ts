@@ -72,7 +72,7 @@ describe('applyOpsToList', () => {
     expect(result[0]).toMatchObject({ id: 'local-1', name: 'New tx', isPendingSync: true })
   })
 
-  it('gives an optimistic transaction the queued time on its selected date for sorting', () => {
+  it('gives an optimistic transaction its actual UTC queue timestamp', () => {
     const createdAt = Date.parse('2026-07-11T05:06:07.890Z')
     const ops = [makeOp({
       type: 'add',
@@ -83,7 +83,7 @@ describe('applyOpsToList', () => {
 
     const result = applyOpsToList([] as TestItem[], ops, 'transaction')
 
-    expect(result[0].postedAt).toBe('2026-06-10T05:06:07.890Z')
+    expect(result[0].postedAt).toBe('2026-07-11T05:06:07.890Z')
   })
 
   it('preserves an explicitly supplied transaction timestamp', () => {

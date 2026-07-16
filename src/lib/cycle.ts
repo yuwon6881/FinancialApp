@@ -28,7 +28,14 @@ export function getCycleRangeDates(year: number, monthIndex: number, cycleDay: n
   const start = new Date(year, monthIndex - 1, startDayActual)
   start.setHours(0, 0, 0, 0)
 
-  const end = addMonthsClamped(start, 1)
+  // The end is the day before the NEXT cycle's clamped start so consecutive cycles
+  // tile with no gaps or overlaps. Deriving it from this month's start (addMonthsClamped)
+  // drops days whenever cycleDay > 28 and adjacent months clamp to different lengths.
+  const nextMonthIndex = monthIndex === 12 ? 1 : monthIndex + 1
+  const nextYear = monthIndex === 12 ? year + 1 : year
+  const daysInNextMonth = new Date(nextYear, nextMonthIndex, 0).getDate()
+  const nextStartDay = Math.min(cycleDay, daysInNextMonth)
+  const end = new Date(nextYear, nextMonthIndex - 1, nextStartDay)
   end.setDate(end.getDate() - 1)
   end.setHours(23, 59, 59, 999)
   return { start, end }
@@ -58,7 +65,12 @@ export function getCurrentCycleYearAndMonth(cycleDay: number): { year: number; m
   const now = new Date()
   let year = now.getFullYear()
   let monthIndex = now.getMonth() + 1
-  if (cycleDay > 1 && now.getDate() < cycleDay) {
+  // Clamp cycleDay to this month's length before comparing, matching getCycleRangeDates.
+  // A raw "getDate() < cycleDay" would misattribute a clamped last-of-month day
+  // (e.g. Feb 28 with cycleDay 31) to the previous cycle, contradicting the range.
+  const daysInMonth = new Date(year, monthIndex, 0).getDate()
+  const clampedStart = Math.min(cycleDay, daysInMonth)
+  if (cycleDay > 1 && now.getDate() < clampedStart) {
     monthIndex--
     if (monthIndex < 1) {
       monthIndex = 12

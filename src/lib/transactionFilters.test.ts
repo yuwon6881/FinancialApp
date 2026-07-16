@@ -96,6 +96,23 @@ describe('matchesTransactionFilters', () => {
     expect(matchesTransactionFilters(tx({ amount: 5, ledgerCategory: 'Income' }), { txType: 'transfer' })).toBe(false)
   })
 
+  it('applies inclusive date ranges', () => {
+    expect(matchesTransactionFilters(tx({ date: '2026-07-10' }), { startDate: '2026-07-10', endDate: '2026-07-10' })).toBe(true)
+    expect(matchesTransactionFilters(tx({ date: '2026-07-09' }), { startDate: '2026-07-10' })).toBe(false)
+    expect(matchesTransactionFilters(tx({ date: '2026-07-11' }), { endDate: '2026-07-10' })).toBe(false)
+  })
+
+  it('applies amount ranges to absolute values', () => {
+    expect(matchesTransactionFilters(tx({ amount: -50 }), { minAmount: 50, maxAmount: 100 })).toBe(true)
+    expect(matchesTransactionFilters(tx({ amount: 49.99 }), { minAmount: 50 })).toBe(false)
+    expect(matchesTransactionFilters(tx({ amount: -100.01 }), { maxAmount: 100 })).toBe(false)
+  })
+
+  it('filters recurring transactions by their recurring payment link', () => {
+    expect(matchesTransactionFilters(tx({ recurringPaymentId: 'rent' }), { recurringOnly: true })).toBe(true)
+    expect(matchesTransactionFilters(tx({ recurringPaymentId: null }), { recurringOnly: true })).toBe(false)
+  })
+
   it('requires all provided criteria to pass', () => {
     const t = tx({ description: 'Salary', amount: 500, category: 'Salary', ledgerCategory: 'Income' })
     expect(matchesTransactionFilters(t, { search: 'sal', buckets: ['Income'], txType: 'inflow' })).toBe(true)

@@ -58,6 +58,9 @@ export interface TransactionQuery {
   txType?: 'inflow' | 'outflow' | 'transfer' | null
   startDate?: string
   endDate?: string
+  minAmount?: number
+  maxAmount?: number
+  recurringOnly?: boolean
 }
 
 function appendTransactionQuery(params: URLSearchParams, query: TransactionQuery): void {
@@ -67,6 +70,9 @@ function appendTransactionQuery(params: URLSearchParams, query: TransactionQuery
   if (query.txType) params.append('txType', query.txType)
   if (query.startDate) params.append('startDate', query.startDate)
   if (query.endDate) params.append('endDate', query.endDate)
+  if (query.minAmount !== undefined) params.append('minAmount', query.minAmount.toString())
+  if (query.maxAmount !== undefined) params.append('maxAmount', query.maxAmount.toString())
+  if (query.recurringOnly) params.append('recurringOnly', 'true')
 }
 
 export async function exportTransactionsCsv(params: TransactionQuery): Promise<{ blob: Blob; filename: string }> {

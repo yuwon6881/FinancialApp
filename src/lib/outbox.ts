@@ -29,11 +29,8 @@ export type DispatchResult =
   | { item: WishlistItem; transaction: Transaction; id?: undefined }
   | void
 
-function getOptimisticTransactionPostedAt(date: unknown, createdAt: number): string {
-  const queuedAt = new Date(createdAt).toISOString()
-  return typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)
-    ? `${date}T${queuedAt.slice(11)}`
-    : queuedAt
+function getOptimisticTransactionPostedAt(createdAt: number): string {
+  return new Date(createdAt).toISOString()
 }
 
 export interface QueuedOp {
@@ -135,13 +132,17 @@ export function enqueue(
   activeSyncOpId?: string | null
 ): QueuedOp[] {
   const targetIdStr = String(targetId)
+  const createdAt = Date.now()
+  const timestampedPayload = entity === 'transaction' && type === 'add' && !payload?.postedAt
+    ? { ...payload, postedAt: getOptimisticTransactionPostedAt(createdAt) }
+    : payload
   const newOp: QueuedOp = {
     id: createOpId(),
     entity,
     type,
     targetId: targetIdStr,
-    payload,
-    createdAt: Date.now(),
+    payload: timestampedPayload,
+    createdAt,
     retryCount: 0,
     isUndo
   }
@@ -293,7 +294,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
       const newItem = {
         ...op.payload,
         ...(entity === 'transaction' && !op.payload?.postedAt
-          ? { postedAt: getOptimisticTransactionPostedAt(op.payload?.date, op.createdAt) }
+          ? { postedAt: getOptimisticTransactionPostedAt(op.createdAt) }
           : {}),
         id: parsedId,
         isPendingSync: !op.isCompleted
@@ -464,5 +465,11 @@ function isWellFormedOp(op: unknown): op is QueuedOp {
 
 export function sanitizeQueuedOps(value: unknown): QueuedOp[] {
   if (!Array.isArray(value)) return []
-  return value.filter(isWellFormedOp).map(o => ({ ...o, targetId: String(o.targetId) }))
+  return value.filter(isWellFormedOp).map(o => ({
+    ...o,
+    targetId: String(o.targetId),
+    payload: o.entity === 'transaction' && o.type === 'add' && !o.payload?.postedAt
+      ? { ...o.payload, postedAt: getOptimisticTransactionPostedAt(o.createdAt) }
+      : o.payload,
+  }))
 }

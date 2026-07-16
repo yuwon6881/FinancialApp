@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { addWishlistItem, fetchWishlist, purchaseWishlistItem, unpurchaseWishlistItem } from '@/lib/api/wishlist'
 import { fetchTransactionById } from '@/lib/api/transactions'
-import { ApiError } from '@/lib/api/client'
 
 describe('wishlist integration (purchase → transaction linkage)', () => {
   it('creates a wishlist item', async () => {
@@ -30,10 +29,13 @@ describe('wishlist integration (purchase → transaction linkage)', () => {
     expect(fetched.wishlistItemId).toBe(item.id)
   })
 
-  it('rejects purchasing the same item twice', async () => {
+  it('returns the original transaction when a purchase is retried', async () => {
     const item = await addWishlistItem({ name: 'Monitor', price: 300 })
-    await purchaseWishlistItem(item.id)
-    await expect(purchaseWishlistItem(item.id)).rejects.toBeInstanceOf(ApiError)
+    const first = await purchaseWishlistItem(item.id)
+    const retry = await purchaseWishlistItem(item.id)
+
+    expect(retry.item.purchaseTransactionId).toBe(first.transaction.id)
+    expect(retry.transaction.id).toBe(first.transaction.id)
   })
 
   it('unpurchasing clears the purchased flag', async () => {
