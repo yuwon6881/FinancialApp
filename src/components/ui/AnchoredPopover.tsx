@@ -47,6 +47,7 @@ export const AnchoredPopover = forwardRef<HTMLDivElement, AnchoredPopoverProps>(
 }, forwardedRef) => {
   const panelRef = useRef<HTMLDivElement | null>(null)
   const [position, setPosition] = useState<Position | null>(null)
+  const isPositioned = position !== null
 
   const setPanelRef = useCallback((node: HTMLDivElement | null) => {
     panelRef.current = node
@@ -132,7 +133,7 @@ export const AnchoredPopover = forwardRef<HTMLDivElement, AnchoredPopoverProps>(
       window.visualViewport?.removeEventListener('scroll', handleViewportChange)
       observer?.disconnect()
     }
-  }, [anchorRef, open, updatePosition])
+  }, [anchorRef, isPositioned, open, updatePosition])
 
   if (!open) return null
 
@@ -148,6 +149,7 @@ export const AnchoredPopover = forwardRef<HTMLDivElement, AnchoredPopoverProps>(
 
   return createPortal(
     <div
+      key={isPositioned ? 'positioned' : 'measurement'}
       {...props}
       ref={setPanelRef}
       data-floating-overlay=""
