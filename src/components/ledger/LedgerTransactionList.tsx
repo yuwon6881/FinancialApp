@@ -163,7 +163,7 @@ export function LedgerTransactionList({
         </AnimatePresence>
         {hasRows && (
           <div className="flex flex-col gap-2.5 p-4 bg-card border border-border/60 rounded-xl text-xs shadow-xs select-none">
-            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Page Total Summary</div>
+            <div className="text-xs font-extrabold text-foreground/80 uppercase tracking-wider border-b border-border/30 pb-2.5 mb-1">Page Total Summary</div>
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground font-semibold">Total Outflow (Debit)</span>
               <span className="text-orange-500 font-bold text-sm">{formatSensitive(pageTotals.outflow)}</span>
