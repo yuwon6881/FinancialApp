@@ -1,5 +1,8 @@
 @import "tailwindcss";
 @import "shadcn/tailwind.css";
+/* Self-hosted Inter (wght + opsz axes): no render-blocking third-party CSS, and the
+   PWA precache makes offline first-paint typography reliable. */
+@import "@fontsource-variable/inter/opsz.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -607,12 +610,19 @@ html {
     will-change: transform, opacity;
 }
 
+/* Skip layout/paint for off-screen ledger rows ("show all cycles" renders up to
+   ~100 at once). The intrinsic size keeps scrollbar geometry stable. */
+.cv-row {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 88px;
+}
+
 @layer base {
     * {
         @apply border-border outline-ring/50;
     }
     html {
-        font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        font-family: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text",
             "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         /* Inter's optical-size + contextual alternates for a sharper, premium read */
         font-feature-settings: "cv11", "ss01", "cv02";

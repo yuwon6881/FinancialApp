@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from "@tailwindcss/vite"
 import path from "path"
 import { VitePWA } from 'vite-plugin-pwa'
+import { visualizer } from 'rollup-plugin-visualizer'
 
 // Inject a Content-Security-Policy <meta> at build time. This is defense-in-depth for both
 // cookie-authenticated web clients and native clients using a secure-storage bearer token:
@@ -28,11 +29,11 @@ function cspMetaPlugin(apiUrl: string | undefined): Plugin {
       const csp = [
         "default-src 'self'",
         "script-src 'self'",
-        // 'unsafe-inline' covers the inline splash <style> + Radix/Tailwind inline styles;
-        // fonts.googleapis.com is the Google Fonts stylesheet host.
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        // 'unsafe-inline' covers the inline splash <style> + Radix/Tailwind inline styles.
+        // Inter is self-hosted (fontsource), so no Google Fonts hosts are needed.
+        "style-src 'self' 'unsafe-inline'",
         "img-src 'self' data: blob:",
-        "font-src 'self' data: https://fonts.gstatic.com",
+        "font-src 'self' data:",
         `connect-src ${connectSrc}`,
         "worker-src 'self'",
         "manifest-src 'self'",
@@ -102,9 +103,13 @@ export default defineConfig(({ mode }) => {
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+        // Precache only the latin Inter subsets for offline first paint; the other
+        // unicode-range subsets are never requested for this app's English UI.
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}', '**/inter-latin*.woff2']
       }
-    })
+    }),
+    // Opt-in bundle breakdown: ANALYZE=1 npm run build -> stats.html (not emitted otherwise).
+    ...(process.env.ANALYZE ? [visualizer({ filename: 'stats.html', gzipSize: true, brotliSize: true })] : [])
   ],
   resolve: {
     alias: {

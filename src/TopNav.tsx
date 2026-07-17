@@ -262,6 +262,8 @@ const TopNav: React.FC<TopNavProps> = ({
               onClick={() => setIsBellOpen(prev => !prev)}
               className="p-1.5 bg-amber-500/5 border border-amber-500/10 hover:bg-amber-500/10 hover:border-amber-500/20 text-amber-500/80 hover:text-amber-500 rounded-xl cursor-pointer transition duration-150 flex items-center justify-center relative"
               title="Subscription Notifications"
+              aria-label="Subscription Notifications"
+              aria-expanded={isBellOpen}
             >
               <Bell className="size-4 text-amber-500" />
               {hasAlerts && (

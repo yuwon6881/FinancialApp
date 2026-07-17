@@ -68,7 +68,7 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
   const split = transaction.id.includes('-split-')
   const formatted = formatCurrencyVal(outflow ? Math.abs(transaction.amount) : transaction.amount, props.currency)
   return (
-    <motion.div variants={rowFadeVariants}>
+    <motion.div variants={rowFadeVariants} className="cv-row">
       <SwipeableRow
         id={`tx-row-${transaction.id}`}
         hint={props.hint}

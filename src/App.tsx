@@ -811,6 +811,8 @@ function App() {
                 bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))'
               }}
               title={prefs.activeTab === 'drafts' ? 'Sync Batch to Server' : 'Open Menu'}
+              aria-label={prefs.activeTab === 'drafts' ? 'Sync Batch to Server' : 'Open Menu'}
+              aria-expanded={prefs.activeTab === 'drafts' ? undefined : isFabOpen}
             >
               {prefs.activeTab === 'drafts' ? (
                 <Upload className="size-6" />
