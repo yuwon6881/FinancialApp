@@ -13,9 +13,16 @@ export function FingerprintSection() {
   const { hideSensitive, showToast } = useAppContext()
   const [open, setOpen] = useState(false)
   const [credentials, setCredentials] = useState<FingerprintCredentialSummary[]>([])
+  const [credentialsLoaded, setCredentialsLoaded] = useState(false)
   const [busy, setBusy] = useState(false)
   const [available, setAvailable] = useState(false)
-  const load = async () => setCredentials(await api.listFingerprintCredentials())
+  const load = async () => {
+    try {
+      setCredentials(await api.listFingerprintCredentials())
+    } finally {
+      setCredentialsLoaded(true)
+    }
+  }
   useEffect(() => {
     void load().catch(console.error)
     void isPlatformAuthenticatorAvailable().then(setAvailable)
@@ -28,6 +35,14 @@ export function FingerprintSection() {
     try { legacyHex = base64UrlToHex(stored) } catch { /* Legacy value was not base64url. */ }
     return credentials.some(credential => credential.id.toUpperCase() === stored.toUpperCase() || credential.id.toUpperCase() === legacyHex)
   }, [credentials])
+  const enabledOnAccount = credentials.length > 0
+  const status = !credentialsLoaded
+    ? { label: 'Checking', className: 'text-muted-foreground' }
+    : enrolledHere
+      ? { label: 'Enabled here', className: 'text-emerald-500' }
+      : enabledOnAccount
+        ? { label: 'Available', className: 'text-blue-500' }
+        : { label: 'Not enabled', className: 'text-muted-foreground' }
 
   const enroll = async () => {
     if (hideSensitive) return
@@ -74,10 +89,16 @@ export function FingerprintSection() {
         <ShieldCheck className="size-5 text-emerald-500 shrink-0" />
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-bold text-foreground">Fingerprint Login</h3>
-          <p className="text-[11px] text-muted-foreground">Unlock with this device's fingerprint or face unlock.</p>
+          <p className="text-[11px] text-muted-foreground">
+            {enrolledHere
+              ? "Unlock with this device's fingerprint or face unlock."
+              : enabledOnAccount
+                ? 'Enabled for this account; set up this device to use it here.'
+                : "Unlock with this device's fingerprint or face unlock."}
+          </p>
         </div>
-        <span className={`shrink-0 text-[10px] font-bold uppercase tracking-wider ${enrolledHere ? 'text-emerald-500' : 'text-muted-foreground'}`}>
-          {enrolledHere ? 'Enabled' : 'Disabled'}
+        <span className={`shrink-0 text-[10px] font-bold uppercase tracking-wider ${status.className}`}>
+          {status.label}
         </span>
         {open ? <ChevronUp className="size-4 text-muted-foreground shrink-0" /> : <ChevronDown className="size-4 text-muted-foreground shrink-0" />}
       </button>
@@ -102,7 +123,7 @@ export function FingerprintSection() {
           ) : (
             <button type="button" onClick={() => void enroll()} disabled={busy || hideSensitive} className="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 disabled:opacity-50 text-white">
               {busy ? <span className="size-3.5 rounded-full border-2 border-t-transparent animate-spin" /> : <Fingerprint className="size-3.5" />}
-              {credentials.length ? 'Add another device' : 'Enable on this device'}
+              {enabledOnAccount ? 'Set up this device' : 'Enable on this device'}
             </button>
           )}
         </div>

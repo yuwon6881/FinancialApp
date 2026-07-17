@@ -136,11 +136,22 @@ export const AnchoredPopover = forwardRef<HTMLDivElement, AnchoredPopoverProps>(
 
   if (!open) return null
 
+  // Match-width controls should also be measured at their final width. Measuring
+  // at natural content width and applying the anchor width one frame later can
+  // change wrapping/height and cause a second visible position correction.
+  const initialAnchorWidth = matchAnchorWidth && anchorRef.current
+    ? Math.min(
+        Math.max(anchorRef.current.getBoundingClientRect().width, minWidth),
+        Math.max(0, (document.documentElement.clientWidth || window.innerWidth) - viewportPadding * 2),
+      )
+    : undefined
+
   return createPortal(
     <div
       {...props}
       ref={setPanelRef}
       data-floating-overlay=""
+      data-positioned={position ? '' : undefined}
       data-side={position?.side}
       className={className}
       style={{
@@ -148,10 +159,17 @@ export const AnchoredPopover = forwardRef<HTMLDivElement, AnchoredPopoverProps>(
         position: 'fixed',
         top: position?.top ?? 0,
         left: position?.left ?? 0,
-        width: matchAnchorWidth && position ? position.anchorWidth : style?.width,
+        width: matchAnchorWidth ? (position?.anchorWidth ?? initialAnchorWidth) : style?.width,
         maxWidth: `calc(100vw - ${viewportPadding * 2}px)`,
         maxHeight: position?.maxHeight,
         visibility: position ? 'visible' : 'hidden',
+        // The first portal frame exists only so we can measure natural panel
+        // dimensions. Do not let its entrance animation begin at (0, 0), or the
+        // browser will animate that stale frame toward the anchored position.
+        opacity: position ? style?.opacity : 0,
+        pointerEvents: position ? style?.pointerEvents : 'none',
+        animation: position ? style?.animation : 'none',
+        transition: position ? style?.transition : 'none',
       }}
     >
       {children}
