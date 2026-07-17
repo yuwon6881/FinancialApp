@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRightLeft } from 'lucide-react'
 import { listContainerVariants } from '../../lib/animations'
 import type { Transaction } from '../../types'
 import { DesktopLedgerRow, MobileLedgerRow } from './LedgerRows'
@@ -39,6 +39,7 @@ export function LedgerTransactionList({
   formatSensitive,
 }: LedgerTransactionListProps) {
   const hasRows = transactions.length > 0
+  const net = pageTotals.inflow - pageTotals.outflow
   return (
     <>
       {/* Ledger Table - Desktop */}
@@ -78,16 +79,10 @@ export function LedgerTransactionList({
               ))}
               {hasRows && (
                 <tr className="bg-muted/25 font-bold border-t-2 border-border text-xs select-none">
-                  <td className="p-4 align-top" colSpan={4}>
+                  <td className="p-4 align-middle" colSpan={4}>
                     <span className="uppercase tracking-wider text-foreground font-extrabold">
                       Page Total <span className="text-muted-foreground font-bold normal-case tracking-normal">({transactions.length} items)</span>
                     </span>
-                    {pageTotals.transfer > 0 && (
-                      <span className="mt-1 flex items-start gap-1.5 text-[10px] font-semibold text-blue-500 normal-case tracking-normal">
-                        <ArrowRight className="size-3 mt-px shrink-0" />
-                        <span>Incl. {formatSensitive(pageTotals.transfer)} moved / allocated between buckets — internal, not in debit or credit.</span>
-                      </span>
-                    )}
                   </td>
                   {/* Wrapped in the same pill shape as the row values so the totals line up exactly
                       under each column (plain text sat ~0.6rem further right than the pill text),
@@ -103,6 +98,30 @@ export function LedgerTransactionList({
                     </span>
                   </td>
                   <td className="p-4"></td>
+                </tr>
+              )}
+              {/* Secondary totals row: the transfer figure as a clearly labelled chip
+                  (rather than a stray sentence), plus the page Net Position. */}
+              {hasRows && (
+                <tr className="bg-muted/25 border-t border-border/40 text-xs select-none">
+                  <td className="px-4 py-3" colSpan={7}>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      {pageTotals.transfer > 0 ? (
+                        <span className="inline-flex items-center gap-2 rounded-lg bg-blue-500/10 ring-1 ring-inset ring-blue-500/30 px-2.5 py-1.5 text-blue-500">
+                          <ArrowRightLeft className="size-3.5 shrink-0" />
+                          <span className="font-semibold">Transferred / Allocated</span>
+                          <span className="font-extrabold">{formatSensitive(pageTotals.transfer)}</span>
+                          <span className="text-[10px] font-medium text-blue-500/70">internal — excluded from debit &amp; credit</span>
+                        </span>
+                      ) : <span />}
+                      <span className="inline-flex items-center gap-2">
+                        <span className="uppercase tracking-wider text-muted-foreground font-bold text-[11px]">Net Position</span>
+                        <span className={`font-extrabold text-sm ${net >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
+                          {net >= 0 ? '+' : '-'}{formatSensitive(Math.abs(net))}
+                        </span>
+                      </span>
+                    </div>
+                  </td>
                 </tr>
               )}
               </AnimatePresence>
@@ -156,7 +175,7 @@ export function LedgerTransactionList({
               <div className="border-t border-border/30 pt-2.5">
                 <div className="flex justify-between items-center">
                   <span className="text-blue-500 font-semibold flex items-center gap-1.5">
-                    <ArrowRight className="size-3.5" /> Moved / Allocated
+                    <ArrowRightLeft className="size-3.5" /> Transferred / Allocated
                   </span>
                   <span className="text-blue-500 font-bold text-sm">{formatSensitive(pageTotals.transfer)}</span>
                 </div>
@@ -167,9 +186,9 @@ export function LedgerTransactionList({
             )}
             <div className="flex justify-between items-center border-t border-border/50 pt-2.5 font-bold">
               <span className="text-foreground">Net Position</span>
-              <span className={`${pageTotals.inflow - pageTotals.outflow >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
-                {pageTotals.inflow - pageTotals.outflow >= 0 ? '+' : '-'}
-                {formatSensitive(Math.abs(pageTotals.inflow - pageTotals.outflow))}
+              <span className={`${net >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
+                {net >= 0 ? '+' : '-'}
+                {formatSensitive(Math.abs(net))}
               </span>
             </div>
           </div>
