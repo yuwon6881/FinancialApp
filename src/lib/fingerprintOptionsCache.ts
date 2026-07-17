@@ -11,6 +11,7 @@ type CacheKind = 'login' | 'assert'
 type CacheEntry = {
   promise: Promise<AssertionOptionsResult>
   createdAt: number
+  username?: string
 }
 
 const PREFETCH_TTL_MS = 4 * 60 * 1000
@@ -21,15 +22,16 @@ const cache: Record<CacheKind, CacheEntry | null> = {
 
 function getCachedOptions(
   kind: CacheKind,
-  fetcher: () => Promise<AssertionOptionsResult>
+  fetcher: () => Promise<AssertionOptionsResult>,
+  username?: string
 ): Promise<AssertionOptionsResult> {
   const existing = cache[kind]
-  if (existing && Date.now() - existing.createdAt < PREFETCH_TTL_MS) {
+  if (existing && Date.now() - existing.createdAt < PREFETCH_TTL_MS && existing.username === username) {
     return existing.promise
   }
 
   const promise = fetcher()
-  cache[kind] = { promise, createdAt: Date.now() }
+  cache[kind] = { promise, createdAt: Date.now(), username }
   promise.catch(() => {
     if (cache[kind]?.promise === promise) {
       cache[kind] = null
@@ -38,12 +40,12 @@ function getCachedOptions(
   return promise
 }
 
-export function prefetchFingerprintLoginOptions(): Promise<AssertionOptionsResult> {
-  return getCachedOptions('login', api.getFingerprintLoginOptions)
+export function prefetchFingerprintLoginOptions(username?: string): Promise<AssertionOptionsResult> {
+  return getCachedOptions('login', () => api.getFingerprintLoginOptions(username), username)
 }
 
-export function getCachedFingerprintLoginOptions(): Promise<AssertionOptionsResult> {
-  return getCachedOptions('login', api.getFingerprintLoginOptions)
+export function getCachedFingerprintLoginOptions(username?: string): Promise<AssertionOptionsResult> {
+  return getCachedOptions('login', () => api.getFingerprintLoginOptions(username), username)
 }
 
 export function clearCachedFingerprintLoginOptions(): void {

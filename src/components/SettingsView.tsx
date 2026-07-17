@@ -171,7 +171,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   onChange={val => view.setCycleDayInput(String(val))}
                   options={Array.from({ length: 28 }, (_, i) => ({
                     value: (i + 1).toString(),
-                    label: `${i + 1}${getDayWithSuffix(i + 1)} of month`
+                    label: `${i + 1}${getDayWithSuffix(i + 1)}`
                   }))}
                   className="w-full"
                 />
@@ -185,7 +185,10 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   options={[
                     { value: 'USD', label: 'USD ($)' },
                     { value: 'EUR', label: 'EUR (€)' },
-                    { value: 'GBP', label: 'GBP (£)' }
+                    { value: 'GBP', label: 'GBP (£)' },
+                    { value: 'MYR', label: 'MYR (RM)' },
+                    { value: 'SGD', label: 'SGD (S$)' },
+                    { value: 'CNY', label: 'CNY (¥)' }
                   ]}
                   className="w-full"
                 />

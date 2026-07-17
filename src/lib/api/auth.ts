@@ -160,8 +160,9 @@ export async function deleteFingerprintCredential(id: string): Promise<void> {
   })
 }
 
-export async function getFingerprintLoginOptions(): Promise<{ challengeId: string; options: AssertionOptionsJson }> {
-  return request('/auth/webauthn/login/options', {
+export async function getFingerprintLoginOptions(username?: string): Promise<{ challengeId: string; options: AssertionOptionsJson }> {
+  const url = username ? `/auth/webauthn/login/options?username=${encodeURIComponent(username)}` : '/auth/webauthn/login/options'
+  return request(url, {
     method: 'POST',
     authenticated: false,
     errorMessage: 'Fingerprint login is not available',

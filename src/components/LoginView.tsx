@@ -35,6 +35,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [pendingToken, setPendingToken] = useState<string | null>(null)
   const [twoFactorCode, setTwoFactorCode] = useState('')
   const [twoFactorLoading, setTwoFactorLoading] = useState(false)
+  const [loginStep, setLoginStep] = useState<1 | 2>(1)
 
   async function checkStatus() {
     try {
@@ -56,22 +57,23 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     isPlatformAuthenticatorAvailable().then(setPlatformAuthAvailable)
   }, [])
 
+  // No account yet (first user) OR an invitee who opted into signup while slots remain.
+  const registering = !isRegistered || wantsRegister
+
   useEffect(() => {
-    if (!isRegistered || !hasFingerprint || !platformAuthAvailable) {
+    if (!isRegistered || !hasFingerprint || !platformAuthAvailable || registering || loginStep !== 2 || !username.trim()) {
       clearCachedFingerprintLoginOptions()
       return
     }
-    void prefetchFingerprintLoginOptions().catch(() => undefined)
-  }, [isRegistered, hasFingerprint, platformAuthAvailable])
-
-  // No account yet (first user) OR an invitee who opted into signup while slots remain.
-  const registering = !isRegistered || wantsRegister
+    void prefetchFingerprintLoginOptions(username.trim()).catch(() => undefined)
+  }, [isRegistered, hasFingerprint, platformAuthAvailable, registering, loginStep, username])
 
   const toggleRegisterMode = () => {
     setWantsRegister(prev => !prev)
     setConfirmPassword('')
     setErrors({})
     setError(null)
+    setLoginStep(1)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,6 +82,18 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     if (!username.trim()) {
       newErrors.username = 'Username is required.'
     }
+
+    if (!registering && loginStep === 1) {
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors)
+        return
+      }
+      setErrors({})
+      setError(null)
+      setLoginStep(2)
+      return
+    }
+
     if (!password.trim()) {
       newErrors.password = 'Password is required.'
     }
@@ -269,38 +283,55 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
         <form noValidate onSubmit={handleSubmit} className="space-y-4">
           {/* Username Input */}
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Username</label>
-            <div className="relative">
-              <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/70 size-4 pointer-events-none" />
-              <input
-                type="text"
-                disabled={loading}
-                placeholder="Admin username"
-                value={username}
-                onChange={e => {
-                  setUsername(e.target.value)
-                  if (errors.username) {
-                    setErrors(prev => ({ ...prev, username: '' }))
-                  }
-                }}
-                autoComplete="off"
-                className={`w-full pl-10 pr-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                  errors.username 
-                    ? 'border-destructive focus:ring-destructive' 
-                    : 'border-border focus:ring-blue-500'
-                }`}
-              />
+          {(registering || loginStep === 1) && (
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Username</label>
+              <div className="relative">
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/70 size-4 pointer-events-none" />
+                <input
+                  type="text"
+                  disabled={loading}
+                  placeholder="Admin username"
+                  value={username}
+                  onChange={e => {
+                    setUsername(e.target.value)
+                    if (errors.username) {
+                      setErrors(prev => ({ ...prev, username: '' }))
+                    }
+                  }}
+                  autoComplete="off"
+                  className={`w-full pl-10 pr-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                    errors.username 
+                      ? 'border-destructive focus:ring-destructive' 
+                      : 'border-border focus:ring-blue-500'
+                  }`}
+                />
+              </div>
+              {errors.username && (
+                <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                  {errors.username}
+                </p>
+              )}
             </div>
-            {errors.username && (
-              <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                {errors.username}
-              </p>
-            )}
-          </div>
+          )}
+
+          {!registering && loginStep === 2 && (
+            <div className="flex items-center justify-between bg-muted/30 p-3 rounded-xl border border-border/40 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center gap-2.5">
+                <div className="bg-background rounded-lg p-1.5 border border-border/50 shadow-sm">
+                  <User className="size-4 text-muted-foreground" />
+                </div>
+                <span className="text-sm font-bold text-foreground">{username}</span>
+              </div>
+              <button type="button" onClick={() => { setLoginStep(1); setPassword(''); setError(null) }} className="text-[11px] px-2.5 py-1.5 bg-background hover:bg-muted border border-border/60 rounded-lg font-bold text-muted-foreground hover:text-foreground transition cursor-pointer shadow-sm">
+                Change
+              </button>
+            </div>
+          )}
 
           {/* Password Input */}
-          <div className="space-y-1">
+          {(registering || loginStep === 2) && (
+            <div className="space-y-1 animate-in fade-in slide-in-from-right-4 duration-300">
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Password</label>
             <div className="relative">
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/70 size-4 pointer-events-none" />
@@ -333,12 +364,13 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 </button>
               )}
             </div>
-            {errors.password && (
-              <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                {errors.password}
-              </p>
-            )}
-          </div>
+              {errors.password && (
+                <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                  {errors.password}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Confirm Password (only for registration) */}
           {registering && (
@@ -386,6 +418,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               <>
                 <Sparkles className="size-4" /> Create Credentials
               </>
+            ) : loginStep === 1 ? (
+              'Continue'
             ) : (
               'Unlock Ledger Dashboard'
             )}
@@ -393,7 +427,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         </form>
 
         {/* Additional-user signup toggle: only when at least one account exists and slots remain. */}
-        {isRegistered && registrationOpen && (
+        {isRegistered && registrationOpen && loginStep === 1 && (
           <button
             type="button"
             onClick={toggleRegisterMode}
@@ -404,7 +438,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           </button>
         )}
 
-        {!registering && isRegistered && hasFingerprint && platformAuthAvailable && (
+        {!registering && isRegistered && hasFingerprint && platformAuthAvailable && loginStep === 2 && (
           <button
             type="button"
             onClick={handleFingerprintLogin}
