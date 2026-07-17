@@ -40,12 +40,12 @@ function op(partial: Partial<QueuedOp>): QueuedOp {
 
 describe('computeOptimisticDashboard', () => {
   it('returns null when there is no dashboard data', () => {
-    expect(computeOptimisticDashboard(null, { activeOps: [], pendingOps: [], transactions: [] })).toBeNull()
+    expect(computeOptimisticDashboard(null, { activeOps: [], transactions: [] })).toBeNull()
   })
 
   it('returns an unchanged (but cloned) copy when there are no ops', () => {
     const dash = makeDashboard()
-    const result = computeOptimisticDashboard(dash, { activeOps: [], pendingOps: [], transactions: [] })
+    const result = computeOptimisticDashboard(dash, { activeOps: [], transactions: [] })
     expect(result).not.toBe(dash)
     expect(result!.stats).toEqual(dash.stats)
     expect(result!.stats).not.toBe(dash.stats)
@@ -54,8 +54,7 @@ describe('computeOptimisticDashboard', () => {
 
   it('applies a pending expense: balance down, expenses up, category adjusted', () => {
     const result = computeOptimisticDashboard(makeDashboard(), {
-      activeOps: [],
-      pendingOps: [op({ type: 'add', payload: { amount: -30, category: 'Food' } })],
+      activeOps: [op({ type: 'add', payload: { amount: -30, category: 'Food' } })],
       transactions: [],
     })
     expect(result!.stats.totalBalance).toBe(970)
@@ -67,8 +66,7 @@ describe('computeOptimisticDashboard', () => {
 
   it('counts an IncomeSplit add toward monthlyIncome as well as inflow', () => {
     const result = computeOptimisticDashboard(makeDashboard(), {
-      activeOps: [],
-      pendingOps: [op({ type: 'add', payload: { amount: 200, ledgerCategory: 'IncomeSplit:50,20,20,10' } })],
+      activeOps: [op({ type: 'add', payload: { amount: 200, ledgerCategory: 'IncomeSplit:50,20,20,10' } })],
       transactions: [],
     })
     expect(result!.stats.monthlyInflow).toBe(700)
@@ -78,8 +76,7 @@ describe('computeOptimisticDashboard', () => {
   it('applies an update as the delta against the original transaction', () => {
     const orig: Transaction = { id: 't1', amount: -20, category: 'Food', ledgerCategory: 'Essentials' } as Transaction
     const result = computeOptimisticDashboard(makeDashboard(), {
-      activeOps: [],
-      pendingOps: [op({ type: 'update', targetId: 't1', payload: { amount: -50 } })],
+      activeOps: [op({ type: 'update', targetId: 't1', payload: { amount: -50 } })],
       transactions: [orig],
     })
     // diff = -50 - (-20) = -30
@@ -92,8 +89,7 @@ describe('computeOptimisticDashboard', () => {
   it('reverses a delete using the original transaction amount', () => {
     const orig: Transaction = { id: 't1', amount: 500, category: 'Salary', ledgerCategory: 'Income' } as Transaction
     const result = computeOptimisticDashboard(makeDashboard(), {
-      activeOps: [],
-      pendingOps: [op({ type: 'delete', targetId: 't1' })],
+      activeOps: [op({ type: 'delete', targetId: 't1' })],
       transactions: [orig],
     })
     expect(result!.stats.totalBalance).toBe(500)
@@ -105,18 +101,17 @@ describe('computeOptimisticDashboard', () => {
   it('merges a pending settings update from activeOps', () => {
     const result = computeOptimisticDashboard(makeDashboard(), {
       activeOps: [op({ entity: 'settings', type: 'update', payload: { currency: 'EUR' } })],
-      pendingOps: [],
       transactions: [],
     })
     expect(result!.setting.currency).toBe('EUR')
   })
 
-  it('ignores transaction ops that appear only in activeOps, not pendingOps', () => {
+  it('keeps completed transaction deltas projected while refresh is pending', () => {
     const result = computeOptimisticDashboard(makeDashboard(), {
-      activeOps: [op({ type: 'add', payload: { amount: -30, category: 'Food' } })],
-      pendingOps: [],
+      activeOps: [op({ type: 'add', isCompleted: true, payload: { amount: -30, category: 'Food' } })],
       transactions: [],
     })
-    expect(result!.stats.totalBalance).toBe(1000)
+    expect(result!.stats.totalBalance).toBe(970)
+    expect(result!.stats.monthlyExpenses).toBe(50)
   })
 })

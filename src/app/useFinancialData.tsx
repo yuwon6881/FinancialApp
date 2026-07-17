@@ -99,7 +99,11 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
   // Persist draft transactions to localStorage
   useEffect(() => {
-    localStorage.setItem('draft_transactions', JSON.stringify(draftTransactions))
+    try {
+      localStorage.setItem('draft_transactions', JSON.stringify(draftTransactions))
+    } catch (storageError) {
+      console.warn('Could not persist draft transactions locally.', storageError)
+    }
   }, [draftTransactions])
 
   const toOutboxPayload = (value: object): OutboxPayload => ({ ...value })
@@ -132,11 +136,48 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     showToast,
     onAuthError: handleLogout,
     onLockError: markSessionLocked,
-    refresh: () => loadAll(selectedMonth || undefined, selectedYear || undefined, true),
+    refresh: async successfulOps => {
+      const ops = successfulOps.map(({ op }) => op)
+      const onlyWishlistCrud = ops.length > 0 && ops.every(op =>
+        op.entity === 'wishlistItem'
+        && (op.type === 'add' || op.type === 'update' || op.type === 'delete')
+      )
+      if (onlyWishlistCrud) {
+        const wishes = await api.fetchWishlist()
+        setWishlist(wishes)
+        setCachedJSON(CACHE_KEYS.wishlist, wishes)
+        setError(null)
+        isServerAwakeRef.current = true
+        return
+      }
+
+      const onlyCategoryAdds = ops.length > 0 && ops.every(op =>
+        op.entity === 'category' && op.type === 'add'
+      )
+      if (onlyCategoryAdds) {
+        const categories = await api.fetchCategories()
+        setCategoriesList(categories)
+        setCachedJSON(CACHE_KEYS.categories, categories)
+        setError(null)
+        isServerAwakeRef.current = true
+        return
+      }
+
+      // Transactions, recurring payments, purchases, category deletion, and
+      // full settings updates can affect multiple derived dashboard values.
+      // Reconcile those together and propagate any failure so completed
+      // optimistic operations remain projected until a later successful fetch.
+      await loadAll(selectedMonth || undefined, selectedYear || undefined, true, true)
+    },
   })
 
   // Fetch initial ledger and dashboard statistics
-  const loadAll = useCallback(async (month?: string, year?: number, isBackground = false) => {
+  const loadAll = useCallback(async (
+    month?: string,
+    year?: number,
+    isBackground = false,
+    rethrowOnError = false,
+  ) => {
     if (!token) return
     const requestSeq = ++loadAllSeqRef.current
     const isStale = () => requestSeq !== loadAllSeqRef.current
@@ -162,7 +203,11 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         transactionsPromise,
         api.fetchRecurringPayments(ac.signal),
         api.fetchCategories(ac.signal),
-        api.fetchWishlist(ac.signal).catch(() => []),
+        api.fetchWishlist(ac.signal).catch((wishlistError: unknown) => {
+          if (getErrorName(wishlistError) === 'AbortError' || rethrowOnError) throw wishlistError
+          console.warn('Could not refresh wishlist; keeping the last known local copy.', wishlistError)
+          return null
+        }),
         api.fetchAutocompleteSuggestions(ac.signal).catch(() => []),
         api.fetchWalletBalance(ac.signal).catch(() => null),
         insightsPromise
@@ -191,7 +236,9 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       setTransactions(txs)
       setRecurringPayments(recs)
       setCategoriesList(cats)
-      setWishlist(wishes)
+      if (wishes !== null) {
+        setWishlist(wishes)
+      }
       setAutocompleteSuggestions(autoSuggests)
       setError(null)
       isServerAwakeRef.current = true
@@ -200,7 +247,9 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       setCachedJSON(CACHE_KEYS.transactions, txs)
       setCachedJSON(CACHE_KEYS.recurringPayments, recs)
       setCachedJSON(CACHE_KEYS.categories, cats)
-      setCachedJSON(CACHE_KEYS.wishlist, wishes)
+      if (wishes !== null) {
+        setCachedJSON(CACHE_KEYS.wishlist, wishes)
+      }
       setCachedCycleSnapshot(dbData.setting.selectedMonth, dbData.setting.selectedYear, mergedDashboard, txs)
 
       const serverDark = dbData.setting.darkMode ?? false
@@ -218,20 +267,26 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         setHasShownModalThisSession(true)
       }
     } catch (err: unknown) {
-      if (getErrorName(err) === 'AbortError' || isStale()) return
+      if (getErrorName(err) === 'AbortError' || isStale()) {
+        if (rethrowOnError) throw err
+        return
+      }
       console.error(err)
       const isJustLoggedIn = Date.now() - lastUnlockedTimeRef.current < 10000
       if (errorMessageIncludes(err, '401') || errorMessageIncludes(err, 'unauthorized')) {
+        if (rethrowOnError) throw err
         if (!isJustLoggedIn) {
           void handleLogout()
         } else {
           setError(null)
         }
       } else if (errorMessageIncludes(err, '423')) {
+        if (rethrowOnError) throw err
         markSessionLocked()
       } else {
         setError('Could not connect to the database API server. Running in offline view mode.')
         isServerAwakeRef.current = false
+        if (rethrowOnError) throw err
       }
     } finally {
       if (!isStale()) {
@@ -242,7 +297,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   }, [token, lastUnlockedTimeRef, handleLogout, markSessionLocked, setDarkMode, setHideSensitive, hasShownModalThisSession, setShowLoginModal, loadAllAbortRef, setSelectedMonth, setSelectedYear])
 
   // Backup outbox/drafts on logout
-  const handleLogoutCleanup = useCallback(async (currentOwner: string) => {
+  const handleLogoutCleanup = useCallback(async (currentOwner: string, createBackup = true) => {
     // A new login must perform its own wake-up and initial fetch. Also invalidate
     // the outgoing session's request so its finally block cannot hide the next
     // session's loading skeleton after logout.
@@ -255,17 +310,42 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     const currentDrafts = draftTransactions
     const currentFailed = getFailedOps()
 
-    if (currentPending.length > 0) {
-      localStorage.setItem('pending_operations_backup', JSON.stringify({ owner: currentOwner, ops: currentPending }))
-    }
-    if (currentDrafts.length > 0) {
-      localStorage.setItem('draft_transactions_backup', JSON.stringify({ owner: currentOwner, transactions: currentDrafts }))
-    }
-    if (currentFailed.length > 0) {
-      localStorage.setItem('failed_operations_backup', JSON.stringify({ owner: currentOwner, ops: currentFailed }))
-    }
+    if (createBackup) {
+      let backupFailed = false
+      const tryBackup = (key: string, value: unknown) => {
+        try {
+          localStorage.setItem(key, JSON.stringify(value))
+        } catch (backupError) {
+          backupFailed = true
+          console.error(`Could not back up ${key} during logout.`, backupError)
+        }
+      }
 
-    backupModalDraftsOnLogout(currentOwner)
+      if (currentPending.length > 0) {
+        tryBackup('pending_operations_backup', { owner: currentOwner, ops: currentPending })
+      }
+      if (currentDrafts.length > 0) {
+        tryBackup('draft_transactions_backup', { owner: currentOwner, transactions: currentDrafts })
+      }
+      if (currentFailed.length > 0) {
+        tryBackup('failed_operations_backup', { owner: currentOwner, ops: currentFailed })
+      }
+
+      try {
+        backupModalDraftsOnLogout(currentOwner)
+      } catch (backupError) {
+        backupFailed = true
+        console.error('Could not back up modal drafts during logout.', backupError)
+      }
+
+      if (backupFailed) {
+        showToast(
+          'Some unsynced local changes could not be backed up, but sign-out will continue.',
+          'Local backup unavailable',
+          'warning',
+        )
+      }
+    }
 
     setDashboardData(null)
     setWalletBalance(null)
@@ -280,18 +360,30 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     setLoading(true)
 
     // Clear LocalStorage cache
-    localStorage.removeItem(CACHE_KEYS.dashboardData)
-    localStorage.removeItem(CACHE_KEYS.transactions)
-    localStorage.removeItem(CACHE_KEYS.recurringPayments)
-    localStorage.removeItem(CACHE_KEYS.categories)
-    localStorage.removeItem(CACHE_KEYS.wishlist)
-    localStorage.removeItem(CACHE_KEYS.walletBalance)
-    localStorage.removeItem(CACHE_KEYS.pendingTransactions)
-    localStorage.removeItem(CACHE_KEYS.pendingOperations)
-    localStorage.removeItem('failed_operations')
-    localStorage.removeItem('draft_transactions')
-    clearAllModalDrafts()
-  }, [getPendingOps, getFailedOps, draftTransactions, resetOutbox, setSelectedMonth, setSelectedYear])
+    for (const key of [
+      CACHE_KEYS.dashboardData,
+      CACHE_KEYS.transactions,
+      CACHE_KEYS.recurringPayments,
+      CACHE_KEYS.categories,
+      CACHE_KEYS.wishlist,
+      CACHE_KEYS.walletBalance,
+      CACHE_KEYS.pendingTransactions,
+      CACHE_KEYS.pendingOperations,
+      'failed_operations',
+      'draft_transactions',
+    ]) {
+      try {
+        localStorage.removeItem(key)
+      } catch (storageError) {
+        console.warn(`Could not remove local storage key ${key}.`, storageError)
+      }
+    }
+    try {
+      clearAllModalDrafts()
+    } catch (storageError) {
+      console.warn('Could not clear modal drafts.', storageError)
+    }
+  }, [getPendingOps, getFailedOps, draftTransactions, resetOutbox, setSelectedMonth, setSelectedYear, showToast])
 
   // Restore backups on login
   const handleLoginSuccessRestore = useCallback((newUsername: string) => {
@@ -439,8 +531,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const allCategories = useOptimisticList(categoriesList, activeOps, 'category')
 
   const optimisticDashboardData = useMemo(
-    () => computeOptimisticDashboard(dashboardData, { activeOps, pendingOps, transactions }),
-    [dashboardData, pendingOps, transactions, allTransactions]
+    () => computeOptimisticDashboard(dashboardData, { activeOps, transactions }),
+    [dashboardData, activeOps, transactions]
   )
 
   const formatSensitive = useCallback((val: number) => {
@@ -469,6 +561,14 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       hideSensitive: settings.hideSensitive ?? hideSensitive,
     }
     mutateQueue(prev => enqueue(prev, 'settings', 'update', 'settings', payload))
+  }
+
+  const handleUpdateDarkModePreference = (value: boolean) => {
+    mutateQueue(prev => enqueue(prev, 'settings', 'update', 'darkMode', { darkMode: value }))
+  }
+
+  const handleUpdateHideSensitivePreference = (value: boolean) => {
+    mutateQueue(prev => enqueue(prev, 'settings', 'update', 'hideSensitive', { hideSensitive: value }))
   }
 
   const handleAddCategory = (newCat: Omit<TransactionCategory, 'id'>) => {
@@ -841,6 +941,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     wakeUpAndSync,
     formatSensitive,
     handleUpdateSettings,
+    handleUpdateDarkModePreference,
+    handleUpdateHideSensitivePreference,
     handleAddCategory,
     handleDeleteCategory,
     requestDeleteCategory,

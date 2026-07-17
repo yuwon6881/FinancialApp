@@ -9,7 +9,7 @@ import type {
   WireTrendPoint,
 } from '../apiTypes'
 import { deobfuscateAmount, obfuscateAmount } from './amounts'
-import { apiFetch, cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
+import { cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
 
 export function fetchDashboard(month?: string, year?: number, signal?: AbortSignal): Promise<DashboardCore> {
   const params = new URLSearchParams()
@@ -126,21 +126,21 @@ export async function updateSettings(settings: {
 }
 
 export async function updateDarkMode(darkMode: boolean): Promise<void> {
-  const response = await apiFetch('/financial/dark-mode', {
+  await requestVoid('/financial/dark-mode', {
     method: 'PUT',
     ...jsonBody({ darkMode }),
+    errorMessage: 'Failed to persist dark mode preference',
   })
-  if (!response.ok) console.warn('Failed to persist dark mode preference to server')
-  else invalidateCache()
+  invalidateCache()
 }
 
 export async function updateHideSensitive(hideSensitive: boolean): Promise<void> {
-  const response = await apiFetch('/financial/hide-sensitive', {
+  await requestVoid('/financial/hide-sensitive', {
     method: 'PUT',
     ...jsonBody({ hideSensitive }),
+    errorMessage: 'Failed to persist hide sensitive preference',
   })
-  if (!response.ok) console.warn('Failed to persist hide sensitive preference to server')
-  else invalidateCache()
+  invalidateCache()
 }
 
 export async function selectPeriod(selectedMonth: string, selectedYear: number): Promise<void> {

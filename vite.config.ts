@@ -133,6 +133,10 @@ export default defineConfig(({ mode }) => {
             if (id.includes('framer-motion')) return 'vendor-motion'
             if (id.includes('radix-ui') || id.includes('@radix-ui')) return 'vendor-radix'
           }
+          // The offline drain/reconciliation state machine changes less often
+          // than the app shell and is large enough to benefit from a parallel,
+          // independently cached chunk.
+          if (id.includes('/src/lib/outboxSync') || id.includes('\\src\\lib\\outboxSync')) return 'sync-engine'
           // DatePicker is shared between the eager app shell (TopNav bell) and
           // several lazy views; keep it in its own parallel-loaded chunk instead
           // of pinning it into the main bundle (mirrors CustomSelect/SearchableSelect).

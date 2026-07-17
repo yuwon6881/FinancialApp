@@ -237,4 +237,20 @@ describe('split API client compatibility', () => {
     await expect(api.addCategory({ name: 'Food' }))
       .rejects.toThrow('Category already exists')
   })
+
+  it('rejects failed dark-mode and sensitive-display preference updates', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('{}', { status: 500 }))
+      .mockResolvedValueOnce(new Response('{}', { status: 503 }))
+    vi.stubGlobal('fetch', fetchMock)
+    Object.defineProperty(window, 'fetch', { value: fetchMock, configurable: true })
+
+    const api = await import('./api')
+
+    await expect(api.updateDarkMode(true))
+      .rejects.toMatchObject({ status: 500, message: 'Failed to persist dark mode preference' })
+    await expect(api.updateHideSensitive(false))
+      .rejects.toMatchObject({ status: 503, message: 'Failed to persist hide sensitive preference' })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
 })

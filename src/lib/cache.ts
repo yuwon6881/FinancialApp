@@ -166,11 +166,24 @@ export function hasCachedKey(key: string): boolean {
 }
 
 export function clearLocalFinancialData(): void {
-  for (const key of [...Object.values(CACHE_KEYS), CYCLE_SNAPSHOTS_KEY]) removeCachedKey(key)
+  for (const key of [...Object.values(CACHE_KEYS), CYCLE_SNAPSHOTS_KEY]) {
+    try {
+      removeCachedKey(key)
+    } catch {
+      // Clearing local data is best-effort. One rejected storage operation
+      // should not prevent the remaining caches and drafts from being removed.
+    }
+  }
   for (const key of [
     'draft_transactions', 'pending_operations_backup', 'pending_transactions_backup',
     'draft_transactions_backup', 'failed_operations', 'failed_operations_backup',
-  ]) localStorage.removeItem(key)
+  ]) {
+    try {
+      localStorage.removeItem(key)
+    } catch {
+      // See above.
+    }
+  }
 }
 
 // The dashboard cache is the source of truth for which month/year was last active,

@@ -32,26 +32,33 @@ export function useReceiptScanDraft(options: UseReceiptScanDraftOptions) {
   const [isScanning, setIsScanning] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
   const [showScanBanner, setShowScanBanner] = useState(false)
-  const [activeReceiptScanJobId, setActiveReceiptScanJobId] = useState<string | null>(null)
+  const [activeReceiptScanJobId, setActiveReceiptScanJobIdState] = useState<string | null>(null)
   const [showScanPicker, setShowScanPicker] = useState(false)
 
   const scanFileInputRef = useRef<HTMLInputElement>(null)
   const scanGalleryInputRef = useRef<HTMLInputElement>(null)
   const appliedReceiptScanJobRef = useRef<string | null>(null)
-  const locallyStartedReceiptScanJobsRef = useRef<Set<string>>(new Set(null))
+  const locallyStartedReceiptScanJobsRef = useRef<Set<string>>(new Set<string>())
+  const activeReceiptScanJobIdRef = useRef<string | null>(null)
+
+  const setActiveReceiptScanJobId = useCallback((scanId: string | null) => {
+    activeReceiptScanJobIdRef.current = scanId
+    setActiveReceiptScanJobIdState(scanId)
+  }, [])
 
   const clearScan = useCallback(() => {
     setScanError(null)
     setShowScanBanner(false)
-    const scanJobToClear = activeReceiptScanJobId
-    if (scanJobToClear) {
-      locallyStartedReceiptScanJobsRef.current.delete(scanJobToClear)
-    }
+    setIsScanning(false)
+    const scanJobToClear = activeReceiptScanJobIdRef.current
+    // Clear the ref synchronously so repeated close/submit events cannot issue
+    // duplicate delete requests before React commits the state update.
     setActiveReceiptScanJobId(null)
     if (scanJobToClear) {
+      locallyStartedReceiptScanJobsRef.current.delete(scanJobToClear)
       void onReceiptScanCleared?.(scanJobToClear)
     }
-  }, [activeReceiptScanJobId, onReceiptScanCleared])
+  }, [onReceiptScanCleared, setActiveReceiptScanJobId])
 
   const handleScanReceipt = useCallback(async (file: File) => {
     setIsScanning(true)
@@ -71,7 +78,7 @@ export function useReceiptScanDraft(options: UseReceiptScanDraftOptions) {
       if (scanFileInputRef.current) scanFileInputRef.current.value = ''
       if (scanGalleryInputRef.current) scanGalleryInputRef.current.value = ''
     }
-  }, [onReceiptScanStarted])
+  }, [onReceiptScanStarted, setActiveReceiptScanJobId])
 
   useEffect(() => {
     if (!receiptScanDraft) return
@@ -83,7 +90,9 @@ export function useReceiptScanDraft(options: UseReceiptScanDraftOptions) {
     if (showAddForm && !isLocallyStarted && !autoOpenAddForm) return
 
     appliedReceiptScanJobRef.current = receiptScanDraft.jobId
-    setActiveReceiptScanJobId(null)
+    // Keep the completed job id until the user submits or cancels so that
+    // consuming the draft also clears backend and persisted tracking state.
+    setActiveReceiptScanJobId(receiptScanDraft.jobId)
     setIsScanning(false)
     if (onStartEditPending) {
       onStartEditPending(null)
@@ -91,23 +100,30 @@ export function useReceiptScanDraft(options: UseReceiptScanDraftOptions) {
     openTransactionForm()
     applyReceiptScanResult(receiptScanDraft.result)
     setShowScanBanner(true)
-  }, [receiptScanDraft, showAddForm, autoOpenAddForm, openTransactionForm, applyReceiptScanResult, onStartEditPending])
+  }, [receiptScanDraft, showAddForm, autoOpenAddForm, openTransactionForm, applyReceiptScanResult, onStartEditPending, setActiveReceiptScanJobId])
 
   useEffect(() => {
-    if (!activeReceiptScanJobId) return
-
-    if (failedScanJob && failedScanJob.jobId === activeReceiptScanJobId) {
+    if (failedScanJob && (
+      failedScanJob.jobId === activeReceiptScanJobId
+      || locallyStartedReceiptScanJobsRef.current.has(failedScanJob.jobId)
+    )) {
       setScanError(failedScanJob.errorMessage)
       setIsScanning(false)
+      locallyStartedReceiptScanJobsRef.current.delete(failedScanJob.jobId)
       setActiveReceiptScanJobId(null)
       return
     }
 
-    if (!activeScanJobIds.includes(activeReceiptScanJobId)) {
+    if (!activeReceiptScanJobId) return
+
+    if (
+      !activeScanJobIds.includes(activeReceiptScanJobId)
+      && receiptScanDraft?.jobId !== activeReceiptScanJobId
+    ) {
       setIsScanning(false)
       setActiveReceiptScanJobId(null)
     }
-  }, [activeReceiptScanJobId, activeScanJobIds, failedScanJob])
+  }, [activeReceiptScanJobId, activeScanJobIds, failedScanJob, receiptScanDraft, setActiveReceiptScanJobId])
 
   return {
     isScanning,

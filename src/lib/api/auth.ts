@@ -80,8 +80,16 @@ export async function logout(): Promise<void> {
   } catch (error) {
     console.error('Logout request failed', error)
   } finally {
-    await tokenStore.clearToken()
-    sessionStorage.removeItem('csrf_token')
+    try {
+      await tokenStore.clearToken()
+    } catch (error) {
+      console.error('Could not clear the local authentication token.', error)
+    }
+    try {
+      sessionStorage.removeItem('csrf_token')
+    } catch (error) {
+      console.warn('Could not clear the cached CSRF token.', error)
+    }
     invalidateCache()
   }
 }

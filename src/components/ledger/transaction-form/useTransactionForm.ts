@@ -300,16 +300,12 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   }
 
   const handleCloseForm = () => {
-    const scanJobToClear = scanner.activeReceiptScanJobId
     dispatch({ type: 'CLOSE' })
     clearFormDraft()
     suggestions.clearSuggestions()
     scanner.clearScan()
     if (state.editingId && onStartEditPending) {
       onStartEditPending(null)
-    }
-    if (scanJobToClear) {
-      void onReceiptScanCleared?.(scanJobToClear)
     }
   }
 
@@ -339,23 +335,17 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       stabilityOverflowRedirect,
     })
 
-    const scanJobToClear = scanner.activeReceiptScanJobId
-
     if (state.mode === 'edit' && state.editingId) {
       const targetId = state.editingId
       dispatch({ type: 'RESET', todayDate, defaultCategory })
       clearFormDraft()
-      if (scanJobToClear) {
-        void onReceiptScanCleared?.(scanJobToClear)
-      }
+      scanner.clearScan()
       await onUpdateTransaction?.(targetId, mapped)
     } else {
       await onAddTransaction(mapped)
       dispatch({ type: 'RESET', todayDate, defaultCategory })
       clearFormDraft()
-      if (scanJobToClear) {
-        void onReceiptScanCleared?.(scanJobToClear)
-      }
+      scanner.clearScan()
     }
   }
 

@@ -43,7 +43,12 @@ vi.mock('@/components/LoginView', () => ({
 }))
 
 vi.mock('@/components/DashboardView', () => ({
-  DashboardView: () => <div data-testid="dashboard-view">Dashboard</div>
+  DashboardView: ({ wishlist = [] }: any) => (
+    <div data-testid="dashboard-view">
+      Dashboard
+      <span data-testid="dashboard-wishlist">{wishlist.map((item: any) => item.name).join(',')}</span>
+    </div>
+  )
 }))
 
 vi.hoisted(() => {
@@ -102,6 +107,30 @@ describe('App behaviors', () => {
       expect(api.fetchDashboard).toHaveBeenCalled()
       expect(screen.getByTestId('dashboard-view')).toBeDefined()
     })
+  })
+
+  it('preserves the cached wishlist when a transient refresh fails', async () => {
+    const cachedWishlist = [{
+      id: 1,
+      name: 'Camera',
+      price: 500,
+      priority: 'High',
+      isPurchased: false,
+      createdAt: '2026-07-16T00:00:00.000Z',
+      isActive: true,
+    }]
+    localStorage.setItem('auth_session', '1')
+    localStorage.setItem('auth_username', 'alice')
+    localStorage.setItem('cached_wishlist', JSON.stringify(cachedWishlist))
+    vi.mocked(api.fetchWishlist).mockRejectedValueOnce(new Error('temporary network failure'))
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(api.fetchWishlist).toHaveBeenCalled()
+      expect(screen.getByTestId('dashboard-wishlist').textContent).toContain('Camera')
+    }, { timeout: 5000 })
+    expect(JSON.parse(localStorage.getItem('cached_wishlist') || '[]')).toEqual(cachedWishlist)
   })
 
   it('performs cache preservation and local storage cleanup on logout', async () => {

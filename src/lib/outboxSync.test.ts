@@ -5,6 +5,7 @@ import {
   AUTH_RACE_BACKOFF_MS,
   SERVER_WAKE_BACKOFF_MS,
   type DrainQueueDeps,
+  type SuccessfulSyncOp,
 } from './outboxSync'
 import type { QueuedOp, DispatchResult, ToastCopy } from './outbox'
 
@@ -29,6 +30,8 @@ interface Harness {
   calls: Record<string, number>
   activeSyncIds: (string | null)[]
   backoffSetTo: number[]
+  errors: (string | null)[]
+  refreshArgs: SuccessfulSyncOp[][]
   syncing: { value: boolean }
 }
 
@@ -39,6 +42,8 @@ function makeHarness(overrides: Partial<DrainQueueDeps> = {}, initialQueue: Queu
   const emittedToasts: Array<{ copy: ToastCopy; hasUndo: boolean }> = []
   const activeSyncIds: (string | null)[] = []
   const backoffSetTo: number[] = []
+  const errors: (string | null)[] = []
+  const refreshArgs: SuccessfulSyncOp[][] = []
   const syncing = { value: false }
   let backoffUntil = 0
   const calls: Record<string, number> = {
@@ -51,6 +56,8 @@ function makeHarness(overrides: Partial<DrainQueueDeps> = {}, initialQueue: Queu
     token: 'tok',
     now: () => 1_000_000,
     getQueue: () => queue,
+    isOnline: () => true,
+    getRecentlyCompleted: () => recentlyCompleted,
     getEditingPendingId: () => null,
     getBackoffUntil: () => backoffUntil,
     getLastUnlockedTime: () => 0,
@@ -63,7 +70,7 @@ function makeHarness(overrides: Partial<DrainQueueDeps> = {}, initialQueue: Queu
     resolveDispatch: () => defaultDispatch,
     setSyncing: (v) => { syncing.value = v },
     setActiveSyncId: (id) => { activeSyncIds.push(id) },
-    setError: () => {},
+    setError: (message) => { errors.push(message) },
     setBackoff: (until) => {
       backoffUntil = until
       backoffSetTo.push(until)
@@ -74,6 +81,7 @@ function makeHarness(overrides: Partial<DrainQueueDeps> = {}, initialQueue: Queu
         if (ids.has(recentlyCompleted[i].id)) recentlyCompleted.splice(i, 1)
       }
     },
+    clearRecentlyCompleted: () => { recentlyCompleted.length = 0 },
     addFailedOp: (o) => { failedOps.push(o) },
     getSyncSuccessToast: () => ({ title: 'ok', message: 'done', tone: 'success' }),
     buildUndoAction: () => ({ label: 'Undo', onAction: () => {} }),
@@ -81,13 +89,28 @@ function makeHarness(overrides: Partial<DrainQueueDeps> = {}, initialQueue: Queu
     emitFailureToast: () => { calls.emitFailureToast++ },
     onAuthError: () => { calls.onAuthError++ },
     onLockError: () => { calls.onLockError++ },
-    refresh: async () => { calls.refresh++ },
+    refresh: async (successfulOps) => {
+      calls.refresh++
+      refreshArgs.push([...successfulOps])
+    },
     onSettled: () => { calls.onSettled++ },
     reTrigger: () => { calls.reTrigger++ },
     ...overrides,
   }
 
-  return { deps, queue, recentlyCompleted, failedOps, emittedToasts, calls, activeSyncIds, backoffSetTo, syncing }
+  return {
+    deps,
+    queue,
+    recentlyCompleted,
+    failedOps,
+    emittedToasts,
+    calls,
+    activeSyncIds,
+    backoffSetTo,
+    errors,
+    refreshArgs,
+    syncing,
+  }
 }
 
 describe('drainQueue — guards', () => {
@@ -118,6 +141,21 @@ describe('drainQueue — guards', () => {
     expect(h.calls.refresh).toBe(0)
     expect(h.calls.reTrigger).toBe(0)
   })
+
+  it('does not dispatch or consume retries while the browser is known to be offline', async () => {
+    const dispatch = vi.fn(async (): Promise<DispatchResult> => undefined)
+    const h = makeHarness(
+      { isOnline: () => false, resolveDispatch: () => dispatch },
+      [op({ id: 'offline', retryCount: MAX_RETRIES - 1 })],
+    )
+
+    await drainQueue(h.deps)
+
+    expect(dispatch).not.toHaveBeenCalled()
+    expect(h.queue[0].retryCount).toBe(MAX_RETRIES - 1)
+    expect(h.failedOps).toEqual([])
+    expect(h.errors.at(-1)).toContain('offline')
+  })
 })
 
 describe('drainQueue — success path', () => {
@@ -131,6 +169,7 @@ describe('drainQueue — success path', () => {
     expect(h.recentlyCompleted).toHaveLength(0) // added then cleared post-refresh
     expect(h.emittedToasts).toEqual([{ copy: { title: 'ok', message: 'done', tone: 'success' }, hasUndo: true }])
     expect(h.calls.refresh).toBe(1)
+    expect(h.refreshArgs[0]).toEqual([{ op: expect.objectContaining({ id: 'a' }), result: undefined }])
     expect(h.activeSyncIds).toEqual(['t1', null]) // set to op, cleared after success
   })
 
@@ -281,6 +320,59 @@ describe('drainQueue — error taxonomy', () => {
     spy.mockRestore()
   })
 
+  it.each([
+    new TypeError('Failed to fetch'),
+    Object.assign(new Error('Native request failed'), { status: 0 }),
+    Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' }),
+  ])('keeps a known connection failure pending without consuming retry budget', async failure => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const dispatch = vi.fn(async (): Promise<DispatchResult> => { throw failure })
+    const h = makeHarness(
+      { resolveDispatch: () => dispatch, now: () => 1_000_000 },
+      [op({ id: 'offline', retryCount: MAX_RETRIES - 1 })],
+    )
+
+    await drainQueue(h.deps)
+
+    expect(h.queue).toHaveLength(1)
+    expect(h.queue[0].retryCount).toBe(MAX_RETRIES - 1)
+    expect(h.failedOps).toEqual([])
+    expect(h.backoffSetTo).toEqual([1_000_000 + SERVER_WAKE_BACKOFF_MS])
+    spy.mockRestore()
+  })
+
+  it.each([502, 503, 504])('keeps a service-wake %s pending without consuming retry budget', async status => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const failure = Object.assign(new Error(`HTTP ${status}`), { status })
+    const h = makeHarness(
+      { resolveDispatch: () => async () => { throw failure }, now: () => 1_000_000 },
+      [op({ id: 'wake', retryCount: MAX_RETRIES - 1 })],
+    )
+
+    await drainQueue(h.deps)
+
+    expect(h.queue[0].retryCount).toBe(MAX_RETRIES - 1)
+    expect(h.failedOps).toEqual([])
+    expect(h.backoffSetTo).toEqual([1_000_000 + SERVER_WAKE_BACKOFF_MS])
+    spy.mockRestore()
+  })
+
+  it('uses an available HTTP status instead of a misleading network-like message', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const failure = Object.assign(new Error('Failed to fetch downstream data'), { status: 500 })
+    const h = makeHarness(
+      { resolveDispatch: () => async () => { throw failure } },
+      [op({ id: 'server-error', retryCount: MAX_RETRIES - 1 })],
+    )
+
+    await drainQueue(h.deps)
+
+    expect(h.queue).toEqual([])
+    expect(h.failedOps).toHaveLength(1)
+    expect(h.failedOps[0].retryCount).toBe(MAX_RETRIES)
+    spy.mockRestore()
+  })
+
   it('moves an op to failedOps after the retry ceiling and continues', async () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const h = makeHarness(
@@ -332,6 +424,84 @@ describe('drainQueue — error taxonomy', () => {
 })
 
 describe('drainQueue — settle', () => {
+  it('retains completed optimistic ops after refresh failure and clears them after a later success', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    let now = 1_000_000
+    let refreshAttempt = 0
+    const h = makeHarness({
+      now: () => now,
+      refresh: async () => {
+        refreshAttempt++
+        if (refreshAttempt === 1) throw new TypeError('Failed to fetch')
+      },
+    }, [op({ id: 'committed', targetId: 'tx-1' })])
+
+    await drainQueue(h.deps)
+
+    expect(h.queue).toEqual([])
+    expect(h.recentlyCompleted).toEqual([
+      expect.objectContaining({ id: 'committed', isCompleted: true }),
+    ])
+    expect(h.backoffSetTo).toEqual([1_000_000 + SERVER_WAKE_BACKOFF_MS])
+
+    now += SERVER_WAKE_BACKOFF_MS
+    await drainQueue(h.deps)
+
+    expect(refreshAttempt).toBe(2)
+    expect(h.recentlyCompleted).toEqual([])
+    spy.mockRestore()
+  })
+
+  it('skips refresh and settles completed ops when the batch does not require one', async () => {
+    const h = makeHarness({
+      shouldRefresh: () => false,
+    }, [op({ id: 'preference', entity: 'settings', type: 'update', targetId: 'darkMode' })])
+
+    await drainQueue(h.deps)
+
+    expect(h.calls.refresh).toBe(0)
+    expect(h.recentlyCompleted).toEqual([])
+  })
+
+  it.each([
+    { status: 401, callback: 'onAuthError' as const },
+    { status: 423, callback: 'onLockError' as const },
+  ])('clears completed ops when post-sync refresh fails with $status', async ({ status, callback }) => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const failure = Object.assign(new Error(`HTTP ${status}`), { status })
+    const h = makeHarness({
+      getLastUnlockedTime: () => 0,
+      refresh: async () => { throw failure },
+    }, [op({ id: 'committed' })])
+
+    await drainQueue(h.deps)
+
+    expect(h.recentlyCompleted).toEqual([])
+    expect(h.calls[callback]).toBe(1)
+    expect(h.backoffSetTo).toEqual([])
+    spy.mockRestore()
+  })
+
+  it('retains completed ops when a post-sync 401 races a fresh login', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const now = 1_000_000
+    const failure = Object.assign(new Error('HTTP 401'), { status: 401 })
+    const h = makeHarness({
+      now: () => now,
+      getLastUnlockedTime: () => now - 1_000,
+      refresh: async () => { throw failure },
+    }, [op({ id: 'committed' })])
+
+    await drainQueue(h.deps)
+
+    expect(h.recentlyCompleted).toEqual([
+      expect.objectContaining({ id: 'committed', isCompleted: true }),
+    ])
+    expect(h.calls.onAuthError).toBe(0)
+    expect(h.backoffSetTo).toEqual([now + AUTH_RACE_BACKOFF_MS])
+    spy.mockRestore()
+  })
+
   it('does not re-trigger when queue is blocked by editing lock', async () => {
     const h = makeHarness({ getEditingPendingId: () => 't1' }, [op({ targetId: 't1' })])
     await drainQueue(h.deps)

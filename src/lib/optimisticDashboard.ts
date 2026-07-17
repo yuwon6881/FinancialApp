@@ -1,27 +1,25 @@
 // Optimistic dashboard recompute extracted from App.tsx.
 //
 // Given the server's dashboard snapshot plus the outbox queues, produce a
-// dashboard that already reflects the pending (not-yet-synced) mutations so the
-// UI updates instantly. Settings updates are applied from the combined
-// active-ops list; transaction add/update/delete adjust the running stats and
-// per-category totals from the still-pending ops only. Pure so the (previously
-// untested) stat arithmetic can be exercised directly.
+// dashboard that already reflects queued mutations so the UI updates instantly.
+// Pending and just-completed operations stay projected until a successful
+// server refresh reconciles them; this also keeps the running stats and
+// per-category totals stable through transient refresh failures. Pure so the
+// arithmetic can be exercised directly.
 
 import type { DashboardData, Transaction } from '../types'
 import type { QueuedOp } from './outbox'
 
 export interface OptimisticDashboardInputs {
-  /** Combined pending + recently-completed ops (used for settings). */
+  /** Combined pending + recently-completed ops awaiting server reconciliation. */
   activeOps: QueuedOp[]
-  /** Still-pending ops only (used for stat/category deltas). */
-  pendingOps: QueuedOp[]
   /** Server transactions, for resolving the "before" amount of updates/deletes. */
   transactions: Transaction[]
 }
 
 export function computeOptimisticDashboard(
   dashboardData: DashboardData | null,
-  { activeOps, pendingOps, transactions }: OptimisticDashboardInputs
+  { activeOps, transactions }: OptimisticDashboardInputs
 ): DashboardData | null {
   if (!dashboardData) return null
 
@@ -38,7 +36,10 @@ export function computeOptimisticDashboard(
     }
   })
 
-  const txOps = pendingOps.filter(o => o.entity === 'transaction')
+  // Completed mutations stay in activeOps until a successful server refresh.
+  // Applying that retained projection prevents dashboard totals from snapping
+  // back when the mutation succeeded but reconciliation temporarily failed.
+  const txOps = activeOps.filter(o => o.entity === 'transaction')
   txOps.forEach(op => {
     if (op.type === 'add' && op.payload) {
       const amount = op.payload.amount || 0

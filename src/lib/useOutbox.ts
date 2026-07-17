@@ -11,7 +11,7 @@ import {
   type OutboxPayload,
   type QueuedOp,
 } from './outbox'
-import { drainQueue } from './outboxSync'
+import { drainQueue, type SuccessfulSyncOp } from './outboxSync'
 import { buildUndoAction, snapshotForUndo, type UndoSnapshot } from './undo'
 
 const TOAST_STAGGER_MS = 350
@@ -23,7 +23,8 @@ interface UseOutboxOptions {
   showToast: (message: string, title?: string, tone?: ToastTone, action?: ToastAction) => void
   onAuthError: () => void
   onLockError: () => void
-  refresh: () => Promise<void>
+  shouldRefresh?: (successfulOps: ReadonlyArray<SuccessfulSyncOp>) => boolean
+  refresh: (successfulOps: ReadonlyArray<SuccessfulSyncOp>) => Promise<void>
 }
 
 export interface UseOutboxResult {
@@ -71,6 +72,7 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
   const optionsRef = useRef(options)
   const pendingOpsRef = useRef(pendingOps)
   const failedOpsRef = useRef(failedOps)
+  const recentlyCompletedOpsRef = useRef(recentlyCompletedOps)
   const editingPendingIdRef = useRef(editingPendingId)
   const syncBackoffUntilRef = useRef(syncBackoffUntil)
   const isSyncingRef = useRef(false)
@@ -152,6 +154,8 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
       token: current.token,
       now: Date.now,
       getQueue: () => pendingOpsRef.current,
+      isOnline: () => typeof navigator === 'undefined' || navigator.onLine !== false,
+      getRecentlyCompleted: () => recentlyCompletedOpsRef.current,
       getEditingPendingId: () => editingPendingIdRef.current,
       getBackoffUntil: () => syncBackoffUntilRef.current,
       getLastUnlockedTime: () => current.lastUnlockedTimeRef.current,
@@ -168,8 +172,20 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
         syncBackoffUntilRef.current = until
         setSyncBackoffUntil(until)
       },
-      addRecentlyCompleted: op => setRecentlyCompletedOps(previous => [...previous, op]),
-      removeRecentlyCompleted: ids => setRecentlyCompletedOps(previous => previous.filter(op => !ids.has(op.id))),
+      addRecentlyCompleted: op => {
+        const next = [...recentlyCompletedOpsRef.current, op]
+        recentlyCompletedOpsRef.current = next
+        setRecentlyCompletedOps(next)
+      },
+      removeRecentlyCompleted: ids => {
+        const next = recentlyCompletedOpsRef.current.filter(op => !ids.has(op.id))
+        recentlyCompletedOpsRef.current = next
+        setRecentlyCompletedOps(next)
+      },
+      clearRecentlyCompleted: () => {
+        recentlyCompletedOpsRef.current = []
+        setRecentlyCompletedOps([])
+      },
       addFailedOp: op => setFailedOps(previous => [...previous, op]),
       getSyncSuccessToast,
       buildUndoAction: createUndo,
@@ -189,6 +205,9 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
         setSyncBackoffUntil(0)
         current.onLockError()
       },
+      shouldRefresh: current.shouldRefresh ?? (successfulOps => successfulOps.some(({ op }) =>
+        op.entity !== 'settings' || (op.targetId !== 'darkMode' && op.targetId !== 'hideSensitive')
+      )),
       refresh: current.refresh,
       onSettled: () => {
         setActiveSyncId(null)
@@ -203,8 +222,9 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
   }, [processQueue])
 
   useEffect(() => {
-    if (!options.token || pendingOps.length === 0) return
+    if (!options.token || (pendingOps.length === 0 && recentlyCompletedOps.length === 0)) return
     if (editingPendingId) return
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return
     if (Date.now() < syncBackoffUntil) {
       const timer = window.setTimeout(() => {
         syncBackoffUntilRef.current = 0
@@ -213,7 +233,17 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
       return () => window.clearTimeout(timer)
     }
     void processQueue()
-  }, [options.token, pendingOps, syncBackoffUntil, editingPendingId, processQueue])
+  }, [options.token, pendingOps, recentlyCompletedOps, syncBackoffUntil, editingPendingId, processQueue])
+
+  useEffect(() => {
+    const handleOnline = () => {
+      syncBackoffUntilRef.current = 0
+      setSyncBackoffUntil(0)
+      processQueueRef.current()
+    }
+    window.addEventListener('online', handleOnline)
+    return () => window.removeEventListener('online', handleOnline)
+  }, [])
 
   const discardFailedOp = useCallback((id: string) => {
     setFailedOps(previous => previous.filter(op => op.id !== id))
@@ -227,6 +257,7 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
   const reset = useCallback(() => {
     mutateQueue(() => [])
     setFailedOps([])
+    recentlyCompletedOpsRef.current = []
     setRecentlyCompletedOps([])
     setEditingPendingId(null)
     setDeletingId(null)

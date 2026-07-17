@@ -324,17 +324,7 @@ function App() {
       if (session.hasFingerprintSetup) {
         void prefetchFingerprintAssertOptions().catch(() => undefined)
       }
-      financial.handleUpdateSettings({
-        targetStabilityFund: Number(financial.optimisticDashboardData?.setting?.targetStabilityFund || 10000),
-        essentialsAlloc: financial.optimisticDashboardData?.setting?.essentialsAlloc ?? 0.5,
-        growthAlloc: financial.optimisticDashboardData?.setting?.growthAlloc ?? 0.25,
-        stabilityAlloc: financial.optimisticDashboardData?.setting?.stabilityAlloc ?? 0.15,
-        rewardsAlloc: financial.optimisticDashboardData?.setting?.rewardsAlloc ?? 0.1,
-        cycleDay: financial.optimisticDashboardData?.setting?.cycleDay ?? 28,
-        currency: financial.optimisticDashboardData?.setting?.currency || 'USD',
-        stabilityOverflowRedirect: financial.optimisticDashboardData?.setting?.stabilityOverflowRedirect,
-        hideSensitive: true
-      })
+      financial.handleUpdateHideSensitivePreference(true)
     }
   }
 
@@ -346,17 +336,7 @@ function App() {
   const handleToggleDarkMode = () => {
     const newDark = !prefs.darkMode
     prefs.setDarkMode(newDark)
-    financial.handleUpdateSettings({
-      targetStabilityFund: Number(financial.optimisticDashboardData?.setting?.targetStabilityFund || 10000),
-      essentialsAlloc: financial.optimisticDashboardData?.setting?.essentialsAlloc ?? 0.5,
-      growthAlloc: financial.optimisticDashboardData?.setting?.growthAlloc ?? 0.25,
-      stabilityAlloc: financial.optimisticDashboardData?.setting?.stabilityAlloc ?? 0.15,
-      rewardsAlloc: financial.optimisticDashboardData?.setting?.rewardsAlloc ?? 0.1,
-      cycleDay: financial.optimisticDashboardData?.setting?.cycleDay ?? 28,
-      currency: financial.optimisticDashboardData?.setting?.currency || 'USD',
-      stabilityOverflowRedirect: financial.optimisticDashboardData?.setting?.stabilityOverflowRedirect,
-      darkMode: newDark
-    })
+    financial.handleUpdateDarkModePreference(newDark)
   }
 
   const appContextValue = useMemo<AppContextValue>(() => buildAppContextValue({
@@ -553,10 +533,21 @@ function App() {
                         }}
                         onNavigateToLedger={nav.handleNavigateToLedger}
                         onClearLocalFinancialData={() => {
-                          clearLocalFinancialData()
-                          void financial.handleLogoutCleanup(session.username)
-                          void financial.loadAll(nav.selectedMonth, nav.selectedYear, true)
-                          dialogs.showToast('Cached financial data and offline drafts were removed from this device.', 'Local Data Cleared', 'success')
+                          const month = nav.selectedMonth
+                          const year = nav.selectedYear
+                          void (async () => {
+                            try {
+                              await financial.handleLogoutCleanup(session.username, false)
+                            } finally {
+                              clearLocalFinancialData()
+                            }
+                            await financial.loadAll(month, year, true)
+                            dialogs.showToast(
+                              'Cached financial data and offline drafts were removed from this device.',
+                              'Local Data Cleared',
+                              'success',
+                            )
+                          })()
                         }}
                       />
                     )}
@@ -713,17 +704,7 @@ function App() {
           onVerified={() => {
             prefs.setHideSensitive(false)
             session.setShowPasswordPrompt(false)
-            financial.handleUpdateSettings({
-              targetStabilityFund: Number(financial.optimisticDashboardData?.setting?.targetStabilityFund || 10000),
-              essentialsAlloc: financial.optimisticDashboardData?.setting?.essentialsAlloc ?? 0.5,
-              growthAlloc: financial.optimisticDashboardData?.setting?.growthAlloc ?? 0.25,
-              stabilityAlloc: financial.optimisticDashboardData?.setting?.stabilityAlloc ?? 0.15,
-              rewardsAlloc: financial.optimisticDashboardData?.setting?.rewardsAlloc ?? 0.1,
-              cycleDay: financial.optimisticDashboardData?.setting?.cycleDay ?? 28,
-              currency: financial.optimisticDashboardData?.setting?.currency || 'USD',
-              stabilityOverflowRedirect: financial.optimisticDashboardData?.setting?.stabilityOverflowRedirect,
-              hideSensitive: false
-            })
+            financial.handleUpdateHideSensitivePreference(false)
           }}
           onTryFingerprint={session.hasFingerprintSetup ? session.revealSensitiveWithFingerprint : undefined}
         />

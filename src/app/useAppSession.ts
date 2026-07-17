@@ -151,11 +151,39 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
 
   async function handleLogout() {
     const currentOwner = usernameRef.current
-    await onLogoutBackupAndCleanup(currentOwner)
+    try {
+      await onLogoutBackupAndCleanup(currentOwner)
+    } catch (error) {
+      console.error('Logout backup and cleanup failed; continuing sign-out.', error)
+    }
 
-    await api.logout()
-    await tokenStore.clearToken()
-    localStorage.removeItem('auth_username')
+    try {
+      await api.logout()
+    } catch (error) {
+      console.error('Logout request failed; clearing the local session anyway.', error)
+    }
+
+    // api.logout() normally clears the token store itself. Keep this fallback
+    // here so a platform-specific or mocked implementation cannot leave a
+    // usable local credential behind.
+    try {
+      await tokenStore.clearToken()
+    } catch (error) {
+      console.error('Could not clear the platform token store during logout.', error)
+    }
+
+    for (const [storage, key] of [
+      [localStorage, 'auth_username'],
+      [localStorage, 'session_locked_global'],
+      [localStorage, 'last_active_time'],
+      [sessionStorage, 'session_locked'],
+    ] as const) {
+      try {
+        storage.removeItem(key)
+      } catch (error) {
+        console.warn(`Could not remove ${key} during logout.`, error)
+      }
+    }
     setToken(null)
     setUsername('')
     setHasFingerprintSetup(false)

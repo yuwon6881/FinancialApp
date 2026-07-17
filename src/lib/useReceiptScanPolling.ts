@@ -5,6 +5,28 @@ import type { AppTab } from '../types'
 import type { ToastTone } from '../components/ui/ToastViewport'
 import { errorMessageIncludes, errorMessageIncludesLower } from './errors'
 
+const RECEIPT_SCAN_JOB_IDS_KEY = 'receipt_scan_job_ids'
+const RECEIPT_SCAN_NOTIFIED_IDS_KEY = 'receipt_scan_notified_ids'
+
+function readStoredIds(key: string): string[] {
+  try {
+    const value = JSON.parse(localStorage.getItem(key) || '[]')
+    return Array.isArray(value)
+      ? value.filter((id): id is string => typeof id === 'string')
+      : []
+  } catch {
+    return []
+  }
+}
+
+function storeIds(key: string, ids: string[]): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(ids))
+  } catch (err) {
+    console.warn(`Failed to persist ${key}`, err)
+  }
+}
+
 export interface ReceiptScanDraft {
   jobId: string
   result: ReceiptScanResult
@@ -45,47 +67,69 @@ export interface UseReceiptScanPollingResult {
 export function useReceiptScanPolling(options: UseReceiptScanPollingOptions): UseReceiptScanPollingResult {
   const { token, activeTabRef, isLedgerAddOpenRef, isMountedRef, setActiveTab, setAutoOpenLedgerAdd, showToast } = options
 
-  const [receiptScanJobIds, setReceiptScanJobIds] = useState<string[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem('receipt_scan_job_ids') || '[]')
-    } catch {
-      return []
-    }
-  })
-  const [notifiedReceiptScanJobIds, setNotifiedReceiptScanJobIds] = useState<string[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem('receipt_scan_notified_ids') || '[]')
-    } catch {
-      return []
-    }
-  })
+  const [receiptScanJobIds, setReceiptScanJobIds] = useState<string[]>(() => readStoredIds(RECEIPT_SCAN_JOB_IDS_KEY))
+  const receiptScanJobIdsRef = useRef(receiptScanJobIds)
+  const [notifiedReceiptScanJobIds, setNotifiedReceiptScanJobIds] = useState<string[]>(() => readStoredIds(RECEIPT_SCAN_NOTIFIED_IDS_KEY))
   const [activeReceiptScanDraft, setActiveReceiptScanDraft] = useState<ReceiptScanDraft | null>(null)
   const [failedScanJob, setFailedScanJob] = useState<FailedScanJob | null>(null)
+  const receiptScanDeletePromisesRef = useRef<Map<string, Promise<void>>>(new Map())
+  const deletedReceiptScanJobIdsRef = useRef<Set<string>>(new Set())
+
+  const updateReceiptScanJobIds = useCallback((update: (current: string[]) => string[]) => {
+    const next = update(receiptScanJobIdsRef.current)
+    receiptScanJobIdsRef.current = next
+    setReceiptScanJobIds(next)
+    // Persist synchronously so a consumed result cannot be restored if the app
+    // closes before React has a chance to run a persistence effect.
+    storeIds(RECEIPT_SCAN_JOB_IDS_KEY, next)
+  }, [])
 
   useEffect(() => {
-    localStorage.setItem('receipt_scan_job_ids', JSON.stringify(receiptScanJobIds))
-  }, [receiptScanJobIds])
-
-  useEffect(() => {
-    localStorage.setItem('receipt_scan_notified_ids', JSON.stringify(notifiedReceiptScanJobIds))
+    storeIds(RECEIPT_SCAN_NOTIFIED_IDS_KEY, notifiedReceiptScanJobIds)
   }, [notifiedReceiptScanJobIds])
 
   const handleReceiptScanStarted = useCallback((scanId: string) => {
-    setReceiptScanJobIds(prev => prev.includes(scanId) ? prev : [...prev, scanId])
+    deletedReceiptScanJobIdsRef.current.delete(scanId)
+    setFailedScanJob(null)
+    updateReceiptScanJobIds(prev => prev.includes(scanId) ? prev : [...prev, scanId])
+  }, [updateReceiptScanJobIds])
+
+  const removeReceiptScanJobState = useCallback((scanId: string, clearFailure: boolean) => {
+    updateReceiptScanJobIds(prev => prev.filter(id => id !== scanId))
+    setNotifiedReceiptScanJobIds(prev => prev.filter(id => id !== scanId))
+    setActiveReceiptScanDraft(prev => prev?.jobId === scanId ? null : prev)
+    if (clearFailure) {
+      setFailedScanJob(prev => prev?.jobId === scanId ? null : prev)
+    }
+  }, [updateReceiptScanJobIds])
+
+  const deleteReceiptScanJobOnce = useCallback((scanId: string): Promise<void> => {
+    if (deletedReceiptScanJobIdsRef.current.has(scanId)) {
+      return Promise.resolve()
+    }
+
+    const inFlight = receiptScanDeletePromisesRef.current.get(scanId)
+    if (inFlight) return inFlight
+
+    const request = (async () => {
+      try {
+        await api.deleteReceiptScanJob(scanId)
+        deletedReceiptScanJobIdsRef.current.add(scanId)
+      } catch (err) {
+        console.warn('Failed to delete receipt scan job', err)
+      } finally {
+        receiptScanDeletePromisesRef.current.delete(scanId)
+      }
+    })()
+
+    receiptScanDeletePromisesRef.current.set(scanId, request)
+    return request
   }, [])
 
   const clearReceiptScanJob = useCallback(async (scanId: string) => {
-    setReceiptScanJobIds(prev => prev.filter(id => id !== scanId))
-    setNotifiedReceiptScanJobIds(prev => prev.filter(id => id !== scanId))
-    setActiveReceiptScanDraft(prev => prev?.jobId === scanId ? null : prev)
-    setFailedScanJob(prev => prev?.jobId === scanId ? null : prev)
-
-    try {
-      await api.deleteReceiptScanJob(scanId)
-    } catch (err) {
-      console.warn('Failed to delete receipt scan job', err)
-    }
-  }, [])
+    removeReceiptScanJobState(scanId, true)
+    await deleteReceiptScanJobOnce(scanId)
+  }, [deleteReceiptScanJobOnce, removeReceiptScanJobState])
 
   const receiptScanPollInFlightRef = useRef(false)
 
@@ -104,6 +148,9 @@ export function useReceiptScanPolling(options: UseReceiptScanPollingOptions): Us
 
           try {
             const job = await api.fetchReceiptScanJob(scanId)
+            if (cancelled || !receiptScanJobIdsRef.current.includes(scanId)) {
+              continue
+            }
 
             if (job.status === 'failed') {
               const errMsg = job.errorMessage || 'Receipt scan failed. Please try again.'
@@ -113,7 +160,10 @@ export function useReceiptScanPolling(options: UseReceiptScanPollingOptions): Us
               if (!isInModal) {
                 showToast(errMsg, 'Receipt Scan Failed', 'error')
               }
-              await clearReceiptScanJob(scanId)
+              // Stop tracking and delete the failed backend job, but keep the
+              // failure signal long enough for an open form to render it.
+              removeReceiptScanJobState(scanId, false)
+              await deleteReceiptScanJobOnce(scanId)
               continue
             }
 
@@ -139,7 +189,7 @@ export function useReceiptScanPolling(options: UseReceiptScanPollingOptions): Us
               continue
             }
             if (errorMessageIncludesLower(err, 'not found')) {
-              setReceiptScanJobIds(prev => prev.filter(id => id !== scanId))
+              removeReceiptScanJobState(scanId, true)
             }
           }
         }
@@ -155,7 +205,7 @@ export function useReceiptScanPolling(options: UseReceiptScanPollingOptions): Us
       cancelled = true
       window.clearInterval(interval)
     }
-  }, [token, receiptScanJobIds, notifiedReceiptScanJobIds, activeReceiptScanDraft, clearReceiptScanJob, activeTabRef, isLedgerAddOpenRef, isMountedRef, setActiveTab, setAutoOpenLedgerAdd, showToast])
+  }, [token, receiptScanJobIds, notifiedReceiptScanJobIds, activeReceiptScanDraft, deleteReceiptScanJobOnce, removeReceiptScanJobState, activeTabRef, isLedgerAddOpenRef, isMountedRef, setActiveTab, setAutoOpenLedgerAdd, showToast])
 
   return {
     activeReceiptScanDraft,

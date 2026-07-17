@@ -137,4 +137,22 @@ describe('auth session token lifecycle', () => {
 
     expect(localStorage.getItem('auth_session')).toBeNull()
   })
+
+  it('resolves logout even when token and CSRF storage cleanup both throw', async () => {
+    vi.doMock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => false } }))
+    const fetchMock = vi.fn(() => Promise.resolve(new Response(null, { status: 204 })))
+    vi.stubGlobal('fetch', fetchMock)
+    Object.defineProperty(window, 'fetch', { value: fetchMock, configurable: true })
+    const removeItem = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new DOMException('Storage unavailable', 'SecurityError')
+    })
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    const api = await import('../api')
+
+    await expect(api.logout()).resolves.toBeUndefined()
+    expect(removeItem).toHaveBeenCalledWith('auth_session')
+    expect(removeItem).toHaveBeenCalledWith('csrf_token')
+  })
 })

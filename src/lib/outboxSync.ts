@@ -22,12 +22,21 @@ export const SERVER_WAKE_BACKOFF_MS = 15000
 /** A 401 within this window of a fresh unlock/login is treated as a race, not a real auth failure. */
 export const JUST_LOGGED_IN_WINDOW_MS = 10000
 
+export interface SuccessfulSyncOp {
+  op: QueuedOp
+  result: DispatchResult
+}
+
 export interface DrainQueueDeps {
   token: string | null
   now: () => number
 
   // --- synchronous queue/ref reads ---
   getQueue: () => QueuedOp[]
+  /** Browser/network reachability. Omitted by non-browser callers that are always online. */
+  isOnline?: () => boolean
+  /** Completed mutations still projected while their server refresh is pending. */
+  getRecentlyCompleted?: () => QueuedOp[]
   getEditingPendingId: () => string | null
   getBackoffUntil: () => number
   getLastUnlockedTime: () => number
@@ -47,6 +56,8 @@ export interface DrainQueueDeps {
   setBackoff: (until: number) => void
   addRecentlyCompleted: (op: QueuedOp) => void
   removeRecentlyCompleted: (ids: Set<string>) => void
+  /** A successful server refresh reconciles every retained completed operation. */
+  clearRecentlyCompleted?: () => void
   addFailedOp: (op: QueuedOp) => void
 
   // --- toasts / undo ---
@@ -60,9 +71,64 @@ export interface DrainQueueDeps {
   onLockError: () => void
 
   // --- post-drain ---
-  refresh: () => Promise<void>
+  /** Defaults to refreshing. Preference-only batches can opt out. */
+  shouldRefresh?: (successfulOps: ReadonlyArray<SuccessfulSyncOp>) => boolean
+  refresh: (successfulOps: ReadonlyArray<SuccessfulSyncOp>) => Promise<void>
   onSettled: () => void
   reTrigger: () => void
+}
+
+function getStatus(err: unknown): number | undefined {
+  if (!err || typeof err !== 'object' || !('status' in err)) return undefined
+  return typeof err.status === 'number' && Number.isFinite(err.status) ? err.status : undefined
+}
+
+function hasHttpStatus(err: unknown, expected: number): boolean {
+  const status = getStatus(err)
+  if (status !== undefined) return status === expected
+  return errorMessageIncludes(err, String(expected))
+}
+
+function isNetworkFailure(err: unknown, online: boolean): boolean {
+  const status = getStatus(err)
+  // A real HTTP response always wins over a message such as "Failed to fetch".
+  // Status 0 is conventionally used by native/web wrappers for no response.
+  if (status !== undefined) return status === 0
+  if (!online) return true
+
+  if (err && typeof err === 'object') {
+    const name = 'name' in err && typeof err.name === 'string' ? err.name : ''
+    if (name === 'NetworkError') return true
+
+    const code = 'code' in err && typeof err.code === 'string' ? err.code.toUpperCase() : ''
+    if (['ERR_NETWORK', 'ECONNABORTED', 'ECONNREFUSED', 'ECONNRESET', 'ENETUNREACH', 'ENOTFOUND', 'ETIMEDOUT'].includes(code)) {
+      return true
+    }
+  }
+
+  const message = getErrorMessage(err, '').toLowerCase()
+  return message.includes('failed to fetch')
+    || message.includes('fetch failed')
+    || message.includes('network request failed')
+    || message.includes('networkerror')
+    || message.includes('load failed')
+}
+
+function isServiceWakeFailure(status: number | undefined): boolean {
+  return status === 502 || status === 503 || status === 504
+}
+
+function mergeCompletedOps(
+  retainedOps: ReadonlyArray<QueuedOp>,
+  successfulOps: ReadonlyArray<SuccessfulSyncOp>,
+): SuccessfulSyncOp[] {
+  const currentById = new Map(successfulOps.map(item => [item.op.id, item]))
+  const merged: SuccessfulSyncOp[] = retainedOps.map(op => currentById.get(op.id) ?? { op, result: undefined })
+  const seen = new Set(retainedOps.map(op => op.id))
+  for (const item of successfulOps) {
+    if (!seen.has(item.op.id)) merged.push(item)
+  }
+  return merged
 }
 
 /**
@@ -71,16 +137,26 @@ export interface DrainQueueDeps {
  */
 export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
   if (!deps.token || deps.isSyncing()) return
+  const isOnline = () => deps.isOnline?.() ?? true
+  if (!isOnline()) {
+    deps.setError('Sync pending: You are offline. Changes will sync when your connection returns.')
+    return
+  }
   deps.setSyncing(true)
 
   let processedAny = false
-  const successfulOps: Array<{ op: QueuedOp; result: DispatchResult }> = []
+  const successfulOps: SuccessfulSyncOp[] = []
 
   try {
     while (true) {
       const queue = deps.getQueue()
       const nextOp = queue[0]
       if (!nextOp) break
+
+      if (!isOnline()) {
+        deps.setError('Sync pending: You are offline. Changes will sync when your connection returns.')
+        break
+      }
 
       const editingId = deps.getEditingPendingId()
       if (nextOp.targetId === editingId || nextOp.id === editingId) {
@@ -132,7 +208,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
 
         deps.setError(null)
         processedAny = true
-        successfulOps.push({ op: nextOp, result })
+        successfulOps.push({ op: completedOp, result })
 
         deps.setActiveSyncId(null)
 
@@ -146,13 +222,17 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
         }
       } catch (err: unknown) {
         console.error(`Failed to sync ${nextOp.entity}:${nextOp.type}:`, err)
-        const isAuthError = errorMessageIncludes(err, '401') || errorMessageIncludesLower(err, 'unauthorized')
-        const isLockError = errorMessageIncludes(err, '423')
+        const status = getStatus(err)
+        const isAuthError = hasHttpStatus(err, 401)
+          || (status === undefined && errorMessageIncludesLower(err, 'unauthorized'))
+        const isLockError = hasHttpStatus(err, 423)
         const isJustLoggedIn = deps.now() - deps.getLastUnlockedTime() < JUST_LOGGED_IN_WINDOW_MS
-        const status = err && typeof err === 'object' && 'status' in err && typeof err.status === 'number' ? err.status : undefined
         const isIdempotentMissingDelete = status === 404 &&
           (nextOp.type === 'delete' || nextOp.type === 'unpurchase')
         const isPermanentError = status !== undefined && status >= 400 && status < 500 && status !== 401 && status !== 423
+        const online = isOnline()
+        const isConnectionFailure = isNetworkFailure(err, online)
+        const isServerWaking = isServiceWakeFailure(status)
 
         if (isIdempotentMissingDelete) {
           deps.mutateQueue(prev => prev.filter(item => item.id !== nextOp.id))
@@ -173,6 +253,15 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
           // burning a retry or moving the op to failedOps.
           deps.setError('Sync pending: reconnecting...')
           deps.setBackoff(deps.now() + AUTH_RACE_BACKOFF_MS)
+          break
+        } else if (isConnectionFailure || isServerWaking) {
+          // No server response (or a gateway/service-wake response) says nothing
+          // about the validity of the user's change. Keep it pending indefinitely
+          // and retry after connectivity returns/a short wake-up delay.
+          deps.setError(online
+            ? 'Sync pending: Server is offline or waking up...'
+            : 'Sync pending: You are offline. Changes will sync when your connection returns.')
+          deps.setBackoff(online ? deps.now() + SERVER_WAKE_BACKOFF_MS : 0)
           break
         } else if (isPermanentError) {
           // Permanent validation/logic error (e.g. 400 Bad Request) -- do not retry.
@@ -202,15 +291,48 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
       }
     }
 
-    if (processedAny) {
-      try {
-        await deps.refresh()
-      } catch (refreshErr) {
-        console.error('Post-sync dashboard refresh failed:', refreshErr)
-      }
+    const retainedOps = deps.getRecentlyCompleted?.() ?? []
+    const completedOps = mergeCompletedOps(retainedOps, successfulOps)
+    if ((processedAny || completedOps.length > 0) && deps.now() >= deps.getBackoffUntil()) {
+      const shouldRefresh = deps.shouldRefresh?.(completedOps) ?? true
+      if (!shouldRefresh) {
+        deps.removeRecentlyCompleted(new Set(completedOps.map(({ op }) => op.id)))
+      } else {
+        let refreshSucceeded = false
+        try {
+          await deps.refresh(completedOps)
+          refreshSucceeded = true
+        } catch (refreshErr) {
+          console.error('Post-sync dashboard refresh failed:', refreshErr)
+          const refreshStatus = getStatus(refreshErr)
+          const isRefreshAuthError = hasHttpStatus(refreshErr, 401)
+            || (refreshStatus === undefined && errorMessageIncludesLower(refreshErr, 'unauthorized'))
+          const isRefreshLockError = hasHttpStatus(refreshErr, 423)
+          const isJustLoggedIn = deps.now() - deps.getLastUnlockedTime() < JUST_LOGGED_IN_WINDOW_MS
 
-      const completedIds = new Set(successfulOps.map(({ op }) => op.id))
-      deps.removeRecentlyCompleted(completedIds)
+          if (isRefreshAuthError && !isJustLoggedIn) {
+            if (deps.clearRecentlyCompleted) deps.clearRecentlyCompleted()
+            else deps.removeRecentlyCompleted(new Set(completedOps.map(({ op }) => op.id)))
+            deps.onAuthError()
+          } else if (isRefreshLockError) {
+            if (deps.clearRecentlyCompleted) deps.clearRecentlyCompleted()
+            else deps.removeRecentlyCompleted(new Set(completedOps.map(({ op }) => op.id)))
+            deps.onLockError()
+          } else {
+            // Preserve the completed optimistic projection and retry its
+            // reconciliation later without hammering an unavailable server.
+            deps.setBackoff(deps.now() + (isRefreshAuthError ? AUTH_RACE_BACKOFF_MS : SERVER_WAKE_BACKOFF_MS))
+          }
+        }
+
+        if (refreshSucceeded) {
+          if (deps.clearRecentlyCompleted) {
+            deps.clearRecentlyCompleted()
+          } else {
+            deps.removeRecentlyCompleted(new Set(completedOps.map(({ op }) => op.id)))
+          }
+        }
+      }
     }
   } finally {
     deps.onSettled()
@@ -223,8 +345,9 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
     const editingId = deps.getEditingPendingId()
     const isEditing = nextOp && (nextOp.targetId === editingId || nextOp.id === editingId)
     const isBackedOff = deps.now() < deps.getBackoffUntil()
+    const hasPendingRefresh = (deps.getRecentlyCompleted?.().length ?? 0) > 0
 
-    if (queue.length > 0 && !isEditing && !isBackedOff) {
+    if ((queue.length > 0 || hasPendingRefresh) && !isEditing && !isBackedOff && isOnline()) {
       deps.reTrigger()
     }
   }

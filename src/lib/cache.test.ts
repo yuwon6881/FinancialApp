@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { CACHE_KEYS, getCachedJSON, setCachedCycleSnapshot, setCachedJSON } from './cache'
+import { CACHE_KEYS, clearLocalFinancialData, getCachedJSON, setCachedCycleSnapshot, setCachedJSON } from './cache'
 import type { DashboardData } from '../types'
 
 describe('setCachedJSON', () => {
@@ -50,5 +50,25 @@ describe('setCachedJSON', () => {
 
     expect(() => setCachedCycleSnapshot('Jul', 2026, {} as DashboardData, [])).not.toThrow()
     setItem.mockRestore()
+  })
+
+  it('continues clearing other local data when one storage removal throws', () => {
+    localStorage.setItem(CACHE_KEYS.dashboardData, JSON.stringify({ stale: true }))
+    localStorage.setItem(CACHE_KEYS.transactions, JSON.stringify([{ id: 'cached-transaction' }]))
+    localStorage.setItem('draft_transactions', JSON.stringify([{ id: 'draft-transaction' }]))
+
+    const originalRemoveItem = Storage.prototype.removeItem
+    const removeItem = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(function (this: Storage, key) {
+      if (key === CACHE_KEYS.dashboardData) {
+        throw new DOMException('Storage unavailable', 'SecurityError')
+      }
+      return originalRemoveItem.call(this, key)
+    })
+
+    expect(() => clearLocalFinancialData()).not.toThrow()
+    expect(localStorage.getItem(CACHE_KEYS.dashboardData)).not.toBeNull()
+    expect(localStorage.getItem(CACHE_KEYS.transactions)).toBeNull()
+    expect(localStorage.getItem('draft_transactions')).toBeNull()
+    removeItem.mockRestore()
   })
 })
