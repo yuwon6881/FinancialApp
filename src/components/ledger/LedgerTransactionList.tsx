@@ -77,6 +77,7 @@ export function LedgerTransactionList({
                   onSplitEditBlocked={onSplitEditBlocked}
                 />
               ))}
+              </AnimatePresence>
               {hasRows && (
                 <tr className="bg-muted/25 font-bold border-t-2 border-border text-xs select-none">
                   <td className="p-4 align-middle" colSpan={4}>
@@ -124,7 +125,6 @@ export function LedgerTransactionList({
                   </td>
                 </tr>
               )}
-              </AnimatePresence>
 
               {!hasRows && (
                 <motion.tr initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -160,6 +160,7 @@ export function LedgerTransactionList({
             onSplitEditBlocked={onSplitEditBlocked}
           />
         ))}
+        </AnimatePresence>
         {hasRows && (
           <div className="flex flex-col gap-2.5 p-4 bg-card border border-border/60 rounded-xl text-xs shadow-xs select-none">
             <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Page Total Summary</div>
@@ -193,7 +194,6 @@ export function LedgerTransactionList({
             </div>
           </div>
         )}
-        </AnimatePresence>
 
         {!hasRows && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-8 text-center text-muted-foreground text-sm border rounded-xl bg-card">
