@@ -316,9 +316,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   }
                 }}
                 autoComplete="new-password"
-                className={`w-full pl-10 pr-10 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                  errors.password 
-                    ? 'border-destructive focus:ring-destructive' 
+                className={`no-native-reveal w-full pl-10 pr-10 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                  errors.password
+                    ? 'border-destructive focus:ring-destructive'
                     : 'border-border focus:ring-blue-500'
                 }`}
               />
@@ -358,8 +358,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   autoComplete="new-password"
                   readOnly
                   onFocus={(e) => e.target.removeAttribute('readonly')}
-                  className={`w-full pl-10 pr-10 py-2.5 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                    errors.confirmPassword 
+                  className={`no-native-reveal w-full pl-10 pr-10 py-2.5 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                    errors.confirmPassword
                       ? 'border-destructive focus:ring-destructive' 
                       : 'border-border focus:ring-blue-500'
                   }`}

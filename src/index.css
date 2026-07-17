@@ -575,6 +575,13 @@ html {
     }
 }
 
+/* Hide Edge's native password reveal/clear icons on inputs that already provide a
+   custom show/hide toggle (e.g. the login card), so only one eye is shown. */
+.no-native-reveal::-ms-reveal,
+.no-native-reveal::-ms-clear {
+    display: none;
+}
+
 .no-scrollbar {
     scrollbar-width: none;
     -ms-overflow-style: none;
