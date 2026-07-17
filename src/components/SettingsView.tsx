@@ -467,7 +467,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                 )}
 
                 {view.categoryUsage && view.visibleCategories.length > 0 && (
-                  <p className="text-[10px] text-muted-foreground -mb-1 px-0.5">
+                  <p className="text-[10px] text-muted-foreground px-0.5">
                     Usage over the last {view.USAGE_LOOKBACK_CYCLES} cycles, least used first. Unused categories are good candidates to remove.
                   </p>
                 )}
