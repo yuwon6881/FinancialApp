@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolveRowSyncState } from './RowSyncBadge'
+import { resolveRowSyncState } from './rowSyncState'
 
 // Pins the one rule every view must agree on: a row that is both deleting AND
 // syncing (true during a delete's dispatch, when activeSyncId === row id and
