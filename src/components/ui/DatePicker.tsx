@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, useLayoutEffect } from 'react'
-import { createPortal } from 'react-dom'
+import { useState, useRef, useEffect } from 'react'
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
+import { AnchoredPopover } from './AnchoredPopover'
 
 interface DatePickerProps {
   /** Value as an ISO date string (YYYY-MM-DD) or '' when unset. */
@@ -11,6 +11,9 @@ interface DatePickerProps {
   error?: boolean
   placeholder?: string
   id?: string
+  min?: string
+  max?: string
+  popoverClassName?: string
 }
 
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
@@ -20,8 +23,6 @@ const MONTHS = [
 ]
 
 const PANEL_WIDTH = 272 // 17rem
-const PANEL_HEIGHT = 340 // approximate, used only for flip decision
-
 // Parse a YYYY-MM-DD string into local y/m/d parts (no timezone shift).
 function parseISO(value: string): { year: number; month: number; day: number } | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value)
@@ -49,12 +50,14 @@ export function DatePicker({
   error = false,
   placeholder = 'Select date',
   id,
+  min,
+  max,
+  popoverClassName = '',
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
-  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null)
 
   const parsed = parseISO(value)
 
@@ -67,40 +70,9 @@ export function DatePicker({
       : { year: now.getFullYear(), month: now.getMonth() }
   })
 
-  // Position the floating panel relative to the trigger, flipping upward when
-  // there isn't enough room below. Rendered in a portal so it is never clipped
-  // by an ancestor's overflow.
-  const updatePosition = () => {
-    const trigger = triggerRef.current
-    if (!trigger) return
-    const rect = trigger.getBoundingClientRect()
-    const vw = window.innerWidth
-    const vh = window.innerHeight
-
-    let left = align === 'right' ? rect.right - PANEL_WIDTH : rect.left
-    left = Math.min(Math.max(left, 8), vw - PANEL_WIDTH - 8)
-
-    const openUp = rect.bottom + PANEL_HEIGHT > vh && rect.top > vh - rect.bottom
-    const top = openUp ? rect.top - PANEL_HEIGHT - 6 : rect.bottom + 6
-
-    setCoords({ top, left })
-  }
-
-  useLayoutEffect(() => {
-    if (!isOpen) return
-    if (parsed) setViewDate({ year: parsed.year, month: parsed.month })
-    updatePosition()
-  }, [isOpen])
-
   useEffect(() => {
     if (!isOpen) return
-    const onScrollOrResize = () => updatePosition()
-    window.addEventListener('scroll', onScrollOrResize, true)
-    window.addEventListener('resize', onScrollOrResize)
-    return () => {
-      window.removeEventListener('scroll', onScrollOrResize, true)
-      window.removeEventListener('resize', onScrollOrResize)
-    }
+    if (parsed) setViewDate({ year: parsed.year, month: parsed.month })
   }, [isOpen])
 
   useEffect(() => {
@@ -143,12 +115,25 @@ export function DatePicker({
   ]
 
   return (
-    <div className={`relative inline-block ${className}`} ref={containerRef}>
+    <div
+      className={`relative inline-block ${className}`}
+      ref={containerRef}
+      onKeyDown={event => {
+        if (isOpen && event.key === 'Escape') {
+          event.preventDefault()
+          event.stopPropagation()
+          setIsOpen(false)
+          triggerRef.current?.focus()
+        }
+      }}
+    >
       <button
         type="button"
         id={id}
         ref={triggerRef}
         onClick={() => setIsOpen(prev => !prev)}
+        aria-haspopup="dialog"
+        aria-expanded={isOpen}
         className={`w-full h-10 flex items-center justify-between gap-2 px-2.5 sm:px-3.5 text-xs bg-background border rounded-xl font-semibold shadow-xs hover:bg-muted/30 transition duration-150 cursor-pointer text-left select-none focus:outline-none focus:ring-1 text-foreground ${
           error ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-blue-500'
         }`}
@@ -159,12 +144,17 @@ export function DatePicker({
         <Calendar className="size-3.5 text-muted-foreground/80 shrink-0" />
       </button>
 
-      {isOpen && coords && createPortal(
-        <div
-          ref={panelRef}
-          style={{ position: 'fixed', top: coords.top, left: coords.left, width: PANEL_WIDTH }}
-          className="bg-card dark:bg-slate-900 border border-border rounded-xl shadow-xl p-3 z-[200] animate-in fade-in zoom-in-95 duration-100"
-        >
+      <AnchoredPopover
+        ref={panelRef}
+        open={isOpen}
+        anchorRef={triggerRef}
+        align={align}
+        side="bottom"
+        role="dialog"
+        aria-label="Choose date"
+        style={{ width: PANEL_WIDTH }}
+        className={`bg-card dark:bg-slate-900 border border-border rounded-xl shadow-xl p-3 z-[210] overflow-y-auto overscroll-contain animate-in fade-in zoom-in-95 duration-100 ${popoverClassName}`}
+      >
           {/* Month / year header */}
           <div className="flex items-center justify-between mb-2.5">
             <button
@@ -207,13 +197,17 @@ export function DatePicker({
               const cellISO = toISO(viewDate.year, viewDate.month, day)
               const isSelected = cellISO === value
               const isToday = cellISO === todayISO
+              const isDisabled = (!!min && cellISO < min) || (!!max && cellISO > max)
               return (
                 <button
                   key={cellISO}
                   type="button"
+                  disabled={isDisabled}
                   onClick={() => selectDay(day)}
                   className={`flex items-center justify-center h-8 text-xs rounded-lg transition duration-100 cursor-pointer ${
-                    isSelected
+                    isDisabled
+                      ? 'text-muted-foreground/35 cursor-not-allowed'
+                      : isSelected
                       ? 'bg-blue-600 text-white font-bold shadow-xs'
                       : isToday
                       ? 'font-bold text-blue-600 dark:text-blue-400 hover:bg-muted/80'
@@ -230,18 +224,17 @@ export function DatePicker({
           <div className="mt-2.5 pt-2.5 border-t border-border/40 flex justify-end">
             <button
               type="button"
+              disabled={(!!min && todayISO < min) || (!!max && todayISO > max)}
               onClick={() => {
                 onChange(todayISO)
                 setIsOpen(false)
               }}
-              className="px-2.5 py-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 rounded-lg transition cursor-pointer"
+              className="px-2.5 py-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 rounded-lg transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
             >
               Today
             </button>
           </div>
-        </div>,
-        document.body
-      )}
+      </AnchoredPopover>
     </div>
   )
 }

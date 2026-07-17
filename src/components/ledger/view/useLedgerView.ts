@@ -5,7 +5,6 @@ import { getCycleRangeDates, getStartOfNCyclesAgo, formatDateForApi } from '../.
 import { getCycleLabelForDropdown } from '../../../lib/cycleLabels'
 import { matchesTransactionFilters, splitFilterSelections } from '../../../lib/transactionFilters'
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../../../lib/csvExport'
-import { lockBodyScroll, unlockBodyScroll } from '../../../lib/scrollLock'
 import { compareTransactionsNewestFirst, mergeTransactionsNewestFirst } from '../../../lib/transactionOrdering'
 
 export interface UseLedgerViewOptions {
@@ -413,16 +412,14 @@ export function useLedgerView(options: UseLedgerViewOptions) {
 
   useEffect(() => {
     if (!isFilterDropdownOpen) return
-    lockBodyScroll()
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement
-      if (!target.closest('.ledger-filter-dropdown')) {
+      if (!target.closest('.ledger-filter-dropdown, [data-floating-overlay]')) {
         setIsFilterDropdownOpen(false)
       }
     }
     document.addEventListener('click', handleClick)
     return () => {
-      unlockBodyScroll()
       document.removeEventListener('click', handleClick)
     }
   }, [isFilterDropdownOpen])

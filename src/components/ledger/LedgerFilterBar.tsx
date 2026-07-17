@@ -1,6 +1,10 @@
-import { Search, Filter, X, Loader2, CalendarDays, Banknote, Repeat2 } from 'lucide-react'
+import { useRef } from 'react'
+import { Search, Filter, X, Loader2, CalendarDays, Banknote, Repeat2, ChevronDown } from 'lucide-react'
 import type { TransactionCategory } from '../../types'
 import { BottomSheet } from '../ui/BottomSheet'
+import { AnchoredPopover } from '../ui/AnchoredPopover'
+import { DatePicker } from '../ui/DatePicker'
+import { PillSwitch } from '../ui/PillSwitch'
 import { getCategoryDotClass, getCategoryFilterClass } from '../../lib/categoryColors'
 
 const LEDGER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
@@ -77,6 +81,8 @@ export function LedgerFilterBar({
   onClearFilters,
   onApplyFilters,
 }: LedgerFilterBarProps) {
+  const filterButtonRef = useRef<HTMLButtonElement>(null)
+  const filterPanelRef = useRef<HTMLDivElement>(null)
   // Which selection set is authoritative for the checkbox state depends on mode.
   const checkboxFilters = showAllCycles ? pendingFilters : selectedFilters
   const activeFilterCount = (showAllCycles ? appliedFilters.length : selectedFilters.length) + activeAdvancedFilterCount
@@ -93,7 +99,7 @@ export function LedgerFilterBar({
   const hasInvalidRange = hasInvalidAmountRange || hasInvalidDateRange
 
   const advancedFilterControls = (
-    <div className="space-y-4 border-t border-border/40 pt-4">
+    <div className="space-y-4 border-t border-border/40 pt-4 md:border-t-0 md:pt-0">
       <div className="space-y-2">
         <span className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
           <CalendarDays className="size-3" /> Date range
@@ -101,22 +107,22 @@ export function LedgerFilterBar({
         <div className="grid grid-cols-2 gap-2">
           <label className="space-y-1 text-[10px] font-semibold text-muted-foreground">
             From
-            <input
-              type="date"
+            <DatePicker
               value={startDate}
               max={endDate || undefined}
-              onChange={event => onStartDateChange(event.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-2 py-2 text-xs text-foreground outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+              onChange={onStartDateChange}
+              className="w-full"
+              popoverClassName="ledger-filter-dropdown"
             />
           </label>
           <label className="space-y-1 text-[10px] font-semibold text-muted-foreground">
             To
-            <input
-              type="date"
+            <DatePicker
               value={endDate}
               min={startDate || undefined}
-              onChange={event => onEndDateChange(event.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-2 py-2 text-xs text-foreground outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+              onChange={onEndDateChange}
+              className="w-full"
+              popoverClassName="ledger-filter-dropdown"
             />
           </label>
         </div>
@@ -184,17 +190,16 @@ export function LedgerFilterBar({
         </div>
       </div>
 
-      <label className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2.5 cursor-pointer">
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2.5">
         <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
           <Repeat2 className="size-3.5 text-blue-500" /> Recurring transactions only
         </span>
-        <input
-          type="checkbox"
+        <PillSwitch
           checked={recurringOnly}
-          onChange={event => onRecurringOnlyChange(event.target.checked)}
-          className="size-4 rounded border-border text-blue-500 focus:ring-blue-500"
+          onChange={onRecurringOnlyChange}
+          ariaLabel="Recurring transactions only"
         />
-      </label>
+      </div>
     </div>
   )
 
@@ -264,9 +269,22 @@ export function LedgerFilterBar({
       )}
 
       {/* Dropdown Multi-Select Category Filter */}
-      <div className="relative ledger-filter-dropdown shrink-0 flex justify-end">
+      <div
+        className="relative ledger-filter-dropdown shrink-0 flex justify-end"
+        onKeyDown={event => {
+          if (!isMobile && isFilterDropdownOpen && event.key === 'Escape') {
+            event.preventDefault()
+            event.stopPropagation()
+            onFilterDropdownOpenChange(false)
+            filterButtonRef.current?.focus()
+          }
+        }}
+      >
         <button
+          ref={filterButtonRef}
           onClick={() => onFilterDropdownOpenChange(!isFilterDropdownOpen)}
+          aria-haspopup="dialog"
+          aria-expanded={isFilterDropdownOpen}
           className="relative flex items-center justify-center md:justify-between gap-2 shrink-0 px-3 md:px-4 py-2.5 md:w-60 text-xs font-semibold bg-background border border-border/60 rounded-xl hover:bg-muted transition duration-200 cursor-pointer select-none"
         >
           <span className="flex items-center gap-2 text-muted-foreground">
@@ -277,7 +295,7 @@ export function LedgerFilterBar({
                 : (selectedFilters.length === 0 ? 'Filters' : `${selectedFilters.length} filter${selectedFilters.length > 1 ? 's' : ''} active`)}
             </span>
           </span>
-          <span className="hidden md:inline text-[9px] text-muted-foreground">{'▼'}</span>
+          <ChevronDown className={`hidden size-3.5 text-muted-foreground transition-transform md:block ${isFilterDropdownOpen ? 'rotate-180' : ''}`} />
           {activeFilterCount > 0 && (
             <span className="md:hidden absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 flex items-center justify-center rounded-full bg-blue-600 text-white text-[9px] font-bold">
               {activeFilterCount}
@@ -286,10 +304,18 @@ export function LedgerFilterBar({
         </button>
 
         {/* Desktop Filter Popover */}
-        {isFilterDropdownOpen && (
-          <div className="hidden md:block absolute right-0 top-full mt-1.5 w-80 bg-card border border-border rounded-2xl shadow-xl p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+        <AnchoredPopover
+          ref={filterPanelRef}
+          open={isFilterDropdownOpen && !isMobile}
+          anchorRef={filterButtonRef}
+          align="right"
+          side="bottom"
+          role="dialog"
+          aria-label="Filter ledger entries"
+          className="ledger-filter-dropdown flex w-[42rem] flex-col overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-xl z-[200] animate-in fade-in slide-in-from-top-2 duration-150"
+        >
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3">
+            <div className="mb-3 flex shrink-0 items-center justify-between border-b border-border/40 pb-2">
               <span className="text-xs font-bold text-foreground">Filter Ledger Entries</span>
               {draftFilterCount > 0 && (
                 <button
@@ -301,59 +327,63 @@ export function LedgerFilterBar({
               )}
             </div>
 
-            {/* Scrollable sections */}
-            <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
-              {/* Section 1: Ledger Allocation Buckets */}
-              <div className="space-y-2">
-                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Ledger Categories</span>
-                <div className="grid grid-cols-1 gap-1.5">
-                  {LEDGER_BUCKETS.map(bucket => {
-                    const isChecked = checkboxFilters.includes(bucket)
-                    return (
-                      <label
-                        key={bucket}
-                        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition ${getCategoryFilterClass(bucket, isChecked)}`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => onToggleFilter(bucket)}
-                          className="rounded border-border text-blue-500 focus:ring-blue-500 size-3"
-                        />
-                        <span className={`size-2 rounded-full ${getCategoryDotClass(bucket)}`} />
-                        <span>{bucket}</span>
-                      </label>
-                    )
-                  })}
-                </div>
-              </div>
+            {/* Two columns keep every control visible on a typical desktop while
+                the outer body remains the single fallback scroll container. */}
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+              <div className="grid grid-cols-2 gap-5">
+                <div className="space-y-4">
+                  {/* Section 1: Ledger Allocation Buckets */}
+                  <div className="space-y-2">
+                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Ledger Categories</span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {LEDGER_BUCKETS.map(bucket => {
+                        const isChecked = checkboxFilters.includes(bucket)
+                        return (
+                          <label
+                            key={bucket}
+                            className={`flex min-w-0 items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition ${getCategoryFilterClass(bucket, isChecked)}`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => onToggleFilter(bucket)}
+                              className="rounded border-border text-blue-500 focus:ring-blue-500 size-3"
+                            />
+                            <span className={`size-2 shrink-0 rounded-full ${getCategoryDotClass(bucket)}`} />
+                            <span className="truncate">{bucket}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
 
-              {/* Section 2: Transaction Categories */}
-              <div className="space-y-2">
-                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Categories</span>
-                <div className="grid grid-cols-1 gap-1.5 max-h-40 overflow-y-auto pr-0.5">
-                  {categories.map(c => {
-                    const isChecked = checkboxFilters.includes(c.name)
-                    return (
-                      <label
-                        key={c.id}
-                        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition ${getCategoryFilterClass(c.name, isChecked)}`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => onToggleFilter(c.name)}
-                          className="rounded border-border text-blue-500 focus:ring-blue-500 size-3"
-                        />
-                        <span className={`size-2 rounded-full ${getCategoryDotClass(c.name)}`} />
-                        <span className="truncate">{c.name}</span>
-                      </label>
-                    )
-                  })}
+                  {/* Section 2: Transaction Categories */}
+                  <div className="space-y-2">
+                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Categories</span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {categories.map(c => {
+                        const isChecked = checkboxFilters.includes(c.name)
+                        return (
+                          <label
+                            key={c.id}
+                            className={`flex min-w-0 items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition ${getCategoryFilterClass(c.name, isChecked)}`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => onToggleFilter(c.name)}
+                              className="rounded border-border text-blue-500 focus:ring-blue-500 size-3"
+                            />
+                            <span className={`size-2 shrink-0 rounded-full ${getCategoryDotClass(c.name)}`} />
+                            <span className="truncate">{c.name}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
                 </div>
+                {advancedFilterControls}
               </div>
-
-              {advancedFilterControls}
             </div>
 
             {/* Apply button -- only in server mode */}
@@ -373,8 +403,7 @@ export function LedgerFilterBar({
                 </button>
               </div>
             )}
-          </div>
-        )}
+        </AnchoredPopover>
 
         {/* Mobile BottomSheet Filter */}
         {isMobile && (
@@ -400,7 +429,7 @@ export function LedgerFilterBar({
               </button>
             ) : undefined}
           >
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+            <div className="ledger-filter-dropdown space-y-4 pr-1">
               {draftFilterCount > 0 && (
                 <div className="flex justify-end">
                   <button
@@ -440,7 +469,7 @@ export function LedgerFilterBar({
               {/* Section 2: Transaction Categories */}
               <div className="space-y-2">
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Categories</span>
-                <div className="grid grid-cols-1 gap-1.5 max-h-52 overflow-y-auto pr-0.5">
+                <div className="grid grid-cols-1 gap-1.5 pr-0.5">
                   {categories.map(c => {
                     const isChecked = checkboxFilters.includes(c.name)
                     return (

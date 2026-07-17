@@ -4,6 +4,7 @@ import { PerimeterBeam } from '../../ui/PerimeterBeam'
 import { CustomSelect } from '../../ui/CustomSelect'
 import { SearchableSelect } from '../../ui/SearchableSelect'
 import { DatePicker } from '../../ui/DatePicker'
+import { AnchoredPopover } from '../../ui/AnchoredPopover'
 import { SmartAmountInput } from '../../ui/SmartAmountInput'
 import { maskCurrencyInput } from '../../../lib/utils'
 import type { TransactionFormState, TransferBucket, SelectableLedgerCategory } from './transactionFormReducer'
@@ -55,6 +56,7 @@ export function TransactionFormFields({
   const [showSuggestions, setShowSuggestions] = React.useState(false)
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = React.useState(-1)
   const suggestionsRef = useRef<HTMLDivElement>(null)
+  const descriptionAnchorRef = useRef<HTMLDivElement>(null)
 
   const handleDescriptionBlur = () => {
     // Keep suggestions open if clicking inside them
@@ -136,7 +138,17 @@ export function TransactionFormFields({
 
   return (
     <>
-      <div className="space-y-1 relative description-autocomplete sm:col-span-2">
+      <div
+        className="space-y-1 relative description-autocomplete sm:col-span-2"
+        onKeyDown={event => {
+          if (event.key === 'Escape' && (showSuggestions || suggestions.showNoteSuggestions)) {
+            event.preventDefault()
+            event.stopPropagation()
+            setShowSuggestions(false)
+            suggestions.setShowNoteSuggestions(false)
+          }
+        }}
+      >
         <div className="flex items-center justify-between gap-2">
           <label className="text-xs font-semibold text-muted-foreground">Description</label>
           {state.transactionType !== 'transfer' && (
@@ -153,7 +165,7 @@ export function TransactionFormFields({
             </button>
           )}
         </div>
-        <div className={`relative ${suggestions.isSuggestingNote ? 'perimeter-beam-host' : ''}`}>
+        <div ref={descriptionAnchorRef} className={`relative ${suggestions.isSuggestingNote ? 'perimeter-beam-host' : ''}`}>
           {suggestions.isSuggestingNote && <PerimeterBeam radius={12} size={40} />}
           <input
             ref={firstInputRef}
@@ -192,8 +204,13 @@ export function TransactionFormFields({
           </p>
         )}
 
-        {suggestions.showNoteSuggestions && (
-          <div className="absolute z-50 w-full mt-1 overflow-hidden bg-card border border-blue-500/25 rounded-xl shadow-xl animate-in fade-in slide-in-from-top-2 duration-150">
+        <AnchoredPopover
+          open={suggestions.showNoteSuggestions}
+          anchorRef={descriptionAnchorRef}
+          matchAnchorWidth
+          side="bottom"
+          className="z-[210] overflow-y-auto overscroll-contain bg-card border border-blue-500/25 rounded-xl shadow-xl animate-in fade-in slide-in-from-top-2 duration-150"
+        >
             {suggestions.isSuggestingNote ? (
               <div className="flex items-center gap-2 px-3.5 py-3 text-xs font-semibold text-muted-foreground">
                 <Loader2 className="size-3.5 animate-spin text-blue-500" />
@@ -225,14 +242,16 @@ export function TransactionFormFields({
                 No better note found for this description.
               </div>
             )}
-          </div>
-        )}
+        </AnchoredPopover>
 
-        {showSuggestions && !suggestions.showNoteSuggestions && filteredSuggestions.length > 0 && (
-          <div
+        <AnchoredPopover
             ref={suggestionsRef}
-            className="absolute z-50 w-full mt-1 max-h-52 overflow-y-auto bg-card border border-border/80 rounded-xl shadow-xl animate-in fade-in slide-in-from-top-2 duration-150"
-          >
+            open={showSuggestions && !suggestions.showNoteSuggestions && filteredSuggestions.length > 0}
+            anchorRef={descriptionAnchorRef}
+            matchAnchorWidth
+            side="bottom"
+            className="z-[210] overflow-y-auto overscroll-contain bg-card border border-border/80 rounded-xl shadow-xl animate-in fade-in slide-in-from-top-2 duration-150"
+        >
             {filteredSuggestions.map((s, idx) => {
               const query = state.description.toLowerCase().trim()
               const matchIdx = s.description.toLowerCase().indexOf(query)
@@ -268,8 +287,7 @@ export function TransactionFormFields({
                 </button>
               )
             })}
-          </div>
-        )}
+        </AnchoredPopover>
 
         {!suggestions.showNoteSuggestions && !state.description.trim() && quickSuggestionEntries.length > 0 && (
           <div

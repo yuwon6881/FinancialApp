@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { ChevronDown, Search } from 'lucide-react'
+import { AnchoredPopover } from './AnchoredPopover'
 
 interface SelectOption<T extends string | number = string | number> {
   value: T
@@ -27,6 +28,8 @@ export function SearchableSelect<T extends string | number>({
   const [isOpen, setIsOpen] = useState(false)
   const [query, setQuery] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
   const selectedOption = options.find(opt => opt.value === value)
@@ -40,7 +43,11 @@ export function SearchableSelect<T extends string | number>({
   // Close on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node
+      if (
+        containerRef.current && !containerRef.current.contains(target) &&
+        panelRef.current && !panelRef.current.contains(target)
+      ) {
         setIsOpen(false)
         setQuery('')
       }
@@ -64,11 +71,22 @@ export function SearchableSelect<T extends string | number>({
     <div
       className={`relative inline-block ${isOpen ? 'z-[120]' : 'z-0'} ${className}`}
       ref={containerRef}
+      onKeyDown={event => {
+        if (isOpen && event.key === 'Escape') {
+          event.preventDefault()
+          event.stopPropagation()
+          setIsOpen(false)
+          triggerRef.current?.focus()
+        }
+      }}
     >
       {/* Trigger button */}
       <button
         type="button"
+        ref={triggerRef}
         onClick={() => setIsOpen(prev => !prev)}
+        aria-haspopup="dialog"
+        aria-expanded={isOpen}
         className="w-full h-10 flex items-center justify-between gap-1.5 sm:gap-2.5 px-2.5 sm:px-3.5 text-xs bg-background border border-border rounded-xl text-foreground font-semibold shadow-xs hover:bg-muted/30 transition duration-150 cursor-pointer text-left select-none"
       >
         <span className="truncate">{selectedOption?.label ?? value}</span>
@@ -78,10 +96,18 @@ export function SearchableSelect<T extends string | number>({
       </button>
 
       {/* Dropdown */}
-      {isOpen && (
-        <div
-          className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-1.5 min-w-[180px] w-max max-w-[calc(100vw-32px)] sm:max-w-[280px] bg-card dark:bg-slate-900 border border-border rounded-xl shadow-xl z-[120] animate-in fade-in slide-in-from-top-1 duration-100 flex flex-col`}
-        >
+      <AnchoredPopover
+        ref={panelRef}
+        open={isOpen}
+        anchorRef={triggerRef}
+        align={align}
+        side="bottom"
+        matchAnchorWidth
+        minWidth={180}
+        role="dialog"
+        aria-label="Choose an option"
+        className="bg-card dark:bg-slate-900 border border-border rounded-xl shadow-xl z-[200] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-100 flex min-h-0 flex-col"
+      >
           {/* Search row */}
           <div className="p-2 border-b border-border/40">
             <div className="relative flex items-center">
@@ -98,12 +124,13 @@ export function SearchableSelect<T extends string | number>({
           </div>
 
           {/* Options list */}
-          <div className="p-1 max-h-52 overflow-y-auto flex flex-col gap-0.5">
+          <div className="min-h-0 flex-1 p-1 overflow-y-auto overscroll-contain flex flex-col gap-0.5">
             {filtered.length > 0 ? (
               filtered.map(opt => (
                 <button
                   key={opt.value}
                   type="button"
+                  aria-pressed={opt.value === value}
                   onClick={() => {
                     onChange(opt.value)
                     setIsOpen(false)
@@ -137,8 +164,7 @@ export function SearchableSelect<T extends string | number>({
               </p>
             )}
           </div>
-        </div>
-      )}
+      </AnchoredPopover>
     </div>
   )
 }

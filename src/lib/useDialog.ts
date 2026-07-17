@@ -1,18 +1,32 @@
 import { useEffect, useRef } from 'react'
 
-const FOCUSABLE_SELECTOR = [
+const FOCUSABLE_SELECTORS = [
   'a[href]',
   'button:not([disabled])',
   'textarea:not([disabled])',
   'input:not([disabled]):not([type="hidden"])',
   'select:not([disabled])',
   '[tabindex]:not([tabindex="-1"])',
-].join(',')
+]
+const FOCUSABLE_SELECTOR = FOCUSABLE_SELECTORS.join(',')
+const FLOATING_FOCUSABLE_SELECTOR = FOCUSABLE_SELECTORS
+  .map(selector => `[data-floating-overlay] ${selector}`)
+  .join(',')
 
 const isMobileLayout = () =>
   typeof window !== 'undefined' && window.matchMedia('(max-width: 639px), (pointer: coarse)').matches
 
 const isTextEntryElement = (el: Element) => el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'
+
+const getDialogFocusables = (panel: HTMLElement): HTMLElement[] => {
+  const inPanel = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))
+  // Dropdowns and calendars are portalled outside the panel to escape overflow,
+  // but they are still logically part of the dialog and must stay in its Tab loop.
+  const inFloatingLayers = Array.from(
+    document.querySelectorAll<HTMLElement>(FLOATING_FOCUSABLE_SELECTOR),
+  )
+  return [...inPanel, ...inFloatingLayers]
+}
 
 interface UseDialogOptions {
   isOpen: boolean
@@ -58,7 +72,7 @@ export function useDialog({ isOpen, onClose, ref, canClose, autoFocus = true }: 
       if (!panel || !autoFocus) return
       // Respect an element that already grabbed focus (e.g. autoFocus input).
       if (panel.contains(document.activeElement) && document.activeElement !== panel) return
-      const focusables = panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      const focusables = getDialogFocusables(panel)
       const target = focusables[0] ?? panel
       // On mobile, focusing a text field pops the on-screen keyboard immediately,
       // while the sheet is still mid-entrance-animation and the body scroll-lock
@@ -81,7 +95,7 @@ export function useDialog({ isOpen, onClose, ref, canClose, autoFocus = true }: 
       }
 
       if (e.key !== 'Tab') return
-      const focusables = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))
+      const focusables = getDialogFocusables(panel)
         .filter(el => el.offsetWidth > 0 || el.offsetHeight > 0 || el === document.activeElement)
       if (focusables.length === 0) {
         e.preventDefault()
@@ -93,11 +107,11 @@ export function useDialog({ isOpen, onClose, ref, canClose, autoFocus = true }: 
       const active = document.activeElement as HTMLElement
 
       if (e.shiftKey) {
-        if (active === first || !panel.contains(active)) {
+        if (active === first || (!panel.contains(active) && !active.closest('[data-floating-overlay]'))) {
           e.preventDefault()
           last.focus()
         }
-      } else if (active === last || !panel.contains(active)) {
+      } else if (active === last || (!panel.contains(active) && !active.closest('[data-floating-overlay]'))) {
         e.preventDefault()
         first.focus()
       }

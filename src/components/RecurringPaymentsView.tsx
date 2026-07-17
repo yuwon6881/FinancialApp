@@ -18,6 +18,7 @@ import { Card } from './ui/Card'
 import { CustomSelect } from './ui/CustomSelect'
 import { DatePicker } from './ui/DatePicker'
 import { BottomSheet } from './ui/BottomSheet'
+import { AnchoredPopover } from './ui/AnchoredPopover'
 import { CycleSkeleton } from './ui/Skeleton'
 import { RowSyncBadge } from './ui/RowSyncBadge'
 import { ToggleButton } from './ui/ToggleButton'
@@ -183,6 +184,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [sortOrder, setSortOrder] = useState<string>('amount-desc')
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false)
+  const filterButtonRef = React.useRef<HTMLButtonElement>(null)
 
   // Toggle filter on or off
   const handleToggleCategoryFilter = (cat: string) => {
@@ -200,7 +202,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     if (!isFilterDropdownOpen) return
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement
-      if (!target.closest('.recurring-filter-dropdown')) {
+      if (!target.closest('.recurring-filter-dropdown, [data-floating-overlay]')) {
         setIsFilterDropdownOpen(false)
       }
     }
@@ -566,9 +568,22 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
       {/* Filter and Sort controls */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-card border border-border/60 rounded-2xl shadow-xs select-none">
         {/* Category Multi-select dropdown */}
-        <div className="relative recurring-filter-dropdown w-full sm:w-auto">
+        <div
+          className="relative recurring-filter-dropdown w-full sm:w-auto"
+          onKeyDown={event => {
+            if (!isMobile && isFilterDropdownOpen && event.key === 'Escape') {
+              event.preventDefault()
+              event.stopPropagation()
+              setIsFilterDropdownOpen(false)
+              filterButtonRef.current?.focus()
+            }
+          }}
+        >
           <button
+            ref={filterButtonRef}
             onClick={() => setIsFilterDropdownOpen(prev => !prev)}
+            aria-haspopup="dialog"
+            aria-expanded={isFilterDropdownOpen}
             className="w-full sm:w-60 flex items-center justify-between gap-2 px-4 py-2 text-xs font-semibold bg-background border border-border rounded-xl hover:bg-muted transition duration-200 cursor-pointer select-none border-border/60"
           >
             <span className="flex items-center gap-2 text-muted-foreground">
@@ -582,8 +597,15 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
           </button>
 
           {/* Desktop Filter Popover */}
-          {isFilterDropdownOpen && (
-            <div className="hidden sm:block absolute left-0 mt-2 w-60 bg-card border border-border rounded-2xl shadow-xl p-4 z-40 animate-in fade-in slide-in-from-top-2 duration-150">
+          <AnchoredPopover
+            open={isFilterDropdownOpen && !isMobile}
+            anchorRef={filterButtonRef}
+            align="left"
+            side="bottom"
+            role="dialog"
+            aria-label="Filter recurring payment categories"
+            className="recurring-filter-dropdown w-60 overflow-y-auto overscroll-contain bg-card border border-border rounded-2xl shadow-xl p-4 z-[200] animate-in fade-in slide-in-from-top-2 duration-150"
+          >
               <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3">
                 <span className="text-xs font-bold text-foreground">Filter Categories</span>
                 {selectedCategories.length > 0 && (
@@ -595,7 +617,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                   </button>
                 )}
               </div>
-              <div className="grid grid-cols-1 gap-1.5 max-h-48 overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 gap-1.5 pr-1">
                 {['Essentials', 'Growth', 'Stability', 'Rewards'].map(bucket => {
                   const isChecked = selectedCategories.includes(bucket)
                   return (
@@ -615,8 +637,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                   )
                 })}
               </div>
-            </div>
-          )}
+          </AnchoredPopover>
 
           {/* Mobile BottomSheet Filter */}
           {isMobile && (
@@ -625,7 +646,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
               title="Filter Categories"
               onClose={() => setIsFilterDropdownOpen(false)}
             >
-              <div className="no-scrollbar space-y-4 max-h-[60vh] overflow-x-hidden overflow-y-auto pr-1">
+              <div className="recurring-filter-dropdown space-y-4 pr-1">
                 {selectedCategories.length > 0 && (
                   <div className="flex justify-end">
                     <button

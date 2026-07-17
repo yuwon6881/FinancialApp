@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
 import type { Transaction, TransactionCategory } from '../types'
 import { FileText, Edit2, Trash2, ArrowLeft, Plus, Sparkles, Loader2 } from 'lucide-react'
 import { formatCurrencyVal, maskCurrencyInput, getCurrencySymbol } from '../lib/utils'
@@ -9,6 +9,7 @@ import { SearchableSelect } from './ui/SearchableSelect'
 import { CustomSelect } from './ui/CustomSelect'
 import { DatePicker } from './ui/DatePicker'
 import { PerimeterBeam } from './ui/PerimeterBeam'
+import { AnchoredPopover } from './ui/AnchoredPopover'
 import { LedgerAllocationBadge } from './ledger/LedgerAllocationBadge'
 import { useTransactionSuggestions } from './ledger/transaction-form/useTransactionSuggestions'
 
@@ -46,6 +47,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
   const [ledgerCategory, setLedgerCategory] = useState('Essentials')
   const [transferSource, setTransferSource] = useState('Essentials')
   const [transferTarget, setTransferTarget] = useState('Growth')
+  const descriptionAnchorRef = useRef<HTMLDivElement>(null)
 
   const normalCategoryOptions = categories
     .filter(item => !item.isPendingDelete && !['transfer', 'adjustment'].includes(item.name.trim().toLowerCase()))
@@ -229,7 +231,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                       </button>
                     )}
                   </div>
-                  <div className={`relative ${suggestions.isSuggestingNote ? 'perimeter-beam-host' : ''}`}>
+                  <div ref={descriptionAnchorRef} className={`relative ${suggestions.isSuggestingNote ? 'perimeter-beam-host' : ''}`}>
                     {suggestions.isSuggestingNote && <PerimeterBeam radius={12} size={40} />}
                     <input
                       type="text"
@@ -258,8 +260,13 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                     </p>
                   )}
 
-                  {suggestions.showNoteSuggestions && (
-                    <div className="absolute z-50 w-full mt-1 overflow-hidden bg-card border border-blue-500/25 rounded-xl shadow-xl animate-in fade-in slide-in-from-top-2 duration-150">
+                  <AnchoredPopover
+                    open={suggestions.showNoteSuggestions}
+                    anchorRef={descriptionAnchorRef}
+                    matchAnchorWidth
+                    side="bottom"
+                    className="z-[200] overflow-y-auto overscroll-contain bg-card border border-blue-500/25 rounded-xl shadow-xl animate-in fade-in slide-in-from-top-2 duration-150"
+                  >
                       {suggestions.isSuggestingNote ? (
                         <div className="flex items-center gap-2 px-3 py-2.5 text-xs font-semibold text-muted-foreground">
                           <Loader2 className="size-3.5 animate-spin text-blue-500" />
@@ -291,8 +298,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                           No better note found for this description.
                         </div>
                       )}
-                    </div>
-                  )}
+                  </AnchoredPopover>
                 </div>
 
                 {/* Amount + Date */}

@@ -15,6 +15,7 @@ import { CollapsibleBody } from './ui/CollapsibleBody'
 import { useAppContext } from '../contexts/AppContext'
 import { ActiveDevicesSection } from './settings/ActiveDevicesSection'
 import { FingerprintSection } from './settings/FingerprintSection'
+import { AnchoredPopover } from './ui/AnchoredPopover'
 
 import { useSettingsView } from './settings/view/useSettingsView'
 
@@ -73,6 +74,21 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
   })
 
   const [activeTab, setActiveTab] = React.useState<'financial-model' | 'categories-preferences' | 'security'>('financial-model')
+  const usageButtonRef = React.useRef<HTMLButtonElement>(null)
+  const usagePanelRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    if (!view.showUsageDetails) return
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node
+      if (
+        !usageButtonRef.current?.contains(target) &&
+        !usagePanelRef.current?.contains(target)
+      ) view.setShowUsageDetails(false)
+    }
+    document.addEventListener('mousedown', handlePointerDown)
+    return () => document.removeEventListener('mousedown', handlePointerDown)
+  }, [view.showUsageDetails])
 
   return (
     <div className="space-y-6 soft-rise">
@@ -287,18 +303,35 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   {view.categoryUsage && view.visibleCategories.length > 0 && (
                     <div className="relative">
                       <button
+                        ref={usageButtonRef}
                         type="button"
                         onClick={e => { e.stopPropagation(); view.setShowUsageDetails(!view.showUsageDetails) }}
+                        aria-haspopup="dialog"
+                        aria-expanded={view.showUsageDetails}
                         className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-muted-foreground bg-background border border-border/60 hover:text-foreground hover:bg-muted transition cursor-pointer"
                       >
                         Usage
                         {view.showUsageDetails ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
                       </button>
 
-                      {view.showUsageDetails && (
-                        <div
+                      <AnchoredPopover
+                          ref={usagePanelRef}
+                          open={view.showUsageDetails}
+                          anchorRef={usageButtonRef}
+                          align="right"
+                          side="bottom"
+                          role="dialog"
+                          aria-label="Category usage details"
                           onClick={e => e.stopPropagation()}
-                          className="absolute right-[-80px] sm:right-0 top-full mt-2 w-72 max-w-[calc(100vw-32px)] md:w-80 z-50 bg-card border border-border/80 shadow-lg rounded-xl p-3 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-150"
+                          onKeyDown={event => {
+                            if (event.key === 'Escape') {
+                              event.preventDefault()
+                              event.stopPropagation()
+                              view.setShowUsageDetails(false)
+                              usageButtonRef.current?.focus()
+                            }
+                          }}
+                          className="w-72 md:w-80 z-[200] bg-card border border-border/80 shadow-lg rounded-xl p-3 flex flex-col gap-2 overflow-y-auto overscroll-contain animate-in fade-in zoom-in-95 duration-150"
                         >
                           <p className="text-[10px] text-muted-foreground leading-relaxed">
                             Usage over the last {view.USAGE_LOOKBACK_CYCLES} cycles, least used first. Categories with no recent activity are good candidates to remove.
@@ -326,8 +359,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                               ))}
                             </div>
                           )}
-                        </div>
-                      )}
+                      </AnchoredPopover>
                     </div>
                   )}
                   <button
