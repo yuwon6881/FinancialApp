@@ -32,8 +32,8 @@ export function fetchTransactions(month?: string, year?: number, all?: boolean, 
   const query = params.size ? `?${params}` : ''
 
   return cachedGet(cacheKey, async () => {
+    // No signal here: the fetch is shared between callers via the cache (see cachedGet).
     const data = await request<WireTransaction[] | null>(`/transactions${query}`, {
-      signal,
       errorMessage: 'Failed to fetch transactions',
     })
     return (data || []).map(deobfuscateTransaction)

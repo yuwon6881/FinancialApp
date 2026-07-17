@@ -6,7 +6,6 @@ import { cachedGet, invalidateCache, jsonBody, request, requestVoid } from './cl
 export function fetchRecurringPayments(signal?: AbortSignal): Promise<RecurringPayment[]> {
   return cachedGet('recurringPayments', async () => {
     const data = await request<WireRecurringPayment[] | null>('/recurring-payments', {
-      signal,
       errorMessage: 'Failed to fetch recurring payments',
     })
     return (data || []).map(deobfuscateRecurringPayment)

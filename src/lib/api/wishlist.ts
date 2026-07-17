@@ -6,7 +6,6 @@ import { cachedGet, invalidateCache, jsonBody, request, requestVoid } from './cl
 export function fetchWishlist(signal?: AbortSignal): Promise<WishlistItem[]> {
   return cachedGet('wishlist', async () => {
     const data = await request<WireWishlistItem[] | null>('/wishlist', {
-      signal,
       errorMessage: 'Failed to fetch wishlist',
     })
     return (data || []).map(deobfuscateWishlistItem)

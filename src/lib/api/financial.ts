@@ -19,7 +19,6 @@ export function fetchDashboard(month?: string, year?: number, signal?: AbortSign
 
   return cachedGet(`dashboard:${month || ''}:${year || ''}`, async () => {
     const data = await request<WireDashboardData>(`/financial/dashboard${query}`, {
-      signal,
       errorMessage: 'Failed to fetch dashboard data',
     })
     return {
@@ -79,7 +78,6 @@ export function fetchDashboardInsights(month?: string, year?: number, signal?: A
 
   return cachedGet(`dashboard-insights:${month || ''}:${year || ''}`, async () => {
     const data = await request<WireDashboardInsights>(`/financial/dashboard/insights${query}`, {
-      signal,
       errorMessage: 'Failed to fetch dashboard insights',
     })
     const mapBreakdown = (items: WireCategoryBreakdown[]) => (items || []).map(item => ({

@@ -90,7 +90,6 @@ export async function applyCategoryCleanup(actions: CategoryCleanupAction[]): Pr
 
 export function fetchCategories(signal?: AbortSignal): Promise<TransactionCategory[]> {
   return cachedGet('categories', () => request<TransactionCategory[]>('/categories', {
-    signal,
     errorMessage: 'Failed to fetch custom categories',
   }), { signal, staleTime: 300_000 })
 }

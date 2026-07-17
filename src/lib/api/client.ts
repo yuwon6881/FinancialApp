@@ -41,31 +41,55 @@ export function invalidateCache(): void {
   cacheStore.clear()
 }
 
+// The cached promise is shared between callers, so `load` must NOT be tied to any
+// caller's AbortSignal: one subscriber aborting would poison the entry for the rest.
+// Instead the caller's signal only detaches that caller (their promise rejects with
+// AbortError) while the underlying fetch runs to completion and warms the cache.
 export function cachedGet<T>(
   key: string,
   load: () => Promise<T>,
   options: { signal?: AbortSignal; staleTime?: number } = {},
 ): Promise<T> {
-  if (options.signal) return load()
-
   const existing = cacheStore.get(key)
-  if (existing) {
-    if (Date.now() - existing.timestamp <= existing.staleTime) {
-      return existing.promise as Promise<T>
-    }
-    cacheStore.delete(key)
+  let promise: Promise<T>
+  if (existing && Date.now() - existing.timestamp <= existing.staleTime) {
+    promise = existing.promise as Promise<T>
+  } else {
+    if (existing) cacheStore.delete(key)
+    promise = load()
+    cacheStore.set(key, {
+      promise,
+      timestamp: Date.now(),
+      staleTime: options.staleTime ?? 30_000,
+    })
+    promise.catch(() => {
+      if (cacheStore.get(key)?.promise === promise) cacheStore.delete(key)
+    })
   }
+  return withAbort(promise, options.signal)
+}
 
-  const promise = load()
-  cacheStore.set(key, {
-    promise,
-    timestamp: Date.now(),
-    staleTime: options.staleTime ?? 30_000,
+function withAbort<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return promise
+  if (signal.aborted) return Promise.reject(newAbortError())
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(newAbortError())
+    signal.addEventListener('abort', onAbort, { once: true })
+    promise.then(
+      value => {
+        signal.removeEventListener('abort', onAbort)
+        resolve(value)
+      },
+      err => {
+        signal.removeEventListener('abort', onAbort)
+        reject(err)
+      },
+    )
   })
-  promise.catch(() => {
-    if (cacheStore.get(key)?.promise === promise) cacheStore.delete(key)
-  })
-  return promise
+}
+
+function newAbortError(): Error {
+  return new DOMException('The operation was aborted.', 'AbortError')
 }
 
 function handleApiResponse(response: Response, url: string): Response {
