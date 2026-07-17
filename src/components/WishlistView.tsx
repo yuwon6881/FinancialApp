@@ -6,7 +6,7 @@ import { SwipeableRow } from './ui/SwipeableRow'
 import { BottomSheet } from './ui/BottomSheet'
 import { CycleSkeleton } from './ui/Skeleton'
 import { Card } from './ui/Card'
-import { RowSyncBadge } from './ui/RowSyncBadge'
+import { RowSyncStatus } from './ui/RowSyncBadge'
 import { formatCurrencyVal } from '../lib/utils'
 import { useSyncStatus } from '../lib/useOptimisticList'
 import { getActiveWishlistItem } from '../lib/wishlist'
@@ -279,11 +279,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                       <div>
                         <h2 className="text-base font-bold text-foreground flex items-center gap-1.5 flex-wrap">
                           {activeItem.name}
-                          {isItemDeleting(activeItem.id) ? (
-                            <RowSyncBadge state="deleting" entityLabel="item" />
-                          ) : (isItemSyncing(activeItem.id) || activeItem.isPendingSync) ? (
-                            <RowSyncBadge state={isItemSyncing(activeItem.id) ? 'syncing' : 'pending'} entityLabel="item" />
-                          ) : null}
+                          <RowSyncStatus isDeleting={isItemDeleting(activeItem.id)} isSyncing={isItemSyncing(activeItem.id)} isPending={activeItem.isPendingSync} entityLabel="item" />
                         </h2>
                         <span className={`inline-block mt-1 text-[9px] px-1.5 py-0.5 rounded border font-semibold ${
                           activeItem.priority === 'High' 
@@ -525,11 +521,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                       <div className="flex items-center gap-2">
                         <h4 className="font-bold text-foreground text-xs truncate flex items-center gap-1.5">
                           <span>{item.name}</span>
-                          {isItemDeleting(item.id) ? (
-                            <RowSyncBadge state="deleting" entityLabel="item" />
-                          ) : (isItemSyncing(item.id) || item.isPendingSync) ? (
-                            <RowSyncBadge state={isItemSyncing(item.id) ? 'syncing' : 'pending'} entityLabel="item" />
-                          ) : null}
+                          <RowSyncStatus isDeleting={isItemDeleting(item.id)} isSyncing={isItemSyncing(item.id)} isPending={item.isPendingSync} entityLabel="item" />
                         </h4>
                         {canAfford && (
                           <span className="size-1.5 rounded-full bg-blue-500 shrink-0" title="Ready to claim" />

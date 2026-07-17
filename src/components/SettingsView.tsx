@@ -3,7 +3,7 @@ import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Bell, ChevronD
 import { motion } from 'framer-motion'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
-import { RowSyncBadge } from './ui/RowSyncBadge'
+import { RowSyncStatus } from './ui/RowSyncBadge'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { PerimeterBeam } from './ui/PerimeterBeam'
 import type { CategoryCleanupSuggestion } from '../lib/api'
@@ -282,7 +282,12 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                         {view.unusedCategoryCount} unused in last {view.USAGE_LOOKBACK_CYCLES} cycles
                       </div>
                     )}
-                    {view.categoryUsage && view.unusedCategoryCount === 0 && view.visibleCategories.length > 0 && (
+                    {view.categoryUsage && view.rarelyUsedCategoryCount > 0 && (
+                      <div className="text-amber-600 dark:text-amber-500 font-semibold mt-0.5">
+                        {view.rarelyUsedCategoryCount} rarely used
+                      </div>
+                    )}
+                    {view.categoryUsage && view.unusedCategoryCount === 0 && view.rarelyUsedCategoryCount === 0 && view.visibleCategories.length > 0 && (
                       <div className="text-emerald-500 font-semibold mt-0.5">
                         all used recently
                       </div>
@@ -468,7 +473,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
 
                 {view.categoryUsage && view.visibleCategories.length > 0 && (
                   <p className="text-[10px] text-muted-foreground px-0.5">
-                    Usage over the last {view.USAGE_LOOKBACK_CYCLES} cycles, least used first. Unused categories are good candidates to remove.
+                    Usage over the last {view.USAGE_LOOKBACK_CYCLES} cycles, least used first. Unused and rarely used categories are good candidates to remove.
                   </p>
                 )}
                 {view.usageError && (
@@ -480,26 +485,28 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                     const isSyncing = view.isCatSyncing(cat.id)
                     const isDeleting = view.isCatDeleting(cat.id)
                     const isUnused = count === 0
+                    const isRarelyUsed = count !== null && count > 0 && count <= view.RARELY_USED_MAX_COUNT
                     return (
                       <div
                         key={cat.id}
                         className={`flex items-center justify-between gap-2 border px-2.5 py-2 rounded-lg text-xs transition-colors ${
-                          isUnused ? 'bg-orange-500/5 border-orange-500/25' : 'bg-background border-border/50'
+                          isUnused
+                            ? 'bg-orange-500/5 border-orange-500/25'
+                            : isRarelyUsed
+                              ? 'bg-amber-500/5 border-amber-500/20'
+                              : 'bg-background border-border/50'
                         }`}
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded border font-semibold shrink-0 ${getCategoryBadgeClass(cat.name)}`}>{cat.name}</span>
-                          {count !== null && (
-                            isUnused ? (
-                              <span className="text-[10px] font-semibold text-orange-500 truncate">Unused</span>
-                            ) : (
-                              <span className="text-[10px] font-semibold text-muted-foreground truncate">{count}&times;</span>
-                            )
+                          {isUnused && (
+                            <span className="text-[10px] font-semibold text-orange-500 truncate">Unused</span>
+                          )}
+                          {isRarelyUsed && (
+                            <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-500 truncate">Rarely used &middot; {count}&times;</span>
                           )}
                         </div>
-                        {(isSyncing || isDeleting) && (
-                          <RowSyncBadge state={isSyncing ? 'syncing' : 'deleting'} entityLabel="category" />
-                        )}
+                        <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isPending={cat.isPendingSync} entityLabel="category" />
                         {!isSyncing && !isDeleting && (
                           <button
                             type="button"

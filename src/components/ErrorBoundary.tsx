@@ -1,4 +1,4 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { Component, Fragment, type ErrorInfo, type ReactNode } from 'react'
 import { AlertTriangle, RotateCcw, Trash2 } from 'lucide-react'
 import { CACHE_KEYS } from '../lib/cache'
 
@@ -17,20 +17,22 @@ interface ErrorBoundaryProps {
 
 interface ErrorBoundaryState {
   error: Error | null
+  /** Bumped on every reset so the recovered subtree is re-keyed and fully remounts. */
+  attempt: number
 }
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   private static readonly chunkReloadKey = 'chunk-load-reload-attempted'
-  state: ErrorBoundaryState = { error: null }
+  state: ErrorBoundaryState = { error: null, attempt: 0 }
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
     return { error }
   }
 
   componentDidUpdate(prevProps: ErrorBoundaryProps) {
     // Auto-recover when the reset key changes (e.g. tab navigation).
     if (this.state.error && prevProps.resetKey !== this.props.resetKey) {
-      this.setState({ error: null })
+      this.reset()
     }
   }
 
@@ -54,7 +56,11 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     }
   }
 
-  reset = () => this.setState({ error: null })
+  // Clear the error AND bump `attempt`, which re-keys the recovered subtree below
+  // so it fully unmounts/remounts. Nulling the error alone re-renders the same
+  // element instances, so any crash driven by stale component state would rethrow
+  // on the very next render and "Try again" would appear to do nothing.
+  reset = () => this.setState(state => ({ error: null, attempt: state.attempt + 1 }))
 
   // Last-resort recovery: the crash is often caused by a stale/malformed
   // cached record (e.g. a pending or draft transaction persisted before a
@@ -69,8 +75,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   render() {
-    const { error } = this.state
-    if (!error) return this.props.children
+    const { error, attempt } = this.state
+    if (!error) return <Fragment key={attempt}>{this.props.children}</Fragment>
 
     if (this.props.fallback) return this.props.fallback(error, this.reset)
 
@@ -85,7 +91,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             : 'app-shell min-h-screen flex items-center justify-center p-6 text-foreground'
         }
       >
-        <div className="flex max-w-sm flex-col items-center gap-4">
+        <div className="mx-auto flex max-w-sm flex-col items-center gap-4">
           <div className="flex size-12 items-center justify-center rounded-2xl bg-orange-500/10 text-orange-500 border border-orange-500/20">
             <AlertTriangle className="size-6" />
           </div>

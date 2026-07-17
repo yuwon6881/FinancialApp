@@ -20,7 +20,7 @@ import { DatePicker } from './ui/DatePicker'
 import { BottomSheet } from './ui/BottomSheet'
 import { AnchoredPopover } from './ui/AnchoredPopover'
 import { CycleSkeleton } from './ui/Skeleton'
-import { RowSyncBadge } from './ui/RowSyncBadge'
+import { RowSyncStatus } from './ui/RowSyncBadge'
 import { ToggleButton } from './ui/ToggleButton'
 import { SmartAmountInput } from './ui/SmartAmountInput'
 import { BillTimeline } from './BillTimeline'
@@ -726,11 +726,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
                       {!rp.active && (
                         <span className="text-[9px] font-semibold bg-muted px-1.5 py-0.5 rounded text-muted-foreground">Paused</span>
                       )}
-                      {isPaymentDeleting(rp.id) ? (
-                        <RowSyncBadge state="deleting" entityLabel="subscription" />
-                      ) : (isPaymentSyncing(rp.id) || rp.isPendingSync) ? (
-                        <RowSyncBadge state={isPaymentSyncing(rp.id) ? 'syncing' : 'pending'} entityLabel="subscription" />
-                      ) : null}
+                      <RowSyncStatus isDeleting={isPaymentDeleting(rp.id)} isSyncing={isPaymentSyncing(rp.id)} isPending={rp.isPendingSync} entityLabel="subscription" />
                     </h3>
                     <span className={`inline-block mt-1 text-[10px] px-1.5 py-0.5 font-semibold rounded border ${getCategoryBadgeClass(rp.category)}`}>
                       {rp.category}

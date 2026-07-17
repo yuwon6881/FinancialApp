@@ -21,6 +21,10 @@ export interface UseSettingsViewOptions {
 }
 
 const USAGE_LOOKBACK_CYCLES = 6
+// A category used this many times or fewer (but at least once) over the lookback window is
+// surfaced as a "rarely used" removal candidate. Above this, the exact count is noise for the
+// decision at hand ("what can I safely remove?"), so we don't show it.
+const RARELY_USED_MAX_COUNT = 2
 
 export function useSettingsView(options: UseSettingsViewOptions) {
   const {
@@ -304,6 +308,9 @@ export function useSettingsView(options: UseSettingsViewOptions) {
   }, [usageTransactions, visibleCategories])
 
   const unusedCategoryCount = categoryUsage ? categoryUsage.filter(c => c.count === 0).length : 0
+  const rarelyUsedCategoryCount = categoryUsage
+    ? categoryUsage.filter(c => c.count > 0 && c.count <= RARELY_USED_MAX_COUNT).length
+    : 0
 
   return {
     activeSettings,
@@ -355,6 +362,8 @@ export function useSettingsView(options: UseSettingsViewOptions) {
     visibleCategories,
     categoryUsage,
     unusedCategoryCount,
+    rarelyUsedCategoryCount,
+    RARELY_USED_MAX_COUNT,
     USAGE_LOOKBACK_CYCLES,
     isCatSyncing,
     isCatDeleting,
