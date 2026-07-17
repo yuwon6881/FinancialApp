@@ -20,6 +20,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     return cached === 'true' ? true : cached === 'false' ? false : null
   })
   const [hasFingerprint, setHasFingerprint] = useState(false)
+  const [registrationOpen, setRegistrationOpen] = useState(false)
+  // When accounts already exist but more slots remain, the user can opt into a signup form.
+  const [wantsRegister, setWantsRegister] = useState(false)
   const [platformAuthAvailable, setPlatformAuthAvailable] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -38,6 +41,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       const res = await api.fetchAuthStatus()
       setIsRegistered(res.isRegistered)
       setHasFingerprint(res.hasFingerprint)
+      // Fall back to the legacy meaning (open only before the first user) if an older API
+      // build doesn't send registrationOpen.
+      setRegistrationOpen(res.registrationOpen ?? !res.isRegistered)
       localStorage.setItem('cached_is_registered', res.isRegistered.toString())
     } catch (err) {
       console.error(err)
@@ -58,6 +64,16 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     void prefetchFingerprintLoginOptions().catch(() => undefined)
   }, [isRegistered, hasFingerprint, platformAuthAvailable])
 
+  // No account yet (first user) OR an invitee who opted into signup while slots remain.
+  const registering = !isRegistered || wantsRegister
+
+  const toggleRegisterMode = () => {
+    setWantsRegister(prev => !prev)
+    setConfirmPassword('')
+    setErrors({})
+    setError(null)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const newErrors: Record<string, string> = {}
@@ -67,7 +83,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     if (!password.trim()) {
       newErrors.password = 'Password is required.'
     }
-    if (!isRegistered) {
+    if (registering) {
       if (!confirmPassword.trim()) {
         newErrors.confirmPassword = 'Confirm password is required.'
       } else if (password !== confirmPassword) {
@@ -84,8 +100,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     setLoading(true)
 
     try {
-      if (!isRegistered) {
-        // Register flow
+      if (registering) {
+        // Register flow (first user, or an additional invitee while slots remain)
         await api.register({ username, password })
         localStorage.setItem('cached_is_registered', 'true')
         // Immediately login after successful registration
@@ -238,8 +254,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             FinancialApp <span className="text-blue-500">Ledger</span>
           </h1>
           <p className="text-xs text-muted-foreground">
-            {!isRegistered 
-              ? 'Create your password to get started.' 
+            {registering
+              ? 'Create your account credentials to get started.'
               : 'Enter password to unlock your dashboard.'}
           </p>
         </div>
@@ -323,7 +339,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           </div>
 
           {/* Confirm Password (only for registration) */}
-          {!isRegistered && (
+          {registering && (
             <div className="space-y-1 animate-in fade-in duration-200">
               <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Confirm Password</label>
               <div className="relative">
@@ -364,7 +380,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           >
             {loading ? (
               <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-            ) : !isRegistered ? (
+            ) : registering ? (
               <>
                 <Sparkles className="size-4" /> Create Credentials
               </>
@@ -374,7 +390,19 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           </button>
         </form>
 
-        {isRegistered && hasFingerprint && platformAuthAvailable && (
+        {/* Additional-user signup toggle: only when at least one account exists and slots remain. */}
+        {isRegistered && registrationOpen && (
+          <button
+            type="button"
+            onClick={toggleRegisterMode}
+            disabled={loading}
+            className="w-full text-center text-xs font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer disabled:opacity-50"
+          >
+            {wantsRegister ? 'Back to sign in' : 'Create a new account'}
+          </button>
+        )}
+
+        {!registering && isRegistered && hasFingerprint && platformAuthAvailable && (
           <button
             type="button"
             onClick={handleFingerprintLogin}

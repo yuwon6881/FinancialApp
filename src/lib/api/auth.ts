@@ -28,7 +28,7 @@ export function getDeviceInfo(): { deviceId: string; deviceName: string } {
   return { deviceId, deviceName: `${browser} on ${os}` }
 }
 
-export async function fetchAuthStatus(): Promise<{ isRegistered: boolean; hasFingerprint: boolean }> {
+export async function fetchAuthStatus(): Promise<{ isRegistered: boolean; hasFingerprint: boolean; registrationOpen: boolean }> {
   return request('/auth/status', {
     authenticated: false,
     errorMessage: 'Failed to fetch auth status',

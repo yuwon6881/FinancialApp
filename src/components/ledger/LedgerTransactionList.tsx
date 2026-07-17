@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeftRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { listContainerVariants } from '../../lib/animations'
 import type { Transaction } from '../../types'
 import { DesktopLedgerRow, MobileLedgerRow } from './LedgerRows'
@@ -83,11 +83,9 @@ export function LedgerTransactionList({
                       Page Total <span className="text-muted-foreground font-bold normal-case tracking-normal">({transactions.length} items)</span>
                     </span>
                     {pageTotals.transfer > 0 && (
-                      <span className="mt-1.5 flex items-start gap-1.5 text-[10px] font-semibold text-blue-500 normal-case tracking-normal leading-relaxed">
-                        <ArrowLeftRight className="size-3 mt-px shrink-0" />
-                        <span>
-                          Includes {formatSensitive(pageTotals.transfer)} moved / allocated between buckets — internal movement, kept out of debit &amp; credit but part of your money flow.
-                        </span>
+                      <span className="mt-1 flex items-start gap-1.5 text-[10px] font-semibold text-blue-500 normal-case tracking-normal">
+                        <ArrowRight className="size-3 mt-px shrink-0" />
+                        <span>Incl. {formatSensitive(pageTotals.transfer)} moved / allocated between buckets — internal, not in debit or credit.</span>
                       </span>
                     )}
                   </td>
@@ -158,12 +156,12 @@ export function LedgerTransactionList({
               <div className="border-t border-border/30 pt-2.5">
                 <div className="flex justify-between items-center">
                   <span className="text-blue-500 font-semibold flex items-center gap-1.5">
-                    <ArrowLeftRight className="size-3.5" /> Moved / Allocated
+                    <ArrowRight className="size-3.5" /> Moved / Allocated
                   </span>
                   <span className="text-blue-500 font-bold text-sm">{formatSensitive(pageTotals.transfer)}</span>
                 </div>
-                <p className="mt-1 text-[10px] text-muted-foreground leading-relaxed">
-                  Internal movement between buckets — part of your money flow, but kept out of debit &amp; credit, so it doesn't change the net position below.
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  Internal movement between buckets — excluded from debit, credit and the net position below.
                 </p>
               </div>
             )}
