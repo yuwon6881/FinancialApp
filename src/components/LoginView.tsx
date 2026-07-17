@@ -167,7 +167,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     setError(null)
     setFingerprintLoading(true)
     try {
-      const { challengeId, options } = await getCachedFingerprintLoginOptions()
+      const { challengeId, options } = await getCachedFingerprintLoginOptions(username.trim())
       const credential = await getFingerprintAssertion(options)
       const res = await api.verifyFingerprintLogin(challengeId, credential)
       onLoginSuccess(res.token, res.username)
