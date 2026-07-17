@@ -15,7 +15,6 @@ import { CollapsibleBody } from './ui/CollapsibleBody'
 import { useAppContext } from '../contexts/AppContext'
 import { ActiveDevicesSection } from './settings/ActiveDevicesSection'
 import { FingerprintSection } from './settings/FingerprintSection'
-import { AnchoredPopover } from './ui/AnchoredPopover'
 
 import { useSettingsView } from './settings/view/useSettingsView'
 
@@ -74,21 +73,12 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
   })
 
   const [activeTab, setActiveTab] = React.useState<'financial-model' | 'categories-preferences' | 'security'>('financial-model')
-  const usageButtonRef = React.useRef<HTMLButtonElement>(null)
-  const usagePanelRef = React.useRef<HTMLDivElement>(null)
 
-  React.useEffect(() => {
-    if (!view.showUsageDetails) return
-    const handlePointerDown = (event: MouseEvent) => {
-      const target = event.target as Node
-      if (
-        !usageButtonRef.current?.contains(target) &&
-        !usagePanelRef.current?.contains(target)
-      ) view.setShowUsageDetails(false)
-    }
-    document.addEventListener('mousedown', handlePointerDown)
-    return () => document.removeEventListener('mousedown', handlePointerDown)
-  }, [view.showUsageDetails])
+  // Category rows for the list. When usage stats are available they are already sorted
+  // least-used-first (so removal candidates surface at the top); otherwise fall back to the
+  // plain category order with no per-row usage figure.
+  const categoryRows: Array<{ category: TransactionCategory; count: number | null }> =
+    view.categoryUsage ?? view.visibleCategories.map(category => ({ category, count: null }))
 
   return (
     <div className="space-y-6 soft-rise">
@@ -300,68 +290,6 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {view.categoryUsage && view.visibleCategories.length > 0 && (
-                    <div className="relative">
-                      <button
-                        ref={usageButtonRef}
-                        type="button"
-                        onClick={e => { e.stopPropagation(); view.setShowUsageDetails(!view.showUsageDetails) }}
-                        aria-haspopup="dialog"
-                        aria-expanded={view.showUsageDetails}
-                        className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-muted-foreground bg-background border border-border/60 hover:text-foreground hover:bg-muted transition cursor-pointer"
-                      >
-                        Usage
-                        {view.showUsageDetails ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
-                      </button>
-
-                      <AnchoredPopover
-                          ref={usagePanelRef}
-                          open={view.showUsageDetails}
-                          anchorRef={usageButtonRef}
-                          align="right"
-                          side="bottom"
-                          role="dialog"
-                          aria-label="Category usage details"
-                          onClick={e => e.stopPropagation()}
-                          onKeyDown={event => {
-                            if (event.key === 'Escape') {
-                              event.preventDefault()
-                              event.stopPropagation()
-                              view.setShowUsageDetails(false)
-                              usageButtonRef.current?.focus()
-                            }
-                          }}
-                          className="w-72 md:w-80 z-[200] bg-card border border-border/80 shadow-lg rounded-xl p-3 flex flex-col gap-2 overflow-y-auto overscroll-contain animate-in fade-in zoom-in-95 duration-150"
-                        >
-                          <p className="text-[10px] text-muted-foreground leading-relaxed">
-                            Usage over the last {view.USAGE_LOOKBACK_CYCLES} cycles, least used first. Categories with no recent activity are good candidates to remove.
-                          </p>
-                          {view.usageError ? (
-                            <p className="text-[10px] font-medium text-destructive">{view.usageError}</p>
-                          ) : (
-                            <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                              {view.categoryUsage.map(({ category, count }) => (
-                                <div
-                                  key={category.id}
-                                  className={`flex items-center justify-between gap-2 border px-2.5 py-1.5 rounded-lg text-[11px] ${
-                                    count === 0 ? 'bg-orange-500/5 border-orange-500/25' : 'bg-background border-border/50'
-                                  }`}
-                                >
-                                  <span className={`inline-flex items-center px-2 py-0.5 rounded border font-semibold ${getCategoryBadgeClass(category.name)}`}>
-                                    {category.name}
-                                  </span>
-                                  {count === 0 ? (
-                                    <span className="text-orange-500 font-semibold text-right text-[10px]">No activity in last {view.USAGE_LOOKBACK_CYCLES} cycles</span>
-                                  ) : (
-                                    <span className="text-muted-foreground font-semibold text-[10px]">{count}&times; in {view.USAGE_LOOKBACK_CYCLES} cycles</span>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                      </AnchoredPopover>
-                    </div>
-                  )}
                   <button
                     type="button"
                     onClick={e => { e.stopPropagation(); void view.handleAiCleanupReview() }}
@@ -538,16 +466,37 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   <p className="text-[10px] text-destructive font-semibold mt-0.5">Name is a reserved word.</p>
                 )}
 
+                {view.categoryUsage && view.visibleCategories.length > 0 && (
+                  <p className="text-[10px] text-muted-foreground -mb-1 px-0.5">
+                    Usage over the last {view.USAGE_LOOKBACK_CYCLES} cycles, least used first. Unused categories are good candidates to remove.
+                  </p>
+                )}
+                {view.usageError && (
+                  <p className="text-[10px] font-medium text-destructive px-0.5">{view.usageError}</p>
+                )}
+
                 <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1 select-none">
-                  {view.visibleCategories.map(cat => {
+                  {categoryRows.map(({ category: cat, count }) => {
                     const isSyncing = view.isCatSyncing(cat.id)
                     const isDeleting = view.isCatDeleting(cat.id)
+                    const isUnused = count === 0
                     return (
                       <div
                         key={cat.id}
-                        className="flex items-center justify-between gap-2 bg-background border border-border/50 px-2.5 py-2 rounded-lg text-xs"
+                        className={`flex items-center justify-between gap-2 border px-2.5 py-2 rounded-lg text-xs transition-colors ${
+                          isUnused ? 'bg-orange-500/5 border-orange-500/25' : 'bg-background border-border/50'
+                        }`}
                       >
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded border font-semibold ${getCategoryBadgeClass(cat.name)}`}>{cat.name}</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded border font-semibold shrink-0 ${getCategoryBadgeClass(cat.name)}`}>{cat.name}</span>
+                          {count !== null && (
+                            isUnused ? (
+                              <span className="text-[10px] font-semibold text-orange-500 truncate">Unused</span>
+                            ) : (
+                              <span className="text-[10px] font-semibold text-muted-foreground truncate">{count}&times;</span>
+                            )
+                          )}
+                        </div>
                         {(isSyncing || isDeleting) && (
                           <RowSyncBadge state={isSyncing ? 'syncing' : 'deleting'} entityLabel="category" />
                         )}
@@ -557,7 +506,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                             disabled={view.checkingDeleteId !== null}
                             onClick={() => view.handleDeleteCategory(cat.id)}
                             title={view.checkingDeleteId === cat.id ? 'Checking usage…' : 'Delete category'}
-                            className="text-muted-foreground hover:text-destructive transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                            className="shrink-0 text-muted-foreground hover:text-destructive transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {view.checkingDeleteId === cat.id ? <Loader2 className="size-3 animate-spin text-destructive" /> : <Trash2 className="size-3" />}
                           </button>

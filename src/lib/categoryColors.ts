@@ -43,10 +43,37 @@ const categoryChartColorMap: Record<string, string> = {
   Stability: 'var(--color-emerald-500, #009e73)',
   Entertainment: 'var(--color-orange-500, #d55e00)',
   Rewards: 'var(--color-pink-500, #cc79a7)',
-  Transport: 'var(--color-purple-500, #7e6dc9)',
+  // Sky, not purple: purple-500 resolves to the same hex as Investment's violet, which made
+  // the two indistinguishable in the outflow doughnut. Sky is unused by other spend categories.
+  Transport: 'var(--color-sky-500, #56b4e9)',
   Adjustment: 'var(--color-amber-500, #e69f00)',
   Discarded: CATEGORY_CHART_FALLBACK,
   Other: CATEGORY_CHART_FALLBACK,
+}
+
+// Distinct, colorblind-aware fallback colors for user-defined categories that aren't in the
+// curated map above. Without this, every custom category collapsed to the single slate
+// CATEGORY_CHART_FALLBACK, so a user with many categories saw the same grey repeated.
+// Each category name is hashed to a stable slot, so a category keeps its color across renders
+// and chart ranges. Validated (light + dark) with the dataviz palette checker: all pass the
+// lightness band, chroma floor, and CVD separation; sub-3:1 contrast is relieved by the chart's
+// always-present legend labels and the 2px card-stroke gaps between slices.
+const CHART_CUSTOM_PALETTE: string[] = [
+  '#d1495b', // red
+  '#66a61e', // olive-green
+  '#b5179e', // magenta
+  '#2f8f6f', // deep teal
+  '#b5651d', // ochre
+  '#984ea3', // plum
+]
+
+// Small deterministic string hash (djb2) so the same category name always maps to the same slot.
+function hashCategoryName(name: string): number {
+  let hash = 5381
+  for (let i = 0; i < name.length; i++) {
+    hash = ((hash << 5) + hash + name.charCodeAt(i)) | 0
+  }
+  return Math.abs(hash)
 }
 
 const categoryDotClassMap: Record<string, string> = {
@@ -81,7 +108,11 @@ export function getCategoryDotClass(category: string | null | undefined): string
 
 export function getCategoryChartColor(category: string | null | undefined): string {
   if (!category) return CATEGORY_CHART_FALLBACK
-  return categoryChartColorMap[normalizeCategoryName(category)] || CATEGORY_CHART_FALLBACK
+  const normalized = normalizeCategoryName(category)
+  const curated = categoryChartColorMap[normalized]
+  if (curated) return curated
+  // Custom category: give it a stable, distinct color instead of collapsing everything to grey.
+  return CHART_CUSTOM_PALETTE[hashCategoryName(normalized) % CHART_CUSTOM_PALETTE.length]
 }
 
 export function getCategoryFilterClass(category: string | null | undefined, selected: boolean): string {

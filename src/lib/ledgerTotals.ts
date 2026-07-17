@@ -13,7 +13,13 @@ export function isTransferTransaction(transaction: LedgerTotalTransaction): bool
 export function calculateLedgerTotals(transactions: LedgerTotalTransaction[]) {
   return transactions.reduce(
     (totals, transaction) => {
-      if (isTransferTransaction(transaction)) return totals
+      // Transfers are internal movement between buckets: they are deliberately
+      // kept out of debit/credit, but we still surface their volume so the user
+      // can see this money was moved/allocated rather than silently dropped.
+      if (isTransferTransaction(transaction)) {
+        totals.transfer += Math.abs(transaction.amount)
+        return totals
+      }
 
       const isIncomeRecord = transaction.ledgerCategory === 'Income' ||
         (transaction.ledgerCategory ?? '').startsWith('IncomeSplit:')
@@ -23,6 +29,6 @@ export function calculateLedgerTotals(transactions: LedgerTotalTransaction[]) {
       else totals.inflow += transaction.amount
       return totals
     },
-    { inflow: 0, outflow: 0 },
+    { inflow: 0, outflow: 0, transfer: 0 },
   )
 }

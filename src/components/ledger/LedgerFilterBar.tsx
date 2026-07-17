@@ -236,7 +236,7 @@ export function LedgerFilterBar({
           <button
             onClick={onServerSearch}
             disabled={serverIsFetching}
-            className="flex min-h-10 shrink-0 items-center justify-center gap-1.5 border-l border-border/50 bg-gradient-to-r from-blue-600 to-blue-500 px-3.5 py-2.5 text-xs font-semibold text-white whitespace-nowrap transition duration-200 hover:from-blue-700 hover:to-blue-600 active:from-blue-800 active:to-blue-700 disabled:opacity-50 cursor-pointer md:px-5"
+            className="flex min-h-10 shrink-0 items-center justify-center gap-1.5 border-l border-border/50 bg-gradient-to-r from-blue-600 to-blue-500 px-3.5 py-2.5 text-xs font-semibold text-white whitespace-nowrap transition-colors duration-200 hover:from-blue-700 hover:to-blue-600 active:from-blue-800 active:to-blue-700 disabled:cursor-wait cursor-pointer md:px-5"
           >
             {serverIsFetching
               ? <Loader2 className="size-3.5 animate-spin" />
