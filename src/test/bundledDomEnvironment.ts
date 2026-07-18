@@ -8,7 +8,7 @@
 // keeps all of vitest's jsdom compat patches (Request/URL/Blob interop,
 // window-error capture) without maintaining a copy here.
 import { existsSync } from 'node:fs'
-import { registerHooks } from 'node:module'
+import Module from 'node:module'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { builtinEnvironments } from 'vitest/runtime'
@@ -17,23 +17,22 @@ const bundlePath = path.resolve(
   process.cwd(), 'node_modules', '.cache', 'jsdom-bundle', 'lib', 'jsdom', 'living', 'jsdom.cjs',
 )
 
-if (!existsSync(bundlePath)) {
-  throw new Error(
-    `jsdom test bundle not found at ${bundlePath}. Run "node scripts/bundle-test-dom.mjs" `
-    + '(npm test does this automatically via the pretest hook).',
-  )
+// module.registerHooks needs Node >= 22.15. Where it (or the bundle) is
+// missing — e.g. CI on an older Node, which has no scanner tax anyway — fall
+// back silently to the builtin environment's stock import('jsdom').
+const registerHooks = (Module as { registerHooks?: (hooks: object) => void }).registerHooks
+
+if (typeof registerHooks === 'function' && existsSync(bundlePath)) {
+  const bundleUrl = pathToFileURL(bundlePath).href
+  registerHooks({
+    resolve(specifier: string, context: unknown, nextResolve: (s: string, c: unknown) => unknown) {
+      if (specifier === 'jsdom') {
+        return { url: bundleUrl, shortCircuit: true }
+      }
+      return nextResolve(specifier, context)
+    },
+  })
 }
-
-const bundleUrl = pathToFileURL(bundlePath).href
-
-registerHooks({
-  resolve(specifier, context, nextResolve) {
-    if (specifier === 'jsdom') {
-      return { url: bundleUrl, shortCircuit: true }
-    }
-    return nextResolve(specifier, context)
-  },
-})
 
 export default {
   ...builtinEnvironments.jsdom,

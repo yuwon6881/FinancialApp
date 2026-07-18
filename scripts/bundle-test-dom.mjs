@@ -8,10 +8,18 @@
 //
 // Runs automatically via the "pretest" npm hook; skips work when the bundle is
 // already up to date for the installed jsdom version.
-import { createRequire } from 'node:module'
+import Module, { createRequire } from 'node:module'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+
+// The bundle is only consumed via module.registerHooks (Node >= 22.15). On
+// older runtimes the test environment falls back to the stock jsdom import,
+// so building the bundle there would be wasted work.
+if (typeof Module.registerHooks !== 'function') {
+  console.log('[bundle-test-dom] module.registerHooks unavailable on this Node; skipping bundle')
+  process.exit(0)
+}
 
 const require = createRequire(import.meta.url)
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
