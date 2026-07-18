@@ -8,6 +8,14 @@ import { resetBackend } from './msw/backend'
 // level are unaffected by this global setup.
 server.listen({ onUnhandledRequest: 'bypass' })
 
+// jsdom intentionally reports scrollTo() as unimplemented. Components use it
+// only as a browser side effect, so make it a quiet no-op in unit tests.
+Object.defineProperty(window, 'scrollTo', {
+  configurable: true,
+  writable: true,
+  value: () => undefined,
+})
+
 beforeEach(() => {
   resetBackend()
   localStorage.clear()

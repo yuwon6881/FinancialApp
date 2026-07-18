@@ -117,9 +117,36 @@ export default defineConfig(({ mode }) => {
     },
   },
   test: {
-    environment: 'jsdom',
+    // Custom environment loading a pre-bundled jsdom (single file): endpoint-
+    // security file scanning makes jsdom's multi-thousand-file import exceed
+    // vitest's 60s worker-start timeout. See scripts/bundle-test-dom.mjs.
+    environment: './src/test/bundledDomEnvironment.ts',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    // The endpoint scanner makes packages with thousands of modules (especially
+    // lucide-react, MSW, and Framer Motion) very slow when Node loads them file by
+    // file in each worker. Pre-bundle those stable test dependencies once into
+    // Vitest's cache, then workers load the optimized output on later runs.
+    deps: {
+      optimizer: {
+        ssr: {
+          enabled: true,
+          include: [
+            '@testing-library/dom',
+            '@testing-library/react',
+            'framer-motion',
+            'lucide-react',
+            'msw',
+            'msw/node',
+            'react-dom',
+          ],
+        },
+      },
+    },
+    // Endpoint-security file scanning makes cold in-test dynamic imports slow on
+    // some dev machines; the default 5s test timeout produces flaky timeouts there.
+    testTimeout: 20_000,
+    hookTimeout: 20_000,
     // Pin the API base URL so MSW handlers can match a stable absolute origin
     // (otherwise client.ts falls back to the relative '/api').
     env: {

@@ -10,7 +10,8 @@
     "deadcode": "knip --include files,dependencies,devDependencies",
     "typecheck:strict": "tsc -p tsconfig.strict.json",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "pretest": "node scripts/bundle-test-dom.mjs"
   },
   "dependencies": {
     "@aparajita/capacitor-secure-storage": "^8.0.0",
@@ -52,6 +53,7 @@
     "jsdom": "^29.1.1",
     "knip": "^6.25.0",
     "msw": "^2.15.0",
+    "rolldown": "^1.0.2",
     "rollup-plugin-visualizer": "^7.0.1",
     "sharp": "^0.35.3",
     "typescript": "~6.0.2",

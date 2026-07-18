@@ -47,7 +47,7 @@ afterEach(() => {
 })
 
 describe('fetchDashboard request caching', () => {
-  it('does not reuse cached promises for abortable startup requests', async () => {
+  it('dedupes abortable startup requests onto one shared fetch', async () => {
     const fetchMock = mockDashboardFetch()
     vi.stubGlobal('fetch', fetchMock)
     Object.defineProperty(window, 'fetch', { value: fetchMock, configurable: true })
@@ -56,7 +56,23 @@ describe('fetchDashboard request caching', () => {
     await api.fetchDashboard(undefined, undefined, new AbortController().signal)
     await api.fetchDashboard(undefined, undefined, new AbortController().signal)
 
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('an aborted caller detaches without cancelling the shared fetch', async () => {
+    const fetchMock = mockDashboardFetch()
+    vi.stubGlobal('fetch', fetchMock)
+    Object.defineProperty(window, 'fetch', { value: fetchMock, configurable: true })
+
+    const api = await import('./api')
+    const ac = new AbortController()
+    const abortedCall = api.fetchDashboard(undefined, undefined, ac.signal)
+    ac.abort()
+
+    await expect(abortedCall).rejects.toMatchObject({ name: 'AbortError' })
+    // The underlying fetch completed and warmed the cache for the next caller.
+    await expect(api.fetchDashboard()).resolves.toBeTruthy()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it('still dedupes non-abortable dashboard requests', async () => {
