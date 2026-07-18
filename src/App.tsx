@@ -62,12 +62,12 @@ const ContentViewFallback = () => (
 
 const fabMenuVariants = {
   hidden: {
-    transition: { staggerChildren: 0.06 },
+    transition: { staggerChildren: 0.04 },
   },
   visible: {
     transition: {
-      delayChildren: 0.08,
-      staggerChildren: 0.12,
+      delayChildren: 0.06,
+      staggerChildren: 0.08,
       // Reveal from the action nearest the FAB and work upwards.
       staggerDirection: -1,
     },
@@ -80,7 +80,7 @@ const fabActionVariants = {
     opacity: 1,
     scale: 1,
     y: 0,
-    transition: { type: 'spring' as const, stiffness: 240, damping: 19 },
+    transition: { type: 'spring' as const, stiffness: 260, damping: 18 },
   },
 }
 
@@ -413,7 +413,12 @@ function App() {
       <AppProvider value={appContextValue}>
         <div className="app-shell min-h-screen text-foreground flex flex-col selection:bg-blue-500/20 selection:text-blue-500">
           <ToastViewport toasts={dialogs.toasts} onDismiss={dialogs.dismissToast} />
-          <LockScreen isOpen onUnlocked={session.handleUnlocked} onSignOut={session.handleLogout} />
+          <LockScreen
+            isOpen
+            username={session.username}
+            onUnlocked={session.handleUnlocked}
+            onSignOut={session.handleLogout}
+          />
         </div>
       </AppProvider>
     )
@@ -711,6 +716,7 @@ function App() {
 
         <LockScreen
           isOpen={session.isLocked && !!session.token}
+          username={session.username}
           onUnlocked={session.handleUnlocked}
           onSignOut={session.handleLogout}
         />
