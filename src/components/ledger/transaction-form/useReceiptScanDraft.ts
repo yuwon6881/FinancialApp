@@ -119,6 +119,11 @@ export function useReceiptScanDraft(options: UseReceiptScanDraftOptions) {
     if (
       !activeScanJobIds.includes(activeReceiptScanJobId)
       && receiptScanDraft?.jobId !== activeReceiptScanJobId
+      // A job started from this form may not have reached the parent's tracked
+      // list yet; dropping it here would silently orphan the scan so a later
+      // cancel could never issue its clear callback. Locally-started jobs are
+      // cleared via the draft, failed-job, or clearScan paths instead.
+      && !locallyStartedReceiptScanJobsRef.current.has(activeReceiptScanJobId)
     ) {
       setIsScanning(false)
       setActiveReceiptScanJobId(null)
