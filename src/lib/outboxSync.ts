@@ -43,6 +43,8 @@ export interface DrainQueueDeps {
   isSyncing: () => boolean
 
   // --- queue mutation ---
+
+  // --- queue mutation ---
   mutateQueue: (updater: (prev: QueuedOp[]) => QueuedOp[]) => void
 
   // --- dispatch ---
@@ -52,6 +54,7 @@ export interface DrainQueueDeps {
   // --- lifecycle / UI side effects ---
   setSyncing: (v: boolean) => void
   setActiveSyncId: (id: string | null) => void
+  setActiveSyncOpId?: (id: string | null) => void
   setError: (msg: string | null) => void
   setBackoff: (until: number) => void
   addRecentlyCompleted: (op: QueuedOp) => void
@@ -168,6 +171,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
       }
 
       deps.setActiveSyncId(nextOp.targetId)
+      deps.setActiveSyncOpId?.(nextOp.id)
 
       try {
         const dispatchFn = deps.resolveDispatch(nextOp)
@@ -181,10 +185,12 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
           deps.emitFailureToast(nextOp, err)
           deps.mutateQueue(prev => prev.filter(item => item.id !== nextOp.id))
           deps.addFailedOp({ ...nextOp, lastError: getErrorMessage(err, String(err)) })
+          deps.setActiveSyncOpId?.(null)
           continue
         }
 
         const result = await dispatchFn(nextOp)
+        deps.setActiveSyncOpId?.(null)
 
         // Functional removal keyed off the live queue, so any op enqueued during
         // the await above (e.g. an Undo tap) is preserved rather than clobbered.
@@ -221,6 +227,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
           deps.emitToast(toastMsg, undoAction)
         }
       } catch (err: unknown) {
+        deps.setActiveSyncOpId?.(null)
         console.error(`Failed to sync ${nextOp.entity}:${nextOp.type}:`, err)
         const status = getStatus(err)
         const isAuthError = hasHttpStatus(err, 401)

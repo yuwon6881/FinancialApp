@@ -76,6 +76,7 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
   const editingPendingIdRef = useRef(editingPendingId)
   const syncBackoffUntilRef = useRef(syncBackoffUntil)
   const isSyncingRef = useRef(false)
+  const activeSyncOpIdRef = useRef<string | null>(null)
   const nextToastAtRef = useRef(0)
   const undoSnapshotsRef = useRef<Map<string, UndoSnapshot>>(new Map())
 
@@ -122,8 +123,7 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
   }, [syncBackoffUntil])
 
   const enqueue = useCallback<UseOutboxResult['enqueue']>((queue, entity, type, targetId, payload, isUndo) => {
-    const activeSyncOpId = isSyncingRef.current && queue.length > 0 ? queue[0].id : null
-    return enqueueOperation(queue, entity, type, targetId, payload, isUndo, activeSyncOpId)
+    return enqueueOperation(queue, entity, type, targetId, payload, isUndo, activeSyncOpIdRef.current)
   }, [])
 
   const mutateQueue = useCallback((updater: (previous: QueuedOp[]) => QueuedOp[]) => {
@@ -167,6 +167,9 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
         setIsBackgroundSyncing(value)
       },
       setActiveSyncId,
+      setActiveSyncOpId: id => {
+        activeSyncOpIdRef.current = id
+      },
       setError: current.setError,
       setBackoff: until => {
         syncBackoffUntilRef.current = until
