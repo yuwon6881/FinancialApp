@@ -32,7 +32,13 @@ export function useAppPreferences(): AppPreferences {
   })
 
   const [darkMode, setDarkModeState] = useState<boolean>(() => {
-    return localStorage.getItem('dark_mode') === 'true'
+    // Respect an explicit saved choice; otherwise fall back to the OS/browser preference.
+    const stored = localStorage.getItem('dark_mode')
+    if (stored === 'true') return true
+    if (stored === 'false') return false
+    return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-color-scheme: dark)').matches
+      : false
   })
 
   const [notifyOnLogin, setNotifyOnLoginState] = useState<boolean>(() => {

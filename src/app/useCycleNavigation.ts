@@ -27,6 +27,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
   const [autoOpenSubscriptionAdd, setAutoOpenSubscriptionAdd] = useState(false)
   const [autoOpenWishlistAdd, setAutoOpenWishlistAdd] = useState(false)
   const [highlightedTxId, setHighlightedTxId] = useState<string | null>(null)
+  const [highlightedRecurringId, setHighlightedRecurringId] = useState<string | null>(null)
   const [ledgerIncomingSearch, setLedgerIncomingSearch] = useState<string | null>(null)
 
   const selectPeriodSeqRef = useRef(0)
@@ -86,6 +87,15 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     setActiveTab('ledger')
   }, [setActiveTab, setLedgerCyclesRange])
 
+  const handleNavigateToRecurring = useCallback((recurringPaymentId: string) => {
+    setHighlightedRecurringId(recurringPaymentId)
+    setActiveTab('recurring')
+  }, [setActiveTab])
+
+  const clearHighlightedRecurring = useCallback(() => {
+    setHighlightedRecurringId(null)
+  }, [])
+
   const handleQuickAction = useCallback((action: 'transaction' | 'subscription' | 'wishlist') => {
     if (action === 'transaction') {
       setActiveTab('ledger')
@@ -130,10 +140,14 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     setAutoOpenWishlistAdd,
     highlightedTxId,
     setHighlightedTxId,
+    highlightedRecurringId,
+    setHighlightedRecurringId,
     ledgerIncomingSearch,
     setLedgerIncomingSearch,
     handleSelectPeriod,
     handleNavigateToLedger,
+    handleNavigateToRecurring,
+    clearHighlightedRecurring,
     handleQuickAction,
     clearIncomingFilters,
   }

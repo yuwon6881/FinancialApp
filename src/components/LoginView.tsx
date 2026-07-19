@@ -200,7 +200,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       const { challengeId, options } = await getCachedFingerprintLoginOptions(username.trim())
       const credential = await getFingerprintAssertion(options)
       const res = await api.verifyFingerprintLogin(challengeId, credential)
-      onLoginSuccess(res.token, res.username)
+      if (res.hasSetupSecurityQuestions === false) {
+        setLoginResData({ token: res.token, username: res.username })
+        setNeedsSecuritySetup(true)
+      } else {
+        onLoginSuccess(res.token, res.username)
+      }
     } catch (err: unknown) {
       console.error(err)
       if (getErrorName(err) === 'NotAllowedError') {
@@ -337,6 +342,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 <input
                   type="text"
                   disabled={loading}
+                  placeholder="Enter your username"
                   value={username}
                   onChange={e => {
                     setUsername(e.target.value)

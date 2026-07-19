@@ -19,6 +19,7 @@ interface DashboardViewProps {
   transactions: Transaction[]
   onSelectPeriod: (month: string, year: number) => void
   onNavigate: (tab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist' | 'settings') => void
+  onNavigateToRecurring?: (recurringPaymentId: string) => void
   hideSensitive?: boolean
   hideBalanceAmounts: boolean
   walletBalance: number
@@ -44,6 +45,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   transactions,
   onSelectPeriod,
   onNavigate,
+  onNavigateToRecurring,
   hideSensitive: hideSensitiveProp,
   hideBalanceAmounts,
   walletBalance,
@@ -169,6 +171,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             activeRecurring={view.activeRecurring}
             formatSensitive={view.formatSensitive}
             onNavigate={onNavigate}
+            onNavigateToRecurring={onNavigateToRecurring}
           />
         </div>
       </div>

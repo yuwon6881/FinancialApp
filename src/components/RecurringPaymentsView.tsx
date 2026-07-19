@@ -27,6 +27,8 @@ interface RecurringPaymentsViewProps {
   autoOpenAddForm?: boolean
   onResetAutoOpen?: () => void
   isSwitchingCycle?: boolean
+  highlightedRecurringId?: string | null
+  onClearHighlightedRecurring?: () => void
   activeSyncId?: string | null
   deletingId?: string | null
   aiDraft?: { nonce: number; fields: Record<string, unknown> } | null
@@ -52,6 +54,8 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   autoOpenAddForm,
   onResetAutoOpen,
   isSwitchingCycle = false,
+  highlightedRecurringId = null,
+  onClearHighlightedRecurring,
   activeSyncId: activeSyncIdProp,
   deletingId: deletingIdProp,
   aiDraft = null,
@@ -162,6 +166,8 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         onToggleActive={onToggleActive}
         onDeletePayment={onDeletePayment}
         onEditPayment={view.beginEditPayment}
+        highlightedId={highlightedRecurringId}
+        onClearHighlight={onClearHighlightedRecurring}
       />
     </div>
   )

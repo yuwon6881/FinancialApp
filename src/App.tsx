@@ -507,6 +507,7 @@ function App() {
                         transactions={financial.allTransactions}
                         onSelectPeriod={nav.handleSelectPeriod}
                         onNavigate={prefs.setActiveTab}
+                        onNavigateToRecurring={nav.handleNavigateToRecurring}
                         hideBalanceAmounts={prefs.hideBalanceAmounts}
                         walletBalance={financial.totalBalance}
                         onToggleBalanceAmounts={handleToggleBalanceAmounts}
@@ -573,6 +574,8 @@ function App() {
                         autoOpenAddForm={nav.autoOpenSubscriptionAdd}
                         onResetAutoOpen={() => nav.setAutoOpenSubscriptionAdd(false)}
                         isSwitchingCycle={nav.isSwitchingCycle}
+                        highlightedRecurringId={nav.highlightedRecurringId}
+                        onClearHighlightedRecurring={nav.clearHighlightedRecurring}
                         aiDraft={aiRouter.state.aiRecurringDraft}
                         aiEditDraft={aiRouter.state.aiRecurringEditDraft}
                         onAiDraftConsumed={() => aiRouter.dispatch({ type: 'CONSUME_RECURRING_DRAFT' })}

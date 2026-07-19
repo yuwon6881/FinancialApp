@@ -177,8 +177,8 @@ export async function getFingerprintLoginOptions(username?: string): Promise<{ c
   })
 }
 
-export async function verifyFingerprintLogin(challengeId: string, credential: unknown): Promise<{ token: string; username: string }> {
-  const data = await request<{ token: string; username: string }>('/auth/webauthn/login/verify', {
+export async function verifyFingerprintLogin(challengeId: string, credential: unknown): Promise<{ token: string; username: string; hasSetupSecurityQuestions?: boolean }> {
+  const data = await request<{ token: string; username: string; hasSetupSecurityQuestions?: boolean }>('/auth/webauthn/login/verify', {
     method: 'POST',
     ...jsonBody({ challengeId, credential, ...getDeviceInfo() }),
     authenticated: false,

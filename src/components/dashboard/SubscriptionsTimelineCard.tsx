@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Calendar } from 'lucide-react'
+import { Calendar, ChevronRight } from 'lucide-react'
 import { listContainerVariants, listItemVariants, listItemExit } from '../../lib/animations'
 import type { ActiveRecurringPayment } from '../../types'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
@@ -9,12 +9,14 @@ interface SubscriptionsTimelineCardProps {
   activeRecurring: ActiveRecurringPayment[]
   formatSensitive: (val: number) => React.ReactNode
   onNavigate: (tab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist' | 'settings') => void
+  onNavigateToRecurring?: (recurringPaymentId: string) => void
 }
 
 export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps> = ({
   activeRecurring,
   formatSensitive,
   onNavigate,
+  onNavigateToRecurring,
 }) => {
   return (
     <div className="app-panel p-6 rounded-2xl bg-card/92 border border-border/60 flex flex-col h-full">
@@ -30,7 +32,7 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
         <motion.div
           initial="hidden" animate="show"
           variants={listContainerVariants}
-          className="space-y-2 mt-4 flex-1 overflow-y-auto pr-1 min-h-0"
+          className="space-y-1.5 mt-4 flex-1 overflow-y-auto overflow-x-hidden no-scrollbar pr-0.5 min-h-0"
         >
           <AnimatePresence>
           {activeRecurring.map((rp: ActiveRecurringPayment) => (
@@ -38,11 +40,14 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
               key={rp.id}
               variants={listItemVariants}
               exit={listItemExit}
-              onClick={() => onNavigate('recurring')}
-              className={`flex items-center justify-between text-xs py-1.5 border-b border-border/30 last:border-b-0 cursor-pointer hover:bg-foreground/5 transition-colors px-2 -mx-2 rounded-md ${rp.isDiscarded ? 'opacity-50' : ''}`}
+              onClick={() => (onNavigateToRecurring ? onNavigateToRecurring(rp.recurringPaymentId) : onNavigate('recurring'))}
+              className={`group relative flex items-center justify-between gap-2 text-xs py-2 pl-3 pr-2 rounded-xl border border-transparent cursor-pointer transition-all duration-200 hover:bg-blue-500/[0.06] hover:border-blue-500/25 hover:shadow-sm hover:-translate-y-px ${rp.isDiscarded ? 'opacity-50' : ''}`}
             >
-              <div className="truncate mr-2">
-                <span className={`font-bold text-foreground truncate block max-w-[120px] ${rp.isDiscarded ? 'line-through' : ''}`}>{rp.name}</span>
+              {/* Accent bar that grows on hover to signal the row is clickable */}
+              <span className="pointer-events-none absolute left-0 top-1/2 h-0 w-[3px] -translate-y-1/2 rounded-full bg-blue-500 transition-all duration-200 group-hover:h-7" />
+
+              <div className="min-w-0 flex-1">
+                <span className={`font-bold text-foreground truncate block transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400 ${rp.isDiscarded ? 'line-through' : ''}`}>{rp.name}</span>
                 <div className="flex flex-wrap items-center gap-1 mt-0.5 select-none">
                   <span className={`inline-block text-[10px] px-1.5 py-0.5 font-semibold rounded border ${getCategoryBadgeClass(rp.category)}`}>
                     {rp.category}
@@ -66,6 +71,8 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
                 <span className={`font-bold block ${rp.isDiscarded ? 'text-slate-500 line-through' : 'text-orange-500'}`}>-{formatSensitive(rp.amount)}</span>
                 <span className="text-muted-foreground text-[9px]">Due {rp.dueDate}</span>
               </div>
+              {/* Chevron affordance: fades and slides in on hover */}
+              <ChevronRight className="size-4 shrink-0 text-blue-500 opacity-0 -translate-x-1 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0" />
             </motion.div>
           ))}
           </AnimatePresence>

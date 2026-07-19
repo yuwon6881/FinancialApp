@@ -68,8 +68,8 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
         </div>
 
         {total > 0 ? (
-          <div className="flex flex-col items-center gap-4 mt-2">
-            <div className="relative size-36 shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5 mt-2">
+            <div className="relative size-36 shrink-0 mx-auto sm:mx-0">
               <svg className="size-full overflow-visible" viewBox="0 0 200 200">
                 {slices.map((slice, index) => {
                   const isHovered = hoveredSlice === index
@@ -112,7 +112,7 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
               </div>
             </div>
 
-            <div className="w-full space-y-1 max-h-24 overflow-y-auto pr-1">
+            <div className="w-full min-w-0 grid grid-cols-1 xl:grid-cols-2 gap-x-4 gap-y-0.5 content-center max-h-32 sm:max-h-40 overflow-y-auto no-scrollbar pr-0.5">
               {slices.map((slice, index) => (
                 <div
                   key={slice.category}
