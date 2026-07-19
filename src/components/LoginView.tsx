@@ -367,14 +367,17 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           )}
 
           {!registering && loginStep === 2 && (
-            <div className="flex items-center justify-between bg-muted/30 p-3 rounded-xl border border-border/40 animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="flex items-center gap-2.5">
-                <div className="bg-background rounded-lg p-1.5 border border-border/50 shadow-sm">
-                  <User className="size-4 text-muted-foreground" />
+            <div className="flex items-center justify-between gap-3 bg-muted/40 p-2.5 pl-3 rounded-2xl border border-border/50 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="size-9 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0 font-black text-sm uppercase select-none">
+                  {username.trim().charAt(0) || <User className="size-4" />}
                 </div>
-                <span className="text-sm font-bold text-foreground">{username}</span>
+                <div className="min-w-0 leading-tight">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Signing in as</p>
+                  <p className="text-sm font-bold text-foreground truncate">{username}</p>
+                </div>
               </div>
-              <button type="button" onClick={() => { setLoginStep(1); setPassword(''); setError(null) }} className="text-[11px] px-2.5 py-1.5 bg-background hover:bg-muted border border-border/60 rounded-lg font-bold text-muted-foreground hover:text-foreground transition cursor-pointer shadow-sm">
+              <button type="button" onClick={() => { setLoginStep(1); setPassword(''); setError(null) }} className="shrink-0 text-[11px] px-3 py-1.5 bg-background hover:bg-muted border border-border/60 rounded-lg font-bold text-muted-foreground hover:text-foreground transition cursor-pointer shadow-sm">
                 Change
               </button>
             </div>

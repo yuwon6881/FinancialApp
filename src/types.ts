@@ -48,7 +48,7 @@ export interface FinancialSetting {
   stabilityAlloc: number
   rewardsAlloc: number
   cycleDay: number
-  darkMode: boolean
+  darkMode: boolean | null
   hideSensitive: boolean
   stabilityOverflowRedirect?: string
   currency?: string

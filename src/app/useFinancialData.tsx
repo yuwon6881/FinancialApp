@@ -252,9 +252,20 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       }
       setCachedCycleSnapshot(dbData.setting.selectedMonth, dbData.setting.selectedYear, mergedDashboard, txs)
 
-      const serverDark = dbData.setting.darkMode ?? false
-      setDarkMode(serverDark)
-      localStorage.setItem('dark_mode', serverDark.toString())
+      // A concrete server value is an explicit user choice; null means "never chosen",
+      // so we follow the OS/browser scheme — matching the login screen — and keep the
+      // preference unset locally so it keeps tracking the OS.
+      const serverDark = dbData.setting.darkMode
+      if (serverDark === true || serverDark === false) {
+        setDarkMode(serverDark)
+        localStorage.setItem('dark_mode', serverDark.toString())
+      } else {
+        const osDark = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+          ? window.matchMedia('(prefers-color-scheme: dark)').matches
+          : false
+        setDarkMode(osDark)
+        localStorage.removeItem('dark_mode')
+      }
 
       const serverHideSensitive = dbData.setting.hideSensitive ?? true
       setHideSensitive(serverHideSensitive)

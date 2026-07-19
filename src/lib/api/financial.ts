@@ -110,7 +110,7 @@ export async function updateSettings(settings: {
   stabilityAlloc: number
   rewardsAlloc: number
   cycleDay: number
-  darkMode?: boolean
+  darkMode?: boolean | null
   hideSensitive?: boolean
   currency?: string
   stabilityOverflowRedirect?: string
