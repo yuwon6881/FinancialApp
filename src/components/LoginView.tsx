@@ -257,8 +257,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           </div>
 
           {error && (
-            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-xl flex items-start gap-2.5 animate-in slide-in-from-top-2 duration-200">
-              <ShieldAlert className="size-4 shrink-0 mt-0.5" />
+            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-xl flex items-center gap-2.5 animate-in slide-in-from-top-2 duration-200">
+              <ShieldAlert className="size-4 shrink-0" />
               <span>{error}</span>
             </div>
           )}
@@ -324,8 +324,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         </div>
 
         {error && (
-          <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-xl flex items-start gap-2.5 animate-in slide-in-from-top-2 duration-200">
-            <ShieldAlert className="size-4 shrink-0 mt-0.5" />
+          <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-xl flex items-center gap-2.5 animate-in slide-in-from-top-2 duration-200">
+            <ShieldAlert className="size-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}

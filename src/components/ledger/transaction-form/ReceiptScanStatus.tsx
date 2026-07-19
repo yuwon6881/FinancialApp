@@ -45,10 +45,10 @@ export function ReceiptScanStatus({
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
-            className="flex items-start justify-between gap-2 px-3 py-2 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs"
+            className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs"
           >
-            <div className="flex items-start gap-2">
-              <AlertCircle className="size-4 shrink-0 mt-0.5" />
+            <div className="flex items-center gap-2">
+              <AlertCircle className="size-4 shrink-0" />
               <span>{scanError}</span>
             </div>
             <button
