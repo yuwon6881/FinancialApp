@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Lock, User, ShieldAlert, Sparkles, Eye, EyeOff, Fingerprint, ShieldCheck } from 'lucide-react'
+import { Lock, User, ShieldAlert, Eye, EyeOff, ShieldCheck } from 'lucide-react'
 import * as api from '../lib/api'
 import { AppLogo } from './ui/AppLogo'
 import { isPlatformAuthenticatorAvailable, getFingerprintAssertion } from '../lib/webauthn'
@@ -9,6 +9,8 @@ import {
   prefetchFingerprintLoginOptions,
 } from '../lib/fingerprintOptionsCache'
 import { getErrorMessage, getErrorName } from '../lib/errors'
+import { SecurityQuestionSetup } from './SecurityQuestionSetup'
+import { ForgotPassword } from './ForgotPassword'
 
 interface LoginViewProps {
   onLoginSuccess: (token: string, username: string) => void
@@ -36,12 +38,14 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [twoFactorCode, setTwoFactorCode] = useState('')
   const [twoFactorLoading, setTwoFactorLoading] = useState(false)
   const [loginStep, setLoginStep] = useState<1 | 2>(1)
+  const [needsSecuritySetup, setNeedsSecuritySetup] = useState(false)
+  const [loginResData, setLoginResData] = useState<{token: string, username: string} | null>(null)
+  const [forgotPassword, setForgotPassword] = useState(false)
 
   async function checkStatus() {
     try {
       const res = await api.fetchAuthStatus()
       setIsRegistered(res.isRegistered)
-      setHasFingerprint(res.hasFingerprint)
       // Fall back to the legacy meaning (open only before the first user) if an older API
       // build doesn't send registrationOpen.
       setRegistrationOpen(res.registrationOpen ?? !res.isRegistered)
@@ -61,12 +65,27 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const registering = !isRegistered || wantsRegister
 
   useEffect(() => {
-    if (!isRegistered || !hasFingerprint || !platformAuthAvailable || registering || loginStep !== 2 || !username.trim()) {
-      clearCachedFingerprintLoginOptions()
+    clearCachedFingerprintLoginOptions()
+    if (!isRegistered || !platformAuthAvailable || registering || loginStep !== 2 || !username.trim()) {
+      setHasFingerprint(false)
       return
     }
-    void prefetchFingerprintLoginOptions(username.trim()).catch(() => undefined)
-  }, [isRegistered, hasFingerprint, platformAuthAvailable, registering, loginStep, username])
+
+    let cancelled = false
+    setHasFingerprint(false)
+    void api.fetchAuthStatus(username.trim()).then(status => {
+      if (cancelled) return
+      setHasFingerprint(status.hasFingerprint)
+      if (status.hasFingerprint) {
+        void prefetchFingerprintLoginOptions(username.trim()).catch(() => undefined)
+      }
+    }).catch(() => undefined)
+
+    return () => {
+      cancelled = true
+      clearCachedFingerprintLoginOptions()
+    }
+  }, [isRegistered, platformAuthAvailable, registering, loginStep, username])
 
   const toggleRegisterMode = () => {
     setWantsRegister(prev => !prev)
@@ -122,6 +141,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         const loginRes = await api.login({ username, password })
         if ('requiresTwoFactor' in loginRes) {
           setPendingToken(loginRes.pendingToken)
+        } else if (loginRes.hasSetupSecurityQuestions === false) {
+          setLoginResData({ token: loginRes.token, username: loginRes.username })
+          setNeedsSecuritySetup(true)
         } else {
           onLoginSuccess(loginRes.token, loginRes.username)
         }
@@ -131,6 +153,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         localStorage.setItem('cached_is_registered', 'true')
         if ('requiresTwoFactor' in loginRes) {
           setPendingToken(loginRes.pendingToken)
+        } else if (loginRes.hasSetupSecurityQuestions === false) {
+          setLoginResData({ token: loginRes.token, username: loginRes.username })
+          setNeedsSecuritySetup(true)
         } else {
           onLoginSuccess(loginRes.token, loginRes.username)
         }
@@ -154,7 +179,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     setTwoFactorLoading(true)
     try {
       const res = await api.verifyTwoFactorLogin(pendingToken, twoFactorCode.trim())
-      onLoginSuccess(res.token, res.username)
+      if (res.hasSetupSecurityQuestions === false) {
+        setLoginResData({ token: res.token, username: res.username })
+        setNeedsSecuritySetup(true)
+      } else {
+        onLoginSuccess(res.token, res.username)
+      }
     } catch (err: unknown) {
       console.error(err)
       setError(getErrorMessage(err, 'Invalid code. Please try again.'))
@@ -176,7 +206,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       if (getErrorName(err) === 'NotAllowedError') {
         // User cancelled the prompt or it timed out - not worth alarming them.
       } else {
-        setError(getErrorMessage(err, 'Fingerprint login failed. Please use your password instead.'))
+        setError(getErrorMessage(err, 'Device unlock failed. Please use your password instead.'))
       }
     } finally {
       clearCachedFingerprintLoginOptions()
@@ -192,6 +222,18 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           <p className="text-xs font-semibold text-muted-foreground">Checking authentication status...</p>
         </div>
       </div>
+    )
+  }
+
+  if (forgotPassword) {
+    return <ForgotPassword onBackToLogin={() => setForgotPassword(false)} />
+  }
+
+  if (needsSecuritySetup && loginResData) {
+    return (
+      <SecurityQuestionSetup
+        onComplete={() => onLoginSuccess(loginResData.token, loginResData.username)}
+      />
     )
   }
 
@@ -269,8 +311,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           </h1>
           <p className="text-xs text-muted-foreground">
             {registering
-              ? 'Create your account credentials to get started.'
-              : 'Enter password to unlock your dashboard.'}
+              ? 'Create your account to get started.'
+              : loginStep === 1
+                ? 'Enter your username to continue.'
+                : 'Enter your password or use device unlock.'}
           </p>
         </div>
 
@@ -287,11 +331,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             <div className="space-y-1">
               <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Username</label>
               <div className="relative">
-                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/70 size-4 pointer-events-none" />
+                <span className="absolute inset-y-0 left-0 flex w-10 items-center justify-center pointer-events-none">
+                  <User className="size-4 text-muted-foreground/70" />
+                </span>
                 <input
                   type="text"
                   disabled={loading}
-                  placeholder="Admin username"
                   value={username}
                   onChange={e => {
                     setUsername(e.target.value)
@@ -299,8 +344,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                       setErrors(prev => ({ ...prev, username: '' }))
                     }
                   }}
-                  autoComplete="off"
-                  className={`w-full pl-10 pr-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                  autoComplete="username"
+                  className={`w-full pl-10 pr-3.5 py-2.5 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
                     errors.username 
                       ? 'border-destructive focus:ring-destructive' 
                       : 'border-border focus:ring-blue-500'
@@ -334,7 +379,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             <div className="space-y-1 animate-in fade-in slide-in-from-right-4 duration-300">
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Password</label>
             <div className="relative">
-              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/70 size-4 pointer-events-none" />
+              <span className="absolute inset-y-0 left-0 flex w-10 items-center justify-center pointer-events-none">
+                <Lock className="size-4 text-muted-foreground/70" />
+              </span>
               <input
                 type={showPassword ? 'text' : 'password'}
                 disabled={loading}
@@ -346,8 +393,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                     setErrors(prev => ({ ...prev, password: '' }))
                   }
                 }}
-                autoComplete="new-password"
-                className={`no-native-reveal w-full pl-10 pr-10 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                autoComplete={registering ? 'new-password' : 'current-password'}
+                className={`no-native-reveal w-full pl-10 pr-10 py-2.5 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
                   errors.password
                     ? 'border-destructive focus:ring-destructive'
                     : 'border-border focus:ring-blue-500'
@@ -369,6 +416,17 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   {errors.password}
                 </p>
               )}
+              {!registering && loginStep === 2 && (
+                <div className="flex justify-end mt-1">
+                  <button
+                    type="button"
+                    onClick={() => setForgotPassword(true)}
+                    className="text-xs font-semibold text-blue-500 hover:text-blue-600 focus:outline-none focus:underline"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -377,7 +435,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             <div className="space-y-1 animate-in fade-in duration-200">
               <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Confirm Password</label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <span className="absolute inset-y-0 left-0 flex w-10 items-center justify-center pointer-events-none">
+                  <Lock className="size-4 text-muted-foreground/70" />
+                </span>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   disabled={loading}
@@ -415,13 +475,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             {loading ? (
               <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
             ) : registering ? (
-              <>
-                <Sparkles className="size-4" /> Create Credentials
-              </>
+              'Create account'
             ) : loginStep === 1 ? (
               'Continue'
             ) : (
-              'Unlock Ledger Dashboard'
+              'Sign in'
             )}
           </button>
         </form>
@@ -448,9 +506,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             {fingerprintLoading ? (
               <div className="w-4 h-4 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
             ) : (
-              <Fingerprint className="size-4 text-blue-500" />
+              <ShieldCheck className="size-4 text-blue-500" />
             )}
-            Unlock with Fingerprint
+            Unlock with device
           </button>
         )}
 

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Bell, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap } from 'lucide-react'
+import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Bell, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap, Moon, Sun, Eye, EyeOff, HardDrive } from 'lucide-react'
 import { motion } from 'framer-motion'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
@@ -456,7 +456,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                     disabled={hideSensitive}
                     value={view.newCatName}
                     onChange={e => view.setNewCatName(e.target.value)}
-                    className="flex-1 h-9 px-3 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+                    className="flex-1 min-w-0 h-9 px-3 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
                   />
                   <button
                     type="button"
@@ -539,11 +539,17 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             </div>
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
-                <span className="font-medium text-foreground">Dark Mode</span>
+                <div className="flex items-center gap-2">
+                  {darkMode ? <Moon className="size-4 text-muted-foreground" /> : <Sun className="size-4 text-muted-foreground" />}
+                  <span className="font-medium text-foreground">Dark Mode</span>
+                </div>
                 <ToggleButton active={darkMode} onClick={props.onToggleDarkMode || (() => {})} />
               </div>
               <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
-                <span className="font-medium text-foreground">Sensitive Mode (Blur)</span>
+                <div className="flex items-center gap-2">
+                  {hideSensitive ? <EyeOff className="size-4 text-muted-foreground" /> : <Eye className="size-4 text-muted-foreground" />}
+                  <span className="font-medium text-foreground">Sensitive Mode (Blur)</span>
+                </div>
                 <ToggleButton active={hideSensitive} onClick={props.onToggleHideSensitive || (() => {})} />
               </div>
               <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
@@ -554,9 +560,12 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                 <ToggleButton active={props.notifyOnLoginEnabled || false} onClick={() => props.onToggleNotifyOnLogin?.(!props.notifyOnLoginEnabled)} />
               </div>
               <div className="flex items-center justify-between text-sm py-1">
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-medium text-foreground">Local Device Cache</span>
-                  <span className="text-[10px] text-muted-foreground">Clear cached data on this device.</span>
+                <div className="flex items-center gap-2">
+                  <HardDrive className="size-4 text-muted-foreground shrink-0" />
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-medium text-foreground">Local Device Cache</span>
+                    <span className="text-[10px] text-muted-foreground">Clear cached data on this device.</span>
+                  </div>
                 </div>
                 <button
                   type="button"

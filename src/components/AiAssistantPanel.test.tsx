@@ -202,4 +202,104 @@ describe('AiAssistantPanel', () => {
     expect((screen.getByLabelText('Ask AI') as HTMLTextAreaElement).disabled).toBe(true)
     expect((screen.getByTitle('Send') as HTMLButtonElement).disabled).toBe(true)
   })
+
+  it('clicking a suggestion chip fills the textarea', () => {
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} sensitiveMode={false} />)
+    const chips = screen.getAllByRole('button').filter(button => !button.getAttribute('title'))
+    expect(chips.length).toBeGreaterThan(0)
+
+    const chipText = chips[0].textContent!
+    fireEvent.click(chips[0])
+
+    const textarea = screen.getByLabelText('Ask AI') as HTMLTextAreaElement
+    expect(textarea.value).toBe(chipText)
+  })
+
+  it('closing mid-request aborts the active request', async () => {
+    let resolve!: (r: AiChatResponse) => void
+    chatWithAi.mockReturnValue(new Promise<AiChatResponse>(r => { resolve = r }))
+    const onClose = vi.fn()
+    const { rerender } = render(<AiAssistantPanel isOpen onClose={onClose} onActions={vi.fn()} />)
+
+    typeAndSend('hello')
+
+    expect(chatWithAi).toHaveBeenCalledTimes(1)
+    const abortSignal = chatWithAi.mock.calls[0][3] as AbortSignal
+    expect(abortSignal.aborted).toBe(false)
+
+    rerender(<AiAssistantPanel isOpen={false} onClose={onClose} onActions={vi.fn()} />)
+    expect(abortSignal.aborted).toBe(true)
+
+    // Resolve just to clean up
+    resolve(reply())
+  })
+
+  it('sensitiveMode prop change refreshes the suggested prompts', () => {
+    const { rerender } = render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} sensitiveMode={true} />)
+    const secureChips = screen.getAllByRole('button').filter(b => !b.getAttribute('title')).map(b => b.textContent)
+
+    rerender(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} sensitiveMode={false} />)
+    const standardChips = screen.getAllByRole('button').filter(b => !b.getAttribute('title')).map(b => b.textContent)
+
+    // As long as the lists are not identical in all cases, we know a refresh happened.
+    // They pull from different sets.
+    expect(secureChips).not.toEqual(standardChips)
+  })
+
+  it('multi-action responses trigger onActions with all actions', async () => {
+    const actions = [
+      { type: 'openDashboard', payload: {} },
+      { type: 'openDashboard', payload: { foo: 'bar' } }
+    ]
+    chatWithAi.mockResolvedValue(reply({ actions, closeChat: false }))
+    const onActions = vi.fn()
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={onActions} />)
+
+    typeAndSend('do two things')
+    await waitFor(() => expect(onActions).toHaveBeenCalledWith(actions))
+  })
+
+  it('error bubble rendering correctly displays the error string and retry button', async () => {
+    chatWithAi.mockRejectedValue(new Error('Test AI Error'))
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+
+    typeAndSend('failing message')
+
+    await waitFor(() => {
+      expect(screen.getByText('Test AI Error')).not.toBeNull()
+    })
+
+    const retryBtn = screen.getByText('Retry')
+    expect(retryBtn).not.toBeNull()
+
+    // Clicking retry should resubmit
+    chatWithAi.mockResolvedValueOnce(reply({ reply: 'recovered' }))
+    fireEvent.click(retryBtn)
+
+    await waitFor(() => {
+      expect(screen.getByText('recovered')).not.toBeNull()
+    })
+  })
+
+  it('path where requiresPanelClose is true executes onClose before onActions', async () => {
+    const actions = [{ type: 'openAddLedgerDraft', payload: {} }]
+    chatWithAi.mockResolvedValue(reply({ actions }))
+
+    const onClose = vi.fn()
+    const onActions = vi.fn()
+
+    render(<AiAssistantPanel isOpen onClose={onClose} onActions={onActions} />)
+
+    typeAndSend('add something')
+
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled()
+      expect(onActions).toHaveBeenCalledWith(actions)
+    })
+
+    // Check order
+    const closeOrder = onClose.mock.invocationCallOrder[0]
+    const actionOrder = onActions.mock.invocationCallOrder[0]
+    expect(closeOrder).toBeLessThan(actionOrder)
+  })
 })

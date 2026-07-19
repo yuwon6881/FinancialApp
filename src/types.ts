@@ -176,3 +176,18 @@ export interface WishlistItem {
   // Set locally while a delete op for this record is still queued/in-flight in the outbox.
   isPendingDelete?: boolean
 }
+
+export interface QuestionAnswerDto {
+  questionId: number
+  answer: string
+}
+
+export interface SecurityQuestion {
+  questionId: number
+  question: string
+}
+
+export interface SecurityQuestionsRecoveryStartResponse {
+  username: string
+  questions: SecurityQuestion[]
+}

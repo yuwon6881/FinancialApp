@@ -309,6 +309,26 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     prevActiveSyncId.current = activeSyncId || null
   }, [activeSyncId, showAllCycles, currentPage, appliedSearch, appliedFilters, appliedTxTypeFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringOnly, pageSize, onFetchPagedTransactions, runServerFetch])
 
+  // Re-fetch server result when deletingTxId transitions from non-null to null (delete completed)
+  const prevDeletingTxId = useRef<string | null>(null)
+  useEffect(() => {
+    if (showAllCycles && prevDeletingTxId.current !== null && deletingTxId === null && onFetchPagedTransactions && isInitialFetchDone.current) {
+      runServerFetch({
+        page: currentPage,
+        search: appliedSearch,
+        filters: appliedFilters,
+        txType: appliedTxTypeFilter,
+        startDate: appliedStartDate,
+        endDate: appliedEndDate,
+        minAmount: appliedMinAmount,
+        maxAmount: appliedMaxAmount,
+        recurringOnly: appliedRecurringOnly,
+        pSize: pageSize,
+      })
+    }
+    prevDeletingTxId.current = deletingTxId || null
+  }, [deletingTxId, showAllCycles, currentPage, appliedSearch, appliedFilters, appliedTxTypeFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringOnly, pageSize, onFetchPagedTransactions, runServerFetch])
+
   // Reset back to page 1 when search inputs or active filters are updated (client-side mode only)
   useEffect(() => {
     if (!showAllCycles) setCurrentPage(1)
@@ -527,6 +547,15 @@ export function useLedgerView(options: UseLedgerViewOptions) {
       setCurrentPage(totalPages)
     }
   }, [totalPages, showAllCycles, currentPage])
+
+  useEffect(() => {
+    if (showAllCycles && serverResult) {
+      const serverTotalPages = Math.ceil(serverResult.total / pageSize) || 1
+      if (currentPage > serverTotalPages) {
+        setCurrentPage(serverTotalPages)
+      }
+    }
+  }, [serverResult, showAllCycles, currentPage, pageSize])
 
   // Handle highlighted transaction scroll into view and page calculation
   useEffect(() => {

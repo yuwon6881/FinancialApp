@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { Loader2, Send, Sparkles, X } from 'lucide-react'
+import { Loader2, Send, Sparkles, X, RotateCcw } from 'lucide-react'
 import { BottomSheet } from './ui/BottomSheet'
 import { PerimeterBeam } from './ui/PerimeterBeam'
 import * as api from '../lib/api'
@@ -51,8 +51,10 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const [lastFailedInput, setLastFailedInput] = useState<string | null>(null)
   const [suggestedPrompts, setSuggestedPrompts] = useState(() => pickSuggestedPrompts(sensitiveMode))
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const activeRequestRef = useRef<AbortController | null>(null)
   const requestGenerationRef = useRef(0)
   // Structured conversation state from the last reply, echoed on the next request. Kept in a
@@ -62,6 +64,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
   const resetChat = () => {
     setMessages([])
     setInput('')
+    setLastFailedInput(null)
     conversationStateRef.current = null
   }
 
@@ -96,18 +99,36 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
     }
   }, [messages, isOpen])
 
+  const adjustTextareaHeight = () => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 112)}px` // 112px = max-h-28
+  }
+
+  useEffect(() => {
+    adjustTextareaHeight()
+  }, [input])
+
   const handleClose = () => {
     cancelInFlight()
     resetChat()
     onClose()
   }
 
-  const sendMessage = async (e?: React.FormEvent) => {
+  const sendMessage = async (e?: React.FormEvent, retryText?: string) => {
     e?.preventDefault()
-    const trimmed = input.trim()
+    const trimmed = (retryText ?? input).trim()
     if (!trimmed || isSending || isOffline) return
 
-    const nextMessages: ChatMessage[] = [...messages, { role: 'user', content: trimmed }]
+    const nextMessages: ChatMessage[] = retryText
+      ? messages.slice(0, -1)
+      : [...messages, { role: 'user', content: trimmed }]
+    const apiHistory = retryText
+      ? messages.slice(0, -2)
+      : lastFailedInput ? messages.slice(0, -1) : messages
+
+    setLastFailedInput(null)
     setMessages(nextMessages)
     setInput('')
     setIsSending(true)
@@ -118,7 +139,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
     activeRequestRef.current = controller
 
     try {
-      const result = await api.chatWithAi(trimmed, messages, conversationStateRef.current, controller.signal)
+      const result = await api.chatWithAi(trimmed, apiHistory, conversationStateRef.current, controller.signal)
       if (generation !== requestGenerationRef.current) return
       conversationStateRef.current = result.state ?? null
       setMessages([...nextMessages, { role: 'assistant', content: result.reply || 'Done.' }])
@@ -145,6 +166,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
       if (controller.signal.aborted || generation !== requestGenerationRef.current) return
       console.warn('Ask AI request failed', err)
       const content = err instanceof Error ? err.message : 'AI is unavailable. Please try again.'
+      setLastFailedInput(trimmed)
       setMessages([...nextMessages, { role: 'assistant', content }])
     } finally {
       if (generation === requestGenerationRef.current) {
@@ -172,7 +194,11 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
         {/* The non-scrolling wrapper owns a subtle perimeter-only activity trace. */}
         <div className={`relative min-h-0 flex-1 rounded-xl ${isSending ? 'perimeter-beam-host' : ''}`}>
           {isSending && <PerimeterBeam size={132} duration={7} />}
-          <div className={`h-full space-y-3 rounded-xl border border-border/60 bg-muted/10 p-3 ${messages.length > 0 ? 'overflow-y-auto' : 'overflow-y-hidden'}`}>
+          <div
+            role="log"
+            aria-live="polite"
+            className={`h-full space-y-3 rounded-xl border border-border/60 bg-muted/10 p-3 ${messages.length > 0 ? 'overflow-y-auto' : 'overflow-y-hidden'}`}
+          >
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center text-center text-xs text-muted-foreground">
               <div className="mb-3 grid size-11 place-items-center rounded-xl border border-border/60 bg-muted/40 shadow-xs">
@@ -204,14 +230,26 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
                 key={`${message.role}-${index}`}
                 className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                <div
-                  className={`max-w-[85%] whitespace-pre-wrap rounded-xl px-3 py-2 text-xs leading-relaxed ${
-                    message.role === 'user'
-                      ? 'bg-primary text-primary-foreground shadow-xs'
-                      : 'border border-border/50 bg-card text-foreground shadow-xs'
-                  }`}
-                >
-                  {message.content}
+                <div className={`flex flex-col gap-1 items-start ${message.role === 'user' ? 'items-end' : ''} max-w-[85%]`}>
+                  <div
+                    className={`whitespace-pre-wrap rounded-xl px-3 py-2 text-xs leading-relaxed ${
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground shadow-xs'
+                        : 'border border-border/50 bg-card text-foreground shadow-xs'
+                    }`}
+                  >
+                    {message.content}
+                  </div>
+                  {message.role === 'assistant' && index === messages.length - 1 && lastFailedInput && (
+                    <button
+                      type="button"
+                      onClick={() => void sendMessage(undefined, lastFailedInput)}
+                      className="flex items-center gap-1.5 px-2 py-1 mt-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    >
+                      <RotateCcw className="size-3" />
+                      Retry
+                    </button>
+                  )}
                 </div>
               </div>
             ))
@@ -222,6 +260,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
 
         <form onSubmit={sendMessage} className="flex items-center gap-2 rounded-xl border border-border bg-card p-1.5 focus-within:border-primary/50 transition-colors shadow-xs">
           <textarea
+            ref={textareaRef}
             aria-label="Ask AI"
             disabled={isOffline}
             value={input}
@@ -234,7 +273,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
             }}
             placeholder={isOffline ? 'Offline' : ''}
             rows={1}
-            className="h-11 min-h-11 max-h-28 flex-1 resize-none rounded-xl border border-transparent bg-transparent px-3 py-2 text-sm outline-hidden focus:bg-background/40"
+            className="min-h-[44px] max-h-28 flex-1 resize-none rounded-xl border border-transparent bg-transparent px-3 py-2 text-sm outline-hidden focus:bg-background/40"
           />
           <button
             type="button"

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Fingerprint } from 'lucide-react'
+import { ShieldCheck } from 'lucide-react'
 import * as api from '../lib/api'
 import { AppLogo } from './ui/AppLogo'
 import { isPlatformAuthenticatorAvailable, getFingerprintAssertion } from '../lib/webauthn'
@@ -13,11 +13,12 @@ import { getErrorMessage, getErrorName } from '../lib/errors'
 
 interface LockScreenProps {
   isOpen: boolean
+  username: string
   onUnlocked: () => void
   onSignOut: () => void
 }
 
-export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
+export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScreenProps) {
   const [lockPassword, setLockPassword] = useState('')
   const [lockError, setLockError] = useState<string | null>(null)
   const [passwordVerifying, setPasswordVerifying] = useState(false)
@@ -36,7 +37,7 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
     ;(async () => {
       const [platformAvailable, status] = await Promise.all([
         isPlatformAuthenticatorAvailable(),
-        api.fetchAuthStatus().catch(() => null),
+        api.fetchAuthStatus(username).catch(() => null),
       ])
       if (!platformAvailable || cancelled || !status?.hasFingerprint) return
       try {
@@ -51,7 +52,7 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
       cancelled = true
       clearCachedFingerprintAssertOptions()
     }
-  }, [isOpen])
+  }, [isOpen, username])
 
   const handleFingerprintUnlock = async () => {
     setFingerprintVerifying(true)
@@ -65,7 +66,7 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
     } catch (err: unknown) {
       console.error(err)
       if (getErrorName(err) !== 'NotAllowedError') {
-        setLockError(getErrorMessage(err, 'Fingerprint unlock failed. Please use your password.'))
+        setLockError(getErrorMessage(err, 'Device unlock failed. Please use your password.'))
       }
     } finally {
       clearCachedFingerprintAssertOptions()
@@ -86,7 +87,7 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
         <AppLogo className="size-16 rounded-2xl shadow-xl shadow-blue-500/20" />
         <div className="text-center">
           <h2 className="text-xl font-bold text-foreground">Session Locked</h2>
-          <p className="text-sm text-muted-foreground mt-1">You were inactive for 5 minutes. Touch fingerprint or enter password to continue.</p>
+          <p className="text-sm text-muted-foreground mt-1">You were inactive for 5 minutes. Use your device unlock or enter your password to continue.</p>
         </div>
 
         {fingerprintAvailable && (
@@ -96,8 +97,8 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
             disabled={fingerprintVerifying || passwordVerifying}
             className="press-scale w-full py-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold text-sm rounded-xl transition duration-200 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/10"
           >
-            <Fingerprint className="size-5 text-emerald-400 animate-pulse" />
-            {fingerprintVerifying ? 'Verifying Fingerprint...' : 'Unlock with Fingerprint'}
+            <ShieldCheck className="size-5 text-emerald-400 animate-pulse" />
+            {fingerprintVerifying ? 'Verifying device...' : 'Unlock with device'}
           </button>
         )}
 
@@ -153,4 +154,3 @@ export function LockScreen({ isOpen, onUnlocked, onSignOut }: LockScreenProps) {
     document.body
   )
 }
-

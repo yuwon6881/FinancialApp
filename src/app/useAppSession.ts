@@ -129,7 +129,7 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
         return
       }
 
-      const status = await api.fetchAuthStatus().catch(() => null)
+      const status = await api.fetchAuthStatus(username).catch(() => null)
       if (cancelled) return
 
       const hasFingerprint = !!status?.hasFingerprint
@@ -142,7 +142,7 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
     return () => {
       cancelled = true
     }
-  }, [token])
+  }, [token, username])
 
   useEffect(() => {
     if (!token || isLocked || !hideSensitive || !hasFingerprintSetup) return

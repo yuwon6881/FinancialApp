@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Fingerprint } from 'lucide-react'
+import { ShieldCheck } from 'lucide-react'
 import * as api from '../lib/api'
 import { BottomSheet } from './ui/BottomSheet'
 
@@ -7,7 +7,7 @@ interface PasswordPromptModalProps {
   isOpen: boolean
   onClose: () => void
   onVerified: () => void
-  /** When provided, shows a "Try Fingerprint Instead" button. Should return true on success. */
+  /** When provided, offers device unlock as an alternative. Should return true on success. */
   onTryFingerprint?: () => Promise<boolean>
 }
 
@@ -33,7 +33,7 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified, onTryFingerpr
         setConfirmPassword('')
         onClose()
       } else {
-        setPromptError('Fingerprint verification failed or was cancelled.')
+        setPromptError('Device verification failed or was cancelled.')
       }
     } finally {
       setFingerprintBusy(false)
@@ -61,9 +61,9 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified, onTryFingerpr
           {fingerprintBusy ? (
             <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
           ) : (
-            <Fingerprint className="size-3.5" />
+            <ShieldCheck className="size-3.5" />
           )}
-          {fingerprintBusy ? 'Verifying...' : 'Unlock with Fingerprint'}
+          {fingerprintBusy ? 'Verifying...' : 'Unlock with device'}
         </button>
       )}
 

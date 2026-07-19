@@ -40,7 +40,7 @@ describe('FingerprintSection', () => {
     expect(screen.queryByText('Disabled')).toBeNull()
     expect(screen.getByText('Enabled for this account; set up this device to use it here.')).toBeTruthy()
 
-    fireEvent.click(screen.getByRole('button', { name: /Fingerprint Login/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Device Unlock/i }))
 
     expect(await screen.findByRole('button', { name: 'Set up this device' })).toBeTruthy()
   })

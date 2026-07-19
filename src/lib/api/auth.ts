@@ -1,5 +1,6 @@
 import type { AssertionOptionsJson, CreateOptionsJson } from '../webauthn'
 import type { LoginCredentials, RegisterCredentials } from '../apiTypes'
+import type { QuestionAnswerDto, SecurityQuestionsRecoveryStartResponse } from '../../types'
 import { apiFetch, invalidateCache, jsonBody, request, requestVoid } from './client'
 import { tokenStore } from '../auth'
 
@@ -28,15 +29,22 @@ export function getDeviceInfo(): { deviceId: string; deviceName: string } {
   return { deviceId, deviceName: `${browser} on ${os}` }
 }
 
-export async function fetchAuthStatus(): Promise<{ isRegistered: boolean; hasFingerprint: boolean; registrationOpen: boolean }> {
-  return request('/auth/status', {
+export async function fetchAuthStatus(username?: string): Promise<{ isRegistered: boolean; hasFingerprint: boolean; registrationOpen: boolean }> {
+  const url = username ? `/auth/status?username=${encodeURIComponent(username)}` : '/auth/status'
+  return request(url, {
     authenticated: false,
     errorMessage: 'Failed to fetch auth status',
   })
 }
 
+export type AuthenticatedLoginResult = {
+  token: string
+  username: string
+  hasSetupSecurityQuestions: boolean
+}
+
 export type LoginResult =
-  | { token: string; username: string }
+  | AuthenticatedLoginResult
   | { requiresTwoFactor: true; pendingToken: string }
 
 export async function login(credentials: LoginCredentials): Promise<LoginResult> {
@@ -53,8 +61,8 @@ export async function login(credentials: LoginCredentials): Promise<LoginResult>
   return data
 }
 
-export async function verifyTwoFactorLogin(pendingToken: string, code: string): Promise<{ token: string; username: string }> {
-  const data = await request<{ token: string; username: string }>('/auth/login/2fa', {
+export async function verifyTwoFactorLogin(pendingToken: string, code: string): Promise<AuthenticatedLoginResult> {
+  const data = await request<AuthenticatedLoginResult>('/auth/login/2fa', {
     method: 'POST',
     ...jsonBody({ pendingToken, code }),
     authenticated: false,
@@ -135,7 +143,7 @@ export interface TwoFactorStatus {
 export async function getFingerprintRegisterOptions(): Promise<{ challengeId: string; options: CreateOptionsJson }> {
   return request('/auth/webauthn/register/options', {
     method: 'POST',
-    errorMessage: 'Failed to start fingerprint registration',
+    errorMessage: 'Failed to start device unlock setup',
   })
 }
 
@@ -143,20 +151,20 @@ export async function verifyFingerprintRegistration(challengeId: string, credent
   await requestVoid('/auth/webauthn/register/verify', {
     method: 'POST',
     ...jsonBody({ challengeId, credential, deviceLabel }),
-    errorMessage: 'Failed to register fingerprint',
+    errorMessage: 'Failed to set up device unlock',
   })
 }
 
 export async function listFingerprintCredentials(): Promise<FingerprintCredentialSummary[]> {
   return request('/auth/webauthn/credentials', {
-    errorMessage: 'Failed to load fingerprint credentials',
+    errorMessage: 'Failed to load device unlock credentials',
   })
 }
 
 export async function deleteFingerprintCredential(id: string): Promise<void> {
   await requestVoid(`/auth/webauthn/credentials/${id}`, {
     method: 'DELETE',
-    errorMessage: 'Failed to remove fingerprint credential',
+    errorMessage: 'Failed to remove device unlock credential',
   })
 }
 
@@ -165,7 +173,7 @@ export async function getFingerprintLoginOptions(username?: string): Promise<{ c
   return request(url, {
     method: 'POST',
     authenticated: false,
-    errorMessage: 'Fingerprint login is not available',
+    errorMessage: 'Device unlock is not available',
   })
 }
 
@@ -253,7 +261,7 @@ export async function regenerateRecoveryCodes(password: string): Promise<{ recov
 export async function getFingerprintAssertOptions(): Promise<{ challengeId: string; options: AssertionOptionsJson }> {
   return request('/auth/webauthn/assert/options', {
     method: 'POST',
-    errorMessage: 'Fingerprint verification is not available',
+    errorMessage: 'Device verification is not available',
   })
 }
 
@@ -261,6 +269,40 @@ export async function verifyFingerprintAssert(challengeId: string, credential: u
   return request('/auth/webauthn/assert/verify', {
     method: 'POST',
     ...jsonBody({ challengeId, credential }),
-    errorMessage: 'Fingerprint verification failed',
+    errorMessage: 'Device verification failed',
+  })
+}
+
+export async function getSecurityQuestionsSetupStatus(): Promise<{ hasSetupSecurityQuestions: boolean }> {
+  return request('/auth/security-questions/setup-status', { errorMessage: 'Failed to check security questions status' })
+}
+
+export async function getAvailableSecurityQuestions(): Promise<string[]> {
+  return request('/auth/security-questions/available', { authenticated: false, errorMessage: 'Failed to load security questions' })
+}
+
+export async function setupSecurityQuestions(answers: QuestionAnswerDto[]): Promise<void> {
+  await requestVoid('/auth/security-questions/setup', {
+    method: 'POST',
+    ...jsonBody({ answers }),
+    errorMessage: 'Failed to set up security questions',
+  })
+}
+
+export async function startSecurityQuestionsRecovery(username: string): Promise<SecurityQuestionsRecoveryStartResponse> {
+  return request('/auth/security-questions/recovery/start', {
+    method: 'POST',
+    authenticated: false,
+    ...jsonBody({ username }),
+    errorMessage: 'Failed to start recovery',
+  })
+}
+
+export async function resetPasswordViaSecurityQuestions(username: string, answers: QuestionAnswerDto[], newPassword: string): Promise<void> {
+  await requestVoid('/auth/security-questions/recovery/reset', {
+    method: 'POST',
+    authenticated: false,
+    ...jsonBody({ username, answers, newPassword }),
+    errorMessage: 'Failed to reset password',
   })
 }

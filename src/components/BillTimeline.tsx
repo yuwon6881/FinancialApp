@@ -129,6 +129,19 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
             if (pStart && pStart > endIso) return
             if (pEnd && pEnd < startIso) return
 
+            if (usingAllPayments) {
+              const freq = (p as RecurringPayment).frequency
+              if (freq && (freq === 'Annually' || freq.toLowerCase() === 'yearly')) {
+                if (pStart) {
+                  const startMonthStr = pStart.split('-')[1]
+                  if (startMonthStr) {
+                    const startMonth = parseInt(startMonthStr, 10)
+                    if (startMonth !== monthIndex + 1) return
+                  }
+                }
+              }
+            }
+
             const dayNum = usingAllPayments
               ? (p as RecurringPayment).dueDate
               : ((p as ActiveRecurringPayment).dueDay || parseInt(((p as ActiveRecurringPayment).dueDate || '').split('-')[2], 10) || 1)

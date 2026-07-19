@@ -1,4 +1,4 @@
-import { CheckCircle2, Fingerprint, ShieldCheck, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { CheckCircle2, KeyRound, ShieldCheck, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import * as api from '../../lib/api'
 import type { FingerprintCredentialSummary } from '../../lib/api'
@@ -53,14 +53,14 @@ export function FingerprintSection() {
       await api.verifyFingerprintRegistration(challengeId, credential, getFriendlyDeviceLabel())
       localStorage.setItem(DEVICE_CREDENTIAL_ID_KEY, base64UrlToHex(credential.id))
       await load()
-      showToast('Fingerprint enabled on this device.', 'Fingerprint enabled', 'success')
+      showToast('Device unlock enabled on this device.', 'Device unlock enabled', 'success')
     } catch (error) {
       if (getErrorName(error) === 'InvalidStateError') {
         localStorage.setItem(DEVICE_CREDENTIAL_ID_KEY, 'already_enrolled')
         await load()
-        showToast('This device already has fingerprint enabled.', 'Already enabled', 'info')
+        showToast('This device already has device unlock enabled.', 'Already enabled', 'info')
       } else if (getErrorName(error) !== 'NotAllowedError') {
-        showToast(getErrorMessage(error, 'Failed to register fingerprint on this device.'), 'Fingerprint error', 'error')
+        showToast(getErrorMessage(error, 'Failed to set up device unlock on this device.'), 'Device unlock error', 'error')
       }
     } finally {
       setBusy(false)
@@ -71,9 +71,9 @@ export function FingerprintSection() {
     try {
       await api.deleteFingerprintCredential(id)
       await load()
-      showToast('Fingerprint credential removed.', 'Fingerprint removed', 'success')
+      showToast('Device unlock credential removed.', 'Device unlock removed', 'success')
     } catch (error) {
-      showToast(getErrorMessage(error, 'Failed to remove fingerprint credential.'), 'Fingerprint error', 'error')
+      showToast(getErrorMessage(error, 'Failed to remove device unlock credential.'), 'Device unlock error', 'error')
     }
   }
 
@@ -88,13 +88,13 @@ export function FingerprintSection() {
       >
         <ShieldCheck className="size-5 text-emerald-500 shrink-0" />
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-bold text-foreground">Fingerprint Login</h3>
+          <h3 className="text-sm font-bold text-foreground">Device Unlock</h3>
           <p className="text-[11px] text-muted-foreground">
             {enrolledHere
-              ? "Unlock with this device's fingerprint or face unlock."
+              ? "Use this device's screen lock, PIN, fingerprint, or face recognition."
               : enabledOnAccount
                 ? 'Enabled for this account; set up this device to use it here.'
-                : "Unlock with this device's fingerprint or face unlock."}
+                : "Use this device's screen lock, PIN, fingerprint, or face recognition."}
           </p>
         </div>
         <span className={`shrink-0 text-[10px] font-bold uppercase tracking-wider ${status.className}`}>
@@ -108,7 +108,7 @@ export function FingerprintSection() {
           {credentials.map(credential => (
             <div key={credential.id} className="flex items-center justify-between bg-muted/20 border px-3 py-2.5 rounded-xl text-xs">
               <span className="flex items-center gap-2 font-semibold">
-                <Fingerprint className="size-4 text-emerald-500" />
+                <KeyRound className="size-4 text-emerald-500" />
                 {credential.deviceLabel || 'Registered device'}
               </span>
               <button type="button" onClick={() => void remove(credential.id)} disabled={hideSensitive} className="p-1.5 text-muted-foreground hover:text-orange-500 disabled:opacity-40">
@@ -122,7 +122,7 @@ export function FingerprintSection() {
             </div>
           ) : (
             <button type="button" onClick={() => void enroll()} disabled={busy || hideSensitive} className="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 disabled:opacity-50 text-white">
-              {busy ? <span className="size-3.5 rounded-full border-2 border-t-transparent animate-spin" /> : <Fingerprint className="size-3.5" />}
+              {busy ? <span className="size-3.5 rounded-full border-2 border-t-transparent animate-spin" /> : <KeyRound className="size-3.5" />}
               {enabledOnAccount ? 'Set up this device' : 'Enable on this device'}
             </button>
           )}

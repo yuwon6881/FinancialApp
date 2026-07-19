@@ -42,7 +42,7 @@ export function getPayloadNumber(payload: Record<string, unknown>, key: string):
 
 /** Action types that mutate records — blocked while sensitive mode is active. */
 export const AI_MUTATION_TYPES = new Set<string>([
-  'openAddLedgerDraft', 'openEditLedgerDraft', 'openEditRecurringDraft', 'openEditWishlistDraft',
+  'openAddLedgerDraft', 'openAddRecurringDraft', 'openAddWishlistDraft', 'openEditLedgerDraft', 'openEditRecurringDraft', 'openEditWishlistDraft',
   'requestDeleteLedger', 'requestDeleteRecurring', 'requestDeleteWishlist',
   'requestConfirmRecurringBill', 'requestDiscardRecurringBill',
   'requestPurchaseWishlist', 'requestUnpurchaseWishlist', 'toggleRecurring',
