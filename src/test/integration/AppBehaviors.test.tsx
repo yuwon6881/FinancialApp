@@ -133,6 +133,25 @@ describe('App behaviors', () => {
     expect(JSON.parse(localStorage.getItem('cached_wishlist') || '[]')).toEqual(cachedWishlist)
   })
 
+  it('opens Ask AI from the mobile quick-action menu', async () => {
+    localStorage.setItem('auth_session', '1')
+    localStorage.setItem('auth_username', 'alice')
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dashboard-view')).toBeDefined()
+    }, { timeout: 5000 })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Menu' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Ask AI' }))
+
+    expect(screen.getByRole('dialog', { name: 'ASK AI' })).toBeDefined()
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Ask AI' })).toBeNull()
+    })
+  })
+
   it('performs cache preservation and local storage cleanup on logout', async () => {
     localStorage.setItem('auth_session', '1')
     localStorage.setItem('auth_username', 'alice')

@@ -248,12 +248,12 @@ const TopNav: React.FC<TopNavProps> = ({
           <button
             type="button"
             onClick={onAskAI}
-            className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-blue-500/8 hover:bg-blue-500/14 border border-blue-500/20 hover:border-blue-500/35 text-blue-600 dark:text-blue-400 rounded-xl select-none shrink-0 transition-all duration-150 cursor-pointer"
+            className="hidden md:flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-500/8 hover:bg-blue-500/14 border border-blue-500/20 hover:border-blue-500/35 text-blue-600 dark:text-blue-400 rounded-xl select-none shrink-0 transition-all duration-150 cursor-pointer"
             title="ASK AI"
             aria-label="ASK AI"
           >
             <Sparkles className="size-3.5" />
-            <span className="hidden sm:inline text-xs font-extrabold tracking-wide">ASK AI</span>
+            <span className="text-xs font-extrabold tracking-wide">ASK AI</span>
           </button>
 
           {/* Notification Bell Dropdown */}

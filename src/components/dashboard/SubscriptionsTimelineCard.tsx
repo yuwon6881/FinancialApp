@@ -32,7 +32,7 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
         <motion.div
           initial="hidden" animate="show"
           variants={listContainerVariants}
-          className="space-y-1.5 mt-4 flex-1 overflow-y-auto overflow-x-hidden no-scrollbar pr-0.5 min-h-0"
+          className="-mx-1 mt-3 flex-1 min-h-0 space-y-1.5 overflow-x-hidden overflow-y-auto p-1 no-scrollbar"
         >
           <AnimatePresence>
           {activeRecurring.map((rp: ActiveRecurringPayment) => (
