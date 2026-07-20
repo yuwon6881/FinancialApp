@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { Loader2, Send, Sparkles, X, RotateCcw } from 'lucide-react'
+import { Loader2, Send, Sparkles, X, RotateCcw, SquarePen } from 'lucide-react'
 import { BottomSheet } from './ui/BottomSheet'
 import { PerimeterBeam } from './ui/PerimeterBeam'
 import * as api from '../lib/api'
@@ -75,13 +75,19 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
     setIsSending(false)
   }
 
+  const handleNewChat = () => {
+    cancelInFlight()
+    resetChat()
+    setSuggestedPrompts(pickSuggestedPrompts(sensitiveMode))
+  }
+
+  // History is intentionally preserved across close/reopen — closing the sheet only
+  // aborts any in-flight request. Use the "New chat" control to clear the conversation.
   useEffect(() => {
     if (isOpen) {
-      resetChat()
-      setSuggestedPrompts(pickSuggestedPrompts(sensitiveMode))
+      if (messages.length === 0) setSuggestedPrompts(pickSuggestedPrompts(sensitiveMode))
     } else {
       cancelInFlight()
-      resetChat()
     }
   }, [isOpen])
 
@@ -112,7 +118,6 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
 
   const handleClose = () => {
     cancelInFlight()
-    resetChat()
     onClose()
   }
 
@@ -149,7 +154,6 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
           action.type.startsWith('request') || action.type === 'openLedgerExport'
         )
         if (requiresPanelClose) {
-          resetChat()
           onClose()
           await nextFrame()
           await onActions(result.actions)
@@ -191,6 +195,19 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
       }
     >
       <div className="flex h-[55vh] sm:h-[480px] flex-col gap-3">
+        {messages.length > 0 && (
+          <div className="flex shrink-0 justify-end">
+            <button
+              type="button"
+              onClick={handleNewChat}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background px-3 py-1.5 text-[11px] font-semibold text-muted-foreground transition hover:border-primary/50 hover:text-foreground cursor-pointer"
+              title="Start a new chat (clears history)"
+            >
+              <SquarePen className="size-3.5" />
+              New chat
+            </button>
+          </div>
+        )}
         {/* The non-scrolling wrapper owns a subtle perimeter-only activity trace. */}
         <div className={`relative min-h-0 flex-1 rounded-xl ${isSending ? 'perimeter-beam-host' : ''}`}>
           {isSending && <PerimeterBeam size={132} duration={7} />}

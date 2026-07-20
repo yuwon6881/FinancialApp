@@ -95,7 +95,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       </div>
 
       {/* Tabs Control */}
-      <div role="tablist" aria-label="Settings sections" className="flex border-b border-border/30 gap-6 select-none overflow-x-auto no-scrollbar pb-1">
+      <div role="tablist" aria-label="Settings sections" className="flex border-b border-border/30 gap-x-7 sm:gap-6 select-none overflow-x-auto no-scrollbar pb-1">
         {([
           ['financial-model', 'Financial Model'],
           ['categories-preferences', 'Categories & Preferences'],
@@ -109,7 +109,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             aria-selected={activeTab === id}
             aria-controls={`settings-panel-${id}`}
             onClick={() => setActiveTab(id)}
-            className={`pb-3 text-xs font-bold transition relative cursor-pointer whitespace-nowrap px-1 ${
+            className={`pb-3 text-xs font-bold transition relative cursor-pointer whitespace-nowrap px-1.5 sm:px-1 ${
               activeTab === id
                 ? 'text-blue-500 font-extrabold'
                 : 'text-muted-foreground hover:text-foreground'

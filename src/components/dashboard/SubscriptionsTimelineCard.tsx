@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Calendar, ChevronRight } from 'lucide-react'
+import { Calendar, ChevronRight, CheckCircle2, Clock, Minus } from 'lucide-react'
 import { listContainerVariants, listItemVariants, listItemExit } from '../../lib/animations'
 import type { ActiveRecurringPayment } from '../../types'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
@@ -49,21 +49,24 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
               <div className="min-w-0 flex-1">
                 <span className={`font-bold text-foreground truncate block transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400 ${rp.isDiscarded ? 'line-through' : ''}`}>{rp.name}</span>
                 <div className="mt-0.5 flex min-w-0 items-center gap-1 select-none">
-                  <span className={`min-w-0 break-words text-[10px] px-1.5 py-0.5 font-semibold rounded border ${getCategoryBadgeClass(rp.category)}`}>
+                  <span
+                    title={rp.category}
+                    className={`min-w-0 truncate text-[10px] px-1.5 py-0.5 font-semibold rounded border ${getCategoryBadgeClass(rp.category)}`}
+                  >
                     {rp.category}
                   </span>
                   {rp.isDiscarded ? (
-                    <span className="shrink-0 whitespace-nowrap text-[10px] px-1.5 py-0.5 font-bold text-slate-500 bg-slate-500/10 border border-slate-500/20 rounded">
-                      Discarded
-                    </span>
+                    <Minus className="size-3.5 shrink-0 text-slate-500" aria-label="Discarded" role="img">
+                      <title>Discarded</title>
+                    </Minus>
                   ) : rp.isPaid ? (
-                    <span className="shrink-0 whitespace-nowrap text-[10px] px-1.5 py-0.5 font-bold text-blue-500 bg-blue-500/10 border border-blue-500/20 rounded">
-                      Paid
-                    </span>
+                    <CheckCircle2 className="size-3.5 shrink-0 text-emerald-500" aria-label="Paid" role="img">
+                      <title>Paid</title>
+                    </CheckCircle2>
                   ) : (
-                    <span className="shrink-0 whitespace-nowrap text-[10px] px-1.5 py-0.5 font-bold text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 rounded animate-pulse">
-                      Pending
-                    </span>
+                    <Clock className="size-3.5 shrink-0 text-amber-500 animate-pulse" aria-label="Pending" role="img">
+                      <title>Pending</title>
+                    </Clock>
                   )}
                 </div>
               </div>
