@@ -156,7 +156,7 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
   if (variant === 'wishlist') {
     return (
       <div data-testid="wishlist-skeleton" className="space-y-6 soft-rise">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[repeat(3,minmax(0,1fr))]">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <StatTileSkeleton />
           <StatTileSkeleton />
           <StatTileSkeleton />
@@ -192,8 +192,13 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
 
   return (
     <div data-testid="drafts-skeleton" className="space-y-6 soft-rise">
-      <CycleHeaderSkeleton titleWidth="w-40" subtitleWidth="w-64" controlWidth="w-36" />
-      <div className="app-panel space-y-3 rounded-2xl border border-border/60 bg-card/92 p-4">
+      {/* Matches DraftStagingView's simple back-button + "Queue" header row,
+          not the card-style CycleHeaderSkeleton used by the other tabs. */}
+      <div className="flex items-center gap-3 border-b border-border/40 pb-4">
+        <Skeleton className="size-9 rounded-xl" />
+        <Skeleton className="h-6 w-24" />
+      </div>
+      <div className="space-y-3">
         {[1, 2, 3, 4].map(i => <ListRowSkeleton key={i} />)}
       </div>
     </div>

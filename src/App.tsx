@@ -419,8 +419,8 @@ function App() {
   if (financial.loading && !financial.optimisticDashboardData) {
     return (
       <LaunchReady>
-        <div data-testid="app-loading-skeleton" className="app-shell min-h-screen text-foreground p-4">
-          <div className="container mx-auto max-w-7xl py-6 space-y-6">
+        <div data-testid="app-loading-skeleton" className="app-shell min-h-screen text-foreground">
+          <div className="mx-auto w-full max-w-[1800px] px-4 py-6 space-y-6 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <AppLogo className="size-10 rounded-xl" pulse />
@@ -517,7 +517,7 @@ function App() {
           onRefresh={() => financial.loadAll(nav.selectedMonth || undefined, nav.selectedYear || undefined, true)}
           disabled={financial.loading || session.isLocked}
         >
-          <main className="relative mx-auto min-w-0 max-w-7xl flex-1 px-4 py-6 pb-24 sm:py-8 md:pb-8">
+          <main className="relative mx-auto w-full min-w-0 max-w-[1800px] flex-1 px-4 py-6 pb-24 sm:px-6 sm:py-8 md:pb-8 lg:px-8">
             <ErrorBoundary variant="inline" resetKey={prefs.activeTab}>
               <Suspense fallback={<ContentViewFallback tab={prefs.activeTab} />}>
                 <LaunchReady>
@@ -793,7 +793,7 @@ function App() {
         />
 
         <footer className="border-t border-border/40 py-6 pb-24 md:pb-6 bg-background/45 backdrop-blur select-none">
-          <div className="container mx-auto px-4 text-center text-xs text-muted-foreground">
+          <div className="mx-auto w-full max-w-[1800px] px-4 text-center text-xs text-muted-foreground sm:px-6 lg:px-8">
             &copy; {new Date().getFullYear()} FinancialApp. All rights reserved.
           </div>
         </footer>

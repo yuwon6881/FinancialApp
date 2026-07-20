@@ -519,6 +519,18 @@ html {
     overscroll-behavior-y: none;
 }
 
+/* Reserve the vertical scrollbar's gutter on desktop so the centered page
+   content never shifts sideways between cycles/tabs — some cycles are tall
+   enough to scroll and others aren't, and without a stable gutter that made
+   the centered container jump, reading as inconsistent left/right margins.
+   Overlay scrollbars on touch devices ignore this, so it's scoped to
+   pointer-precise (desktop) viewports to keep mobile edge-to-edge. */
+@media (min-width: 768px) {
+    html {
+        scrollbar-gutter: stable;
+    }
+}
+
 .sheet-backdrop {
     position: fixed;
     inset: 0;
