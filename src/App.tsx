@@ -245,8 +245,17 @@ function App() {
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', prefs.darkMode)
+    const surface = prefs.darkMode ? '#0a0d14' : '#f6f8fc'
     const meta = document.querySelector('meta[name="theme-color"]')
-    if (meta) meta.setAttribute('content', prefs.darkMode ? '#0a0d14' : '#f6f8fc')
+    if (meta) meta.setAttribute('content', surface)
+    // Paint the root + body surface to match the active theme. In a standalone
+    // PWA the status-bar (top) and gesture-nav (bottom) safe-area regions, plus
+    // any overscroll area, take the page background — the hard-coded dark launch
+    // color in index.html otherwise showed through as black bars in light mode.
+    // color-scheme also nudges the OS to tint its own chrome to match.
+    document.documentElement.style.backgroundColor = surface
+    document.body.style.backgroundColor = surface
+    document.documentElement.style.colorScheme = prefs.darkMode ? 'dark' : 'light'
     void syncStatusBarTheme(prefs.darkMode)
   }, [prefs.darkMode])
 

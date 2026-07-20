@@ -48,20 +48,20 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
 
               <div className="min-w-0 flex-1">
                 <span className={`font-bold text-foreground truncate block transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400 ${rp.isDiscarded ? 'line-through' : ''}`}>{rp.name}</span>
-                <div className="mt-0.5 flex min-w-0 flex-wrap items-start gap-1 select-none">
-                  <span className={`max-w-full whitespace-normal break-words text-[10px] px-1.5 py-0.5 font-semibold rounded border ${getCategoryBadgeClass(rp.category)}`}>
+                <div className="mt-0.5 flex min-w-0 items-center gap-1 select-none">
+                  <span className={`min-w-0 truncate text-[10px] px-1.5 py-0.5 font-semibold rounded border ${getCategoryBadgeClass(rp.category)}`}>
                     {rp.category}
                   </span>
                   {rp.isDiscarded ? (
-                    <span className="text-[10px] px-1.5 py-0.5 font-bold text-slate-500 bg-slate-500/10 border border-slate-500/20 rounded">
+                    <span className="shrink-0 whitespace-nowrap text-[10px] px-1.5 py-0.5 font-bold text-slate-500 bg-slate-500/10 border border-slate-500/20 rounded">
                       Discarded
                     </span>
                   ) : rp.isPaid ? (
-                    <span className="text-[10px] px-1.5 py-0.5 font-bold text-blue-500 bg-blue-500/10 border border-blue-500/20 rounded">
+                    <span className="shrink-0 whitespace-nowrap text-[10px] px-1.5 py-0.5 font-bold text-blue-500 bg-blue-500/10 border border-blue-500/20 rounded">
                       Paid
                     </span>
                   ) : (
-                    <span className="text-[10px] px-1.5 py-0.5 font-bold text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 rounded animate-pulse">
+                    <span className="shrink-0 whitespace-nowrap text-[10px] px-1.5 py-0.5 font-bold text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 rounded animate-pulse">
                       Pending
                     </span>
                   )}

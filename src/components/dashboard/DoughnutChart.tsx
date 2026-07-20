@@ -123,7 +123,7 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
               </div>
             </div>
 
-            <div role="list" className="w-full min-w-0 grid grid-cols-1 xl:grid-cols-2 gap-x-4 gap-y-0.5 content-center max-h-32 sm:max-h-40 overflow-y-auto no-scrollbar pr-0.5">
+            <div role="list" className="w-full min-w-0 grid grid-cols-1 xl:grid-cols-2 gap-x-4 gap-y-0.5 content-start max-h-32 sm:max-h-40 overflow-y-auto no-scrollbar pr-0.5">
               {slices.map((slice, index) => (
                 <button
                   key={slice.category}
@@ -139,9 +139,9 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
                   onBlur={() => setHoveredSlice(null)}
                   onClick={() => onNavigateToLedger?.({ category: slice.category, range: chartView })}
                 >
-                  <span className="flex items-center gap-1.5 truncate mr-2">
+                  <span className="flex min-w-0 flex-1 items-center gap-1.5 mr-2">
                     <span aria-hidden="true" className="size-2 rounded-full shrink-0" style={{ backgroundColor: getCategoryChartColor(slice.category) }} />
-                    <span className="font-bold text-foreground truncate max-w-[85px]">{slice.category}</span>
+                    <span className="font-bold text-foreground truncate">{slice.category}</span>
                   </span>
                   <span className="text-foreground/90 font-extrabold shrink-0">
                     {formatSensitive(slice.amount)} ({(slice.percentage * 100).toFixed(0)}%)

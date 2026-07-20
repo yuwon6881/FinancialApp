@@ -5,8 +5,11 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0a0d14" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#f6f8fc" media="(prefers-color-scheme: light)" />
+    <!-- Single, unscoped theme-color. The in-app theme is a manual toggle (not
+         tied to prefers-color-scheme), so App.tsx updates this value to keep the
+         status bar / system chrome in sync. Media-scoped variants would ignore
+         that toggle and leave a mismatched (black-looking) bar in the PWA. -->
+    <meta name="theme-color" content="#0a0d14" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <!-- Inter is self-hosted via @fontsource-variable/inter (imported in index.css);
