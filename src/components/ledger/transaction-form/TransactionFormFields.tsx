@@ -345,6 +345,7 @@ export function TransactionFormFields({
           <div className="space-y-1">
             <label className="flex items-center h-5 text-xs font-semibold text-muted-foreground">Source Category (From)</label>
             <CustomSelect
+              ariaLabel="Transfer source category"
               value={state.transferSource}
               onChange={val => onSetField('transferSource', val as TransferBucket)}
               options={[
@@ -360,6 +361,7 @@ export function TransactionFormFields({
           <div className="space-y-1">
             <label className="flex items-center h-5 text-xs font-semibold text-muted-foreground">Target Category (To)</label>
             <CustomSelect
+              ariaLabel="Transfer target category"
               value={state.transferTarget}
               onChange={val => onSetField('transferTarget', val as TransferBucket)}
               options={[
@@ -401,6 +403,7 @@ export function TransactionFormFields({
           <div className="space-y-1">
             <label className="flex items-center h-5 text-xs font-semibold text-muted-foreground">Ledger Category</label>
             <CustomSelect
+              ariaLabel="Ledger category"
               value={state.ledgerCategory}
               onChange={val => onSetField('ledgerCategory', val as SelectableLedgerCategory)}
               options={[

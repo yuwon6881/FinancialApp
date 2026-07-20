@@ -1,6 +1,14 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import * as api from '../lib/api'
 import { getCachedDashboardPeriod, getCachedCycleSnapshot } from '../lib/cache'
+import type { AppTab } from '../types'
+import {
+  ledgerRouteSearch,
+  readAppLocation,
+  updateAppSearch,
+  type AppNavigationOptions,
+  type LedgerRouteRange,
+} from '../lib/appLocation'
 
 export interface UseCycleNavigationOptions {
   loadAll: (month?: string, year?: number, isBackground?: boolean) => void | Promise<void>
@@ -8,32 +16,43 @@ export interface UseCycleNavigationOptions {
   markSessionLocked: () => void
   setDashboardData: (data: any) => void
   setTransactions: (txs: any) => void
-  setActiveTab: (tab: any) => void
-  setLedgerCyclesRange: (range: any) => void
+  setActiveTab: (tab: AppTab, navigationOptions?: AppNavigationOptions) => void
+  setLedgerCyclesRange: (range: LedgerRouteRange) => void
 }
 
 export function useCycleNavigation(options: UseCycleNavigationOptions) {
   const { loadAll, handleLogout, markSessionLocked, setDashboardData, setTransactions, setActiveTab, setLedgerCyclesRange } = options
 
-  const [selectedMonth, setSelectedMonth] = useState<string>(() => getCachedDashboardPeriod().month || '')
-  const [selectedYear, setSelectedYear] = useState<number>(() => getCachedDashboardPeriod().year || 0)
+  const [initialLocation] = useState(readAppLocation)
+  const cachedPeriod = getCachedDashboardPeriod()
+
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => initialLocation.month || cachedPeriod.month || '')
+  const [selectedYear, setSelectedYear] = useState<number>(() => initialLocation.year || cachedPeriod.year || 0)
   const [isSwitchingCycle, setIsSwitchingCycle] = useState<boolean>(false)
 
-  const [ledgerIncomingCategory, setLedgerIncomingCategory] = useState<string | null>(null)
-  const [ledgerIncomingDate, setLedgerIncomingDate] = useState<string | null>(null)
-  const [ledgerIncomingTxType, setLedgerIncomingTxType] = useState<'inflow' | 'outflow' | 'transfer' | null>(null)
-  const [ledgerShowAllCycles, setLedgerShowAllCycles] = useState(false)
+  const [ledgerIncomingFilters, setLedgerIncomingFilters] = useState<string[]>(initialLocation.ledger.filters)
+  const [ledgerIncomingSearch, setLedgerIncomingSearch] = useState<string>(initialLocation.ledger.search)
+  const [ledgerIncomingStartDate, setLedgerIncomingStartDate] = useState<string>(initialLocation.ledger.startDate)
+  const [ledgerIncomingEndDate, setLedgerIncomingEndDate] = useState<string>(initialLocation.ledger.endDate)
+  const [ledgerIncomingMinAmount, setLedgerIncomingMinAmount] = useState<string>(initialLocation.ledger.minAmount)
+  const [ledgerIncomingMaxAmount, setLedgerIncomingMaxAmount] = useState<string>(initialLocation.ledger.maxAmount)
+  const [ledgerIncomingRecurringOnly, setLedgerIncomingRecurringOnly] = useState(initialLocation.ledger.recurringOnly)
+  const [ledgerIncomingTxType, setLedgerIncomingTxType] = useState<'inflow' | 'outflow' | 'transfer' | null>(initialLocation.ledger.txType)
+  const [ledgerShowAllCycles, setLedgerShowAllCycles] = useState(initialLocation.ledger.showAllCycles)
   const [autoOpenLedgerAdd, setAutoOpenLedgerAdd] = useState(false)
   const [autoOpenSubscriptionAdd, setAutoOpenSubscriptionAdd] = useState(false)
   const [autoOpenWishlistAdd, setAutoOpenWishlistAdd] = useState(false)
-  const [highlightedTxId, setHighlightedTxId] = useState<string | null>(null)
-  const [highlightedRecurringId, setHighlightedRecurringId] = useState<string | null>(null)
-  const [ledgerIncomingSearch, setLedgerIncomingSearch] = useState<string | null>(null)
+  const [highlightedTxId, setHighlightedTxId] = useState<string | null>(initialLocation.ledger.highlightedTxId)
+  const [highlightedRecurringId, setHighlightedRecurringId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null
+    return new URLSearchParams(window.location.search).get('subscription')
+  })
 
   const selectPeriodSeqRef = useRef(0)
 
-  const handleSelectPeriod = useCallback(async (month: string, year: number) => {
+  const handleSelectPeriod = useCallback(async (month: string, year: number, syncLocation = true) => {
     const requestSeq = ++selectPeriodSeqRef.current
+    if (syncLocation) updateAppSearch({ month, year }, { replace: false })
     const cachedSnapshot = getCachedCycleSnapshot(month, year)
     if (cachedSnapshot) {
       setDashboardData(cachedSnapshot.dashboardData)
@@ -73,27 +92,45 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     highlightedTxId?: string | null
     showAllCycles?: boolean
   }) => {
-    setLedgerIncomingCategory(navOptions.category || null)
-    setLedgerIncomingSearch(navOptions.search || null)
-    setLedgerIncomingDate(navOptions.date || null)
+    const filters = navOptions.category ? [navOptions.category] : []
+    const search = navOptions.search || ''
+    const startDate = navOptions.date || ''
+    const endDate = navOptions.date || ''
+    setLedgerIncomingFilters(filters)
+    setLedgerIncomingSearch(search)
+    setLedgerIncomingStartDate(startDate)
+    setLedgerIncomingEndDate(endDate)
+    setLedgerIncomingMinAmount('')
+    setLedgerIncomingMaxAmount('')
+    setLedgerIncomingRecurringOnly(false)
     setLedgerIncomingTxType(navOptions.txType || null)
     const range = navOptions.range || 'monthly'
     setLedgerCyclesRange(range)
     const showAll = navOptions.showAllCycles !== undefined ? navOptions.showAllCycles : (range !== 'monthly')
     setLedgerShowAllCycles(showAll)
-    if (navOptions.highlightedTxId) {
-      setHighlightedTxId(navOptions.highlightedTxId)
-    }
-    setActiveTab('ledger')
+    setHighlightedTxId(navOptions.highlightedTxId || null)
+    setActiveTab('ledger', {
+      search: ledgerRouteSearch({
+        filters,
+        search,
+        startDate,
+        endDate,
+        txType: navOptions.txType || null,
+        showAllCycles: showAll,
+        range,
+        highlightedTxId: navOptions.highlightedTxId || null,
+      }),
+    })
   }, [setActiveTab, setLedgerCyclesRange])
 
   const handleNavigateToRecurring = useCallback((recurringPaymentId: string) => {
     setHighlightedRecurringId(recurringPaymentId)
-    setActiveTab('recurring')
+    setActiveTab('recurring', { search: { subscription: recurringPaymentId } })
   }, [setActiveTab])
 
   const clearHighlightedRecurring = useCallback(() => {
     setHighlightedRecurringId(null)
+    updateAppSearch({ subscription: null })
   }, [])
 
   const handleQuickAction = useCallback((action: 'transaction' | 'subscription' | 'wishlist') => {
@@ -110,12 +147,51 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
   }, [setActiveTab])
 
   const clearIncomingFilters = useCallback(() => {
-    setLedgerIncomingCategory(null)
-    setLedgerIncomingSearch(null)
-    setLedgerIncomingDate(null)
+    setLedgerIncomingFilters([])
+    setLedgerIncomingSearch('')
+    setLedgerIncomingStartDate('')
+    setLedgerIncomingEndDate('')
+    setLedgerIncomingMinAmount('')
+    setLedgerIncomingMaxAmount('')
+    setLedgerIncomingRecurringOnly(false)
     setLedgerIncomingTxType(null)
     setHighlightedTxId(null)
   }, [])
+
+  useEffect(() => {
+    setLedgerCyclesRange(initialLocation.ledger.range)
+  }, [])
+
+  const selectedPeriodRef = useRef({ month: selectedMonth, year: selectedYear })
+  useEffect(() => {
+    selectedPeriodRef.current = { month: selectedMonth, year: selectedYear }
+  }, [selectedMonth, selectedYear])
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const location = readAppLocation()
+      setLedgerIncomingFilters(location.ledger.filters)
+      setLedgerIncomingSearch(location.ledger.search)
+      setLedgerIncomingStartDate(location.ledger.startDate)
+      setLedgerIncomingEndDate(location.ledger.endDate)
+      setLedgerIncomingMinAmount(location.ledger.minAmount)
+      setLedgerIncomingMaxAmount(location.ledger.maxAmount)
+      setLedgerIncomingRecurringOnly(location.ledger.recurringOnly)
+      setLedgerIncomingTxType(location.ledger.txType)
+      setLedgerShowAllCycles(location.ledger.showAllCycles)
+      setLedgerCyclesRange(location.ledger.range)
+      setHighlightedTxId(location.ledger.highlightedTxId)
+      setHighlightedRecurringId(new URLSearchParams(window.location.search).get('subscription'))
+
+      const period = selectedPeriodRef.current
+      if (location.month && location.year && (location.month !== period.month || location.year !== period.year)) {
+        void handleSelectPeriod(location.month, location.year, false)
+      }
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [handleSelectPeriod, setLedgerCyclesRange])
 
   return {
     selectedMonth,
@@ -124,10 +200,18 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     setSelectedYear,
     isSwitchingCycle,
     setIsSwitchingCycle,
-    ledgerIncomingCategory,
-    setLedgerIncomingCategory,
-    ledgerIncomingDate,
-    setLedgerIncomingDate,
+    ledgerIncomingFilters,
+    setLedgerIncomingFilters,
+    ledgerIncomingStartDate,
+    setLedgerIncomingStartDate,
+    ledgerIncomingEndDate,
+    setLedgerIncomingEndDate,
+    ledgerIncomingMinAmount,
+    setLedgerIncomingMinAmount,
+    ledgerIncomingMaxAmount,
+    setLedgerIncomingMaxAmount,
+    ledgerIncomingRecurringOnly,
+    setLedgerIncomingRecurringOnly,
     ledgerIncomingTxType,
     setLedgerIncomingTxType,
     ledgerShowAllCycles,

@@ -148,6 +148,7 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
       {/* Sort Select */}
       <div className="w-full sm:w-60">
         <CustomSelect
+          ariaLabel="Sort recurring payments"
           value={sortOrder}
           onChange={(val) => onSortChange(val)}
           options={[

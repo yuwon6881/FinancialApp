@@ -119,6 +119,7 @@ export const SecurityQuestionSetup: React.FC<SecurityQuestionSetupProps> = ({ on
                   Question {idx + 1}
                 </label>
                 <CustomSelect<number>
+                  ariaLabel={`Security question ${idx + 1}`}
                   value={item.val}
                   onChange={item.setVal}
                   options={options}

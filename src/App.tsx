@@ -11,6 +11,7 @@ import { Loader2, Upload, Wallet, CreditCard, PiggyBank, Sparkles, X, Zap } from
 // chunk loads on demand behind an instant blank-shell fallback (no flash).
 const LoginView = lazy(() => import('./components/LoginView').then(m => ({ default: m.LoginView })))
 const DashboardView = lazy(() => import('./components/DashboardView').then(m => ({ default: m.DashboardView })))
+const ReportsView = lazy(() => import('./components/ReportsView').then(m => ({ default: m.ReportsView })))
 const RecurringPaymentsView = lazy(() => import('./components/RecurringPaymentsView').then(m => ({ default: m.RecurringPaymentsView })))
 const LedgerView = lazy(() => import('./components/LedgerView').then(m => ({ default: m.LedgerView })))
 const WishlistView = lazy(() => import('./components/WishlistView').then(m => ({ default: m.WishlistView })))
@@ -48,6 +49,7 @@ import { buildAppContextValue } from './app/buildAppContextValue'
 import { getErrorName } from './lib/errors'
 import { prefetchFingerprintAssertOptions } from './lib/fingerprintOptionsCache'
 import { useBillReminders } from './lib/useBillReminders'
+import { readAppLocation, updateAppSearch } from './lib/appLocation'
 
 // Instant, flash-free placeholder while a lazily-loaded chunk is fetched at the root level.
 const ViewFallback = () => <div className="app-shell min-h-screen" />
@@ -140,7 +142,10 @@ function App() {
     hideSensitive: prefs.hideSensitive,
     setHideSensitive: prefs.setHideSensitive,
     loadAllAbortRef,
-    loadAll: (m, y, b) => financial.loadAll(m, y, b),
+    loadAll: (m, y, b) => {
+      const route = readAppLocation()
+      return financial.loadAll(m || route.month || undefined, y || route.year || undefined, b)
+    },
     onLogoutBackupAndCleanup: (username) => financial.handleLogoutCleanup(username),
     onLoginSuccessRestore: (username) => financial.handleLoginSuccessRestore(username),
   })
@@ -277,6 +282,12 @@ function App() {
     }
   }, [prefs.activeTab, nav, prefs])
 
+  useEffect(() => {
+    if (nav.selectedMonth && nav.selectedYear) {
+      updateAppSearch({ month: nav.selectedMonth, year: nav.selectedYear })
+    }
+  }, [nav.selectedMonth, nav.selectedYear])
+
   const [currentCycleDashboardData, setCurrentCycleDashboardData] = useState<DashboardData | null>(null)
   useEffect(() => {
     if (!session.token || !financial.dashboardData) return
@@ -370,6 +381,14 @@ function App() {
     dialogs.setConfirmModalData,
   ])
 
+  if (!session.isSessionResolved) {
+    return (
+      <LaunchReady>
+        <ViewFallback />
+      </LaunchReady>
+    )
+  }
+
   if (!session.token) {
     return (
       <Suspense fallback={<ViewFallback />}>
@@ -443,11 +462,9 @@ function App() {
           onLogout={session.handleLogout}
           username={session.username}
           pendingNotifications={financial.optimisticDashboardData?.pendingNotifications || []}
-          onConfirmSubscription={financial.handleConfirmSubscription}
-          onDeletePayment={financial.handleDeletePayment}
+          onOpenNotifications={() => dialogs.setShowLoginModal(true)}
           darkMode={prefs.darkMode}
           onToggleDarkMode={handleToggleDarkMode}
-          currency={financial.optimisticDashboardData?.setting?.currency || 'USD'}
           isSyncing={financial.isBackgroundSyncing || financial.pendingOps.length > 0}
           isOffline={financial.isOffline}
           syncLabel={
@@ -463,7 +480,6 @@ function App() {
           }
           failedOpsCount={financial.failedOps.length}
           onOpenFailedOps={() => dialogs.setShowFailedOpsModal(true)}
-          onDiscardSubscription={financial.handleDiscardSubscription}
           draftCount={financial.draftTransactions.length}
         />
 
@@ -508,19 +524,28 @@ function App() {
                     {prefs.activeTab === 'dashboard' && (
                       <DashboardView
                         dashboardData={financial.optimisticDashboardData}
-                        transactions={financial.allTransactions}
                         onSelectPeriod={nav.handleSelectPeriod}
                         onNavigate={prefs.setActiveTab}
                         onNavigateToRecurring={nav.handleNavigateToRecurring}
                         hideBalanceAmounts={prefs.hideBalanceAmounts}
                         walletBalance={financial.totalBalance}
                         onToggleBalanceAmounts={handleToggleBalanceAmounts}
-                        onConfirmSubscription={financial.handleConfirmSubscription}
-                        onDeletePayment={financial.handleDeletePayment}
+                        pendingNotificationCount={financial.optimisticDashboardData?.pendingNotifications?.length || 0}
+                        onOpenNotifications={() => dialogs.setShowLoginModal(true)}
                         onNavigateToLedger={nav.handleNavigateToLedger}
                         wishlist={financial.allWishlist}
-                        onDiscardSubscription={financial.handleDiscardSubscription}
-                        onAddTransaction={(tx) => financial.handleAddTransaction(tx, prefs.setActiveTab)}
+                        isSwitchingCycle={nav.isSwitchingCycle}
+                      />
+                    )}
+
+                    {prefs.activeTab === 'reports' && (
+                      <ReportsView
+                        dashboardData={financial.optimisticDashboardData}
+                        transactions={financial.allTransactions}
+                        wishlist={financial.allWishlist}
+                        hideBalanceAmounts={prefs.hideBalanceAmounts}
+                        onSelectPeriod={nav.handleSelectPeriod}
+                        onNavigateToLedger={nav.handleNavigateToLedger}
                         onAddBalanceAdjustment={financial.handleAddBalanceAdjustment}
                         isSwitchingCycle={nav.isSwitchingCycle}
                       />
@@ -627,9 +652,14 @@ function App() {
                         availableYears={financial.optimisticDashboardData?.availableYears || [nav.selectedYear || new Date().getFullYear()]}
                         cycleDay={financial.optimisticDashboardData?.setting?.cycleDay || 28}
                         onSelectPeriod={nav.handleSelectPeriod}
-                        incomingCategory={nav.ledgerIncomingCategory}
+                        incomingCategory={nav.ledgerIncomingFilters[0] || null}
+                        incomingFilters={nav.ledgerIncomingFilters}
                         incomingSearch={nav.ledgerIncomingSearch}
-                        incomingDate={nav.ledgerIncomingDate}
+                        incomingStartDate={nav.ledgerIncomingStartDate}
+                        incomingEndDate={nav.ledgerIncomingEndDate}
+                        incomingMinAmount={nav.ledgerIncomingMinAmount}
+                        incomingMaxAmount={nav.ledgerIncomingMaxAmount}
+                        incomingRecurringOnly={nav.ledgerIncomingRecurringOnly}
                         incomingTxType={nav.ledgerIncomingTxType}
                         highlightedTxId={nav.highlightedTxId}
                         onClearIncomingFilters={nav.clearIncomingFilters}

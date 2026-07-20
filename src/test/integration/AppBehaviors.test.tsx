@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react'
 import App from '@/App'
 import * as api from '@/lib/api'
+import * as auth from '@/lib/auth'
 
 // Mock the API calls so we don't depend on a live service or delay
 vi.mock('@/lib/api', async () => {
@@ -51,6 +52,10 @@ vi.mock('@/components/DashboardView', () => ({
   )
 }))
 
+vi.mock('@/components/ReportsView', () => ({
+  ReportsView: () => <div data-testid="reports-view">Reports</div>
+}))
+
 vi.hoisted(() => {
   window.matchMedia = vi.fn().mockImplementation(query => ({
     matches: false,
@@ -67,6 +72,7 @@ vi.hoisted(() => {
 
 describe('App behaviors', () => {
   beforeEach(() => {
+    window.history.replaceState({}, '', '/dashboard')
     localStorage.clear()
     sessionStorage.clear()
     vi.clearAllMocks()
@@ -74,6 +80,7 @@ describe('App behaviors', () => {
 
   afterEach(() => {
     cleanup()
+    vi.restoreAllMocks()
   })
 
   it('restores login state from localStorage on mount', async () => {
@@ -88,13 +95,34 @@ describe('App behaviors', () => {
     }, { timeout: 5000 })
   })
 
+  it('does not show login while a stored session is being restored', async () => {
+    localStorage.setItem('auth_session', '1')
+    localStorage.setItem('auth_username', 'alice')
+    let resolveSession!: (token: string | null) => void
+    const sessionPromise = new Promise<string | null>(resolve => { resolveSession = resolve })
+    vi.spyOn(auth, 'resolveSessionToken').mockReturnValue(sessionPromise)
+
+    render(<App />)
+
+    try {
+      await new Promise(resolve => window.setTimeout(resolve, 50))
+      expect(screen.queryByTestId('login-view')).toBeNull()
+    } finally {
+      resolveSession('cookie-session')
+    }
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dashboard-view')).toBeDefined()
+    })
+  })
+
   it('shows the skeleton and fetches data immediately after login', async () => {
     let releasePing!: (value: { status: string }) => void
     const pendingPing = new Promise<{ status: string }>(resolve => { releasePing = resolve })
     vi.mocked(api.pingServer).mockReturnValueOnce(pendingPing)
 
     render(<App />)
-    fireEvent.click(screen.getByText('Log In'))
+    fireEvent.click(await screen.findByText('Log In'))
 
     await waitFor(() => {
       expect(screen.getByTestId('app-loading-skeleton')).toBeDefined()
@@ -150,6 +178,18 @@ describe('App behaviors', () => {
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: 'Ask AI' })).toBeNull()
     })
+  })
+
+  it('uses addressable navigation for the Reports view', async () => {
+    localStorage.setItem('auth_session', '1')
+    localStorage.setItem('auth_username', 'alice')
+    render(<App />)
+
+    await waitFor(() => expect(screen.getByTestId('dashboard-view')).toBeDefined())
+    fireEvent.click(screen.getAllByRole('button', { name: /Reports/ })[0])
+
+    await waitFor(() => expect(screen.getByTestId('reports-view')).toBeDefined())
+    expect(window.location.pathname).toBe('/reports')
   })
 
   it('performs cache preservation and local storage cleanup on logout', async () => {

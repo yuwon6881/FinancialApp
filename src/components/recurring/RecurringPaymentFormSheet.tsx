@@ -125,6 +125,7 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
         <div className="space-y-1">
           <label className="text-xs font-semibold text-muted-foreground">Budget Category</label>
           <CustomSelect
+            ariaLabel="Budget category"
             value={category || (categories[0]?.name || '')}
             onChange={val => onCategoryChange(val)}
             options={categories.map(c => ({ value: c.name, label: c.name }))}
@@ -135,6 +136,7 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
         <div className="space-y-1">
           <label className="text-xs font-semibold text-muted-foreground">Frequency</label>
           <CustomSelect
+            ariaLabel="Payment frequency"
             value={frequency}
             onChange={onFrequencyChange}
             options={[
@@ -166,6 +168,7 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
         <div className="space-y-1">
           <label className="text-xs font-semibold text-muted-foreground">Ledger Category</label>
           <CustomSelect
+            ariaLabel="Ledger category"
             value={ledgerCategory}
             onChange={val => onLedgerCategoryChange(val)}
             options={[

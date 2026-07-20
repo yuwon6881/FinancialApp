@@ -6,6 +6,7 @@ import { getCycleLabelForDropdown } from '../../../lib/cycleLabels'
 import { matchesTransactionFilters, splitFilterSelections } from '../../../lib/transactionFilters'
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../../../lib/csvExport'
 import { compareTransactionsNewestFirst, mergeTransactionsNewestFirst } from '../../../lib/transactionOrdering'
+import { ledgerRouteSearch, updateAppSearch } from '../../../lib/appLocation'
 
 export interface UseLedgerViewOptions {
   transactions: Transaction[]
@@ -14,8 +15,14 @@ export interface UseLedgerViewOptions {
   selectedYear: number
   cycleDay: number
   incomingCategory?: string | null | undefined
+  incomingFilters?: string[] | undefined
   incomingSearch?: string | null | undefined
   incomingDate?: string | null | undefined
+  incomingStartDate?: string | null | undefined
+  incomingEndDate?: string | null | undefined
+  incomingMinAmount?: string | null | undefined
+  incomingMaxAmount?: string | null | undefined
+  incomingRecurringOnly?: boolean | undefined
   incomingTxType?: 'inflow' | 'outflow' | 'transfer' | null | undefined
   highlightedTxId?: string | null | undefined
   onClearIncomingFilters?: () => void
@@ -63,8 +70,14 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     selectedYear,
     cycleDay,
     incomingCategory,
+    incomingFilters,
     incomingSearch,
     incomingDate,
+    incomingStartDate,
+    incomingEndDate,
+    incomingMinAmount,
+    incomingMaxAmount,
+    incomingRecurringOnly,
     incomingTxType,
     highlightedTxId,
     onClearIncomingFilters,
@@ -84,14 +97,17 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   } = options
 
   // Search & Filter state
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedFilters, setSelectedFilters] = useState<string[]>([])
-  const [selectedStartDate, setSelectedStartDate] = useState('')
-  const [selectedEndDate, setSelectedEndDate] = useState('')
-  const [selectedMinAmount, setSelectedMinAmount] = useState('')
-  const [selectedMaxAmount, setSelectedMaxAmount] = useState('')
-  const [selectedRecurringOnly, setSelectedRecurringOnly] = useState(false)
-  const [selectedTxTypeFilter, setSelectedTxTypeFilter] = useState<LedgerTxType>(null)
+  const initialFilters = incomingFilters ?? (incomingCategory ? [incomingCategory] : [])
+  const initialStartDate = incomingStartDate ?? incomingDate ?? ''
+  const initialEndDate = incomingEndDate ?? incomingDate ?? ''
+  const [searchTerm, setSearchTerm] = useState(incomingSearch || '')
+  const [selectedFilters, setSelectedFilters] = useState<string[]>(initialFilters)
+  const [selectedStartDate, setSelectedStartDate] = useState(initialStartDate)
+  const [selectedEndDate, setSelectedEndDate] = useState(initialEndDate)
+  const [selectedMinAmount, setSelectedMinAmount] = useState(incomingMinAmount || '')
+  const [selectedMaxAmount, setSelectedMaxAmount] = useState(incomingMaxAmount || '')
+  const [selectedRecurringOnly, setSelectedRecurringOnly] = useState(incomingRecurringOnly || false)
+  const [selectedTxTypeFilter, setSelectedTxTypeFilter] = useState<LedgerTxType>(incomingTxType || null)
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false)
 
   // Pagination states
@@ -107,22 +123,22 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   const [showExportModal, setShowExportModal] = useState(false)
   const [exportIsFetching, setExportIsFetching] = useState(false)
 
-  const [pendingSearchTerm, setPendingSearchTerm] = useState('')
-  const [pendingFilters, setPendingFilters] = useState<string[]>([])
-  const [pendingStartDate, setPendingStartDate] = useState('')
-  const [pendingEndDate, setPendingEndDate] = useState('')
-  const [pendingMinAmount, setPendingMinAmount] = useState('')
-  const [pendingMaxAmount, setPendingMaxAmount] = useState('')
-  const [pendingRecurringOnly, setPendingRecurringOnly] = useState(false)
-  const [pendingTxTypeFilter, setPendingTxTypeFilter] = useState<LedgerTxType>(null)
-  const [appliedSearch, setAppliedSearch] = useState('')
-  const [appliedFilters, setAppliedFilters] = useState<string[]>([])
-  const [appliedStartDate, setAppliedStartDate] = useState('')
-  const [appliedEndDate, setAppliedEndDate] = useState('')
-  const [appliedMinAmount, setAppliedMinAmount] = useState('')
-  const [appliedMaxAmount, setAppliedMaxAmount] = useState('')
-  const [appliedRecurringOnly, setAppliedRecurringOnly] = useState(false)
-  const [appliedTxTypeFilter, setAppliedTxTypeFilter] = useState<LedgerTxType>(null)
+  const [pendingSearchTerm, setPendingSearchTerm] = useState(incomingSearch || '')
+  const [pendingFilters, setPendingFilters] = useState<string[]>(initialFilters)
+  const [pendingStartDate, setPendingStartDate] = useState(initialStartDate)
+  const [pendingEndDate, setPendingEndDate] = useState(initialEndDate)
+  const [pendingMinAmount, setPendingMinAmount] = useState(incomingMinAmount || '')
+  const [pendingMaxAmount, setPendingMaxAmount] = useState(incomingMaxAmount || '')
+  const [pendingRecurringOnly, setPendingRecurringOnly] = useState(incomingRecurringOnly || false)
+  const [pendingTxTypeFilter, setPendingTxTypeFilter] = useState<LedgerTxType>(incomingTxType || null)
+  const [appliedSearch, setAppliedSearch] = useState(incomingSearch || '')
+  const [appliedFilters, setAppliedFilters] = useState<string[]>(initialFilters)
+  const [appliedStartDate, setAppliedStartDate] = useState(initialStartDate)
+  const [appliedEndDate, setAppliedEndDate] = useState(initialEndDate)
+  const [appliedMinAmount, setAppliedMinAmount] = useState(incomingMinAmount || '')
+  const [appliedMaxAmount, setAppliedMaxAmount] = useState(incomingMaxAmount || '')
+  const [appliedRecurringOnly, setAppliedRecurringOnly] = useState(incomingRecurringOnly || false)
+  const [appliedTxTypeFilter, setAppliedTxTypeFilter] = useState<LedgerTxType>(incomingTxType || null)
 
   // Delete transaction state
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -217,27 +233,30 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   // Trigger initial server fetch when entering all-cycles mode
   useEffect(() => {
     if (showAllCycles && onFetchPagedTransactions) {
-      const initialFilters = incomingCategory ? [incomingCategory] : []
+      const initialFilters = incomingFilters ?? (incomingCategory ? [incomingCategory] : [])
       const initialTxType = incomingTxType || null
       const initialSearch = incomingSearch || ''
-      const initialStartDate = incomingDate || ''
-      const initialEndDate = incomingDate || ''
+      const initialStartDate = incomingStartDate ?? incomingDate ?? ''
+      const initialEndDate = incomingEndDate ?? incomingDate ?? ''
+      const initialMinAmount = incomingMinAmount || ''
+      const initialMaxAmount = incomingMaxAmount || ''
+      const initialRecurringOnly = incomingRecurringOnly || false
 
       setPendingSearchTerm(initialSearch)
       setPendingFilters(initialFilters)
       setPendingStartDate(initialStartDate)
       setPendingEndDate(initialEndDate)
-      setPendingMinAmount('')
-      setPendingMaxAmount('')
-      setPendingRecurringOnly(false)
+      setPendingMinAmount(initialMinAmount)
+      setPendingMaxAmount(initialMaxAmount)
+      setPendingRecurringOnly(initialRecurringOnly)
       setPendingTxTypeFilter(initialTxType)
       setAppliedSearch(initialSearch)
       setAppliedFilters(initialFilters)
       setAppliedStartDate(initialStartDate)
       setAppliedEndDate(initialEndDate)
-      setAppliedMinAmount('')
-      setAppliedMaxAmount('')
-      setAppliedRecurringOnly(false)
+      setAppliedMinAmount(initialMinAmount)
+      setAppliedMaxAmount(initialMaxAmount)
+      setAppliedRecurringOnly(initialRecurringOnly)
       setAppliedTxTypeFilter(initialTxType)
       setCurrentPage(1)
       setPageSize(100)
@@ -249,9 +268,9 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         txType: initialTxType,
         startDate: initialStartDate,
         endDate: initialEndDate,
-        minAmount: '',
-        maxAmount: '',
-        recurringOnly: false,
+        minAmount: initialMinAmount,
+        maxAmount: initialMaxAmount,
+        recurringOnly: initialRecurringOnly,
         pSize: 100,
       })
         .finally(() => {
@@ -261,7 +280,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
       setServerResult(null)
       isInitialFetchDone.current = false
     }
-  }, [showAllCycles, onFetchPagedTransactions, runServerFetch, allCyclesRange, incomingCategory, incomingTxType, incomingSearch])
+  }, [showAllCycles, onFetchPagedTransactions, runServerFetch, allCyclesRange, incomingCategory, incomingFilters, incomingTxType, incomingSearch, incomingDate, incomingStartDate, incomingEndDate, incomingMinAmount, incomingMaxAmount, incomingRecurringOnly])
 
   // Re-fetch when page changes in server mode
   useEffect(() => {
@@ -336,25 +355,64 @@ export function useLedgerView(options: UseLedgerViewOptions) {
 
   // Synchronize incoming filters from props
   useEffect(() => {
-    if (incomingCategory) {
-      setSelectedFilters([incomingCategory])
-    } else {
-      setSelectedFilters([])
-    }
-  }, [incomingCategory])
+    setSelectedFilters(incomingFilters ?? (incomingCategory ? [incomingCategory] : []))
+  }, [incomingCategory, incomingFilters])
 
   useEffect(() => {
     setSearchTerm(incomingSearch || '')
   }, [incomingSearch])
 
   useEffect(() => {
-    setSelectedStartDate(incomingDate || '')
-    setSelectedEndDate(incomingDate || '')
-  }, [incomingDate])
+    setSelectedStartDate(incomingStartDate ?? incomingDate ?? '')
+    setSelectedEndDate(incomingEndDate ?? incomingDate ?? '')
+  }, [incomingDate, incomingStartDate, incomingEndDate])
+
+  useEffect(() => {
+    setSelectedMinAmount(incomingMinAmount || '')
+    setSelectedMaxAmount(incomingMaxAmount || '')
+  }, [incomingMinAmount, incomingMaxAmount])
+
+  useEffect(() => {
+    setSelectedRecurringOnly(incomingRecurringOnly || false)
+  }, [incomingRecurringOnly])
 
   useEffect(() => {
     setSelectedTxTypeFilter(incomingTxType || null)
   }, [incomingTxType])
+
+  // Keep the visible ledger state addressable. Typing and local filter changes
+  // replace the current history entry; explicit cross-view navigation still
+  // creates its own Back/Forward entry in useCycleNavigation.
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.location.pathname !== '/ledger') return
+    const routeState = showAllCycles
+      ? {
+          filters: appliedFilters,
+          search: appliedSearch,
+          startDate: appliedStartDate,
+          endDate: appliedEndDate,
+          minAmount: appliedMinAmount,
+          maxAmount: appliedMaxAmount,
+          recurringOnly: appliedRecurringOnly,
+          txType: appliedTxTypeFilter,
+        }
+      : {
+          filters: selectedFilters,
+          search: searchTerm,
+          startDate: selectedStartDate,
+          endDate: selectedEndDate,
+          minAmount: selectedMinAmount,
+          maxAmount: selectedMaxAmount,
+          recurringOnly: selectedRecurringOnly,
+          txType: selectedTxTypeFilter,
+        }
+    updateAppSearch(ledgerRouteSearch({
+      ...routeState,
+      showAllCycles,
+      range: cyclesRange || 'monthly',
+      highlightedTxId: highlightedTxId || null,
+    }))
+  }, [showAllCycles, cyclesRange, highlightedTxId, searchTerm, selectedFilters, selectedStartDate, selectedEndDate, selectedMinAmount, selectedMaxAmount, selectedRecurringOnly, selectedTxTypeFilter, appliedSearch, appliedFilters, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringOnly, appliedTxTypeFilter])
 
   // Toggle filter on or off
   const handleToggleFilter = (filterName: string) => {

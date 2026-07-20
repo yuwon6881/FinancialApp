@@ -34,8 +34,14 @@ interface LedgerViewProps {
   cycleDay: number
   onSelectPeriod: (month: string, year: number) => void
   incomingCategory: string | null
+  incomingFilters?: string[]
   incomingSearch?: string | null
   incomingDate?: string | null
+  incomingStartDate?: string | null
+  incomingEndDate?: string | null
+  incomingMinAmount?: string | null
+  incomingMaxAmount?: string | null
+  incomingRecurringOnly?: boolean
   incomingTxType?: 'inflow' | 'outflow' | 'transfer' | null
   highlightedTxId?: string | null
   onClearIncomingFilters?: () => void

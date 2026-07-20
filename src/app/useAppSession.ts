@@ -20,6 +20,7 @@ export interface UseAppSessionOptions {
 
 export interface AppSession {
   token: string | null
+  isSessionResolved: boolean
   setToken: (token: string | null) => void
   username: string
   setUsername: (username: string) => void
@@ -42,6 +43,7 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
   const { onLogoutBackupAndCleanup, onLoginSuccessRestore, loadAll, setHideSensitive, hideSensitive, loadAllAbortRef } = options
 
   const [token, setToken] = useState<string | null>(null)
+  const [isSessionResolved, setIsSessionResolved] = useState(false)
   const [username, setUsername] = useState<string>(localStorage.getItem('auth_username') || '')
 
   const lastUnlockedTimeRef = useRef<number>(0)
@@ -61,17 +63,24 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
   useEffect(() => {
     let cancelled = false
     void (async () => {
-      const sessionToken = await resolveSessionToken()
-      if (cancelled) return
-      setToken(sessionToken)
-      // Reconcile the global lock only when this tab has no explicit lock state yet.
-      if (
-        sessionToken
-        && sessionStorage.getItem('session_locked') === null
-        && localStorage.getItem('session_locked_global') === 'true'
-      ) {
-        setIsLocked(true)
-        sessionStorage.setItem('session_locked', 'true')
+      try {
+        const sessionToken = await resolveSessionToken()
+        if (cancelled) return
+        setToken(sessionToken)
+        // Reconcile the global lock only when this tab has no explicit lock state yet.
+        if (
+          sessionToken
+          && sessionStorage.getItem('session_locked') === null
+          && localStorage.getItem('session_locked_global') === 'true'
+        ) {
+          setIsLocked(true)
+          sessionStorage.setItem('session_locked', 'true')
+        }
+      } catch (error) {
+        console.error('Could not restore the saved session.', error)
+        if (!cancelled) setToken(null)
+      } finally {
+        if (!cancelled) setIsSessionResolved(true)
       }
     })()
     return () => {
@@ -235,6 +244,7 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
 
   return {
     token,
+    isSessionResolved,
     setToken,
     username,
     setUsername,

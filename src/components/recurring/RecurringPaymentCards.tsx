@@ -106,6 +106,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                 <ToggleButton
                   active={rp.active}
                   onClick={() => onToggleActive(rp.id)}
+                  label={`${rp.active ? 'Pause' : 'Resume'} ${rp.name}`}
                   disabled={isBusy || hideSensitive}
                 />
               </div>

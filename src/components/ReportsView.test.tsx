@@ -1,0 +1,84 @@
+import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import { ReportsView } from './ReportsView'
+
+vi.mock('./dashboard/useDashboardView', () => ({
+  useDashboardView: () => ({
+    months: ['Jun', 'Jul'],
+    years: [2025, 2026],
+    activeSettings: {
+      selectedMonth: 'Jul',
+      selectedYear: 2026,
+      cycleDay: 28,
+      growthAlloc: 0.25,
+      targetStabilityFund: 10000,
+    },
+    cycleLabel: 'Jul 28th ~ Aug 27th, 2026',
+    categories: [{ name: 'Growth', remaining: 400 }],
+    pendingDeductionsByCategory: {},
+    areBalanceAmountsMasked: false,
+    growthMetric: {},
+    essentialsMetric: {},
+    stabilityMetric: {},
+    activeRecurring: [],
+    formatCurrency: (value: number) => `$${value}`,
+    formatSensitive: (value: number) => `$${value}`,
+    formatCompactSensitive: (value: number) => String(value),
+    openBalanceAdjustment: vi.fn(),
+    adjustingCategory: null,
+    newBalanceInput: '',
+    balanceErrors: {},
+    adjustmentDescription: '',
+    pendingBalanceAdjustment: null,
+    isAdjustmentUnchanged: false,
+    adjustmentPreviewDiff: null,
+    handleBalanceInputChange: vi.fn(),
+    handleDescriptionChange: vi.fn(),
+    handleCloseAdjustBalance: vi.fn(),
+    prepareBalanceAdjustment: vi.fn(),
+    cancelBalanceAdjustment: vi.fn(),
+    confirmBalanceAdjustment: vi.fn(),
+  }),
+}))
+
+vi.mock('./dashboard/CarryoverLedgerTable', () => ({ CarryoverLedgerTable: () => <div>Carryover report</div> }))
+vi.mock('./dashboard/FinancialPlanMetrics', () => ({ FinancialPlanMetrics: () => <div>Plan performance report</div> }))
+vi.mock('./dashboard/TrendLineChart', () => ({ TrendLineChart: () => <div>Trend report</div> }))
+vi.mock('./dashboard/DoughnutChart', () => ({ DoughnutChart: () => <div>Category report</div> }))
+vi.mock('./dashboard/CycleCalendar', () => ({ CycleCalendar: ({ onSelectDate }: { onSelectDate: (date: string) => void }) => <button onClick={() => onSelectDate('2026-07-30')}>Activity calendar</button> }))
+vi.mock('./dashboard/BalanceAdjustmentModals', () => ({ BalanceAdjustmentModals: () => null }))
+
+describe('ReportsView', () => {
+  it('contains the analytical sections removed from Today', () => {
+    render(
+      <ReportsView
+        dashboardData={null}
+        transactions={[]}
+        hideBalanceAmounts={false}
+        onSelectPeriod={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('heading', { name: 'Reports' })).toBeTruthy()
+    expect(screen.getByText('Carryover report')).toBeTruthy()
+    expect(screen.getByText('Plan performance report')).toBeTruthy()
+    expect(screen.getByText('Trend report')).toBeTruthy()
+    expect(screen.getByText('Category report')).toBeTruthy()
+    expect(screen.getByText('Activity calendar')).toBeTruthy()
+  })
+
+  it('links a calendar date back to the addressable ledger', () => {
+    const onNavigateToLedger = vi.fn()
+    render(
+      <ReportsView
+        dashboardData={null}
+        transactions={[]}
+        hideBalanceAmounts={false}
+        onSelectPeriod={vi.fn()}
+        onNavigateToLedger={onNavigateToLedger}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Activity calendar' }))
+    expect(onNavigateToLedger).toHaveBeenCalledWith({ date: '2026-07-30' })
+  })
+})

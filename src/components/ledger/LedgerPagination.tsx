@@ -74,6 +74,7 @@ export function LedgerPagination({
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground font-medium">Rows per page:</span>
           <CustomSelect
+            ariaLabel="Rows per page"
             value={pageSize}
             onChange={(val) => onPageSizeChange(Number(val))}
             options={[

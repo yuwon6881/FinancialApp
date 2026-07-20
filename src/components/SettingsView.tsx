@@ -95,7 +95,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       </div>
 
       {/* Tabs Control */}
-      <div className="flex border-b border-border/30 gap-6 select-none overflow-x-auto no-scrollbar pb-1">
+      <div role="tablist" aria-label="Settings sections" className="flex border-b border-border/30 gap-6 select-none overflow-x-auto no-scrollbar pb-1">
         {([
           ['financial-model', 'Financial Model'],
           ['categories-preferences', 'Categories & Preferences'],
@@ -103,7 +103,11 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
         ] as const).map(([id, label]) => (
           <button
             key={id}
+            id={`settings-tab-${id}`}
             type="button"
+            role="tab"
+            aria-selected={activeTab === id}
+            aria-controls={`settings-panel-${id}`}
             onClick={() => setActiveTab(id)}
             className={`pb-3 text-xs font-bold transition relative cursor-pointer whitespace-nowrap px-1 ${
               activeTab === id
@@ -124,7 +128,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       </div>
 
       {activeTab === 'financial-model' && (
-        <div className="w-full animate-in fade-in duration-200">
+        <div id="settings-panel-financial-model" role="tabpanel" aria-labelledby="settings-tab-financial-model" className="w-full animate-in fade-in duration-200">
           <form noValidate onSubmit={view.handleSaveSettings} className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-5">
             <div className="flex items-center justify-between gap-3 border-b border-border/40 pb-3">
               <div>
@@ -169,6 +173,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
               <label className="space-y-1 block">
                 <span className="text-xs font-semibold text-muted-foreground block">Ledger Cycle Day</span>
                 <CustomSelect
+                  ariaLabel="Ledger cycle day"
                   value={view.cycleDayInput}
                   onChange={val => view.setCycleDayInput(String(val))}
                   options={Array.from({ length: 28 }, (_, i) => ({
@@ -182,6 +187,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
               <label className="space-y-1 block">
                 <span className="text-xs font-semibold text-muted-foreground block">Default Account Currency</span>
                 <CustomSelect
+                  ariaLabel="Default account currency"
                   value={view.currencyInput}
                   onChange={val => view.setCurrencyInput(String(val))}
                   options={[
@@ -199,6 +205,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
               <label className="space-y-1 block">
                 <span className="text-xs font-semibold text-muted-foreground block">Stability Fund Overflow Redirect</span>
                 <CustomSelect
+                  ariaLabel="Stability fund overflow redirect"
                   value={view.stabilityOverflowRedirectInput}
                   onChange={val => view.setStabilityOverflowRedirectInput(String(val))}
                   options={[
@@ -266,7 +273,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       )}
 
       {activeTab === 'categories-preferences' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start animate-in fade-in duration-200">
+        <div id="settings-panel-categories-preferences" role="tabpanel" aria-labelledby="settings-tab-categories-preferences" className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start animate-in fade-in duration-200">
           {/* Transaction Categories */}
           <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
             <div className="border-b border-border/40 pb-2">
@@ -410,6 +417,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                                   <span className="text-[10px] font-semibold text-muted-foreground">Move its entries to:</span>
                                   <div>
                                     <CustomSelect
+                                      ariaLabel="Category consolidation target"
                                       value={consolidateTarget}
                                       onChange={val => view.setConsolidateTargets(prev => ({ ...prev, [suggestion.id]: String(val) }))}
                                       options={[
@@ -551,21 +559,21 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   {darkMode ? <Moon className="size-4 text-muted-foreground" /> : <Sun className="size-4 text-muted-foreground" />}
                   <span className="font-medium text-foreground">Dark Mode</span>
                 </div>
-                <ToggleButton active={darkMode} onClick={props.onToggleDarkMode || (() => {})} />
+                <ToggleButton active={darkMode} onClick={props.onToggleDarkMode || (() => {})} label="Dark mode" />
               </div>
               <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
                 <div className="flex items-center gap-2">
                   {hideSensitive ? <EyeOff className="size-4 text-muted-foreground" /> : <Eye className="size-4 text-muted-foreground" />}
                   <span className="font-medium text-foreground">Sensitive Mode (Blur)</span>
                 </div>
-                <ToggleButton active={hideSensitive} onClick={props.onToggleHideSensitive || (() => {})} />
+                <ToggleButton active={hideSensitive} onClick={props.onToggleHideSensitive || (() => {})} label="Sensitive mode" />
               </div>
               <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
                 <div className="flex items-center gap-2">
                   <Bell className="size-4 text-muted-foreground" />
                   <span className="font-medium text-foreground">Notify bills on Login</span>
                 </div>
-                <ToggleButton active={props.notifyOnLoginEnabled || false} onClick={() => props.onToggleNotifyOnLogin?.(!props.notifyOnLoginEnabled)} />
+                <ToggleButton active={props.notifyOnLoginEnabled || false} onClick={() => props.onToggleNotifyOnLogin?.(!props.notifyOnLoginEnabled)} label="Notify bills on login" />
               </div>
               <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
                 <div className="flex items-center gap-2">
@@ -575,7 +583,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                     <span className="text-[10px] text-muted-foreground">Device notification before a subscription is due.</span>
                   </div>
                 </div>
-                <ToggleButton active={props.billRemindersEnabled || false} onClick={() => props.onToggleBillReminders?.(!props.billRemindersEnabled)} />
+                <ToggleButton active={props.billRemindersEnabled || false} onClick={() => props.onToggleBillReminders?.(!props.billRemindersEnabled)} label="Bill reminders" />
               </div>
               <div className="flex items-center justify-between text-sm py-1">
                 <div className="flex items-center gap-2">
@@ -600,7 +608,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
 
       {activeTab === 'security' && (
         <React.Suspense fallback={<div className="flex h-40 items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start animate-in fade-in duration-200">
+          <div id="settings-panel-security" role="tabpanel" aria-labelledby="settings-tab-security" className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start animate-in fade-in duration-200">
             <div className="space-y-6">
               <ActiveDevicesSection />
               <ChangePasswordSection hideSensitive={hideSensitive} />

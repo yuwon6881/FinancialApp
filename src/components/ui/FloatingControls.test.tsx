@@ -20,13 +20,35 @@ describe('floating form controls', () => {
       </div>,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'One' }))
-    const option = screen.getByRole('button', { name: 'Two' })
+    fireEvent.click(screen.getByRole('combobox', { name: 'Select an option' }))
+    const option = screen.getByRole('option', { name: 'Two' })
 
     expect(screen.getByTestId('clipping-parent').contains(option)).toBe(false)
     expect(option.closest('[data-floating-overlay]')).not.toBeNull()
 
     fireEvent.click(option)
+    expect(onChange).toHaveBeenCalledWith('two')
+  })
+
+  it('supports standard select-only keyboard interaction', () => {
+    const onChange = vi.fn()
+    render(
+      <CustomSelect
+        ariaLabel="Cycle month"
+        value="one"
+        onChange={onChange}
+        options={[
+          { value: 'one', label: 'One' },
+          { value: 'two', label: 'Two' },
+        ]}
+      />,
+    )
+
+    const select = screen.getByRole('combobox', { name: 'Cycle month' })
+    fireEvent.keyDown(select, { key: 'ArrowDown' })
+    expect(select.getAttribute('aria-expanded')).toBe('true')
+    fireEvent.keyDown(select, { key: 'ArrowDown' })
+    fireEvent.keyDown(select, { key: 'Enter' })
     expect(onChange).toHaveBeenCalledWith('two')
   })
 

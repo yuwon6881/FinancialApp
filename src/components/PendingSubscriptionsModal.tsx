@@ -5,6 +5,7 @@ import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { BottomSheet } from './ui/BottomSheet'
 import { ToggleButton } from './ui/ToggleButton'
 import { DatePicker } from './ui/DatePicker'
+import { BellRing, CheckCircle2 } from 'lucide-react'
 
 interface PendingSubscriptionsModalProps {
   isOpen: boolean
@@ -33,8 +34,6 @@ export function PendingSubscriptionsModal({
 }: PendingSubscriptionsModalProps) {
   const [paidDates, setPaidDates] = useState<Record<string, string>>({})
 
-  if (pendingNotifications.length === 0) return null
-
   return (
     <BottomSheet
       isOpen={isOpen}
@@ -42,8 +41,8 @@ export function PendingSubscriptionsModal({
       maxWidthClassName="max-w-2xl"
       title={
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
-          <span className="text-base font-bold text-foreground">Pending Subscription Payments</span>
+          <BellRing className="size-4 text-amber-500" />
+          <span className="text-base font-bold text-foreground">Bills to review</span>
         </div>
       }
       footer={
@@ -53,6 +52,7 @@ export function PendingSubscriptionsModal({
             <ToggleButton
               active={showOnLoginChecked}
               onClick={() => onToggleShowOnLogin(!showOnLoginChecked)}
+              label="Show pending-payment reminder after startup"
               className="size-6 shrink-0"
             />
           </div>
@@ -65,11 +65,19 @@ export function PendingSubscriptionsModal({
         </div>
       }
     >
-      <div className="text-xs text-muted-foreground">
-        The following subscription renewals have arrived or passed. Please confirm which bills have been paid to register them in the ledger.
-      </div>
+      {pendingNotifications.length === 0 ? (
+        <div className="flex min-h-56 flex-col items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-8 text-center">
+          <CheckCircle2 className="size-9 text-emerald-500" />
+          <h3 className="mt-3 text-sm font-bold text-foreground">All caught up</h3>
+          <p className="mt-1 max-w-sm text-xs text-muted-foreground">No subscription payments are waiting for confirmation.</p>
+        </div>
+      ) : (
+      <>
+        <div className="text-xs text-muted-foreground">
+          Confirm paid bills to add them to the ledger, skip only this cycle, or remove the subscription entirely.
+        </div>
 
-      <div key={isOpen ? 'open' : 'closed'} className="space-y-3 overflow-y-auto max-h-80 pr-1 py-1 mt-2">
+        <div key={isOpen ? 'open' : 'closed'} className="space-y-3 overflow-y-auto max-h-80 pr-1 py-1 mt-2">
         {pendingNotifications.map((noti) => (
           <div key={noti.id} className="p-4 rounded-xl bg-muted/30 border border-border/40 shadow-xs flex flex-col gap-3">
             <div className="flex items-start justify-between gap-4">
@@ -107,18 +115,24 @@ export function PendingSubscriptionsModal({
                       const dateVal = paidDates[noti.id] ?? noti.billingDate
                       onConfirmSubscription(noti, dateVal)
                     }}
+                    disabled={hideSensitive}
+                    title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
                     className="flex-1 sm:flex-initial px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition shadow-sm whitespace-nowrap text-center"
                   >
                     Confirm Paid
                   </button>
                   <button
                     onClick={() => onDiscardSubscription(noti)}
+                    disabled={hideSensitive}
+                    title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
                     className="flex-1 sm:flex-initial px-3 py-1.5 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-xs rounded-lg transition duration-150 cursor-pointer border border-slate-500/10 whitespace-nowrap text-center"
                   >
                     Discard
                   </button>
                   <button
                     onClick={() => onRemoveSubscription(noti.recurringPaymentId)}
+                    disabled={hideSensitive}
+                    title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
                     className="flex-1 sm:flex-initial px-3 py-1.5 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-xs rounded-lg transition duration-150 cursor-pointer border border-orange-500/10 whitespace-nowrap text-center"
                   >
                     Remove
@@ -128,7 +142,9 @@ export function PendingSubscriptionsModal({
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      </>
+      )}
     </BottomSheet>
   )
 }

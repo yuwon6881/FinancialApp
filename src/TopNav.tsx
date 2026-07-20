@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import {
   Menubar,
   MenubarContent,
@@ -22,14 +22,11 @@ import {
   PiggyBank,
   FileText,
   Settings,
-  Sparkles
+  Sparkles,
+  BarChart3
 } from 'lucide-react'
 import { triggerHaptic } from './lib/haptics'
-import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
-import { SwipeableRow } from './components/ui/SwipeableRow'
 import { AppLogo } from './components/ui/AppLogo'
-import { DatePicker } from './components/ui/DatePicker'
-import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from './lib/utils'
 import type { AppTab, PendingNotification } from './types'
 
 interface TopNavProps {
@@ -42,15 +39,12 @@ interface TopNavProps {
   onLogout: () => void
   username: string
   pendingNotifications: PendingNotification[]
-  onConfirmSubscription: (noti: PendingNotification, paidDate: string) => void
-  onDeletePayment: (id: string) => void
+  onOpenNotifications: () => void
   darkMode: boolean
   onToggleDarkMode: () => void
-  currency?: string
   isSyncing?: boolean
   syncLabel?: string
   isOffline?: boolean
-  onDiscardSubscription?: (noti: PendingNotification) => void
   draftCount?: number
   failedOpsCount?: number
   onOpenFailedOps?: () => void
@@ -66,40 +60,17 @@ const TopNav: React.FC<TopNavProps> = ({
   onLogout,
   username,
   pendingNotifications,
-  onConfirmSubscription,
-  onDeletePayment,
+  onOpenNotifications,
   darkMode,
   onToggleDarkMode,
-  currency = 'USD',
   isSyncing = false,
   syncLabel,
   isOffline = false,
-  onDiscardSubscription,
   draftCount = 0,
   failedOpsCount = 0,
   onOpenFailedOps
 }) => {
-  const [isBellOpen, setIsBellOpen] = useState(false)
-  const [confirmNotiId, setConfirmNotiId] = useState<string | null>(null)
-  const [paidDate, setPaidDate] = useState('')
-  const [notiToDelete, setNotiToDelete] = useState<PendingNotification | null>(null)
-
-  useEffect(() => {
-    if (!isBellOpen) return
-    const handleClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
-      if (!target.closest('.bell-container')) {
-        setIsBellOpen(false)
-        setConfirmNotiId(null)
-      }
-    }
-    document.addEventListener('click', handleClick)
-    return () => document.removeEventListener('click', handleClick)
-  }, [isBellOpen])
-
-  const allAlerts = pendingNotifications || []
-
-  const hasAlerts = allAlerts.length > 0
+  const hasAlerts = pendingNotifications.length > 0
 
   const getInitials = (name: string) => {
     if (!name) return 'U'
@@ -119,12 +90,21 @@ const TopNav: React.FC<TopNavProps> = ({
   }> = [
     {
       tab: 'dashboard',
-      label: 'Dashboard',
-      mobileLabel: 'Dashboard',
+      label: 'Today',
+      mobileLabel: 'Today',
       Icon: TrendingUp,
       activeClass: 'bg-blue-500/12 text-blue-600 dark:text-blue-400 border-blue-500/25 shadow-blue-500/10',
       iconClass: 'text-blue-500',
       dotClass: 'bg-blue-500'
+    },
+    {
+      tab: 'reports',
+      label: 'Reports',
+      mobileLabel: 'Reports',
+      Icon: BarChart3,
+      activeClass: 'bg-indigo-500/12 text-indigo-600 dark:text-indigo-400 border-indigo-500/25 shadow-indigo-500/10',
+      iconClass: 'text-indigo-500',
+      dotClass: 'bg-indigo-500'
     },
     {
       tab: 'recurring',
@@ -152,15 +132,6 @@ const TopNav: React.FC<TopNavProps> = ({
       activeClass: 'bg-pink-500/12 text-pink-600 dark:text-pink-400 border-pink-500/25 shadow-pink-500/10',
       iconClass: 'text-pink-500',
       dotClass: 'bg-pink-500'
-    },
-    {
-      tab: 'settings',
-      label: 'Settings',
-      mobileLabel: 'Settings',
-      Icon: Settings,
-      activeClass: 'bg-slate-500/12 text-slate-600 dark:text-slate-300 border-slate-500/25 shadow-slate-500/10',
-      iconClass: 'text-slate-500',
-      dotClass: 'bg-slate-500'
     }
   ]
 
@@ -256,172 +227,20 @@ const TopNav: React.FC<TopNavProps> = ({
             <span className="text-xs font-extrabold tracking-wide">ASK AI</span>
           </button>
 
-          {/* Notification Bell Dropdown */}
-          <div className="relative bell-container">
+          {/* One notification entry point; the shared review sheet is owned by App. */}
+          <div className="relative">
             <button
-              onClick={() => setIsBellOpen(prev => !prev)}
+              type="button"
+              onClick={onOpenNotifications}
               className="p-1.5 bg-amber-500/5 border border-amber-500/10 hover:bg-amber-500/10 hover:border-amber-500/20 text-amber-500/80 hover:text-amber-500 rounded-xl cursor-pointer transition duration-150 flex items-center justify-center relative"
-              title="Subscription Notifications"
-              aria-label="Subscription Notifications"
-              aria-expanded={isBellOpen}
+              title={hasAlerts ? `${pendingNotifications.length} bills need review` : 'No bills need review'}
+              aria-label={hasAlerts ? `Review ${pendingNotifications.length} pending bills` : 'Bills: all caught up'}
             >
               <Bell className="size-4 text-amber-500" />
               {hasAlerts && (
                 <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-amber-500 ring-2 ring-background animate-pulse" />
               )}
             </button>
-
-            {isBellOpen && (
-              <div className="fixed sm:absolute top-[calc(4rem+env(safe-area-inset-top,0px))] sm:top-auto left-4 right-4 sm:left-auto sm:right-0 mt-2 sm:w-80 bg-card border border-border rounded-2xl shadow-xl p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3 select-none">
-                  <h4 className="text-xs font-bold text-foreground">Subscription Notifications</h4>
-                  <span className="text-[9px] text-muted-foreground font-semibold">
-                    {allAlerts.length} pending
-                  </span>
-                </div>
-
-                <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
-                  {allAlerts.map(noti => {
-                    const isConfirming = confirmNotiId === noti.id
-                    const notificationBody = (
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <span className="font-semibold text-foreground truncate block">{noti.name}</span>
-                          <span className="text-[9px] text-muted-foreground block whitespace-nowrap">{noti.billingDate}</span>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <span className="text-orange-500 font-extrabold block transition-all duration-300">
-                            {hideSensitive ? SENSITIVE_AMOUNT_MASK : `-${formatCurrencyVal(noti.amount, currency)}`}
-                          </span>
-                        </div>
-                      </div>
-                    )
-                    const startConfirm = () => {
-                      if (hideSensitive) return
-                      setConfirmNotiId(noti.id)
-                      setPaidDate(noti.billingDate)
-                    }
-                    const discardNotification = () => {
-                      if (hideSensitive) return
-                      onDiscardSubscription?.(noti)
-                      setIsBellOpen(false)
-                    }
-                    const requestDelete = () => {
-                      if (hideSensitive) return
-                      setNotiToDelete(noti)
-                    }
-                    const notificationActions = (
-                      <>
-                        <button
-                          onClick={startConfirm}
-                          disabled={hideSensitive}
-                          className="flex-1 min-h-[44px] min-w-[44px] px-2 flex items-center justify-center bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-[10px] font-extrabold transition cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
-                        >
-                          Pay
-                        </button>
-                        {onDiscardSubscription && (
-                          <button
-                            onClick={discardNotification}
-                            disabled={hideSensitive}
-                            className="flex-1 min-h-[44px] min-w-[44px] px-2 flex items-center justify-center bg-slate-700 hover:bg-slate-800 active:bg-slate-900 text-white text-[10px] font-extrabold transition cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
-                          >
-                            Skip
-                          </button>
-                        )}
-                        <button
-                          onClick={requestDelete}
-                          disabled={hideSensitive}
-                          className="flex-1 min-h-[44px] min-w-[44px] px-2 flex items-center justify-center bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-[10px] font-extrabold transition cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
-                        >
-                          Remove
-                        </button>
-                      </>
-                    )
-                    const notificationDesktopActions = (
-                      <>
-                        <button
-                          onClick={startConfirm}
-                          disabled={hideSensitive}
-                          title={hideSensitive ? 'Unhide balances to edit' : undefined}
-                          className="px-2 py-1 bg-blue-500/15 hover:bg-blue-500/25 text-blue-500 font-bold text-[9px] rounded transition cursor-pointer text-center whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          Pay
-                        </button>
-                        {onDiscardSubscription && (
-                          <button
-                            onClick={discardNotification}
-                            disabled={hideSensitive}
-                            title={hideSensitive ? 'Unhide balances to edit' : "Discard this cycle's payment"}
-                            className="px-2 py-1 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-[9px] rounded transition cursor-pointer text-center whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
-                          >
-                            Skip
-                          </button>
-                        )}
-                        <button
-                          onClick={requestDelete}
-                          disabled={hideSensitive}
-                          title={hideSensitive ? 'Unhide balances to edit' : 'Delete subscription definition entirely'}
-                          className="px-2 py-1 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-[9px] rounded border border-orange-500/10 transition cursor-pointer text-center whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          Remove
-                        </button>
-                      </>
-                    )
-                    return (
-                      <div key={noti.id}>
-                        {isConfirming ? (
-                          <div className="flex flex-col gap-1.5 p-1.5 bg-background border border-border rounded-lg mt-1 animate-in slide-in-from-bottom-1 duration-150">
-                            {notificationBody}
-                            <label className="text-[8px] font-bold text-muted-foreground">Paid Date:</label>
-                            <div className="flex flex-col sm:flex-row gap-1.5">
-                              <DatePicker
-                                value={paidDate}
-                                onChange={setPaidDate}
-                                align="right"
-                                className="w-full sm:flex-1"
-                              />
-                              <div className="flex gap-1.5 w-full sm:w-auto">
-                                <button
-                                  onClick={() => {
-                                    onConfirmSubscription(noti, paidDate)
-                                    setConfirmNotiId(null)
-                                  }}
-                                  className="flex-1 sm:flex-initial px-2 py-0.5 bg-blue-600 text-white rounded text-[10px] font-bold cursor-pointer hover:bg-blue-700 text-center"
-                                >
-                                  Pay
-                                </button>
-                                <button
-                                  onClick={() => setConfirmNotiId(null)}
-                                  className="px-1.5 py-0.5 bg-muted text-foreground border border-border rounded text-[10px] font-semibold cursor-pointer text-center"
-                                >
-                                  X
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <SwipeableRow
-                            className="rounded-xl bg-muted/30 text-xs"
-                            contentClassName="p-2.5"
-                            actionsWidth={168}
-                            actions={notificationActions}
-                            desktopActions={notificationDesktopActions}
-                          >
-                            {notificationBody}
-                          </SwipeableRow>
-                        )}
-                      </div>
-                    )
-                  })}
-
-                  {allAlerts.length === 0 && (
-                    <div className="text-[10px] text-muted-foreground py-6 text-center select-none">
-                      No pending subscription notifications.
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Quick Actions Menubar (Shadcn UI) */}
@@ -549,20 +368,6 @@ const TopNav: React.FC<TopNavProps> = ({
         })}
       </nav>
     </div>
-    <CustomConfirmModal
-      isOpen={!!notiToDelete}
-      title="Remove Subscription"
-      message="Are you sure you want to delete this recurring subscription? This will cancel all future notifications for this subscription."
-      confirmText="Remove"
-      cancelText="Cancel"
-      onConfirm={() => {
-        if (notiToDelete) {
-          onDeletePayment(notiToDelete.recurringPaymentId)
-          setNotiToDelete(null)
-        }
-      }}
-      onCancel={() => setNotiToDelete(null)}
-    />
     </>
   )
 }

@@ -3,6 +3,10 @@
     {
       "source": "/api/:path*",
       "destination": "https://financialapp-api-i47taxhzba-as.a.run.app/api/:path*"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/index.html"
     }
   ]
 }

@@ -35,6 +35,7 @@ export function LedgerToolbar({
 
           <div className="flex items-center gap-1.5 select-none w-full sm:w-auto">
             <CustomSelect
+              ariaLabel="Ledger cycle"
               value={selectedMonth}
               onChange={val => onSelectPeriod(String(val), selectedYear)}
               options={['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(m => ({
@@ -44,6 +45,7 @@ export function LedgerToolbar({
               className="flex-1 sm:w-56 sm:flex-initial"
             />
             <CustomSelect
+              ariaLabel="Ledger cycle year"
               value={selectedYear}
               onChange={val => onSelectPeriod(selectedMonth, Number(val))}
               options={availableYears.map(y => ({

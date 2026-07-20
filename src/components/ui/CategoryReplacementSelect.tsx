@@ -16,6 +16,7 @@ export const CategoryReplacementSelect = ({
   const [value, setValue] = useState('')
   return (
     <CustomSelect
+      ariaLabel="Replacement category"
       value={value}
       onChange={nextValue => {
         const selected = String(nextValue)

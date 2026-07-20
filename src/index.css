@@ -695,3 +695,17 @@ html {
         background: var(--muted-foreground);
     }
 }
+
+/* Readability floor for dense supporting copy. The visual hierarchy remains
+   intact, but no application label or status is rendered below 12 CSS pixels. */
+:is(.text-\[8px\], .text-\[9px\], .text-\[10px\], .text-\[11px\]) {
+    font-size: 0.75rem !important;
+    line-height: 1rem !important;
+}
+
+/* Shared pointer-target floor for icon and compact actions. Larger controls
+   keep their authored dimensions; only undersized buttons are expanded. */
+button {
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+}

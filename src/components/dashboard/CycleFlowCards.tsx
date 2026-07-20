@@ -1,6 +1,6 @@
 import React from 'react'
 import { ArrowDownLeft, ArrowUpRight, PiggyBank } from 'lucide-react'
-import type { WishlistItem } from '../../types'
+import type { AppTab, WishlistItem } from '../../types'
 import { AnimatedNumber } from '../ui/AnimatedNumber'
 import { SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
 import { activateOnKeyboard } from './activateOnKeyboard'
@@ -26,7 +26,7 @@ interface CycleFlowCardsProps {
   hideSensitive: boolean
   formatCurrency: (val: number) => string
   formatSensitive: (val: number) => React.ReactNode
-  onNavigate: (tab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist' | 'settings') => void
+  onNavigate: (tab: AppTab) => void
   onNavigateToLedger?: (options: NavigateToLedgerOptions) => void
 }
 

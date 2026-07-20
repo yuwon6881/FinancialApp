@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type { AppTab } from '../types'
-import { APP_TABS } from '../types'
+import { navigateToAppTab, readAppLocation, type AppNavigationOptions } from '../lib/appLocation'
 
 export interface AppPreferences {
   activeTab: AppTab
-  setActiveTab: (tab: AppTab) => void
+  setActiveTab: (tab: AppTab, options?: AppNavigationOptions) => void
   hideSensitive: boolean
   setHideSensitive: (value: boolean) => void
   hideBalanceAmounts: boolean
@@ -21,8 +21,7 @@ export interface AppPreferences {
 
 export function useAppPreferences(): AppPreferences {
   const [activeTab, setActiveTabState] = useState<AppTab>(() => {
-    const cached = localStorage.getItem('active_tab')
-    return APP_TABS.includes(cached as AppTab) ? (cached as AppTab) : 'dashboard'
+    return readAppLocation().tab
   })
 
   const [hideSensitive, setHideSensitiveState] = useState<boolean>(() => {
@@ -60,9 +59,19 @@ export function useAppPreferences(): AppPreferences {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [activeTab])
 
-  const setActiveTab = (tab: AppTab) => {
+  useEffect(() => {
+    if (window.location.pathname === '/' || window.location.search.includes('view=')) {
+      navigateToAppTab(activeTab, { replace: true })
+    }
+    const handlePopState = () => setActiveTabState(readAppLocation().tab)
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
+  const setActiveTab = useCallback((tab: AppTab, options?: AppNavigationOptions) => {
     setActiveTabState(tab)
-  }
+    navigateToAppTab(tab, options)
+  }, [])
 
   const setHideSensitive = (value: boolean) => {
     setHideSensitiveState(value)

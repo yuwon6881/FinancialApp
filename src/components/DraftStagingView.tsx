@@ -362,6 +362,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                         Source (From)
                       </label>
                       <CustomSelect
+                        ariaLabel="Transfer source category"
                         value={transferSource}
                         onChange={value => {
                           setTransferSource(value)
@@ -381,6 +382,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                         Target (To)
                       </label>
                       <CustomSelect
+                        ariaLabel="Transfer target category"
                         value={transferTarget}
                         onChange={value => setTransferTarget(value)}
                         options={TRANSFER_BUCKETS.filter(option => option !== transferSource).map(option => ({ value: option, label: option }))}
@@ -423,6 +425,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                         Ledger Category
                       </label>
                       <CustomSelect
+                        ariaLabel="Ledger category"
                         value={ledgerCategory}
                         onChange={value => {
                           setLedgerCategory(value)

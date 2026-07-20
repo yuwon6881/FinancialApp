@@ -61,6 +61,7 @@ export function WishlistItemForm(props: WishlistItemFormProps) {
         <div>
           <label className="text-muted-foreground block mb-1">Priority</label>
           <CustomSelect
+            ariaLabel="Goal priority"
             value={props.priority}
             onChange={props.onPriorityChange}
             options={['High', 'Medium', 'Low'].map(value => ({ value, label: value }))}
