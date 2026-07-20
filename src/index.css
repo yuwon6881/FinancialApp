@@ -97,7 +97,7 @@
     --app-vvw: 100vw;
     --app-vv-top: 0px;
     --app-vv-left: 0px;
-    /* Crisp, luxury light mode — slate-50 base, rich obsidian ink, vibrant accents */
+    /* Crisp, spacious light mode — layered off-whites, slate ink */
     --background: #f8fafc;
     --foreground: #0f172a;
     --card: #ffffff;
@@ -105,20 +105,20 @@
     --popover: #ffffff;
     --popover-foreground: #0f172a;
     /* Primary = deep electric indigo (reserved for actions/highlights) */
-    --primary: #4f46e5;
+    --primary: #4338ca;
     --primary-foreground: #ffffff;
     --secondary: #f1f5f9;
     --secondary-foreground: #0f172a;
     --muted: #f1f5f9;
-    --muted-foreground: #475569;
-    --accent: #eff6ff;
-    --accent-foreground: #1e40af;
+    --muted-foreground: #64748b;
+    --accent: #e0e7ff;
+    --accent-foreground: #312e81;
     /* Destructive = sophisticated crimson/coral */
     --destructive: #e11d48;
     --destructive-foreground: #ffffff;
     --border: #e2e8f0;
     --input: #e2e8f0;
-    --ring: #6366f1;
+    --ring: #4f46e5;
     --chart-line: #4f46e5;
     --chart-1: #4f46e5;
     --chart-2: #10b981;
@@ -126,13 +126,13 @@
     --chart-4: #ec4899;
     --chart-5: #f43f5e;
     --sidebar: #ffffff;
-    --sidebar-foreground: #0f172a;
+    --sidebar-foreground: #0f1729;
     --sidebar-primary: #4f46e5;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #f1f5f9;
-    --sidebar-accent-foreground: #0f172a;
-    --sidebar-border: #e2e8f0;
-    --sidebar-ring: #6366f1;
+    --sidebar-accent: #eef1f7;
+    --sidebar-accent-foreground: #0f1729;
+    --sidebar-border: #e5e9f2;
+    --sidebar-ring: #4f46e5;
     /* Indigo family — brand / primary / credits-as-actions */
     --ledger-blue-400: #6366f1;
     --ledger-blue-500: #4f46e5;
@@ -164,11 +164,11 @@
     --ledger-neutral-400: #94a3b8;
     --ledger-neutral-500: #64748b;
     --ledger-neutral-600: #475569;
-    --app-grid: rgba(99, 102, 241, 0.05);
-    --app-surface-a: rgba(99, 102, 241, 0.07);
-    --app-surface-b: rgba(16, 185, 129, 0.05);
-    --app-surface-c: rgba(236, 72, 153, 0.04);
-    --app-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.09), 0 1px 3px 0 rgba(15, 23, 42, 0.04);
+    --app-grid: rgba(67, 56, 202, 0.04);
+    --app-surface-a: rgba(99, 102, 241, 0.22);
+    --app-surface-b: rgba(16, 185, 129, 0.15);
+    --app-surface-c: rgba(236, 72, 153, 0.12);
+    --app-shadow: 0 24px 60px -12px rgba(15, 23, 42, 0.08), 0 12px 24px -8px rgba(15, 23, 42, 0.04);
 }
 
 .dark {
@@ -250,8 +250,7 @@
     position: relative;
     isolation: isolate;
     background:
-        radial-gradient(ellipse 80% 50% at 50% -10%, color-mix(in srgb, var(--primary) 6%, transparent), transparent 70%),
-        linear-gradient(180deg, color-mix(in srgb, var(--card) 60%, var(--background)), var(--background) 34rem),
+        linear-gradient(180deg, color-mix(in srgb, var(--card) 42%, var(--background)), var(--background) 34rem),
         var(--background);
 }
 
@@ -265,23 +264,19 @@
         linear-gradient(90deg, transparent, var(--app-surface-a) 18%, transparent 44%),
         linear-gradient(115deg, transparent 36%, var(--app-surface-b) 58%, transparent 82%),
         linear-gradient(180deg, var(--app-surface-c), transparent 26rem);
-    opacity: 0.55;
+    opacity: 0.42;
     mask-image: linear-gradient(to bottom, black 0, transparent 34rem);
 }
 
 .glass-nav {
     background:
-        linear-gradient(180deg, color-mix(in srgb, var(--card) 92%, transparent), color-mix(in srgb, var(--card) 80%, transparent));
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
-    border-bottom: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+        linear-gradient(180deg, color-mix(in srgb, var(--background) 92%, transparent), color-mix(in srgb, var(--background) 78%, transparent)),
+        linear-gradient(90deg, var(--app-surface-a), var(--app-surface-c));
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
 }
 
 .app-panel {
-    box-shadow:
-        0 1px 2px 0 rgba(15, 23, 42, 0.04),
-        0 8px 26px -4px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     background-clip: padding-box;
