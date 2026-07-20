@@ -47,7 +47,7 @@ export interface QueuedOp {
   lastError?: string
 }
 
-export type ToastTone = 'info' | 'success' | 'warning' | 'error'
+type ToastTone = 'info' | 'success' | 'warning' | 'error'
 
 export interface ToastCopy {
   title: string

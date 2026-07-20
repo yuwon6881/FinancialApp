@@ -130,4 +130,3 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
 })
 
 TransactionFormSheet.displayName = 'TransactionFormSheet'
-export default TransactionFormSheet

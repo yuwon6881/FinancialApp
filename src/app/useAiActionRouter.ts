@@ -180,4 +180,3 @@ export function useAiActionRouter(options: UseAiActionRouterOptions) {
     handleAiActions,
   }
 }
-export default useAiActionRouter

@@ -6,8 +6,9 @@ import { AnchoredPopover } from '../ui/AnchoredPopover'
 import { DatePicker } from '../ui/DatePicker'
 import { PillSwitch } from '../ui/PillSwitch'
 import { getCategoryDotClass, getCategoryFilterClass } from '../../lib/categoryColors'
+import { LEDGER_BUCKETS as LEDGER_BUCKET_VALUES } from '../../lib/transactionFilters'
 
-const LEDGER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
+const LEDGER_BUCKETS: readonly string[] = LEDGER_BUCKET_VALUES
 
 interface LedgerFilterBarProps {
   showAllCycles: boolean

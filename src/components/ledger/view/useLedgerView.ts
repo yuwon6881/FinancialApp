@@ -3,7 +3,7 @@ import type { Transaction } from '../../../types'
 import type { PagedTransactionResult } from '../../../lib/api'
 import { getCycleRangeDates, getStartOfNCyclesAgo, formatDateForApi } from '../../../lib/cycle'
 import { getCycleLabelForDropdown } from '../../../lib/cycleLabels'
-import { matchesTransactionFilters, splitFilterSelections } from '../../../lib/transactionFilters'
+import { matchesTransactionFilters, splitFilterSelections, LEDGER_BUCKETS as LEDGER_BUCKET_VALUES } from '../../../lib/transactionFilters'
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../../../lib/csvExport'
 import { compareTransactionsNewestFirst, mergeTransactionsNewestFirst } from '../../../lib/transactionOrdering'
 import { ledgerRouteSearch, updateAppSearch } from '../../../lib/appLocation'
@@ -41,7 +41,7 @@ export interface UseLedgerViewOptions {
   formRef: React.RefObject<any>
 }
 
-const LEDGER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
+const LEDGER_BUCKETS: readonly string[] = LEDGER_BUCKET_VALUES
 type LedgerTxType = 'inflow' | 'outflow' | 'transfer' | null
 
 const parseAmountFilter = (value: string): number | undefined => {

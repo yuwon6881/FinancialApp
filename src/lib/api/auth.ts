@@ -273,10 +273,6 @@ export async function verifyFingerprintAssert(challengeId: string, credential: u
   })
 }
 
-export async function getSecurityQuestionsSetupStatus(): Promise<{ hasSetupSecurityQuestions: boolean }> {
-  return request('/auth/security-questions/setup-status', { errorMessage: 'Failed to check security questions status' })
-}
-
 export async function getAvailableSecurityQuestions(): Promise<string[]> {
   return request('/auth/security-questions/available', { authenticated: false, errorMessage: 'Failed to load security questions' })
 }
