@@ -110,7 +110,6 @@ describe('DashboardView focused Today experience', () => {
     render(<DashboardView {...makeProps()} />)
     expect(screen.getByText('$1,234.56')).toBeTruthy()
     expect(screen.getByText('Cycle progress')).toBeTruthy()
-    expect(screen.getByText('Safe to spend / day')).toBeTruthy()
     expect(screen.getByText('Goal: Camera')).toBeTruthy()
     expect(screen.getByText('40%')).toBeTruthy()
     // Cycle inflow/outflow moved to the Reports tab.
@@ -118,12 +117,31 @@ describe('DashboardView focused Today experience', () => {
     expect(screen.queryByText('$3,210.55')).toBeNull()
   })
 
+  it('shows the next cycle start and keeps daily spending room in the plan snapshot', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 6, 20))
+
+    try {
+      render(<DashboardView {...makeProps()} />)
+
+      expect(screen.getByText(/next cycle starts Aug 28/)).toBeTruthy()
+      expect(screen.queryByText('Safe to spend / day')).toBeNull()
+      const dailySpendingRoom = screen.getByText('Daily spending room')
+      expect(dailySpendingRoom).toBeTruthy()
+      expect(dailySpendingRoom.parentElement?.textContent).toContain('$47.90/day')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('links the summary to reports and ledger details', () => {
     const props = makeProps()
     render(<DashboardView {...props} />)
 
-    fireEvent.click(screen.getByRole('button', { name: /View full reports/ }))
+    const reportsButton = screen.getByRole('button', { name: /View full reports/ })
+    fireEvent.click(reportsButton)
     expect(props.onNavigate).toHaveBeenCalledWith('reports')
+    expect(reportsButton.parentElement?.className).toContain('justify-end')
 
     fireEvent.click(screen.getByText('Essentials remaining'))
     expect(props.onNavigateToLedger).toHaveBeenCalledWith({ category: 'Essentials' })

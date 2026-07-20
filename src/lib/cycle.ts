@@ -41,6 +41,75 @@ export function getCycleRangeDates(year: number, monthIndex: number, cycleDay: n
   return { start, end }
 }
 
+export type CyclePhase = 'upcoming' | 'active' | 'ended'
+
+export interface CycleProgress {
+  phase: CyclePhase
+  totalDays: number
+  dayNumber: number
+  daysLeft: number
+  daysUntilStart: number
+  progressPct: number
+  endDate: Date
+  nextStartDate: Date
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+function atMidnight(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
+}
+
+export function getCycleProgress(year: number, monthIndex: number, cycleDay: number, referenceDate = new Date()): CycleProgress {
+  const { start, end } = getCycleRangeDates(year, monthIndex, cycleDay)
+  const startMidnight = atMidnight(start)
+  const endMidnight = atMidnight(end)
+  const referenceMidnight = atMidnight(referenceDate)
+  const totalDays = Math.max(1, Math.round((endMidnight.getTime() - startMidnight.getTime()) / DAY_MS) + 1)
+  const nextStartDate = new Date(endMidnight)
+  nextStartDate.setDate(nextStartDate.getDate() + 1)
+
+  if (referenceMidnight < startMidnight) {
+    return {
+      phase: 'upcoming',
+      totalDays,
+      dayNumber: 0,
+      daysLeft: totalDays,
+      daysUntilStart: Math.round((startMidnight.getTime() - referenceMidnight.getTime()) / DAY_MS),
+      progressPct: 0,
+      endDate: end,
+      nextStartDate,
+    }
+  }
+
+  if (referenceMidnight > endMidnight) {
+    return {
+      phase: 'ended',
+      totalDays,
+      dayNumber: totalDays,
+      daysLeft: 0,
+      daysUntilStart: 0,
+      progressPct: 100,
+      endDate: end,
+      nextStartDate,
+    }
+  }
+
+  const dayNumber = Math.round((referenceMidnight.getTime() - startMidnight.getTime()) / DAY_MS) + 1
+  const daysLeft = Math.round((endMidnight.getTime() - referenceMidnight.getTime()) / DAY_MS) + 1
+
+  return {
+    phase: 'active',
+    totalDays,
+    dayNumber,
+    daysLeft,
+    daysUntilStart: 0,
+    progressPct: Math.min(100, Math.round((dayNumber / totalDays) * 100)),
+    endDate: end,
+    nextStartDate,
+  }
+}
+
 export function getStartOfNCyclesAgo(activeYear: number, activeMonthIndex: number, cycleDay: number, n: number): Date {
   let curMonth = activeMonthIndex
   let curYear = activeYear

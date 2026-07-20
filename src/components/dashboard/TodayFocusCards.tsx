@@ -1,11 +1,10 @@
 import React, { useMemo } from 'react'
-import { CalendarClock, Coins, PiggyBank } from 'lucide-react'
+import { CalendarClock, PiggyBank } from 'lucide-react'
 import type { AppTab, WishlistItem } from '../../types'
 import { AnimatedNumber } from '../ui/AnimatedNumber'
 import { SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
-import { getCycleRangeDates, MONTH_NAMES } from '../../lib/cycle'
+import { getCycleProgress, MONTH_NAMES } from '../../lib/cycle'
 import { activateOnKeyboard } from './activateOnKeyboard'
-import type { NavigateToLedgerOptions } from './types'
 
 export interface WishlistGoal {
   item: WishlistItem
@@ -15,7 +14,6 @@ export interface WishlistGoal {
 }
 
 interface TodayFocusCardsProps {
-  essentialsRemaining: number
   selectedMonth: string
   selectedYear: number
   cycleDay: number
@@ -24,54 +22,17 @@ interface TodayFocusCardsProps {
   formatCurrency: (val: number) => string
   formatSensitive: (val: number) => React.ReactNode
   onNavigate: (tab: AppTab) => void
-  onNavigateToLedger?: (options: NavigateToLedgerOptions) => void
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000
-const midnight = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
-
-type CyclePhase = 'upcoming' | 'active' | 'ended'
-
-interface CycleProgress {
-  phase: CyclePhase
-  totalDays: number
-  dayNumber: number
-  daysLeft: number
-  daysUntilStart: number
-  progressPct: number
-  endDate: Date
-}
-
-const useCycleProgress = (selectedMonth: string, selectedYear: number, cycleDay: number): CycleProgress => {
+const useCycleProgress = (selectedMonth: string, selectedYear: number, cycleDay: number) => {
   return useMemo(() => {
     const monthIndex = MONTH_NAMES.indexOf(selectedMonth) + 1
     const safeMonthIndex = monthIndex > 0 ? monthIndex : new Date().getMonth() + 1
-    const { start, end } = getCycleRangeDates(selectedYear || new Date().getFullYear(), safeMonthIndex, cycleDay || 28)
-    const startMid = midnight(start)
-    const endMid = midnight(end)
-    const todayMid = midnight(new Date())
-    const totalDays = Math.max(1, Math.round((endMid - startMid) / DAY_MS) + 1)
-
-    if (todayMid < startMid) {
-      return {
-        phase: 'upcoming', totalDays, dayNumber: 0, daysLeft: totalDays,
-        daysUntilStart: Math.round((startMid - todayMid) / DAY_MS), progressPct: 0, endDate: end,
-      }
-    }
-    if (todayMid > endMid) {
-      return { phase: 'ended', totalDays, dayNumber: totalDays, daysLeft: 0, daysUntilStart: 0, progressPct: 100, endDate: end }
-    }
-    const dayNumber = Math.round((todayMid - startMid) / DAY_MS) + 1
-    const daysLeft = Math.round((endMid - todayMid) / DAY_MS) + 1
-    return {
-      phase: 'active', totalDays, dayNumber, daysLeft, daysUntilStart: 0,
-      progressPct: Math.min(100, Math.round((dayNumber / totalDays) * 100)), endDate: end,
-    }
+    return getCycleProgress(selectedYear || new Date().getFullYear(), safeMonthIndex, cycleDay || 28)
   }, [selectedMonth, selectedYear, cycleDay])
 }
 
 export const TodayFocusCards: React.FC<TodayFocusCardsProps> = ({
-  essentialsRemaining,
   selectedMonth,
   selectedYear,
   cycleDay,
@@ -80,14 +41,10 @@ export const TodayFocusCards: React.FC<TodayFocusCardsProps> = ({
   formatCurrency,
   formatSensitive,
   onNavigate,
-  onNavigateToLedger,
 }) => {
   const cycle = useCycleProgress(selectedMonth, selectedYear, cycleDay)
-  const resetLabel = cycle.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-
-  // Days across which the remaining Essentials budget can still be spent.
-  const spendDays = cycle.phase === 'active' ? cycle.daysLeft : cycle.phase === 'upcoming' ? cycle.totalDays : 1
-  const perDay = essentialsRemaining / Math.max(1, spendDays)
+  const nextStartLabel = cycle.nextStartDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const endLabel = cycle.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 
   const progressHeadline = cycle.phase === 'upcoming'
     ? `Starts in ${cycle.daysUntilStart} day${cycle.daysUntilStart === 1 ? '' : 's'}`
@@ -96,13 +53,13 @@ export const TodayFocusCards: React.FC<TodayFocusCardsProps> = ({
       : `Day ${cycle.dayNumber} of ${cycle.totalDays}`
 
   const progressCaption = cycle.phase === 'active'
-    ? `${cycle.daysLeft} day${cycle.daysLeft === 1 ? '' : 's'} left · resets ${resetLabel}`
+    ? `${cycle.daysLeft} day${cycle.daysLeft === 1 ? '' : 's'} left · next cycle starts ${nextStartLabel}`
     : cycle.phase === 'upcoming'
-      ? `${cycle.totalDays}-day cycle · resets ${resetLabel}`
-      : `Ended ${resetLabel}`
+      ? `${cycle.totalDays}-day cycle · next cycle starts ${nextStartLabel}`
+      : `Ended ${endLabel}`
 
   return (
-    <div className={`grid grid-cols-1 md:grid-cols-2 ${wishlistGoal ? 'lg:grid-cols-3' : ''} gap-4`}>
+    <div className={`grid grid-cols-1 ${wishlistGoal ? 'md:grid-cols-2' : ''} gap-4`}>
       {/* Cycle progress */}
       <div className="metric-card app-panel p-6 rounded-2xl bg-card/92 border border-border/60">
         <div className="flex items-center justify-between mb-2">
@@ -119,34 +76,6 @@ export const TodayFocusCards: React.FC<TodayFocusCardsProps> = ({
           />
         </div>
         <p className="text-[10px] mt-2 text-muted-foreground">{progressCaption}</p>
-      </div>
-
-      {/* Safe to spend per day */}
-      <div
-        onClick={() => onNavigateToLedger?.({ category: 'Essentials' })}
-        onKeyDown={(event) => activateOnKeyboard(event, () => onNavigateToLedger?.({ category: 'Essentials' }))}
-        role="button"
-        tabIndex={0}
-        className="metric-card interactive-card app-panel p-6 rounded-2xl bg-card/92 border border-border/60 hover:border-emerald-500/30 transition-all duration-300 group cursor-pointer"
-      >
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold text-muted-foreground">Safe to spend / day</span>
-          <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 group-hover:scale-110 transition-transform duration-300">
-            <Coins className="size-4" />
-          </div>
-        </div>
-        <div className="text-2xl font-black text-foreground">
-          {hideSensitive
-            ? SENSITIVE_AMOUNT_MASK
-            : cycle.phase === 'ended'
-              ? formatSensitive(essentialsRemaining)
-              : <><AnimatedNumber value={Math.max(0, perDay)} formatFn={formatCurrency} /><span className="text-sm font-bold text-muted-foreground">/day</span></>}
-        </div>
-        <p className="text-[10px] mt-1.5 text-muted-foreground">
-          {cycle.phase === 'ended'
-            ? <>Essentials left this cycle</>
-            : <>Essentials <span className="font-semibold text-emerald-500">{formatSensitive(Math.max(0, essentialsRemaining))}</span> over {spendDays} day{spendDays === 1 ? '' : 's'}</>}
-        </p>
       </div>
 
       {/* Wishlist goal (shown when an active goal exists) */}

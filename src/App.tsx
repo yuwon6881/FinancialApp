@@ -527,7 +527,7 @@ function App() {
           onRefresh={() => financial.loadAll(nav.selectedMonth || undefined, nav.selectedYear || undefined, true)}
           disabled={financial.loading || session.isLocked}
         >
-          <main className="flex-1 container mx-auto px-4 py-6 sm:py-8 pb-24 md:pb-8 max-w-7xl relative">
+          <main className="relative mx-auto min-w-0 max-w-7xl flex-1 px-4 py-6 pb-24 sm:py-8 md:pb-8">
             <ErrorBoundary variant="inline" resetKey={prefs.activeTab}>
               <Suspense fallback={<ContentViewFallback />}>
                 <LaunchReady>

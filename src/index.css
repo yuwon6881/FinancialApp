@@ -51,6 +51,9 @@
     --color-blue-500: var(--ledger-blue-500);
     --color-blue-600: var(--ledger-blue-600);
     --color-blue-700: var(--ledger-blue-700);
+    --color-indigo-400: var(--ledger-blue-400);
+    --color-indigo-500: var(--ledger-blue-500);
+    --color-indigo-600: var(--ledger-blue-600);
     --color-sky-400: var(--ledger-sky-400);
     --color-sky-500: var(--ledger-sky-500);
     --color-green-400: var(--ledger-income-400);
@@ -73,6 +76,9 @@
     --color-amber-400: var(--ledger-pending-400);
     --color-amber-500: var(--ledger-pending-500);
     --color-amber-600: var(--ledger-pending-600);
+    --color-yellow-400: var(--ledger-pending-400);
+    --color-yellow-500: var(--ledger-pending-500);
+    --color-yellow-600: var(--ledger-pending-600);
     --color-violet-400: var(--ledger-transfer-400);
     --color-violet-500: var(--ledger-transfer-500);
     --color-violet-600: var(--ledger-transfer-600);
@@ -134,34 +140,35 @@
     --sidebar-border: #e5e9f2;
     --sidebar-ring: #4f46e5;
     /* Indigo family — brand / primary / credits-as-actions */
-    --ledger-blue-400: #6366f1;
+    /* Light-mode accent text is deliberately at least WCAG AA against white. */
+    --ledger-blue-400: #4f46e5;
     --ledger-blue-500: #4f46e5;
     --ledger-blue-600: #4338ca;
     --ledger-blue-700: #3730a3;
-    --ledger-sky-400: #38bdf8;
-    --ledger-sky-500: #0ea5e9;
+    --ledger-sky-400: #0369a1;
+    --ledger-sky-500: #0369a1;
     /* Emerald / mint — positive cash flow & credits */
-    --ledger-income-400: #34d399;
-    --ledger-income-500: #10b981;
-    --ledger-income-600: #059669;
+    --ledger-income-400: #047857;
+    --ledger-income-500: #047857;
+    --ledger-income-600: #065f46;
     /* Coral / crimson — debits & expenses */
-    --ledger-expense-400: #fb7185;
-    --ledger-expense-500: #f43f5e;
-    --ledger-expense-600: #e11d48;
+    --ledger-expense-400: #e11d48;
+    --ledger-expense-500: #e11d48;
+    --ledger-expense-600: #be123c;
     --ledger-expense-700: #be123c;
-    --ledger-pending-400: #fbbf24;
-    --ledger-pending-500: #f59e0b;
-    --ledger-pending-600: #d97706;
-    --ledger-transfer-400: #a78bfa;
-    --ledger-transfer-500: #8b5cf6;
-    --ledger-transfer-600: #7c3aed;
-    --ledger-purple-400: #c084fc;
-    --ledger-purple-500: #a855f7;
-    --ledger-purple-600: #9333ea;
-    --ledger-wishlist-400: #f472b6;
-    --ledger-wishlist-500: #ec4899;
-    --ledger-wishlist-600: #db2777;
-    --ledger-neutral-400: #94a3b8;
+    --ledger-pending-400: #b45309;
+    --ledger-pending-500: #a16207;
+    --ledger-pending-600: #92400e;
+    --ledger-transfer-400: #7c3aed;
+    --ledger-transfer-500: #6d28d9;
+    --ledger-transfer-600: #5b21b6;
+    --ledger-purple-400: #9333ea;
+    --ledger-purple-500: #7e22ce;
+    --ledger-purple-600: #6b21a8;
+    --ledger-wishlist-400: #db2777;
+    --ledger-wishlist-500: #be185d;
+    --ledger-wishlist-600: #9d174d;
+    --ledger-neutral-400: #64748b;
     --ledger-neutral-500: #64748b;
     --ledger-neutral-600: #475569;
     --app-grid: rgba(67, 56, 202, 0.04);

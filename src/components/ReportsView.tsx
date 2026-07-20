@@ -54,7 +54,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   if (isSwitchingCycle) return <CycleSkeleton variant="dashboard" />
 
   return (
-    <div className="space-y-6 soft-rise">
+    <div className="min-w-0 space-y-6 overflow-x-hidden soft-rise">
       <header className="app-panel relative z-40 rounded-2xl border border-border/60 bg-card/92 p-4 sm:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
