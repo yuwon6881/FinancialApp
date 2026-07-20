@@ -14,7 +14,7 @@ export function Card({ active = true, className, children, ...props }: CardProps
   return (
     <div
       className={cn(
-        'p-6 rounded-2xl bg-card border transition-all duration-300',
+        'min-w-0 p-6 rounded-2xl bg-card border transition-all duration-300',
         active ? 'border-border/60 shadow-xs' : 'border-dashed border-border/60 opacity-60',
         className
       )}

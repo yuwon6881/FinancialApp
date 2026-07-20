@@ -115,6 +115,15 @@ describe('RecurringPaymentsView characterization', () => {
     } as unknown as typeof ResizeObserver
   })
 
+  it('uses fixed grid tracks and bounds every subscription card to its track', () => {
+    render(<RecurringPaymentsView {...makeProps()} />)
+
+    const netflixCard = getCard('Netflix')
+    expect(netflixCard.parentElement?.className).toContain('grid-cols-[repeat(3,minmax(0,1fr))]')
+    expect(netflixCard.className).toContain('min-w-0')
+    expect(netflixCard.className).toContain('w-full')
+  })
+
   beforeEach(() => {
     vi.mocked(BillTimeline).mockClear()
   })

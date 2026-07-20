@@ -11,7 +11,7 @@ import {
 } from '../lib/appLocation'
 
 export interface UseCycleNavigationOptions {
-  loadAll: (month?: string, year?: number, isBackground?: boolean) => void | Promise<void>
+  loadAll: (month?: string, year?: number, isBackground?: boolean, shouldCommit?: () => boolean) => void | Promise<void>
   handleLogout: () => void | Promise<void>
   markSessionLocked: () => void
   setDashboardData: (data: any) => void
@@ -49,22 +49,28 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
   })
 
   const selectPeriodSeqRef = useRef(0)
+  const selectPeriodQueueRef = useRef<Promise<void>>(Promise.resolve())
 
   const handleSelectPeriod = useCallback(async (month: string, year: number, syncLocation = true) => {
     const requestSeq = ++selectPeriodSeqRef.current
     if (syncLocation) updateAppSearch({ month, year }, { replace: false })
+    setSelectedMonth(month)
+    setSelectedYear(year)
     const cachedSnapshot = getCachedCycleSnapshot(month, year)
     if (cachedSnapshot) {
       setDashboardData(cachedSnapshot.dashboardData)
       setTransactions(cachedSnapshot.transactions)
-      setSelectedMonth(month)
-      setSelectedYear(year)
     } else {
       setIsSwitchingCycle(true)
     }
     try {
-      await api.selectPeriod(month, year)
-      await loadAll(month, year, true)
+      const selectRequest = selectPeriodQueueRef.current
+        .catch(() => undefined)
+        .then(() => api.selectPeriod(month, year))
+      selectPeriodQueueRef.current = selectRequest.then(() => undefined, () => undefined)
+      await selectRequest
+      if (requestSeq !== selectPeriodSeqRef.current) return
+      await loadAll(month, year, true, () => requestSeq === selectPeriodSeqRef.current)
     } catch (err: unknown) {
       if (requestSeq !== selectPeriodSeqRef.current) return
       console.error(err)

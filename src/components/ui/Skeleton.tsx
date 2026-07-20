@@ -68,39 +68,62 @@ const ListRowSkeleton: React.FC = () => (
 )
 
 /**
- * Full-page skeleton shown while a view's data is refetching for a newly
- * selected cycle (month/year). One shared implementation per variant keeps
- * Dashboard/Ledger/Recurring/Wishlist from drifting into their own
- * hand-rolled `animate-pulse` markup.
+ * Layout-specific skeletons shared by initial loading, lazy page transitions,
+ * and cycle refreshes. Keeping them here prevents placeholders from drifting
+ * away from the current page structures.
  */
-export const CycleSkeleton: React.FC<{ variant: 'dashboard' | 'ledger' | 'recurring' | 'wishlist' }> = ({ variant }) => {
+export type PageSkeletonVariant = 'dashboard' | 'reports' | 'ledger' | 'recurring' | 'wishlist' | 'drafts' | 'settings'
+
+const PanelSkeleton = ({ height = 'h-40' }: { height?: string }) => (
+  <div className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
+    <Skeleton className="h-4 w-40" />
+    <Skeleton className={cn('mt-5 w-full rounded-xl', height)} />
+  </div>
+)
+
+export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: boolean }> = ({ variant, fullPage = false }) => {
   if (variant === 'dashboard') {
     return (
-      <div className="space-y-6 soft-rise">
+      <div data-testid="dashboard-skeleton" className="space-y-6 soft-rise">
         <CycleHeaderSkeleton subtitleWidth="w-72" controlWidth="w-60" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => <CardSkeleton key={i} />)}
+        <PanelSkeleton height="h-12" />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[repeat(2,minmax(0,1fr))]">
+          <CardSkeleton />
+          <CardSkeleton />
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="p-6 rounded-2xl bg-card border border-border/60 space-y-4">
-            <Skeleton className="h-5 w-40" />
-            <Skeleton className="h-48 w-full rounded-xl" />
-          </div>
-          <div className="p-6 rounded-2xl bg-card border border-border/60 space-y-4">
-            <Skeleton className="h-5 w-40" />
-            <div className="flex justify-center py-4">
-              <Skeleton className="size-36 rounded-full" />
-            </div>
-          </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <PanelSkeleton height="h-36" />
+          <PanelSkeleton height="h-36" />
         </div>
+      </div>
+    )
+  }
+
+  if (variant === 'reports') {
+    return (
+      <div data-testid="reports-skeleton" className="space-y-6 soft-rise">
+        <CycleHeaderSkeleton titleWidth="w-28" subtitleWidth="w-72" controlWidth="w-80" />
+        <PanelSkeleton height="h-28" />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[repeat(3,minmax(0,1fr))]">
+          {[1, 2, 3].map(i => <CardSkeleton key={i} />)}
+        </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[repeat(2,minmax(0,1fr))]">
+          <PanelSkeleton height="h-56" />
+          <PanelSkeleton height="h-56" />
+        </div>
+        <PanelSkeleton height="h-72" />
       </div>
     )
   }
 
   if (variant === 'ledger') {
     return (
-      <div className="space-y-6 soft-rise">
+      <div data-testid="ledger-skeleton" className="space-y-6 soft-rise">
         <CycleHeaderSkeleton titleWidth="w-44" subtitleWidth="w-64" controlWidth="w-52" />
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Skeleton className="h-10 flex-1 rounded-xl" />
+          <Skeleton className="h-10 w-full rounded-xl sm:w-48" />
+        </div>
         <div className="p-4 rounded-2xl bg-card border border-border/60 space-y-3">
           {[1, 2, 3, 4, 5, 6].map(i => <ListRowSkeleton key={i} />)}
         </div>
@@ -110,11 +133,13 @@ export const CycleSkeleton: React.FC<{ variant: 'dashboard' | 'ledger' | 'recurr
 
   if (variant === 'recurring') {
     return (
-      <div className="space-y-6 soft-rise">
+      <div data-testid="recurring-skeleton" className="space-y-6 soft-rise">
         <CycleHeaderSkeleton controlWidth="w-40" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <PanelSkeleton height="h-36" />
+        <Skeleton className="h-10 w-full rounded-xl sm:w-72" />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-[repeat(2,minmax(0,1fr))] lg:grid-cols-[repeat(3,minmax(0,1fr))]">
           {[1, 2, 3, 4, 5, 6].map(i => (
-            <div key={i} className="p-5 rounded-2xl bg-card border border-border/60 space-y-4">
+            <div key={i} className="min-w-0 space-y-4 rounded-2xl border border-border/60 bg-card p-5">
               <div className="flex items-center justify-between">
                 <Skeleton className="h-5 w-28" />
                 <Skeleton className="h-5 w-16 rounded-full" />
@@ -128,12 +153,49 @@ export const CycleSkeleton: React.FC<{ variant: 'dashboard' | 'ledger' | 'recurr
     )
   }
 
-  // wishlist — only the rewards banner tiles are cycle-scoped; the goals grid below isn't.
+  if (variant === 'wishlist') {
+    return (
+      <div data-testid="wishlist-skeleton" className="space-y-6 soft-rise">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[repeat(3,minmax(0,1fr))]">
+          <StatTileSkeleton />
+          <StatTileSkeleton />
+          <StatTileSkeleton />
+        </div>
+        {fullPage && (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+            <PanelSkeleton height="h-72" />
+            <PanelSkeleton height="h-72" />
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  if (variant === 'settings') {
+    return (
+      <div data-testid="settings-skeleton" className="space-y-6 soft-rise">
+        <CycleHeaderSkeleton titleWidth="w-28" subtitleWidth="w-80" controlWidth="w-0" />
+        <div className="flex gap-6 border-b border-border/30 pb-3">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+        <div className="app-panel space-y-5 rounded-2xl border border-border/60 bg-card/92 p-5">
+          <Skeleton className="h-5 w-36" />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-[repeat(2,minmax(0,1fr))]">
+            {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 soft-rise">
-      <StatTileSkeleton />
-      <StatTileSkeleton />
-      <StatTileSkeleton />
+    <div data-testid="drafts-skeleton" className="space-y-6 soft-rise">
+      <CycleHeaderSkeleton titleWidth="w-40" subtitleWidth="w-64" controlWidth="w-36" />
+      <div className="app-panel space-y-3 rounded-2xl border border-border/60 bg-card/92 p-4">
+        {[1, 2, 3, 4].map(i => <ListRowSkeleton key={i} />)}
+      </div>
     </div>
   )
 }

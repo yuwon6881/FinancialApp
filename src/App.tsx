@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { SplashScreen } from '@capacitor/splash-screen'
 import TopNav from "./TopNav.tsx"
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { type DashboardData } from './types'
+import { type AppTab, type DashboardData } from './types'
 import * as api from './lib/api'
 import { Loader2, Upload, Wallet, CreditCard, PiggyBank, Sparkles, X, Zap } from 'lucide-react'
 
@@ -22,7 +22,7 @@ import { CustomAlertModal } from './components/ui/CustomAlertModal'
 import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 import { PullToRefresh } from './components/ui/PullToRefresh'
 import { ToastViewport } from './components/ui/ToastViewport'
-import { CardSkeleton, Skeleton } from './components/ui/Skeleton'
+import { CycleSkeleton, Skeleton, type PageSkeletonVariant } from './components/ui/Skeleton'
 import { clearLocalFinancialData } from './lib/cache'
 import { useVisualViewportVars } from './lib/useVisualViewportVars'
 import { useReceiptScanPolling } from './lib/useReceiptScanPolling'
@@ -55,11 +55,11 @@ import { readAppLocation, updateAppSearch } from './lib/appLocation'
 const ViewFallback = () => <div className="app-shell min-h-screen" />
 
 // Skeleton placeholder for tab navigation to prevent empty squares in the main content area.
-const ContentViewFallback = () => (
-  <div className="w-full space-y-6 pt-2 animate-in fade-in duration-300">
-    <div className="w-1/3 h-8 rounded-xl skeleton-shimmer" />
-    <div className="w-full h-32 rounded-2xl skeleton-shimmer" />
-    <div className="w-full h-64 rounded-2xl skeleton-shimmer" />
+const getPageSkeletonVariant = (tab: AppTab): PageSkeletonVariant => tab
+
+const ContentViewFallback = ({ tab }: { tab: AppTab }) => (
+  <div className="w-full pt-2 animate-in fade-in duration-300">
+    <CycleSkeleton variant={getPageSkeletonVariant(tab)} fullPage />
   </div>
 )
 
@@ -152,7 +152,7 @@ function App() {
 
   // 4. Cycle Navigation
   const nav = useCycleNavigation({
-    loadAll: (m, y, b) => financial.loadAll(m, y, b),
+    loadAll: (m, y, b, shouldCommit) => financial.loadAll(m, y, b, false, shouldCommit),
     handleLogout: session.handleLogout,
     markSessionLocked: session.markSessionLocked,
     setDashboardData: (d) => financial.setDashboardData(d),
@@ -431,17 +431,7 @@ function App() {
               </div>
               <Loader2 className="animate-spin text-blue-500 size-5" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <CardSkeleton />
-              <CardSkeleton />
-              <CardSkeleton />
-              <CardSkeleton />
-            </div>
-            <div className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
-              <Skeleton className="h-4 w-40" />
-              <Skeleton className="mt-5 h-28 w-full rounded-xl" />
-              <Skeleton className="mt-4 h-28 w-full rounded-xl" />
-            </div>
+            <CycleSkeleton variant={getPageSkeletonVariant(prefs.activeTab)} fullPage />
           </div>
         </div>
       </LaunchReady>
@@ -529,7 +519,7 @@ function App() {
         >
           <main className="relative mx-auto min-w-0 max-w-7xl flex-1 px-4 py-6 pb-24 sm:py-8 md:pb-8">
             <ErrorBoundary variant="inline" resetKey={prefs.activeTab}>
-              <Suspense fallback={<ContentViewFallback />}>
+              <Suspense fallback={<ContentViewFallback tab={prefs.activeTab} />}>
                 <LaunchReady>
                   <motion.div
                     key={prefs.activeTab}

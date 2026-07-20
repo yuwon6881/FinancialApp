@@ -177,6 +177,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     year?: number,
     isBackground = false,
     rethrowOnError = false,
+    shouldCommit?: () => boolean,
   ) => {
     if (!token) return
     const requestSeq = ++loadAllSeqRef.current
@@ -213,7 +214,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         insightsPromise
       ])
 
-      if (isStale()) return
+      if (isStale() || shouldCommit?.() === false) return
       if (wallet !== null) {
         setWalletBalance(wallet)
         setCachedJSON(CACHE_KEYS.walletBalance, wallet)
@@ -278,7 +279,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         setHasShownModalThisSession(true)
       }
     } catch (err: unknown) {
-      if (getErrorName(err) === 'AbortError' || isStale()) {
+      if (getErrorName(err) === 'AbortError' || isStale() || shouldCommit?.() === false) {
         if (rethrowOnError) throw err
         return
       }

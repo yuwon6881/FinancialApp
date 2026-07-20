@@ -51,7 +51,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     onAddBalanceAdjustment,
   })
 
-  if (isSwitchingCycle) return <CycleSkeleton variant="dashboard" />
+  if (isSwitchingCycle) return <CycleSkeleton variant="reports" />
 
   return (
     <div className="min-w-0 space-y-6 overflow-x-hidden soft-rise">

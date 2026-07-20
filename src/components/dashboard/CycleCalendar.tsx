@@ -59,7 +59,7 @@ export function CycleCalendar(props: CycleCalendarProps) {
                 onClick={() => props.onSelectDate?.(day.dateKey)}
               >
                 <span className={`text-[11px] font-bold sm:text-sm ${isToday ? 'text-blue-500' : 'text-foreground/90'}`}>{day.date.getDate()}</span>
-                {hasNet && <span className={`max-w-full truncate text-[7px] font-bold leading-tight sm:text-[8px] ${positive ? 'text-blue-500' : 'text-orange-500'}`}>{props.formatNet(day.net!)}</span>}
+                {hasNet && <span className={`max-w-full truncate text-[7px] font-bold leading-tight sm:text-[8px] md:text-[10px] ${positive ? 'text-blue-500' : 'text-orange-500'}`}>{props.formatNet(day.net!)}</span>}
                 {day.recurringNames.length > 0 && <span className="absolute top-1 right-1 size-1.5 rounded-full bg-blue-500 animate-pulse" />}
               </motion.button>
             )
