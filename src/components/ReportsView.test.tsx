@@ -43,6 +43,7 @@ vi.mock('./dashboard/useDashboardView', () => ({
 
 vi.mock('./dashboard/CarryoverLedgerTable', () => ({ CarryoverLedgerTable: () => <div>Carryover report</div> }))
 vi.mock('./dashboard/FinancialPlanMetrics', () => ({ FinancialPlanMetrics: () => <div>Plan performance report</div> }))
+vi.mock('./dashboard/CycleFlowCards', () => ({ CycleFlowCards: () => <div>Cycle flow report</div> }))
 vi.mock('./dashboard/TrendLineChart', () => ({ TrendLineChart: () => <div>Trend report</div> }))
 vi.mock('./dashboard/DoughnutChart', () => ({ DoughnutChart: () => <div>Category report</div> }))
 vi.mock('./dashboard/CycleCalendar', () => ({ CycleCalendar: ({ onSelectDate }: { onSelectDate: (date: string) => void }) => <button onClick={() => onSelectDate('2026-07-30')}>Activity calendar</button> }))
@@ -62,6 +63,7 @@ describe('ReportsView', () => {
     expect(screen.getByRole('heading', { name: 'Reports' })).toBeTruthy()
     expect(screen.getByText('Carryover report')).toBeTruthy()
     expect(screen.getByText('Plan performance report')).toBeTruthy()
+    expect(screen.getByText('Cycle flow report')).toBeTruthy()
     expect(screen.getByText('Trend report')).toBeTruthy()
     expect(screen.getByText('Category report')).toBeTruthy()
     expect(screen.getByText('Activity calendar')).toBeTruthy()

@@ -106,13 +106,16 @@ describe('DashboardView focused Today experience', () => {
     expect(screen.queryByRole('button', { name: 'Review bills' })).toBeNull()
   })
 
-  it('renders cycle figures and the active wish goal', () => {
+  it('renders the today focus cards and the active wish goal', () => {
     render(<DashboardView {...makeProps()} />)
     expect(screen.getByText('$1,234.56')).toBeTruthy()
-    expect(screen.getByText('$3,210.55')).toBeTruthy()
-    expect(screen.getByText('$987.65')).toBeTruthy()
+    expect(screen.getByText('Cycle progress')).toBeTruthy()
+    expect(screen.getByText('Safe to spend / day')).toBeTruthy()
     expect(screen.getByText('Goal: Camera')).toBeTruthy()
     expect(screen.getByText('40%')).toBeTruthy()
+    // Cycle inflow/outflow moved to the Reports tab.
+    expect(screen.queryByText('Cycle Inflow')).toBeNull()
+    expect(screen.queryByText('$3,210.55')).toBeNull()
   })
 
   it('links the summary to reports and ledger details', () => {

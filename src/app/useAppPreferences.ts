@@ -55,7 +55,8 @@ export function useAppPreferences(): AppPreferences {
   const [ledgerCyclesRange, setLedgerCyclesRange] = useState<'monthly' | '3month' | '6month' | 'yearly'>('monthly')
 
   useEffect(() => {
-    localStorage.setItem('active_tab', activeTab)
+    // Navigation is URL-based now (see appLocation.ts); the old `active_tab`
+    // localStorage mirror is no longer read anywhere, so it isn't written.
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [activeTab])
 

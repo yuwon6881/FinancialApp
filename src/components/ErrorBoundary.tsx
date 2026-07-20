@@ -95,7 +95,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           <div className="flex size-12 items-center justify-center rounded-2xl bg-orange-500/10 text-orange-500 border border-orange-500/20">
             <AlertTriangle className="size-6" />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 text-center">
             <h2 className="text-lg font-bold tracking-tight text-foreground">Something went wrong</h2>
             <p className="text-xs leading-relaxed text-muted-foreground">
               An unexpected error interrupted this view. Your saved and queued data is safe —

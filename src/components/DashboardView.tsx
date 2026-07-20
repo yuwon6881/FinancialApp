@@ -3,7 +3,7 @@ import type { DashboardData, WishlistItem, AppTab } from '../types'
 import { CycleSkeleton } from './ui/Skeleton'
 import { useAppContext } from '../contexts/AppContext'
 import { DashboardHeader } from './dashboard/DashboardHeader'
-import { CycleFlowCards } from './dashboard/CycleFlowCards'
+import { TodayFocusCards } from './dashboard/TodayFocusCards'
 import { SubscriptionsTimelineCard } from './dashboard/SubscriptionsTimelineCard'
 import { useDashboardView } from './dashboard/useDashboardView'
 import { AlertCircle, BarChart3, CheckCircle2, ShieldCheck } from 'lucide-react'
@@ -105,9 +105,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </section>
 
-      {/* Grid of Metric Cards */}
-      <CycleFlowCards
-        stats={view.stats}
+      {/* Today-focused metric cards: cycle progress, safe-to-spend, and the active wish goal */}
+      <TodayFocusCards
+        essentialsRemaining={view.essentialsMetric.projectedRemaining}
+        selectedMonth={view.activeSettings.selectedMonth}
+        selectedYear={view.activeSettings.selectedYear}
+        cycleDay={view.activeSettings.cycleDay}
         wishlistGoal={view.wishlistGoal}
         hideSensitive={hideSensitive}
         formatCurrency={view.formatCurrency}

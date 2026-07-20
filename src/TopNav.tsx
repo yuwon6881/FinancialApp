@@ -107,15 +107,6 @@ const TopNav: React.FC<TopNavProps> = ({
       dotClass: 'bg-indigo-500'
     },
     {
-      tab: 'recurring',
-      label: 'Recurring',
-      mobileLabel: 'Recurring',
-      Icon: CreditCard,
-      activeClass: 'bg-violet-500/12 text-violet-600 dark:text-violet-400 border-violet-500/25 shadow-violet-500/10',
-      iconClass: 'text-violet-500',
-      dotClass: 'bg-violet-500'
-    },
-    {
       tab: 'ledger',
       label: 'Ledger',
       mobileLabel: 'Ledger',
@@ -123,6 +114,15 @@ const TopNav: React.FC<TopNavProps> = ({
       activeClass: 'bg-teal-500/12 text-teal-600 dark:text-teal-400 border-teal-500/25 shadow-teal-500/10',
       iconClass: 'text-teal-500',
       dotClass: 'bg-teal-500'
+    },
+    {
+      tab: 'recurring',
+      label: 'Recurring',
+      mobileLabel: 'Recurring',
+      Icon: CreditCard,
+      activeClass: 'bg-violet-500/12 text-violet-600 dark:text-violet-400 border-violet-500/25 shadow-violet-500/10',
+      iconClass: 'text-violet-500',
+      dotClass: 'bg-violet-500'
     },
     {
       tab: 'wishlist',

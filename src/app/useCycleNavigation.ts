@@ -147,7 +147,9 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
   }, [setActiveTab])
 
   const clearIncomingFilters = useCallback(() => {
-    setLedgerIncomingFilters([])
+    // Keep the same array reference when it is already empty so callers (e.g. a
+    // tab-change effect) cannot trigger a fresh-`[]`-driven re-render loop.
+    setLedgerIncomingFilters(prev => (prev.length === 0 ? prev : []))
     setLedgerIncomingSearch('')
     setLedgerIncomingStartDate('')
     setLedgerIncomingEndDate('')

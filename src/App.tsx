@@ -275,12 +275,29 @@ function App() {
     }
   }, [prefs.activeTab, financial.draftTransactions, prefs])
 
+  // Depend only on the stable identities (activeTab + the memoized/setter fns),
+  // NOT the whole `nav`/`prefs` objects — those are re-created every render, so
+  // including them made this effect run on every render. Because
+  // `clearIncomingFilters` now resets `ledgerIncomingFilters` to a fresh `[]`
+  // (a new reference that never bails out of a re-render), that turned into an
+  // infinite setState→render→effect loop (React error #185) whenever the active
+  // tab was not the ledger.
   useEffect(() => {
     if (prefs.activeTab !== 'ledger') {
       nav.clearIncomingFilters()
       prefs.setLedgerCyclesRange('monthly')
     }
-  }, [prefs.activeTab, nav, prefs])
+  }, [prefs.activeTab, nav.clearIncomingFilters, prefs.setLedgerCyclesRange])
+
+  // Drop the subscription highlight (state + `?subscription=` param) whenever we
+  // leave the Recurring tab. Without this, navigating away mid-highlight — before
+  // the card's fade-out fires onClearHighlight — leaves the id set, so every later
+  // visit to Recurring re-scrolls and re-highlights the last-clicked subscription.
+  useEffect(() => {
+    if (prefs.activeTab !== 'recurring' && nav.highlightedRecurringId) {
+      nav.clearHighlightedRecurring()
+    }
+  }, [prefs.activeTab, nav.highlightedRecurringId, nav.clearHighlightedRecurring])
 
   useEffect(() => {
     if (nav.selectedMonth && nav.selectedYear) {

@@ -8,6 +8,7 @@ import { CycleSkeleton } from './ui/Skeleton'
 import { useDashboardView } from './dashboard/useDashboardView'
 import { CarryoverLedgerTable } from './dashboard/CarryoverLedgerTable'
 import { FinancialPlanMetrics } from './dashboard/FinancialPlanMetrics'
+import { CycleFlowCards } from './dashboard/CycleFlowCards'
 import { TrendLineChart } from './dashboard/TrendLineChart'
 import { DoughnutChart } from './dashboard/DoughnutChart'
 import { CycleCalendar } from './dashboard/CycleCalendar'
@@ -103,6 +104,16 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         stabilityMetric={view.stabilityMetric}
         growthAlloc={view.activeSettings.growthAlloc}
         targetStabilityFund={view.activeSettings.targetStabilityFund}
+        formatSensitive={view.formatSensitive}
+        onNavigateToLedger={onNavigateToLedger}
+      />
+
+      {/* Cycle inflow / outflow summary — moved here from the Today tab so the
+          dashboard stays focused on daily status while Reports holds analysis. */}
+      <CycleFlowCards
+        stats={view.stats}
+        hideSensitive={hideSensitive}
+        formatCurrency={view.formatCurrency}
         formatSensitive={view.formatSensitive}
         onNavigateToLedger={onNavigateToLedger}
       />
