@@ -10,20 +10,55 @@
          status bar / system chrome in sync. Media-scoped variants would ignore
          that toggle and leave a mismatched (black-looking) bar in the PWA. -->
     <meta name="theme-color" content="#0a0d14" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- Apply the saved theme BEFORE first paint. In a standalone PWA the OS
+         status bar (top) and gesture-nav (bottom) draw the page background when
+         Chrome runs edge-to-edge (Chrome 135+ with viewport-fit=cover). If the
+         root background is still the hard-coded dark launch color at that first
+         frame, those safe-area regions read as black bars in light mode. This
+         mirrors the dark_mode logic in useAppPreferences so the surface + the
+         theme-color meta are correct from the very first frame. -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('dark_mode');
+          var isDark = stored === 'true' ? true
+            : stored === 'false' ? false
+            : !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var surface = isDark ? '#0a0d14' : '#f6f8fc';
+          var root = document.documentElement;
+          if (isDark) root.classList.add('dark');
+          root.style.backgroundColor = surface;
+          root.style.colorScheme = isDark ? 'dark' : 'light';
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', surface);
+        } catch (e) { /* localStorage unavailable — fall back to CSS defaults */ }
+      })();
+    </script>
     <!-- Inter is self-hosted via @fontsource-variable/inter (imported in index.css);
          degrades to SF Pro / Segoe UI while it loads -->
     <title>FinancialApp — Ledger</title>
     <style>
-      /* Ensure the page surface is always the app's dark background so there
-         is never a white or transparent flash between the native splash
-         dismissing and the first real frame painting (warm-relaunch fix). */
+      /* Base surface + safe-area fill. Kept theme-aware (the inline script above
+         sets the root color for an explicit saved choice; this media query is
+         the pre-script fallback) so the PWA status-bar / gesture-nav regions
+         never flash the wrong color. body inherits the root's resolved color. */
       html,
       body {
         margin: 0;
         padding: 0;
         background: #0a0d14;
+      }
+      @media (prefers-color-scheme: light) {
+        html,
+        body {
+          background: #f6f8fc;
+        }
+      }
+      body {
+        background: inherit;
       }
 
       /* Inline splash overlay — painted by the browser as soon as the HTML is
