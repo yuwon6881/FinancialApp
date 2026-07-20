@@ -1,19 +1,18 @@
-// One-off generator: renders the "F" brand mark into every PNG icon the PWA
-// manifest and iOS need without dark background square boxes.
+// One-off generator: renders the black "F" brand tile into every PNG icon the
+// PWA manifest and iOS need.
 import sharp from 'sharp'
 
 const F_PATH = 'M30 32h40v8H38v12h28v8H38v16h-8V32z'
 
-// Transparent background for standard icons
+// Keep standard and maskable assets visually identical. Installed browsers may
+// choose either purpose for the launcher icon and generated splash screen.
 const tile = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="1024" height="1024">
+  <rect width="100" height="100" fill="#0a0d14" />
   <path d="${F_PATH}" fill="#60a5fa" />
 </svg>`
 
-// Solid seamless background for adaptive icons. Android may reuse these on its
-// generated splash screen, so match the light manifest background rather than
-// painting a visible dark square around the mark.
 const maskable = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="1024" height="1024">
-  <rect width="100" height="100" fill="#f6f8fc" />
+  <rect width="100" height="100" fill="#0a0d14" />
   <path d="${F_PATH}" fill="#60a5fa" />
 </svg>`
 

@@ -52,8 +52,9 @@
       }
 
       /* Inline splash overlay — painted by the browser as soon as the HTML is
-         parsed, long before any JS evaluates.  React's createRoot().render()
-         replaces #root's children, which automatically removes this element. */
+         parsed, long before any JS evaluates. Keep it aligned with the fixed
+         black Android install splash and launcher icon. React's render replaces
+         #root's children, which automatically removes this element. */
       #__splash {
         position: fixed;
         inset: 0;
@@ -61,7 +62,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: var(--launch-surface);
+        background: #0a0d14;
       }
       #__splash svg {
         width: 56px;

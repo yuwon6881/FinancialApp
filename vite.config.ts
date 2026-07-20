@@ -74,17 +74,12 @@ export default defineConfig(({ mode }) => {
         id: '/',
         scope: '/',
         start_url: '/',
-        // Brave can leave Android-owned status/navigation regions black in
-        // standalone mode even when both document theme colors are light.
-        // Fullscreen removes those browser-owned bars. Keep it as both the base
-        // mode and first override so Brave uses it across manifest generations.
-        display: 'fullscreen',
-        display_override: ['fullscreen', 'standalone'],
-        // Installed Chromium PWAs may keep these launch-time values for the
-        // Android status/navigation bars. Default to the light surface so
-        // Brave cannot strand light mode behind black system-bar regions;
-        // the document's theme-color is updated pre-paint for saved dark mode.
-        background_color: '#f6f8fc',
+        // Keep Android's navigation controls immediately available instead of
+        // requiring an initial swipe to reveal them from fullscreen mode.
+        display: 'standalone',
+        // Android uses this fixed value behind its generated install splash.
+        background_color: '#0a0d14',
+        // The document updates this pre-paint for the user's saved app theme.
         theme_color: '#f6f8fc',
         orientation: 'portrait-primary',
         icons: [
