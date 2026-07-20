@@ -37,28 +37,28 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   onSelectPeriod,
 }) => {
   return (
-    <div className="app-panel relative z-40 overflow-visible rounded-2xl border border-indigo-500/20 bg-card/95 shadow-sm">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-indigo-500/10 via-transparent to-teal-500/10">
+    <div className="app-panel relative z-40 overflow-visible rounded-2xl border border-blue-500/15 bg-card/90">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 p-4 sm:p-6 rounded-2xl bg-linear-to-br from-blue-500/10 via-transparent to-teal-500/10">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/15">
             <Wallet className="size-5" />
           </div>
           <div className="min-w-0">
-            <h2 className="text-2xl font-extrabold tracking-tight text-foreground">
+            <h2 className="text-2xl font-bold tracking-tight text-foreground">
               Ledger Dashboard
             </h2>
             <p className="text-muted-foreground text-xs mt-0.5 truncate">
-              Active Cycle: <span className="font-semibold text-indigo-600 dark:text-indigo-400">{cycleLabel}</span>
+              Active Cycle: <span className="font-semibold text-blue-500">{cycleLabel}</span>
             </p>
           </div>
         </div>
         <div className="mt-4 flex flex-col gap-3 lg:max-w-2xl">
-          <div className="flex flex-col gap-3 rounded-xl border border-indigo-500/15 bg-background/80 px-3.5 py-3 shadow-xs sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 rounded-xl border border-blue-500/15 bg-background/55 px-3.5 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Wallet Balance</span>
-                <span className="rounded-md border border-border/70 bg-card/80 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                <span className="text-[10px] font-bold uppercase text-blue-500">Wallet Balance</span>
+                <span className="rounded-md border border-border/50 bg-card/70 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
                   Essentials + Stability + Rewards
                 </span>
               </div>

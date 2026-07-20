@@ -11,7 +11,8 @@ const budgets = [
   { name: 'vendor-radix-*.js', pattern: /^vendor-radix-.*\.js$/, limitKb: 28.0 },
   // 21.5: nudged from 21.0 for the transfer-volume summary row (Moved/Allocated total + note).
   { name: 'LedgerView-*.js', pattern: /^LedgerView-.*\.js$/, limitKb: 21.5 },
-  { name: 'SettingsView-*.js', pattern: /^SettingsView-.*\.js$/, limitKb: 21.0 }
+  // 21.5: nudged from 21.0 for the Bill Reminders opt-in toggle row.
+  { name: 'SettingsView-*.js', pattern: /^SettingsView-.*\.js$/, limitKb: 21.5 }
 ]
 
 function getGzipSize(filePath) {

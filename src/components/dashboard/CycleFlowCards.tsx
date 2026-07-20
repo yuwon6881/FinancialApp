@@ -47,11 +47,11 @@ export const CycleFlowCards: React.FC<CycleFlowCardsProps> = ({
         onKeyDown={(event) => activateOnKeyboard(event, () => onNavigateToLedger?.({ txType: 'inflow' }))}
         role="button"
         tabIndex={0}
-        className="metric-card interactive-card app-panel p-6 rounded-2xl bg-card border border-border/70 hover:border-teal-500/40 transition-all duration-300 group cursor-pointer shadow-xs hover:shadow-md"
+        className="metric-card interactive-card app-panel p-6 rounded-2xl bg-card/92 border border-border/60 hover:border-teal-500/30 transition-all duration-300 group cursor-pointer"
       >
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-semibold text-muted-foreground">Cycle Inflow</span>
-          <div className="p-2 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 group-hover:scale-110 transition-transform duration-300">
+          <div className="p-2 rounded-lg bg-teal-500/10 text-teal-500 group-hover:scale-110 transition-transform duration-300">
             <ArrowDownLeft className="size-4" />
           </div>
         </div>
@@ -59,7 +59,7 @@ export const CycleFlowCards: React.FC<CycleFlowCardsProps> = ({
           {hideSensitive ? SENSITIVE_AMOUNT_MASK : <AnimatedNumber value={stats.monthlyInflow} formatFn={formatCurrency} />}
         </div>
         <p className="text-[10px] mt-1.5 text-muted-foreground">
-          Total Actual Income: <span className="font-semibold text-teal-600 dark:text-teal-400">{formatSensitive(stats.monthlyIncome)}</span>
+          Total Actual Income: <span className="font-semibold text-teal-500">{formatSensitive(stats.monthlyIncome)}</span>
         </p>
       </div>
 
@@ -69,11 +69,11 @@ export const CycleFlowCards: React.FC<CycleFlowCardsProps> = ({
         onKeyDown={(event) => activateOnKeyboard(event, () => onNavigateToLedger?.({ txType: 'outflow' }))}
         role="button"
         tabIndex={0}
-        className="metric-card interactive-card app-panel p-6 rounded-2xl bg-card border border-border/70 hover:border-rose-500/40 transition-all duration-300 group cursor-pointer shadow-xs hover:shadow-md"
+        className="metric-card interactive-card app-panel p-6 rounded-2xl bg-card/92 border border-border/60 hover:border-orange-500/30 transition-all duration-300 group cursor-pointer"
       >
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-semibold text-muted-foreground">Cycle Outflow</span>
-          <div className="p-2 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 group-hover:scale-110 transition-transform duration-300">
+          <div className="p-2 rounded-lg bg-orange-500/10 text-orange-500 group-hover:scale-110 transition-transform duration-300">
             <ArrowUpRight className="size-4" />
           </div>
         </div>
@@ -81,7 +81,7 @@ export const CycleFlowCards: React.FC<CycleFlowCardsProps> = ({
           {hideSensitive ? SENSITIVE_AMOUNT_MASK : <AnimatedNumber value={stats.monthlyExpenses} formatFn={formatCurrency} />}
         </div>
         <p className="text-[10px] text-muted-foreground mt-1.5">
-          Active committed bills: <span className="font-semibold text-rose-600 dark:text-rose-400">{formatSensitive(stats.activeRecurringTotal)}</span>/mo
+          Active committed bills: <span className="font-semibold text-orange-500">{formatSensitive(stats.activeRecurringTotal)}</span>/mo
         </p>
       </div>
 

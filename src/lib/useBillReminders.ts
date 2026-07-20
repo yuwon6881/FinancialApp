@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo } from 'react'
 import type { RecurringPayment } from '../types'
-import { cancelAllBillReminders, syncBillReminders } from './billReminders'
 
 // Only the fields that affect scheduling; used to avoid rescheduling on every render
 // (the payments array is a fresh reference each render because of optimistic merging).
@@ -14,20 +13,23 @@ function schedulingSignature(payments: RecurringPayment[]): string {
 
 /**
  * Keeps OS bill reminders in sync with the user's recurring payments while the
- * feature is enabled. Reschedules only when the schedule-relevant fields change,
- * and cancels everything when disabled.
+ * feature is enabled. Reschedules only when the schedule-relevant fields change
+ * (keyed on `signature`), and cancels everything when disabled. `payments` is read
+ * from the effect closure; only scheduling-relevant changes re-run it, and those are
+ * exactly what `signature` captures, so a stale non-scheduling field can never matter.
  */
 export function useBillReminders(payments: RecurringPayment[], enabled: boolean): void {
-  const paymentsRef = useRef(payments)
-  paymentsRef.current = payments
-
   const signature = useMemo(() => schedulingSignature(payments), [payments])
 
   useEffect(() => {
-    if (!enabled) {
-      void cancelAllBillReminders()
-      return
-    }
-    void syncBillReminders(paymentsRef.current)
+    // Lazy-load the reminder module so the plugin glue stays out of the main bundle.
+    void (async () => {
+      const { syncBillReminders, cancelAllBillReminders } = await import('./billReminders')
+      if (!enabled) {
+        await cancelAllBillReminders()
+        return
+      }
+      await syncBillReminders(payments)
+    })()
   }, [enabled, signature])
 }
