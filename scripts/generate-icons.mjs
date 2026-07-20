@@ -9,9 +9,11 @@ const tile = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" widt
   <path d="${F_PATH}" fill="#60a5fa" />
 </svg>`
 
-// Solid seamless background for maskable icons (matching manifest background_color #090d16)
+// Solid seamless background for adaptive icons. Android may reuse these on its
+// generated splash screen, so match the light manifest background rather than
+// painting a visible dark square around the mark.
 const maskable = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="1024" height="1024">
-  <rect width="100" height="100" fill="#090d16" />
+  <rect width="100" height="100" fill="#f6f8fc" />
   <path d="${F_PATH}" fill="#60a5fa" />
 </svg>`
 

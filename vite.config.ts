@@ -65,13 +65,21 @@ export default defineConfig(({ mode }) => {
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'Financial App',
+        // Chromium renders `name` under its generated Android splash icon.
+        // Keep the required field non-empty but visually blank; `short_name`
+        // remains the readable launcher/install label.
+        name: '\u200B',
         short_name: 'FinancialApp',
         description: 'Double-entry safe ledger system and financial planning app.',
         id: '/',
         scope: '/',
         start_url: '/',
-        display: 'standalone',
+        // Brave can leave Android-owned status/navigation regions black in
+        // standalone mode even when both document theme colors are light.
+        // Fullscreen removes those browser-owned bars. Keep it as both the base
+        // mode and first override so Brave uses it across manifest generations.
+        display: 'fullscreen',
+        display_override: ['fullscreen', 'standalone'],
         // Installed Chromium PWAs may keep these launch-time values for the
         // Android status/navigation bars. Default to the light surface so
         // Brave cannot strand light mode behind black system-bar regions;

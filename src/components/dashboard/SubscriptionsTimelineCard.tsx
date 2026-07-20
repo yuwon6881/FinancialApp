@@ -49,7 +49,7 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
               <div className="min-w-0 flex-1">
                 <span className={`font-bold text-foreground truncate block transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400 ${rp.isDiscarded ? 'line-through' : ''}`}>{rp.name}</span>
                 <div className="mt-0.5 flex min-w-0 items-center gap-1 select-none">
-                  <span className={`min-w-0 truncate text-[10px] px-1.5 py-0.5 font-semibold rounded border ${getCategoryBadgeClass(rp.category)}`}>
+                  <span className={`min-w-0 break-words text-[10px] px-1.5 py-0.5 font-semibold rounded border ${getCategoryBadgeClass(rp.category)}`}>
                     {rp.category}
                   </span>
                   {rp.isDiscarded ? (
