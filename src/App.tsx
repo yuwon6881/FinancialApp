@@ -5,7 +5,7 @@ import TopNav from "./TopNav.tsx"
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { type DashboardData } from './types'
 import * as api from './lib/api'
-import { Loader2, Plus, Upload, Wallet, CreditCard, PiggyBank, Sparkles } from 'lucide-react'
+import { Loader2, Upload, Wallet, CreditCard, PiggyBank, Sparkles, X, Zap } from 'lucide-react'
 
 // Every view is code-split so the initial bundle only ships the shell. Each
 // chunk loads on demand behind an instant blank-shell fallback (no flash).
@@ -809,10 +809,6 @@ function App() {
             </AnimatePresence>
             <motion.button
               whileTap={{ scale: 0.92 }}
-              animate={{
-                rotate: (prefs.activeTab !== 'drafts' && isFabOpen) ? 135 : 0
-              }}
-              transition={{ type: "spring", stiffness: 260, damping: 20 }}
               onClick={() => {
                 if (prefs.activeTab === 'drafts') {
                   financial.handleSyncDraftBatch()
@@ -828,14 +824,16 @@ function App() {
               style={{
                 bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))'
               }}
-              title={prefs.activeTab === 'drafts' ? 'Sync Batch to Server' : 'Open Menu'}
-              aria-label={prefs.activeTab === 'drafts' ? 'Sync Batch to Server' : 'Open Menu'}
+              title={prefs.activeTab === 'drafts' ? 'Sync Batch to Server' : isFabOpen ? 'Close Menu' : 'Open Menu'}
+              aria-label={prefs.activeTab === 'drafts' ? 'Sync Batch to Server' : isFabOpen ? 'Close Menu' : 'Open Menu'}
               aria-expanded={prefs.activeTab === 'drafts' ? undefined : isFabOpen}
             >
               {prefs.activeTab === 'drafts' ? (
                 <Upload className="size-6" />
+              ) : isFabOpen ? (
+                <X className="size-6" />
               ) : (
-                <Plus className="size-6" />
+                <Zap className="size-6" />
               )}
             </motion.button>
           </>

@@ -280,6 +280,12 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   <h3 className="text-sm font-bold text-foreground">Transaction Categories</h3>
                   <div className="text-[11px] text-muted-foreground mt-0.5">
                     <div>{view.visibleCategories.length} active categories.</div>
+                    {view.isLoadingUsage && (
+                      <div className="flex items-center gap-1">
+                        <Loader2 className="size-3 animate-spin" />
+                        Checking usage…
+                      </div>
+                    )}
                     {view.categoryUsage && view.unusedCategoryCount > 0 && (
                       <div className="text-orange-500 font-semibold mt-0.5">
                         {view.unusedCategoryCount} unused in last {view.USAGE_LOOKBACK_CYCLES} cycles

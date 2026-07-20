@@ -21,6 +21,8 @@ import {
   Trash2, 
   Clock,
   CheckCircle2,
+  Coins,
+  Flag,
   Target,
   Edit2,
   Trophy,
@@ -223,7 +225,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
             <span className="text-xl font-black text-foreground mt-1 block">{formatSensitive(totalCost)}</span>
           </div>
           <div className="p-2.5 rounded-xl bg-slate-500/10 text-slate-500">
-            <Target className="size-5" />
+            <Coins className="size-5" />
           </div>
         </Card>
 
@@ -413,7 +415,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
             })()
           ) : (
             <Card className="p-8 border-dashed text-center flex flex-col items-center justify-center min-h-[300px]">
-              <Target className="size-10 text-muted-foreground/60 mb-2" />
+              <Flag className="size-10 text-muted-foreground/60 mb-2" />
               <h4 className="font-bold text-foreground text-sm">No Active Focus Item</h4>
               <p className="text-xs text-muted-foreground max-w-xs mt-1">Set a goal from your wishlist queue below or create a new target to track savings progress.</p>
               <motion.button 

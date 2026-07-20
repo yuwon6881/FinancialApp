@@ -99,6 +99,8 @@ export function useSettingsView(options: UseSettingsViewOptions) {
 
   useEffect(() => {
     let cancelled = false
+    setUsageTransactions(null)
+    setUsageError(null)
     const { year: activeYear, monthIndex: activeMonthIdx } = getCurrentCycleYearAndMonth(activeSettings.cycleDay)
 
     const startDate = getStartOfNCyclesAgo(activeYear, activeMonthIdx, activeSettings.cycleDay, USAGE_LOOKBACK_CYCLES)
@@ -311,6 +313,7 @@ export function useSettingsView(options: UseSettingsViewOptions) {
   const rarelyUsedCategoryCount = categoryUsage
     ? categoryUsage.filter(c => c.count > 0 && c.count <= RARELY_USED_MAX_COUNT).length
     : 0
+  const isLoadingUsage = usageTransactions === null && usageError === null
 
   return {
     activeSettings,
@@ -338,6 +341,7 @@ export function useSettingsView(options: UseSettingsViewOptions) {
     setShowUsageDetails,
     categoriesOpen,
     setCategoriesOpen,
+    isLoadingUsage,
     usageError,
     cleanupSuggestions,
     setCleanupSuggestions,

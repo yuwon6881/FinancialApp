@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronDown, ChevronUp, LogOut, MonitorSmartphone, Trash2 } from 'lucide-react'
+import { CalendarDays, ChevronDown, ChevronUp, Loader2, LogOut, MonitorSmartphone, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import * as api from '../../lib/api'
 import type { SessionSummary } from '../../lib/api'
@@ -19,7 +19,15 @@ export function ActiveDevicesSection() {
   const { hideSensitive, showToast } = useAppContext()
   const [open, setOpen] = useState(false)
   const [sessions, setSessions] = useState<SessionSummary[]>([])
-  const load = async () => setSessions(await api.getSessions())
+  const [loading, setLoading] = useState(true)
+  const load = async () => {
+    setLoading(true)
+    try {
+      setSessions(await api.getSessions())
+    } finally {
+      setLoading(false)
+    }
+  }
   useEffect(() => { void load().catch(console.error) }, [])
 
   const revoke = async (id: string) => {
@@ -48,7 +56,9 @@ export function ActiveDevicesSection() {
       <button type="button" onClick={() => setOpen(value => !value)} aria-expanded={open} className="w-full flex items-center gap-3 p-5 text-left cursor-pointer">
         <div className="p-2 bg-blue-500/10 rounded-xl"><MonitorSmartphone className="size-4 text-blue-500" /></div>
         <div className="flex-1"><h3 className="text-sm font-bold">Active Devices</h3><p className="text-[11px] text-muted-foreground">Manage devices currently logged into your account.</p></div>
-        <span className="text-[10px] font-bold text-muted-foreground">{sessions.length}</span>
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-muted-foreground">
+          {loading ? <><Loader2 className="size-3 animate-spin" /> Checking…</> : sessions.length}
+        </span>
         {open ? <ChevronUp className="size-4 text-muted-foreground" /> : <ChevronDown className="size-4 text-muted-foreground" />}
       </button>
       <CollapsibleBody open={open}>
