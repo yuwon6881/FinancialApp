@@ -637,6 +637,19 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
           </div>
         </div>
       )}
+
+      {activeTab === 'security' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start animate-in fade-in duration-200">
+          <div className="space-y-6">
+            <ActiveDevicesSection />
+            <ChangePasswordSection hideSensitive={hideSensitive} />
+          </div>
+          <div className="space-y-6">
+            <TwoFactorSection hideSensitive={hideSensitive} />
+            <FingerprintSection />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
