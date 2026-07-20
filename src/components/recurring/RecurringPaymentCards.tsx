@@ -70,7 +70,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
     <motion.div
       initial="hidden" animate="show"
       variants={listContainerVariants}
-      className="grid grid-cols-1 gap-6 md:grid-cols-[repeat(2,minmax(0,1fr))] lg:grid-cols-[repeat(3,minmax(0,1fr))]"
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
     >
       <AnimatePresence>
       {payments.map(rp => {
@@ -81,23 +81,23 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
             id={`recur-card-${rp.id}`}
             variants={listItemVariants}
             exit={listItemExit}
-            className={`flex min-w-0 w-full flex-col justify-between overflow-hidden rounded-2xl border bg-card p-6 transition-all duration-300 ${
+            className={`p-6 rounded-2xl bg-card border transition-all duration-300 flex flex-col justify-between ${
               rp.active
                 ? 'border-border/60 hover:border-blue-500/30 shadow-xs'
                 : 'border-dashed border-border/60 opacity-60'
             }`}
           >
             <div>
-              <div className="flex min-w-0 items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h3 className="flex min-w-0 items-center gap-1.5 text-base font-bold text-foreground">
-                    <span className="truncate">{rp.name}</span>
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-base font-bold text-foreground flex items-center gap-1.5 flex-wrap">
+                    {rp.name}
                     {!rp.active && (
                       <span className="text-[9px] font-semibold bg-muted px-1.5 py-0.5 rounded text-muted-foreground">Paused</span>
                     )}
                     <RowSyncStatus isDeleting={isPaymentDeleting(rp.id)} isSyncing={isPaymentSyncing(rp.id)} isPending={rp.isPendingSync} entityLabel="subscription" />
                   </h3>
-                  <span className={`mt-1 inline-block max-w-full truncate rounded border px-1.5 py-0.5 text-[10px] font-semibold ${getCategoryBadgeClass(rp.category)}`}>
+                  <span className={`inline-block mt-1 text-[10px] px-1.5 py-0.5 font-semibold rounded border ${getCategoryBadgeClass(rp.category)}`}>
                     {rp.category}
                   </span>
                 </div>
@@ -121,7 +121,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                   <span className="text-muted-foreground flex items-center gap-1.5">
                     <Calendar className="size-3.5" /> Billing Starts
                   </span>
-                  <span className="ml-3 min-w-0 truncate text-foreground font-medium" title={rp.startDate}>
+                  <span className="text-foreground font-medium">
                     {rp.startDate}
                   </span>
                 </div>
@@ -129,7 +129,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                   <span className="text-muted-foreground flex items-center gap-1.5">
                     <Repeat className="size-3.5" /> Recurs
                   </span>
-                  <span className="ml-3 min-w-0 truncate text-foreground font-medium" title={`Every ${normalizeRecurringFrequency(rp.frequency) === 'Annually' ? 'year' : 'month'} on the ${getDayWithSuffix(rp.dueDate)}`}>
+                  <span className="text-foreground font-medium">
                     Every {normalizeRecurringFrequency(rp.frequency) === 'Annually' ? 'year' : 'month'} on the {getDayWithSuffix(rp.dueDate)}
                   </span>
                 </div>
@@ -137,7 +137,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                   <span className="text-muted-foreground flex items-center gap-1.5">
                     <CreditCard className="size-3.5" /> Ledger Category
                   </span>
-                  <span className={`ml-3 inline-block max-w-[55%] truncate rounded-md border px-1.5 py-0.5 font-semibold ${getCategoryBadgeClass(rp.ledgerCategory)}`} title={rp.ledgerCategory}>
+                  <span className={`inline-block px-1.5 py-0.5 rounded-md border font-semibold ${getCategoryBadgeClass(rp.ledgerCategory)}`}>
                     {rp.ledgerCategory}
                   </span>
                 </div>

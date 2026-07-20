@@ -127,8 +127,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         onNavigate={onNavigate}
       />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <section aria-labelledby="plan-snapshot-heading" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5 lg:col-span-2">
+      <div data-testid="today-plan-grid" className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start">
+        <section aria-labelledby="plan-snapshot-heading" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 id="plan-snapshot-heading" className="text-base font-bold text-foreground">Plan snapshot</h3>
@@ -167,7 +167,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </section>
 
-        <div className="lg:col-span-1">
+        <div className="min-w-0">
           <SubscriptionsTimelineCard
             activeRecurring={view.activeRecurring}
             formatSensitive={view.formatSensitive}

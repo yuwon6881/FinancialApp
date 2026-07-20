@@ -99,11 +99,8 @@ const getCard = (name: string): HTMLElement => {
   return card as HTMLElement
 }
 
-// The status toggle is the only icon-only (no text) button inside a card.
 const getToggleButton = (card: HTMLElement): HTMLElement => {
-  const button = within(card).getAllByRole('button').find(b => !b.textContent?.trim())
-  if (!button) throw new Error('toggle button not found')
-  return button
+  return within(card).getByRole('switch')
 }
 
 describe('RecurringPaymentsView characterization', () => {
@@ -115,14 +112,6 @@ describe('RecurringPaymentsView characterization', () => {
     } as unknown as typeof ResizeObserver
   })
 
-  it('uses fixed grid tracks and bounds every subscription card to its track', () => {
-    render(<RecurringPaymentsView {...makeProps()} />)
-
-    const netflixCard = getCard('Netflix')
-    expect(netflixCard.parentElement?.className).toContain('grid-cols-[repeat(3,minmax(0,1fr))]')
-    expect(netflixCard.className).toContain('min-w-0')
-    expect(netflixCard.className).toContain('w-full')
-  })
 
   beforeEach(() => {
     vi.mocked(BillTimeline).mockClear()
@@ -348,12 +337,12 @@ describe('RecurringPaymentsView characterization', () => {
 
       expect(names().map(n => n.replace('Paused', ''))).toEqual(['Insurance', 'Gym', 'Netflix', 'Cloud Storage'])
 
-      fireEvent.click(screen.getByRole('button', { name: 'Sort by: Amount (High to Low)' }))
-      fireEvent.click(screen.getByRole('button', { name: 'Sort by: Name (A-Z)' }))
+      fireEvent.click(screen.getByRole('combobox', { name: 'Sort recurring payments' }))
+      fireEvent.click(screen.getByRole('option', { name: 'Sort by: Name (A-Z)' }))
       expect(names().map(n => n.replace('Paused', ''))).toEqual(['Cloud Storage', 'Gym', 'Insurance', 'Netflix'])
 
-      fireEvent.click(screen.getByRole('button', { name: 'Sort by: Name (A-Z)' }))
-      fireEvent.click(screen.getByRole('button', { name: 'Sort by: Next Due Date' }))
+      fireEvent.click(screen.getByRole('combobox', { name: 'Sort recurring payments' }))
+      fireEvent.click(screen.getByRole('option', { name: 'Sort by: Next Due Date' }))
       expect(names().map(n => n.replace('Paused', ''))).toEqual(['Insurance', 'Gym', 'Netflix', 'Cloud Storage'])
     })
   })

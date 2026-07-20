@@ -93,6 +93,25 @@ describe('DashboardView focused Today experience', () => {
     expect(screen.queryByText('Carryover Rolling Ledgers')).toBeNull()
   })
 
+  it('keeps long subscription labels inside a fixed dashboard column', () => {
+    const longCategory = 'Household subscriptions and recurring services'
+    render(<DashboardView {...makeProps({
+      dashboardData: {
+        ...dashboardData,
+        activeRecurringPayments: [{
+          ...dashboardData.activeRecurringPayments[0],
+          category: longCategory,
+          isDiscarded: true,
+          status: 'Discarded',
+        }],
+      },
+    })} />)
+
+    expect(screen.getByTestId('today-plan-grid').className).toContain('minmax(0,2fr)')
+    expect(screen.getByTestId('subscriptions-timeline-card').className).toContain('min-w-0')
+    expect(screen.getByText(longCategory).className).toContain('break-words')
+  })
+
   it('opens the one shared bill review surface', () => {
     const props = makeProps()
     render(<DashboardView {...props} />)

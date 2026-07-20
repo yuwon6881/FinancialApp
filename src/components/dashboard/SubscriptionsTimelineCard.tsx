@@ -19,7 +19,7 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
   onNavigateToRecurring,
 }) => {
   return (
-    <div className="app-panel p-6 rounded-2xl bg-card/92 border border-border/60 flex flex-col h-full">
+    <div data-testid="subscriptions-timeline-card" className="app-panel flex h-full min-w-0 flex-col rounded-2xl border border-border/60 bg-card/92 p-6 lg:max-h-[24rem]">
       <div className="flex-1 flex flex-col min-h-0">
         <div className="flex items-center justify-between mb-2">
           <div>
@@ -48,8 +48,8 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
 
               <div className="min-w-0 flex-1">
                 <span className={`font-bold text-foreground truncate block transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400 ${rp.isDiscarded ? 'line-through' : ''}`}>{rp.name}</span>
-                <div className="flex flex-wrap items-center gap-1 mt-0.5 select-none">
-                  <span className={`inline-block text-[10px] px-1.5 py-0.5 font-semibold rounded border ${getCategoryBadgeClass(rp.category)}`}>
+                <div className="mt-0.5 flex min-w-0 flex-wrap items-start gap-1 select-none">
+                  <span className={`max-w-full whitespace-normal break-words text-[10px] px-1.5 py-0.5 font-semibold rounded border ${getCategoryBadgeClass(rp.category)}`}>
                     {rp.category}
                   </span>
                   {rp.isDiscarded ? (

@@ -39,9 +39,8 @@ describe('DraftStagingView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Other' }))
     fireEvent.click(screen.getByRole('button', { name: 'Transport' }))
 
-    // Ledger Category is a CustomSelect: trigger shows the current value.
-    fireEvent.click(screen.getByRole('button', { name: 'Essentials' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Growth' }))
+    fireEvent.click(screen.getByRole('combobox', { name: 'Ledger category' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Growth' }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
@@ -79,9 +78,8 @@ describe('DraftStagingView', () => {
 
     fireEvent.click(screen.getByTitle('Edit draft item'))
 
-    // Source is a CustomSelect showing the current bucket; retarget it.
-    fireEvent.click(screen.getByRole('button', { name: 'Essentials' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Stability' }))
+    fireEvent.click(screen.getByRole('combobox', { name: 'Transfer source category' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Stability' }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
