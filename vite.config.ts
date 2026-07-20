@@ -72,8 +72,12 @@ export default defineConfig(({ mode }) => {
         scope: '/',
         start_url: '/',
         display: 'standalone',
-        background_color: '#0a0d14',
-        theme_color: '#0a0d14',
+        // Installed Chromium PWAs may keep these launch-time values for the
+        // Android status/navigation bars. Default to the light surface so
+        // Brave cannot strand light mode behind black system-bar regions;
+        // the document's theme-color is updated pre-paint for saved dark mode.
+        background_color: '#f6f8fc',
+        theme_color: '#f6f8fc',
         orientation: 'portrait-primary',
         icons: [
           {

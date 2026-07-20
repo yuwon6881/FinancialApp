@@ -5,11 +5,10 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <!-- Single, unscoped theme-color. The in-app theme is a manual toggle (not
-         tied to prefers-color-scheme), so App.tsx updates this value to keep the
-         status bar / system chrome in sync. Media-scoped variants would ignore
-         that toggle and leave a mismatched (black-looking) bar in the PWA. -->
-    <meta name="theme-color" content="#0a0d14" />
+    <!-- Use the light surface as the static fallback because Chromium-based
+         installed PWAs can retain this initial value for Android's system bars.
+         The pre-paint script and App.tsx replace it for saved dark mode. -->
+    <meta name="theme-color" content="#f6f8fc" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -20,28 +19,13 @@
          frame, those safe-area regions read as black bars in light mode. This
          mirrors the dark_mode logic in useAppPreferences so the surface + the
          theme-color meta are correct from the very first frame. -->
-    <script>
-      (function () {
-        try {
-          var stored = localStorage.getItem('dark_mode');
-          var isDark = stored === 'true' ? true
-            : stored === 'false' ? false
-            : !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-          var surface = isDark ? '#0a0d14' : '#f6f8fc';
-          var root = document.documentElement;
-          if (isDark) root.classList.add('dark');
-          root.style.backgroundColor = surface;
-          root.style.colorScheme = isDark ? 'dark' : 'light';
-          var meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) meta.setAttribute('content', surface);
-        } catch (e) { /* localStorage unavailable — fall back to CSS defaults */ }
-      })();
-    </script>
+    <!-- External because the production CSP intentionally blocks inline scripts. -->
+    <script src="/theme-init.js"></script>
     <!-- Inter is self-hosted via @fontsource-variable/inter (imported in index.css);
          degrades to SF Pro / Segoe UI while it loads -->
     <title>FinancialApp — Ledger</title>
     <style>
-      /* Base surface + safe-area fill. Kept theme-aware (the inline script above
+      /* Base surface + safe-area fill. Kept theme-aware (the startup script above
          sets the root color for an explicit saved choice; this media query is
          the pre-script fallback) so the PWA status-bar / gesture-nav regions
          never flash the wrong color. body inherits the root's resolved color. */
@@ -49,12 +33,18 @@
       body {
         margin: 0;
         padding: 0;
-        background: #0a0d14;
+        background: #f6f8fc;
       }
-      @media (prefers-color-scheme: light) {
+      html {
+        --launch-surface: #f6f8fc;
+      }
+      @media (prefers-color-scheme: dark) {
         html,
         body {
-          background: #f6f8fc;
+          background: #0a0d14;
+        }
+        html {
+          --launch-surface: #0a0d14;
         }
       }
       body {
@@ -71,7 +61,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #0a0d14;
+        background: var(--launch-surface);
       }
       #__splash svg {
         width: 56px;
