@@ -26,11 +26,11 @@ import { clearLocalFinancialData } from './lib/cache'
 import { useVisualViewportVars } from './lib/useVisualViewportVars'
 import { useReceiptScanPolling } from './lib/useReceiptScanPolling'
 import { useNativeAppLifecycle } from './lib/useNativeAppLifecycle'
-import { PendingSubscriptionsModal } from './components/PendingSubscriptionsModal'
-import { FailedSyncModal } from './components/FailedSyncModal'
-import { PasswordPromptModal } from './components/PasswordPromptModal'
-import { LockScreen } from './components/LockScreen'
-import { AiAssistantPanel } from './components/AiAssistantPanel'
+const PendingSubscriptionsModal = lazy(() => import('./components/PendingSubscriptionsModal').then(m => ({ default: m.PendingSubscriptionsModal })))
+const FailedSyncModal = lazy(() => import('./components/FailedSyncModal').then(m => ({ default: m.FailedSyncModal })))
+const PasswordPromptModal = lazy(() => import('./components/PasswordPromptModal').then(m => ({ default: m.PasswordPromptModal })))
+const LockScreen = lazy(() => import('./components/LockScreen').then(m => ({ default: m.LockScreen })))
+const AiAssistantPanel = lazy(() => import('./components/AiAssistantPanel').then(m => ({ default: m.AiAssistantPanel })))
 import { AppLogo } from './components/ui/AppLogo'
 import { syncStatusBarTheme } from './lib/nativeUi'
 import { getCurrentCycleYearAndMonth, MONTH_NAMES } from './lib/cycle'
@@ -48,7 +48,6 @@ import { buildAppContextValue } from './app/buildAppContextValue'
 import { getErrorName } from './lib/errors'
 import { prefetchFingerprintAssertOptions } from './lib/fingerprintOptionsCache'
 import { useBillReminders } from './lib/useBillReminders'
-import { requestBillReminderPermission, syncBillReminders, cancelAllBillReminders } from './lib/billReminders'
 
 // Instant, flash-free placeholder while a lazily-loaded chunk is fetched at the root level.
 const ViewFallback = () => <div className="app-shell min-h-screen" />
@@ -544,13 +543,15 @@ function App() {
                         }}
                         billRemindersEnabled={prefs.billReminders}
                         onToggleBillReminders={(checked) => {
-                          if (!checked) {
-                            prefs.setBillReminders(false)
-                            void cancelAllBillReminders()
-                            dialogs.showToast('Bill reminders turned off.', 'Settings Saved', 'success')
-                            return
-                          }
                           void (async () => {
+                            // Lazy-load the reminder module so the plugin glue stays out of the main bundle.
+                            const { requestBillReminderPermission, syncBillReminders, cancelAllBillReminders } = await import('./lib/billReminders')
+                            if (!checked) {
+                              prefs.setBillReminders(false)
+                              await cancelAllBillReminders()
+                              dialogs.showToast('Bill reminders turned off.', 'Settings Saved', 'success')
+                              return
+                            }
                             const permission = await requestBillReminderPermission()
                             if (permission === 'granted') {
                               prefs.setBillReminders(true)
