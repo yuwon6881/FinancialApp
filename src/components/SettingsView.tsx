@@ -1,5 +1,5 @@
 import React from 'react'
-import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Bell, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap, Moon, Sun, Eye, EyeOff, HardDrive } from 'lucide-react'
+import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Bell, BellRing, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap, Moon, Sun, Eye, EyeOff, HardDrive } from 'lucide-react'
 import { motion } from 'framer-motion'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
@@ -40,6 +40,8 @@ interface SettingsViewProps {
   onApplyCategoryCleanupSuggestion?: (suggestion: CategoryCleanupSuggestion, targetCategoryOverride?: string) => Promise<void> | void
   notifyOnLoginEnabled?: boolean
   onToggleNotifyOnLogin?: (checked: boolean) => void
+  billRemindersEnabled?: boolean
+  onToggleBillReminders?: (checked: boolean) => void
   activeSyncId?: string | null
   deletingId?: string | null
   onToast?: (message: string, title?: string, tone?: ToastTone) => void
@@ -512,32 +514,6 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                             <span className="text-[10px] font-semibold text-orange-500 truncate">Unused</span>
                           )}
                           {isRarelyUsed && (
-                  <p className="text-[10px] font-medium text-destructive px-0.5">{view.usageError}</p>
-                )}
-
-                <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1 select-none">
-                  {categoryRows.map(({ category: cat, count }) => {
-                    const isSyncing = view.isCatSyncing(cat.id)
-                    const isDeleting = view.isCatDeleting(cat.id)
-                    const isUnused = count === 0
-                    const isRarelyUsed = count !== null && count > 0 && count <= view.RARELY_USED_MAX_COUNT
-                    return (
-                      <div
-                        key={cat.id}
-                        className={`flex items-center justify-between gap-2 border px-2.5 py-2 rounded-lg text-xs transition-colors ${
-                          isUnused
-                            ? 'bg-orange-500/5 border-orange-500/25'
-                            : isRarelyUsed
-                              ? 'bg-amber-500/5 border-amber-500/20'
-                              : 'bg-background border-border/50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded border font-semibold shrink-0 ${getCategoryBadgeClass(cat.name)}`}>{cat.name}</span>
-                          {isUnused && (
-                            <span className="text-[10px] font-semibold text-orange-500 truncate">Unused</span>
-                          )}
-                          {isRarelyUsed && (
                             <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-500 truncate">Rarely used &middot; {count}&times;</span>
                           )}
                         </div>
@@ -630,6 +606,16 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   <span className="font-medium text-foreground">Notify bills on Login</span>
                 </div>
                 <ToggleButton active={props.notifyOnLoginEnabled || false} onClick={() => props.onToggleNotifyOnLogin?.(!props.notifyOnLoginEnabled)} />
+              </div>
+              <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
+                <div className="flex items-center gap-2">
+                  <BellRing className="size-4 text-muted-foreground shrink-0" />
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-medium text-foreground">Bill Reminders</span>
+                    <span className="text-[10px] text-muted-foreground">Device notification before a subscription is due.</span>
+                  </div>
+                </div>
+                <ToggleButton active={props.billRemindersEnabled || false} onClick={() => props.onToggleBillReminders?.(!props.billRemindersEnabled)} />
               </div>
               <div className="flex items-center justify-between text-sm py-1">
                 <div className="flex items-center gap-2">
