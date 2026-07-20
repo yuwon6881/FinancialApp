@@ -109,7 +109,7 @@ describe('AiAssistantPanel', () => {
     expect(chatWithAi.mock.calls[1][2]).toEqual(state)
   })
 
-  it('resets conversation state when the chat is closed and reopened', async () => {
+  it('preserves conversation state across close and reopen', async () => {
     const state: AiConversationState = { lastIntent: 'ledger.spending_total' }
     chatWithAi.mockResolvedValue(reply({ state }))
     const onClose = vi.fn()
@@ -118,10 +118,25 @@ describe('AiAssistantPanel', () => {
     typeAndSend('hi')
     await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(1))
 
-    // Close then reopen -> state must be cleared, so the next send carries null again.
+    // Close then reopen -> history is preserved, so the next send still carries the state.
     rerender(<AiAssistantPanel isOpen={false} onClose={onClose} onActions={vi.fn()} />)
     rerender(<AiAssistantPanel isOpen onClose={onClose} onActions={vi.fn()} />)
 
+    typeAndSend('follow up question')
+    await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(2))
+    expect(chatWithAi.mock.calls[1][2]).toEqual(state)
+  })
+
+  it('clears conversation state when New chat is pressed', async () => {
+    const state: AiConversationState = { lastIntent: 'ledger.spending_total' }
+    chatWithAi.mockResolvedValue(reply({ state }))
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+
+    typeAndSend('hi')
+    await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(1))
+
+    // New chat resets history, so the next send starts fresh with null state.
+    fireEvent.click(await screen.findByRole('button', { name: /new chat/i }))
     typeAndSend('fresh question')
     await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(2))
     expect(chatWithAi.mock.calls[1][2]).toBeNull()

@@ -109,7 +109,7 @@ describe('DashboardView focused Today experience', () => {
 
     expect(screen.getByTestId('today-plan-grid').className).toContain('minmax(0,2fr)')
     expect(screen.getByTestId('subscriptions-timeline-card').className).toContain('min-w-0')
-    expect(screen.getByText(longCategory).className).toContain('break-words')
+    expect(screen.getByText(longCategory).className).toContain('truncate')
   })
 
   it('opens the one shared bill review surface', () => {
