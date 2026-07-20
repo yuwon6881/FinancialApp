@@ -32,6 +32,11 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
       return `${position.x},${position.y}`
     }).join(' '), [points])
 
+  const rangeLabel = range === '3month' ? 'last 3 cycles' : range === '6month' ? 'last 6 cycles' : 'full year'
+  const chartSummary = points.length > 0
+    ? `Cumulative growth balance over the ${rangeLabel}, from ${points[0].month} at ${formatSensitive(points[0].balance)} to ${points[points.length - 1].month} at ${formatSensitive(points[points.length - 1].balance)}.`
+    : 'Growth balance trend. No data points available yet.'
+
   const selectNearest = (clientX: number) => {
     if (!svgRef.current || points.length < 2) return
     const rect = svgRef.current.getBoundingClientRect()
@@ -49,9 +54,9 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
           </div>
           <TrendingUp className="size-4 text-blue-500" />
         </div>
-        <div className="flex items-center bg-muted/40 rounded-lg p-0.5 border border-border/40 text-[9px] mb-3 w-fit">
+        <div role="group" aria-label="Trend range" className="flex items-center bg-muted/40 rounded-lg p-0.5 border border-border/40 text-[9px] mb-3 w-fit">
           {(['3month', '6month', 'yearly'] as const).map(value => (
-            <button key={value} onClick={() => setRange(value)} className={`px-2 py-0.5 rounded-md font-bold transition cursor-pointer ${range === value ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}>
+            <button key={value} type="button" onClick={() => setRange(value)} aria-pressed={range === value} aria-label={value === '3month' ? 'Last 3 months' : value === '6month' ? 'Last 6 months' : 'Full year'} className={`px-2 py-0.5 rounded-md font-bold transition cursor-pointer ${range === value ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}>
               {value === '3month' ? '3M' : value === '6month' ? '6M' : 'Year'}
             </button>
           ))}
@@ -65,24 +70,40 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
         >
           {polyline ? (
             <>
-              <svg ref={svgRef} className="w-full h-[120px] overflow-visible" viewBox="0 0 500 120" preserveAspectRatio="none">
+              <svg ref={svgRef} role="img" aria-label={chartSummary} className="w-full h-[120px] overflow-visible" viewBox="0 0 500 120" preserveAspectRatio="none">
                 <defs><linearGradient id="growthGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" /><stop offset="100%" stopColor="#3b82f6" stopOpacity="0" /></linearGradient></defs>
                 <motion.path d={`M 15,105 L ${polyline} L 485,105 Z`} fill="url(#growthGradient)" initial={{ opacity: 0 }} animate={{ opacity: 1 }} />
                 <motion.polyline key={range} fill="none" stroke="var(--color-chart-line, #4f46e5)" strokeWidth="2.5" points={polyline} strokeLinecap="round" strokeLinejoin="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} />
               </svg>
               {points.map((_, index) => {
                 const position = chartPosition(points, index)
-                return <span key={index} className="absolute size-1.5 rounded-full bg-blue-500/50" style={{ left: `calc(${position.left}% - 3px)`, top: `calc(${position.top}% - 3px)` }} />
+                return <span key={index} aria-hidden="true" className="absolute size-1.5 rounded-full bg-blue-500/50" style={{ left: `calc(${position.left}% - 3px)`, top: `calc(${position.top}% - 3px)` }} />
               })}
               {hoveredIndex !== null && points[hoveredIndex] && (() => {
                 const point = points[hoveredIndex]
                 const position = chartPosition(points, hoveredIndex)
-                return <div className="absolute z-20 bg-card border rounded-xl p-1.5 shadow-xl text-center" style={{ left: `clamp(4px, calc(${position.left}% - 50px), calc(100% - 104px))`, top: `clamp(4px, calc(${position.top}% - 46px), calc(100% - 40px))`, width: 100 }}><b className="block text-[9px]">{point.month}</b><span className="text-[10px] font-black text-blue-500">{hideSensitive ? SENSITIVE_AMOUNT_MASK : formatCurrencyVal(point.balance, currency)}</span></div>
+                return <div aria-hidden="true" className="absolute z-20 bg-card border rounded-xl p-1.5 shadow-xl text-center" style={{ left: `clamp(4px, calc(${position.left}% - 50px), calc(100% - 104px))`, top: `clamp(4px, calc(${position.top}% - 46px), calc(100% - 40px))`, width: 100 }}><b className="block text-[9px]">{point.month}</b><span className="text-[10px] font-black text-blue-500">{hideSensitive ? SENSITIVE_AMOUNT_MASK : formatCurrencyVal(point.balance, currency)}</span></div>
               })()}
+              {/* Screen-reader-only data table: the SVG scrubber is pointer-only, so expose the
+                  underlying points as a real table for assistive tech and keyboard users. */}
+              <table className="sr-only">
+                <caption>{chartSummary}</caption>
+                <thead>
+                  <tr><th scope="col">Cycle</th><th scope="col">Growth balance</th></tr>
+                </thead>
+                <tbody>
+                  {points.map((point, index) => (
+                    <tr key={index}>
+                      <th scope="row">{point.month}</th>
+                      <td>{formatSensitive(point.balance)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </>
           ) : <div className="text-xs text-muted-foreground pb-12 text-center">Calculating trend points...</div>}
         </div>
-        <div className="flex justify-between px-[3%] mt-1">{points.map((point, index) => <span key={index} className="text-[9px] text-muted-foreground font-bold w-8">{point.month}</span>)}</div>
+        <div aria-hidden="true" className="flex justify-between px-[3%] mt-1">{points.map((point, index) => <span key={index} className="text-[9px] text-muted-foreground font-bold w-8">{point.month}</span>)}</div>
       </div>
       <div className="border-t border-border/50 pt-3 mt-3 flex justify-between text-[10px] text-muted-foreground">
         <span>{range === '3month' ? 'Last 3 cycles' : range === '6month' ? 'Last 6 cycles' : `${dashboardData?.setting.selectedYear || new Date().getFullYear()} full year`}</span>

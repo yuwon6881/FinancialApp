@@ -41,10 +41,12 @@ export function CycleCalendar(props: CycleCalendarProps) {
             const positive = hasNet && day.net! >= 0
             const isToday = day.dateKey === today
             const color = isToday
-              ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-card bg-blue-500/10 border-blue-500/30'
+              ? 'ring-2 ring-indigo-600 dark:ring-indigo-400 ring-offset-2 ring-offset-card bg-indigo-500/10 dark:bg-indigo-500/20 border-indigo-500/40 shadow-sm'
               : hasNet
-                ? positive ? 'bg-blue-500/8 border-blue-500/20' : 'bg-orange-500/8 border-orange-500/20'
-                : 'bg-muted/5 border-border/40 hover:bg-muted/20'
+                ? positive
+                  ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/25 hover:bg-emerald-500/15'
+                  : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/25 hover:bg-rose-500/15'
+                : 'bg-card border-border/70 hover:bg-muted/40 text-foreground'
             const label = day.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
             return (
               <motion.button
@@ -55,12 +57,12 @@ export function CycleCalendar(props: CycleCalendarProps) {
                 transition={{ duration: 0.3, delay: index * 0.01 }}
                 whileTap={{ scale: 0.95 }}
                 title={`${label}${hasNet ? `: ${day.net! >= 0 ? '+' : ''}${day.net!.toFixed(2)}` : ''}${day.recurringNames.length ? `\nBills: ${day.recurringNames.join(', ')}` : ''}`}
-                className={`relative h-12 xs:h-14 md:h-16 rounded-xl flex flex-col items-center justify-center border text-[10px] cursor-pointer ${color}`}
+                className={`relative h-12 xs:h-14 md:h-16 rounded-xl flex flex-col items-center justify-center border text-[10px] cursor-pointer transition-colors ${color}`}
                 onClick={() => props.onSelectDate?.(day.dateKey)}
               >
-                <span className={`text-xs md:text-sm font-bold ${isToday ? 'text-blue-500' : 'text-foreground/90'}`}>{day.date.getDate()}</span>
-                {hasNet && <span className={`text-[8px] sm:text-[10px] font-black ${positive ? 'text-blue-500' : 'text-orange-500'}`}>{props.formatNet(day.net!)}</span>}
-                {day.recurringNames.length > 0 && <span className="absolute top-1 right-1 size-1.5 rounded-full bg-blue-500 animate-pulse" />}
+                <span className={`text-xs md:text-sm font-bold ${isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-foreground'}`}>{day.date.getDate()}</span>
+                {hasNet && <span className={`text-[8px] sm:text-[10px] font-black ${positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>{props.formatNet(day.net!)}</span>}
+                {day.recurringNames.length > 0 && <span className="absolute top-1 right-1 size-1.5 rounded-full bg-indigo-500 animate-pulse" />}
               </motion.button>
             )
           })}

@@ -512,6 +512,32 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                             <span className="text-[10px] font-semibold text-orange-500 truncate">Unused</span>
                           )}
                           {isRarelyUsed && (
+                  <p className="text-[10px] font-medium text-destructive px-0.5">{view.usageError}</p>
+                )}
+
+                <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1 select-none">
+                  {categoryRows.map(({ category: cat, count }) => {
+                    const isSyncing = view.isCatSyncing(cat.id)
+                    const isDeleting = view.isCatDeleting(cat.id)
+                    const isUnused = count === 0
+                    const isRarelyUsed = count !== null && count > 0 && count <= view.RARELY_USED_MAX_COUNT
+                    return (
+                      <div
+                        key={cat.id}
+                        className={`flex items-center justify-between gap-2 border px-2.5 py-2 rounded-lg text-xs transition-colors ${
+                          isUnused
+                            ? 'bg-orange-500/5 border-orange-500/25'
+                            : isRarelyUsed
+                              ? 'bg-amber-500/5 border-amber-500/20'
+                              : 'bg-background border-border/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded border font-semibold shrink-0 ${getCategoryBadgeClass(cat.name)}`}>{cat.name}</span>
+                          {isUnused && (
+                            <span className="text-[10px] font-semibold text-orange-500 truncate">Unused</span>
+                          )}
+                          {isRarelyUsed && (
                             <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-500 truncate">Rarely used &middot; {count}&times;</span>
                           )}
                         </div>
@@ -540,16 +566,56 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
               <div>
                 <h3 className="text-sm font-bold text-foreground">App Preferences</h3>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Customize display options.</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Customize display options and theme appearance.</p>
               </div>
             </div>
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
-                <div className="flex items-center gap-2">
-                  {darkMode ? <Moon className="size-4 text-muted-foreground" /> : <Sun className="size-4 text-muted-foreground" />}
-                  <span className="font-medium text-foreground">Dark Mode</span>
+              <div className="flex flex-col gap-3 py-2 border-b border-border/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {darkMode ? <Moon className="size-4 text-indigo-500" /> : <Sun className="size-4 text-amber-500" />}
+                    <span className="font-medium text-foreground">Appearance Theme</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground font-semibold">{darkMode ? 'Dark Mode' : 'Light Mode'}</span>
                 </div>
-                <ToggleButton active={darkMode} onClick={props.onToggleDarkMode || (() => {})} />
+                <div className="grid grid-cols-2 gap-3 mt-1 select-none">
+                  <button
+                    type="button"
+                    onClick={() => { if (darkMode) props.onToggleDarkMode?.() }}
+                    className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all cursor-pointer ${
+                      !darkMode
+                        ? 'border-indigo-600 bg-indigo-500/5 shadow-xs'
+                        : 'border-border/60 bg-muted/30 hover:border-border'
+                    }`}
+                  >
+                    <div className="w-full h-12 rounded-lg bg-slate-50 border border-slate-200 p-2 flex flex-col justify-between shadow-2xs">
+                      <div className="flex justify-between items-center">
+                        <div className="h-1.5 w-8 bg-indigo-500 rounded-full" />
+                        <div className="size-2 rounded-full bg-slate-300" />
+                      </div>
+                      <div className="h-2 w-14 bg-slate-200 rounded-md" />
+                    </div>
+                    <span className={`text-xs font-bold ${!darkMode ? 'text-indigo-600 dark:text-indigo-400' : 'text-muted-foreground'}`}>Light Theme</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { if (!darkMode) props.onToggleDarkMode?.() }}
+                    className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all cursor-pointer ${
+                      darkMode
+                        ? 'border-indigo-500 bg-indigo-500/10 shadow-xs'
+                        : 'border-border/60 bg-muted/30 hover:border-border'
+                    }`}
+                  >
+                    <div className="w-full h-12 rounded-lg bg-slate-900 border border-slate-800 p-2 flex flex-col justify-between shadow-2xs">
+                      <div className="flex justify-between items-center">
+                        <div className="h-1.5 w-8 bg-indigo-400 rounded-full" />
+                        <div className="size-2 rounded-full bg-slate-700" />
+                      </div>
+                      <div className="h-2 w-14 bg-slate-800 rounded-md" />
+                    </div>
+                    <span className={`text-xs font-bold ${darkMode ? 'text-indigo-400' : 'text-muted-foreground'}`}>Dark Theme</span>
+                  </button>
+                </div>
               </div>
               <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
                 <div className="flex items-center gap-2">
@@ -582,19 +648,6 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'security' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start animate-in fade-in duration-200">
-          <div className="space-y-6">
-            <ActiveDevicesSection />
-            <ChangePasswordSection hideSensitive={hideSensitive} />
-          </div>
-          <div className="space-y-6">
-            <TwoFactorSection hideSensitive={hideSensitive} />
-            <FingerprintSection />
           </div>
         </div>
       )}
