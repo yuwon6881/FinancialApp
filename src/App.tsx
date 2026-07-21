@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { Capacitor } from '@capacitor/core'
 import { SplashScreen } from '@capacitor/splash-screen'
 import TopNav from "./TopNav.tsx"
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -90,16 +91,39 @@ const fabActionVariants = {
 const nextPaint = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
 const wait = (ms: number) => new Promise<void>(resolve => window.setTimeout(resolve, ms))
 
-const hideNativeSplashAfterPaint = async () => {
+const waitForStableAppPaint = async () => {
   await nextPaint()
   await nextPaint()
   await nextPaint()
   await wait(180)
+}
+
+const hideNativeSplashAfterPaint = async () => {
+  if (!Capacitor.isNativePlatform()) return
+  await waitForStableAppPaint()
   await SplashScreen.hide().catch(() => undefined)
 }
 
-const finishLaunchHandoff = async () => {
-  await hideNativeSplashAfterPaint()
+let launchHandoffPromise: Promise<void> | null = null
+
+const finishLaunchHandoff = () => {
+  if (launchHandoffPromise) return launchHandoffPromise
+
+  launchHandoffPromise = (async () => {
+    // Keep the document splash above React until several complete frames have
+    // painted. This closes the translucent WebAPK handoff gap seen in Chrome
+    // without delaying subsequent in-app view changes.
+    await waitForStableAppPaint()
+    document.getElementById('__splash')?.remove()
+
+    // Chrome's installed PWA splash is browser-owned. Only call the Capacitor
+    // plugin in the native shell, where it actually controls the launch window.
+    if (Capacitor.isNativePlatform()) {
+      await SplashScreen.hide().catch(() => undefined)
+    }
+  })()
+
+  return launchHandoffPromise
 }
 
 const LaunchReady = ({ children }: { children: ReactNode }) => {
@@ -449,17 +473,19 @@ function App() {
 
   if (session.isLocked && !!session.token) {
     return (
-      <AppProvider value={appContextValue}>
-        <div className="app-shell min-h-screen text-foreground flex flex-col selection:bg-blue-500/20 selection:text-blue-500">
-          <ToastViewport toasts={dialogs.toasts} onDismiss={dialogs.dismissToast} />
-          <LockScreen
-            isOpen
-            username={session.username}
-            onUnlocked={session.handleUnlocked}
-            onSignOut={session.handleLogout}
-          />
-        </div>
-      </AppProvider>
+      <LaunchReady>
+        <AppProvider value={appContextValue}>
+          <div className="app-shell min-h-screen text-foreground flex flex-col selection:bg-blue-500/20 selection:text-blue-500">
+            <ToastViewport toasts={dialogs.toasts} onDismiss={dialogs.dismissToast} />
+            <LockScreen
+              isOpen
+              username={session.username}
+              onUnlocked={session.handleUnlocked}
+              onSignOut={session.handleLogout}
+            />
+          </div>
+        </AppProvider>
+      </LaunchReady>
     )
   }
 

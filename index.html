@@ -12,49 +12,27 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <!-- Apply the saved theme BEFORE first paint. In a standalone PWA the OS
-         status bar (top) and gesture-nav (bottom) draw the page background when
-         Chrome runs edge-to-edge (Chrome 135+ with viewport-fit=cover). If the
-         root background is still the hard-coded dark launch color at that first
-         frame, those safe-area regions read as black bars in light mode. This
-         mirrors the dark_mode logic in useAppPreferences so the surface + the
-         theme-color meta are correct from the very first frame. -->
-    <!-- External because the production CSP intentionally blocks inline scripts. -->
-    <script src="/theme-init.js"></script>
-    <!-- Inter is self-hosted via @fontsource-variable/inter (imported in index.css);
-         degrades to SF Pro / Segoe UI while it loads -->
-    <title>FinancialApp — Ledger</title>
     <style>
-      /* Base surface + safe-area fill. Kept theme-aware (the startup script above
-         sets the root color for an explicit saved choice; this media query is
-         the pre-script fallback) so the PWA status-bar / gesture-nav regions
-         never flash the wrong color. body inherits the root's resolved color. */
+      /* Critical launch paint. Keep this before every external resource so the
+         first document frame matches Chrome's manifest-generated splash even
+         when its service worker or renderer takes longer to start. */
       html,
       body {
         margin: 0;
         padding: 0;
-        background: #f6f8fc;
+        min-height: 100%;
+        background: var(--launch-surface, #0a0d14);
       }
       html {
-        --launch-surface: #f6f8fc;
-      }
-      @media (prefers-color-scheme: dark) {
-        html,
-        body {
-          background: #0a0d14;
-        }
-        html {
-          --launch-surface: #0a0d14;
-        }
+        --launch-surface: #0a0d14;
       }
       body {
-        background: inherit;
+        min-height: 100vh;
       }
 
-      /* Inline splash overlay — painted by the browser as soon as the HTML is
-         parsed, long before any JS evaluates. Keep it aligned with the fixed
-         black Android install splash and launcher icon. React's render replaces
-         #root's children, which automatically removes this element. */
+      /* This overlay is deliberately outside #root. React cannot remove it
+         during its first commit; the launch handoff removes it only after a
+         complete app frame has painted. */
       #__splash {
         position: fixed;
         inset: 0;
@@ -74,16 +52,21 @@
         50% { opacity: .85; }
       }
     </style>
+    <!-- Apply the saved app theme after the critical splash CSS is available.
+         External because the production CSP intentionally blocks inline scripts. -->
+    <script src="/theme-init.js"></script>
+    <!-- Inter is self-hosted via @fontsource-variable/inter (imported in index.css);
+         degrades to SF Pro / Segoe UI while it loads -->
+    <title>FinancialApp — Ledger</title>
   </head>
   <body>
-    <div id="root">
-      <!-- Inline splash: visible instantly from raw HTML until React mounts -->
-      <div id="__splash" aria-hidden="true">
-        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M30 32h40v8H38v12h28v8H38v16h-8V32z" fill="#60a5fa"/>
-        </svg>
-      </div>
+    <!-- Logo-only launch surface. It intentionally contains no visible title. -->
+    <div id="__splash" aria-hidden="true">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M30 32h40v8H38v12h28v8H38v16h-8V32z" fill="#60a5fa"/>
+      </svg>
     </div>
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
