@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as api from '../lib/api'
-import type { DashboardData } from '../types'
+import type { DashboardCore, DashboardData } from '../types'
 import { MONTH_NAMES, getCurrentCycleYearAndMonth } from '../lib/cycle'
 import { getErrorName } from '../lib/errors'
 
@@ -18,6 +18,21 @@ function prevCycle(year: number, monthIndex: number): { year: number; monthIndex
     y -= 1
   }
   return { year: y, monthIndex: m }
+}
+
+function completeDashboard(core: DashboardCore): DashboardData {
+  return {
+    ...core,
+    last3CategoryBreakdown: [],
+    last6CategoryBreakdown: [],
+    yearlyCategoryBreakdown: [],
+    availableYears: [],
+    stats: {
+      ...core.stats,
+      pastThreeMonthsRewardsAverage: 0,
+      hasRewardsHistory: false,
+    },
+  }
 }
 
 export interface CycleSummaryTarget {
@@ -93,41 +108,56 @@ export function useCycleSummary(options: UseCycleSummaryOptions) {
     target != null && target.monthIndex === selectedMonthIndex && target.year === selectedYear
 
   const [fetched, setFetched] = useState<{ key: string; data: DashboardData } | null>(null)
+  const [previous, setPrevious] = useState<{ key: string; data: DashboardData } | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const fetchedKey = target ? cycleKeyOf(target.year, target.monthIndex) : null
+  const previousTarget = target ? prevCycle(target.year, target.monthIndex) : null
+  const previousKey = previousTarget ? cycleKeyOf(previousTarget.year, previousTarget.monthIndex) : null
 
   // Fetch the target cycle's dashboard when it isn't the selected cycle. Re-runs when the live
   // dashboard changes (a proxy for "a sync happened") so an edit to the target cycle is reflected.
   useEffect(() => {
-    if (!token || !target || targetIsSelected) {
+    if (!token || !target) {
       setFetched(null)
+      setPrevious(null)
+      setIsLoading(false)
+      setLoadError(null)
       return
     }
     const key = cycleKeyOf(target.year, target.monthIndex)
     const month = MONTH_NAMES[target.monthIndex - 1]
+    const prior = prevCycle(target.year, target.monthIndex)
+    const priorKey = cycleKeyOf(prior.year, prior.monthIndex)
+    const priorMonth = MONTH_NAMES[prior.monthIndex - 1]
     const ac = new AbortController()
-    Promise.all([
-      api.fetchDashboard(month, target.year, ac.signal),
-      api.fetchDashboardInsights(month, target.year, ac.signal),
+    setIsLoading(true)
+    setLoadError(null)
+    Promise.allSettled([
+      targetIsSelected ? Promise.resolve(null) : api.fetchDashboard(month, target.year, ac.signal, false),
+      api.fetchDashboard(priorMonth, prior.year, ac.signal, false),
     ])
-      .then(([core, insights]) => {
-        const merged: DashboardData = {
-          ...core,
-          last3CategoryBreakdown: insights.last3CategoryBreakdown,
-          last6CategoryBreakdown: insights.last6CategoryBreakdown,
-          yearlyCategoryBreakdown: insights.yearlyCategoryBreakdown,
-          availableYears: insights.availableYears,
-          stats: {
-            ...core.stats,
-            pastThreeMonthsRewardsAverage: insights.pastThreeMonthsRewardsAverage,
-            hasRewardsHistory: insights.hasRewardsHistory,
-          },
+      .then(([targetResult, previousResult]) => {
+        if (targetResult.status === 'fulfilled') {
+          if (targetResult.value) setFetched({ key, data: completeDashboard(targetResult.value) })
+          else setFetched(null)
+        } else if (getErrorName(targetResult.reason) !== 'AbortError') {
+          setFetched(null)
+          setLoadError('Could not load this cycle. Please try again.')
+          console.warn('Could not load end-of-cycle summary data', targetResult.reason)
         }
-        setFetched({ key, data: merged })
+
+        if (previousResult.status === 'fulfilled') {
+          setPrevious({ key: priorKey, data: completeDashboard(previousResult.value) })
+        } else {
+          setPrevious(null)
+          if (getErrorName(previousResult.reason) !== 'AbortError') {
+            console.warn('Could not load previous-cycle comparison data', previousResult.reason)
+          }
+        }
       })
-      .catch(err => {
-        if (getErrorName(err) !== 'AbortError') {
-          console.warn('Could not load end-of-cycle summary data', err)
-        }
+      .finally(() => {
+        if (!ac.signal.aborted) setIsLoading(false)
       })
     return () => ac.abort()
     // optimisticDashboardData is intentionally a dep: it changes reference after any sync, which
@@ -140,11 +170,16 @@ export function useCycleSummary(options: UseCycleSummaryOptions) {
       ? fetched.data
       : null
 
+  const previousData = previous && previous.key === previousKey ? previous.data : null
+
   return {
     isOpen: target != null,
     variant: (isManual ? 'manual' : 'auto') as 'manual' | 'auto',
     target,
     data,
+    previousData,
+    isLoading: isLoading || (target != null && data == null && loadError == null),
+    loadError,
     cycleDay,
     onClose: isManual ? closeManual : closeAuto,
     openManual,

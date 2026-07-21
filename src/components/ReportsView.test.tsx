@@ -7,13 +7,13 @@ vi.mock('./dashboard/useDashboardView', () => ({
     months: ['Jun', 'Jul'],
     years: [2025, 2026],
     activeSettings: {
-      selectedMonth: 'Jul',
+      selectedMonth: 'Jun',
       selectedYear: 2026,
-      cycleDay: 28,
+      cycleDay: 1,
       growthAlloc: 0.25,
       targetStabilityFund: 10000,
     },
-    cycleLabel: 'Jul 28th ~ Aug 27th, 2026',
+    cycleLabel: 'Jun 01 ~ Jun 30, 2026',
     categories: [{ name: 'Growth', remaining: 400 }],
     pendingDeductionsByCategory: {},
     areBalanceAmountsMasked: false,
@@ -82,5 +82,21 @@ describe('ReportsView', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: 'Activity calendar' }))
     expect(onNavigateToLedger).toHaveBeenCalledWith({ date: '2026-07-30' })
+  })
+
+  it('offers a compact summary action for an ended cycle', () => {
+    const onViewCycleSummary = vi.fn()
+    render(
+      <ReportsView
+        dashboardData={null}
+        transactions={[]}
+        hideBalanceAmounts={false}
+        onSelectPeriod={vi.fn()}
+        onViewCycleSummary={onViewCycleSummary}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'View cycle summary' }))
+    expect(onViewCycleSummary).toHaveBeenCalledWith(6, 2026)
   })
 })

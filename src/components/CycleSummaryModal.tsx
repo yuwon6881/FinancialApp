@@ -1,14 +1,18 @@
 import { useMemo, type ReactNode } from 'react'
 import {
-  TrendingUp,
-  TrendingDown,
-  Wallet,
   ArrowDownRight,
   ArrowUpRight,
-  PiggyBank,
+  ChartNoAxesCombined,
+  CircleDollarSign,
+  FileBarChart,
+  Gift,
+  Lightbulb,
+  LoaderCircle,
   Receipt,
-  ShoppingBag,
-  Sparkles,
+  ShieldCheck,
+  TrendingDown,
+  TrendingUp,
+  Wallet,
 } from 'lucide-react'
 import type { DashboardData, WishlistItem } from '../types'
 import { useAppContext } from '../contexts/AppContext'
@@ -19,24 +23,129 @@ import { BottomSheet } from './ui/BottomSheet'
 interface CycleSummaryModalProps {
   isOpen: boolean
   onClose: () => void
-  // Full dashboard payload for the cycle being summarized. For the currently selected cycle this
-  // is the live (optimistic) data, so edits made while viewing the cycle are reflected instantly.
   data: DashboardData | null
+  previousData: DashboardData | null
+  isLoading: boolean
+  loadError: string | null
   wishlist: WishlistItem[]
-  monthIndex: number // 1-12, the cycle's anchor month
+  monthIndex: number
   year: number
   cycleDay: number
-  // "auto" = fired once on entering a new cycle; "manual" = re-opened from Reports.
   variant: 'auto' | 'manual'
   onViewLedger?: () => void
 }
 
 const ENVELOPES = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const
+const EPSILON = 0.005
+
+function signedPercent(value: number): string {
+  return `${value >= 0 ? '+' : ''}${Math.round(value * 100)}%`
+}
+
+export function buildCycleSummary(
+  data: DashboardData,
+  previousData: DashboardData | null,
+  wishlist: WishlistItem[],
+  year: number,
+  monthIndex: number,
+  cycleDay: number,
+) {
+  const income = data.stats.monthlyIncome
+  const inflow = data.stats.monthlyInflow
+  const expenses = data.stats.monthlyExpenses
+  const net = inflow - expenses
+  const envelopes = ENVELOPES.map(name => {
+    const category = data.categories.find(item => item.name === name)
+    return {
+      name,
+      spent: category?.spent ?? Math.max(0, -(category?.netChange ?? 0)),
+      remaining: category?.remaining ?? 0,
+      overspent: (category?.remaining ?? 0) < -EPSILON,
+    }
+  })
+
+  const topCategories = [...(data.monthlyCategoryBreakdown || [])]
+    .filter(category => category.amount > 0)
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 5)
+  const topMax = topCategories.reduce((max, category) => Math.max(max, category.amount), 0)
+  const bills = data.activeRecurringPayments || []
+  const paidBills = bills.filter(bill => bill.status === 'Paid')
+  const { start, end } = getCycleRangeDates(year, monthIndex, cycleDay)
+  const purchasedThisCycle = wishlist.filter(item => {
+    if (!item.isPurchased || !item.purchasedAt) return false
+    const purchasedAt = new Date(item.purchasedAt)
+    return !Number.isNaN(purchasedAt.getTime()) && purchasedAt >= start && purchasedAt <= end
+  })
+
+  const previousExpenses = previousData?.stats.monthlyExpenses ?? null
+  const previousInflow = previousData?.stats.monthlyInflow ?? null
+  const previousNet = previousInflow === null || previousExpenses === null ? null : previousInflow - previousExpenses
+  const savingsRate = inflow > EPSILON ? net / inflow : null
+  const previousSavingsRate = previousInflow !== null && previousInflow > EPSILON && previousNet !== null
+    ? previousNet / previousInflow
+    : null
+  const spendingDelta = previousExpenses === null ? null : expenses - previousExpenses
+
+  const previousBreakdown = new Map(
+    (previousData?.monthlyCategoryBreakdown || []).map(category => [category.category, category.amount]),
+  )
+  const currentBreakdown = new Map((data.monthlyCategoryBreakdown || []).map(category => [category.category, category.amount]))
+  const categoryNames = new Set([...currentBreakdown.keys(), ...previousBreakdown.keys()])
+  const biggestCategoryShift = [...categoryNames]
+    .map(category => ({
+      category,
+      delta: (currentBreakdown.get(category) || 0) - (previousBreakdown.get(category) || 0),
+    }))
+    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))[0] || null
+
+  const growthNow = data.categories.find(category => category.name === 'Growth')?.remaining ?? null
+  const growthBefore = previousData?.categories.find(category => category.name === 'Growth')?.remaining ?? null
+  const growthDelta = growthNow === null || growthBefore === null ? null : growthNow - growthBefore
+  const hasActivity = inflow > EPSILON || expenses > EPSILON || paidBills.length > 0 || purchasedThisCycle.length > 0
+  const previousHasActivity = previousData != null && (
+    (previousInflow ?? 0) > EPSILON || (previousExpenses ?? 0) > EPSILON ||
+    (previousData.monthlyCategoryBreakdown || []).length > 0
+  )
+
+  return {
+    income,
+    inflow,
+    expenses,
+    net,
+    positive: net >= 0,
+    hasActivity,
+    previousHasActivity,
+    savingsRate,
+    previousSavingsRate,
+    spendingDelta,
+    biggestCategoryShift: biggestCategoryShift && Math.abs(biggestCategoryShift.delta) > EPSILON
+      ? biggestCategoryShift
+      : null,
+    growthDelta,
+    envelopes,
+    stabilityPct: Math.max(0, Math.min(1, data.stats.stabilityPercentReached)),
+    stabilityTarget: data.setting.targetStabilityFund,
+    topCategories,
+    topMax,
+    paidBillsCount: paidBills.length,
+    paidTotal: paidBills.reduce((sum, bill) => sum + Math.abs(bill.amount), 0),
+    pendingCount: bills.filter(bill => bill.status === 'Pending').length,
+    discardedCount: bills.filter(bill => bill.status === 'Discarded').length,
+    billsCount: bills.length,
+    purchasedThisCycle,
+    purchasedTotal: purchasedThisCycle.reduce((sum, item) => sum + item.price, 0),
+    cycleLabel: data.cycleLabel,
+  }
+}
 
 export function CycleSummaryModal({
   isOpen,
   onClose,
   data,
+  previousData,
+  isLoading,
+  loadError,
   wishlist,
   monthIndex,
   year,
@@ -45,291 +154,202 @@ export function CycleSummaryModal({
   onViewLedger,
 }: CycleSummaryModalProps) {
   const { formatSensitive } = useAppContext()
-
-  const summary = useMemo(() => {
-    if (!data) return null
-
-    const income = data.stats.monthlyIncome
-    const inflow = data.stats.monthlyInflow
-    const expenses = data.stats.monthlyExpenses
-    const net = inflow - expenses
-
-    // Growth-balance trajectory vs the prior cycle, taken from the trend series (the last point is
-    // this cycle, the one before it is the previous cycle). Only shown when both points exist.
-    const trend = data.trendPoints || []
-    const growthNow = trend.length >= 1 ? trend[trend.length - 1].balance : null
-    const growthPrev = trend.length >= 2 ? trend[trend.length - 2].balance : null
-    const growthDelta = growthNow !== null && growthPrev !== null ? growthNow - growthPrev : null
-
-    const envelopes = ENVELOPES.map(name => {
-      const cat = data.categories.find(c => c.name === name)
-      const budget = cat?.budget ?? 0
-      const target = cat?.target ?? 0
-      const netChange = cat?.netChange ?? 0
-      const remaining = cat?.remaining ?? 0
-      const spent = netChange < 0 ? -netChange : 0
-      const available = budget + target
-      return { name, budget, target, netChange, remaining, spent, available, overspent: remaining < -0.005 }
-    })
-
-    const stabilityPct = Math.max(0, Math.min(1, data.stats.stabilityPercentReached))
-
-    const topCategories = (data.monthlyCategoryBreakdown || [])
-      .filter(c => c.amount > 0)
-      .slice(0, 5)
-    const topMax = topCategories.reduce((max, c) => Math.max(max, c.amount), 0)
-
-    const bills = data.activeRecurringPayments || []
-    const paidBills = bills.filter(b => b.status === 'Paid')
-    const paidTotal = paidBills.reduce((sum, b) => sum + Math.abs(b.amount), 0)
-    const pendingCount = bills.filter(b => b.status === 'Pending').length
-    const discardedCount = bills.filter(b => b.status === 'Discarded').length
-
-    // Wishlist items purchased within this cycle's date range.
-    const { start, end } = getCycleRangeDates(year, monthIndex, cycleDay)
-    const purchasedThisCycle = (wishlist || []).filter(item => {
-      if (!item.isPurchased || !item.purchasedAt) return false
-      const at = new Date(item.purchasedAt)
-      return at >= start && at <= end
-    })
-    const purchasedTotal = purchasedThisCycle.reduce((sum, item) => sum + item.price, 0)
-
-    return {
-      income,
-      inflow,
-      expenses,
-      net,
-      positive: net >= 0,
-      growthDelta,
-      envelopes,
-      stabilityPct,
-      stabilityTarget: data.setting.targetStabilityFund,
-      topCategories,
-      topMax,
-      paidBillsCount: paidBills.length,
-      paidTotal,
-      pendingCount,
-      discardedCount,
-      purchasedThisCycle,
-      purchasedTotal,
-      cycleLabel: data.cycleLabel,
-    }
-  }, [data, wishlist, monthIndex, year, cycleDay])
+  const summary = useMemo(
+    () => data ? buildCycleSummary(data, previousData, wishlist, year, monthIndex, cycleDay) : null,
+    [data, previousData, wishlist, year, monthIndex, cycleDay],
+  )
 
   return (
     <BottomSheet
       isOpen={isOpen}
       onClose={onClose}
-      maxWidthClassName="max-w-2xl"
-      ariaLabel="End of cycle summary"
+      maxWidthClassName="max-w-3xl"
+      ariaLabel="Cycle summary"
       title={
-        <div className="flex items-center gap-2">
-          <Sparkles className="size-4 text-violet-500" />
-          <div className="flex flex-col">
-            <span className="text-base font-bold text-foreground">
-              {variant === 'auto' ? 'Your cycle just wrapped up' : 'Cycle summary'}
-            </span>
-            {summary && <span className="text-[11px] font-medium text-muted-foreground">{summary.cycleLabel}</span>}
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
+            <ChartNoAxesCombined className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <div className="truncate text-sm font-bold text-foreground sm:text-base">
+              {variant === 'auto' ? 'Your cycle wrapped up' : 'Cycle summary'}
+            </div>
+            {summary && <div className="truncate text-[11px] font-medium text-muted-foreground">{summary.cycleLabel}</div>}
           </div>
         </div>
       }
       footer={
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
-          {onViewLedger && (
-            <button
-              onClick={onViewLedger}
-              className="w-full sm:w-auto rounded-xl border border-border/60 bg-muted/40 px-4 py-2 text-xs font-bold text-foreground transition hover:bg-muted/70 cursor-pointer"
-            >
-              View full ledger
+        <div className="flex gap-2 sm:justify-end">
+          {onViewLedger && summary?.hasActivity && (
+            <button onClick={onViewLedger} className="flex-1 rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-xs font-bold text-foreground transition hover:bg-muted/70 sm:flex-none">
+              View ledger
             </button>
           )}
-          <button
-            onClick={onClose}
-            className="w-full sm:w-auto rounded-xl bg-foreground px-4 py-2 text-xs font-bold text-background shadow-sm transition hover:bg-foreground/90 cursor-pointer"
-          >
+          <button onClick={onClose} className="flex-1 rounded-lg bg-foreground px-4 py-2 text-xs font-bold text-background transition hover:bg-foreground/90 sm:flex-none">
             {variant === 'auto' ? 'Got it' : 'Close'}
           </button>
         </div>
       }
     >
-      {!summary ? (
-        <div className="flex min-h-56 items-center justify-center p-8 text-center text-xs text-muted-foreground">
-          No data for this cycle yet.
+      {isLoading ? (
+        <div className="flex min-h-64 flex-col items-center justify-center gap-3 p-8 text-center text-xs text-muted-foreground">
+          <LoaderCircle className="size-5 animate-spin text-blue-500" />
+          Loading cycle summary…
+        </div>
+      ) : !summary ? (
+        <div className="flex min-h-64 flex-col items-center justify-center px-6 py-10 text-center">
+          <span className="flex size-12 items-center justify-center rounded-2xl bg-orange-500/10 text-orange-500">
+            <FileBarChart className="size-6" />
+          </span>
+          <h3 className="mt-4 text-sm font-bold text-foreground">Summary unavailable</h3>
+          <p className="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">
+            {loadError || 'Could not load this cycle. Please close the summary and try again.'}
+          </p>
+        </div>
+      ) : !summary.hasActivity ? (
+        <div className="flex min-h-64 flex-col items-center justify-center px-6 py-10 text-center">
+          <span className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+            <FileBarChart className="size-6" />
+          </span>
+          <h3 className="mt-4 text-sm font-bold text-foreground">No activity recorded</h3>
+          <p className="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">
+            This cycle has no inflows, expenses, paid bills, or wishlist purchases to summarize.
+          </p>
         </div>
       ) : (
-        <div className="space-y-5">
-          {/* Hero: net result for the cycle */}
-          <div
-            className={`rounded-2xl border p-5 text-center ${
-              summary.positive
-                ? 'border-emerald-500/20 bg-emerald-500/5'
-                : 'border-orange-500/20 bg-orange-500/5'
-            }`}
-          >
-            <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-              {summary.positive ? (
-                <TrendingUp className="size-3.5 text-emerald-500" />
-              ) : (
-                <TrendingDown className="size-3.5 text-orange-500" />
-              )}
-              {summary.positive ? 'You came out ahead' : 'You spent more than you took in'}
+        <div className="space-y-4 sm:space-y-5">
+          <div className="grid gap-3 sm:grid-cols-[1.25fr_1fr]">
+            <div className={`rounded-2xl border p-4 sm:p-5 ${summary.positive ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-orange-500/20 bg-orange-500/5'}`}>
+              <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                {summary.positive ? <TrendingUp className="size-3.5 text-emerald-500" /> : <TrendingDown className="size-3.5 text-orange-500" />}
+                Net cash flow
+              </div>
+              <div className={`mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl ${summary.positive ? 'text-emerald-500' : 'text-orange-500'}`}>
+                {summary.net < 0 ? '−' : '+'}{formatSensitive(Math.abs(summary.net))}
+              </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                {summary.positive ? 'More came in than went out.' : 'More went out than came in.'}
+              </p>
             </div>
-            <div
-              className={`mt-1.5 text-3xl font-extrabold tracking-tight ${
-                summary.positive ? 'text-emerald-500' : 'text-orange-500'
-              }`}
-            >
-              {formatSensitive(Math.abs(summary.net))}
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-1">
+              <StatTile icon={<ArrowDownRight className="size-3.5 text-emerald-500" />} label="In" value={formatSensitive(summary.inflow)} />
+              <StatTile icon={<ArrowUpRight className="size-3.5 text-orange-500" />} label="Out" value={formatSensitive(summary.expenses)} />
+              <StatTile icon={<Wallet className="size-3.5 text-blue-500" />} label="Income" value={formatSensitive(summary.income)} />
             </div>
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              {summary.positive ? 'net saved this cycle' : 'net overspend this cycle'}
-            </p>
           </div>
 
-          {/* Cash flow tiles */}
-          <div className="grid grid-cols-3 gap-2">
-            <StatTile
-              icon={<ArrowDownRight className="size-3.5 text-emerald-500" />}
-              label="In"
-              value={formatSensitive(summary.inflow)}
-            />
-            <StatTile
-              icon={<ArrowUpRight className="size-3.5 text-orange-500" />}
-              label="Out"
-              value={formatSensitive(summary.expenses)}
-            />
-            <StatTile
-              icon={<Wallet className="size-3.5 text-blue-500" />}
-              label="Income"
-              value={formatSensitive(summary.income)}
-            />
-          </div>
-
-          {summary.growthDelta !== null && (
-            <div className="flex items-center justify-between rounded-xl border border-border/50 bg-muted/30 px-4 py-2.5">
-              <span className="text-xs font-semibold text-foreground">Growth balance vs last cycle</span>
-              <span
-                className={`flex items-center gap-1 text-xs font-bold ${
-                  summary.growthDelta >= 0 ? 'text-emerald-500' : 'text-orange-500'
-                }`}
-              >
-                {summary.growthDelta >= 0 ? <TrendingUp className="size-3.5" /> : <TrendingDown className="size-3.5" />}
-                {summary.growthDelta >= 0 ? '+' : '-'}
-                {formatSensitive(Math.abs(summary.growthDelta))}
-              </span>
-            </div>
+          {summary.previousHasActivity && (
+            <Section title="Compared with previous cycle" icon={<Lightbulb className="size-3.5" />}>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {summary.spendingDelta !== null && (
+                  <InsightCard
+                    title={summary.spendingDelta <= 0 ? 'Spending fell' : 'Spending rose'}
+                    value={`${summary.spendingDelta <= 0 ? '−' : '+'}${formatSensitive(Math.abs(summary.spendingDelta))}`}
+                    tone={summary.spendingDelta <= 0 ? 'good' : 'warn'}
+                    detail="versus the previous cycle"
+                  />
+                )}
+                {summary.savingsRate !== null && (
+                  <InsightCard
+                    title="Savings rate"
+                    value={signedPercent(summary.savingsRate)}
+                    tone={summary.savingsRate >= 0 ? 'good' : 'warn'}
+                    detail={summary.previousSavingsRate === null ? 'of cycle inflow' : `${signedPercent(summary.savingsRate - summary.previousSavingsRate)} pts vs previous`}
+                  />
+                )}
+                {summary.biggestCategoryShift && (
+                  <InsightCard
+                    title={`Largest shift: ${summary.biggestCategoryShift.category}`}
+                    value={`${summary.biggestCategoryShift.delta < 0 ? '−' : '+'}${formatSensitive(Math.abs(summary.biggestCategoryShift.delta))}`}
+                    tone={summary.biggestCategoryShift.delta <= 0 ? 'good' : 'warn'}
+                    detail="change in category spending"
+                  />
+                )}
+                {summary.growthDelta !== null && (
+                  <InsightCard
+                    title="Growth balance"
+                    value={`${summary.growthDelta < 0 ? '−' : '+'}${formatSensitive(Math.abs(summary.growthDelta))}`}
+                    tone={summary.growthDelta >= 0 ? 'good' : 'warn'}
+                    detail="change from previous ending balance"
+                  />
+                )}
+              </div>
+            </Section>
           )}
 
-          {/* Budget envelopes */}
-          <Section title="Budget envelopes">
-            <div className="space-y-2">
-              {summary.envelopes.map(env => (
-                <div key={env.name} className="rounded-xl border border-border/50 bg-muted/20 p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-foreground">{env.name}</span>
-                    <span
-                      className={`text-xs font-bold ${env.overspent ? 'text-orange-500' : 'text-foreground'}`}
-                    >
-                      {formatSensitive(env.remaining)}
-                      <span className="ml-1 text-[10px] font-medium text-muted-foreground">left</span>
+          <Section title="Envelope activity" icon={<CircleDollarSign className="size-3.5" />}>
+            <p className="-mt-1 mb-2 text-[10px] leading-relaxed text-muted-foreground">
+              Balances carry across cycles. “Spent” is this cycle’s actual outflow and excludes envelope transfers.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {summary.envelopes.map(envelope => (
+                <div key={envelope.name} className="rounded-xl border border-border/50 bg-muted/20 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs font-bold text-foreground">{envelope.name}</span>
+                    <span className={`text-xs font-bold ${envelope.overspent ? 'text-orange-500' : 'text-foreground'}`}>
+                      {formatSensitive(envelope.spent)} spent
                     </span>
                   </div>
                   <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
-                    <span>Spent {formatSensitive(env.spent)}</span>
-                    {env.overspent && (
-                      <span className="font-bold text-orange-500">Over budget</span>
-                    )}
+                    <span>Ending balance</span>
+                    <span className={envelope.overspent ? 'font-bold text-orange-500' : ''}>{formatSensitive(envelope.remaining)}</span>
                   </div>
                 </div>
               ))}
             </div>
           </Section>
 
-          {/* Stability fund progress */}
-          {summary.stabilityTarget > 0 && (
-            <Section title="Stability fund">
-              <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="flex items-center gap-1.5 font-semibold text-foreground">
-                    <PiggyBank className="size-3.5 text-cyan-500" />
-                    Target reached
-                  </span>
-                  <span className="font-bold text-foreground">{Math.round(summary.stabilityPct * 100)}%</span>
-                </div>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-cyan-500 transition-all"
-                    style={{ width: `${Math.min(100, summary.stabilityPct * 100)}%` }}
-                  />
-                </div>
-              </div>
-            </Section>
-          )}
-
-          {/* Top spending categories */}
-          {summary.topCategories.length > 0 && (
-            <Section title="Where it went">
-              <div className="space-y-1.5">
-                {summary.topCategories.map(cat => (
-                  <div key={cat.category} className="flex items-center gap-2">
-                    <span
-                      className={`inline-block shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-bold ${getCategoryBadgeClass(cat.category)}`}
-                    >
-                      {cat.category}
-                    </span>
-                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-foreground/40"
-                        style={{ width: `${summary.topMax > 0 ? (cat.amount / summary.topMax) * 100 : 0}%` }}
-                      />
-                    </div>
-                    <span className="shrink-0 text-[11px] font-bold text-foreground">
-                      {formatSensitive(cat.amount)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </Section>
-          )}
-
-          {/* Bills */}
-          <Section title="Bills this cycle">
-            <div className="flex items-center justify-between rounded-xl border border-border/50 bg-muted/20 p-3">
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                <Receipt className="size-3.5 text-amber-500" />
-                {summary.paidBillsCount} paid
-                {summary.pendingCount > 0 && (
-                  <span className="text-muted-foreground">· {summary.pendingCount} pending</span>
-                )}
-                {summary.discardedCount > 0 && (
-                  <span className="text-muted-foreground">· {summary.discardedCount} skipped</span>
-                )}
-              </span>
-              <span className="text-xs font-bold text-foreground">{formatSensitive(summary.paidTotal)}</span>
-            </div>
-          </Section>
-
-          {/* Wishlist purchases */}
-          {summary.purchasedThisCycle.length > 0 && (
-            <Section title="Wishlist purchases">
-              <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                    <ShoppingBag className="size-3.5 text-pink-500" />
-                    {summary.purchasedThisCycle.length} item{summary.purchasedThisCycle.length === 1 ? '' : 's'}
-                  </span>
-                  <span className="text-xs font-bold text-foreground">{formatSensitive(summary.purchasedTotal)}</span>
-                </div>
-                <div className="space-y-1">
-                  {summary.purchasedThisCycle.map(item => (
-                    <div key={item.id} className="flex items-center justify-between text-[11px]">
-                      <span className="truncate text-muted-foreground">{item.name}</span>
-                      <span className="shrink-0 font-semibold text-foreground">{formatSensitive(item.price)}</span>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {summary.topCategories.length > 0 && (
+              <Section title="Where it went">
+                <div className="space-y-2 rounded-xl border border-border/50 bg-muted/20 p-3">
+                  {summary.topCategories.map(category => (
+                    <div key={category.category} className="flex items-center gap-2">
+                      <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-bold ${getCategoryBadgeClass(category.category)}`}>{category.category}</span>
+                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                        <div className="h-full rounded-full bg-foreground/40" style={{ width: `${summary.topMax > 0 ? (category.amount / summary.topMax) * 100 : 0}%` }} />
+                      </div>
+                      <span className="shrink-0 text-[11px] font-bold text-foreground">{formatSensitive(category.amount)}</span>
                     </div>
                   ))}
                 </div>
-              </div>
-            </Section>
+              </Section>
+            )}
+
+            {summary.stabilityTarget > 0 && (
+              <Section title="Stability fund">
+                <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="flex items-center gap-1.5 font-semibold text-foreground"><ShieldCheck className="size-3.5 text-cyan-500" />Funded toward target</span>
+                    <span className="font-bold text-foreground">{Math.round(summary.stabilityPct * 100)}%</span>
+                  </div>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-cyan-500" style={{ width: `${summary.stabilityPct * 100}%` }} /></div>
+                </div>
+              </Section>
+            )}
+          </div>
+
+          {(summary.billsCount > 0 || summary.purchasedThisCycle.length > 0) && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {summary.billsCount > 0 && (
+                <Section title="Bills">
+                  <div className="flex items-center justify-between gap-3 rounded-xl border border-border/50 bg-muted/20 p-3">
+                    <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-foreground"><Receipt className="size-3.5 shrink-0 text-amber-500" />{summary.paidBillsCount} paid · {summary.pendingCount} pending{summary.discardedCount > 0 ? ` · ${summary.discardedCount} skipped` : ''}</span>
+                    <span className="shrink-0 text-xs font-bold text-foreground">{formatSensitive(summary.paidTotal)}</span>
+                  </div>
+                </Section>
+              )}
+              {summary.purchasedThisCycle.length > 0 && (
+                <Section title="Wishlist purchases">
+                  <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
+                    <div className="mb-2 flex items-center justify-between text-xs"><span className="flex items-center gap-1.5 font-semibold text-foreground"><Gift className="size-3.5 text-pink-500" />{summary.purchasedThisCycle.length} purchased</span><span className="font-bold text-foreground">{formatSensitive(summary.purchasedTotal)}</span></div>
+                    <div className="space-y-1.5">
+                      {summary.purchasedThisCycle.map(item => <div key={item.id} className="flex items-center justify-between gap-3 text-[11px]"><span className="truncate text-muted-foreground">{item.name}</span><span className="shrink-0 font-semibold text-foreground">{formatSensitive(item.price)}</span></div>)}
+                    </div>
+                  </div>
+                </Section>
+              )}
+            </div>
           )}
         </div>
       )}
@@ -338,22 +358,13 @@ export function CycleSummaryModal({
 }
 
 function StatTile({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
-  return (
-    <div className="rounded-xl border border-border/50 bg-muted/20 p-3 text-center">
-      <div className="flex items-center justify-center gap-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-        {icon}
-        {label}
-      </div>
-      <div className="mt-1 text-sm font-bold text-foreground">{value}</div>
-    </div>
-  )
+  return <div className="flex min-w-0 flex-col items-center justify-center rounded-xl border border-border/50 bg-muted/20 px-2 py-2.5 sm:flex-row sm:justify-between sm:px-3"><div className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide text-muted-foreground sm:text-[10px]">{icon}{label}</div><div className="mt-1 max-w-full truncate text-xs font-bold text-foreground sm:mt-0 sm:text-sm">{value}</div></div>
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div>
-      <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{title}</h3>
-      {children}
-    </div>
-  )
+function InsightCard({ title, value, detail, tone }: { title: string; value: ReactNode; detail: string; tone: 'good' | 'warn' }) {
+  return <div className="rounded-xl border border-border/50 bg-muted/20 p-3"><div className="flex items-start justify-between gap-2"><span className="text-[11px] font-semibold text-foreground">{title}</span><span className={`shrink-0 text-xs font-bold ${tone === 'good' ? 'text-emerald-500' : 'text-orange-500'}`}>{value}</span></div><p className="mt-1 text-[10px] text-muted-foreground">{detail}</p></div>
+}
+
+function Section({ title, icon, children }: { title: string; icon?: ReactNode; children: ReactNode }) {
+  return <section><h3 className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{icon}{title}</h3>{children}</section>
 }

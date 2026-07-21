@@ -1,0 +1,115 @@
+import { describe, expect, it } from 'vitest'
+import type { DashboardData, WishlistItem } from '../types'
+import { buildCycleSummary } from './CycleSummaryModal'
+
+function dashboard(overrides: Partial<DashboardData> = {}): DashboardData {
+  return {
+    setting: {
+      targetStabilityFund: 1000,
+      selectedMonth: 'Jul',
+      selectedYear: 2026,
+      essentialsAlloc: 0.5,
+      growthAlloc: 0.2,
+      stabilityAlloc: 0.1,
+      rewardsAlloc: 0.2,
+      cycleDay: 1,
+      darkMode: false,
+      hideSensitive: false,
+    },
+    cycleLabel: 'Jul 01 ~ Jul 31, 2026',
+    categories: [
+      { name: 'Essentials', allocation: 0.5, target: 500, budget: 0, netChange: 375, spent: 125, remaining: 375 },
+      { name: 'Growth', allocation: 0.2, target: 200, budget: 0, netChange: 160, spent: 40, remaining: 160 },
+      { name: 'Stability', allocation: 0.1, target: 100, budget: 0, netChange: 100, spent: 0, remaining: 100 },
+      { name: 'Rewards', allocation: 0.2, target: 200, budget: 0, netChange: 175, spent: 25, remaining: 175 },
+    ],
+    stats: {
+      totalBalance: 650,
+      monthlyIncome: 1000,
+      monthlyInflow: 1000,
+      monthlyExpenses: 190,
+      activeRecurringTotal: 0,
+      growthPercentAchieved: 0.8,
+      stabilityPercentReached: 0.1,
+      pastThreeMonthsRewardsAverage: 0,
+      hasRewardsHistory: false,
+    },
+    activeRecurringPayments: [],
+    trendPoints: [],
+    last3TrendPoints: [],
+    last6TrendPoints: [],
+    pendingNotifications: [],
+    monthlyCategoryBreakdown: [{ category: 'Food', amount: 125 }, { category: 'Education', amount: 40 }],
+    last3CategoryBreakdown: [],
+    last6CategoryBreakdown: [],
+    yearlyCategoryBreakdown: [],
+    availableYears: [2026],
+    ...overrides,
+  }
+}
+
+function wish(overrides: Partial<WishlistItem> = {}): WishlistItem {
+  return {
+    id: 1,
+    name: 'Headphones',
+    price: 80,
+    priority: 'Medium',
+    isPurchased: true,
+    purchasedAt: '2026-07-15T08:00:00.000Z',
+    createdAt: '2026-06-01T00:00:00.000Z',
+    isActive: false,
+    ...overrides,
+  }
+}
+
+describe('buildCycleSummary', () => {
+  it('uses true envelope outflows instead of treating net change as spending', () => {
+    const summary = buildCycleSummary(dashboard(), null, [], 2026, 7, 1)
+
+    expect(summary.envelopes.map(envelope => [envelope.name, envelope.spent])).toEqual([
+      ['Essentials', 125],
+      ['Growth', 40],
+      ['Stability', 0],
+      ['Rewards', 25],
+    ])
+  })
+
+  it('includes only wishlist items purchased inside the summarized cycle', () => {
+    const summary = buildCycleSummary(
+      dashboard(),
+      null,
+      [wish(), wish({ id: 2, name: 'Old item', purchasedAt: '2026-06-30T08:00:00.000Z' })],
+      2026,
+      7,
+      1,
+    )
+
+    expect(summary.purchasedThisCycle.map(item => item.name)).toEqual(['Headphones'])
+    expect(summary.purchasedTotal).toBe(80)
+  })
+
+  it('derives previous-cycle spending, savings, category, and growth comparisons', () => {
+    const previous = dashboard({
+      categories: dashboard().categories.map(category => category.name === 'Growth' ? { ...category, remaining: 120 } : category),
+      stats: { ...dashboard().stats, monthlyInflow: 900, monthlyIncome: 900, monthlyExpenses: 250 },
+      monthlyCategoryBreakdown: [{ category: 'Food', amount: 200 }, { category: 'Education', amount: 20 }],
+    })
+    const summary = buildCycleSummary(dashboard(), previous, [], 2026, 7, 1)
+
+    expect(summary.spendingDelta).toBe(-60)
+    expect(summary.savingsRate).toBeCloseTo(0.81)
+    expect(summary.previousSavingsRate).toBeCloseTo(650 / 900)
+    expect(summary.biggestCategoryShift).toEqual({ category: 'Food', delta: -75 })
+    expect(summary.growthDelta).toBe(40)
+  })
+
+  it('recognizes a truly empty cycle instead of presenting zero as a positive result', () => {
+    const empty = dashboard({
+      stats: { ...dashboard().stats, monthlyIncome: 0, monthlyInflow: 0, monthlyExpenses: 0 },
+      monthlyCategoryBreakdown: [],
+      activeRecurringPayments: [],
+    })
+
+    expect(buildCycleSummary(empty, null, [], 2026, 7, 1).hasActivity).toBe(false)
+  })
+})

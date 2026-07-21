@@ -1,5 +1,5 @@
 import React from 'react'
-import { BarChart3, Sparkles } from 'lucide-react'
+import { BarChart3, ChartNoAxesCombined } from 'lucide-react'
 import type { DashboardData, Transaction, WishlistItem } from '../types'
 import { useAppContext } from '../contexts/AppContext'
 import { getCycleLabelForDropdown } from '../lib/cycleLabels'
@@ -77,7 +77,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               <p className="mt-1 text-xs text-muted-foreground">Trends, plan performance, and activity for {view.cycleLabel}.</p>
             </div>
           </div>
-          <div className="grid w-full grid-cols-[minmax(0,1fr)_5.5rem] gap-2 sm:grid-cols-[minmax(14rem,1fr)_7rem] lg:w-auto lg:min-w-[22rem]">
+          <div className="grid w-full grid-cols-[minmax(0,1fr)_5.5rem_auto] gap-2 sm:grid-cols-[minmax(14rem,1fr)_7rem_auto] lg:w-auto lg:min-w-[25rem]">
             <CustomSelect
               ariaLabel="Report cycle"
               value={view.activeSettings.selectedMonth}
@@ -100,10 +100,12 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               <button
                 type="button"
                 onClick={() => onViewCycleSummary(selectedMonthIndex, view.activeSettings.selectedYear)}
-                className="col-span-2 flex items-center justify-center gap-1.5 rounded-xl border border-violet-500/20 bg-violet-500/10 px-3 py-2 text-xs font-bold text-violet-500 transition hover:bg-violet-500/20 cursor-pointer"
+                aria-label="View cycle summary"
+                title="View cycle summary"
+                className="flex size-9 self-center items-center justify-center rounded-lg border border-blue-500/20 bg-blue-500/10 text-blue-500 transition hover:bg-blue-500/20 cursor-pointer sm:h-9 sm:w-auto sm:gap-1.5 sm:px-3"
               >
-                <Sparkles className="size-3.5" />
-                View cycle summary
+                <ChartNoAxesCombined className="size-3.5" />
+                <span className="hidden whitespace-nowrap text-xs font-bold sm:inline">Summary</span>
               </button>
             )}
           </div>

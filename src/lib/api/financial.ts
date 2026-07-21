@@ -11,13 +11,19 @@ import type {
 import { deobfuscateAmount, obfuscateAmount } from './amounts'
 import { cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
 
-export function fetchDashboard(month?: string, year?: number, signal?: AbortSignal): Promise<DashboardCore> {
+export function fetchDashboard(
+  month?: string,
+  year?: number,
+  signal?: AbortSignal,
+  persistSelection = true,
+): Promise<DashboardCore> {
   const params = new URLSearchParams()
   if (month) params.append('month', month)
   if (year) params.append('year', year.toString())
+  if (!persistSelection) params.append('persistSelection', 'false')
   const query = params.size ? `?${params}` : ''
 
-  return cachedGet(`dashboard:${month || ''}:${year || ''}`, async () => {
+  return cachedGet(`dashboard:${month || ''}:${year || ''}:${persistSelection}`, async () => {
     const data = await request<WireDashboardData>(`/financial/dashboard${query}`, {
       errorMessage: 'Failed to fetch dashboard data',
     })
@@ -32,6 +38,7 @@ export function fetchDashboard(month?: string, year?: number, signal?: AbortSign
         target: deobfuscateAmount(category.target),
         budget: deobfuscateAmount(category.budget),
         netChange: deobfuscateAmount(category.netChange),
+        spent: deobfuscateAmount(category.spent),
         remaining: deobfuscateAmount(category.remaining),
       })),
       stats: {

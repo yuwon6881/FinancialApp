@@ -820,6 +820,9 @@ function App() {
             isOpen={cycleSummary.isOpen}
             onClose={cycleSummary.onClose}
             data={cycleSummary.data}
+            previousData={cycleSummary.previousData}
+            isLoading={cycleSummary.isLoading}
+            loadError={cycleSummary.loadError}
             wishlist={financial.allWishlist}
             monthIndex={cycleSummary.target.monthIndex}
             year={cycleSummary.target.year}

@@ -63,6 +63,9 @@ export interface CategorySummary {
   target: number
   budget: number
   netChange: number
+  // Actual outflows assigned to this envelope during the selected cycle. Unlike netChange this
+  // excludes allocated income and transfers between envelopes.
+  spent?: number
   remaining: number
 }
 

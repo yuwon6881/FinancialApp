@@ -47,6 +47,18 @@ afterEach(() => {
 })
 
 describe('fetchDashboard request caching', () => {
+  it('can read a summary cycle without persisting it as the selected report period', async () => {
+    const fetchMock = mockDashboardFetch()
+    vi.stubGlobal('fetch', fetchMock)
+    Object.defineProperty(window, 'fetch', { value: fetchMock, configurable: true })
+
+    const api = await import('./api')
+    await api.fetchDashboard('Jun', 2026, undefined, false)
+
+    const [url] = fetchMock.mock.calls[0] as unknown as [string]
+    expect(url).toContain('/financial/dashboard?month=Jun&year=2026&persistSelection=false')
+  })
+
   it('dedupes abortable startup requests onto one shared fetch', async () => {
     const fetchMock = mockDashboardFetch()
     vi.stubGlobal('fetch', fetchMock)

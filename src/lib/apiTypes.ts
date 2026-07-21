@@ -37,10 +37,11 @@ type WireDashboardSetting = Omit<FinancialSetting, 'targetStabilityFund'> & {
   targetStabilityFund: WireAmount
 }
 
-export type WireCategorySummary = Omit<CategorySummary, 'target' | 'budget' | 'netChange' | 'remaining'> & {
+export type WireCategorySummary = Omit<CategorySummary, 'target' | 'budget' | 'netChange' | 'spent' | 'remaining'> & {
   target: WireAmount
   budget: WireAmount
   netChange: WireAmount
+  spent?: WireAmount
   remaining: WireAmount
 }
 
