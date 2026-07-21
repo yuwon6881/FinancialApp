@@ -897,16 +897,17 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     })
   }
 
-  const handlePurchaseWishlistItem = (id: number) => {
+  const handlePurchaseWishlistItem = (id: number, customDate?: string) => {
     if (!guardSensitive()) return
     const item = allWishlist.find(w => String(w.id) === String(id))
     const now = new Date()
-    const date = now.toLocaleDateString('en-CA')
+    const date = customDate || now.toLocaleDateString('en-CA')
+    const postedAt = customDate ? `${customDate}T12:00:00.000Z` : now.toISOString()
     mutateQueue(prev => enqueue(prev, 'wishlistItem', 'purchase', String(id), item ? {
       name: item.name,
       price: item.price,
       date,
-      postedAt: now.toISOString()
+      postedAt
     } : undefined))
   }
 

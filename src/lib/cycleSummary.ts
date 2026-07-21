@@ -1,4 +1,4 @@
-import type { DashboardData, WishlistItem } from '../types'
+import type { DashboardData, Transaction, WishlistItem } from '../types'
 import { getCycleRangeDates } from './cycle'
 
 const ENVELOPES = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const
@@ -21,6 +21,7 @@ export function buildCycleSummary(
   year: number,
   monthIndex: number,
   cycleDay: number,
+  transactions?: Transaction[],
 ) {
   const income = data.stats.monthlyIncome
   const inflow = data.stats.monthlyInflow
@@ -45,8 +46,11 @@ export function buildCycleSummary(
   const paidBills = bills.filter(bill => bill.status === 'Paid')
   const { start, end } = getCycleRangeDates(year, monthIndex, cycleDay)
   const purchasedThisCycle = wishlist.filter(item => {
-    if (!item.isPurchased || !item.purchasedAt) return false
-    const purchasedAt = new Date(item.purchasedAt)
+    if (!item.isPurchased) return false
+    const linkedTx = transactions?.find(t => t.wishlistItemId === item.id || (item.purchaseTransactionId && String(t.id) === String(item.purchaseTransactionId)))
+    const rawDate = linkedTx?.date || item.purchasedAt
+    if (!rawDate) return false
+    const purchasedAt = new Date(rawDate)
     return !Number.isNaN(purchasedAt.getTime()) && purchasedAt >= start && purchasedAt <= end
   })
 

@@ -20,6 +20,7 @@ interface TestItem {
   ledgerCategory?: string
   amount?: number
   wishlistItemId?: number
+  recurringPaymentId?: string | null
   active?: boolean
   isPurchased?: boolean
   purchasedAt?: string

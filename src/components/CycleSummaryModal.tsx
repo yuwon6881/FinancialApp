@@ -11,7 +11,7 @@ import {
   TrendingUp,
   Zap,
 } from 'lucide-react'
-import type { DashboardData, WishlistItem } from '../types'
+import type { DashboardData, Transaction, WishlistItem } from '../types'
 import { useAppContext } from '../contexts/AppContext'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { buildCycleSummary, formatRate } from '../lib/cycleSummary'
@@ -25,6 +25,7 @@ interface CycleSummaryModalProps {
   isLoading: boolean
   loadError: string | null
   wishlist: WishlistItem[]
+  transactions?: Transaction[]
   monthIndex: number
   year: number
   cycleDay: number
@@ -40,6 +41,7 @@ export function CycleSummaryModal({
   isLoading,
   loadError,
   wishlist,
+  transactions,
   monthIndex,
   year,
   cycleDay,
@@ -48,8 +50,8 @@ export function CycleSummaryModal({
 }: CycleSummaryModalProps) {
   const { formatSensitive } = useAppContext()
   const summary = useMemo(
-    () => data ? buildCycleSummary(data, previousData, wishlist, year, monthIndex, cycleDay) : null,
-    [data, previousData, wishlist, year, monthIndex, cycleDay],
+    () => data ? buildCycleSummary(data, previousData, wishlist, year, monthIndex, cycleDay, transactions) : null,
+    [data, previousData, wishlist, year, monthIndex, cycleDay, transactions],
   )
 
   return (

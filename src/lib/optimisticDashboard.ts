@@ -110,5 +110,36 @@ export function computeOptimisticDashboard(
     }
   })
 
+  const wishlistPurchaseOps = activeOps.filter(o => o.entity === 'wishlistItem' && (o.type === 'purchase' || o.type === 'unpurchase'))
+  wishlistPurchaseOps.forEach(op => {
+    if (op.type === 'purchase' && op.payload) {
+      const price = Number(op.payload.price || 0)
+      if (price > 0) {
+        const amount = -price
+        data.stats.totalBalance += amount
+        data.stats.monthlyExpenses += price
+        const rewardsCat = data.categories.find(c => c.name.toLowerCase() === 'rewards')
+        if (rewardsCat) {
+          rewardsCat.netChange += amount
+          rewardsCat.remaining += amount
+        }
+      }
+    } else if (op.type === 'unpurchase' && op.payload) {
+      const origTx = transactions.find(t => String(t.id) === String(op.payload?.purchaseTransactionId))
+      if (origTx) {
+        const amount = origTx.amount
+        data.stats.totalBalance -= amount
+        if (amount < 0) {
+          data.stats.monthlyExpenses -= Math.abs(amount)
+        }
+        const rewardsCat = data.categories.find(c => c.name.toLowerCase() === 'rewards')
+        if (rewardsCat) {
+          rewardsCat.netChange -= amount
+          rewardsCat.remaining -= amount
+        }
+      }
+    }
+  })
+
   return data
 }

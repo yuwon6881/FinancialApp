@@ -433,7 +433,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         result[existingIndex] = {
           ...item,
           isPurchased: true,
-          purchasedAt: op.payload?.purchasedAt || new Date().toISOString(),
+          purchasedAt: op.payload?.postedAt || op.payload?.date || op.payload?.purchasedAt || new Date().toISOString(),
           purchaseTransactionId: op.payload?.purchaseTransactionId ?? item.purchaseTransactionId ?? null,
           isPendingSync: !op.isCompleted
         }
@@ -469,7 +469,7 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
   'wishlistItem:add': (op) => api.addWishlistItem(op.payload as Partial<WishlistItem>, op.id),
   'wishlistItem:update': (op) => api.updateWishlistItem(Number(op.targetId), op.payload as unknown as WishlistItem),
   'wishlistItem:delete': (op) => api.deleteWishlistItem(Number(op.targetId)),
-  'wishlistItem:purchase': (op) => api.purchaseWishlistItem(Number(op.targetId)),
+  'wishlistItem:purchase': (op) => api.purchaseWishlistItem(Number(op.targetId), typeof op.payload?.date === 'string' ? op.payload.date : undefined),
   'wishlistItem:unpurchase': (op) => api.unpurchaseWishlistItem(Number(op.targetId)),
 
   'category:add': (op) => api.addCategory({ ...(op.payload as Partial<TransactionCategory>), id: op.targetId } as Omit<TransactionCategory, 'id'> & { id?: string }),

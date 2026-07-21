@@ -753,6 +753,7 @@ function App() {
                     {prefs.activeTab === 'wishlist' && (
                       <WishlistView 
                         wishlist={financial.allWishlist}
+                        transactions={financial.allTransactions}
                         rewardsBalance={wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')?.remaining ?? 0}
                         rewardsTarget={wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')?.target ?? 400}
                         pastThreeMonthsRewardsAverage={wishlistDashboardData?.stats?.pastThreeMonthsRewardsAverage ?? 0}
@@ -824,6 +825,7 @@ function App() {
             isLoading={cycleSummary.isLoading}
             loadError={cycleSummary.loadError}
             wishlist={financial.allWishlist}
+            transactions={financial.allTransactions}
             monthIndex={cycleSummary.target.monthIndex}
             year={cycleSummary.target.year}
             cycleDay={cycleSummary.cycleDay}

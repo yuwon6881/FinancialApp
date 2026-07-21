@@ -142,7 +142,7 @@ const TopNav: React.FC<TopNavProps> = ({
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
         <div className="h-[2.5px] w-full bg-gradient-to-r from-blue-500 via-teal-500 via-amber-500 to-pink-500" />
-        <div className="container mx-auto flex h-16 items-center px-4">
+        <div className="mx-auto flex h-16 w-full max-w-[1440px] items-center px-4 sm:px-6 lg:px-8">
         
         {/* Left Side (Logo and Brand) */}
         <div className="flex-1 flex items-center justify-start min-w-max">

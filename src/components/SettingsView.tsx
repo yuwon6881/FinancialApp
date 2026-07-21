@@ -128,7 +128,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       </div>
 
       {activeTab === 'financial-model' && (
-        <div id="settings-panel-financial-model" role="tabpanel" aria-labelledby="settings-tab-financial-model" className="w-full animate-in fade-in duration-200">
+        <div id="settings-panel-financial-model" role="tabpanel" aria-labelledby="settings-tab-financial-model" className="w-full max-w-4xl mx-auto animate-in fade-in duration-200">
           <form noValidate onSubmit={view.handleSaveSettings} className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-5">
             <div className="flex items-center justify-between gap-3 border-b border-border/40 pb-3">
               <div>

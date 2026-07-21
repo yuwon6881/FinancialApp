@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { listContainerVariants, listItemVariants } from '../lib/animations'
-import type { WishlistItem } from '../types'
+import type { WishlistItem, Transaction } from '../types'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { BottomSheet } from './ui/BottomSheet'
+import { DatePicker } from './ui/DatePicker'
 import { CycleSkeleton } from './ui/Skeleton'
 import { Card } from './ui/Card'
 import { RowSyncStatus } from './ui/RowSyncBadge'
@@ -38,6 +39,7 @@ const activateOnKeyboard = (event: React.KeyboardEvent, action: () => void) => {
 
 interface WishlistViewProps {
   wishlist: WishlistItem[]
+  transactions?: Transaction[]
   rewardsBalance: number
   rewardsTarget: number
   pastThreeMonthsRewardsAverage: number
@@ -47,7 +49,7 @@ interface WishlistViewProps {
   onAddItem: (item: Partial<WishlistItem>) => Promise<void> | void
   onUpdateItem: (id: number, item: WishlistItem) => Promise<void> | void
   onDeleteItem: (id: number) => Promise<void> | void
-  onPurchaseItem: (id: number) => Promise<void> | void
+  onPurchaseItem: (id: number, customDate?: string) => Promise<void> | void
   formatSensitive?: (val: number) => React.ReactNode
   autoOpenAddModal?: boolean
   onResetAutoOpen?: () => void
@@ -73,6 +75,7 @@ interface WishlistViewProps {
 
 export const WishlistView: React.FC<WishlistViewProps> = ({
   wishlist,
+  transactions,
   rewardsBalance,
   rewardsTarget,
   pastThreeMonthsRewardsAverage,
@@ -103,6 +106,20 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   const activeSyncId = activeSyncIdProp ?? app.activeSyncId
   const deletingId = deletingIdProp ?? app.deletingId
   const { isSyncing: isItemSyncing, isDeleting: isItemDeleting } = useSyncStatus(wishlist, activeSyncId, deletingId)
+
+  const [purchasingItem, setPurchasingItem] = React.useState<WishlistItem | null>(null)
+  const [purchaseDateInput, setPurchaseDateInput] = React.useState<string>(new Date().toLocaleDateString('en-CA'))
+
+  const handleOpenClaimModal = (item: WishlistItem) => {
+    setPurchaseDateInput(new Date().toLocaleDateString('en-CA'))
+    setPurchasingItem(item)
+  }
+
+  const handleConfirmPurchase = () => {
+    if (!purchasingItem) return
+    void onPurchaseItem(purchasingItem.id, purchaseDateInput)
+    setPurchasingItem(null)
+  }
 
   const {
     showAddModal,
@@ -377,7 +394,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.96 }}
-                      onClick={() => onPurchaseItem(activeItem.id)}
+                      onClick={() => handleOpenClaimModal(activeItem)}
                       disabled={!canAfford}
                       className={`flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-xl transition duration-200 cursor-pointer w-full sm:w-auto ${
                         canAfford
@@ -559,26 +576,71 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
             Milestones unlocked <span className="ml-1 rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] text-blue-500">{purchasedItems.length}</span>
           </h3>
           <div className="divide-y divide-border/30 text-xs font-semibold">
-            {purchasedItems.map(item => (
-              <div key={item.id} className="py-3 flex items-center justify-between text-foreground">
-                <div className="flex items-center gap-2">
-                  <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
-                    <CheckCircle2 className="size-3.5" />
-                  </span>
-                  <div>
-                    <span className="font-bold block">{item.name}</span>
-                    <span className="text-[10px] text-muted-foreground font-normal">
-                      Bought: {item.purchasedAt ? new Date(item.purchasedAt).toLocaleDateString() : 'N/A'}
+            {purchasedItems.map(item => {
+              const linkedTx = transactions?.find(t => t.wishlistItemId === item.id || (item.purchaseTransactionId && String(t.id) === String(item.purchaseTransactionId)))
+              const displayDate = linkedTx?.date || (item.purchasedAt ? new Date(item.purchasedAt).toLocaleDateString() : 'N/A')
+              return (
+                <div key={item.id} className="py-3 flex items-center justify-between text-foreground">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
+                      <CheckCircle2 className="size-3.5" />
                     </span>
+                    <div>
+                      <span className="font-bold block">{item.name}</span>
+                      <span className="text-[10px] text-muted-foreground font-normal">
+                        Bought: {displayDate}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-black text-muted-foreground">{formatSensitive(item.price)}</span>
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className="font-black text-muted-foreground">{formatSensitive(item.price)}</span>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </Card>
+      )}
+
+      {/* Claim Reward Modal */}
+      {purchasingItem && (
+        <BottomSheet
+          isOpen={!!purchasingItem}
+          title="Claim Reward Target"
+          onClose={() => setPurchasingItem(null)}
+          maxWidthClassName="max-w-md"
+        >
+          <div className="space-y-4 py-2">
+            <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-between">
+              <div>
+                <h4 className="font-bold text-sm text-foreground">{purchasingItem.name}</h4>
+                <span className="text-xs text-muted-foreground font-medium">Goal Target</span>
+              </div>
+              <span className="text-lg font-extrabold text-blue-500">{formatSensitive(purchasingItem.price)}</span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold mb-1 text-foreground">Purchased Date</label>
+              <DatePicker
+                value={purchaseDateInput}
+                onChange={setPurchaseDateInput}
+                className="w-full"
+              />
+              <p className="text-[11px] text-muted-foreground mt-1 font-medium">
+                Select the date this reward was acquired. A ledger transaction will be logged on this date.
+              </p>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Button variant="ghost" className="flex-1" onClick={() => setPurchasingItem(null)}>
+                Cancel
+              </Button>
+              <Button variant="primary" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold" onClick={handleConfirmPurchase}>
+                Claim & Log to Ledger
+              </Button>
+            </div>
+          </div>
+        </BottomSheet>
       )}
 
       {/* Add Item Modal */}
