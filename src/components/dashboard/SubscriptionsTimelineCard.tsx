@@ -34,10 +34,11 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
           variants={listContainerVariants}
           className="-mx-1 mt-3 flex-1 min-h-0 space-y-1.5 overflow-x-hidden overflow-y-auto p-1 no-scrollbar"
         >
-          <AnimatePresence>
+          <AnimatePresence mode="popLayout">
           {activeRecurring.map((rp: ActiveRecurringPayment) => (
             <motion.div
               key={rp.id}
+              layout
               variants={listItemVariants}
               exit={listItemExit}
               onClick={() => (onNavigateToRecurring ? onNavigateToRecurring(rp.recurringPaymentId) : onNavigate('recurring'))}

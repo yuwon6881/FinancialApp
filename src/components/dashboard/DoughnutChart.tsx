@@ -84,15 +84,15 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
               <svg role="img" aria-label={chartSummary} className="size-full overflow-visible" viewBox="0 0 200 200">
                 {slices.map((slice, index) => {
                   const isHovered = hoveredSlice === index
+                  const targetPath = getDoughnutPath(100, 100, isHovered ? 96 : 90, isHovered ? 56 : 62, slice.startAngle, slice.endAngle)
                   return (
                     <motion.path
                       key={slice.category}
-                      d={getDoughnutPath(100, 100, isHovered ? 96 : 90, isHovered ? 56 : 62, slice.startAngle, slice.endAngle)}
                       fill={getCategoryChartColor(slice.category)}
                       className="transition-all duration-200 cursor-pointer stroke-card stroke-2 hover:opacity-90"
                       initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ duration: 0.5, delay: index * 0.1, type: 'spring' }}
+                      animate={{ d: targetPath, scale: 1, opacity: 1 }}
+                      transition={{ duration: 0.4, ease: 'easeOut', delay: index * 0.04 }}
                       style={{ transformOrigin: '100px 100px' }}
                       onMouseEnter={() => setHoveredSlice(index)}
                       onMouseLeave={() => setHoveredSlice(null)}
@@ -125,8 +125,9 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
 
             <div role="list" className="w-full min-w-0 grid grid-cols-1 xl:grid-cols-2 gap-x-4 gap-y-0.5 content-start max-h-32 sm:max-h-40 overflow-y-auto no-scrollbar pr-0.5">
               {slices.map((slice, index) => (
-                <button
+                <motion.button
                   key={slice.category}
+                  layout
                   type="button"
                   role="listitem"
                   aria-label={`View ${slice.category} transactions: ${formatSensitive(slice.amount)}, ${(slice.percentage * 100).toFixed(0)}% of outflows for ${rangeLabel}`}
@@ -146,7 +147,7 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
                   <span className="text-foreground/90 font-extrabold shrink-0">
                     {formatSensitive(slice.amount)} ({(slice.percentage * 100).toFixed(0)}%)
                   </span>
-                </button>
+                </motion.button>
               ))}
             </div>
           </div>

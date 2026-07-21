@@ -1,6 +1,6 @@
 import { Clock, Edit2 } from 'lucide-react'
 import type { CategorySummary } from '../../types'
-import { AnimatedNumber } from '../ui/AnimatedNumber'
+import { SensitiveAmount } from '../ui/SensitiveAmount'
 import { getCategoryDotClass } from '../../lib/categoryColors'
 import { SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
 
@@ -59,13 +59,13 @@ export function CarryoverLedgerTable({
                 <div className="text-right font-medium text-foreground">{amount(category.target)}</div>
                 <div className="text-right text-muted-foreground font-medium">{amount(category.budget)}</div>
                 <div className={`text-right font-medium ${category.netChange < 0 ? 'text-orange-500' : category.netChange > 0 ? 'text-blue-500' : ''}`}>
-                  <div>{amountsMasked ? SENSITIVE_AMOUNT_MASK : <>{category.netChange > 0 ? '+' : ''}<AnimatedNumber value={category.netChange} formatFn={formatCurrency} /></>}</div>
+                  <div><SensitiveAmount value={category.netChange} isMasked={amountsMasked} formatFn={(v) => (v > 0 ? '+' : '') + formatCurrency(v)} /></div>
                   {pending > 0 && <div className="text-[10px] text-yellow-500 font-normal flex items-center justify-end gap-1 mt-0.5"><Clock className="size-3" />Pending: -{amount(pending)}</div>}
                 </div>
                 <div className="flex items-center justify-end gap-1.5 text-right">
                   <div className="flex min-w-[96px] flex-col items-end gap-1">
                     <div className={`font-bold ${category.remaining < 0 ? 'text-orange-500' : 'text-foreground'}`}>
-                      {amountsMasked ? SENSITIVE_AMOUNT_MASK : <AnimatedNumber value={category.remaining} formatFn={formatCurrency} />}
+                      <SensitiveAmount value={category.remaining} isMasked={amountsMasked} formatFn={formatCurrency} />
                     </div>
                     {pending > 0 && <div className={`text-[10px] font-semibold ${(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>Projected: {amount(category.remaining - pending)}</div>}
                   </div>
@@ -94,7 +94,7 @@ export function CarryoverLedgerTable({
                 <div>
                   <span className="text-muted-foreground text-[10px] block mb-0.5">Net Change</span>
                   <span className={`font-semibold ${category.netChange < 0 ? 'text-orange-500' : category.netChange > 0 ? 'text-blue-500' : 'text-foreground'}`}>
-                    {amountsMasked ? SENSITIVE_AMOUNT_MASK : <>{category.netChange > 0 ? '+' : ''}<AnimatedNumber value={category.netChange} formatFn={formatCurrency} /></>}
+                    <SensitiveAmount value={category.netChange} isMasked={amountsMasked} formatFn={(v) => (v > 0 ? '+' : '') + formatCurrency(v)} />
                   </span>
                   {pending > 0 && <span className="text-[10px] text-yellow-500 flex items-center gap-1 mt-0.5"><Clock className="size-3" />Pending: -{amount(pending)}</span>}
                 </div>
@@ -102,7 +102,7 @@ export function CarryoverLedgerTable({
                   <span className="text-muted-foreground text-[10px] block mb-0.5">Remaining Balance</span>
                   <div className="flex items-center gap-1.5">
                     <span className={`font-bold ${category.remaining < 0 ? 'text-orange-500' : 'text-foreground'}`}>
-                      {amountsMasked ? SENSITIVE_AMOUNT_MASK : <AnimatedNumber value={category.remaining} formatFn={formatCurrency} />}
+                      <SensitiveAmount value={category.remaining} isMasked={amountsMasked} formatFn={formatCurrency} />
                     </span>
                     {adjustButton(category)}
                   </div>

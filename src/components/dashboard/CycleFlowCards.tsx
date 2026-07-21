@@ -1,7 +1,6 @@
 import React from 'react'
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react'
-import { AnimatedNumber } from '../ui/AnimatedNumber'
-import { SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
+import { SensitiveAmount } from '../ui/SensitiveAmount'
 import { activateOnKeyboard } from './activateOnKeyboard'
 import type { NavigateToLedgerOptions } from './types'
 
@@ -44,7 +43,7 @@ export const CycleFlowCards: React.FC<CycleFlowCardsProps> = ({
           </div>
         </div>
         <div className="text-2xl font-black text-foreground">
-          {hideSensitive ? SENSITIVE_AMOUNT_MASK : <AnimatedNumber value={stats.monthlyInflow} formatFn={formatCurrency} />}
+          <SensitiveAmount value={stats.monthlyInflow} isMasked={hideSensitive} formatFn={formatCurrency} />
         </div>
         <p className="text-[10px] mt-1.5 text-muted-foreground">
           Total Actual Income: <span className="font-semibold text-teal-500">{formatSensitive(stats.monthlyIncome)}</span>
@@ -66,7 +65,7 @@ export const CycleFlowCards: React.FC<CycleFlowCardsProps> = ({
           </div>
         </div>
         <div className="text-2xl font-black text-foreground">
-          {hideSensitive ? SENSITIVE_AMOUNT_MASK : <AnimatedNumber value={stats.monthlyExpenses} formatFn={formatCurrency} />}
+          <SensitiveAmount value={stats.monthlyExpenses} isMasked={hideSensitive} formatFn={formatCurrency} />
         </div>
         <p className="text-[10px] text-muted-foreground mt-1.5">
           Active committed bills: <span className="font-semibold text-orange-500">{formatSensitive(stats.activeRecurringTotal)}</span>/mo

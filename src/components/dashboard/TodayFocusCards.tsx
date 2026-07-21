@@ -2,7 +2,7 @@ import React, { useMemo } from 'react'
 import { CalendarClock, PiggyBank } from 'lucide-react'
 import type { AppTab, WishlistItem } from '../../types'
 import { AnimatedNumber } from '../ui/AnimatedNumber'
-import { SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
+import { SensitiveAmount } from '../ui/SensitiveAmount'
 import { getCycleProgress, MONTH_NAMES } from '../../lib/cycle'
 import { activateOnKeyboard } from './activateOnKeyboard'
 
@@ -107,7 +107,7 @@ export const TodayFocusCards: React.FC<TodayFocusCardsProps> = ({
             />
           </div>
           <p className="text-[10px] text-muted-foreground mt-2 flex justify-between">
-            <span>{hideSensitive ? SENSITIVE_AMOUNT_MASK : <AnimatedNumber value={wishlistGoal.rewardsBalance} formatFn={formatCurrency} />} saved</span>
+            <span><SensitiveAmount value={wishlistGoal.rewardsBalance} isMasked={hideSensitive} formatFn={formatCurrency} /> saved</span>
             <span className="font-semibold text-foreground">{formatSensitive(wishlistGoal.item.price)}</span>
           </p>
         </div>

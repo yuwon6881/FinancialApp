@@ -72,12 +72,37 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
             <>
               <svg ref={svgRef} role="img" aria-label={chartSummary} className="w-full h-[120px] overflow-visible" viewBox="0 0 500 120" preserveAspectRatio="none">
                 <defs><linearGradient id="growthGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" /><stop offset="100%" stopColor="#3b82f6" stopOpacity="0" /></linearGradient></defs>
-                <motion.path d={`M 15,105 L ${polyline} L 485,105 Z`} fill="url(#growthGradient)" initial={{ opacity: 0 }} animate={{ opacity: 1 }} />
-                <motion.polyline key={range} fill="none" stroke="var(--color-chart-line, #4f46e5)" strokeWidth="2.5" points={polyline} strokeLinecap="round" strokeLinejoin="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} />
+                <motion.path
+                  d={`M 15,105 L ${polyline} L 485,105 Z`}
+                  fill="url(#growthGradient)"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1, d: `M 15,105 L ${polyline} L 485,105 Z` }}
+                  transition={{ duration: 0.4, ease: 'easeInOut' }}
+                />
+                <motion.polyline
+                  fill="none"
+                  stroke="var(--color-chart-line, #4f46e5)"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  initial={{ opacity: 0 }}
+                  animate={{ points: polyline, opacity: 1 }}
+                  transition={{ duration: 0.4, ease: 'easeInOut' }}
+                />
               </svg>
-              {points.map((_, index) => {
+              {points.map((point, index) => {
                 const position = chartPosition(points, index)
-                return <span key={index} aria-hidden="true" className="absolute size-1.5 rounded-full bg-blue-500/50" style={{ left: `calc(${position.left}% - 3px)`, top: `calc(${position.top}% - 3px)` }} />
+                return (
+                  <motion.span
+                    key={`${point.month}-${index}`}
+                    layout
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1, left: `calc(${position.left}% - 3px)`, top: `calc(${position.top}% - 3px)` }}
+                    transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+                    aria-hidden="true"
+                    className="absolute size-1.5 rounded-full bg-blue-500/80 shadow-xs"
+                  />
+                )
               })}
               {hoveredIndex !== null && points[hoveredIndex] && (() => {
                 const point = points[hoveredIndex]

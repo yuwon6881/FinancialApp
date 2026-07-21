@@ -1,4 +1,5 @@
 import React from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Loader2, Clock } from 'lucide-react'
 import { resolveRowSyncState, type RowSyncFlags, type RowSyncState } from './rowSyncState'
 
@@ -13,7 +14,11 @@ export interface RowSyncStatusProps extends RowSyncFlags {
  */
 export const RowSyncStatus: React.FC<RowSyncStatusProps> = ({ entityLabel, ...flags }) => {
   const state = resolveRowSyncState(flags)
-  return state ? <RowSyncBadge state={state} entityLabel={entityLabel} /> : null
+  return (
+    <AnimatePresence mode="wait">
+      {state && <RowSyncBadge key={state} state={state} entityLabel={entityLabel} />}
+    </AnimatePresence>
+  )
 }
 
 const STATE_STYLE: Record<RowSyncState, string> = {
@@ -38,12 +43,16 @@ export const RowSyncBadge: React.FC<{ state: RowSyncState; entityLabel: string }
   const Icon = state === 'pending' ? Clock : Loader2
 
   return (
-    <span
+    <motion.span
+      initial={{ opacity: 0, scale: 0.85, y: -2 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.85, y: 2 }}
+      transition={{ duration: 0.18, ease: 'easeOut' }}
       title={title}
-      className={`inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-md border shrink-0 select-none animate-pulse ${STATE_STYLE[state]}`}
+      className={`inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-md border shrink-0 select-none ${STATE_STYLE[state]}`}
     >
       <Icon className={`size-2.5 shrink-0 mr-1 ${state === 'pending' ? '' : 'animate-spin'}`} />
       {STATE_LABEL[state]}
-    </span>
+    </motion.span>
   )
 }

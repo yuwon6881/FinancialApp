@@ -1,8 +1,7 @@
 import React from 'react'
 import { Calendar, Eye, EyeOff, Wallet } from 'lucide-react'
 import { CustomSelect } from '../ui/CustomSelect'
-import { AnimatedNumber } from '../ui/AnimatedNumber'
-import { SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
+import { SensitiveAmount } from '../ui/SensitiveAmount'
 import { getCycleLabelForDropdown, ordinal } from '../../lib/cycleLabels'
 
 interface DashboardHeaderProps {
@@ -69,11 +68,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             <div className="flex shrink-0 items-center justify-between gap-2 sm:justify-end">
               <div className="text-left sm:text-right">
                 <div className="text-xl font-black text-foreground">
-                  {areBalanceAmountsMasked ? (
-                    <span className="font-mono tracking-wide">{SENSITIVE_AMOUNT_MASK}</span>
-                  ) : (
-                    <AnimatedNumber value={walletBalance} formatFn={formatCurrency} />
-                  )}
+                  <SensitiveAmount value={walletBalance} isMasked={areBalanceAmountsMasked} formatFn={formatCurrency} />
                 </div>
                 <p className="mt-0.5 text-[10px] font-semibold text-muted-foreground">
                   {hideSensitive ? 'Sensitive mode active' : hideBalanceAmounts ? 'Hidden on this device' : 'Visible'}
