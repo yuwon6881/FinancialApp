@@ -33,6 +33,7 @@ export interface UseFinancialDataOptions {
   setConfirmModalData: (data: any) => void
   setHideSensitive: (value: boolean) => void
   setDarkMode: (value: boolean) => void
+  notifyOnLogin: boolean
   loadAllAbortRef: React.MutableRefObject<AbortController | null>
   selectedMonth: string
   setSelectedMonth: (month: string) => void
@@ -62,6 +63,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     setConfirmModalData,
     setHideSensitive,
     setDarkMode,
+    notifyOnLogin,
     loadAllAbortRef,
     selectedMonth,
     setSelectedMonth,
@@ -259,21 +261,18 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       const serverDark = dbData.setting.darkMode
       if (serverDark === true || serverDark === false) {
         setDarkMode(serverDark)
-        localStorage.setItem('dark_mode', serverDark.toString())
       } else {
         const osDark = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
           ? window.matchMedia('(prefers-color-scheme: dark)').matches
           : false
         setDarkMode(osDark)
-        localStorage.removeItem('dark_mode')
       }
 
       const serverHideSensitive = dbData.setting.hideSensitive ?? true
       setHideSensitive(serverHideSensitive)
-      localStorage.setItem('hide_sensitive', serverHideSensitive.toString())
 
       if (dbData.pendingNotifications && dbData.pendingNotifications.length > 0 && !hasShownModalThisSession) {
-        if (localStorage.getItem('show_notifications_on_login') !== 'false') {
+        if (notifyOnLogin) {
           setShowLoginModal(true)
         }
         setHasShownModalThisSession(true)
@@ -306,7 +305,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         setIsBackgroundSyncing(false)
       }
     }
-  }, [token, lastUnlockedTimeRef, handleLogout, markSessionLocked, setDarkMode, setHideSensitive, hasShownModalThisSession, setShowLoginModal, loadAllAbortRef, setSelectedMonth, setSelectedYear])
+  }, [token, lastUnlockedTimeRef, handleLogout, markSessionLocked, setDarkMode, setHideSensitive, notifyOnLogin, hasShownModalThisSession, setShowLoginModal, loadAllAbortRef, setSelectedMonth, setSelectedYear])
 
   // Backup outbox/drafts on logout
   const handleLogoutCleanup = useCallback(async (currentOwner: string, createBackup = true) => {
@@ -581,6 +580,20 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
   const handleUpdateHideSensitivePreference = (value: boolean) => {
     mutateQueue(prev => enqueue(prev, 'settings', 'update', 'hideSensitive', { hideSensitive: value }))
+  }
+
+  // Acknowledge (or silently adopt) the end-of-cycle summary for a given cycle key. Patches the
+  // marker into local dashboard state + cache immediately so the once-per-cycle trigger won't
+  // re-fire before the server write round-trips, then queues the durable server update.
+  const handleMarkSummarySeen = (cycleKey: string) => {
+    const patchSetting = (data: DashboardData | null) =>
+      data ? { ...data, setting: { ...data.setting, lastSummaryCycleSeen: cycleKey } } : data
+    setDashboardData(prev => {
+      const next = patchSetting(prev)
+      if (next) setCachedJSON(CACHE_KEYS.dashboardData, next)
+      return next
+    })
+    mutateQueue(prev => enqueue(prev, 'settings', 'update', 'summarySeen', { cycleKey }))
   }
 
   const handleAddCategory = (newCat: Omit<TransactionCategory, 'id'>) => {
@@ -955,6 +968,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     handleUpdateSettings,
     handleUpdateDarkModePreference,
     handleUpdateHideSensitivePreference,
+    handleMarkSummarySeen,
     handleAddCategory,
     handleDeleteCategory,
     requestDeleteCategory,

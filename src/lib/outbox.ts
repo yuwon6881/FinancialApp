@@ -91,6 +91,8 @@ const SUCCESS_TOAST_OVERRIDES: Partial<Record<string, (op: QueuedOp) => ToastCop
     if (op.targetId === 'hideSensitive') {
       return { title: 'Settings synced', message: `Hide sensitive data ${op.payload?.hideSensitive ? 'enabled' : 'disabled'} — synced to server`, tone: 'success' }
     }
+    // Acknowledging an end-of-cycle summary is a silent bookkeeping write — no toast.
+    if (op.targetId === 'summarySeen') return null
     return defaultSyncSuccessToast(op)
   }
 }
@@ -444,6 +446,7 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
   'settings:update': (op) => {
     if (op.targetId === 'darkMode') return api.updateDarkMode(op.payload?.darkMode === true)
     if (op.targetId === 'hideSensitive') return api.updateHideSensitive(op.payload?.hideSensitive === true)
+    if (op.targetId === 'summarySeen') return api.updateSummarySeen(typeof op.payload?.cycleKey === 'string' ? op.payload.cycleKey : null)
     return api.updateSettings(op.payload as unknown as Pick<FinancialSetting, 'targetStabilityFund' | 'essentialsAlloc' | 'growthAlloc' | 'stabilityAlloc' | 'rewardsAlloc' | 'cycleDay'> & Partial<FinancialSetting>)
   }
 }

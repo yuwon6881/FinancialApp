@@ -33,6 +33,7 @@ const FailedSyncModal = lazy(() => import('./components/FailedSyncModal').then(m
 const PasswordPromptModal = lazy(() => import('./components/PasswordPromptModal').then(m => ({ default: m.PasswordPromptModal })))
 const LockScreen = lazy(() => import('./components/LockScreen').then(m => ({ default: m.LockScreen })))
 const AiAssistantPanel = lazy(() => import('./components/AiAssistantPanel').then(m => ({ default: m.AiAssistantPanel })))
+const CycleSummaryModal = lazy(() => import('./components/CycleSummaryModal').then(m => ({ default: m.CycleSummaryModal })))
 import { AppLogo } from './components/ui/AppLogo'
 import { syncStatusBarTheme } from './lib/nativeUi'
 import { getCurrentCycleYearAndMonth, MONTH_NAMES } from './lib/cycle'
@@ -46,6 +47,7 @@ import { useFinancialData } from './app/useFinancialData'
 import { useCycleNavigation } from './app/useCycleNavigation'
 import { useAiActionRouter } from './app/useAiActionRouter'
 import { useAppDialogs } from './app/useAppDialogs'
+import { useCycleSummary } from './app/useCycleSummary'
 import { buildAppContextValue } from './app/buildAppContextValue'
 import { getErrorName } from './lib/errors'
 import { prefetchFingerprintAssertOptions } from './lib/fingerprintOptionsCache'
@@ -165,6 +167,7 @@ function App() {
   const session = useAppSession({
     hideSensitive: prefs.hideSensitive,
     setHideSensitive: prefs.setHideSensitive,
+    onPreferenceOwnerChange: prefs.setPreferenceOwner,
     loadAllAbortRef,
     loadAll: (m, y, b) => {
       const route = readAppLocation()
@@ -199,6 +202,7 @@ function App() {
     setConfirmModalData: dialogs.setConfirmModalData,
     setHideSensitive: prefs.setHideSensitive,
     setDarkMode: prefs.setDarkMode,
+    notifyOnLogin: prefs.notifyOnLogin,
     loadAllAbortRef,
     selectedMonth: nav.selectedMonth,
     setSelectedMonth: nav.setSelectedMonth,
@@ -380,12 +384,21 @@ function App() {
 
   const wishlistDashboardData = currentCycleDashboardData || financial.optimisticDashboardData
 
+  // End-of-cycle summary: fires once when a new cycle begins (persisted server-side so it can't
+  // re-fire on navigation or on another device), and is re-openable from Reports for any ended
+  // cycle. The summary reads live data for the selected cycle, so edits are always reflected.
+  const cycleSummary = useCycleSummary({
+    token: session.token,
+    dashboardData: financial.dashboardData,
+    optimisticDashboardData: financial.optimisticDashboardData,
+    onMarkSummarySeen: financial.handleMarkSummarySeen,
+  })
+
   const handleToggleHideSensitive = async () => {
     if (prefs.hideSensitive) {
       session.setShowPasswordPrompt(true)
     } else {
       prefs.setHideSensitive(true)
-      localStorage.setItem('hide_sensitive', 'true')
       if (session.hasFingerprintSetup) {
         void prefetchFingerprintAssertOptions().catch(() => undefined)
       }
@@ -590,6 +603,7 @@ function App() {
                         onNavigateToLedger={nav.handleNavigateToLedger}
                         onAddBalanceAdjustment={financial.handleAddBalanceAdjustment}
                         isSwitchingCycle={nav.isSwitchingCycle}
+                        onViewCycleSummary={cycleSummary.openManual}
                       />
                     )}
 
@@ -800,6 +814,26 @@ function App() {
             onConfirm: () => financial.handleDeletePayment(recurringPaymentId)
           })}
         />
+
+        {cycleSummary.target && (
+          <CycleSummaryModal
+            isOpen={cycleSummary.isOpen}
+            onClose={cycleSummary.onClose}
+            data={cycleSummary.data}
+            wishlist={financial.allWishlist}
+            monthIndex={cycleSummary.target.monthIndex}
+            year={cycleSummary.target.year}
+            cycleDay={cycleSummary.cycleDay}
+            variant={cycleSummary.variant}
+            onViewLedger={() => {
+              const month = MONTH_NAMES[cycleSummary.target!.monthIndex - 1]
+              const year = cycleSummary.target!.year
+              cycleSummary.onClose()
+              void nav.handleSelectPeriod(month, year)
+              prefs.setActiveTab('ledger')
+            }}
+          />
+        )}
 
         <FailedSyncModal
           isOpen={dialogs.showFailedOpsModal}

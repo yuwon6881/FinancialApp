@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { AppTab } from '../types'
 import { navigateToAppTab, readAppLocation, type AppNavigationOptions } from '../lib/appLocation'
 
@@ -17,39 +17,38 @@ export interface AppPreferences {
   setBillReminders: (value: boolean) => void
   ledgerCyclesRange: 'monthly' | '3month' | '6month' | 'yearly'
   setLedgerCyclesRange: (range: 'monthly' | '3month' | '6month' | 'yearly') => void
+  setPreferenceOwner: (username: string | null) => void
 }
 
 export function useAppPreferences(): AppPreferences {
+  const preferenceOwnerRef = useRef<string | null>(null)
   const [activeTab, setActiveTabState] = useState<AppTab>(() => {
     return readAppLocation().tab
   })
 
   const [hideSensitive, setHideSensitiveState] = useState<boolean>(() => {
-    return localStorage.getItem('hide_sensitive') !== 'false'
+    return true
   })
 
   const [hideBalanceAmounts, setHideBalanceAmountsState] = useState<boolean>(() => {
-    return localStorage.getItem('hide_balance_amounts') === 'true'
+    return false
   })
 
   const [darkMode, setDarkModeState] = useState<boolean>(() => {
     // Respect an explicit saved choice; otherwise fall back to the OS/browser preference.
-    const stored = localStorage.getItem('dark_mode')
-    if (stored === 'true') return true
-    if (stored === 'false') return false
     return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
       ? window.matchMedia('(prefers-color-scheme: dark)').matches
       : false
   })
 
   const [notifyOnLogin, setNotifyOnLoginState] = useState<boolean>(() => {
-    return localStorage.getItem('show_notifications_on_login') !== 'false'
+    return true
   })
 
   // Off by default: turning it on requests the OS notification permission (see the
   // Settings toggle), so it must be an explicit opt-in.
   const [billReminders, setBillRemindersState] = useState<boolean>(() => {
-    return localStorage.getItem('bill_reminders_enabled') === 'true'
+    return false
   })
 
   const [ledgerCyclesRange, setLedgerCyclesRange] = useState<'monthly' | '3month' | '6month' | 'yearly'>('monthly')
@@ -74,29 +73,67 @@ export function useAppPreferences(): AppPreferences {
     navigateToAppTab(tab, options)
   }, [])
 
+  const preferenceKey = (key: string) => {
+    const owner = preferenceOwnerRef.current
+    return owner ? `${key}:${owner}` : null
+  }
+
+  const readBooleanPreference = (key: string, fallback: boolean) => {
+    const namespacedKey = preferenceKey(key)
+    if (!namespacedKey) return fallback
+    const stored = localStorage.getItem(namespacedKey)
+    return stored === null ? fallback : stored === 'true'
+  }
+
+  const setPreferenceOwner = (username: string | null) => {
+    preferenceOwnerRef.current = username
+    // Sensitive mode is server-backed. Keep the safe state until the signed-in
+    // account's dashboard settings have loaded instead of reusing browser state.
+    setHideSensitiveState(true)
+    setHideBalanceAmountsState(readBooleanPreference('hide_balance_amounts', false))
+    setNotifyOnLoginState(readBooleanPreference('show_notifications_on_login', true))
+    setBillRemindersState(readBooleanPreference('bill_reminders_enabled', false))
+
+    const storedDarkMode = preferenceKey('dark_mode')
+    if (storedDarkMode && localStorage.getItem(storedDarkMode) === 'true') {
+      setDarkModeState(true)
+    } else if (storedDarkMode && localStorage.getItem(storedDarkMode) === 'false') {
+      setDarkModeState(false)
+    } else {
+      setDarkModeState(typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+        ? window.matchMedia('(prefers-color-scheme: dark)').matches
+        : false)
+    }
+  }
+
   const setHideSensitive = (value: boolean) => {
     setHideSensitiveState(value)
-    localStorage.setItem('hide_sensitive', value.toString())
+    const key = preferenceKey('hide_sensitive')
+    if (key) localStorage.setItem(key, value.toString())
   }
 
   const setHideBalanceAmounts = (value: boolean) => {
     setHideBalanceAmountsState(value)
-    localStorage.setItem('hide_balance_amounts', value.toString())
+    const key = preferenceKey('hide_balance_amounts')
+    if (key) localStorage.setItem(key, value.toString())
   }
 
   const setDarkMode = (value: boolean) => {
     setDarkModeState(value)
-    localStorage.setItem('dark_mode', value.toString())
+    const key = preferenceKey('dark_mode')
+    if (key) localStorage.setItem(key, value.toString())
   }
 
   const setNotifyOnLogin = (value: boolean) => {
     setNotifyOnLoginState(value)
-    localStorage.setItem('show_notifications_on_login', value.toString())
+    const key = preferenceKey('show_notifications_on_login')
+    if (key) localStorage.setItem(key, value.toString())
   }
 
   const setBillReminders = (value: boolean) => {
     setBillRemindersState(value)
-    localStorage.setItem('bill_reminders_enabled', value.toString())
+    const key = preferenceKey('bill_reminders_enabled')
+    if (key) localStorage.setItem(key, value.toString())
   }
 
   return {
@@ -114,5 +151,6 @@ export function useAppPreferences(): AppPreferences {
     setBillReminders,
     ledgerCyclesRange,
     setLedgerCyclesRange,
+    setPreferenceOwner,
   }
 }

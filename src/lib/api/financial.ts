@@ -141,6 +141,17 @@ export async function updateHideSensitive(hideSensitive: boolean): Promise<void>
   invalidateCache()
 }
 
+// Persist which cycle the user has acknowledged an end-of-cycle summary for. A null/empty
+// key clears the marker. Mirrors the dark-mode/hide-sensitive lightweight preference writers.
+export async function updateSummarySeen(cycleKey: string | null): Promise<void> {
+  await requestVoid('/financial/summary-seen', {
+    method: 'PUT',
+    ...jsonBody({ cycleKey }),
+    errorMessage: 'Failed to persist end-of-cycle summary state',
+  })
+  invalidateCache()
+}
+
 export async function selectPeriod(selectedMonth: string, selectedYear: number): Promise<void> {
   await requestVoid('/financial/select-period', {
     method: 'POST',

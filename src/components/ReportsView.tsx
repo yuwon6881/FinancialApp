@@ -1,8 +1,9 @@
 import React from 'react'
-import { BarChart3 } from 'lucide-react'
+import { BarChart3, Sparkles } from 'lucide-react'
 import type { DashboardData, Transaction, WishlistItem } from '../types'
 import { useAppContext } from '../contexts/AppContext'
 import { getCycleLabelForDropdown } from '../lib/cycleLabels'
+import { getCycleProgress } from '../lib/cycle'
 import { CustomSelect } from './ui/CustomSelect'
 import { CycleSkeleton } from './ui/Skeleton'
 import { useDashboardView } from './dashboard/useDashboardView'
@@ -30,7 +31,10 @@ interface ReportsViewProps {
   }) => void
   onAddBalanceAdjustment?: (newTx: Omit<Transaction, 'id'>) => Promise<void> | void
   isSwitchingCycle?: boolean
+  onViewCycleSummary?: (monthIndex: number, year: number) => void
 }
+
+const REPORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 export const ReportsView: React.FC<ReportsViewProps> = ({
   dashboardData,
@@ -41,6 +45,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   onNavigateToLedger,
   onAddBalanceAdjustment,
   isSwitchingCycle = false,
+  onViewCycleSummary,
 }) => {
   const { hideSensitive } = useAppContext()
   const view = useDashboardView({
@@ -50,6 +55,12 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     hideBalanceAmounts,
     onAddBalanceAdjustment,
   })
+
+  // The end-of-cycle summary only makes sense for a cycle that has actually closed. Offer the
+  // manual re-open button whenever the viewed cycle has ended.
+  const selectedMonthIndex = REPORT_MONTHS.indexOf(view.activeSettings.selectedMonth) + 1
+  const selectedCycleEnded = selectedMonthIndex > 0 &&
+    getCycleProgress(view.activeSettings.selectedYear, selectedMonthIndex, view.activeSettings.cycleDay).phase === 'ended'
 
   if (isSwitchingCycle) return <CycleSkeleton variant="reports" />
 
@@ -85,6 +96,16 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               className="w-full"
               align="right"
             />
+            {selectedCycleEnded && onViewCycleSummary && (
+              <button
+                type="button"
+                onClick={() => onViewCycleSummary(selectedMonthIndex, view.activeSettings.selectedYear)}
+                className="col-span-2 flex items-center justify-center gap-1.5 rounded-xl border border-violet-500/20 bg-violet-500/10 px-3 py-2 text-xs font-bold text-violet-500 transition hover:bg-violet-500/20 cursor-pointer"
+              >
+                <Sparkles className="size-3.5" />
+                View cycle summary
+              </button>
+            )}
           </div>
         </div>
       </header>

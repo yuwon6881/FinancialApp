@@ -15,6 +15,7 @@ export interface UseAppSessionOptions {
   loadAll: (month?: string, year?: number, isBackground?: boolean) => void
   setHideSensitive: (value: boolean) => void
   hideSensitive: boolean
+  onPreferenceOwnerChange: (username: string | null) => void
   loadAllAbortRef: React.MutableRefObject<AbortController | null>
 }
 
@@ -40,7 +41,7 @@ export interface AppSession {
 }
 
 export function useAppSession(options: UseAppSessionOptions): AppSession {
-  const { onLogoutBackupAndCleanup, onLoginSuccessRestore, loadAll, setHideSensitive, hideSensitive, loadAllAbortRef } = options
+  const { onLogoutBackupAndCleanup, onLoginSuccessRestore, loadAll, setHideSensitive, hideSensitive, onPreferenceOwnerChange, loadAllAbortRef } = options
 
   const [token, setToken] = useState<string | null>(null)
   const [isSessionResolved, setIsSessionResolved] = useState(false)
@@ -66,6 +67,7 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
       try {
         const sessionToken = await resolveSessionToken()
         if (cancelled) return
+        onPreferenceOwnerChange(sessionToken ? (localStorage.getItem('auth_username') || null) : null)
         setToken(sessionToken)
         // Reconcile the global lock only when this tab has no explicit lock state yet.
         if (
@@ -160,6 +162,7 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
 
   async function handleLogout() {
     const currentOwner = usernameRef.current
+    onPreferenceOwnerChange(null)
     try {
       await onLogoutBackupAndCleanup(currentOwner)
     } catch (error) {
@@ -212,6 +215,7 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
     lastUnlockedTimeRef.current = now
     setIsLocked(false)
     api.invalidateCache()
+    onPreferenceOwnerChange(newUsername)
     // On the web the real bearer token is never held in memory — the cookie is the credential and
     // this opaque marker only gates the logged-in UI. Native keeps the real token for its header.
     setToken(usesCookieAuth ? WEB_COOKIE_SESSION : newToken)
@@ -228,7 +232,6 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
       const credential = await getFingerprintAssertion(fingerprintOptions)
       await api.verifyFingerprintAssert(challengeId, credential)
       setHideSensitive(false)
-      localStorage.setItem('hide_sensitive', 'false')
       verified = true
       return true
     } catch (err) {
