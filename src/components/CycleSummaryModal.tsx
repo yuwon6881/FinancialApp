@@ -13,7 +13,7 @@ import {
 import type { DashboardData, WishlistItem } from '../types'
 import { useAppContext } from '../contexts/AppContext'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
-import { buildCycleSummary, formatRate, formatRateChange } from '../lib/cycleSummary'
+import { buildCycleSummary, formatRate } from '../lib/cycleSummary'
 import { BottomSheet } from './ui/BottomSheet'
 
 interface CycleSummaryModalProps {
@@ -73,11 +73,11 @@ export function CycleSummaryModal({
       footer={
         <div className="flex gap-2 sm:justify-end">
           {onViewLedger && summary?.hasActivity && (
-            <button onClick={onViewLedger} className="flex-1 rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-xs font-bold text-foreground transition hover:bg-muted/70 sm:flex-none">
+            <button onClick={onViewLedger} className="flex-1 cursor-pointer rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-xs font-bold text-foreground transition hover:bg-muted/70 sm:flex-none">
               View ledger
             </button>
           )}
-          <button onClick={onClose} className="flex-1 rounded-lg bg-foreground px-4 py-2 text-xs font-bold text-background transition hover:bg-foreground/90 sm:flex-none">
+          <button onClick={onClose} className="flex-1 cursor-pointer rounded-lg bg-foreground px-4 py-2 text-xs font-bold text-background transition hover:bg-foreground/90 sm:flex-none">
             {variant === 'auto' ? 'Got it' : 'Close'}
           </button>
         </div>
@@ -135,15 +135,28 @@ export function CycleSummaryModal({
                     title="Spending"
                     value={formatSensitive(Math.abs(summary.spendingDelta))}
                     tone={summary.spendingDelta <= 0 ? 'good' : 'warn'}
-                    detail={summary.spendingDelta <= 0 ? 'less than last cycle' : 'more than last cycle'}
+                    trendUp={summary.spendingDelta > 0}
+                    detail={summary.spendingDelta <= 0 ? 'Less than last cycle' : 'More than last cycle'}
                   />
                 )}
                 {summary.savingsRate !== null && (
                   <InsightCard
                     title="Savings rate"
                     value={formatRate(summary.savingsRate)}
-                    tone={summary.savingsRate >= 0 ? 'good' : 'warn'}
-                    detail={summary.previousSavingsRate === null ? 'this cycle' : formatRateChange(summary.savingsRate - summary.previousSavingsRate)}
+                    tone={summary.savingsRate >= 0.1 ? 'good' : 'warn'}
+                    trendUp={summary.previousSavingsRate !== null ? summary.savingsRate > summary.previousSavingsRate : summary.savingsRate > 0}
+                    detail={(() => {
+                      if (summary.previousSavingsRate === null) {
+                        return `${formatRate(summary.savingsRate)} of income saved — no prior cycle to compare`
+                      }
+                      const change = summary.savingsRate - summary.previousSavingsRate
+                      const pts = Math.round(Math.abs(change) * 100)
+                      if (pts === 0) return `${formatRate(summary.savingsRate)} saved — same as last cycle`
+                      return change > 0
+                        ? `Up ${pts}pp vs last cycle — saving more`
+                        : `Down ${pts}pp vs last cycle — saving less`
+                    })()}
+                    tooltipHint="Savings rate = (Income − Spending) ÷ Income"
                   />
                 )}
                 {summary.biggestCategoryShift && (
@@ -151,6 +164,7 @@ export function CycleSummaryModal({
                     title="Biggest shift"
                     value={summary.biggestCategoryShift.category}
                     tone={summary.biggestCategoryShift.delta <= 0 ? 'good' : 'warn'}
+                    trendUp={summary.biggestCategoryShift.delta > 0}
                     detail={`${formatSensitive(Math.abs(summary.biggestCategoryShift.delta))} ${summary.biggestCategoryShift.delta <= 0 ? 'less' : 'more'} spent`}
                   />
                 )}
@@ -159,7 +173,8 @@ export function CycleSummaryModal({
                     title="Growth fund"
                     value={`${summary.growthDelta < 0 ? '−' : '+'}${formatSensitive(Math.abs(summary.growthDelta))}`}
                     tone={summary.growthDelta >= 0 ? 'good' : 'warn'}
-                    detail="ending balance"
+                    trendUp={summary.growthDelta >= 0}
+                    detail="Ending balance this cycle"
                   />
                 )}
               </div>
@@ -170,15 +185,41 @@ export function CycleSummaryModal({
             <div className="grid gap-3 sm:grid-cols-2">
               {summary.envelopes.map(envelope => (
                 <div key={envelope.name} className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
-                  <div className="flex items-center justify-between gap-3">
+                  {/* Name + optional overspent badge */}
+                  <div className="mb-2.5 flex items-center justify-between gap-2">
                     <span className="text-xs font-bold text-foreground">{envelope.name}</span>
-                    <span className={`text-xs font-bold ${envelope.overspent ? 'text-orange-500' : 'text-foreground'}`}>
-                      <span className="mr-1 font-medium text-muted-foreground">Spent</span>{formatSensitive(envelope.spent)}
-                    </span>
+                    {envelope.overspent && (
+                      <span className="shrink-0 rounded-full bg-orange-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-orange-500">
+                        Overspent
+                      </span>
+                    )}
                   </div>
-                  <div className="mt-1.5 flex items-center justify-between text-[10px] text-muted-foreground">
-                    <span>Balance</span>
-                    <span className={envelope.overspent ? 'font-bold text-orange-500' : ''}>{formatSensitive(envelope.remaining)}</span>
+                  {/* Two equal-weight stat tiles side by side */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex flex-col gap-0.5 rounded-lg bg-muted/40 px-2.5 py-2">
+                      <span className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Spent</span>
+                      <span className={`text-xs font-bold ${envelope.overspent ? 'text-orange-500' : 'text-foreground'}`}>
+                        {formatSensitive(envelope.spent)}
+                      </span>
+                    </div>
+                    <div className={`flex flex-col gap-0.5 rounded-lg px-2.5 py-2 ${
+                      envelope.overspent
+                        ? 'bg-orange-500/10'
+                        : envelope.remaining > 0
+                          ? 'bg-emerald-500/10'
+                          : 'bg-muted/40'
+                    }`}>
+                      <span className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Carry forward</span>
+                      <span className={`text-xs font-bold ${
+                        envelope.overspent
+                          ? 'text-orange-500'
+                          : envelope.remaining > 0
+                            ? 'text-emerald-400'
+                            : 'text-muted-foreground'
+                      }`}>
+                        {formatSensitive(envelope.remaining)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -188,14 +229,27 @@ export function CycleSummaryModal({
           <div className="grid gap-6 sm:grid-cols-2">
             {summary.topCategories.length > 0 && (
               <Section title="Where it went">
-                <div className="space-y-3 rounded-xl border border-border/50 bg-muted/20 p-3.5">
+                <div className="space-y-2.5 rounded-xl border border-border/50 bg-muted/20 p-3.5">
                   {summary.topCategories.map(category => (
-                    <div key={category.category} className="grid grid-cols-[minmax(0,6.5rem)_minmax(2.5rem,1fr)_auto] items-center gap-2">
-                      <span className={`truncate rounded border px-1.5 py-0.5 text-[9px] font-bold ${getCategoryBadgeClass(category.category)}`}>{category.category}</span>
-                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                        <div className="h-full rounded-full bg-foreground/40" style={{ width: `${summary.topMax > 0 ? (category.amount / summary.topMax) * 100 : 0}%` }} />
+                    <div key={category.category} className="flex items-center gap-2">
+                      {/* Badge: natural width, capped, never stretches */}
+                      <span
+                        className={`max-w-[6.5rem] shrink-0 truncate rounded border px-1.5 py-0.5 text-[9px] font-bold leading-tight ${getCategoryBadgeClass(category.category)}`}
+                        title={category.category}
+                      >
+                        {category.category}
+                      </span>
+                      {/* Bar: grows to fill remaining space */}
+                      <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-foreground/40 transition-all"
+                          style={{ width: `${summary.topMax > 0 ? (category.amount / summary.topMax) * 100 : 0}%` }}
+                        />
                       </div>
-                      <span className="shrink-0 text-[11px] font-bold text-foreground">{formatSensitive(category.amount)}</span>
+                      {/* Amount: fixed right-aligned column */}
+                      <span className="w-20 shrink-0 text-right text-[11px] font-bold text-foreground">
+                        {formatSensitive(category.amount)}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -247,8 +301,37 @@ function StatTile({ icon, label, value }: { icon: ReactNode; label: string; valu
   return <div className="flex min-w-0 flex-col items-center justify-center rounded-xl border border-border/50 bg-muted/20 px-2 py-2.5 sm:flex-row sm:justify-between sm:px-3"><div className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide text-muted-foreground sm:text-[10px]">{icon}{label}</div><div className="mt-1 max-w-full truncate text-xs font-bold text-foreground sm:mt-0 sm:text-sm">{value}</div></div>
 }
 
-function InsightCard({ title, value, detail, tone }: { title: string; value: ReactNode; detail: string; tone: 'good' | 'warn' }) {
-  return <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5"><div className="flex items-start justify-between gap-3"><span className="text-[11px] font-semibold text-muted-foreground">{title}</span><span className={`max-w-[55%] truncate text-right text-xs font-bold ${tone === 'good' ? 'text-emerald-500' : 'text-orange-500'}`}>{value}</span></div><p className="mt-1.5 text-[10px] text-foreground/70">{detail}</p></div>
+interface InsightCardProps {
+  title: string
+  value: ReactNode
+  detail: string
+  tone: 'good' | 'warn'
+  trendUp?: boolean
+  tooltipHint?: string
+}
+
+function InsightCard({ title, value, detail, tone, trendUp, tooltipHint }: InsightCardProps) {
+  const isGood = tone === 'good'
+  const trendColor = trendUp === undefined
+    ? 'text-muted-foreground'
+    : isGood ? 'text-emerald-500' : 'text-orange-500'
+
+  return (
+    <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
+      <div className="flex items-start justify-between gap-3">
+        <span className="text-[11px] font-semibold text-muted-foreground" title={tooltipHint}>{title}</span>
+        <div className="flex shrink-0 items-center gap-1">
+          {trendUp !== undefined && (
+            trendUp
+              ? <TrendingUp className={`size-3 ${trendColor}`} />
+              : <TrendingDown className={`size-3 ${trendColor}`} />
+          )}
+          <span className={`max-w-[10rem] truncate text-right text-xs font-bold ${isGood ? 'text-emerald-500' : 'text-orange-500'}`}>{value}</span>
+        </div>
+      </div>
+      <p className="mt-1.5 text-[10px] leading-relaxed text-foreground/70">{detail}</p>
+    </div>
+  )
 }
 
 function Section({ title, icon, children }: { title: string; icon?: ReactNode; children: ReactNode }) {
