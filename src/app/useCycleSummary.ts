@@ -109,7 +109,6 @@ export function useCycleSummary(options: UseCycleSummaryOptions) {
 
   const [fetched, setFetched] = useState<{ key: string; data: DashboardData } | null>(null)
   const [previous, setPrevious] = useState<{ key: string; data: DashboardData } | null>(null)
-  const [fetchedTxns, setFetchedTxns] = useState<{ key: string; txns: Transaction[] } | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const fetchedKey = target ? cycleKeyOf(target.year, target.monthIndex) : null
@@ -122,7 +121,6 @@ export function useCycleSummary(options: UseCycleSummaryOptions) {
     if (!token || !target) {
       setFetched(null)
       setPrevious(null)
-      setFetchedTxns(null)
       setIsLoading(false)
       setLoadError(null)
       return
@@ -138,9 +136,8 @@ export function useCycleSummary(options: UseCycleSummaryOptions) {
     Promise.allSettled([
       targetIsSelected ? Promise.resolve(null) : api.fetchDashboard(month, target.year, ac.signal, false, true),
       api.fetchDashboard(priorMonth, prior.year, ac.signal, false, true),
-      api.fetchTransactions(month, target.year, false, ac.signal),
     ])
-      .then(([targetResult, previousResult, txnsResult]) => {
+      .then(([targetResult, previousResult]) => {
         if (targetResult.status === 'fulfilled') {
           if (targetResult.value) setFetched({ key, data: completeDashboard(targetResult.value) })
           else setFetched(null)
@@ -158,12 +155,6 @@ export function useCycleSummary(options: UseCycleSummaryOptions) {
             console.warn('Could not load previous-cycle comparison data', previousResult.reason)
           }
         }
-
-        if (txnsResult.status === 'fulfilled') {
-          setFetchedTxns({ key, txns: txnsResult.value })
-        } else {
-          setFetchedTxns(null)
-        }
       })
       .finally(() => {
         if (!ac.signal.aborted) setIsLoading(false)
@@ -180,7 +171,6 @@ export function useCycleSummary(options: UseCycleSummaryOptions) {
       : null
 
   const previousData = previous && previous.key === previousKey ? previous.data : null
-  const transactions = fetchedTxns && fetchedTxns.key === fetchedKey ? fetchedTxns.txns : null
 
   return {
     isOpen: target != null,
@@ -188,7 +178,6 @@ export function useCycleSummary(options: UseCycleSummaryOptions) {
     target,
     data,
     previousData,
-    transactions,
     isLoading: isLoading || (target != null && data == null && loadError == null),
     loadError,
     cycleDay,

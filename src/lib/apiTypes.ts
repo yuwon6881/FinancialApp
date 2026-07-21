@@ -14,6 +14,21 @@ import type {
 
 type WireAmount = string | number
 
+export interface WireCycleSummaryInsights {
+  largestExpenseDescription?: string
+  largestExpenseAmount?: WireAmount
+  biggestDayDate?: string
+  biggestDayTotal?: WireAmount
+  avgDailySpend?: WireAmount
+  cycleLengthDays: number
+  velocityFirstHalf?: WireAmount
+  velocitySecondHalf?: WireAmount
+  noSpendDays: number
+  transactionCount: number
+  committedSpend: WireAmount
+  discretionarySpend: WireAmount
+}
+
 export interface LoginCredentials {
   username: string
   password: string
@@ -99,6 +114,7 @@ export type WireDashboardData = Omit<
   last6TrendPoints: WireTrendPoint[]
   pendingNotifications: WirePendingNotification[]
   monthlyCategoryBreakdown: WireCategoryBreakdown[]
+  cycleSummaryInsights?: WireCycleSummaryInsights
 }
 
 // The expensive historical aggregates split out of /dashboard into /dashboard/insights (see

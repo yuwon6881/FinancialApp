@@ -75,6 +75,18 @@ export function fetchDashboard(
         ...category,
         amount: deobfuscateAmount(category.amount),
       })),
+      ...(data.cycleSummaryInsights && {
+        cycleSummaryInsights: {
+          ...data.cycleSummaryInsights,
+          largestExpenseAmount: data.cycleSummaryInsights.largestExpenseAmount !== undefined ? deobfuscateAmount(data.cycleSummaryInsights.largestExpenseAmount) : undefined,
+          biggestDayTotal: data.cycleSummaryInsights.biggestDayTotal !== undefined ? deobfuscateAmount(data.cycleSummaryInsights.biggestDayTotal) : undefined,
+          avgDailySpend: data.cycleSummaryInsights.avgDailySpend !== undefined ? deobfuscateAmount(data.cycleSummaryInsights.avgDailySpend) : undefined,
+          velocityFirstHalf: data.cycleSummaryInsights.velocityFirstHalf !== undefined ? deobfuscateAmount(data.cycleSummaryInsights.velocityFirstHalf) : undefined,
+          velocitySecondHalf: data.cycleSummaryInsights.velocitySecondHalf !== undefined ? deobfuscateAmount(data.cycleSummaryInsights.velocitySecondHalf) : undefined,
+          committedSpend: deobfuscateAmount(data.cycleSummaryInsights.committedSpend),
+          discretionarySpend: deobfuscateAmount(data.cycleSummaryInsights.discretionarySpend),
+        }
+      })
     }
   }, { signal })
 }

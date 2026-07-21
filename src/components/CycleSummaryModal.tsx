@@ -22,7 +22,6 @@ interface CycleSummaryModalProps {
   onClose: () => void
   data: DashboardData | null
   previousData: DashboardData | null
-  transactions: Transaction[] | null
   isLoading: boolean
   loadError: string | null
   wishlist: WishlistItem[]
@@ -38,7 +37,6 @@ export function CycleSummaryModal({
   onClose,
   data,
   previousData,
-  transactions,
   isLoading,
   loadError,
   wishlist,
@@ -50,8 +48,8 @@ export function CycleSummaryModal({
 }: CycleSummaryModalProps) {
   const { formatSensitive } = useAppContext()
   const summary = useMemo(
-    () => data ? buildCycleSummary(data, previousData, wishlist, year, monthIndex, cycleDay, transactions) : null,
-    [data, previousData, wishlist, year, monthIndex, cycleDay, transactions],
+    () => data ? buildCycleSummary(data, previousData, wishlist, year, monthIndex, cycleDay) : null,
+    [data, previousData, wishlist, year, monthIndex, cycleDay],
   )
 
   return (
@@ -130,59 +128,7 @@ export function CycleSummaryModal({
             </div>
           </div>
 
-          {summary.previousHasActivity && (
-            <Section title="Since last cycle">
-              <div className="grid gap-3 sm:grid-cols-2">
-                {summary.spendingDelta !== null && (
-                  <InsightCard
-                    title="Spending"
-                    value={formatSensitive(Math.abs(summary.spendingDelta))}
-                    tone={summary.spendingDelta <= 0 ? 'good' : 'warn'}
-                    trendUp={summary.spendingDelta > 0}
-                    detail={summary.spendingDelta <= 0 ? 'Less than last cycle' : 'More than last cycle'}
-                  />
-                )}
-                {summary.savingsRate !== null && (
-                  <InsightCard
-                    title="Savings rate"
-                    value={formatRate(summary.savingsRate)}
-                    tone={summary.savingsRate >= 0.1 ? 'good' : 'warn'}
-                    trendUp={summary.previousSavingsRate !== null ? summary.savingsRate > summary.previousSavingsRate : summary.savingsRate > 0}
-                    detail={(() => {
-                      if (summary.previousSavingsRate === null) {
-                        return `${formatRate(summary.savingsRate)} of income saved this cycle`
-                      }
-                      const change = summary.savingsRate - summary.previousSavingsRate
-                      const pts = Math.round(Math.abs(change) * 100)
-                      if (pts === 0) return `Same as last cycle (${formatRate(summary.savingsRate)})`
-                      return change > 0
-                        ? `Up from ${formatRate(summary.previousSavingsRate)} last cycle`
-                        : `Down from ${formatRate(summary.previousSavingsRate)} last cycle`
-                    })()}
-                    tooltipHint="Savings rate = (Income − Spending) ÷ Income"
-                  />
-                )}
-                {summary.biggestCategoryShift && (
-                  <InsightCard
-                    title="Biggest shift"
-                    value={summary.biggestCategoryShift.category}
-                    tone={summary.biggestCategoryShift.delta <= 0 ? 'good' : 'warn'}
-                    trendUp={summary.biggestCategoryShift.delta > 0}
-                    detail={`${formatSensitive(Math.abs(summary.biggestCategoryShift.delta))} ${summary.biggestCategoryShift.delta <= 0 ? 'less' : 'more'} spent`}
-                  />
-                )}
-                {summary.growthDelta !== null && (
-                  <InsightCard
-                    title="Growth fund"
-                    value={`${summary.growthDelta < 0 ? '−' : '+'}${formatSensitive(Math.abs(summary.growthDelta))}`}
-                    tone={summary.growthDelta >= 0 ? 'good' : 'warn'}
-                    trendUp={summary.growthDelta >= 0}
-                    detail="Ending balance this cycle"
-                  />
-                )}
-              </div>
-            </Section>
-          )}
+
 
           <Section title="Envelopes">
             <div className="grid gap-3 sm:grid-cols-2">
@@ -235,13 +181,15 @@ export function CycleSummaryModal({
                 <div className="space-y-2.5 rounded-xl border border-border/50 bg-muted/20 p-3.5">
                   {summary.topCategories.map(category => (
                     <div key={category.category} className="flex items-center gap-2">
-                      {/* Badge: fixed width so all bars start at the same X position */}
-                      <span
-                        className={`w-24 shrink-0 truncate rounded border px-1.5 py-0.5 text-[9px] font-bold leading-tight ${getCategoryBadgeClass(category.category)}`}
-                        title={category.category}
-                      >
-                        {category.category}
-                      </span>
+                      {/* Badge Container: fixed width so all bars start at the same X position without stretching the badge */}
+                      <div className="w-24 shrink-0 flex items-center">
+                        <span
+                          className={`max-w-full truncate rounded border px-1.5 py-0.5 text-[9px] font-bold leading-tight ${getCategoryBadgeClass(category.category)}`}
+                          title={category.category}
+                        >
+                          {category.category}
+                        </span>
+                      </div>
                       {/* Bar: grows to fill remaining space */}
                       <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
                         <div
@@ -295,20 +243,20 @@ export function CycleSummaryModal({
             </div>
           )}
 
-          {/* Spending insights — only when transaction data is available */}
-          {(summary.largestTxn || summary.biggestDay || summary.avgDailySpend !== null || summary.velocityFirstHalf !== null) && (
+          {/* Spending insights — backend-generated */}
+          {(summary.largestTxn || summary.biggestDay || summary.avgDailySpend !== null || summary.velocityFirstHalf !== null || summary.noSpendDays > 0 || summary.transactionCount > 0) && (
             <Section title="Spending insights" icon={<Zap className="size-3 text-amber-400" />}>
               <div className="grid gap-3 sm:grid-cols-2">
                 {summary.largestTxn && (
                   <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
-                    <p className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Largest transaction</p>
+                    <p className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Largest single expense</p>
                     <p className="mt-1 truncate text-xs font-bold text-foreground" title={summary.largestTxn.description}>{summary.largestTxn.description}</p>
                     <p className="mt-0.5 text-xs font-bold text-orange-400">{formatSensitive(Math.abs(summary.largestTxn.amount))}</p>
                   </div>
                 )}
                 {summary.biggestDay && (
                   <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
-                    <p className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Biggest spending day</p>
+                    <p className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Highest spending day</p>
                     <p className="mt-1 text-xs font-bold text-foreground">
                       {new Date(summary.biggestDay.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                     </p>
@@ -318,12 +266,39 @@ export function CycleSummaryModal({
                 {summary.avgDailySpend !== null && (
                   <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
                     <p className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Average daily spend</p>
-                    <p className="mt-1 text-xs font-bold text-foreground">{formatSensitive(summary.avgDailySpend)}</p>
-                    <p className="mt-0.5 text-[10px] text-muted-foreground">Over {summary.cycleLengthDays} days</p>
+                    <p className="mt-1 text-xs font-bold text-foreground">{formatSensitive(summary.avgDailySpend)} / day</p>
+                    <p className="mt-0.5 text-[10px] text-muted-foreground">Across a {summary.cycleLengthDays}-day cycle</p>
                   </div>
                 )}
+                <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
+                  <p className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">No-spend days</p>
+                  <p className="mt-1 text-xs font-bold text-emerald-500">{summary.noSpendDays} days</p>
+                  <p className="mt-0.5 text-[10px] text-muted-foreground">Days with zero expenses</p>
+                </div>
+                <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
+                  <p className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Transaction count</p>
+                  <p className="mt-1 text-xs font-bold text-foreground">{summary.transactionCount} transactions</p>
+                  <p className="mt-0.5 text-[10px] text-muted-foreground">Total purchases this cycle</p>
+                </div>
+                <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
+                  <p className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Spend Type</p>
+                  <div className="mt-2 space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-muted-foreground">Committed</span>
+                      <span className="font-bold text-foreground">{formatSensitive(summary.committedSpend)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-muted-foreground">Discretionary</span>
+                      <span className="font-bold text-foreground">{formatSensitive(summary.discretionarySpend)}</span>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="bg-blue-500" style={{ width: `${summary.committedSpend + summary.discretionarySpend > 0 ? (summary.committedSpend / (summary.committedSpend + summary.discretionarySpend)) * 100 : 0}%` }} />
+                    <div className="bg-purple-500" style={{ width: `${summary.committedSpend + summary.discretionarySpend > 0 ? (summary.discretionarySpend / (summary.committedSpend + summary.discretionarySpend)) * 100 : 0}%` }} />
+                  </div>
+                </div>
                 {summary.velocityFirstHalf !== null && summary.velocitySecondHalf !== null && (
-                  <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
+                  <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5 sm:col-span-2">
                     <p className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Spending velocity</p>
                     <div className="mt-2 space-y-1.5">
                       <div className="flex items-center justify-between text-[11px]">
@@ -335,14 +310,61 @@ export function CycleSummaryModal({
                         <span className={`font-bold ${summary.velocitySecondHalf > summary.velocityFirstHalf ? 'text-orange-400' : 'text-foreground'}`}>{formatSensitive(summary.velocitySecondHalf)}</span>
                       </div>
                     </div>
-                    <p className="mt-1.5 text-[9px] text-muted-foreground">
-                      {summary.velocityFirstHalf > summary.velocitySecondHalf
-                        ? 'Spent more in the first half'
-                        : summary.velocitySecondHalf > summary.velocityFirstHalf
-                          ? 'Spent more in the second half'
-                          : 'Evenly spread across the cycle'}
-                    </p>
                   </div>
+                )}
+              </div>
+            </Section>
+          )}
+
+          {summary.previousHasActivity && (
+            <Section title="Since last cycle">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {summary.spendingDelta !== null && (
+                  <InsightCard
+                    title="Spending"
+                    value={formatSensitive(Math.abs(summary.spendingDelta))}
+                    tone={summary.spendingDelta <= 0 ? 'good' : 'warn'}
+                    trendUp={summary.spendingDelta > 0}
+                    detail={summary.spendingDelta <= 0 ? 'Less than last cycle' : 'More than last cycle'}
+                  />
+                )}
+                {summary.savingsRate !== null && (
+                  <InsightCard
+                    title="Savings rate"
+                    value={formatRate(summary.savingsRate)}
+                    tone={summary.savingsRate >= 0.1 ? 'good' : 'warn'}
+                    trendUp={summary.previousSavingsRate !== null ? summary.savingsRate > summary.previousSavingsRate : summary.savingsRate > 0}
+                    detail={(() => {
+                      if (summary.previousSavingsRate === null) {
+                        return `${formatRate(summary.savingsRate)} of income saved this cycle`
+                      }
+                      const change = summary.savingsRate - summary.previousSavingsRate
+                      const pts = Math.round(Math.abs(change) * 100)
+                      if (pts === 0) return `Same as last cycle (${formatRate(summary.savingsRate)})`
+                      return change > 0
+                        ? `Up from ${formatRate(summary.previousSavingsRate)} last cycle`
+                        : `Down from ${formatRate(summary.previousSavingsRate)} last cycle`
+                    })()}
+                    tooltipHint="Savings rate = (Income − Spending) ÷ Income"
+                  />
+                )}
+                {summary.biggestCategoryShift && (
+                  <InsightCard
+                    title="Biggest shift"
+                    value={summary.biggestCategoryShift.category}
+                    tone={summary.biggestCategoryShift.delta <= 0 ? 'good' : 'warn'}
+                    trendUp={summary.biggestCategoryShift.delta > 0}
+                    detail={`${formatSensitive(Math.abs(summary.biggestCategoryShift.delta))} ${summary.biggestCategoryShift.delta <= 0 ? 'less' : 'more'} spent`}
+                  />
+                )}
+                {summary.growthDelta !== null && (
+                  <InsightCard
+                    title="Growth fund"
+                    value={`${summary.growthDelta < 0 ? '−' : '+'}${formatSensitive(Math.abs(summary.growthDelta))}`}
+                    tone={summary.growthDelta >= 0 ? 'good' : 'warn'}
+                    trendUp={summary.growthDelta >= 0}
+                    detail="Ending balance this cycle"
+                  />
                 )}
               </div>
             </Section>

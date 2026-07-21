@@ -136,10 +136,26 @@ export interface DashboardData {
   availableYears?: number[]
 }
 
+export interface CycleSummaryInsights {
+  largestExpenseDescription?: string
+  largestExpenseAmount?: number
+  biggestDayDate?: string
+  biggestDayTotal?: number
+  avgDailySpend?: number
+  cycleLengthDays: number
+  velocityFirstHalf?: number
+  velocitySecondHalf?: number
+  noSpendDays: number
+  transactionCount: number
+  committedSpend: number
+  discretionarySpend: number
+}
+
 // What api.fetchDashboard actually returns before loadAll() merges in DashboardInsights --
 // everything DashboardData has except the fields that moved to the insights fetch.
 export type DashboardCore = Omit<DashboardData, 'last3CategoryBreakdown' | 'last6CategoryBreakdown' | 'yearlyCategoryBreakdown' | 'availableYears' | 'stats'> & {
   stats: Omit<DashboardStats, 'pastThreeMonthsRewardsAverage' | 'hasRewardsHistory'>
+  cycleSummaryInsights?: CycleSummaryInsights
 }
 
 // The expensive historical aggregates, fetched separately via api.fetchDashboardInsights and

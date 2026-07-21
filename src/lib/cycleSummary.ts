@@ -21,7 +21,6 @@ export function buildCycleSummary(
   year: number,
   monthIndex: number,
   cycleDay: number,
-  transactions?: Transaction[] | null,
 ) {
   const income = data.stats.monthlyIncome
   const inflow = data.stats.monthlyInflow
@@ -81,54 +80,7 @@ export function buildCycleSummary(
     (previousData.monthlyCategoryBreakdown || []).length > 0
   )
 
-  // Transaction-based insights (only available when txn list is passed in)
-  const cycleExpenseTxns = transactions
-    ? transactions.filter(t => {
-        if (t.amount >= 0) return false // skip inflows & zeros
-        const d = new Date(t.date)
-        return !Number.isNaN(d.getTime()) && d >= start && d <= end
-      })
-    : null
-
-  // Largest single expense
-  const largestTxn = cycleExpenseTxns && cycleExpenseTxns.length > 0
-    ? cycleExpenseTxns.reduce((max, t) => Math.abs(t.amount) > Math.abs(max.amount) ? t : max)
-    : null
-
-  // Biggest spending day
-  let biggestDay: { date: string; total: number } | null = null
-  if (cycleExpenseTxns && cycleExpenseTxns.length > 0) {
-    const byDay = new Map<string, number>()
-    for (const t of cycleExpenseTxns) {
-      const day = t.date.slice(0, 10)
-      byDay.set(day, (byDay.get(day) ?? 0) + Math.abs(t.amount))
-    }
-    let maxDay = ''
-    let maxTotal = 0
-    for (const [day, total] of byDay) {
-      if (total > maxTotal) { maxTotal = total; maxDay = day }
-    }
-    if (maxDay) biggestDay = { date: maxDay, total: maxTotal }
-  }
-
-  // Average daily spend (cycle length in days)
-  const cycleLengthDays = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1)
-  const avgDailySpend = cycleExpenseTxns && cycleExpenseTxns.length > 0
-    ? cycleExpenseTxns.reduce((sum, t) => sum + Math.abs(t.amount), 0) / cycleLengthDays
-    : null
-
-  // Spending velocity: first half vs second half of cycle
-  let velocityFirstHalf = 0
-  let velocitySecondHalf = 0
-  if (cycleExpenseTxns && cycleExpenseTxns.length > 0) {
-    const midMs = start.getTime() + (end.getTime() - start.getTime()) / 2
-    for (const t of cycleExpenseTxns) {
-      const tMs = new Date(t.date).getTime()
-      if (tMs <= midMs) velocityFirstHalf += Math.abs(t.amount)
-      else velocitySecondHalf += Math.abs(t.amount)
-    }
-  }
-  const velocityAvailable = cycleExpenseTxns !== null && cycleExpenseTxns.length > 0
+  const insights = data.cycleSummaryInsights
 
   return {
     income,
@@ -158,12 +110,20 @@ export function buildCycleSummary(
     purchasedThisCycle,
     purchasedTotal: purchasedThisCycle.reduce((sum, item) => sum + item.price, 0),
     cycleLabel: data.cycleLabel,
-    // New transaction insights
-    largestTxn,
-    biggestDay,
-    avgDailySpend,
-    velocityFirstHalf: velocityAvailable ? velocityFirstHalf : null,
-    velocitySecondHalf: velocityAvailable ? velocitySecondHalf : null,
-    cycleLengthDays,
+    // Backend insights
+    largestTxn: insights?.largestExpenseDescription 
+      ? { description: insights.largestExpenseDescription, amount: insights.largestExpenseAmount ?? 0 } 
+      : null,
+    biggestDay: insights?.biggestDayDate 
+      ? { date: insights.biggestDayDate, total: insights.biggestDayTotal ?? 0 } 
+      : null,
+    avgDailySpend: insights?.avgDailySpend ?? null,
+    velocityFirstHalf: insights?.velocityFirstHalf ?? null,
+    velocitySecondHalf: insights?.velocitySecondHalf ?? null,
+    cycleLengthDays: insights?.cycleLengthDays ?? 1,
+    noSpendDays: insights?.noSpendDays ?? 0,
+    transactionCount: insights?.transactionCount ?? 0,
+    committedSpend: insights?.committedSpend ?? 0,
+    discretionarySpend: insights?.discretionarySpend ?? 0,
   }
 }
