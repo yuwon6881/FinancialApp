@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DashboardData, WishlistItem } from '../types'
-import { buildCycleSummary } from './CycleSummaryModal'
+import { buildCycleSummary } from '../lib/cycleSummary'
 
 function dashboard(overrides: Partial<DashboardData> = {}): DashboardData {
   return {
