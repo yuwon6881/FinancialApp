@@ -173,6 +173,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             formatSensitive={view.formatSensitive}
             onNavigate={onNavigate}
             onNavigateToRecurring={onNavigateToRecurring}
+            cycleKey={`${view.activeSettings.selectedMonth}-${view.activeSettings.selectedYear}`}
           />
         </div>
       </div>

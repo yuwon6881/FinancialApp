@@ -284,7 +284,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
   const effectiveOps = entity === 'transaction'
     ? [
         ...entityOps,
-        ...ops.filter(op => op.entity === 'wishlistItem' && (op.type === 'purchase' || op.type === 'unpurchase'))
+        ...ops.filter(op => op.entity === 'wishlistItem' && (op.type === 'purchase' || op.type === 'unpurchase' || op.type === 'delete'))
       ]
     : entityOps
 
@@ -334,17 +334,30 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         }
       }
     } else if (op.type === 'delete') {
-      result = result.map(item => {
-        const itemStr = String(item.id)
-        if (itemStr === targetStr || itemStr.startsWith(`${targetStr}-split-`) || (itemStr.includes('-split-') && itemStr.split('-split-')[0] === targetStr)) {
-          return {
-            ...item,
-            isPendingDelete: true,
-            isPendingSync: !op.isCompleted
+      if (entity === 'transaction' && op.entity === 'wishlistItem') {
+        // Deleting a purchased wishlist item cascades to its linked ledger transaction
+        // server-side (see WishlistService.DeleteWishlistItemAsync). Mirror that here so
+        // the ledger row disappears immediately instead of lingering until the next
+        // refresh -- the linked transaction keys off wishlistItemId, not the op targetId.
+        result = result.map(item => {
+          const wishlistItemId = (item as T & { wishlistItemId?: number | null }).wishlistItemId
+          return wishlistItemId != null && String(wishlistItemId) === targetStr
+            ? { ...item, isPendingDelete: true, isPendingSync: !op.isCompleted }
+            : item
+        })
+      } else {
+        result = result.map(item => {
+          const itemStr = String(item.id)
+          if (itemStr === targetStr || itemStr.startsWith(`${targetStr}-split-`) || (itemStr.includes('-split-') && itemStr.split('-split-')[0] === targetStr)) {
+            return {
+              ...item,
+              isPendingDelete: true,
+              isPendingSync: !op.isCompleted
+            }
           }
-        }
-        return item
-      })
+          return item
+        })
+      }
     } else if (op.type === 'toggle') {
       const existingIndex = result.findIndex(item => String(item.id) === targetStr)
       if (existingIndex >= 0) {

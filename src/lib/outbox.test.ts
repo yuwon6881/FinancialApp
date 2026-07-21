@@ -204,6 +204,21 @@ describe('applyOpsToList', () => {
     expect(result[0]).toMatchObject({ isPendingDelete: true, isPendingSync: true })
   })
 
+  it('marks a purchased wishlist ledger transaction pending delete for a wishlist delete op', () => {
+    // Undo-add (delete) of a purchased item must cascade to its linked ledger row in the
+    // optimistic projection -- keyed off wishlistItemId, not the op targetId -- so the
+    // transaction disappears immediately rather than lingering until the next refresh.
+    const base: TestItem[] = [
+      { id: 'tx-guid', name: 'Headphones', description: 'Purchased: Headphones (Wish List)', wishlistItemId: 5 },
+      { id: 'tx-other', name: 'Groceries' },
+    ]
+    const ops = [makeOp({ entity: 'wishlistItem', type: 'delete', targetId: '5' })]
+    const result = applyOpsToList(base, ops, 'transaction')
+    expect(result[0]).toMatchObject({ id: 'tx-guid', isPendingDelete: true, isPendingSync: true })
+    expect(result[1]).toMatchObject({ id: 'tx-other' })
+    expect(result[1].isPendingDelete).toBeUndefined()
+  })
+
   it('ignores ops for a different entity', () => {
     const base: TestItem[] = [{ id: '1', name: 'A' }]
     const ops = [makeOp({ type: 'update', targetId: '1', payload: { name: 'Should not apply' }, entity: 'wishlistItem' })]

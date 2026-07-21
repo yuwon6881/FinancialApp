@@ -1,7 +1,6 @@
 import React from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, type Variants } from 'framer-motion'
 import { Calendar, ChevronRight, CheckCircle2, Clock, Minus } from 'lucide-react'
-import { listContainerVariants, listItemVariants, listItemExit } from '../../lib/animations'
 import type { ActiveRecurringPayment } from '../../types'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
 
@@ -10,6 +9,25 @@ interface SubscriptionsTimelineCardProps {
   formatSensitive: (val: number) => React.ReactNode
   onNavigate: (tab: 'dashboard' | 'recurring' | 'ledger' | 'wishlist' | 'settings') => void
   onNavigateToRecurring?: (recurringPaymentId: string) => void
+  cycleKey?: string
+}
+
+const listContainerVariants: Variants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.03,
+    },
+  },
+}
+
+const subItemVariants: Variants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { duration: 0.15, ease: 'easeOut' },
+  },
 }
 
 export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps> = ({
@@ -17,7 +35,10 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
   formatSensitive,
   onNavigate,
   onNavigateToRecurring,
+  cycleKey,
 }) => {
+  const containerKey = cycleKey || activeRecurring.map(r => r.id).join(',')
+
   return (
     <div data-testid="subscriptions-timeline-card" className="app-panel flex h-full min-w-0 flex-col rounded-2xl border border-border/60 bg-card/92 p-6 lg:max-h-[24rem]">
       <div className="flex-1 flex flex-col min-h-0">
@@ -30,19 +51,18 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
         </div>
 
         <motion.div
-          initial="hidden" animate="show"
+          key={containerKey}
+          initial="hidden"
+          animate="show"
           variants={listContainerVariants}
           className="-mx-1 mt-3 flex-1 min-h-0 space-y-1.5 overflow-x-hidden overflow-y-auto p-1 no-scrollbar"
         >
-          <AnimatePresence mode="popLayout">
           {activeRecurring.map((rp: ActiveRecurringPayment) => (
             <motion.div
               key={rp.id}
-              layout
-              variants={listItemVariants}
-              exit={listItemExit}
+              variants={subItemVariants}
               onClick={() => (onNavigateToRecurring ? onNavigateToRecurring(rp.recurringPaymentId) : onNavigate('recurring'))}
-              className={`group relative flex items-center justify-between gap-2 text-xs py-2 pl-3 pr-2 rounded-xl border border-transparent cursor-pointer transition-all duration-200 hover:bg-blue-500/[0.06] hover:border-blue-500/25 hover:shadow-sm hover:-translate-y-px ${rp.isDiscarded ? 'opacity-50' : ''}`}
+              className={`group relative flex items-center justify-between gap-2 text-xs py-2 pl-3 pr-2 rounded-xl border border-transparent cursor-pointer transition-colors duration-150 hover:bg-blue-500/[0.06] hover:border-blue-500/25 hover:shadow-xs ${rp.isDiscarded ? 'opacity-50' : ''}`}
             >
               {/* Accent bar that grows on hover to signal the row is clickable */}
               <span className="pointer-events-none absolute left-0 top-1/2 h-0 w-[3px] -translate-y-1/2 rounded-full bg-blue-500 transition-all duration-200 group-hover:h-7" />
@@ -79,7 +99,6 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
               <ChevronRight className="size-4 shrink-0 text-blue-500 opacity-0 -translate-x-1 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0" />
             </motion.div>
           ))}
-          </AnimatePresence>
           {activeRecurring.length === 0 && (
             <div className="text-xs text-muted-foreground py-10 text-center">No subscriptions for this cycle.</div>
           )}
