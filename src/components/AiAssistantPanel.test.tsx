@@ -92,6 +92,32 @@ describe('AiAssistantPanel', () => {
     expect(textarea.style.overflowY).toBe('auto')
   })
 
+  it('restores the draft composer height when the panel is reopened', () => {
+    const originalScrollHeight = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'scrollHeight')
+    Object.defineProperty(HTMLTextAreaElement.prototype, 'scrollHeight', {
+      configurable: true,
+      get() { return this.value ? 144 : 44 },
+    })
+
+    try {
+      const props = { onClose: vi.fn(), onActions: vi.fn() }
+      const { rerender } = render(<AiAssistantPanel {...props} isOpen />)
+      fireEvent.change(screen.getByLabelText('Ask AI'), { target: { value: 'A preserved multi-line draft' } })
+      expect((screen.getByLabelText('Ask AI') as HTMLTextAreaElement).style.height).toBe('144px')
+
+      rerender(<AiAssistantPanel {...props} isOpen={false} />)
+      rerender(<AiAssistantPanel {...props} isOpen />)
+
+      expect((screen.getByLabelText('Ask AI') as HTMLTextAreaElement).style.height).toBe('144px')
+    } finally {
+      if (originalScrollHeight) {
+        Object.defineProperty(HTMLTextAreaElement.prototype, 'scrollHeight', originalScrollHeight)
+      } else {
+        delete (HTMLTextAreaElement.prototype as unknown as { scrollHeight?: number }).scrollHeight
+      }
+    }
+  })
+
   it('prevents duplicate sends while a request is in flight', async () => {
     let resolve!: (r: AiChatResponse) => void
     chatWithAi.mockReturnValue(new Promise<AiChatResponse>(r => { resolve = r }))

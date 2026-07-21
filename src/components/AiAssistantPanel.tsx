@@ -116,7 +116,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
 
   useEffect(() => {
     adjustTextareaHeight()
-  }, [input])
+  }, [input, isOpen])
 
   const handleClose = () => {
     cancelInFlight()

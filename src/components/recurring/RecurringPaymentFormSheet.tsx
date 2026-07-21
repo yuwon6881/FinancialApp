@@ -74,6 +74,11 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
       }
     >
       <form noValidate onSubmit={onSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {editingPayment && (
+          <p className="sm:col-span-2 rounded-xl border border-blue-500/15 bg-blue-500/5 px-3.5 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
+            Changes apply to unpaid and future bills. Paid bills keep the details recorded in the ledger.
+          </p>
+        )}
         <div className="space-y-1">
           <label className="text-xs font-semibold text-muted-foreground">Subscription Name</label>
           <input
