@@ -4,6 +4,16 @@ import { getCycleRangeDates } from './cycle'
 const ENVELOPES = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const
 const EPSILON = 0.005
 
+export function formatRate(value: number): string {
+  return `${Math.round(value * 100)}%`
+}
+
+export function formatRateChange(value: number): string {
+  const points = Math.round(Math.abs(value) * 100)
+  if (points === 0) return 'No change'
+  return `${points} ${points === 1 ? 'point' : 'points'} ${value > 0 ? 'higher' : 'lower'}`
+}
+
 export function buildCycleSummary(
   data: DashboardData,
   previousData: DashboardData | null,

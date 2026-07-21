@@ -53,10 +53,10 @@ describe('fetchDashboard request caching', () => {
     Object.defineProperty(window, 'fetch', { value: fetchMock, configurable: true })
 
     const api = await import('./api')
-    await api.fetchDashboard('Jun', 2026, undefined, false)
+    await api.fetchDashboard('Jun', 2026, undefined, false, true)
 
     const [url] = fetchMock.mock.calls[0] as unknown as [string]
-    expect(url).toContain('/financial/dashboard?month=Jun&year=2026&persistSelection=false')
+    expect(url).toContain('/financial/dashboard?month=Jun&year=2026&persistSelection=false&summaryOnly=true')
   })
 
   it('dedupes abortable startup requests onto one shared fetch', async () => {

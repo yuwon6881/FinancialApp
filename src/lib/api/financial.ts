@@ -16,14 +16,16 @@ export function fetchDashboard(
   year?: number,
   signal?: AbortSignal,
   persistSelection = true,
+  summaryOnly = false,
 ): Promise<DashboardCore> {
   const params = new URLSearchParams()
   if (month) params.append('month', month)
   if (year) params.append('year', year.toString())
   if (!persistSelection) params.append('persistSelection', 'false')
+  if (summaryOnly) params.append('summaryOnly', 'true')
   const query = params.size ? `?${params}` : ''
 
-  return cachedGet(`dashboard:${month || ''}:${year || ''}:${persistSelection}`, async () => {
+  return cachedGet(`dashboard:${month || ''}:${year || ''}:${persistSelection}:${summaryOnly}`, async () => {
     const data = await request<WireDashboardData>(`/financial/dashboard${query}`, {
       errorMessage: 'Failed to fetch dashboard data',
     })

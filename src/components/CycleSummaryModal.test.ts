@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DashboardData, WishlistItem } from '../types'
-import { buildCycleSummary } from '../lib/cycleSummary'
+import { buildCycleSummary, formatRate, formatRateChange } from '../lib/cycleSummary'
 
 function dashboard(overrides: Partial<DashboardData> = {}): DashboardData {
   return {
@@ -63,6 +63,13 @@ function wish(overrides: Partial<WishlistItem> = {}): WishlistItem {
 }
 
 describe('buildCycleSummary', () => {
+  it('describes savings rates and percentage-point changes without cryptic notation', () => {
+    expect(formatRate(0.81)).toBe('81%')
+    expect(formatRateChange(-0.8)).toBe('80 points lower')
+    expect(formatRateChange(0.087)).toBe('9 points higher')
+    expect(formatRateChange(0)).toBe('No change')
+  })
+
   it('uses true envelope outflows instead of treating net change as spending', () => {
     const summary = buildCycleSummary(dashboard(), null, [], 2026, 7, 1)
 

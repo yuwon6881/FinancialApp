@@ -3,21 +3,17 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   ChartNoAxesCombined,
-  CircleDollarSign,
   FileBarChart,
   Gift,
-  Lightbulb,
   LoaderCircle,
   Receipt,
-  ShieldCheck,
   TrendingDown,
   TrendingUp,
-  Wallet,
 } from 'lucide-react'
 import type { DashboardData, WishlistItem } from '../types'
 import { useAppContext } from '../contexts/AppContext'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
-import { buildCycleSummary } from '../lib/cycleSummary'
+import { buildCycleSummary, formatRate, formatRateChange } from '../lib/cycleSummary'
 import { BottomSheet } from './ui/BottomSheet'
 
 interface CycleSummaryModalProps {
@@ -33,10 +29,6 @@ interface CycleSummaryModalProps {
   cycleDay: number
   variant: 'auto' | 'manual'
   onViewLedger?: () => void
-}
-
-function signedPercent(value: number): string {
-  return `${value >= 0 ? '+' : ''}${Math.round(value * 100)}%`
 }
 
 export function CycleSummaryModal({
@@ -117,7 +109,7 @@ export function CycleSummaryModal({
           </p>
         </div>
       ) : (
-        <div className="space-y-4 sm:space-y-5">
+        <div className="space-y-6">
           <div className="grid gap-3 sm:grid-cols-[1.25fr_1fr]">
             <div className={`rounded-2xl border p-4 sm:p-5 ${summary.positive ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-orange-500/20 bg-orange-500/5'}`}>
               <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -127,71 +119,65 @@ export function CycleSummaryModal({
               <div className={`mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl ${summary.positive ? 'text-emerald-500' : 'text-orange-500'}`}>
                 {summary.net < 0 ? '−' : '+'}{formatSensitive(Math.abs(summary.net))}
               </div>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                {summary.positive ? 'More came in than went out.' : 'More went out than came in.'}
-              </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">{summary.positive ? 'Left after spending' : 'Spent beyond inflow'}</p>
             </div>
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-1">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-1">
               <StatTile icon={<ArrowDownRight className="size-3.5 text-emerald-500" />} label="In" value={formatSensitive(summary.inflow)} />
               <StatTile icon={<ArrowUpRight className="size-3.5 text-orange-500" />} label="Out" value={formatSensitive(summary.expenses)} />
-              <StatTile icon={<Wallet className="size-3.5 text-blue-500" />} label="Income" value={formatSensitive(summary.income)} />
             </div>
           </div>
 
           {summary.previousHasActivity && (
-            <Section title="Compared with previous cycle" icon={<Lightbulb className="size-3.5" />}>
-              <div className="grid gap-2 sm:grid-cols-2">
+            <Section title="Since last cycle">
+              <div className="grid gap-3 sm:grid-cols-2">
                 {summary.spendingDelta !== null && (
                   <InsightCard
-                    title={summary.spendingDelta <= 0 ? 'Spending fell' : 'Spending rose'}
-                    value={`${summary.spendingDelta <= 0 ? '−' : '+'}${formatSensitive(Math.abs(summary.spendingDelta))}`}
+                    title="Spending"
+                    value={formatSensitive(Math.abs(summary.spendingDelta))}
                     tone={summary.spendingDelta <= 0 ? 'good' : 'warn'}
-                    detail="versus the previous cycle"
+                    detail={summary.spendingDelta <= 0 ? 'less than last cycle' : 'more than last cycle'}
                   />
                 )}
                 {summary.savingsRate !== null && (
                   <InsightCard
                     title="Savings rate"
-                    value={signedPercent(summary.savingsRate)}
+                    value={formatRate(summary.savingsRate)}
                     tone={summary.savingsRate >= 0 ? 'good' : 'warn'}
-                    detail={summary.previousSavingsRate === null ? 'of cycle inflow' : `${signedPercent(summary.savingsRate - summary.previousSavingsRate)} pts vs previous`}
+                    detail={summary.previousSavingsRate === null ? 'this cycle' : formatRateChange(summary.savingsRate - summary.previousSavingsRate)}
                   />
                 )}
                 {summary.biggestCategoryShift && (
                   <InsightCard
-                    title={`Largest shift: ${summary.biggestCategoryShift.category}`}
-                    value={`${summary.biggestCategoryShift.delta < 0 ? '−' : '+'}${formatSensitive(Math.abs(summary.biggestCategoryShift.delta))}`}
+                    title="Biggest shift"
+                    value={summary.biggestCategoryShift.category}
                     tone={summary.biggestCategoryShift.delta <= 0 ? 'good' : 'warn'}
-                    detail="change in category spending"
+                    detail={`${formatSensitive(Math.abs(summary.biggestCategoryShift.delta))} ${summary.biggestCategoryShift.delta <= 0 ? 'less' : 'more'} spent`}
                   />
                 )}
                 {summary.growthDelta !== null && (
                   <InsightCard
-                    title="Growth balance"
+                    title="Growth fund"
                     value={`${summary.growthDelta < 0 ? '−' : '+'}${formatSensitive(Math.abs(summary.growthDelta))}`}
                     tone={summary.growthDelta >= 0 ? 'good' : 'warn'}
-                    detail="change from previous ending balance"
+                    detail="ending balance"
                   />
                 )}
               </div>
             </Section>
           )}
 
-          <Section title="Envelope activity" icon={<CircleDollarSign className="size-3.5" />}>
-            <p className="-mt-1 mb-2 text-[10px] leading-relaxed text-muted-foreground">
-              Balances carry across cycles. “Spent” is this cycle’s actual outflow and excludes envelope transfers.
-            </p>
-            <div className="grid gap-2 sm:grid-cols-2">
+          <Section title="Envelopes">
+            <div className="grid gap-3 sm:grid-cols-2">
               {summary.envelopes.map(envelope => (
-                <div key={envelope.name} className="rounded-xl border border-border/50 bg-muted/20 p-3">
+                <div key={envelope.name} className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-xs font-bold text-foreground">{envelope.name}</span>
                     <span className={`text-xs font-bold ${envelope.overspent ? 'text-orange-500' : 'text-foreground'}`}>
-                      {formatSensitive(envelope.spent)} spent
+                      <span className="mr-1 font-medium text-muted-foreground">Spent</span>{formatSensitive(envelope.spent)}
                     </span>
                   </div>
-                  <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
-                    <span>Ending balance</span>
+                  <div className="mt-1.5 flex items-center justify-between text-[10px] text-muted-foreground">
+                    <span>Balance</span>
                     <span className={envelope.overspent ? 'font-bold text-orange-500' : ''}>{formatSensitive(envelope.remaining)}</span>
                   </div>
                 </div>
@@ -199,13 +185,13 @@ export function CycleSummaryModal({
             </div>
           </Section>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-6 sm:grid-cols-2">
             {summary.topCategories.length > 0 && (
               <Section title="Where it went">
-                <div className="space-y-2 rounded-xl border border-border/50 bg-muted/20 p-3">
+                <div className="space-y-3 rounded-xl border border-border/50 bg-muted/20 p-3.5">
                   {summary.topCategories.map(category => (
-                    <div key={category.category} className="flex items-center gap-2">
-                      <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-bold ${getCategoryBadgeClass(category.category)}`}>{category.category}</span>
+                    <div key={category.category} className="grid grid-cols-[minmax(0,6.5rem)_minmax(2.5rem,1fr)_auto] items-center gap-2">
+                      <span className={`truncate rounded border px-1.5 py-0.5 text-[9px] font-bold ${getCategoryBadgeClass(category.category)}`}>{category.category}</span>
                       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                         <div className="h-full rounded-full bg-foreground/40" style={{ width: `${summary.topMax > 0 ? (category.amount / summary.topMax) * 100 : 0}%` }} />
                       </div>
@@ -218,9 +204,9 @@ export function CycleSummaryModal({
 
             {summary.stabilityTarget > 0 && (
               <Section title="Stability fund">
-                <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
+                <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="flex items-center gap-1.5 font-semibold text-foreground"><ShieldCheck className="size-3.5 text-cyan-500" />Funded toward target</span>
+                    <span className="font-semibold text-foreground">Funded</span>
                     <span className="font-bold text-foreground">{Math.round(summary.stabilityPct * 100)}%</span>
                   </div>
                   <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-cyan-500" style={{ width: `${summary.stabilityPct * 100}%` }} /></div>
@@ -230,7 +216,7 @@ export function CycleSummaryModal({
           </div>
 
           {(summary.billsCount > 0 || summary.purchasedThisCycle.length > 0) && (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-6 sm:grid-cols-2">
               {summary.billsCount > 0 && (
                 <Section title="Bills">
                   <div className="flex items-center justify-between gap-3 rounded-xl border border-border/50 bg-muted/20 p-3">
@@ -262,9 +248,9 @@ function StatTile({ icon, label, value }: { icon: ReactNode; label: string; valu
 }
 
 function InsightCard({ title, value, detail, tone }: { title: string; value: ReactNode; detail: string; tone: 'good' | 'warn' }) {
-  return <div className="rounded-xl border border-border/50 bg-muted/20 p-3"><div className="flex items-start justify-between gap-2"><span className="text-[11px] font-semibold text-foreground">{title}</span><span className={`shrink-0 text-xs font-bold ${tone === 'good' ? 'text-emerald-500' : 'text-orange-500'}`}>{value}</span></div><p className="mt-1 text-[10px] text-muted-foreground">{detail}</p></div>
+  return <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5"><div className="flex items-start justify-between gap-3"><span className="text-[11px] font-semibold text-muted-foreground">{title}</span><span className={`max-w-[55%] truncate text-right text-xs font-bold ${tone === 'good' ? 'text-emerald-500' : 'text-orange-500'}`}>{value}</span></div><p className="mt-1.5 text-[10px] text-foreground/70">{detail}</p></div>
 }
 
 function Section({ title, icon, children }: { title: string; icon?: ReactNode; children: ReactNode }) {
-  return <section><h3 className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{icon}{title}</h3>{children}</section>
+  return <section><h3 className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{icon}{title}</h3>{children}</section>
 }

@@ -134,8 +134,8 @@ export function useCycleSummary(options: UseCycleSummaryOptions) {
     setIsLoading(true)
     setLoadError(null)
     Promise.allSettled([
-      targetIsSelected ? Promise.resolve(null) : api.fetchDashboard(month, target.year, ac.signal, false),
-      api.fetchDashboard(priorMonth, prior.year, ac.signal, false),
+      targetIsSelected ? Promise.resolve(null) : api.fetchDashboard(month, target.year, ac.signal, false, true),
+      api.fetchDashboard(priorMonth, prior.year, ac.signal, false, true),
     ])
       .then(([targetResult, previousResult]) => {
         if (targetResult.status === 'fulfilled') {
