@@ -1,29 +1,5 @@
 # React + TypeScript + Vite
 
-## Android app
-
-The Android version is a Capacitor 8 app with package ID `com.yuwon.financialapp`.
-Unlike a browser-installed PWA, the native shell owns the Android window and can
-reliably draw the app behind the camera cutout and gesture-navigation area.
-
-The shell uses transparent edge-to-edge system bars. Capacitor's `SystemBars` API
-changes status-bar and gesture-navigation icon contrast whenever the app's
-light/dark theme changes and injects Android safe-area CSS variables so interactive
-content stays clear of those overlays. This is the supported solution for Brave
-and Edge, which may keep standalone PWA content outside Android-owned system regions.
-
-Prerequisites: Android Studio Otter 2025.2.1 or newer, its bundled JDK, and the
-Android 16 / API 36 SDK. To refresh and open the native project:
-
-```powershell
-npm run android:sync
-npm run android:open
-```
-
-Build and install the app from Android Studio. The browser PWA remains available,
-but installing it from Chrome, Brave, or Edge still delegates system-bar behavior
-to that browser and cannot provide the native guarantee.
-
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

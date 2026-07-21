@@ -1,23 +1,25 @@
-import { Capacitor, SystemBars, SystemBarsStyle } from '@capacitor/core'
+import { Capacitor } from '@capacitor/core'
+
+// Colors mirror the theme-color meta toggle in App.tsx, keeping native chrome
+// in sync with the web PWA's light/dark surface color.
+const DARK_BG = '#0a0d14'
+const LIGHT_BG = '#f6f8fc'
 
 // One-time native chrome setup. No-ops on web so the plugins never touch the
 // browser build's behavior.
 export async function initNativeUi(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return
 
-  await syncSystemBarsTheme(document.documentElement.classList.contains('dark'))
-
   const { Keyboard, KeyboardResize } = await import('@capacitor/keyboard')
   await Keyboard.setResizeMode({ mode: KeyboardResize.Native }).catch(() => undefined)
   await Keyboard.setScroll({ isDisabled: false }).catch(() => undefined)
 }
 
-// Android 15+ requires edge-to-edge system bars, so the native bridge keeps the
-// transparent status/navigation bar icon contrast aligned with the app theme.
-export async function syncSystemBarsTheme(isDark: boolean): Promise<void> {
+// Keeps the native status bar color/style aligned with the app's dark-mode toggle.
+export async function syncStatusBarTheme(isDark: boolean): Promise<void> {
   if (!Capacitor.isNativePlatform()) return
 
-  await SystemBars.setStyle({
-    style: isDark ? SystemBarsStyle.Dark : SystemBarsStyle.Light,
-  }).catch(() => undefined)
+  const { StatusBar, Style } = await import('@capacitor/status-bar')
+  await StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light }).catch(() => undefined)
+  await StatusBar.setBackgroundColor({ color: isDark ? DARK_BG : LIGHT_BG }).catch(() => undefined)
 }
