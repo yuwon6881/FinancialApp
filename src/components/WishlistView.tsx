@@ -9,6 +9,7 @@ import { CycleSkeleton } from './ui/Skeleton'
 import { Card } from './ui/Card'
 import { RowSyncStatus } from './ui/RowSyncBadge'
 import { formatCurrencyVal } from '../lib/utils'
+import { MONTH_NAMES, getCycleYearAndMonthForDate } from '../lib/cycle'
 import { useSyncStatus } from '../lib/useOptimisticList'
 import { getActiveWishlistItem } from '../lib/wishlist'
 import { Button } from './ui/Button'
@@ -27,14 +28,30 @@ import {
   Target,
   Edit2,
   Trophy,
-  ArrowUpRight
+  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
+  Loader2
 } from 'lucide-react'
+import type { PagedWishlistResult } from '../lib/api'
+
+const CLAIMED_PAGE_SIZE = 5
 
 const activateOnKeyboard = (event: React.KeyboardEvent, action: () => void) => {
   if (event.key === 'Enter' || event.key === ' ') {
     event.preventDefault()
     action()
   }
+}
+
+// Parse a transaction/purchase date into a *local* calendar Date. Both the ledger
+// 'YYYY-MM-DD' date and an ISO purchasedAt begin with the date part, so read that
+// directly and avoid the UTC-midnight timezone shift `new Date('YYYY-MM-DD')` causes.
+const parseClaimDate = (value: string): Date | null => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value)
+  if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
 interface WishlistViewProps {
@@ -60,7 +77,11 @@ interface WishlistViewProps {
     range?: 'monthly' | '3month' | '6month' | 'yearly'
     highlightedTxId?: string | null
     showAllCycles?: boolean
+    targetMonth?: string
+    targetYear?: number
   }) => void
+  cycleDay?: number
+  onFetchClaimedWishlist?: (page: number, pageSize: number) => Promise<PagedWishlistResult>
   activeSyncId?: string | null
   deletingId?: string | null
   isSwitchingCycle?: boolean
@@ -90,6 +111,8 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   autoOpenAddModal,
   onResetAutoOpen,
   onNavigateToLedger,
+  cycleDay = 28,
+  onFetchClaimedWishlist,
   activeSyncId: activeSyncIdProp,
   deletingId: deletingIdProp,
   isSwitchingCycle = false,
@@ -119,6 +142,26 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     if (!purchasingItem) return
     void onPurchaseItem(purchasingItem.id, purchaseDateInput)
     setPurchasingItem(null)
+  }
+
+  // Open a claimed reward's ledger entry: jump to the cycle that owns the purchase
+  // date (which may be a previous cycle) in monthly view, then highlight/scroll to
+  // the transaction. Monthly view is used because the ledger's highlight searches
+  // the loaded single-cycle list — all-cycles mode is server-paged and can't find it.
+  const handleOpenClaimInLedger = (txId: string, rawDate: string | null) => {
+    if (!onNavigateToLedger) return
+    const options: Parameters<NonNullable<typeof onNavigateToLedger>>[0] = {
+      highlightedTxId: txId,
+      showAllCycles: false,
+      range: 'monthly',
+    }
+    const claimDate = rawDate ? parseClaimDate(rawDate) : null
+    if (claimDate) {
+      const { year, monthIndex } = getCycleYearAndMonthForDate(claimDate, cycleDay)
+      options.targetMonth = MONTH_NAMES[monthIndex - 1]
+      options.targetYear = year
+    }
+    onNavigateToLedger(options)
   }
 
   const {
@@ -170,6 +213,54 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
       return dateB - dateA
     })
   }, [wishlist])
+
+  // --- Rewards Claimed history: server-side pagination (5 per page) ---------
+  // The server owns paging; we fall back to client-side slicing of the cached
+  // purchased items when offline / the fetch fails, so the history stays usable
+  // (and shows optimistic claims) without a connection.
+  const [claimPage, setClaimPage] = React.useState(1)
+  const [claimServer, setClaimServer] = React.useState<PagedWishlistResult | null>(null)
+  const [claimLoading, setClaimLoading] = React.useState(false)
+  const [claimFailed, setClaimFailed] = React.useState(false)
+
+  // Lightweight change signal: newest claims land at the top, so the count plus the
+  // top item's identity/date is enough to detect an add/undo/delete and refetch.
+  const purchasedSignal = `${purchasedItems.length}|${purchasedItems[0]?.id ?? ''}|${purchasedItems[0]?.purchasedAt ?? ''}`
+
+  React.useEffect(() => {
+    if (!onFetchClaimedWishlist) return
+    let cancelled = false
+    setClaimLoading(true)
+    onFetchClaimedWishlist(claimPage, CLAIMED_PAGE_SIZE)
+      .then(result => { if (!cancelled) { setClaimServer(result); setClaimFailed(false) } })
+      .catch(() => { if (!cancelled) { setClaimServer(null); setClaimFailed(true) } })
+      .finally(() => { if (!cancelled) setClaimLoading(false) })
+    return () => { cancelled = true }
+  }, [onFetchClaimedWishlist, claimPage, purchasedSignal])
+
+  const useServerClaims = !!claimServer && !claimFailed
+  const totalClaimed = useServerClaims ? claimServer.total : purchasedItems.length
+  const claimTotalPages = Math.max(1, Math.ceil(totalClaimed / CLAIMED_PAGE_SIZE))
+
+  // Clamp the page if deletions shrank the list below the current page.
+  React.useEffect(() => {
+    if (claimPage > claimTotalPages) setClaimPage(claimTotalPages)
+  }, [claimPage, claimTotalPages])
+
+  const claimPageItems = useMemo(() => {
+    const serverItems = useServerClaims ? claimServer!.items : null
+    if (!serverItems) {
+      return purchasedItems.slice((claimPage - 1) * CLAIMED_PAGE_SIZE, claimPage * CLAIMED_PAGE_SIZE)
+    }
+    // On the first page, surface optimistic (not-yet-synced) claims the server
+    // hasn't recorded yet on top, so a just-claimed reward shows immediately.
+    if (claimPage === 1) {
+      const serverIds = new Set(serverItems.map(i => String(i.id)))
+      const pending = purchasedItems.filter(p => p.isPendingSync && !serverIds.has(String(p.id)))
+      if (pending.length > 0) return [...pending, ...serverItems].slice(0, CLAIMED_PAGE_SIZE)
+    }
+    return serverItems
+  }, [useServerClaims, claimServer, purchasedItems, claimPage])
 
   // Stats
   const totalCost = useMemo(() => {
@@ -569,25 +660,37 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
       </div>
 
       {/* History Log / Purchased Items */}
-      {purchasedItems.length > 0 && (
+      {totalClaimed > 0 && (
         <Card>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
               <Trophy className="size-4 text-blue-500" />
               Rewards Claimed
+              {claimLoading && <Loader2 className="size-3 text-muted-foreground animate-spin" />}
             </h3>
             <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold text-blue-500">
-              {purchasedItems.length} {purchasedItems.length === 1 ? 'reward' : 'rewards'}
+              {totalClaimed} {totalClaimed === 1 ? 'reward' : 'rewards'}
             </span>
           </div>
-          <div className="space-y-1.5">
-            {purchasedItems.map(item => {
+          <div className={`space-y-1.5 transition-opacity duration-150 ${claimLoading ? 'opacity-60' : ''}`}>
+            {claimPageItems.map(item => {
               const linkedTx = transactions?.find(t => t.wishlistItemId === item.id || (item.purchaseTransactionId && String(t.id) === String(item.purchaseTransactionId)))
               const displayDate = linkedTx?.date || (item.purchasedAt ? new Date(item.purchasedAt).toLocaleDateString() : 'N/A')
+              const txId = linkedTx?.id ?? (item.purchaseTransactionId ? String(item.purchaseTransactionId) : null)
+              const rawDate = linkedTx?.date ?? item.purchasedAt ?? null
+              const canNavigate = !!txId && !!onNavigateToLedger
               return (
-                <div
+                <button
                   key={item.id}
-                  className="group flex items-center justify-between gap-3 rounded-xl border border-transparent px-2.5 py-2.5 transition-colors duration-150 hover:border-border/50 hover:bg-muted/40"
+                  type="button"
+                  disabled={!canNavigate}
+                  onClick={() => { if (canNavigate && txId) handleOpenClaimInLedger(txId, rawDate) }}
+                  aria-label={canNavigate ? `View "${item.name}" reward claim in the ledger` : undefined}
+                  className={`group flex w-full items-center justify-between gap-3 rounded-xl border border-transparent px-2.5 py-2.5 text-left transition-colors duration-150 ${
+                    canNavigate
+                      ? 'cursor-pointer hover:border-border/50 hover:bg-muted/40 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring'
+                      : 'cursor-default'
+                  }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span className="shrink-0 grid place-items-center size-8 rounded-lg bg-blue-500/10 text-blue-500 ring-1 ring-blue-500/15">
@@ -601,14 +704,43 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                       </span>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end shrink-0">
-                    <span className="font-black text-xs text-foreground">{formatSensitive(item.price)}</span>
-                    <span className="mt-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-500/80">Claimed</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex flex-col items-end">
+                      <span className="font-black text-xs text-foreground">{formatSensitive(item.price)}</span>
+                      <span className="mt-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-500/80">Claimed</span>
+                    </div>
+                    {canNavigate && (
+                      <ArrowUpRight className="size-3.5 text-muted-foreground opacity-0 transition-opacity duration-150 group-hover:opacity-100" />
+                    )}
                   </div>
-                </div>
+                </button>
               )
             })}
           </div>
+
+          {claimTotalPages > 1 && (
+            <div className="mt-3 flex items-center justify-between border-t border-border/30 pt-3">
+              <button
+                type="button"
+                onClick={() => setClaimPage(page => Math.max(1, page - 1))}
+                disabled={claimPage <= 1 || claimLoading}
+                className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-foreground transition-colors hover:bg-muted/50 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+              >
+                <ChevronLeft className="size-3.5" /> Prev
+              </button>
+              <span className="text-[10px] font-semibold text-muted-foreground">
+                Page {claimPage} of {claimTotalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setClaimPage(page => Math.min(claimTotalPages, page + 1))}
+                disabled={claimPage >= claimTotalPages || claimLoading}
+                className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-foreground transition-colors hover:bg-muted/50 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+              >
+                Next <ChevronRight className="size-3.5" />
+              </button>
+            </div>
+          )}
         </Card>
       )}
 

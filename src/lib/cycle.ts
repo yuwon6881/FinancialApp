@@ -131,15 +131,22 @@ export function getStartOfNCyclesAgo(activeYear: number, activeMonthIndex: numbe
 // period, which is a different concept -- last viewed, not current). Mirrors
 // the backend's GetCycleYearAndMonthIndexForDate.
 export function getCurrentCycleYearAndMonth(cycleDay: number): { year: number; monthIndex: number } {
-  const now = new Date()
-  let year = now.getFullYear()
-  let monthIndex = now.getMonth() + 1
+  return getCycleYearAndMonthForDate(new Date(), cycleDay)
+}
+
+// Which cycle a given calendar date falls into, given the configured cycleDay.
+// Mirrors the backend's GetCycleYearAndMonthIndexForDate. Used to jump the ledger
+// to the exact cycle that owns a transaction (e.g. clicking a claimed reward whose
+// purchase may sit in a previous cycle).
+export function getCycleYearAndMonthForDate(date: Date, cycleDay: number): { year: number; monthIndex: number } {
+  let year = date.getFullYear()
+  let monthIndex = date.getMonth() + 1
   // Clamp cycleDay to this month's length before comparing, matching getCycleRangeDates.
   // A raw "getDate() < cycleDay" would misattribute a clamped last-of-month day
   // (e.g. Feb 28 with cycleDay 31) to the previous cycle, contradicting the range.
   const daysInMonth = new Date(year, monthIndex, 0).getDate()
   const clampedStart = Math.min(cycleDay, daysInMonth)
-  if (cycleDay > 1 && now.getDate() < clampedStart) {
+  if (cycleDay > 1 && date.getDate() < clampedStart) {
     monthIndex--
     if (monthIndex < 1) {
       monthIndex = 12

@@ -1,5 +1,5 @@
 import type { Transaction, WishlistItem } from '../../types'
-import type { WireWishlistItem, WireWishlistPurchaseResult } from '../apiTypes'
+import type { WireWishlistItem, WireWishlistPurchaseResult, WirePagedWishlistResult } from '../apiTypes'
 import { deobfuscateTransaction, deobfuscateWishlistItem, obfuscateAmount } from './amounts'
 import { cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
 
@@ -10,6 +10,32 @@ export function fetchWishlist(signal?: AbortSignal): Promise<WishlistItem[]> {
     })
     return (data || []).map(deobfuscateWishlistItem)
   }, { signal, staleTime: 120_000 })
+}
+
+export interface PagedWishlistResult {
+  items: WishlistItem[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+// Server-paged "Rewards Claimed" history (purchased items only, newest first).
+export async function fetchClaimedWishlistPage(
+  page: number,
+  pageSize: number,
+  signal?: AbortSignal,
+): Promise<PagedWishlistResult> {
+  const query = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
+  const data = await request<WirePagedWishlistResult>(`/wishlist/claimed?${query}`, {
+    signal,
+    errorMessage: 'Failed to fetch claimed rewards',
+  })
+  return {
+    items: (data.items || []).map(deobfuscateWishlistItem),
+    total: data.total ?? 0,
+    page: data.page ?? page,
+    pageSize: data.pageSize ?? pageSize,
+  }
 }
 
 export async function addWishlistItem(item: Partial<WishlistItem>, clientKey?: string): Promise<WishlistItem> {

@@ -765,6 +765,8 @@ function App() {
                         autoOpenAddModal={nav.autoOpenWishlistAdd}
                         onResetAutoOpen={() => nav.setAutoOpenWishlistAdd(false)}
                         onNavigateToLedger={nav.handleNavigateToLedger}
+                        cycleDay={financial.optimisticDashboardData?.setting?.cycleDay || 28}
+                        onFetchClaimedWishlist={api.fetchClaimedWishlistPage}
                         isSwitchingCycle={nav.isSwitchingCycle}
                         onStartEditPending={financial.setEditingPendingId}
                         aiDraft={aiRouter.state.aiWishlistDraft}

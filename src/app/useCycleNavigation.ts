@@ -97,7 +97,19 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     range?: 'monthly' | '3month' | '6month' | 'yearly'
     highlightedTxId?: string | null
     showAllCycles?: boolean
+    // When set, first switch the active cycle to this period (monthly view) so a
+    // transaction living in another cycle is actually present to scroll to/highlight.
+    targetMonth?: string
+    targetYear?: number
   }) => {
+    // Jump to the transaction's own cycle before applying ledger state, so the
+    // highlight/scroll (which searches the loaded single-cycle list) can find it.
+    if (navOptions.targetMonth && navOptions.targetYear) {
+      const current = selectedPeriodRef.current
+      if (navOptions.targetMonth !== current.month || navOptions.targetYear !== current.year) {
+        void handleSelectPeriod(navOptions.targetMonth, navOptions.targetYear)
+      }
+    }
     const filters = navOptions.category ? [navOptions.category] : []
     const search = navOptions.search || ''
     const startDate = navOptions.date || ''
@@ -127,7 +139,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
         highlightedTxId: navOptions.highlightedTxId || null,
       }),
     })
-  }, [setActiveTab, setLedgerCyclesRange])
+  }, [setActiveTab, setLedgerCyclesRange, handleSelectPeriod])
 
   const handleNavigateToRecurring = useCallback((recurringPaymentId: string) => {
     setHighlightedRecurringId(recurringPaymentId)

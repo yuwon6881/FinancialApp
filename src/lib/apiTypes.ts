@@ -140,3 +140,10 @@ export interface WireWishlistPurchaseResult {
   item: WireWishlistItem
   transaction: WireTransaction
 }
+
+export interface WirePagedWishlistResult {
+  items?: WireWishlistItem[]
+  total?: number
+  page?: number
+  pageSize?: number
+}
