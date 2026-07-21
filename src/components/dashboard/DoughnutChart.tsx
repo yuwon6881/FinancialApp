@@ -87,7 +87,10 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
                   const targetPath = getDoughnutPath(100, 100, isHovered ? 96 : 90, isHovered ? 56 : 62, slice.startAngle, slice.endAngle)
                   return (
                     <motion.path
-                      key={slice.category}
+                      // Keyed by range + category so switching timeframe remounts every
+                      // arc and replays the staggered scale/opacity fade-in, instead of
+                      // persisting slices snapping their `d` to the new geometry.
+                      key={`${chartView}-${slice.category}`}
                       // d is a static attribute (not animated). framer-motion can't
                       // safely interpolate arc paths: it treats `d` as a flat number
                       // list, so the A-command flags and any structural difference

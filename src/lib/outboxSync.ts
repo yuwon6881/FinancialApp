@@ -228,7 +228,6 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
         }
       } catch (err: unknown) {
         deps.setActiveSyncOpId?.(null)
-        console.error(`Failed to sync ${nextOp.entity}:${nextOp.type}:`, err)
         const status = getStatus(err)
         const isAuthError = hasHttpStatus(err, 401)
           || (status === undefined && errorMessageIncludesLower(err, 'unauthorized'))
@@ -236,6 +235,13 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
         const isJustLoggedIn = deps.now() - deps.getLastUnlockedTime() < JUST_LOGGED_IN_WINDOW_MS
         const isIdempotentMissingDelete = status === 404 &&
           (nextOp.type === 'delete' || nextOp.type === 'unpurchase')
+        // A 404 on a delete/unpurchase is an expected, benign outcome (the row was
+        // already gone — e.g. deleting a stale/optimistic item, or an undo chain).
+        // It resolves to a success below, so don't log it as an error and pollute
+        // the console; genuine sync failures still log.
+        if (!isIdempotentMissingDelete) {
+          console.error(`Failed to sync ${nextOp.entity}:${nextOp.type}:`, err)
+        }
         const isPermanentError = status !== undefined && status >= 400 && status < 500 && status !== 401 && status !== 423
         const online = isOnline()
         const isConnectionFailure = isNetworkFailure(err, online)

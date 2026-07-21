@@ -78,7 +78,10 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
                     (range switch or re-render on navigation) the two paths have
                     different segment counts and it emits a malformed `d`
                     ("Expected number" SVG error). Fading in avoids that entirely. */}
+                {/* Keyed by range so a timeframe switch remounts the fill/line and
+                    replays the fade-in with the new shape, rather than snapping. */}
                 <motion.path
+                  key={`fill-${range}`}
                   d={`M 15,105 L ${polyline} L 485,105 Z`}
                   fill="url(#growthGradient)"
                   initial={{ opacity: 0 }}
@@ -86,6 +89,7 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
                   transition={{ duration: 0.4, ease: 'easeInOut' }}
                 />
                 <motion.polyline
+                  key={`line-${range}`}
                   points={polyline}
                   fill="none"
                   stroke="var(--color-chart-line, #4f46e5)"
@@ -101,13 +105,18 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
                 const position = chartPosition(points, index)
                 return (
                   <motion.span
-                    key={`${point.month}-${index}`}
-                    layout
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1, left: `calc(${position.left}% - 3px)`, top: `calc(${position.top}% - 3px)` }}
-                    transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+                    // Keyed by range and positioned statically via `style`. Previously
+                    // `layout` + a spring on left/top made the dots overshoot and bounce
+                    // into place on every timeframe switch. Remounting per range and
+                    // easing only scale/opacity gives a smooth staggered fade-in with no
+                    // position morph, so the dots land cleanly with the redrawn line.
+                    key={`${range}-${point.month}-${index}`}
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.3, ease: 'easeOut', delay: index * 0.03 }}
                     aria-hidden="true"
                     className="absolute size-1.5 rounded-full bg-blue-500/80 shadow-xs"
+                    style={{ left: `calc(${position.left}% - 3px)`, top: `calc(${position.top}% - 3px)` }}
                   />
                 )
               })}

@@ -571,29 +571,39 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
       {/* History Log / Purchased Items */}
       {purchasedItems.length > 0 && (
         <Card>
-          <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5 mb-4">
-            <CheckCircle2 className="size-4 text-blue-500" />
-            Milestones unlocked <span className="ml-1 rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] text-blue-500">{purchasedItems.length}</span>
-          </h3>
-          <div className="divide-y divide-border/30 text-xs font-semibold">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+              <Trophy className="size-4 text-blue-500" />
+              Rewards Claimed
+            </h3>
+            <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold text-blue-500">
+              {purchasedItems.length} {purchasedItems.length === 1 ? 'reward' : 'rewards'}
+            </span>
+          </div>
+          <div className="space-y-1.5">
             {purchasedItems.map(item => {
               const linkedTx = transactions?.find(t => t.wishlistItemId === item.id || (item.purchaseTransactionId && String(t.id) === String(item.purchaseTransactionId)))
               const displayDate = linkedTx?.date || (item.purchasedAt ? new Date(item.purchasedAt).toLocaleDateString() : 'N/A')
               return (
-                <div key={item.id} className="py-3 flex items-center justify-between text-foreground">
-                  <div className="flex items-center gap-2">
-                    <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
-                      <CheckCircle2 className="size-3.5" />
+                <div
+                  key={item.id}
+                  className="group flex items-center justify-between gap-3 rounded-xl border border-transparent px-2.5 py-2.5 transition-colors duration-150 hover:border-border/50 hover:bg-muted/40"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="shrink-0 grid place-items-center size-8 rounded-lg bg-blue-500/10 text-blue-500 ring-1 ring-blue-500/15">
+                      <CheckCircle2 className="size-4" />
                     </span>
-                    <div>
-                      <span className="font-bold block">{item.name}</span>
-                      <span className="text-[10px] text-muted-foreground font-normal">
-                        Bought: {displayDate}
+                    <div className="min-w-0">
+                      <span className="font-bold text-xs text-foreground block truncate">{item.name}</span>
+                      <span className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground font-medium">
+                        <Clock className="size-2.5" />
+                        {displayDate}
                       </span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className="font-black text-muted-foreground">{formatSensitive(item.price)}</span>
+                  <div className="flex flex-col items-end shrink-0">
+                    <span className="font-black text-xs text-foreground">{formatSensitive(item.price)}</span>
+                    <span className="mt-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-500/80">Claimed</span>
                   </div>
                 </div>
               )
