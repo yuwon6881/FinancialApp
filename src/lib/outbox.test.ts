@@ -219,6 +219,18 @@ describe('applyOpsToList', () => {
     expect(result[1].isPendingDelete).toBeUndefined()
   })
 
+  it('marks a transaction pending delete for a recurring payment delete op', () => {
+    const base: TestItem[] = [
+      { id: 'tx-1', name: 'Netflix', description: 'Netflix Payment', recurringPaymentId: 'rec-1' },
+      { id: 'tx-2', name: 'Groceries' },
+    ]
+    const ops = [makeOp({ entity: 'recurringPayment', type: 'delete', targetId: 'rec-1' })]
+    const result = applyOpsToList(base, ops, 'transaction')
+    expect(result[0]).toMatchObject({ id: 'tx-1', isPendingDelete: true, isPendingSync: true })
+    expect(result[1]).toMatchObject({ id: 'tx-2' })
+    expect(result[1].isPendingDelete).toBeUndefined()
+  })
+
   it('ignores ops for a different entity', () => {
     const base: TestItem[] = [{ id: '1', name: 'A' }]
     const ops = [makeOp({ type: 'update', targetId: '1', payload: { name: 'Should not apply' }, entity: 'wishlistItem' })]
@@ -242,6 +254,15 @@ describe('enqueue', () => {
   it('collapses a delete against an unsent add into no-op (cascade removes all ops for that target)', () => {
     const queue = [makeOp({ id: 'op-add', type: 'add', targetId: 'local-1', payload: { name: 'Draft' } })]
     const next = enqueue(queue, 'transaction', 'delete', 'local-1')
+    expect(next).toEqual([])
+  })
+
+  it('cascade removes unsent transactions linked to an unsent recurring payment when undoing/deleting recurring payment', () => {
+    const queue = [
+      makeOp({ id: 'op-rec-add', entity: 'recurringPayment', type: 'add', targetId: 'rec-1', payload: { name: 'Netflix' } }),
+      makeOp({ id: 'op-tx-add', entity: 'transaction', type: 'add', targetId: 'tx-1', payload: { name: 'Netflix Payment', recurringPaymentId: 'rec-1' } }),
+    ]
+    const next = enqueue(queue, 'recurringPayment', 'delete', 'rec-1')
     expect(next).toEqual([])
   })
 

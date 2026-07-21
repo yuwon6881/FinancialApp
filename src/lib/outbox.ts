@@ -164,7 +164,14 @@ export function enqueue(
     }
     if (queuedAddNotInFlight) {
       // Delete against a target with an unsent add: drop the add & cascade-remove all ops for that target
-      return queue.filter(op => !sameTarget(op))
+      // Also if entity === 'recurringPayment', drop any unsent transaction ops generated from this recurring payment
+      return queue.filter(op => {
+        if (sameTarget(op)) return false
+        if (entity === 'recurringPayment' && op.entity === 'transaction' && op.payload?.recurringPaymentId === targetIdStr) {
+          return false
+        }
+        return true
+      })
     } else {
       // Delete against existing entity: drop queued update/toggle/purchase/unpurchase (not in-flight) for that target & append delete
       const filtered = queue.filter(op => !(sameTarget(op) && (op.type === 'update' || op.type === 'toggle' || op.type === 'purchase' || op.type === 'unpurchase') && op.id !== activeSyncOpId))
@@ -284,7 +291,10 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
   const effectiveOps = entity === 'transaction'
     ? [
         ...entityOps,
-        ...ops.filter(op => op.entity === 'wishlistItem' && (op.type === 'purchase' || op.type === 'unpurchase' || op.type === 'delete'))
+        ...ops.filter(op =>
+          (op.entity === 'wishlistItem' && (op.type === 'purchase' || op.type === 'unpurchase' || op.type === 'delete')) ||
+          (op.entity === 'recurringPayment' && op.type === 'delete')
+        )
       ]
     : entityOps
 
@@ -342,6 +352,15 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         result = result.map(item => {
           const wishlistItemId = (item as T & { wishlistItemId?: number | null }).wishlistItemId
           return wishlistItemId != null && String(wishlistItemId) === targetStr
+            ? { ...item, isPendingDelete: true, isPendingSync: !op.isCompleted }
+            : item
+        })
+      } else if (entity === 'transaction' && op.entity === 'recurringPayment') {
+        // Deleting or undoing a recurring payment subscription marks any ledger transaction
+        // created from it as pending delete in optimistic FE state.
+        result = result.map(item => {
+          const recurringPaymentId = (item as T & { recurringPaymentId?: string | null }).recurringPaymentId
+          return recurringPaymentId != null && String(recurringPaymentId) === targetStr
             ? { ...item, isPendingDelete: true, isPendingSync: !op.isCompleted }
             : item
         })
