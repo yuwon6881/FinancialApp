@@ -59,21 +59,38 @@ export function computeOptimisticDashboard(
         data.stats.monthlyExpenses += Math.abs(amount)
       }
     } else if (op.type === 'update' && op.payload) {
+      // Model an update as "remove the original, add the new value". Applying only the
+      // net delta to the new category (as before) left the old category untouched when
+      // the category changed, and classified inflow/expense by the sign of the delta —
+      // so reducing an inflow (or expense) landed in the wrong bucket. Removing each
+      // side by its own sign/category keeps every bucket correct in all cases.
       const orig = transactions.find(t => String(t.id) === String(op.targetId))
       const oldAmount = orig ? orig.amount : 0
       const newAmount = op.payload.amount !== undefined ? op.payload.amount : oldAmount
-      const diff = newAmount - oldAmount
-      data.stats.totalBalance += diff
-      const catName = op.payload.category || op.payload.ledgerCategory || (orig ? (orig.category || orig.ledgerCategory) : '')
-      const cat = data.categories.find(c => c.name.toLowerCase() === catName.toLowerCase())
-      if (cat) {
-        cat.netChange += diff
-        cat.remaining += diff
+      data.stats.totalBalance += newAmount - oldAmount
+
+      const oldCatName = orig ? (orig.category || orig.ledgerCategory) : ''
+      const oldCat = data.categories.find(c => c.name.toLowerCase() === oldCatName.toLowerCase())
+      if (oldCat) {
+        oldCat.netChange -= oldAmount
+        oldCat.remaining -= oldAmount
       }
-      if (diff > 0) {
-        data.stats.monthlyInflow += diff
-      } else if (diff < 0) {
-        data.stats.monthlyExpenses += Math.abs(diff)
+      const newCatName = op.payload.category || op.payload.ledgerCategory || oldCatName
+      const newCat = data.categories.find(c => c.name.toLowerCase() === newCatName.toLowerCase())
+      if (newCat) {
+        newCat.netChange += newAmount
+        newCat.remaining += newAmount
+      }
+
+      if (oldAmount > 0) {
+        data.stats.monthlyInflow -= oldAmount
+      } else {
+        data.stats.monthlyExpenses -= Math.abs(oldAmount)
+      }
+      if (newAmount > 0) {
+        data.stats.monthlyInflow += newAmount
+      } else {
+        data.stats.monthlyExpenses += Math.abs(newAmount)
       }
     } else if (op.type === 'delete') {
       const orig = transactions.find(t => String(t.id) === String(op.targetId))

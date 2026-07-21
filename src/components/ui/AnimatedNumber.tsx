@@ -24,6 +24,10 @@ export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
   }, [value, springValue])
 
   useEffect(() => {
+    // Re-render immediately with the current value whenever the formatter changes
+    // (e.g. a currency switch). The spring only emits 'change' when `value` moves,
+    // so without this the number would keep its stale format until it next changes.
+    setDisplayValue(formatFn(springValue.get()))
     const unsubscribe = springValue.on('change', (latest: number) => {
       setDisplayValue(formatFn(latest))
     })

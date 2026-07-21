@@ -86,6 +86,30 @@ describe('computeOptimisticDashboard', () => {
     expect(food.netChange).toBe(-50)
   })
 
+  it('moves the amount between categories when an update changes the category', () => {
+    const orig: Transaction = { id: 't1', amount: -30, category: 'Food', ledgerCategory: 'Essentials' } as Transaction
+    const result = computeOptimisticDashboard(makeDashboard(), {
+      // Category changes Food -> Salary, amount unchanged (no `amount` in payload).
+      activeOps: [op({ type: 'update', targetId: 't1', payload: { category: 'Salary' } })],
+      transactions: [orig],
+    })
+    // Balance and totals unchanged (same amount), but the -30 leaves Food and lands on Salary.
+    expect(result!.stats.totalBalance).toBe(1000)
+    expect(result!.categories.find(c => c.name === 'Food')!.netChange).toBe(10)   // -20 - (-30)
+    expect(result!.categories.find(c => c.name === 'Salary')!.netChange).toBe(470) // 500 + (-30)
+  })
+
+  it('reducing an expense lowers expenses rather than counting as inflow', () => {
+    const orig: Transaction = { id: 't1', amount: -50, category: 'Food', ledgerCategory: 'Essentials' } as Transaction
+    const result = computeOptimisticDashboard(makeDashboard(), {
+      activeOps: [op({ type: 'update', targetId: 't1', payload: { amount: -20 } })],
+      transactions: [orig],
+    })
+    expect(result!.stats.totalBalance).toBe(1030)      // +30 net
+    expect(result!.stats.monthlyInflow).toBe(500)      // unchanged — the delta must NOT be treated as inflow
+    expect(result!.categories.find(c => c.name === 'Food')!.netChange).toBe(10) // -20 +50 -20
+  })
+
   it('reverses a delete using the original transaction amount', () => {
     const orig: Transaction = { id: 't1', amount: 500, category: 'Salary', ledgerCategory: 'Income' } as Transaction
     const result = computeOptimisticDashboard(makeDashboard(), {
