@@ -9,8 +9,9 @@ import {
   Receipt,
   TrendingDown,
   TrendingUp,
+  Zap,
 } from 'lucide-react'
-import type { DashboardData, WishlistItem } from '../types'
+import type { DashboardData, Transaction, WishlistItem } from '../types'
 import { useAppContext } from '../contexts/AppContext'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { buildCycleSummary, formatRate } from '../lib/cycleSummary'
@@ -21,6 +22,7 @@ interface CycleSummaryModalProps {
   onClose: () => void
   data: DashboardData | null
   previousData: DashboardData | null
+  transactions: Transaction[] | null
   isLoading: boolean
   loadError: string | null
   wishlist: WishlistItem[]
@@ -36,6 +38,7 @@ export function CycleSummaryModal({
   onClose,
   data,
   previousData,
+  transactions,
   isLoading,
   loadError,
   wishlist,
@@ -47,8 +50,8 @@ export function CycleSummaryModal({
 }: CycleSummaryModalProps) {
   const { formatSensitive } = useAppContext()
   const summary = useMemo(
-    () => data ? buildCycleSummary(data, previousData, wishlist, year, monthIndex, cycleDay) : null,
-    [data, previousData, wishlist, year, monthIndex, cycleDay],
+    () => data ? buildCycleSummary(data, previousData, wishlist, year, monthIndex, cycleDay, transactions) : null,
+    [data, previousData, wishlist, year, monthIndex, cycleDay, transactions],
   )
 
   return (
@@ -147,14 +150,14 @@ export function CycleSummaryModal({
                     trendUp={summary.previousSavingsRate !== null ? summary.savingsRate > summary.previousSavingsRate : summary.savingsRate > 0}
                     detail={(() => {
                       if (summary.previousSavingsRate === null) {
-                        return `${formatRate(summary.savingsRate)} of income saved — no prior cycle to compare`
+                        return `${formatRate(summary.savingsRate)} of income saved this cycle`
                       }
                       const change = summary.savingsRate - summary.previousSavingsRate
                       const pts = Math.round(Math.abs(change) * 100)
-                      if (pts === 0) return `${formatRate(summary.savingsRate)} saved — same as last cycle`
+                      if (pts === 0) return `Same as last cycle (${formatRate(summary.savingsRate)})`
                       return change > 0
-                        ? `Up ${pts}pp vs last cycle — saving more`
-                        : `Down ${pts}pp vs last cycle — saving less`
+                        ? `Up from ${formatRate(summary.previousSavingsRate)} last cycle`
+                        : `Down from ${formatRate(summary.previousSavingsRate)} last cycle`
                     })()}
                     tooltipHint="Savings rate = (Income − Spending) ÷ Income"
                   />
@@ -232,9 +235,9 @@ export function CycleSummaryModal({
                 <div className="space-y-2.5 rounded-xl border border-border/50 bg-muted/20 p-3.5">
                   {summary.topCategories.map(category => (
                     <div key={category.category} className="flex items-center gap-2">
-                      {/* Badge: natural width, capped, never stretches */}
+                      {/* Badge: fixed width so all bars start at the same X position */}
                       <span
-                        className={`max-w-[6.5rem] shrink-0 truncate rounded border px-1.5 py-0.5 text-[9px] font-bold leading-tight ${getCategoryBadgeClass(category.category)}`}
+                        className={`w-24 shrink-0 truncate rounded border px-1.5 py-0.5 text-[9px] font-bold leading-tight ${getCategoryBadgeClass(category.category)}`}
                         title={category.category}
                       >
                         {category.category}
@@ -290,6 +293,59 @@ export function CycleSummaryModal({
                 </Section>
               )}
             </div>
+          )}
+
+          {/* Spending insights — only when transaction data is available */}
+          {(summary.largestTxn || summary.biggestDay || summary.avgDailySpend !== null || summary.velocityFirstHalf !== null) && (
+            <Section title="Spending insights" icon={<Zap className="size-3 text-amber-400" />}>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {summary.largestTxn && (
+                  <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
+                    <p className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Largest transaction</p>
+                    <p className="mt-1 truncate text-xs font-bold text-foreground" title={summary.largestTxn.description}>{summary.largestTxn.description}</p>
+                    <p className="mt-0.5 text-xs font-bold text-orange-400">{formatSensitive(Math.abs(summary.largestTxn.amount))}</p>
+                  </div>
+                )}
+                {summary.biggestDay && (
+                  <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
+                    <p className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Biggest spending day</p>
+                    <p className="mt-1 text-xs font-bold text-foreground">
+                      {new Date(summary.biggestDay.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    </p>
+                    <p className="mt-0.5 text-xs font-bold text-orange-400">{formatSensitive(summary.biggestDay.total)}</p>
+                  </div>
+                )}
+                {summary.avgDailySpend !== null && (
+                  <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
+                    <p className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Average daily spend</p>
+                    <p className="mt-1 text-xs font-bold text-foreground">{formatSensitive(summary.avgDailySpend)}</p>
+                    <p className="mt-0.5 text-[10px] text-muted-foreground">Over {summary.cycleLengthDays} days</p>
+                  </div>
+                )}
+                {summary.velocityFirstHalf !== null && summary.velocitySecondHalf !== null && (
+                  <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
+                    <p className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Spending velocity</p>
+                    <div className="mt-2 space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-muted-foreground">First half</span>
+                        <span className={`font-bold ${summary.velocityFirstHalf > summary.velocitySecondHalf ? 'text-orange-400' : 'text-foreground'}`}>{formatSensitive(summary.velocityFirstHalf)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-muted-foreground">Second half</span>
+                        <span className={`font-bold ${summary.velocitySecondHalf > summary.velocityFirstHalf ? 'text-orange-400' : 'text-foreground'}`}>{formatSensitive(summary.velocitySecondHalf)}</span>
+                      </div>
+                    </div>
+                    <p className="mt-1.5 text-[9px] text-muted-foreground">
+                      {summary.velocityFirstHalf > summary.velocitySecondHalf
+                        ? 'Spent more in the first half'
+                        : summary.velocitySecondHalf > summary.velocityFirstHalf
+                          ? 'Spent more in the second half'
+                          : 'Evenly spread across the cycle'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </Section>
           )}
         </div>
       )}

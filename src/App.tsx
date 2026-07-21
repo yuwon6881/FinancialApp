@@ -821,6 +821,7 @@ function App() {
             onClose={cycleSummary.onClose}
             data={cycleSummary.data}
             previousData={cycleSummary.previousData}
+            transactions={cycleSummary.transactions}
             isLoading={cycleSummary.isLoading}
             loadError={cycleSummary.loadError}
             wishlist={financial.allWishlist}
