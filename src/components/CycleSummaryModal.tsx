@@ -175,72 +175,56 @@ export function CycleSummaryModal({
             </div>
           </Section>
 
-          <div className="grid gap-6 sm:grid-cols-2">
-            {summary.topCategories.length > 0 && (
-              <Section title="Where it went">
-                <div className="space-y-2.5 rounded-xl border border-border/50 bg-muted/20 p-3.5">
-                  {summary.topCategories.map(category => (
-                    <div key={category.category} className="flex items-center gap-2">
-                      {/* Badge Container: fixed width so all bars start at the same X position without stretching the badge */}
-                      <div className="w-24 shrink-0 flex items-center">
-                        <span
-                          className={`max-w-full truncate rounded border px-1.5 py-0.5 text-[9px] font-bold leading-tight ${getCategoryBadgeClass(category.category)}`}
-                          title={category.category}
-                        >
-                          {category.category}
-                        </span>
-                      </div>
-                      {/* Bar: grows to fill remaining space */}
-                      <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="h-full rounded-full bg-foreground/40 transition-all"
-                          style={{ width: `${summary.topMax > 0 ? (category.amount / summary.topMax) * 100 : 0}%` }}
-                        />
-                      </div>
-                      {/* Amount: fixed right-aligned column */}
-                      <span className="w-20 shrink-0 text-right text-[11px] font-bold text-foreground">
-                        {formatSensitive(category.amount)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </Section>
-            )}
-
-            {summary.stabilityTarget > 0 && (
-              <Section title="Stability fund">
-                <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-foreground">Funded</span>
-                    <span className="font-bold text-foreground">{Math.round(summary.stabilityPct * 100)}%</span>
-                  </div>
-                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-cyan-500" style={{ width: `${summary.stabilityPct * 100}%` }} /></div>
-                </div>
-              </Section>
-            )}
-          </div>
-
-          {(summary.billsCount > 0 || summary.purchasedThisCycle.length > 0) && (
-            <div className="grid gap-6 sm:grid-cols-2">
-              {summary.billsCount > 0 && (
-                <Section title="Bills">
-                  <div className="flex items-center justify-between gap-3 rounded-xl border border-border/50 bg-muted/20 p-3">
-                    <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-foreground"><Receipt className="size-3.5 shrink-0 text-amber-500" />{summary.paidBillsCount} paid · {summary.pendingCount} pending{summary.discardedCount > 0 ? ` · ${summary.discardedCount} skipped` : ''}</span>
-                    <span className="shrink-0 text-xs font-bold text-foreground">{formatSensitive(summary.paidTotal)}</span>
-                  </div>
-                </Section>
-              )}
-              {summary.purchasedThisCycle.length > 0 && (
-                <Section title="Wishlist purchases">
-                  <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
-                    <div className="mb-2 flex items-center justify-between text-xs"><span className="flex items-center gap-1.5 font-semibold text-foreground"><Gift className="size-3.5 text-pink-500" />{summary.purchasedThisCycle.length} purchased</span><span className="font-bold text-foreground">{formatSensitive(summary.purchasedTotal)}</span></div>
-                    <div className="space-y-1.5">
-                      {summary.purchasedThisCycle.map(item => <div key={item.id} className="flex items-center justify-between gap-3 text-[11px]"><span className="truncate text-muted-foreground">{item.name}</span><span className="shrink-0 font-semibold text-foreground">{formatSensitive(item.price)}</span></div>)}
-                    </div>
-                  </div>
-                </Section>
-              )}
-            </div>
+          {summary.previousHasActivity && (
+            <Section title="Since last cycle">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {summary.spendingDelta !== null && (
+                  <InsightCard
+                    title="Spending"
+                    value={formatSensitive(Math.abs(summary.spendingDelta))}
+                    tone={summary.spendingDelta <= 0 ? 'good' : 'warn'}
+                    trendUp={summary.spendingDelta > 0}
+                    detail={summary.spendingDelta <= 0 ? 'Less than last cycle' : 'More than last cycle'}
+                  />
+                )}
+                {summary.savingsRate !== null && (
+                  <InsightCard
+                    title="Savings rate"
+                    value={formatRate(summary.savingsRate)}
+                    tone={summary.savingsRate >= 0.1 ? 'good' : 'warn'}
+                    trendUp={summary.previousSavingsRate !== null ? summary.savingsRate > summary.previousSavingsRate : summary.savingsRate > 0}
+                    detail={(() => {
+                      if (summary.previousSavingsRate === null) {
+                        return `${formatRate(summary.savingsRate)} of income saved this cycle`
+                      }
+                      const change = summary.savingsRate - summary.previousSavingsRate
+                      const pts = Math.round(Math.abs(change) * 100)
+                      if (pts === 0) return `Same as last cycle (${formatRate(summary.savingsRate)})`
+                      return `Was ${formatRate(summary.previousSavingsRate)} last cycle`
+                    })()}
+                    tooltipHint="Savings rate = (Income − Spending) ÷ Income"
+                  />
+                )}
+                {summary.biggestCategoryShift && (
+                  <InsightCard
+                    title="Biggest shift"
+                    value={summary.biggestCategoryShift.category}
+                    tone={summary.biggestCategoryShift.delta <= 0 ? 'good' : 'warn'}
+                    trendUp={summary.biggestCategoryShift.delta > 0}
+                    detail={`${formatSensitive(Math.abs(summary.biggestCategoryShift.delta))} ${summary.biggestCategoryShift.delta <= 0 ? 'less' : 'more'} spent`}
+                  />
+                )}
+                {summary.growthDelta !== null && (
+                  <InsightCard
+                    title="Growth fund"
+                    value={`${summary.growthDelta < 0 ? '−' : '+'}${formatSensitive(Math.abs(summary.growthDelta))}`}
+                    tone={summary.growthDelta >= 0 ? 'good' : 'warn'}
+                    trendUp={summary.growthDelta >= 0}
+                    detail="Ending balance this cycle"
+                  />
+                )}
+              </div>
+            </Section>
           )}
 
           {/* Spending insights — backend-generated */}
@@ -316,59 +300,74 @@ export function CycleSummaryModal({
             </Section>
           )}
 
-          {summary.previousHasActivity && (
-            <Section title="Since last cycle">
-              <div className="grid gap-3 sm:grid-cols-2">
-                {summary.spendingDelta !== null && (
-                  <InsightCard
-                    title="Spending"
-                    value={formatSensitive(Math.abs(summary.spendingDelta))}
-                    tone={summary.spendingDelta <= 0 ? 'good' : 'warn'}
-                    trendUp={summary.spendingDelta > 0}
-                    detail={summary.spendingDelta <= 0 ? 'Less than last cycle' : 'More than last cycle'}
-                  />
-                )}
-                {summary.savingsRate !== null && (
-                  <InsightCard
-                    title="Savings rate"
-                    value={formatRate(summary.savingsRate)}
-                    tone={summary.savingsRate >= 0.1 ? 'good' : 'warn'}
-                    trendUp={summary.previousSavingsRate !== null ? summary.savingsRate > summary.previousSavingsRate : summary.savingsRate > 0}
-                    detail={(() => {
-                      if (summary.previousSavingsRate === null) {
-                        return `${formatRate(summary.savingsRate)} of income saved this cycle`
-                      }
-                      const change = summary.savingsRate - summary.previousSavingsRate
-                      const pts = Math.round(Math.abs(change) * 100)
-                      if (pts === 0) return `Same as last cycle (${formatRate(summary.savingsRate)})`
-                      return change > 0
-                        ? `Up from ${formatRate(summary.previousSavingsRate)} last cycle`
-                        : `Down from ${formatRate(summary.previousSavingsRate)} last cycle`
-                    })()}
-                    tooltipHint="Savings rate = (Income − Spending) ÷ Income"
-                  />
-                )}
-                {summary.biggestCategoryShift && (
-                  <InsightCard
-                    title="Biggest shift"
-                    value={summary.biggestCategoryShift.category}
-                    tone={summary.biggestCategoryShift.delta <= 0 ? 'good' : 'warn'}
-                    trendUp={summary.biggestCategoryShift.delta > 0}
-                    detail={`${formatSensitive(Math.abs(summary.biggestCategoryShift.delta))} ${summary.biggestCategoryShift.delta <= 0 ? 'less' : 'more'} spent`}
-                  />
-                )}
-                {summary.growthDelta !== null && (
-                  <InsightCard
-                    title="Growth fund"
-                    value={`${summary.growthDelta < 0 ? '−' : '+'}${formatSensitive(Math.abs(summary.growthDelta))}`}
-                    tone={summary.growthDelta >= 0 ? 'good' : 'warn'}
-                    trendUp={summary.growthDelta >= 0}
-                    detail="Ending balance this cycle"
-                  />
-                )}
-              </div>
-            </Section>
-          )}
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div>
+              {summary.topCategories.length > 0 && (
+                <Section title="Where it went">
+                  <div className="space-y-2.5 rounded-xl border border-border/50 bg-muted/20 p-3.5">
+                    {summary.topCategories.map(category => (
+                      <div key={category.category} className="flex items-center gap-2">
+                        {/* Badge Container: fixed width so all bars start at the same X position without stretching the badge */}
+                        <div className="w-24 shrink-0 flex items-center">
+                          <span
+                            className={`max-w-full truncate rounded border px-1.5 py-0.5 text-[9px] font-bold leading-tight ${getCategoryBadgeClass(category.category)}`}
+                            title={category.category}
+                          >
+                            {category.category}
+                          </span>
+                        </div>
+                        {/* Bar: grows to fill remaining space */}
+                        <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="h-full rounded-full bg-foreground/40 transition-all"
+                            style={{ width: `${summary.topMax > 0 ? (category.amount / summary.topMax) * 100 : 0}%` }}
+                          />
+                        </div>
+                        {/* Amount: fixed right-aligned column */}
+                        <span className="w-20 shrink-0 text-right text-[11px] font-bold text-foreground">
+                          {formatSensitive(category.amount)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </Section>
+              )}
+            </div>
+
+            <div className="space-y-6">
+              {summary.stabilityTarget > 0 && (
+                <Section title="Stability fund">
+                  <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-foreground">Funded</span>
+                      <span className="font-bold text-foreground">{Math.round(summary.stabilityPct * 100)}%</span>
+                    </div>
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-cyan-500" style={{ width: `${summary.stabilityPct * 100}%` }} /></div>
+                  </div>
+                </Section>
+              )}
+
+              {summary.billsCount > 0 && (
+                <Section title="Bills">
+                  <div className="flex items-center justify-between gap-3 rounded-xl border border-border/50 bg-muted/20 p-3">
+                    <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-foreground"><Receipt className="size-3.5 shrink-0 text-amber-500" />{summary.paidBillsCount} paid · {summary.pendingCount} pending{summary.discardedCount > 0 ? ` · ${summary.discardedCount} skipped` : ''}</span>
+                    <span className="shrink-0 text-xs font-bold text-foreground">{formatSensitive(summary.paidTotal)}</span>
+                  </div>
+                </Section>
+              )}
+
+              {summary.purchasedThisCycle.length > 0 && (
+                <Section title="Wishlist purchases">
+                  <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
+                    <div className="mb-2 flex items-center justify-between text-xs"><span className="flex items-center gap-1.5 font-semibold text-foreground"><Gift className="size-3.5 text-pink-500" />{summary.purchasedThisCycle.length} purchased</span><span className="font-bold text-foreground">{formatSensitive(summary.purchasedTotal)}</span></div>
+                    <div className="space-y-1.5">
+                      {summary.purchasedThisCycle.map(item => <div key={item.id} className="flex items-center justify-between gap-3 text-[11px]"><span className="truncate text-muted-foreground">{item.name}</span><span className="shrink-0 font-semibold text-foreground">{formatSensitive(item.price)}</span></div>)}
+                    </div>
+                  </div>
+                </Section>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </BottomSheet>
