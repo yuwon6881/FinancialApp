@@ -419,6 +419,11 @@ describe('drainQueue — error taxonomy', () => {
     expect(h.queue).toEqual([])
     expect(h.failedOps).toEqual([])
     expect(h.calls.emitFailureToast).toBe(0)
+    // A replayed/superseded delete still confirms success to the user, but offers no
+    // Undo action -- the target row is already gone.
+    expect(h.emittedToasts).toEqual([
+      { copy: { title: 'ok', message: 'done', tone: 'success' }, hasUndo: false },
+    ])
     spy.mockRestore()
   })
 })

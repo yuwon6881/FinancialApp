@@ -248,6 +248,12 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
           deps.setActiveSyncId(null)
           processedAny = true
           successfulOps.push({ op: nextOp, result: undefined })
+          // The row was already gone server-side, so the op still succeeded from the
+          // user's perspective (e.g. an undo-purchase whose item a prior undo already
+          // deleted). Confirm it with the same success toast the happy path fires --
+          // but never an Undo action, since the target no longer exists to act on.
+          const toastMsg = deps.getSyncSuccessToast(nextOp)
+          if (toastMsg) deps.emitToast(toastMsg, undefined)
           continue
         } else if (isAuthError && !isJustLoggedIn) {
           deps.onAuthError()
