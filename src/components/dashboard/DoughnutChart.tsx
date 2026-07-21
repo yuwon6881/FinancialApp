@@ -88,10 +88,16 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
                   return (
                     <motion.path
                       key={slice.category}
+                      // d is a static attribute (not animated). framer-motion can't
+                      // safely interpolate arc paths: it treats `d` as a flat number
+                      // list, so the A-command flags and any structural difference
+                      // between renders produce a malformed `d` ("Expected number"
+                      // SVG error) while navigating. Animate only scale/opacity.
+                      d={targetPath}
                       fill={getCategoryChartColor(slice.category)}
                       className="transition-all duration-200 cursor-pointer stroke-card stroke-2 hover:opacity-90"
                       initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ d: targetPath, scale: 1, opacity: 1 }}
+                      animate={{ scale: 1, opacity: 1 }}
                       transition={{ duration: 0.4, ease: 'easeOut', delay: index * 0.04 }}
                       style={{ transformOrigin: '100px 100px' }}
                       onMouseEnter={() => setHoveredSlice(index)}
