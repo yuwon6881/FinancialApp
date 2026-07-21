@@ -1,4 +1,4 @@
-import type { DashboardData, Transaction, WishlistItem } from '../types'
+import type { DashboardData, WishlistItem } from '../types'
 import { getCycleRangeDates } from './cycle'
 
 const ENVELOPES = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const

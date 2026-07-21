@@ -11,7 +11,7 @@ import {
   TrendingUp,
   Zap,
 } from 'lucide-react'
-import type { DashboardData, Transaction, WishlistItem } from '../types'
+import type { DashboardData, WishlistItem } from '../types'
 import { useAppContext } from '../contexts/AppContext'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { buildCycleSummary, formatRate } from '../lib/cycleSummary'

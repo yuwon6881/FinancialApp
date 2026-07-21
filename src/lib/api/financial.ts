@@ -77,12 +77,16 @@ export function fetchDashboard(
       })),
       ...(data.cycleSummaryInsights && {
         cycleSummaryInsights: {
-          ...data.cycleSummaryInsights,
+          largestExpenseDescription: data.cycleSummaryInsights.largestExpenseDescription,
           largestExpenseAmount: data.cycleSummaryInsights.largestExpenseAmount !== undefined ? deobfuscateAmount(data.cycleSummaryInsights.largestExpenseAmount) : undefined,
+          biggestDayDate: data.cycleSummaryInsights.biggestDayDate,
           biggestDayTotal: data.cycleSummaryInsights.biggestDayTotal !== undefined ? deobfuscateAmount(data.cycleSummaryInsights.biggestDayTotal) : undefined,
           avgDailySpend: data.cycleSummaryInsights.avgDailySpend !== undefined ? deobfuscateAmount(data.cycleSummaryInsights.avgDailySpend) : undefined,
+          cycleLengthDays: data.cycleSummaryInsights.cycleLengthDays,
           velocityFirstHalf: data.cycleSummaryInsights.velocityFirstHalf !== undefined ? deobfuscateAmount(data.cycleSummaryInsights.velocityFirstHalf) : undefined,
           velocitySecondHalf: data.cycleSummaryInsights.velocitySecondHalf !== undefined ? deobfuscateAmount(data.cycleSummaryInsights.velocitySecondHalf) : undefined,
+          noSpendDays: data.cycleSummaryInsights.noSpendDays,
+          transactionCount: data.cycleSummaryInsights.transactionCount,
           committedSpend: deobfuscateAmount(data.cycleSummaryInsights.committedSpend),
           discretionarySpend: deobfuscateAmount(data.cycleSummaryInsights.discretionarySpend),
         }

@@ -134,6 +134,7 @@ export interface DashboardData {
   last6CategoryBreakdown: CategoryBreakdown[]
   yearlyCategoryBreakdown: CategoryBreakdown[]
   availableYears?: number[]
+  cycleSummaryInsights?: CycleSummaryInsights
 }
 
 export interface CycleSummaryInsights {

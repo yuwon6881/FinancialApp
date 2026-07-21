@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as api from '../lib/api'
-import type { DashboardCore, DashboardData, Transaction } from '../types'
+import type { DashboardCore, DashboardData } from '../types'
 import { MONTH_NAMES, getCurrentCycleYearAndMonth } from '../lib/cycle'
 import { getErrorName } from '../lib/errors'
 
