@@ -108,8 +108,10 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
   const adjustTextareaHeight = () => {
     const el = textareaRef.current
     if (!el) return
+    const maxHeight = 160
     el.style.height = 'auto'
-    el.style.height = `${Math.min(el.scrollHeight, 112)}px` // 112px = max-h-28
+    el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`
+    el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden'
   }
 
   useEffect(() => {
@@ -193,21 +195,33 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
           ASK AI
         </span>
       }
-    >
-      <div className="flex h-[55vh] sm:h-[480px] flex-col gap-3">
-        {messages.length > 0 && (
-          <div className="flex shrink-0 justify-end">
+      headerActions={
+        <>
+          {messages.length > 0 && (
             <button
               type="button"
               onClick={handleNewChat}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background px-3 py-1.5 text-[11px] font-semibold text-muted-foreground transition hover:border-primary/50 hover:text-foreground cursor-pointer"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
               title="Start a new chat (clears history)"
+              aria-label="Start a new chat"
             >
               <SquarePen className="size-3.5" />
-              New chat
+              <span>New chat</span>
             </button>
-          </div>
-        )}
+          )}
+          <button
+            type="button"
+            onClick={handleClose}
+            className="inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
+            title="Close"
+            aria-label="Close Ask AI"
+          >
+            <X className="size-4" />
+          </button>
+        </>
+      }
+    >
+      <div className="flex h-[55vh] sm:h-[480px] flex-col gap-3">
         {/* The non-scrolling wrapper owns a subtle perimeter-only activity trace. */}
         <div className={`relative min-h-0 flex-1 rounded-xl ${isSending ? 'perimeter-beam-host' : ''}`}>
           {isSending && <PerimeterBeam size={132} duration={7} />}
@@ -275,7 +289,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
           </div>
         </div>
 
-        <form onSubmit={sendMessage} className="flex items-center gap-2 rounded-xl border border-border bg-card p-1.5 focus-within:border-primary/50 transition-colors shadow-xs">
+        <form onSubmit={sendMessage} className="flex items-end gap-2 rounded-xl border border-border bg-card p-1.5 shadow-xs transition-[border-color,box-shadow] focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10">
           <textarea
             ref={textareaRef}
             aria-label="Ask AI"
@@ -283,28 +297,21 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                 e.preventDefault()
                 void sendMessage()
               }
             }}
-            placeholder={isOffline ? 'Offline' : ''}
+            placeholder={isOffline ? 'Ask AI is offline' : 'Ask about your finances…'}
             rows={1}
-            className="min-h-[44px] max-h-28 flex-1 resize-none rounded-xl border border-transparent bg-transparent px-3 py-2 text-sm outline-hidden focus:bg-background/40"
+            className="min-h-11 max-h-40 flex-1 resize-none rounded-lg border border-transparent bg-transparent px-3 py-2.5 text-sm leading-6 outline-hidden placeholder:text-muted-foreground/70"
           />
-          <button
-            type="button"
-            onClick={handleClose}
-            className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-background text-muted-foreground transition hover:bg-muted cursor-pointer"
-            title="Close"
-          >
-            <X className="size-4" />
-          </button>
           <button
             type="submit"
             disabled={!input.trim() || isSending || isOffline}
             className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs transition hover:bg-primary/95 disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer"
             title="Send"
+            aria-label="Send message"
           >
             {isSending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
           </button>

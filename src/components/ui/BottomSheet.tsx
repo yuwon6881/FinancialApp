@@ -8,6 +8,7 @@ import { lockBodyScroll, unlockBodyScroll } from '../../lib/scrollLock'
 interface BottomSheetProps {
   isOpen: boolean
   title: React.ReactNode
+  headerActions?: React.ReactNode
   children: React.ReactNode
   onClose: () => void
   maxWidthClassName?: string
@@ -19,6 +20,7 @@ interface BottomSheetProps {
 export const BottomSheet: React.FC<BottomSheetProps> = ({
   isOpen,
   title,
+  headerActions,
   children,
   onClose,
   maxWidthClassName = 'max-w-md',
@@ -305,8 +307,9 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
               className="pb-3 shrink-0"
             >
               {isMobile && <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto mb-2 shrink-0" />}
-              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <div className="flex min-h-9 items-center justify-between gap-3 border-b border-border/40 pb-3">
                 <div id={titleId} className="min-w-0 text-base font-bold text-foreground">{title}</div>
+                {headerActions && <div className="flex shrink-0 items-center gap-1.5">{headerActions}</div>}
               </div>
             </div>
             {children}

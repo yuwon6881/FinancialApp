@@ -10,8 +10,8 @@ vi.mock('../lib/api', () => ({
 // Mock BottomSheet to a transparent passthrough so we test the panel's own markup/logic
 // (scroll classes, send controls, state round-trip) without portals/animation.
 vi.mock('./ui/BottomSheet', () => ({
-  BottomSheet: ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) =>
-    isOpen ? <div data-testid="sheet">{children}</div> : null,
+  BottomSheet: ({ isOpen, title, headerActions, children }: { isOpen: boolean; title: React.ReactNode; headerActions?: React.ReactNode; children: React.ReactNode }) =>
+    isOpen ? <div data-testid="sheet"><header>{title}{headerActions}</header>{children}</div> : null,
 }))
 
 import * as api from '../lib/api'
@@ -81,6 +81,17 @@ describe('AiAssistantPanel', () => {
     expect(chatWithAi).toHaveBeenCalledTimes(1)
   })
 
+  it('grows the composer to its cap before enabling internal scrolling', () => {
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+    const textarea = screen.getByLabelText('Ask AI') as HTMLTextAreaElement
+    Object.defineProperty(textarea, 'scrollHeight', { configurable: true, value: 220 })
+
+    fireEvent.change(textarea, { target: { value: 'A long multi-line message' } })
+
+    expect(textarea.style.height).toBe('160px')
+    expect(textarea.style.overflowY).toBe('auto')
+  })
+
   it('prevents duplicate sends while a request is in flight', async () => {
     let resolve!: (r: AiChatResponse) => void
     chatWithAi.mockReturnValue(new Promise<AiChatResponse>(r => { resolve = r }))
@@ -136,7 +147,9 @@ describe('AiAssistantPanel', () => {
     await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(1))
 
     // New chat resets history, so the next send starts fresh with null state.
-    fireEvent.click(await screen.findByRole('button', { name: /new chat/i }))
+    const newChatButton = await screen.findByRole('button', { name: /new chat/i })
+    expect(newChatButton.closest('header')).not.toBeNull()
+    fireEvent.click(newChatButton)
     typeAndSend('fresh question')
     await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(2))
     expect(chatWithAi.mock.calls[1][2]).toBeNull()
