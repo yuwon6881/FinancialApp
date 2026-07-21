@@ -72,21 +72,28 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
             <>
               <svg ref={svgRef} role="img" aria-label={chartSummary} className="w-full h-[120px] overflow-visible" viewBox="0 0 500 120" preserveAspectRatio="none">
                 <defs><linearGradient id="growthGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" /><stop offset="100%" stopColor="#3b82f6" stopOpacity="0" /></linearGradient></defs>
+                {/* d/points are set as static attributes and only opacity is
+                    animated. Animating the path data numerically makes framer-motion
+                    interpolate between path strings; when the point count changes
+                    (range switch or re-render on navigation) the two paths have
+                    different segment counts and it emits a malformed `d`
+                    ("Expected number" SVG error). Fading in avoids that entirely. */}
                 <motion.path
                   d={`M 15,105 L ${polyline} L 485,105 Z`}
                   fill="url(#growthGradient)"
                   initial={{ opacity: 0 }}
-                  animate={{ opacity: 1, d: `M 15,105 L ${polyline} L 485,105 Z` }}
+                  animate={{ opacity: 1 }}
                   transition={{ duration: 0.4, ease: 'easeInOut' }}
                 />
                 <motion.polyline
+                  points={polyline}
                   fill="none"
                   stroke="var(--color-chart-line, #4f46e5)"
                   strokeWidth="2.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   initial={{ opacity: 0 }}
-                  animate={{ points: polyline, opacity: 1 }}
+                  animate={{ opacity: 1 }}
                   transition={{ duration: 0.4, ease: 'easeInOut' }}
                 />
               </svg>

@@ -631,7 +631,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               </p>
             </div>
 
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-2 pt-4">
               <Button variant="ghost" className="flex-1" onClick={() => setPurchasingItem(null)}>
                 Cancel
               </Button>

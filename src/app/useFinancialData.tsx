@@ -140,9 +140,16 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     onLockError: markSessionLocked,
     refresh: async successfulOps => {
       const ops = successfulOps.map(({ op }) => op)
+      // NOTE: `delete` is intentionally excluded from this wishlist-only fast path.
+      // Deleting a *purchased* wishlist item cascade-deletes its linked ledger
+      // transaction on the backend (see WishlistService.DeleteWishlistItemAsync),
+      // which also shifts dashboard/cycle balances. Refetching only the wishlist
+      // would leave that deleted transaction lingering in FE state/cache until a
+      // full reload (e.g. undoing a fast add-then-purchase). Route deletes through
+      // the full reconcile below instead.
       const onlyWishlistCrud = ops.length > 0 && ops.every(op =>
         op.entity === 'wishlistItem'
-        && (op.type === 'add' || op.type === 'update' || op.type === 'delete')
+        && (op.type === 'add' || op.type === 'update')
       )
       if (onlyWishlistCrud) {
         const wishes = await api.fetchWishlist()

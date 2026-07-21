@@ -105,7 +105,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           <div className="flex items-center gap-2.5">
             <button
               type="button"
-              onClick={this.reset}
+              onClick={() => window.location.reload()}
               className="press-scale inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-muted cursor-pointer"
             >
               <RotateCcw className="size-3.5" /> Try again
