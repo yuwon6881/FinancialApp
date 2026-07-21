@@ -33,7 +33,7 @@ const PasswordPromptModal = lazy(() => import('./components/PasswordPromptModal'
 const LockScreen = lazy(() => import('./components/LockScreen').then(m => ({ default: m.LockScreen })))
 const AiAssistantPanel = lazy(() => import('./components/AiAssistantPanel').then(m => ({ default: m.AiAssistantPanel })))
 import { AppLogo } from './components/ui/AppLogo'
-import { syncStatusBarTheme } from './lib/nativeUi'
+import { syncSystemBarsTheme } from './lib/nativeUi'
 import { getCurrentCycleYearAndMonth, MONTH_NAMES } from './lib/cycle'
 import type { AppContextValue } from './contexts/AppContext'
 import { AppProvider } from './contexts/AppProvider'
@@ -256,7 +256,7 @@ function App() {
     document.documentElement.style.backgroundColor = surface
     document.body.style.backgroundColor = surface
     document.documentElement.style.colorScheme = prefs.darkMode ? 'dark' : 'light'
-    void syncStatusBarTheme(prefs.darkMode)
+    void syncSystemBarsTheme(prefs.darkMode)
   }, [prefs.darkMode])
 
   useVisualViewportVars()
