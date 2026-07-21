@@ -79,6 +79,13 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
   const activeSyncOpIdRef = useRef<string | null>(null)
   const nextToastAtRef = useRef(0)
   const undoSnapshotsRef = useRef<Map<string, UndoSnapshot>>(new Map())
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
 
   useEffect(() => {
     optionsRef.current = options
@@ -164,48 +171,54 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
       resolveDispatch: op => DISPATCH[`${op.entity}:${op.type}`],
       setSyncing: value => {
         isSyncingRef.current = value
-        setIsBackgroundSyncing(value)
+        if (mountedRef.current) setIsBackgroundSyncing(value)
       },
-      setActiveSyncId,
+      setActiveSyncId: id => {
+        if (mountedRef.current) setActiveSyncId(id)
+      },
       setActiveSyncOpId: id => {
         activeSyncOpIdRef.current = id
       },
       setError: current.setError,
       setBackoff: until => {
         syncBackoffUntilRef.current = until
-        setSyncBackoffUntil(until)
+        if (mountedRef.current) setSyncBackoffUntil(until)
       },
       addRecentlyCompleted: op => {
         const next = [...recentlyCompletedOpsRef.current, op]
         recentlyCompletedOpsRef.current = next
-        setRecentlyCompletedOps(next)
+        if (mountedRef.current) setRecentlyCompletedOps(next)
       },
       removeRecentlyCompleted: ids => {
         const next = recentlyCompletedOpsRef.current.filter(op => !ids.has(op.id))
         recentlyCompletedOpsRef.current = next
-        setRecentlyCompletedOps(next)
+        if (mountedRef.current) setRecentlyCompletedOps(next)
       },
       clearRecentlyCompleted: () => {
         recentlyCompletedOpsRef.current = []
-        setRecentlyCompletedOps([])
+        if (mountedRef.current) setRecentlyCompletedOps([])
       },
-      addFailedOp: op => setFailedOps(previous => [...previous, op]),
+      addFailedOp: op => {
+        if (mountedRef.current) setFailedOps(previous => [...previous, op])
+      },
       getSyncSuccessToast,
       buildUndoAction: createUndo,
       emitToast: (copy, action) => {
+        if (!mountedRef.current) return
         const now = Date.now()
         const showAt = Math.max(now, nextToastAtRef.current)
         nextToastAtRef.current = showAt + TOAST_STAGGER_MS
         window.setTimeout(() => current.showToast(copy.message, copy.title, copy.tone, action), showAt - now)
       },
       emitFailureToast: op => {
+        if (!mountedRef.current) return
         const description = op.payload?.description || op.payload?.name || op.entity
         current.showToast(`Couldn't sync '${description}' — removed from queue`, 'Sync Failed', 'error')
       },
       onAuthError: current.onAuthError,
       onLockError: () => {
         syncBackoffUntilRef.current = 0
-        setSyncBackoffUntil(0)
+        if (mountedRef.current) setSyncBackoffUntil(0)
         current.onLockError()
       },
       shouldRefresh: current.shouldRefresh ?? (successfulOps => successfulOps.some(({ op }) =>
@@ -213,6 +226,7 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
       )),
       refresh: current.refresh,
       onSettled: () => {
+        if (!mountedRef.current) return
         setActiveSyncId(null)
         setDeletingId(null)
       },
