@@ -27,21 +27,22 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   <header className="app-panel overflow-hidden rounded-2xl border border-blue-500/15 bg-card/90">
     <div className="grid gap-5 rounded-2xl bg-linear-to-br from-blue-500/10 via-transparent to-teal-500/10 p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,25rem)] lg:items-center">
       <div className="min-w-0">
-        <div className="flex items-center gap-3">
+        <div className="flex items-start gap-3 sm:items-center">
           <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-blue-500/15 bg-blue-500/10 text-blue-500">
             <CalendarCheck2 className="size-5" />
           </div>
           <div className="min-w-0">
-            <h2 className="text-2xl font-bold tracking-tight text-foreground">Today</h2>
-            <p className="mt-0.5 truncate text-xs text-muted-foreground">
-              Your current salary cycle · <span className="font-semibold text-blue-500">{cycleLabel}</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-2xl font-bold tracking-tight text-foreground">Today</h2>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-500/25 bg-teal-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-teal-400">
+                <CalendarCheck2 className="size-3 text-teal-400" />
+                <span>Starts on the {ordinal(cycleDay)}</span>
+              </span>
+            </div>
+            <p className="mt-1 truncate text-xs text-muted-foreground">
+              Current cycle · <span className="font-semibold text-blue-500">{cycleLabel}</span>
             </p>
           </div>
-        </div>
-        <div className="mt-4 flex items-center gap-2 text-[11px] text-muted-foreground">
-          <CalendarCheck2 className="size-3.5 text-teal-500" />
-          <span>Cycle starts on the</span>
-          <span className="font-bold text-foreground">{ordinal(cycleDay)}</span>
         </div>
       </div>
 

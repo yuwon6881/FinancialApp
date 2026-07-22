@@ -24,13 +24,13 @@ export function CategoryLimitPerformance({
   if (items.length === 0) {
     if (compact) return null
     return (
-      <section className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
+      <section className="app-panel flex h-full flex-col justify-between rounded-2xl border border-border/60 bg-card/92 p-5">
         <div className="flex items-center justify-between gap-3">
           <h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
             <Gauge className="size-4 text-blue-500" /> Category limit performance
           </h3>
         </div>
-        <div className="mt-4 flex flex-col items-center justify-center rounded-xl border border-dashed border-border/70 bg-muted/15 px-6 py-7 text-center sm:flex-row sm:justify-between sm:text-left">
+        <div className="mt-4 flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-border/70 bg-muted/15 px-6 py-7 text-center sm:flex-row sm:justify-between sm:text-left">
           <div className="flex flex-col items-center gap-3.5 sm:flex-row sm:gap-4">
             <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/10 text-blue-500 shadow-sm">
               <SlidersHorizontal className="size-5" />
@@ -45,7 +45,14 @@ export function CategoryLimitPerformance({
           {onNavigate && (
             <button
               type="button"
-              onClick={() => onNavigate('settings')}
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  const url = new URL(window.location.href)
+                  url.searchParams.set('section', 'category-limits')
+                  window.history.replaceState(null, '', url.toString())
+                }
+                onNavigate('settings')
+              }}
               className="mt-4 inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3.5 py-2 text-xs font-bold text-blue-500 transition hover:border-blue-500/50 hover:bg-blue-500/20 cursor-pointer sm:mt-0"
             >
               <span>Set Up Limits</span>

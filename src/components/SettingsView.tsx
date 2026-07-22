@@ -74,7 +74,31 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
     onToast,
   })
 
-  const [activeTab, setActiveTab] = React.useState<'financial-model' | 'categories-preferences' | 'security'>('financial-model')
+  const [activeTab, setActiveTab] = React.useState<'financial-model' | 'categories-preferences' | 'security'>(() => {
+    if (typeof window !== 'undefined') {
+      const search = window.location.search
+      const hash = window.location.hash
+      if (search.includes('category') || search.includes('limits') || hash.includes('category') || hash.includes('limits')) {
+        return 'categories-preferences'
+      }
+    }
+    return 'financial-model'
+  })
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const search = window.location.search
+      const hash = window.location.hash
+      if (search.includes('category') || search.includes('limits') || hash.includes('category') || hash.includes('limits')) {
+        setActiveTab('categories-preferences')
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            document.getElementById('category-limits-card')?.scrollIntoView({ behavior: 'smooth' })
+          }, 100)
+        })
+      }
+    }
+  }, [])
 
   // Category rows for the list. When usage stats are available they are already sorted
   // least-used-first (so removal candidates surface at the top); otherwise fall back to the

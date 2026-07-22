@@ -147,7 +147,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         onNavigateToLedger={onNavigateToLedger}
       />
 
-      <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,2fr)] lg:items-start">
+      <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,2fr)] lg:items-stretch">
         <SubscriptionsTimelineCard
           activeRecurring={view.activeRecurring}
           formatSensitive={view.formatSensitive}

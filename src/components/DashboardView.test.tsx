@@ -102,7 +102,7 @@ describe('DashboardView focused Today experience', () => {
     expect(screen.getByText('Essentials spending pace')).toBeTruthy()
     expect(screen.getByText('Projected cycle finish')).toBeTruthy()
     expect(screen.getByText('Category watch')).toBeTruthy()
-    expect(screen.getByText(/Your current salary cycle/)).toBeTruthy()
+    expect(screen.getByText(/Current cycle/)).toBeTruthy()
     expect(screen.queryByText('Subscriptions')).toBeNull()
     expect(screen.queryByText('Financial Plan Metrics')).toBeNull()
     expect(screen.queryByText('Carryover Rolling Ledgers')).toBeNull()

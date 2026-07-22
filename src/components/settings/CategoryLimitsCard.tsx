@@ -67,7 +67,7 @@ export function CategoryLimitsCard({
   }
 
   return (
-    <section className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
+    <section id="category-limits-card" className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
       <div className="flex items-start justify-between gap-3 border-b border-border/40 pb-3">
         <div>
           <h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
