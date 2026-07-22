@@ -68,7 +68,6 @@ const wishlist: WishlistItem[] = [
 
 const makeProps = (overrides: Partial<React.ComponentProps<typeof DashboardView>> = {}) => ({
   dashboardData,
-  onSelectPeriod: vi.fn(),
   onNavigate: vi.fn(),
   hideSensitive: false,
   hideBalanceAmounts: false,
@@ -90,7 +89,7 @@ describe('DashboardView focused Today experience', () => {
     } as unknown as typeof ResizeObserver
   })
 
-  it('prioritizes available money, attention, plan status, and upcoming bills', () => {
+  it('prioritizes current money, attention, and plan status', () => {
     render(<DashboardView {...makeProps()} />)
 
     expect(screen.getByText('Today')).toBeTruthy()
@@ -103,28 +102,17 @@ describe('DashboardView focused Today experience', () => {
     expect(screen.getByText('Essentials spending pace')).toBeTruthy()
     expect(screen.getByText('Projected cycle finish')).toBeTruthy()
     expect(screen.getByText('Category watch')).toBeTruthy()
-    expect(screen.getByText('Subscriptions')).toBeTruthy()
+    expect(screen.getByText(/Your current salary cycle/)).toBeTruthy()
+    expect(screen.queryByText('Subscriptions')).toBeNull()
     expect(screen.queryByText('Financial Plan Metrics')).toBeNull()
     expect(screen.queryByText('Carryover Rolling Ledgers')).toBeNull()
   })
 
-  it('keeps long subscription labels inside a fixed dashboard column', () => {
-    const longCategory = 'Household subscriptions and recurring services'
-    render(<DashboardView {...makeProps({
-      dashboardData: {
-        ...dashboardData,
-        activeRecurringPayments: [{
-          ...dashboardData.activeRecurringPayments[0],
-          category: longCategory,
-          isDiscarded: true,
-          status: 'Discarded',
-        }],
-      },
-    })} />)
+  it('gives the plan snapshot the full Today content width', () => {
+    render(<DashboardView {...makeProps()} />)
 
-    expect(screen.getByTestId('today-plan-grid').className).toContain('minmax(0,2fr)')
-    expect(screen.getByTestId('subscriptions-timeline-card').className).toContain('min-w-0')
-    expect(screen.getByText(longCategory).className).toContain('truncate')
+    expect(screen.getByTestId('today-plan-grid').className).not.toContain('grid-cols')
+    expect(screen.queryByTestId('subscriptions-timeline-card')).toBeNull()
   })
 
   it('opens the one shared bill review surface', () => {
@@ -163,6 +151,27 @@ describe('DashboardView focused Today experience', () => {
       const dailySpendingRoom = screen.getByText('Daily spending room')
       expect(dailySpendingRoom).toBeTruthy()
       expect(dailySpendingRoom.parentElement?.textContent).toContain('$47.90/day')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('describes an unsustainable pace against the remaining daily allowance', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 6, 20))
+
+    try {
+      render(<DashboardView {...makeProps({
+        dashboardData: {
+          ...dashboardData,
+          todayPlanInsights: {
+            ...dashboardData.todayPlanInsights!,
+            nonRecurringEssentialsDailyAverage: 100,
+          },
+        },
+      })} />)
+
+      expect(screen.getByText(/faster than your remaining daily allowance/)).toBeTruthy()
     } finally {
       vi.useRealTimers()
     }

@@ -9,12 +9,12 @@ vi.mock('@/lib/api', async () => {
   const actual = await vi.importActual('@/lib/api') as any
   return {
     ...actual,
-    fetchDashboard: vi.fn().mockResolvedValue({
-      setting: { selectedMonth: 'Jun', selectedYear: 2026, currency: 'USD', hideSensitive: true, darkMode: false },
+    fetchDashboard: vi.fn().mockImplementation((month?: string, year?: number) => Promise.resolve({
+      setting: { selectedMonth: month || 'Jun', selectedYear: year || 2026, cycleDay: 28, currency: 'USD', hideSensitive: true, darkMode: false },
       stats: { pastThreeMonthsRewardsAverage: 120, hasRewardsHistory: true },
       categories: [],
       pendingNotifications: []
-    }),
+    })),
     fetchTransactions: vi.fn().mockResolvedValue([]),
     fetchRecurringPayments: vi.fn().mockResolvedValue([]),
     fetchCategories: vi.fn().mockResolvedValue([]),
@@ -29,6 +29,7 @@ vi.mock('@/lib/api', async () => {
       pastThreeMonthsRewardsAverage: 120,
       hasRewardsHistory: true
     }),
+    selectPeriod: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn().mockResolvedValue({ success: true }),
     pingServer: vi.fn().mockResolvedValue({ status: 'healthy' })
   }
@@ -44,16 +45,22 @@ vi.mock('@/components/LoginView', () => ({
 }))
 
 vi.mock('@/components/DashboardView', () => ({
-  DashboardView: ({ wishlist = [] }: any) => (
+  DashboardView: ({ dashboardData, wishlist = [] }: any) => (
     <div data-testid="dashboard-view">
       Dashboard
+      <span data-testid="today-cycle">{dashboardData?.setting?.selectedMonth}-{dashboardData?.setting?.selectedYear}</span>
       <span data-testid="dashboard-wishlist">{wishlist.map((item: any) => item.name).join(',')}</span>
     </div>
   )
 }))
 
 vi.mock('@/components/ReportsView', () => ({
-  ReportsView: () => <div data-testid="reports-view">Reports</div>
+  ReportsView: ({ onSelectPeriod }: any) => (
+    <div data-testid="reports-view">
+      Reports
+      <button onClick={() => onSelectPeriod('Jan', 2025)}>Select historical report</button>
+    </div>
+  )
 }))
 
 vi.hoisted(() => {
@@ -190,6 +197,22 @@ describe('App behaviors', () => {
 
     await waitFor(() => expect(screen.getByTestId('reports-view')).toBeDefined())
     expect(window.location.pathname).toBe('/reports')
+  })
+
+  it('keeps Today on the current cycle after Reports selects a historical cycle', async () => {
+    localStorage.setItem('auth_session', '1')
+    localStorage.setItem('auth_username', 'alice')
+    render(<App />)
+
+    await waitFor(() => expect(screen.getByTestId('today-cycle').textContent).toBe('Jun-2026'))
+    fireEvent.click(screen.getAllByRole('button', { name: /Reports/ })[0])
+    fireEvent.click(await screen.findByRole('button', { name: 'Select historical report' }))
+
+    await waitFor(() => expect(api.fetchDashboard).toHaveBeenCalledWith('Jan', 2025, expect.any(AbortSignal)))
+    fireEvent.click(screen.getAllByRole('button', { name: /Today/ })[0])
+
+    await waitFor(() => expect(screen.getByTestId('today-cycle').textContent).toBe('Jun-2026'))
+    expect(api.fetchDashboard).toHaveBeenCalledWith('Jun', 2026, expect.any(AbortSignal), false)
   })
 
   it('performs cache preservation and local storage cleanup on logout', async () => {

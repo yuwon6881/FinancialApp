@@ -1,6 +1,6 @@
 import React from 'react'
 import { BarChart3, ChartNoAxesCombined } from 'lucide-react'
-import type { DashboardData, Transaction, WishlistItem } from '../types'
+import type { AppTab, DashboardData, Transaction, WishlistItem } from '../types'
 import { useAppContext } from '../contexts/AppContext'
 import { getCycleLabelForDropdown } from '../lib/cycleLabels'
 import { getCycleProgress } from '../lib/cycle'
@@ -15,6 +15,7 @@ import { DoughnutChart } from './dashboard/DoughnutChart'
 import { CycleCalendar } from './dashboard/CycleCalendar'
 import { BalanceAdjustmentModals } from './dashboard/BalanceAdjustmentModals'
 import { CategoryLimitPerformance } from './dashboard/CategoryLimitPerformance'
+import { SubscriptionsTimelineCard } from './dashboard/SubscriptionsTimelineCard'
 
 interface ReportsViewProps {
   dashboardData: DashboardData | null
@@ -22,6 +23,8 @@ interface ReportsViewProps {
   wishlist?: WishlistItem[]
   hideBalanceAmounts: boolean
   onSelectPeriod: (month: string, year: number) => void
+  onNavigate?: (tab: AppTab) => void
+  onNavigateToRecurring?: (recurringPaymentId: string) => void
   onNavigateToLedger?: (options: {
     category?: string | null
     date?: string | null
@@ -43,6 +46,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   wishlist = [],
   hideBalanceAmounts,
   onSelectPeriod,
+  onNavigate = () => undefined,
+  onNavigateToRecurring,
   onNavigateToLedger,
   onAddBalanceAdjustment,
   isSwitchingCycle = false,
@@ -142,11 +147,20 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         onNavigateToLedger={onNavigateToLedger}
       />
 
-      <CategoryLimitPerformance
-        items={view.categoryLimitProgress}
-        formatSensitive={view.formatSensitive}
-        onNavigateToLedger={onNavigateToLedger}
-      />
+      <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,2fr)] lg:items-start">
+        <SubscriptionsTimelineCard
+          activeRecurring={view.activeRecurring}
+          formatSensitive={view.formatSensitive}
+          onNavigate={onNavigate}
+          onNavigateToRecurring={onNavigateToRecurring}
+          cycleKey={`${view.activeSettings.selectedMonth}-${view.activeSettings.selectedYear}`}
+        />
+        <CategoryLimitPerformance
+          items={view.categoryLimitProgress}
+          formatSensitive={view.formatSensitive}
+          onNavigateToLedger={onNavigateToLedger}
+        />
+      </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <TrendLineChart

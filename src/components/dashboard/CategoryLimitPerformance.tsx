@@ -19,7 +19,19 @@ export function CategoryLimitPerformance({
   onNavigateToLedger,
   compact = false,
 }: CategoryLimitPerformanceProps) {
-  if (items.length === 0) return null
+  if (items.length === 0) {
+    if (compact) return null
+    return (
+      <section className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
+        <h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+          <Gauge className="size-4 text-blue-500" /> Category limit performance
+        </h3>
+        <p className="mt-2 text-xs text-muted-foreground">
+          No category spending guides were configured for this cycle.
+        </p>
+      </section>
+    )
+  }
 
   const sorted = [...items].sort((a, b) => {
     const statusDelta = statusRank[a.status] - statusRank[b.status]

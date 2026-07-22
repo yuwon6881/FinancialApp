@@ -4,7 +4,6 @@ import { CycleSkeleton } from './ui/Skeleton'
 import { useAppContext } from '../contexts/AppContext'
 import { DashboardHeader } from './dashboard/DashboardHeader'
 import { TodayFocusCards } from './dashboard/TodayFocusCards'
-import { SubscriptionsTimelineCard } from './dashboard/SubscriptionsTimelineCard'
 import { CategoryLimitPerformance } from './dashboard/CategoryLimitPerformance'
 import { useDashboardView } from './dashboard/useDashboardView'
 import { AlertCircle, BarChart3, CheckCircle2, ShieldCheck } from 'lucide-react'
@@ -13,9 +12,7 @@ import { getCycleProgress, MONTH_NAMES } from '../lib/cycle'
 
 interface DashboardViewProps {
   dashboardData: DashboardData | null
-  onSelectPeriod: (month: string, year: number) => void
   onNavigate: (tab: AppTab) => void
-  onNavigateToRecurring?: (recurringPaymentId: string) => void
   hideSensitive?: boolean
   hideBalanceAmounts: boolean
   walletBalance: number
@@ -35,9 +32,7 @@ interface DashboardViewProps {
 }
 export const DashboardView: React.FC<DashboardViewProps> = ({
   dashboardData,
-  onSelectPeriod,
   onNavigate,
-  onNavigateToRecurring,
   hideSensitive: hideSensitiveProp,
   hideBalanceAmounts,
   walletBalance,
@@ -78,21 +73,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   return (
     <div className="space-y-6 soft-rise">
 
-      {/* Period Selection & Header */}
       <DashboardHeader
         cycleLabel={view.cycleLabel}
-        selectedMonth={view.activeSettings.selectedMonth}
-        selectedYear={view.activeSettings.selectedYear}
         cycleDay={view.activeSettings.cycleDay}
-        months={view.months}
-        years={view.years}
         walletBalance={walletBalance}
         areBalanceAmountsMasked={view.areBalanceAmountsMasked}
         hideSensitive={hideSensitive}
         hideBalanceAmounts={hideBalanceAmounts}
         formatCurrency={view.formatCurrency}
         onToggleBalanceAmounts={onToggleBalanceAmounts}
-        onSelectPeriod={onSelectPeriod}
       />
 
       <section aria-labelledby="attention-heading" className={`app-panel rounded-2xl border p-5 ${pendingNotificationCount > 0 ? 'border-amber-500/25 bg-amber-500/8' : 'border-emerald-500/20 bg-emerald-500/5'}`}>
@@ -132,12 +121,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         onNavigate={onNavigate}
       />
 
-      <div data-testid="today-plan-grid" className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-stretch">
-        <section aria-labelledby="plan-snapshot-heading" className="app-panel flex h-full flex-col rounded-2xl border border-border/60 bg-card/92 p-5">
+      <div data-testid="today-plan-grid">
+        <section aria-labelledby="plan-snapshot-heading" className="app-panel flex flex-col rounded-2xl border border-border/60 bg-card/92 p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 id="plan-snapshot-heading" className="text-base font-bold text-foreground">Plan snapshot</h3>
-              <p className="mt-1 text-xs text-muted-foreground">A quick check of spending room and emergency savings.</p>
+              <p className="mt-1 text-xs text-muted-foreground">Current-cycle spending room, committed bills, and emergency savings.</p>
             </div>
             <ShieldCheck className="size-5 shrink-0 text-blue-500" />
           </div>
@@ -196,8 +185,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 {hasEndedCycle
                   ? 'Non-recurring Essentials daily average.'
                   : paceDifference > 0.05
-                    ? `${Math.round(paceDifference * 100)}% above today’s Essentials room.`
-                    : 'Within today’s Essentials room.'}
+                    ? dailySpendingRoom <= 0
+                      ? 'No daily Essentials allowance remains.'
+                      : `${Math.round(paceDifference * 100)}% faster than your remaining daily allowance.`
+                    : 'Within your remaining daily allowance.'}
               </span>
             </button>
 
@@ -221,16 +212,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </Button>
           </div>
         </section>
-
-        <div className="min-w-0 h-full">
-          <SubscriptionsTimelineCard
-            activeRecurring={view.activeRecurring}
-            formatSensitive={view.formatSensitive}
-            onNavigate={onNavigate}
-            onNavigateToRecurring={onNavigateToRecurring}
-            cycleKey={`${view.activeSettings.selectedMonth}-${view.activeSettings.selectedYear}`}
-          />
-        </div>
       </div>
 
       <CategoryLimitPerformance

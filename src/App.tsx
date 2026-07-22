@@ -24,7 +24,7 @@ import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 import { PullToRefresh } from './components/ui/PullToRefresh'
 import { ToastViewport } from './components/ui/ToastViewport'
 import { CycleSkeleton, Skeleton, type PageSkeletonVariant } from './components/ui/Skeleton'
-import { clearLocalFinancialData } from './lib/cache'
+import { clearLocalFinancialData, getCachedCycleSnapshot } from './lib/cache'
 import { useVisualViewportVars } from './lib/useVisualViewportVars'
 import { useReceiptScanPolling } from './lib/useReceiptScanPolling'
 import { useNativeAppLifecycle } from './lib/useNativeAppLifecycle'
@@ -339,21 +339,41 @@ function App() {
   }, [nav.selectedMonth, nav.selectedYear])
 
   const [currentCycleDashboardData, setCurrentCycleDashboardData] = useState<DashboardData | null>(null)
-  useEffect(() => {
-    if (!session.token || !financial.dashboardData) return
+  const currentCycleDashboardRef = useRef<DashboardData | null>(null)
+  const [isCurrentCycleLoading, setIsCurrentCycleLoading] = useState(false)
+  const currentCycleDay = financial.optimisticDashboardData?.setting.cycleDay || 28
+  const currentCyclePeriod = getCurrentCycleYearAndMonth(currentCycleDay)
+  const currentCycleMonth = MONTH_NAMES[currentCyclePeriod.monthIndex - 1]
+  const selectedCycleIsCurrent = financial.optimisticDashboardData?.setting.selectedMonth === currentCycleMonth &&
+    financial.optimisticDashboardData?.setting.selectedYear === currentCyclePeriod.year
 
-    const cycleDay = financial.dashboardData.setting.cycleDay || 28
+  useEffect(() => {
+    if (!session.token || !financial.optimisticDashboardData) return
+
+    const currentData = financial.optimisticDashboardData
+    const cycleDay = currentData.setting.cycleDay || 28
     const { year, monthIndex } = getCurrentCycleYearAndMonth(cycleDay)
     const month = MONTH_NAMES[monthIndex - 1]
+    const matchesCurrentPeriod = (data: DashboardData | null) =>
+      data?.setting.selectedMonth === month && data.setting.selectedYear === year
 
-    if (financial.dashboardData.setting.selectedMonth === month && financial.dashboardData.setting.selectedYear === year) {
-      setCurrentCycleDashboardData(null)
+    if (matchesCurrentPeriod(currentData)) {
+      currentCycleDashboardRef.current = currentData
+      setCurrentCycleDashboardData(currentData)
+      setIsCurrentCycleLoading(false)
       return
     }
 
+    if (!matchesCurrentPeriod(currentCycleDashboardRef.current)) {
+      const cached = getCachedCycleSnapshot(month, year)?.dashboardData || null
+      currentCycleDashboardRef.current = matchesCurrentPeriod(cached) ? cached : null
+      if (currentCycleDashboardRef.current) setCurrentCycleDashboardData(currentCycleDashboardRef.current)
+    }
+
+    setIsCurrentCycleLoading(!currentCycleDashboardRef.current)
     const ac = new AbortController()
     Promise.all([
-      api.fetchDashboard(month, year, ac.signal),
+      api.fetchDashboard(month, year, ac.signal, false),
       api.fetchDashboardInsights(month, year, ac.signal)
     ]).then(([core, insights]) => {
       const merged: DashboardData = {
@@ -368,17 +388,27 @@ function App() {
           hasRewardsHistory: insights.hasRewardsHistory
         }
       }
+      currentCycleDashboardRef.current = merged
       setCurrentCycleDashboardData(merged)
     }).catch(err => {
       if (getErrorName(err) !== 'AbortError') {
-        console.warn('Could not load current-cycle wishlist metrics', err)
+        console.warn('Could not load the current-cycle Today view', err)
       }
+    }).finally(() => {
+      if (!ac.signal.aborted) setIsCurrentCycleLoading(false)
     })
 
     return () => ac.abort()
-  }, [session.token, financial.dashboardData])
+  }, [session.token, financial.optimisticDashboardData])
 
-  const wishlistDashboardData = currentCycleDashboardData || financial.optimisticDashboardData
+  const todayDashboardData = selectedCycleIsCurrent
+    ? financial.optimisticDashboardData
+    : currentCycleDashboardData?.setting.selectedMonth === currentCycleMonth &&
+        currentCycleDashboardData.setting.selectedYear === currentCyclePeriod.year
+      ? currentCycleDashboardData
+      : null
+  const currentPendingNotifications = todayDashboardData?.pendingNotifications || []
+  const wishlistDashboardData = todayDashboardData || financial.optimisticDashboardData
 
   // End-of-cycle summary: fires once when a new cycle begins (persisted server-side so it can't
   // re-fire on navigation or on another device), and is re-openable from Reports for any ended
@@ -512,7 +542,7 @@ function App() {
           onToggleHideSensitive={handleToggleHideSensitive}
           onLogout={session.handleLogout}
           username={session.username}
-          pendingNotifications={financial.optimisticDashboardData?.pendingNotifications || []}
+          pendingNotifications={currentPendingNotifications}
           onOpenNotifications={() => dialogs.setShowLoginModal(true)}
           darkMode={prefs.darkMode}
           onToggleDarkMode={handleToggleDarkMode}
@@ -574,18 +604,20 @@ function App() {
                   >
                     {prefs.activeTab === 'dashboard' && (
                       <DashboardView
-                        dashboardData={financial.optimisticDashboardData}
-                        onSelectPeriod={nav.handleSelectPeriod}
+                        dashboardData={todayDashboardData}
                         onNavigate={prefs.setActiveTab}
-                        onNavigateToRecurring={nav.handleNavigateToRecurring}
                         hideBalanceAmounts={prefs.hideBalanceAmounts}
                         walletBalance={financial.totalBalance}
                         onToggleBalanceAmounts={handleToggleBalanceAmounts}
-                        pendingNotificationCount={financial.optimisticDashboardData?.pendingNotifications?.length || 0}
+                        pendingNotificationCount={currentPendingNotifications.length}
                         onOpenNotifications={() => dialogs.setShowLoginModal(true)}
-                        onNavigateToLedger={nav.handleNavigateToLedger}
+                        onNavigateToLedger={options => nav.handleNavigateToLedger({
+                          ...options,
+                          targetMonth: currentCycleMonth,
+                          targetYear: currentCyclePeriod.year,
+                        })}
                         wishlist={financial.allWishlist}
-                        isSwitchingCycle={nav.isSwitchingCycle}
+                        isSwitchingCycle={isCurrentCycleLoading || !todayDashboardData}
                       />
                     )}
 
@@ -596,6 +628,8 @@ function App() {
                         wishlist={financial.allWishlist}
                         hideBalanceAmounts={prefs.hideBalanceAmounts}
                         onSelectPeriod={nav.handleSelectPeriod}
+                        onNavigate={prefs.setActiveTab}
+                        onNavigateToRecurring={nav.handleNavigateToRecurring}
                         onNavigateToLedger={nav.handleNavigateToLedger}
                         onAddBalanceAdjustment={financial.handleAddBalanceAdjustment}
                         isSwitchingCycle={nav.isSwitchingCycle}
@@ -771,8 +805,8 @@ function App() {
 
         <PendingSubscriptionsModal
           isOpen={dialogs.showLoginModal}
-          pendingNotifications={financial.optimisticDashboardData?.pendingNotifications || []}
-          currency={financial.optimisticDashboardData?.setting?.currency || 'USD'}
+          pendingNotifications={currentPendingNotifications}
+          currency={todayDashboardData?.setting.currency || financial.optimisticDashboardData?.setting?.currency || 'USD'}
           hideSensitive={prefs.hideSensitive}
           showOnLoginChecked={prefs.notifyOnLogin}
           onToggleShowOnLogin={(checked) => {

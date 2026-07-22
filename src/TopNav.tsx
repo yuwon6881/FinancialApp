@@ -9,7 +9,7 @@ import {
   MenubarTrigger,
 } from "@/components/ui/menubar"
 import { 
-  TrendingUp, 
+  CalendarCheck2,
   Wallet, 
   LogOut, 
   Plus, 
@@ -92,7 +92,7 @@ const TopNav: React.FC<TopNavProps> = ({
       tab: 'dashboard',
       label: 'Today',
       mobileLabel: 'Today',
-      Icon: TrendingUp,
+      Icon: CalendarCheck2,
       activeClass: 'bg-blue-500/12 text-blue-600 dark:text-blue-400 border-blue-500/25 shadow-blue-500/10',
       iconClass: 'text-blue-500',
       dotClass: 'bg-blue-500'
