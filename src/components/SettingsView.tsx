@@ -351,65 +351,65 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       {activeTab === 'categories-preferences' && (
         <div id="settings-panel-categories-preferences" role="tabpanel" aria-labelledby="settings-tab-categories-preferences" className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start animate-in fade-in duration-200">
           {/* Transaction Categories */}
-          <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4 order-2 lg:order-1">
-            <div className="border-b border-border/40 pb-2">
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={() => view.setCategoriesOpen(!view.categoriesOpen)}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); view.setCategoriesOpen(!view.categoriesOpen) } }}
-                aria-expanded={view.categoriesOpen}
-                className="flex items-center justify-between gap-3 cursor-pointer"
-              >
-                <div className="min-w-0">
-                  <h3 className="text-sm font-bold text-foreground">Transaction Categories</h3>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">
-                    <div>{view.visibleCategories.length} active categories.</div>
-                    {view.isLoadingUsage && (
-                      <div className="flex items-center gap-1">
-                        <Loader2 className="size-3 animate-spin" />
-                        Checking usage…
-                      </div>
-                    )}
-                    {view.categoryUsage && view.unusedCategoryCount > 0 && (
-                      <div className="text-orange-500 font-semibold mt-0.5">
-                        {view.unusedCategoryCount} unused in last {view.USAGE_LOOKBACK_CYCLES} cycles
-                      </div>
-                    )}
-                    {view.categoryUsage && view.rarelyUsedCategoryCount > 0 && (
-                      <div className="text-amber-600 dark:text-amber-500 font-semibold mt-0.5">
-                        {view.rarelyUsedCategoryCount} rarely used
-                      </div>
-                    )}
-                    {view.categoryUsage && view.unusedCategoryCount === 0 && view.rarelyUsedCategoryCount === 0 && view.visibleCategories.length > 0 && (
-                      <div className="text-emerald-500 font-semibold mt-0.5">
-                        all used recently
-                      </div>
-                    )}
-                  </div>
+          <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs order-2 lg:order-1">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => view.setCategoriesOpen(!view.categoriesOpen)}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); view.setCategoriesOpen(!view.categoriesOpen) } }}
+              aria-expanded={view.categoriesOpen}
+              className={`flex items-center justify-between gap-3 select-none cursor-pointer ${
+                view.categoriesOpen ? 'border-b border-border/40 pb-3' : ''
+              }`}
+            >
+              <div className="min-w-0">
+                <h3 className="text-sm font-bold text-foreground">Transaction Categories</h3>
+                <div className="text-[11px] text-muted-foreground mt-0.5">
+                  <div>{view.visibleCategories.length} active categories.</div>
+                  {view.isLoadingUsage && (
+                    <div className="flex items-center gap-1">
+                      <Loader2 className="size-3 animate-spin" />
+                      Checking usage…
+                    </div>
+                  )}
+                  {view.categoryUsage && view.unusedCategoryCount > 0 && (
+                    <div className="text-orange-500 font-semibold mt-0.5">
+                      {view.unusedCategoryCount} unused in last {view.USAGE_LOOKBACK_CYCLES} cycles
+                    </div>
+                  )}
+                  {view.categoryUsage && view.rarelyUsedCategoryCount > 0 && (
+                    <div className="text-amber-600 dark:text-amber-500 font-semibold mt-0.5">
+                      {view.rarelyUsedCategoryCount} rarely used
+                    </div>
+                  )}
+                  {view.categoryUsage && view.unusedCategoryCount === 0 && view.rarelyUsedCategoryCount === 0 && view.visibleCategories.length > 0 && (
+                    <div className="text-emerald-500 font-semibold mt-0.5">
+                      all used recently
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={e => { e.stopPropagation(); void view.handleAiCleanupReview() }}
-                    disabled={hideSensitive || view.isReviewingCleanup || view.visibleCategories.length === 0}
-                    title={hideSensitive ? 'Unhide balances to review' : 'AI category review'}
-                    className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition cursor-pointer ${
-                      view.isReviewingCleanup
-                        ? 'border-blue-500/35 bg-blue-500/5 text-blue-600 dark:text-blue-400'
-                        : 'text-blue-600 dark:text-blue-400 bg-blue-500/5 border-blue-500/30 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed'
-                    }`}
-                  >
-                    {view.isReviewingCleanup ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
-                    AI
-                  </button>
-                  {view.categoriesOpen ? <ChevronUp className="size-4 text-muted-foreground" /> : <ChevronDown className="size-4 text-muted-foreground" />}
-                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={e => { e.stopPropagation(); void view.handleAiCleanupReview() }}
+                  disabled={hideSensitive || view.isReviewingCleanup || view.visibleCategories.length === 0}
+                  title={hideSensitive ? 'Unhide balances to review' : 'AI category review'}
+                  className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition cursor-pointer ${
+                    view.isReviewingCleanup
+                      ? 'border-blue-500/35 bg-blue-500/5 text-blue-600 dark:text-blue-400'
+                      : 'text-blue-600 dark:text-blue-400 bg-blue-500/5 border-blue-500/30 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed'
+                  }`}
+                >
+                  {view.isReviewingCleanup ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
+                  AI
+                </button>
+                {view.categoriesOpen ? <ChevronUp className="size-4 text-muted-foreground" /> : <ChevronDown className="size-4 text-muted-foreground" />}
               </div>
             </div>
 
             <CollapsibleBody open={view.categoriesOpen}>
-              <div className="space-y-4 px-0.5 pt-1 animate-in fade-in duration-200">
+              <div className="space-y-4 px-0.5 pt-4">
                 {(view.cleanupReviewOpen || view.cleanupReviewError) && (
                   <div className={`rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 space-y-2 ${view.isReviewingCleanup ? 'perimeter-beam-host' : ''}`}>
                     {view.isReviewingCleanup && <PerimeterBeam radius={12} size={120} />}
