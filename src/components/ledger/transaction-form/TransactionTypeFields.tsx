@@ -17,7 +17,6 @@ export function TransactionTypeFields({ txType, onChangeTxType, disabled = false
     <div className="space-y-1 sm:col-span-2">
       <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
         Transaction Type
-        {disabled && <span className="text-[10px] font-medium text-muted-foreground/70">(locked while editing)</span>}
       </label>
       <div
         className="flex gap-2"

@@ -154,7 +154,10 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   const activeSuggestionEntries = useMemo(() => {
     if (state.transactionType === 'transfer') return []
     return autocompleteSuggestions.filter(s =>
-      s.txType === state.transactionType && !s.ledgerCategory.toLowerCase().startsWith('transfer:income->')
+      s.txType === state.transactionType &&
+      !s.ledgerCategory.toLowerCase().startsWith('transfer:income->') &&
+      !s.description.toLowerCase().startsWith('purchased:') &&
+      !s.description.toLowerCase().endsWith('(wish list)')
     )
   }, [autocompleteSuggestions, state.transactionType])
 
