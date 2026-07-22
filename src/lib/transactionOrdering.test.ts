@@ -65,4 +65,17 @@ describe('transaction ordering', () => {
       .map(item => item.id))
       .toEqual(['july-16', 'backdated'])
   })
+
+  it('does not reorder legacy same-day rows while one is editing or deleting', () => {
+    const first = transaction({ id: 'z-row', postedAt: undefined })
+    const second = transaction({ id: 'a-row', postedAt: undefined })
+    const originalOrder = [first, second].sort(compareTransactionsNewestFirst).map(item => item.id)
+
+    const pendingOrder = [first, { ...second, isPendingSync: true, isPendingDelete: true }]
+      .sort(compareTransactionsNewestFirst)
+      .map(item => item.id)
+
+    expect(originalOrder).toEqual(['z-row', 'a-row'])
+    expect(pendingOrder).toEqual(originalOrder)
+  })
 })

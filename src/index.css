@@ -732,20 +732,28 @@ button {
    need their cell borders animated; mobile rows carry the uniform border glow on the card container. */
 @keyframes ledger-highlight-mobile-shell {
     0% {
-        border-color: rgba(99, 102, 241, 0.9) !important;
-        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.9), 0 0 16px rgba(99, 102, 241, 0.4);
+        border-color: rgba(99, 102, 241, 0.95) !important;
+        box-shadow: 0 0 16px rgba(99, 102, 241, 0.35);
+        outline: 1.5px solid rgba(99, 102, 241, 0.95);
+        outline-offset: -1.5px;
     }
     30% {
         border-color: rgba(99, 102, 241, 0.65) !important;
-        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.65), 0 0 10px rgba(99, 102, 241, 0.25);
+        box-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
+        outline: 1.5px solid rgba(99, 102, 241, 0.65);
+        outline-offset: -1.5px;
     }
     70% {
         border-color: rgba(99, 102, 241, 0.25) !important;
-        box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.25), 0 0 4px rgba(99, 102, 241, 0.1);
+        box-shadow: 0 0 4px rgba(99, 102, 241, 0.08);
+        outline: 1px solid rgba(99, 102, 241, 0.25);
+        outline-offset: -1px;
     }
     100% {
         border-color: var(--border);
         box-shadow: 0 1px 2px rgb(0 0 0 / 0.03);
+        outline: 0 solid transparent;
+        outline-offset: 0;
     }
 }
 
@@ -767,7 +775,6 @@ button {
 .ledger-transaction-highlight:not(tr) {
     position: relative;
     z-index: 10;
-    border-radius: 1rem;
     animation: ledger-highlight-mobile-shell 3.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 

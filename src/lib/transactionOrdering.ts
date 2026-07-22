@@ -19,9 +19,11 @@ export function compareTransactionsNewestFirst(a: Transaction, b: Transaction): 
   const timeDiff = transactionTime(b) - transactionTime(a)
   if (timeDiff !== 0) return timeDiff
 
-  const pendingDiff = Number(Boolean(b.isPendingSync)) - Number(Boolean(a.isPendingSync))
-  if (pendingDiff !== 0) return pendingDiff
-
+  // Sync state must never affect position. Existing rows temporarily become
+  // pending during edits/deletes (including cascades from wishlist/recurring
+  // deletes), and legacy same-day rows may not have postedAt to distinguish
+  // them. Sorting pending rows first made those rows jump to the top while the
+  // request was in flight. New optimistic adds already receive a postedAt.
   return String(b.id).localeCompare(String(a.id))
 }
 
