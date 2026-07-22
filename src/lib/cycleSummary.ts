@@ -85,6 +85,11 @@ export function buildCycleSummary(
   )
 
   const insights = data.cycleSummaryInsights
+  const categoryLimits = [...(data.categoryLimitProgress || [])]
+    .sort((a, b) => {
+      const rank = { Exceeded: 0, Watch: 1, OnTrack: 2 } as const
+      return rank[a.status] - rank[b.status] || b.percentUsed - a.percentUsed
+    })
 
   return {
     income,
@@ -130,5 +135,7 @@ export function buildCycleSummary(
     transactionCount: insights?.transactionCount ?? 0,
     committedSpend: insights?.committedSpend ?? 0,
     discretionarySpend: insights?.discretionarySpend ?? 0,
+    categoryLimits,
+    categoryLimitsMet: categoryLimits.filter(limit => limit.spent <= limit.limit + EPSILON).length,
   }
 }

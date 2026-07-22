@@ -40,6 +40,17 @@ const dashboardData: DashboardData = {
     { id: 'arp-1', recurringPaymentId: 'rp-1', name: 'Netflix', amount: 15, category: 'Entertainment', ledgerCategory: 'Essentials', dueDate: '2026-07-30', isPaid: false, isDiscarded: false, status: 'Pending' },
     { id: 'arp-2', recurringPaymentId: 'rp-2', name: 'Spotify', amount: 9.99, category: 'Software', ledgerCategory: 'Rewards', dueDate: '2026-08-02', isPaid: true, isDiscarded: false, status: 'Paid' },
   ],
+  todayPlanInsights: {
+    unpaidRecurringCount: 1,
+    unpaidRecurringTotal: 15,
+    unpaidEssentialsTotal: 15,
+    nonRecurringEssentialsSpent: 300,
+    nonRecurringEssentialsDailyAverage: 20,
+    projectedEssentialsEndingBalance: 1185,
+  },
+  categoryLimitProgress: [
+    { category: 'Transport', limit: 400, spent: 320, remaining: 80, pendingCommitted: 0, projectedSpend: 440, percentUsed: 0.8, status: 'Watch' },
+  ],
   trendPoints: [],
   last3TrendPoints: [],
   last6TrendPoints: [],
@@ -88,6 +99,10 @@ describe('DashboardView focused Today experience', () => {
     expect(screen.getByText('Plan snapshot')).toBeTruthy()
     expect(screen.getByText('Essentials remaining')).toBeTruthy()
     expect(screen.getByText('Emergency fund progress')).toBeTruthy()
+    expect(screen.getByText('Unpaid recurring bills')).toBeTruthy()
+    expect(screen.getByText('Current spending pace')).toBeTruthy()
+    expect(screen.getByText('Projected cycle finish')).toBeTruthy()
+    expect(screen.getByText('Category watch')).toBeTruthy()
     expect(screen.getByText('Subscriptions')).toBeTruthy()
     expect(screen.queryByText('Financial Plan Metrics')).toBeNull()
     expect(screen.queryByText('Carryover Rolling Ledgers')).toBeNull()

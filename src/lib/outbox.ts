@@ -18,6 +18,7 @@ export interface OutboxPayload {
   purchasedAt?: string
   purchaseTransactionId?: string | null
   replacementCategoryId?: string
+  cycleLimit?: number | null
   date?: string
   postedAt?: string
 }
@@ -473,6 +474,10 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
   'wishlistItem:unpurchase': (op) => api.unpurchaseWishlistItem(Number(op.targetId)),
 
   'category:add': (op) => api.addCategory({ ...(op.payload as Partial<TransactionCategory>), id: op.targetId } as Omit<TransactionCategory, 'id'> & { id?: string }),
+  'category:update': (op) => api.updateCategoryCycleLimit(
+    op.targetId,
+    typeof op.payload?.cycleLimit === 'number' ? op.payload.cycleLimit : null,
+  ),
   'category:delete': (op) => api.deleteCategory(op.targetId, typeof op.payload?.replacementCategoryId === 'string' ? op.payload.replacementCategoryId : undefined),
 
   'settings:update': (op) => {

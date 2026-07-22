@@ -131,4 +131,16 @@ describe('buildCycleSummary', () => {
 
     expect(buildCycleSummary(empty, null, [], 2026, 7, 1).hasActivity).toBe(false)
   })
+
+  it('includes tracked category guides ordered by the ones needing attention', () => {
+    const summary = buildCycleSummary(dashboard({
+      categoryLimitProgress: [
+        { category: 'Food', limit: 400, spent: 320, remaining: 80, pendingCommitted: 0, projectedSpend: 320, percentUsed: 0.8, status: 'OnTrack' },
+        { category: 'Transport', limit: 200, spent: 230, remaining: -30, pendingCommitted: 0, projectedSpend: 230, percentUsed: 1.15, status: 'Exceeded' },
+      ],
+    }), null, [], 2026, 7, 1)
+
+    expect(summary.categoryLimits.map(item => item.category)).toEqual(['Transport', 'Food'])
+    expect(summary.categoryLimitsMet).toBe(1)
+  })
 })

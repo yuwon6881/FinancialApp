@@ -14,6 +14,7 @@ import { TrendLineChart } from './dashboard/TrendLineChart'
 import { DoughnutChart } from './dashboard/DoughnutChart'
 import { CycleCalendar } from './dashboard/CycleCalendar'
 import { BalanceAdjustmentModals } from './dashboard/BalanceAdjustmentModals'
+import { CategoryLimitPerformance } from './dashboard/CategoryLimitPerformance'
 
 interface ReportsViewProps {
   dashboardData: DashboardData | null
@@ -137,6 +138,12 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         stats={view.stats}
         hideSensitive={hideSensitive}
         formatCurrency={view.formatCurrency}
+        formatSensitive={view.formatSensitive}
+        onNavigateToLedger={onNavigateToLedger}
+      />
+
+      <CategoryLimitPerformance
+        items={view.categoryLimitProgress}
         formatSensitive={view.formatSensitive}
         onNavigateToLedger={onNavigateToLedger}
       />

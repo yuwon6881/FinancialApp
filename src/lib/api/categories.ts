@@ -1,5 +1,10 @@
 import type { TransactionCategory } from '../../types'
 import { cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
+import { deobfuscateAmount, obfuscateAmount } from './amounts'
+
+type WireTransactionCategory = Omit<TransactionCategory, 'cycleLimit'> & {
+  cycleLimit?: string | number | null
+}
 
 export interface CategorySuggestion {
   category: string
@@ -89,19 +94,41 @@ export async function applyCategoryCleanup(actions: CategoryCleanupAction[]): Pr
 }
 
 export function fetchCategories(signal?: AbortSignal): Promise<TransactionCategory[]> {
-  return cachedGet('categories', () => request<TransactionCategory[]>('/categories', {
-    errorMessage: 'Failed to fetch custom categories',
-  }), { signal, staleTime: 300_000 })
+  return cachedGet('categories', async () => {
+    const categories = await request<WireTransactionCategory[]>('/categories', {
+      errorMessage: 'Failed to fetch custom categories',
+    })
+    return categories.map(category => ({
+      ...category,
+      cycleLimit: category.cycleLimit == null ? null : deobfuscateAmount(category.cycleLimit),
+    }))
+  }, { signal, staleTime: 300_000 })
 }
 
 export async function addCategory(category: Omit<TransactionCategory, 'id'> & { id?: string }): Promise<TransactionCategory> {
-  const result = await request<TransactionCategory>('/categories', {
+  const result = await request<WireTransactionCategory>('/categories', {
     method: 'POST',
     ...jsonBody(category),
     errorMessage: 'Failed to add custom category',
   })
   invalidateCache()
-  return result
+  return {
+    ...result,
+    cycleLimit: result.cycleLimit == null ? null : deobfuscateAmount(result.cycleLimit),
+  }
+}
+
+export async function updateCategoryCycleLimit(id: string, cycleLimit: number | null): Promise<TransactionCategory> {
+  const result = await request<WireTransactionCategory>(`/categories/${encodeURIComponent(id)}/cycle-limit`, {
+    method: 'PUT',
+    ...jsonBody({ cycleLimit: cycleLimit == null ? null : obfuscateAmount(cycleLimit) }),
+    errorMessage: 'Failed to update category spending guide',
+  })
+  invalidateCache()
+  return {
+    ...result,
+    cycleLimit: result.cycleLimit == null ? null : deobfuscateAmount(result.cycleLimit),
+  }
 }
 
 export async function deleteCategory(id: string, replacementCategoryId?: string): Promise<void> {

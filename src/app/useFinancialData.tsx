@@ -609,6 +609,11 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     mutateQueue(prev => enqueue(prev, 'category', 'add', finalId, { ...newCat, id: finalId }))
   }
 
+  const handleUpdateCategoryCycleLimit = (id: string, cycleLimit: number | null) => {
+    if (!guardSensitive()) return
+    mutateQueue(prev => enqueue(prev, 'category', 'update', id, { cycleLimit }))
+  }
+
   const handleDeleteCategory = (id: string, replacementCategoryId?: string) => {
     snapshotForUndo('category', String(id), allCategories.find(cat => String(cat.id) === String(id)))
     mutateQueue(prev => enqueue(prev, 'category', 'delete', id, replacementCategoryId ? { replacementCategoryId } : undefined))
@@ -978,6 +983,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     handleUpdateHideSensitivePreference,
     handleMarkSummarySeen,
     handleAddCategory,
+    handleUpdateCategoryCycleLimit,
     handleDeleteCategory,
     requestDeleteCategory,
     handleApplyCategoryCleanupSuggestion,

@@ -9,6 +9,8 @@ import type {
   RecurringPayment,
   Transaction,
   TrendPoint,
+  TodayPlanInsights,
+  CategoryLimitProgress,
   WishlistItem,
 } from '../types'
 
@@ -89,6 +91,32 @@ export type WireCategoryBreakdown = Omit<CategoryBreakdown, 'amount'> & {
   amount: WireAmount
 }
 
+export type WireTodayPlanInsights = Omit<
+  TodayPlanInsights,
+  | 'unpaidRecurringTotal'
+  | 'unpaidEssentialsTotal'
+  | 'nonRecurringEssentialsSpent'
+  | 'nonRecurringEssentialsDailyAverage'
+  | 'projectedEssentialsEndingBalance'
+> & {
+  unpaidRecurringTotal: WireAmount
+  unpaidEssentialsTotal: WireAmount
+  nonRecurringEssentialsSpent: WireAmount
+  nonRecurringEssentialsDailyAverage: WireAmount
+  projectedEssentialsEndingBalance: WireAmount
+}
+
+export type WireCategoryLimitProgress = Omit<
+  CategoryLimitProgress,
+  'limit' | 'spent' | 'remaining' | 'pendingCommitted' | 'projectedSpend'
+> & {
+  limit: WireAmount
+  spent: WireAmount
+  remaining: WireAmount
+  pendingCommitted: WireAmount
+  projectedSpend: WireAmount
+}
+
 export type WireDashboardData = Omit<
   DashboardData,
   | 'setting'
@@ -104,6 +132,8 @@ export type WireDashboardData = Omit<
   | 'last6CategoryBreakdown'
   | 'yearlyCategoryBreakdown'
   | 'availableYears'
+  | 'todayPlanInsights'
+  | 'categoryLimitProgress'
 > & {
   setting: WireDashboardSetting
   categories: WireCategorySummary[]
@@ -114,6 +144,8 @@ export type WireDashboardData = Omit<
   last6TrendPoints: WireTrendPoint[]
   pendingNotifications: WirePendingNotification[]
   monthlyCategoryBreakdown: WireCategoryBreakdown[]
+  todayPlanInsights?: WireTodayPlanInsights
+  categoryLimitProgress?: WireCategoryLimitProgress[]
   cycleSummaryInsights?: WireCycleSummaryInsights
 }
 

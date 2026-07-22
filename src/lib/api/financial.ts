@@ -75,6 +75,22 @@ export function fetchDashboard(
         ...category,
         amount: deobfuscateAmount(category.amount),
       })),
+      todayPlanInsights: {
+        unpaidRecurringCount: data.todayPlanInsights?.unpaidRecurringCount || 0,
+        unpaidRecurringTotal: deobfuscateAmount(data.todayPlanInsights?.unpaidRecurringTotal),
+        unpaidEssentialsTotal: deobfuscateAmount(data.todayPlanInsights?.unpaidEssentialsTotal),
+        nonRecurringEssentialsSpent: deobfuscateAmount(data.todayPlanInsights?.nonRecurringEssentialsSpent),
+        nonRecurringEssentialsDailyAverage: deobfuscateAmount(data.todayPlanInsights?.nonRecurringEssentialsDailyAverage),
+        projectedEssentialsEndingBalance: deobfuscateAmount(data.todayPlanInsights?.projectedEssentialsEndingBalance),
+      },
+      categoryLimitProgress: (data.categoryLimitProgress || []).map(progress => ({
+        ...progress,
+        limit: deobfuscateAmount(progress.limit),
+        spent: deobfuscateAmount(progress.spent),
+        remaining: deobfuscateAmount(progress.remaining),
+        pendingCommitted: deobfuscateAmount(progress.pendingCommitted),
+        projectedSpend: deobfuscateAmount(progress.projectedSpend),
+      })),
       ...(data.cycleSummaryInsights && {
         cycleSummaryInsights: {
           largestExpenseDescription: data.cycleSummaryInsights.largestExpenseDescription,

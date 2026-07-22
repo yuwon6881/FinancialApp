@@ -5,6 +5,7 @@ import { useAppContext } from '../contexts/AppContext'
 import { DashboardHeader } from './dashboard/DashboardHeader'
 import { TodayFocusCards } from './dashboard/TodayFocusCards'
 import { SubscriptionsTimelineCard } from './dashboard/SubscriptionsTimelineCard'
+import { CategoryLimitPerformance } from './dashboard/CategoryLimitPerformance'
 import { useDashboardView } from './dashboard/useDashboardView'
 import { AlertCircle, BarChart3, CheckCircle2, ShieldCheck } from 'lucide-react'
 import { Button } from './ui/Button'
@@ -65,6 +66,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const spendDays = cycleProgress.phase === 'active' ? cycleProgress.daysLeft : cycleProgress.phase === 'upcoming' ? cycleProgress.totalDays : 1
   const hasEndedCycle = cycleProgress.phase === 'ended'
   const dailySpendingRoom = Math.max(0, view.essentialsMetric.projectedRemaining) / spendDays
+  const currentDailyPace = view.todayPlanInsights.nonRecurringEssentialsDailyAverage
+  const paceDifference = dailySpendingRoom > 0
+    ? (currentDailyPace - dailySpendingRoom) / dailySpendingRoom
+    : currentDailyPace > 0 ? 1 : 0
 
   if (isSwitchingCycle) {
     return <CycleSkeleton variant="dashboard" />
@@ -127,8 +132,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         onNavigate={onNavigate}
       />
 
-      <div data-testid="today-plan-grid" className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start">
-        <section aria-labelledby="plan-snapshot-heading" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
+      <div data-testid="today-plan-grid" className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-stretch">
+        <section aria-labelledby="plan-snapshot-heading" className="app-panel flex h-full flex-col rounded-2xl border border-border/60 bg-card/92 p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 id="plan-snapshot-heading" className="text-base font-bold text-foreground">Plan snapshot</h3>
@@ -136,7 +141,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
             <ShieldCheck className="size-5 shrink-0 text-blue-500" />
           </div>
-          <div className="mt-5 grid gap-4 sm:grid-cols-3">
+          <div className="mt-5 grid flex-1 gap-3 sm:grid-cols-3 sm:grid-rows-2">
             <button type="button" onClick={() => onNavigateToLedger?.({ category: 'Essentials' })} className="interactive-card rounded-xl border border-border/50 bg-muted/25 p-4 text-left cursor-pointer">
               <span className="text-xs font-semibold text-muted-foreground">Essentials remaining</span>
               <span className="mt-1 block text-xl font-black text-foreground">{view.formatSensitive(view.essentialsMetric.projectedRemaining)}</span>
@@ -159,6 +164,56 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   : `Based on ${spendDays} day${spendDays === 1 ? '' : 's'} of Essentials remaining.`}
               </span>
             </div>
+
+            <button
+              type="button"
+              onClick={onOpenNotifications}
+              disabled={view.todayPlanInsights.unpaidRecurringCount === 0}
+              className="interactive-card rounded-xl border border-border/50 bg-muted/25 p-4 text-left cursor-pointer disabled:cursor-default"
+            >
+              <span className="text-xs font-semibold text-muted-foreground">Unpaid recurring bills</span>
+              <span className="mt-1 block text-xl font-black text-foreground">
+                {view.formatSensitive(view.todayPlanInsights.unpaidRecurringTotal)}
+              </span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                {view.todayPlanInsights.unpaidRecurringCount === 0
+                  ? 'No bills are awaiting payment.'
+                  : `${view.todayPlanInsights.unpaidRecurringCount} bill${view.todayPlanInsights.unpaidRecurringCount === 1 ? '' : 's'} still to review.`}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigateToLedger?.({ category: 'Essentials', txType: 'outflow' })}
+              className="interactive-card rounded-xl border border-border/50 bg-muted/25 p-4 text-left cursor-pointer"
+            >
+              <span className="text-xs font-semibold text-muted-foreground">Current spending pace</span>
+              <span className="mt-1 block text-xl font-black text-foreground">
+                {view.formatSensitive(currentDailyPace)}
+                <span className="text-sm font-bold text-muted-foreground">/day</span>
+              </span>
+              <span className={`mt-1 block text-xs ${!hasEndedCycle && paceDifference > 0.05 ? 'font-semibold text-amber-500' : 'text-muted-foreground'}`}>
+                {hasEndedCycle
+                  ? 'Non-recurring Essentials daily average.'
+                  : paceDifference > 0.05
+                    ? `${Math.round(paceDifference * 100)}% above today’s spending room.`
+                    : 'Within today’s spending room.'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigateToLedger?.({ category: 'Essentials' })}
+              className={`interactive-card rounded-xl border p-4 text-left cursor-pointer ${view.todayPlanInsights.projectedEssentialsEndingBalance < 0 ? 'border-orange-500/30 bg-orange-500/5' : 'border-border/50 bg-muted/25'}`}
+            >
+              <span className="text-xs font-semibold text-muted-foreground">{hasEndedCycle ? 'Cycle-end Essentials' : 'Projected cycle finish'}</span>
+              <span className={`mt-1 block text-xl font-black ${view.todayPlanInsights.projectedEssentialsEndingBalance < 0 ? 'text-orange-500' : 'text-foreground'}`}>
+                {view.formatSensitive(view.todayPlanInsights.projectedEssentialsEndingBalance)}
+              </span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                {hasEndedCycle ? 'Actual Essentials balance at close.' : 'After unpaid bills and the current pace.'}
+              </span>
+            </button>
           </div>
           <div className="mt-4 flex justify-end">
             <Button variant="ghost" onClick={() => onNavigate('reports')}>
@@ -167,7 +222,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </section>
 
-        <div className="min-w-0">
+        <div className="min-w-0 h-full">
           <SubscriptionsTimelineCard
             activeRecurring={view.activeRecurring}
             formatSensitive={view.formatSensitive}
@@ -177,6 +232,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           />
         </div>
       </div>
+
+      <CategoryLimitPerformance
+        items={view.categoryLimitProgress}
+        formatSensitive={view.formatSensitive}
+        onNavigateToLedger={onNavigateToLedger}
+        compact
+      />
     </div>
   )
 }

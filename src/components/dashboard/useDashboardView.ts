@@ -82,6 +82,15 @@ export function useDashboardView(options: UseDashboardViewOptions) {
   }, [dashboardData])
 
   const activeRecurring = dashboardData?.activeRecurringPayments || []
+  const todayPlanInsights = dashboardData?.todayPlanInsights || {
+    unpaidRecurringCount: 0,
+    unpaidRecurringTotal: 0,
+    unpaidEssentialsTotal: 0,
+    nonRecurringEssentialsSpent: 0,
+    nonRecurringEssentialsDailyAverage: 0,
+    projectedEssentialsEndingBalance: 0,
+  }
+  const categoryLimitProgress = dashboardData?.categoryLimitProgress || []
   const areBalanceAmountsMasked = hideSensitive || hideBalanceAmounts
 
   const pendingDeductionsByCategory = useMemo(() => {
@@ -278,6 +287,8 @@ export function useDashboardView(options: UseDashboardViewOptions) {
     categories,
     stats,
     activeRecurring,
+    todayPlanInsights,
+    categoryLimitProgress,
     areBalanceAmountsMasked,
     pendingDeductionsByCategory,
     activeWishlistItem,

@@ -5,6 +5,7 @@ import {
   ChartNoAxesCombined,
   FileBarChart,
   Gift,
+  Gauge,
   LoaderCircle,
   Receipt,
   TrendingDown,
@@ -176,6 +177,54 @@ export function CycleSummaryModal({
               ))}
             </div>
           </Section>
+
+          {summary.categoryLimits.length > 0 && (
+            <Section title="Cycle spending guides" icon={<Gauge className="size-3 text-blue-500" />}>
+              <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
+                <div className="mb-3 flex items-center justify-between gap-3 border-b border-border/40 pb-3">
+                  <div>
+                    <p className="text-xs font-bold text-foreground">
+                      {summary.categoryLimitsMet} of {summary.categoryLimits.length} within guide
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-muted-foreground">Final category spending for this salary cycle.</p>
+                  </div>
+                  <span className={`rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-wide ${summary.categoryLimitsMet === summary.categoryLimits.length ? 'bg-emerald-500/10 text-emerald-500' : 'bg-orange-500/10 text-orange-500'}`}>
+                    {summary.categoryLimitsMet === summary.categoryLimits.length ? 'All met' : `${summary.categoryLimits.length - summary.categoryLimitsMet} over`}
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {summary.categoryLimits.map(limit => {
+                    const exceeded = limit.spent > limit.limit
+                    return (
+                      <div key={limit.category}>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`max-w-32 truncate rounded border px-1.5 py-0.5 text-[9px] font-bold ${getCategoryBadgeClass(limit.category)}`}>
+                            {limit.category}
+                          </span>
+                          <span className={`text-[10px] font-bold ${exceeded ? 'text-orange-500' : 'text-foreground'}`}>
+                            {exceeded
+                              ? <>{formatSensitive(Math.abs(limit.remaining))} over</>
+                              : <>{formatSensitive(limit.remaining)} left</>}
+                          </span>
+                        </div>
+                        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className={`h-full rounded-full ${exceeded ? 'bg-orange-500' : 'bg-blue-500'}`}
+                            style={{ width: `${Math.min(100, Math.max(0, limit.percentUsed * 100))}%` }}
+                          />
+                        </div>
+                        <div className="mt-1 flex items-center justify-between text-[9px] text-muted-foreground">
+                          <span>{formatSensitive(limit.spent)} spent</span>
+                          <span>{formatSensitive(limit.limit)} guide</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </Section>
+          )}
 
           {summary.previousHasActivity && (
             <Section title="Since last cycle">

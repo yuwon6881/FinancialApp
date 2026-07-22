@@ -135,6 +135,30 @@ export interface DashboardData {
   yearlyCategoryBreakdown: CategoryBreakdown[]
   availableYears?: number[]
   cycleSummaryInsights?: CycleSummaryInsights
+  todayPlanInsights?: TodayPlanInsights
+  categoryLimitProgress?: CategoryLimitProgress[]
+}
+
+export interface TodayPlanInsights {
+  unpaidRecurringCount: number
+  unpaidRecurringTotal: number
+  unpaidEssentialsTotal: number
+  nonRecurringEssentialsSpent: number
+  nonRecurringEssentialsDailyAverage: number
+  projectedEssentialsEndingBalance: number
+}
+
+export type CategoryLimitStatus = 'OnTrack' | 'Watch' | 'Exceeded'
+
+export interface CategoryLimitProgress {
+  category: string
+  limit: number
+  spent: number
+  remaining: number
+  pendingCommitted: number
+  projectedSpend: number
+  percentUsed: number
+  status: CategoryLimitStatus
 }
 
 export interface CycleSummaryInsights {
@@ -173,6 +197,7 @@ export interface DashboardInsights {
 export interface TransactionCategory {
   id: string
   name: string
+  cycleLimit?: number | null
   isPendingSync?: boolean
   // Set locally while a delete op for this record is still queued/in-flight in the outbox.
   isPendingDelete?: boolean

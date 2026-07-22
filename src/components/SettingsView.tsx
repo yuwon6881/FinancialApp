@@ -17,6 +17,7 @@ const ActiveDevicesSection = React.lazy(() => import('./settings/ActiveDevicesSe
 const FingerprintSection = React.lazy(() => import('./settings/FingerprintSection').then(m => ({ default: m.FingerprintSection })))
 
 import { useSettingsView } from './settings/view/useSettingsView'
+import { CategoryLimitsCard } from './settings/CategoryLimitsCard'
 
 interface SettingsViewProps {
   dashboardData: DashboardData | null
@@ -36,6 +37,7 @@ interface SettingsViewProps {
     stabilityOverflowRedirect?: string
   }) => void
   onAddCategory: (category: Omit<TransactionCategory, 'id'>) => void
+  onUpdateCategoryCycleLimit: (id: string, cycleLimit: number | null) => void
   onDeleteCategory: (id: string) => void | Promise<void>
   onApplyCategoryCleanupSuggestion?: (suggestion: CategoryCleanupSuggestion, targetCategoryOverride?: string) => Promise<void> | void
   notifyOnLoginEnabled?: boolean
@@ -95,8 +97,8 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       {/* Tabs Control */}
       <div role="tablist" aria-label="Settings sections" className="flex border-b border-border/30 gap-x-7 sm:gap-6 select-none overflow-x-auto no-scrollbar pb-1">
         {([
-          ['financial-model', 'Financial Model'],
-          ['categories-preferences', 'Categories & Preferences'],
+          ['financial-model', 'Plan & Preferences'],
+          ['categories-preferences', 'Categories & Limits'],
           ['security', 'Security & Devices']
         ] as const).map(([id, label]) => (
           <button
@@ -126,7 +128,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       </div>
 
       {activeTab === 'financial-model' && (
-        <div id="settings-panel-financial-model" role="tabpanel" aria-labelledby="settings-tab-financial-model" className="w-full animate-in fade-in duration-200">
+        <div id="settings-panel-financial-model" role="tabpanel" aria-labelledby="settings-tab-financial-model" className="w-full space-y-6 animate-in fade-in duration-200">
           <form noValidate onSubmit={view.handleSaveSettings} className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-5">
             <div className="flex items-center justify-between gap-3 border-b border-border/40 pb-3">
               <div>
@@ -267,6 +269,54 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
               </button>
             </div>
           </form>
+
+          <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-foreground">App Preferences</h3>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Customize display, reminders, and local storage.</p>
+              </div>
+            </div>
+            <div className="grid gap-x-6 gap-y-3 md:grid-cols-2">
+              <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
+                <div className="flex items-center gap-2">
+                  {darkMode ? <Moon className="size-4 text-muted-foreground" /> : <Sun className="size-4 text-muted-foreground" />}
+                  <span className="font-medium text-foreground">Dark Mode</span>
+                </div>
+                <ToggleButton active={darkMode} onClick={props.onToggleDarkMode || (() => {})} label="Dark mode" />
+              </div>
+              <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
+                <div className="flex items-center gap-2">
+                  {hideSensitive ? <EyeOff className="size-4 text-muted-foreground" /> : <Eye className="size-4 text-muted-foreground" />}
+                  <span className="font-medium text-foreground">Sensitive Mode (Blur)</span>
+                </div>
+                <ToggleButton active={hideSensitive} onClick={props.onToggleHideSensitive || (() => {})} label="Sensitive mode" />
+              </div>
+              <div className="flex items-center justify-between text-sm py-1 border-b border-border/20 md:border-b-0">
+                <div className="flex items-center gap-2">
+                  <Bell className="size-4 text-muted-foreground" />
+                  <span className="font-medium text-foreground">Notify Bills</span>
+                </div>
+                <ToggleButton active={props.notifyOnLoginEnabled || false} onClick={() => props.onToggleNotifyOnLogin?.(!props.notifyOnLoginEnabled)} label="Notify Bills" />
+              </div>
+              <div className="flex items-center justify-between text-sm py-1">
+                <div className="flex items-center gap-2">
+                  <HardDrive className="size-4 text-muted-foreground shrink-0" />
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-medium text-foreground">Local Device Cache</span>
+                    <span className="text-[10px] text-muted-foreground">Clear cached data on this device.</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={props.onClearLocalFinancialData}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-xs font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer"
+                >
+                  <DatabaseZap className="size-3.5 text-muted-foreground" /> Clear
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -543,54 +593,13 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             </CollapsibleBody>
           </div>
 
-          {/* App Preferences */}
-          <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-border/40 pb-3">
-              <div>
-                <h3 className="text-sm font-bold text-foreground">App Preferences</h3>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Customize display options.</p>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
-                <div className="flex items-center gap-2">
-                  {darkMode ? <Moon className="size-4 text-muted-foreground" /> : <Sun className="size-4 text-muted-foreground" />}
-                  <span className="font-medium text-foreground">Dark Mode</span>
-                </div>
-                <ToggleButton active={darkMode} onClick={props.onToggleDarkMode || (() => {})} label="Dark mode" />
-              </div>
-              <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
-                <div className="flex items-center gap-2">
-                  {hideSensitive ? <EyeOff className="size-4 text-muted-foreground" /> : <Eye className="size-4 text-muted-foreground" />}
-                  <span className="font-medium text-foreground">Sensitive Mode (Blur)</span>
-                </div>
-                <ToggleButton active={hideSensitive} onClick={props.onToggleHideSensitive || (() => {})} label="Sensitive mode" />
-              </div>
-              <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
-                <div className="flex items-center gap-2">
-                  <Bell className="size-4 text-muted-foreground" />
-                  <span className="font-medium text-foreground">Notify Bills</span>
-                </div>
-                <ToggleButton active={props.notifyOnLoginEnabled || false} onClick={() => props.onToggleNotifyOnLogin?.(!props.notifyOnLoginEnabled)} label="Notify Bills" />
-              </div>
-              <div className="flex items-center justify-between text-sm py-1">
-                <div className="flex items-center gap-2">
-                  <HardDrive className="size-4 text-muted-foreground shrink-0" />
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-medium text-foreground">Local Device Cache</span>
-                    <span className="text-[10px] text-muted-foreground">Clear cached data on this device.</span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={props.onClearLocalFinancialData}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-xs font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer"
-                >
-                  <DatabaseZap className="size-3.5 text-muted-foreground" /> Clear
-                </button>
-              </div>
-            </div>
-          </div>
+          <CategoryLimitsCard
+            categories={view.visibleCategories}
+            currency={view.activeSettings.currency || 'USD'}
+            hideSensitive={hideSensitive}
+            activeSyncId={activeSyncId}
+            onUpdate={props.onUpdateCategoryCycleLimit}
+          />
         </div>
       )}
 

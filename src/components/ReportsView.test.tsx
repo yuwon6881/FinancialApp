@@ -21,6 +21,7 @@ vi.mock('./dashboard/useDashboardView', () => ({
     essentialsMetric: {},
     stabilityMetric: {},
     activeRecurring: [],
+    categoryLimitProgress: [],
     formatCurrency: (value: number) => `$${value}`,
     formatSensitive: (value: number) => `$${value}`,
     formatCompactSensitive: (value: number) => String(value),

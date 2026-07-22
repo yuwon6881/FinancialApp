@@ -611,6 +611,7 @@ function App() {
                         onToggleHideSensitive={handleToggleHideSensitive}
                         onUpdateSettings={financial.handleUpdateSettings}
                         onAddCategory={financial.handleAddCategory}
+                        onUpdateCategoryCycleLimit={financial.handleUpdateCategoryCycleLimit}
                         onDeleteCategory={financial.requestDeleteCategory}
                         onApplyCategoryCleanupSuggestion={financial.handleApplyCategoryCleanupSuggestion}
                         notifyOnLoginEnabled={prefs.notifyOnLogin}
