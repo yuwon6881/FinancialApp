@@ -13,8 +13,6 @@ export interface AppPreferences {
   setDarkMode: (value: boolean) => void
   notifyOnLogin: boolean
   setNotifyOnLogin: (value: boolean) => void
-  billReminders: boolean
-  setBillReminders: (value: boolean) => void
   ledgerCyclesRange: 'monthly' | '3month' | '6month' | 'yearly'
   setLedgerCyclesRange: (range: 'monthly' | '3month' | '6month' | 'yearly') => void
   setPreferenceOwner: (username: string | null) => void
@@ -43,12 +41,6 @@ export function useAppPreferences(): AppPreferences {
 
   const [notifyOnLogin, setNotifyOnLoginState] = useState<boolean>(() => {
     return true
-  })
-
-  // Off by default: turning it on requests the OS notification permission (see the
-  // Settings toggle), so it must be an explicit opt-in.
-  const [billReminders, setBillRemindersState] = useState<boolean>(() => {
-    return false
   })
 
   const [ledgerCyclesRange, setLedgerCyclesRange] = useState<'monthly' | '3month' | '6month' | 'yearly'>('monthly')
@@ -92,7 +84,6 @@ export function useAppPreferences(): AppPreferences {
     setHideSensitiveState(true)
     setHideBalanceAmountsState(readBooleanPreference('hide_balance_amounts', false))
     setNotifyOnLoginState(readBooleanPreference('show_notifications_on_login', true))
-    setBillRemindersState(readBooleanPreference('bill_reminders_enabled', false))
 
     const storedDarkMode = preferenceKey('dark_mode')
     if (storedDarkMode && localStorage.getItem(storedDarkMode) === 'true') {
@@ -130,12 +121,6 @@ export function useAppPreferences(): AppPreferences {
     if (key) localStorage.setItem(key, value.toString())
   }
 
-  const setBillReminders = (value: boolean) => {
-    setBillRemindersState(value)
-    const key = preferenceKey('bill_reminders_enabled')
-    if (key) localStorage.setItem(key, value.toString())
-  }
-
   return {
     activeTab,
     setActiveTab,
@@ -147,8 +132,6 @@ export function useAppPreferences(): AppPreferences {
     setDarkMode,
     notifyOnLogin,
     setNotifyOnLogin,
-    billReminders,
-    setBillReminders,
     ledgerCyclesRange,
     setLedgerCyclesRange,
     setPreferenceOwner,

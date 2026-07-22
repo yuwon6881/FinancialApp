@@ -19,7 +19,6 @@ describe('useAppPreferences', () => {
       result.current.setHideBalanceAmounts(true)
       result.current.setDarkMode(true)
       result.current.setNotifyOnLogin(false)
-      result.current.setBillReminders(true)
     })
 
     expect(localStorage.getItem('hide_sensitive:alice')).toBe('false')
@@ -31,7 +30,6 @@ describe('useAppPreferences', () => {
     expect(result.current.hideBalanceAmounts).toBe(false)
     expect(result.current.darkMode).toBe(false)
     expect(result.current.notifyOnLogin).toBe(true)
-    expect(result.current.billReminders).toBe(false)
 
     act(() => result.current.setPreferenceOwner('alice'))
 
@@ -41,6 +39,5 @@ describe('useAppPreferences', () => {
     expect(result.current.hideBalanceAmounts).toBe(true)
     expect(result.current.darkMode).toBe(true)
     expect(result.current.notifyOnLogin).toBe(false)
-    expect(result.current.billReminders).toBe(true)
   })
 })

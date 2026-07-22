@@ -728,3 +728,61 @@ button {
     min-width: 1.75rem;
     min-height: 1.75rem;
 }
+
+/* Destination cue used after deep-linking to a ledger transaction. Table rows
+   need their cells painted individually; mobile rows can carry the glow on the
+   card wrapper itself. The animation settles gradually so the row remains easy
+   to identify after the smooth scroll finishes. */
+@keyframes ledger-highlight-card {
+    0%, 18% {
+        background-color: rgb(59 130 246 / 0.18);
+        box-shadow: 0 0 0 3px rgb(59 130 246 / 0.65), 0 12px 32px rgb(59 130 246 / 0.24);
+    }
+    55% {
+        background-color: rgb(59 130 246 / 0.10);
+        box-shadow: 0 0 0 2px rgb(59 130 246 / 0.38), 0 8px 22px rgb(59 130 246 / 0.14);
+    }
+    100% {
+        background-color: transparent;
+        box-shadow: 0 0 0 0 rgb(59 130 246 / 0);
+    }
+}
+
+@keyframes ledger-highlight-cell {
+    0%, 18% { background-color: rgb(59 130 246 / 0.22); }
+    55% { background-color: rgb(59 130 246 / 0.11); }
+    100% { background-color: transparent; }
+}
+
+.ledger-transaction-highlight:not(tr) {
+    position: relative;
+    z-index: 2;
+    animation: ledger-highlight-card 3.6s ease-out both;
+}
+
+tr.ledger-transaction-highlight {
+    position: relative;
+    z-index: 2;
+    filter: drop-shadow(0 8px 14px rgb(59 130 246 / 0.18));
+}
+
+tr.ledger-transaction-highlight > td {
+    animation: ledger-highlight-cell 3.6s ease-out both;
+}
+
+tr.ledger-transaction-highlight > td:first-child {
+    border-left: 3px solid rgb(59 130 246 / 0.75);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ledger-transaction-highlight:not(tr) {
+        animation: none;
+        background-color: rgb(59 130 246 / 0.12);
+        box-shadow: 0 0 0 3px rgb(59 130 246 / 0.55);
+    }
+
+    tr.ledger-transaction-highlight > td {
+        animation: none;
+        background-color: rgb(59 130 246 / 0.16);
+    }
+}

@@ -615,7 +615,9 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     }
   }, [serverResult, showAllCycles, currentPage, pageSize])
 
-  // Handle highlighted transaction scroll into view and page calculation
+  // Handle highlighted transaction scroll into view and page calculation.
+  // A single semantic class lets CSS render an appropriate treatment for both
+  // desktop table rows and mobile cards.
   useEffect(() => {
     if (highlightedTxId) {
       const index = filteredTransactions.findIndex(t => t.id === highlightedTxId)
@@ -628,18 +630,18 @@ export function useLedgerView(options: UseLedgerViewOptions) {
           const rowEl = document.getElementById(`tx-row-${highlightedTxId}`)
           if (rowEl) {
             rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
-            rowEl.classList.add('bg-blue-500/10', 'ring-2', 'ring-blue-500/30', 'dark:bg-blue-500/20')
+            rowEl.classList.add('ledger-transaction-highlight')
             clearTimer = setTimeout(() => {
-              rowEl.classList.remove('bg-blue-500/10', 'ring-2', 'ring-blue-500/30', 'dark:bg-blue-500/20')
+              rowEl.classList.remove('ledger-transaction-highlight')
               onClearIncomingFilters?.()
-            }, 3000)
+            }, 3600)
           }
         }, 300)
         return () => {
           clearTimeout(timer)
           if (clearTimer) clearTimeout(clearTimer)
           const rowEl = document.getElementById(`tx-row-${highlightedTxId}`)
-          rowEl?.classList.remove('bg-blue-500/10', 'ring-2', 'ring-blue-500/30', 'dark:bg-blue-500/20')
+          rowEl?.classList.remove('ledger-transaction-highlight')
         }
       }
     }

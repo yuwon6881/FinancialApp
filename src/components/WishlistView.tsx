@@ -10,6 +10,7 @@ import { Card } from './ui/Card'
 import { RowSyncStatus } from './ui/RowSyncBadge'
 import { formatCurrencyVal } from '../lib/utils'
 import { MONTH_NAMES, getCycleYearAndMonthForDate } from '../lib/cycle'
+import { claimedWishlistChangeSignal, selectClaimedWishlistPage } from '../lib/claimedWishlist'
 import { useSyncStatus } from '../lib/useOptimisticList'
 import { getActiveWishlistItem } from '../lib/wishlist'
 import { Button } from './ui/Button'
@@ -210,7 +211,11 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     return wishlist.filter(w => w.isPurchased).sort((a,b) => {
       const dateA = a.purchasedAt ? new Date(a.purchasedAt).getTime() : 0
       const dateB = b.purchasedAt ? new Date(b.purchasedAt).getTime() : 0
-      return dateB - dateA
+      if (dateB !== dateA) return dateB - dateA
+      const createdA = new Date(a.createdAt).getTime()
+      const createdB = new Date(b.createdAt).getTime()
+      if (createdB !== createdA) return createdB - createdA
+      return b.id - a.id
     })
   }, [wishlist])
 
@@ -223,9 +228,8 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   const [claimLoading, setClaimLoading] = React.useState(false)
   const [claimFailed, setClaimFailed] = React.useState(false)
 
-  // Lightweight change signal: newest claims land at the top, so the count plus the
-  // top item's identity/date is enough to detect an add/undo/delete and refetch.
-  const purchasedSignal = `${purchasedItems.length}|${purchasedItems[0]?.id ?? ''}|${purchasedItems[0]?.purchasedAt ?? ''}`
+  // Include sync state so completing an optimistic claim refreshes the server page.
+  const purchasedSignal = claimedWishlistChangeSignal(purchasedItems)
 
   React.useEffect(() => {
     if (!onFetchClaimedWishlist) return
@@ -238,8 +242,14 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     return () => { cancelled = true }
   }, [onFetchClaimedWishlist, claimPage, purchasedSignal])
 
-  const useServerClaims = !!claimServer && !claimFailed
-  const totalClaimed = useServerClaims ? claimServer.total : purchasedItems.length
+  const selectedClaims = useMemo(() => selectClaimedWishlistPage(
+    purchasedItems,
+    claimServer,
+    claimPage,
+    CLAIMED_PAGE_SIZE,
+    claimFailed,
+  ), [purchasedItems, claimServer, claimPage, claimFailed])
+  const totalClaimed = selectedClaims.total
   const claimTotalPages = Math.max(1, Math.ceil(totalClaimed / CLAIMED_PAGE_SIZE))
 
   // Clamp the page if deletions shrank the list below the current page.
@@ -247,20 +257,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     if (claimPage > claimTotalPages) setClaimPage(claimTotalPages)
   }, [claimPage, claimTotalPages])
 
-  const claimPageItems = useMemo(() => {
-    const serverItems = useServerClaims ? claimServer!.items : null
-    if (!serverItems) {
-      return purchasedItems.slice((claimPage - 1) * CLAIMED_PAGE_SIZE, claimPage * CLAIMED_PAGE_SIZE)
-    }
-    // On the first page, surface optimistic (not-yet-synced) claims the server
-    // hasn't recorded yet on top, so a just-claimed reward shows immediately.
-    if (claimPage === 1) {
-      const serverIds = new Set(serverItems.map(i => String(i.id)))
-      const pending = purchasedItems.filter(p => p.isPendingSync && !serverIds.has(String(p.id)))
-      if (pending.length > 0) return [...pending, ...serverItems].slice(0, CLAIMED_PAGE_SIZE)
-    }
-    return serverItems
-  }, [useServerClaims, claimServer, purchasedItems, claimPage])
+  const claimPageItems = selectedClaims.items
 
   // Stats
   const totalCost = useMemo(() => {

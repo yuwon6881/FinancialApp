@@ -48,11 +48,11 @@ export function PendingSubscriptionsModal({
       footer={
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
           <div className="flex items-center justify-between gap-3 text-xs font-medium text-foreground w-full sm:w-auto">
-            <span>Show pending-payment reminder after startup</span>
+            <span>Notify Bills</span>
             <ToggleButton
               active={showOnLoginChecked}
               onClick={() => onToggleShowOnLogin(!showOnLoginChecked)}
-              label="Show pending-payment reminder after startup"
+              label="Notify Bills"
               className="size-6 shrink-0"
             />
           </div>

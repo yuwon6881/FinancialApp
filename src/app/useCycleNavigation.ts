@@ -30,6 +30,11 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
   const [selectedYear, setSelectedYear] = useState<number>(() => initialLocation.year || cachedPeriod.year || 0)
   const [isSwitchingCycle, setIsSwitchingCycle] = useState<boolean>(false)
 
+  const selectedPeriodRef = useRef({ month: selectedMonth, year: selectedYear })
+  useEffect(() => {
+    selectedPeriodRef.current = { month: selectedMonth, year: selectedYear }
+  }, [selectedMonth, selectedYear])
+
   const [ledgerIncomingFilters, setLedgerIncomingFilters] = useState<string[]>(initialLocation.ledger.filters)
   const [ledgerIncomingSearch, setLedgerIncomingSearch] = useState<string>(initialLocation.ledger.search)
   const [ledgerIncomingStartDate, setLedgerIncomingStartDate] = useState<string>(initialLocation.ledger.startDate)
@@ -181,11 +186,6 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
   useEffect(() => {
     setLedgerCyclesRange(initialLocation.ledger.range)
   }, [])
-
-  const selectedPeriodRef = useRef({ month: selectedMonth, year: selectedYear })
-  useEffect(() => {
-    selectedPeriodRef.current = { month: selectedMonth, year: selectedYear }
-  }, [selectedMonth, selectedYear])
 
   useEffect(() => {
     const handlePopState = () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addMonthsClamped, getCycleProgress, getCycleRangeDates } from './cycle'
+import { addMonthsClamped, getCycleProgress, getCycleRangeDates, getCycleYearAndMonthForDate } from './cycle'
 
 describe('addMonthsClamped', () => {
   it('mirrors AddMonths at the end of a shorter month', () => {
@@ -35,5 +35,17 @@ describe('getCycleProgress', () => {
     expect(progress.phase).toBe('active')
     expect([progress.endDate.getMonth() + 1, progress.endDate.getDate()]).toEqual([2, 27])
     expect([progress.nextStartDate.getMonth() + 1, progress.nextStartDate.getDate()]).toEqual([2, 28])
+  })
+})
+
+describe('getCycleYearAndMonthForDate', () => {
+  it('assigns dates before the cycle day to the previous cycle', () => {
+    expect(getCycleYearAndMonthForDate(new Date(2026, 0, 27), 28)).toEqual({ year: 2025, monthIndex: 12 })
+    expect(getCycleYearAndMonthForDate(new Date(2026, 0, 28), 28)).toEqual({ year: 2026, monthIndex: 1 })
+  })
+
+  it('uses the clamped final day as the cycle boundary in a short month', () => {
+    expect(getCycleYearAndMonthForDate(new Date(2025, 1, 27), 31)).toEqual({ year: 2025, monthIndex: 1 })
+    expect(getCycleYearAndMonthForDate(new Date(2025, 1, 28), 31)).toEqual({ year: 2025, monthIndex: 2 })
   })
 })

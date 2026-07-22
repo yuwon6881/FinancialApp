@@ -51,7 +51,6 @@ import { useCycleSummary } from './app/useCycleSummary'
 import { buildAppContextValue } from './app/buildAppContextValue'
 import { getErrorName } from './lib/errors'
 import { prefetchFingerprintAssertOptions } from './lib/fingerprintOptionsCache'
-import { useBillReminders } from './lib/useBillReminders'
 import { readAppLocation, updateAppSearch } from './lib/appLocation'
 
 // Instant, flash-free placeholder while a lazily-loaded chunk is fetched at the root level.
@@ -212,9 +211,6 @@ function App() {
     hasShownModalThisSession,
     setShowLoginModal: dialogs.setShowLoginModal,
   })
-
-  // Keep OS bill reminders in sync with the user's recurring payments while enabled.
-  useBillReminders(financial.allRecurringPayments, prefs.billReminders)
 
   const [isLedgerAddOpen, setIsLedgerAddOpen] = useState(false)
   const isLedgerAddOpenRef = useRef(isLedgerAddOpen)
@@ -621,33 +617,6 @@ function App() {
                         onToggleNotifyOnLogin={(checked) => {
                           prefs.setNotifyOnLogin(checked)
                           dialogs.showToast('Notification preference updated.', 'Settings Saved', 'success')
-                        }}
-                        billRemindersEnabled={prefs.billReminders}
-                        onToggleBillReminders={(checked) => {
-                          void (async () => {
-                            // Lazy-load the reminder module so the plugin glue stays out of the main bundle.
-                            const { requestBillReminderPermission, syncBillReminders, cancelAllBillReminders } = await import('./lib/billReminders')
-                            if (!checked) {
-                              prefs.setBillReminders(false)
-                              await cancelAllBillReminders()
-                              dialogs.showToast('Bill reminders turned off.', 'Settings Saved', 'success')
-                              return
-                            }
-                            const permission = await requestBillReminderPermission()
-                            if (permission === 'granted') {
-                              prefs.setBillReminders(true)
-                              const result = await syncBillReminders(financial.allRecurringPayments)
-                              dialogs.showToast(
-                                `Bill reminders on — ${result.scheduled} upcoming reminder${result.scheduled === 1 ? '' : 's'} scheduled.`,
-                                'Settings Saved',
-                                'success',
-                              )
-                            } else if (permission === 'denied') {
-                              dialogs.showToast('Allow notifications in your device settings to receive bill reminders.', 'Permission Needed', 'warning')
-                            } else {
-                              dialogs.showToast('Bill reminders are not supported on this device.', 'Unavailable', 'info')
-                            }
-                          })()
                         }}
                         onNavigateToLedger={nav.handleNavigateToLedger}
                         onClearLocalFinancialData={() => {

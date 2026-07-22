@@ -60,4 +60,39 @@ describe('useCycleNavigation', () => {
     })
     expect(committedCycles).toEqual(['Aug'])
   })
+
+  it('switches to a claimed transaction cycle before opening and highlighting the ledger', async () => {
+    vi.mocked(api.selectPeriod).mockResolvedValue(undefined)
+    const loadAll = vi.fn().mockResolvedValue(undefined)
+    const setActiveTab = vi.fn()
+    const setLedgerCyclesRange = vi.fn()
+    const { result } = renderHook(() => useCycleNavigation({
+      loadAll,
+      handleLogout: vi.fn(),
+      markSessionLocked: vi.fn(),
+      setDashboardData: vi.fn(),
+      setTransactions: vi.fn(),
+      setActiveTab,
+      setLedgerCyclesRange,
+    }))
+
+    await act(async () => {
+      result.current.handleNavigateToLedger({
+        highlightedTxId: 'wishlist-tx-1',
+        targetMonth: 'Jan',
+        targetYear: 2026,
+        range: 'monthly',
+        showAllCycles: false,
+      })
+      await Promise.resolve()
+    })
+
+    expect(api.selectPeriod).toHaveBeenCalledWith('Jan', 2026)
+    expect(setLedgerCyclesRange).toHaveBeenCalledWith('monthly')
+    expect(setActiveTab).toHaveBeenCalledWith('ledger', expect.objectContaining({
+      search: expect.objectContaining({ tx: 'wishlist-tx-1', all: null, range: null }),
+    }))
+    expect(result.current.highlightedTxId).toBe('wishlist-tx-1')
+    expect(result.current.ledgerShowAllCycles).toBe(false)
+  })
 })

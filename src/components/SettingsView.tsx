@@ -40,8 +40,6 @@ interface SettingsViewProps {
   onApplyCategoryCleanupSuggestion?: (suggestion: CategoryCleanupSuggestion, targetCategoryOverride?: string) => Promise<void> | void
   notifyOnLoginEnabled?: boolean
   onToggleNotifyOnLogin?: (checked: boolean) => void
-  billRemindersEnabled?: boolean
-  onToggleBillReminders?: (checked: boolean) => void
   activeSyncId?: string | null
   deletingId?: string | null
   onToast?: (message: string, title?: string, tone?: ToastTone) => void
@@ -128,7 +126,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       </div>
 
       {activeTab === 'financial-model' && (
-        <div id="settings-panel-financial-model" role="tabpanel" aria-labelledby="settings-tab-financial-model" className="w-full max-w-4xl mx-auto animate-in fade-in duration-200">
+        <div id="settings-panel-financial-model" role="tabpanel" aria-labelledby="settings-tab-financial-model" className="w-full animate-in fade-in duration-200">
           <form noValidate onSubmit={view.handleSaveSettings} className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-5">
             <div className="flex items-center justify-between gap-3 border-b border-border/40 pb-3">
               <div>
@@ -571,19 +569,9 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
               <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
                 <div className="flex items-center gap-2">
                   <Bell className="size-4 text-muted-foreground" />
-                  <span className="font-medium text-foreground">Notify bills on Login</span>
+                  <span className="font-medium text-foreground">Notify Bills</span>
                 </div>
-                <ToggleButton active={props.notifyOnLoginEnabled || false} onClick={() => props.onToggleNotifyOnLogin?.(!props.notifyOnLoginEnabled)} label="Notify bills on login" />
-              </div>
-              <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
-                <div className="flex items-center gap-2">
-                  <Bell className="size-4 text-muted-foreground shrink-0" />
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-medium text-foreground">Bill Reminders</span>
-                    <span className="text-[10px] text-muted-foreground">Device notification before a subscription is due.</span>
-                  </div>
-                </div>
-                <ToggleButton active={props.billRemindersEnabled || false} onClick={() => props.onToggleBillReminders?.(!props.billRemindersEnabled)} label="Bill reminders" />
+                <ToggleButton active={props.notifyOnLoginEnabled || false} onClick={() => props.onToggleNotifyOnLogin?.(!props.notifyOnLoginEnabled)} label="Notify Bills" />
               </div>
               <div className="flex items-center justify-between text-sm py-1">
                 <div className="flex items-center gap-2">

@@ -109,6 +109,7 @@ export function buildCycleSummary(
     paidBillsCount: paidBills.length,
     paidTotal: paidBills.reduce((sum, bill) => sum + Math.abs(bill.amount), 0),
     pendingCount: bills.filter(bill => bill.status === 'Pending').length,
+    pendingTotal: bills.filter(bill => bill.status === 'Pending').reduce((sum, bill) => sum + Math.abs(bill.amount), 0),
     discardedCount: bills.filter(bill => bill.status === 'Discarded').length,
     billsCount: bills.length,
     purchasedThisCycle,
