@@ -187,7 +187,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               onClick={() => onNavigateToLedger?.({ category: 'Essentials', txType: 'outflow' })}
               className="interactive-card rounded-xl border border-border/50 bg-muted/25 p-4 text-left cursor-pointer"
             >
-              <span className="text-xs font-semibold text-muted-foreground">Current spending pace</span>
+              <span className="text-xs font-semibold text-muted-foreground">Essentials spending pace</span>
               <span className="mt-1 block text-xl font-black text-foreground">
                 {view.formatSensitive(currentDailyPace)}
                 <span className="text-sm font-bold text-muted-foreground">/day</span>
@@ -196,8 +196,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 {hasEndedCycle
                   ? 'Non-recurring Essentials daily average.'
                   : paceDifference > 0.05
-                    ? `${Math.round(paceDifference * 100)}% above today’s spending room.`
-                    : 'Within today’s spending room.'}
+                    ? `${Math.round(paceDifference * 100)}% above today’s Essentials room.`
+                    : 'Within today’s Essentials room.'}
               </span>
             </button>
 

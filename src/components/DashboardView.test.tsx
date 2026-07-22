@@ -100,7 +100,7 @@ describe('DashboardView focused Today experience', () => {
     expect(screen.getByText('Essentials remaining')).toBeTruthy()
     expect(screen.getByText('Emergency fund progress')).toBeTruthy()
     expect(screen.getByText('Unpaid recurring bills')).toBeTruthy()
-    expect(screen.getByText('Current spending pace')).toBeTruthy()
+    expect(screen.getByText('Essentials spending pace')).toBeTruthy()
     expect(screen.getByText('Projected cycle finish')).toBeTruthy()
     expect(screen.getByText('Category watch')).toBeTruthy()
     expect(screen.getByText('Subscriptions')).toBeTruthy()
