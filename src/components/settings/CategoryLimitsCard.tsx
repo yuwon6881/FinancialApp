@@ -88,14 +88,14 @@ export function CategoryLimitsCard({
   }
 
   return (
-    <section id="category-limits-card" className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
+    <section id="category-limits-card" className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs">
       <div
         role="button"
         tabIndex={0}
         onClick={() => setIsOpen(!isOpen)}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsOpen(!isOpen) } }}
         aria-expanded={isOpen}
-        className="flex items-center justify-between gap-3 border-b border-border/40 pb-3 cursor-pointer"
+        className="flex items-center justify-between gap-3 select-none cursor-pointer"
       >
         <div className="min-w-0">
           <h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
@@ -114,75 +114,99 @@ export function CategoryLimitsCard({
       </div>
 
       <CollapsibleBody open={isOpen}>
-        <div className="max-h-[28rem] space-y-2 overflow-y-auto pr-1 pt-1">
-        {categories.map(category => {
-          const enabled = drafts[category.id] != null
-          const isSyncing = activeSyncId === category.id
-          return (
-            <div key={category.id} className="rounded-xl border border-border/50 bg-background p-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-2">
-                  <ToggleButton
-                    active={enabled}
-                    disabled={hideSensitive || isSyncing}
-                    label={`Track ${category.name} cycle spending`}
-                    className="size-6"
-                    onClick={() => {
-                      setDrafts(previous => ({
-                        ...previous,
-                        [category.id]: enabled ? null : normalizedValue(category.cycleLimit) ?? '',
-                      }))
-                      setErrors(previous => ({ ...previous, [category.id]: '' }))
-                    }}
-                  />
-                  <span className={`truncate rounded border px-2 py-0.5 text-[10px] font-semibold ${getCategoryBadgeClass(category.name)}`}>
-                    {category.name}
-                  </span>
-                  <RowSyncStatus isSyncing={isSyncing} isPending={category.isPendingSync} entityLabel="guide" />
-                </div>
-                {!enabled && <span className="text-[10px] font-semibold text-muted-foreground">No guide</span>}
-              </div>
-
-              {enabled && (
-                <div className="mt-2">
-                  <div className="relative flex items-center">
-                    <span className="absolute left-3 z-10 text-xs font-semibold text-muted-foreground pointer-events-none">
-                      {getCurrencySymbol(currency)}
+        <div className="pt-4 space-y-4">
+          <div className="space-y-2.5">
+            {categories.map(category => {
+              const enabled = drafts[category.id] != null
+              const isSyncing = activeSyncId === category.id
+              return (
+                <div
+                  key={category.id}
+                  className={`rounded-xl border p-3 sm:p-3.5 transition-all duration-200 ${
+                    enabled
+                      ? 'border-blue-500/25 bg-blue-500/5 dark:bg-blue-500/10'
+                      : 'border-border/40 bg-muted/20 hover:border-border/70'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <ToggleButton
+                        active={enabled}
+                        disabled={hideSensitive || isSyncing}
+                        label={`Track ${category.name} cycle spending`}
+                        className="size-6 shrink-0"
+                        onClick={() => {
+                          setDrafts(previous => ({
+                            ...previous,
+                            [category.id]: enabled ? null : (normalizedValue(category.cycleLimit) ?? ''),
+                          }))
+                          setErrors(previous => ({ ...previous, [category.id]: '' }))
+                        }}
+                      />
+                      <div className="flex flex-wrap items-center gap-2 min-w-0">
+                        <span className={`truncate rounded-md border px-2.5 py-0.5 text-xs font-semibold ${getCategoryBadgeClass(category.name)}`}>
+                          {category.name}
+                        </span>
+                        <RowSyncStatus isSyncing={isSyncing} isPending={category.isPendingSync} entityLabel="guide" />
+                      </div>
+                    </div>
+                    <span className={`text-[11px] font-semibold shrink-0 ${enabled ? 'text-blue-500 font-bold' : 'text-muted-foreground'}`}>
+                      {enabled ? 'Active Guide' : 'No Guide'}
                     </span>
-                    <SmartAmountInput
-                      type="text"
-                      inputMode="decimal"
-                      aria-label={`${category.name} cycle spending guide`}
-                      disabled={hideSensitive || isSyncing}
-                      value={drafts[category.id] ?? ''}
-                      onChange={event => {
-                        setDrafts(previous => ({ ...previous, [category.id]: event.target.value }))
-                        setErrors(previous => ({ ...previous, [category.id]: '' }))
-                      }}
-                      placeholder="0.00"
-                      className={`w-full rounded-xl border bg-background py-2 pr-3 text-sm focus:outline-none focus:ring-1 ${getCurrencySymbol(currency).length > 2 ? 'pl-12' : 'pl-9'} ${errors[category.id] ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-blue-500'}`}
-                    />
                   </div>
-                  {errors[category.id] && <p className="mt-1 text-[10px] font-semibold text-destructive">{errors[category.id]}</p>}
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
 
-        <div className="flex flex-col gap-3 border-t border-border/30 pt-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[10px] leading-relaxed text-muted-foreground">
-            Changes apply from the current salary cycle onward; earlier cycle reports keep their original guide.
-          </p>
-          <button
-            type="button"
-            onClick={save}
-            disabled={hideSensitive || changedCategories.length === 0}
-            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground cursor-pointer"
-          >
-            <Save className="size-3.5" /> Save Guides
-          </button>
+                  {enabled && (
+                    <div className="mt-3 pt-3 border-t border-border/30 animate-in fade-in duration-150 space-y-1.5">
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Monthly Cycle Cap
+                      </label>
+                      <div className="relative flex items-center">
+                        <span className="absolute left-3 z-10 text-xs font-bold text-muted-foreground pointer-events-none">
+                          {getCurrencySymbol(currency)}
+                        </span>
+                        <SmartAmountInput
+                          type="text"
+                          inputMode="decimal"
+                          aria-label={`${category.name} cycle spending guide`}
+                          disabled={hideSensitive || isSyncing}
+                          value={drafts[category.id] ?? ''}
+                          onChange={event => {
+                            setDrafts(previous => ({ ...previous, [category.id]: event.target.value }))
+                            setErrors(previous => ({ ...previous, [category.id]: '' }))
+                          }}
+                          placeholder="0.00"
+                          className={`w-full rounded-xl border bg-background py-2 pr-3 text-sm font-semibold focus:outline-none focus:ring-1 ${
+                            getCurrencySymbol(currency).length > 2 ? 'pl-12' : 'pl-9'
+                          } ${
+                            errors[category.id]
+                              ? 'border-destructive focus:ring-destructive'
+                              : 'border-border focus:ring-blue-500'
+                          }`}
+                        />
+                      </div>
+                      {errors[category.id] && (
+                        <p className="mt-1 text-[10px] font-semibold text-destructive">{errors[category.id]}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="flex flex-col gap-3 border-t border-border/30 pt-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[10px] leading-relaxed text-muted-foreground">
+              Changes apply from the current salary cycle onward; earlier cycle reports keep their original guide.
+            </p>
+            <button
+              type="button"
+              onClick={save}
+              disabled={hideSensitive || changedCategories.length === 0}
+              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground cursor-pointer"
+            >
+              <Save className="size-3.5" /> Save Guides
+            </button>
+          </div>
         </div>
       </CollapsibleBody>
     </section>
