@@ -782,14 +782,14 @@ tr.ledger-transaction-highlight > td {
 
 tr.ledger-transaction-highlight > td:first-child {
     border-left: 1.5px solid rgba(99, 102, 241, 0.9);
-    border-top-left-radius: 0.75rem;
-    border-bottom-left-radius: 0.75rem;
+    border-top-left-radius: 0.75rem !important;
+    border-bottom-left-radius: 0.75rem !important;
 }
 
 tr.ledger-transaction-highlight > td:last-child {
     border-right: 1.5px solid rgba(99, 102, 241, 0.9);
-    border-top-right-radius: 0.75rem;
-    border-bottom-right-radius: 0.75rem;
+    border-top-right-radius: 0.75rem !important;
+    border-bottom-right-radius: 0.75rem !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

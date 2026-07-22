@@ -45,7 +45,7 @@ export function LedgerTransactionList({
       {/* Ledger Table - Desktop */}
       <div className="hidden md:block overflow-hidden border border-border/60 rounded-2xl bg-card shadow-xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-separate border-spacing-0">
             <thead>
               <tr className="border-b border-border/50 bg-muted/20 text-xs font-semibold text-muted-foreground select-none">
                 <th className="p-4">Date</th>
