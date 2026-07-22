@@ -721,7 +721,6 @@ html {
     font-size: 0.75rem !important;
     line-height: 1rem !important;
 }
-
 /* Shared pointer-target floor for icon and compact actions. Larger controls
    keep their authored dimensions; only undersized buttons are expanded. */
 button {
@@ -730,34 +729,23 @@ button {
 }
 
 /* Destination cue used after deep-linking to a ledger transaction. Table rows
-   need their cell borders animated; mobile rows carry the border glow directly on the card. */
+   need their cell borders animated; mobile rows carry the uniform border glow on the card container. */
 @keyframes ledger-highlight-mobile-shell {
-    0%, 18% {
-        border-color: rgb(59 130 246 / 0.72);
-        box-shadow: 0 10px 28px rgb(59 130 246 / 0.18);
+    0% {
+        border-color: rgba(99, 102, 241, 0.9) !important;
+        box-shadow: 0 0 20px rgba(99, 102, 241, 0.35);
     }
-    58% {
-        border-color: rgb(59 130 246 / 0.34);
-        box-shadow: 0 6px 18px rgb(59 130 246 / 0.09);
+    30% {
+        border-color: rgba(99, 102, 241, 0.65) !important;
+        box-shadow: 0 0 12px rgba(99, 102, 241, 0.2);
+    }
+    70% {
+        border-color: rgba(99, 102, 241, 0.25) !important;
+        box-shadow: 0 0 6px rgba(99, 102, 241, 0.08);
     }
     100% {
         border-color: var(--border);
         box-shadow: 0 1px 2px rgb(0 0 0 / 0.03);
-    }
-}
-
-@keyframes ledger-highlight-mobile-surface {
-    0%, 18% {
-        background-color: color-mix(in oklab, var(--card) 88%, rgb(59 130 246));
-        box-shadow: inset 4px 0 0 rgb(59 130 246 / 0.9);
-    }
-    58% {
-        background-color: color-mix(in oklab, var(--card) 95%, rgb(59 130 246));
-        box-shadow: inset 3px 0 0 rgb(59 130 246 / 0.45);
-    }
-    100% {
-        background-color: var(--card);
-        box-shadow: inset 0 0 0 rgb(59 130 246 / 0);
     }
 }
 
@@ -778,12 +766,12 @@ button {
 
 .ledger-transaction-highlight:not(tr) {
     position: relative;
-    z-index: 2;
-    animation: ledger-highlight-mobile-shell 3.6s ease-out both;
+    z-index: 10;
+    animation: ledger-highlight-mobile-shell 3.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .ledger-transaction-highlight:not(tr) > [data-swipe-content] {
-    animation: ledger-highlight-mobile-surface 3.6s ease-out both;
+    animation: none;
 }
 
 tr.ledger-transaction-highlight {
@@ -819,8 +807,6 @@ tr.ledger-transaction-highlight > td:last-child {
 
     .ledger-transaction-highlight:not(tr) > [data-swipe-content] {
         animation: none;
-        background-color: color-mix(in oklab, var(--card) 94%, rgb(59 130 246));
-        box-shadow: inset 4px 0 0 rgb(59 130 246 / 0.75);
     }
 
     tr.ledger-transaction-highlight > td {
