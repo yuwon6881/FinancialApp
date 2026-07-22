@@ -92,9 +92,13 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       if (search.includes('category') || search.includes('limits') || hash.includes('category') || hash.includes('limits')) {
         setActiveTab('categories-preferences')
         requestAnimationFrame(() => {
-          setTimeout(() => {
-            document.getElementById('category-limits-card')?.scrollIntoView({ behavior: 'smooth' })
-          }, 100)
+          const el = document.getElementById('category-limits-card')
+          if (el) {
+            const rect = el.getBoundingClientRect()
+            if (rect.top > window.innerHeight || rect.top < 0) {
+              el.scrollIntoView({ behavior: 'auto', block: 'start' })
+            }
+          }
         })
       }
     }
@@ -347,7 +351,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       {activeTab === 'categories-preferences' && (
         <div id="settings-panel-categories-preferences" role="tabpanel" aria-labelledby="settings-tab-categories-preferences" className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start animate-in fade-in duration-200">
           {/* Transaction Categories */}
-          <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
+          <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4 order-2 lg:order-1">
             <div className="border-b border-border/40 pb-2">
               <div
                 role="button"
@@ -617,13 +621,15 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             </CollapsibleBody>
           </div>
 
-          <CategoryLimitsCard
-            categories={view.visibleCategories}
-            currency={view.activeSettings.currency || 'USD'}
-            hideSensitive={hideSensitive}
-            activeSyncId={activeSyncId}
-            onUpdate={props.onUpdateCategoryCycleLimit}
-          />
+          <div className="order-1 lg:order-2">
+            <CategoryLimitsCard
+              categories={view.visibleCategories}
+              currency={view.activeSettings.currency || 'USD'}
+              hideSensitive={hideSensitive}
+              activeSyncId={activeSyncId}
+              onUpdate={props.onUpdateCategoryCycleLimit}
+            />
+          </div>
         </div>
       )}
 
