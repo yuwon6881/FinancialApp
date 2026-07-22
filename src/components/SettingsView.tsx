@@ -128,8 +128,8 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       </div>
 
       {activeTab === 'financial-model' && (
-        <div id="settings-panel-financial-model" role="tabpanel" aria-labelledby="settings-tab-financial-model" className="w-full space-y-6 animate-in fade-in duration-200">
-          <form noValidate onSubmit={view.handleSaveSettings} className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-5">
+        <div id="settings-panel-financial-model" role="tabpanel" aria-labelledby="settings-tab-financial-model" className="w-full grid grid-cols-1 lg:grid-cols-3 lg:items-start lg:gap-6 space-y-6 lg:space-y-0 animate-in fade-in duration-200">
+          <form noValidate onSubmit={view.handleSaveSettings} className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-5 lg:col-span-2">
             <div className="flex items-center justify-between gap-3 border-b border-border/40 pb-3">
               <div>
                 <h3 className="text-sm font-bold text-foreground">Financial Model</h3>
@@ -270,14 +270,14 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             </div>
           </form>
 
-          <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
+          <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4 lg:col-span-1">
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
               <div>
                 <h3 className="text-sm font-bold text-foreground">App Preferences</h3>
                 <p className="text-[11px] text-muted-foreground mt-0.5">Customize display, reminders, and local storage.</p>
               </div>
             </div>
-            <div className="grid gap-x-6 gap-y-3 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-y-3">
               <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
                 <div className="flex items-center gap-2">
                   {darkMode ? <Moon className="size-4 text-muted-foreground" /> : <Sun className="size-4 text-muted-foreground" />}

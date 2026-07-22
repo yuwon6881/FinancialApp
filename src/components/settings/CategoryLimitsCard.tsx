@@ -6,6 +6,8 @@ import { getCurrencySymbol } from '../../lib/utils'
 import { SmartAmountInput } from '../ui/SmartAmountInput'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
 
+import { ToggleButton } from '../ui/ToggleButton'
+
 interface CategoryLimitsCardProps {
   categories: TransactionCategory[]
   currency: string
@@ -88,12 +90,11 @@ export function CategoryLimitsCard({
             <div key={category.id} className="rounded-xl border border-border/50 bg-background p-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2">
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={enabled}
-                    aria-label={`Track ${category.name} cycle spending`}
+                  <ToggleButton
+                    active={enabled}
                     disabled={hideSensitive || isSyncing}
+                    label={`Track ${category.name} cycle spending`}
+                    className="size-6"
                     onClick={() => {
                       setDrafts(previous => ({
                         ...previous,
@@ -101,10 +102,7 @@ export function CategoryLimitsCard({
                       }))
                       setErrors(previous => ({ ...previous, [category.id]: '' }))
                     }}
-                    className={`relative h-5 w-9 shrink-0 rounded-full transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${enabled ? 'bg-blue-500' : 'bg-muted'}`}
-                  >
-                    <span className={`absolute top-0.5 size-4 rounded-full bg-white shadow-xs transition-transform ${enabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                  </button>
+                  />
                   <span className={`truncate rounded border px-2 py-0.5 text-[10px] font-semibold ${getCategoryBadgeClass(category.name)}`}>
                     {category.name}
                   </span>
