@@ -1,11 +1,11 @@
 import React from 'react'
-import { Gauge, Save } from 'lucide-react'
+import { ChevronDown, ChevronUp, Gauge, Save } from 'lucide-react'
 import type { TransactionCategory } from '../../types'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
 import { getCurrencySymbol } from '../../lib/utils'
 import { SmartAmountInput } from '../ui/SmartAmountInput'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
-
+import { CollapsibleBody } from '../ui/CollapsibleBody'
 import { ToggleButton } from '../ui/ToggleButton'
 
 interface CategoryLimitsCardProps {
@@ -27,6 +27,27 @@ export function CategoryLimitsCard({
 }: CategoryLimitsCardProps) {
   const [drafts, setDrafts] = React.useState<Record<string, string | null>>({})
   const [errors, setErrors] = React.useState<Record<string, string>>({})
+  const [isOpen, setIsOpen] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+      const search = window.location.search
+      const hash = window.location.hash
+      if (search.includes('category') || search.includes('limits') || hash.includes('category') || hash.includes('limits')) {
+        return true
+      }
+      return window.innerWidth >= 768
+    }
+    return true
+  })
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const search = window.location.search
+      const hash = window.location.hash
+      if (search.includes('category') || search.includes('limits') || hash.includes('category') || hash.includes('limits')) {
+        setIsOpen(true)
+      }
+    }
+  }, [])
 
   React.useEffect(() => {
     setDrafts(Object.fromEntries(categories.map(category => [category.id, normalizedValue(category.cycleLimit)])))
@@ -68,8 +89,15 @@ export function CategoryLimitsCard({
 
   return (
     <section id="category-limits-card" className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
-      <div className="flex items-start justify-between gap-3 border-b border-border/40 pb-3">
-        <div>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsOpen(!isOpen) } }}
+        aria-expanded={isOpen}
+        className="flex items-center justify-between gap-3 border-b border-border/40 pb-3 cursor-pointer"
+      >
+        <div className="min-w-0">
           <h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
             <Gauge className="size-4 text-blue-500" /> Cycle Spending Guides
           </h3>
@@ -77,12 +105,16 @@ export function CategoryLimitsCard({
             Optional category expectations. Spending is never blocked when a guide is reached.
           </p>
         </div>
-        <span className="shrink-0 rounded-full bg-blue-500/10 px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-blue-500">
-          {categories.filter(category => category.cycleLimit != null).length} tracked
-        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="rounded-full bg-blue-500/10 px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-blue-500">
+            {categories.filter(category => category.cycleLimit != null).length} tracked
+          </span>
+          {isOpen ? <ChevronUp className="size-4 text-muted-foreground" /> : <ChevronDown className="size-4 text-muted-foreground" />}
+        </div>
       </div>
 
-      <div className="max-h-[28rem] space-y-2 overflow-y-auto pr-1">
+      <CollapsibleBody open={isOpen}>
+        <div className="max-h-[28rem] space-y-2 overflow-y-auto pr-1 pt-1">
         {categories.map(category => {
           const enabled = drafts[category.id] != null
           const isSyncing = activeSyncId === category.id
@@ -139,19 +171,20 @@ export function CategoryLimitsCard({
         })}
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-border/30 pt-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-[10px] leading-relaxed text-muted-foreground">
-          Changes apply from the current salary cycle onward; earlier cycle reports keep their original guide.
-        </p>
-        <button
-          type="button"
-          onClick={save}
-          disabled={hideSensitive || changedCategories.length === 0}
-          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground cursor-pointer"
-        >
-          <Save className="size-3.5" /> Save Guides
-        </button>
-      </div>
+        <div className="flex flex-col gap-3 border-t border-border/30 pt-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[10px] leading-relaxed text-muted-foreground">
+            Changes apply from the current salary cycle onward; earlier cycle reports keep their original guide.
+          </p>
+          <button
+            type="button"
+            onClick={save}
+            disabled={hideSensitive || changedCategories.length === 0}
+            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground cursor-pointer"
+          >
+            <Save className="size-3.5" /> Save Guides
+          </button>
+        </div>
+      </CollapsibleBody>
     </section>
   )
 }

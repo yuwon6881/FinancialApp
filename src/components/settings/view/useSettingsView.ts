@@ -87,7 +87,12 @@ export function useSettingsView(options: UseSettingsViewOptions) {
   }
 
   const [showUsageDetails, setShowUsageDetails] = useState(false)
-  const [categoriesOpen, setCategoriesOpen] = useState(true)
+  const [categoriesOpen, setCategoriesOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768
+    }
+    return true
+  })
   const [usageTransactions, setUsageTransactions] = useState<{ category: string }[] | null>(null)
   const [usageError, setUsageError] = useState<string | null>(null)
   const [cleanupSuggestions, setCleanupSuggestions] = useState<CategoryCleanupSuggestion[]>([])

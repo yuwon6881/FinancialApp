@@ -55,14 +55,14 @@ export const StatTileSkeleton: React.FC = () => (
 
 /** A single list-row placeholder, matching Ledger's transaction rows. */
 const ListRowSkeleton: React.FC = () => (
-  <div className="flex items-center justify-between py-3 px-4 rounded-xl border border-border/30 bg-background/50">
-    <div className="flex items-center gap-3">
-      <Skeleton className="h-4 w-20" />
-      <Skeleton className="h-4 w-36" />
+  <div className="flex items-center justify-between min-w-0 gap-2 py-3 px-3 sm:px-4 rounded-xl border border-border/30 bg-background/50">
+    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+      <Skeleton className="h-4 w-12 sm:w-20 shrink-0" />
+      <Skeleton className="h-4 w-24 sm:w-36 truncate" />
     </div>
-    <div className="flex items-center gap-4">
-      <Skeleton className="h-5 w-20 rounded-full" />
-      <Skeleton className="h-5 w-24" />
+    <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+      <Skeleton className="h-5 w-14 sm:w-20 rounded-full" />
+      <Skeleton className="h-5 w-16 sm:w-24" />
     </div>
   </div>
 )
@@ -118,13 +118,13 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
 
   if (variant === 'ledger') {
     return (
-      <div data-testid="ledger-skeleton" className="space-y-6 soft-rise">
+      <div data-testid="ledger-skeleton" className="space-y-6 soft-rise w-full min-w-0 overflow-hidden">
         <CycleHeaderSkeleton titleWidth="w-44" subtitleWidth="w-64" controlWidth="w-52" />
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <Skeleton className="h-10 flex-1 rounded-xl" />
-          <Skeleton className="h-10 w-full rounded-xl sm:w-48" />
+        <div className="flex flex-col gap-3 sm:flex-row min-w-0">
+          <Skeleton className="h-10 flex-1 rounded-xl min-w-0" />
+          <Skeleton className="h-10 w-full rounded-xl sm:w-48 shrink-0" />
         </div>
-        <div className="p-4 rounded-2xl bg-card border border-border/60 space-y-3">
+        <div className="p-3 sm:p-4 rounded-2xl bg-card border border-border/60 space-y-3 min-w-0 overflow-hidden">
           {[1, 2, 3, 4, 5, 6].map(i => <ListRowSkeleton key={i} />)}
         </div>
       </div>
