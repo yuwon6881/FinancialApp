@@ -733,21 +733,21 @@ button {
 @keyframes ledger-highlight-mobile-shell {
     0% {
         border-color: rgba(99, 102, 241, 0.95) !important;
-        box-shadow: 0 0 16px rgba(99, 102, 241, 0.35);
-        outline: 1.5px solid rgba(99, 102, 241, 0.95);
-        outline-offset: -1.5px;
+        box-shadow: 0 0 18px rgba(99, 102, 241, 0.4);
+        outline: 2.5px solid rgba(99, 102, 241, 0.95);
+        outline-offset: -2.5px;
     }
     30% {
-        border-color: rgba(99, 102, 241, 0.65) !important;
-        box-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
-        outline: 1.5px solid rgba(99, 102, 241, 0.65);
-        outline-offset: -1.5px;
+        border-color: rgba(99, 102, 241, 0.7) !important;
+        box-shadow: 0 0 12px rgba(99, 102, 241, 0.25);
+        outline: 2.5px solid rgba(99, 102, 241, 0.7);
+        outline-offset: -2.5px;
     }
     70% {
-        border-color: rgba(99, 102, 241, 0.25) !important;
-        box-shadow: 0 0 4px rgba(99, 102, 241, 0.08);
-        outline: 1px solid rgba(99, 102, 241, 0.25);
-        outline-offset: -1px;
+        border-color: rgba(99, 102, 241, 0.3) !important;
+        box-shadow: 0 0 6px rgba(99, 102, 241, 0.1);
+        outline: 1.5px solid rgba(99, 102, 241, 0.3);
+        outline-offset: -1.5px;
     }
     100% {
         border-color: var(--border);
