@@ -1,6 +1,6 @@
 import React from 'react'
-import { AlertTriangle, CheckCircle2, Gauge, TrendingUp } from 'lucide-react'
-import type { CategoryLimitProgress } from '../../types'
+import { AlertTriangle, ArrowRight, CheckCircle2, Gauge, SlidersHorizontal, TrendingUp } from 'lucide-react'
+import type { CategoryLimitProgress, AppTab } from '../../types'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
 import type { NavigateToLedgerOptions } from './types'
 
@@ -8,6 +8,7 @@ interface CategoryLimitPerformanceProps {
   items: CategoryLimitProgress[]
   formatSensitive: (value: number) => React.ReactNode
   onNavigateToLedger?: (options: NavigateToLedgerOptions) => void
+  onNavigate?: (tab: AppTab) => void
   compact?: boolean
 }
 
@@ -17,18 +18,41 @@ export function CategoryLimitPerformance({
   items,
   formatSensitive,
   onNavigateToLedger,
+  onNavigate,
   compact = false,
 }: CategoryLimitPerformanceProps) {
   if (items.length === 0) {
     if (compact) return null
     return (
       <section className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
-        <h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-          <Gauge className="size-4 text-blue-500" /> Category limit performance
-        </h3>
-        <p className="mt-2 text-xs text-muted-foreground">
-          No category spending guides were configured for this cycle.
-        </p>
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+            <Gauge className="size-4 text-blue-500" /> Category limit performance
+          </h3>
+        </div>
+        <div className="mt-4 flex flex-col items-center justify-center rounded-xl border border-dashed border-border/70 bg-muted/15 px-6 py-7 text-center sm:flex-row sm:justify-between sm:text-left">
+          <div className="flex flex-col items-center gap-3.5 sm:flex-row sm:gap-4">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/10 text-blue-500 shadow-sm">
+              <SlidersHorizontal className="size-5" />
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-xs font-bold text-foreground">No category spending guides configured</h4>
+              <p className="max-w-md text-[11px] text-muted-foreground leading-relaxed">
+                Set budget limits on categories to track spend pace, monitor warning thresholds, and keep your cycle budget on track.
+              </p>
+            </div>
+          </div>
+          {onNavigate && (
+            <button
+              type="button"
+              onClick={() => onNavigate('settings')}
+              className="mt-4 inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3.5 py-2 text-xs font-bold text-blue-500 transition hover:border-blue-500/50 hover:bg-blue-500/20 cursor-pointer sm:mt-0"
+            >
+              <span>Set Up Limits</span>
+              <ArrowRight className="size-3.5" />
+            </button>
+          )}
+        </div>
       </section>
     )
   }

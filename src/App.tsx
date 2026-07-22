@@ -378,6 +378,11 @@ function App() {
     ]).then(([core, insights]) => {
       const merged: DashboardData = {
         ...core,
+        setting: {
+          ...core.setting,
+          selectedMonth: month,
+          selectedYear: year,
+        },
         last3CategoryBreakdown: insights.last3CategoryBreakdown,
         last6CategoryBreakdown: insights.last6CategoryBreakdown,
         yearlyCategoryBreakdown: insights.yearlyCategoryBreakdown,

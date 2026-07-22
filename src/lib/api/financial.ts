@@ -33,6 +33,8 @@ export function fetchDashboard(
       ...data,
       setting: {
         ...data.setting,
+        selectedMonth: month || data.setting.selectedMonth,
+        selectedYear: year || data.setting.selectedYear,
         targetStabilityFund: deobfuscateAmount(data.setting.targetStabilityFund),
       },
       categories: (data.categories || []).map((category: WireCategorySummary) => ({

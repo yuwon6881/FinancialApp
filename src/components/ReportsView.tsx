@@ -159,6 +159,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           items={view.categoryLimitProgress}
           formatSensitive={view.formatSensitive}
           onNavigateToLedger={onNavigateToLedger}
+          onNavigate={onNavigate}
         />
       </div>
 

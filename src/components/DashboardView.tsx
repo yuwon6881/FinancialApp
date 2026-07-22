@@ -218,6 +218,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         items={view.categoryLimitProgress}
         formatSensitive={view.formatSensitive}
         onNavigateToLedger={onNavigateToLedger}
+        onNavigate={onNavigate}
         compact
       />
     </div>
