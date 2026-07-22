@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { Search, Filter, X, Loader2, CalendarDays, Banknote, Repeat2, ChevronDown, ShoppingBag } from 'lucide-react'
+import { Search, Filter, X, Loader2, CalendarDays, Banknote, ChevronDown } from 'lucide-react'
 import type { TransactionCategory } from '../../types'
 import { BottomSheet } from '../ui/BottomSheet'
 import { AnchoredPopover } from '../ui/AnchoredPopover'
@@ -196,27 +196,15 @@ export function LedgerFilterBar({
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2.5">
-        <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
-          <Repeat2 className="size-3.5 text-blue-500" /> Recurring transactions only
-        </span>
-        <PillSwitch
-          checked={recurringOnly}
-          onChange={onRecurringOnlyChange}
-          ariaLabel="Recurring transactions only"
-        />
-      </div>
-
-      <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2.5">
-        <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
-          <ShoppingBag className="size-3.5 text-blue-500" /> Wishlist purchases only
-        </span>
-        <PillSwitch
-          checked={wishlistOnly}
-          onChange={onWishlistOnlyChange}
-          ariaLabel="Wishlist purchases only"
-        />
-      </div>
+      {([
+        ['Recurring transactions only', recurringOnly, onRecurringOnlyChange],
+        ['Wishlist purchases only', wishlistOnly, onWishlistOnlyChange],
+      ] as const).map(([label, checked, onChange]) => (
+        <div key={label} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2.5">
+          <span className="text-xs font-semibold text-foreground">{label}</span>
+          <PillSwitch checked={checked} onChange={onChange} ariaLabel={label} />
+        </div>
+      ))}
     </div>
   )
 
