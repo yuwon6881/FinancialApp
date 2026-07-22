@@ -42,6 +42,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
   const [ledgerIncomingMinAmount, setLedgerIncomingMinAmount] = useState<string>(initialLocation.ledger.minAmount)
   const [ledgerIncomingMaxAmount, setLedgerIncomingMaxAmount] = useState<string>(initialLocation.ledger.maxAmount)
   const [ledgerIncomingRecurringOnly, setLedgerIncomingRecurringOnly] = useState(initialLocation.ledger.recurringOnly)
+  const [ledgerIncomingWishlistOnly, setLedgerIncomingWishlistOnly] = useState(initialLocation.ledger.wishlistOnly)
   const [ledgerIncomingTxType, setLedgerIncomingTxType] = useState<'inflow' | 'outflow' | 'transfer' | null>(initialLocation.ledger.txType)
   const [ledgerShowAllCycles, setLedgerShowAllCycles] = useState(initialLocation.ledger.showAllCycles)
   const [autoOpenLedgerAdd, setAutoOpenLedgerAdd] = useState(false)
@@ -126,6 +127,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     setLedgerIncomingMinAmount('')
     setLedgerIncomingMaxAmount('')
     setLedgerIncomingRecurringOnly(false)
+    setLedgerIncomingWishlistOnly(false)
     setLedgerIncomingTxType(navOptions.txType || null)
     const range = navOptions.range || 'monthly'
     setLedgerCyclesRange(range)
@@ -179,6 +181,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     setLedgerIncomingMinAmount('')
     setLedgerIncomingMaxAmount('')
     setLedgerIncomingRecurringOnly(false)
+    setLedgerIncomingWishlistOnly(false)
     setLedgerIncomingTxType(null)
     setHighlightedTxId(null)
   }, [])
@@ -197,6 +200,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
       setLedgerIncomingMinAmount(location.ledger.minAmount)
       setLedgerIncomingMaxAmount(location.ledger.maxAmount)
       setLedgerIncomingRecurringOnly(location.ledger.recurringOnly)
+      setLedgerIncomingWishlistOnly(location.ledger.wishlistOnly)
       setLedgerIncomingTxType(location.ledger.txType)
       setLedgerShowAllCycles(location.ledger.showAllCycles)
       setLedgerCyclesRange(location.ledger.range)
@@ -232,6 +236,8 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     setLedgerIncomingMaxAmount,
     ledgerIncomingRecurringOnly,
     setLedgerIncomingRecurringOnly,
+    ledgerIncomingWishlistOnly,
+    setLedgerIncomingWishlistOnly,
     ledgerIncomingTxType,
     setLedgerIncomingTxType,
     ledgerShowAllCycles,

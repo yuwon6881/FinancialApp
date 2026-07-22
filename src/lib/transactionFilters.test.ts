@@ -113,6 +113,11 @@ describe('matchesTransactionFilters', () => {
     expect(matchesTransactionFilters(tx({ recurringPaymentId: null }), { recurringOnly: true })).toBe(false)
   })
 
+  it('filters wishlist purchases by their wishlist item link', () => {
+    expect(matchesTransactionFilters(tx({ wishlistItemId: 7 }), { wishlistOnly: true })).toBe(true)
+    expect(matchesTransactionFilters(tx({ wishlistItemId: null }), { wishlistOnly: true })).toBe(false)
+  })
+
   it('requires all provided criteria to pass', () => {
     const t = tx({ description: 'Salary', amount: 500, category: 'Salary', ledgerCategory: 'Income' })
     expect(matchesTransactionFilters(t, { search: 'sal', buckets: ['Income'], txType: 'inflow' })).toBe(true)

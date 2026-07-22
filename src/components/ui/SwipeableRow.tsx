@@ -149,6 +149,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
 
       {/* Sliding content surface */}
       <motion.div
+        data-swipe-content
         drag={disabled ? false : 'x'}
         dragConstraints={{ left: -actionsWidth, right: 0 }}
         dragElastic={0.1}

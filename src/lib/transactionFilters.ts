@@ -27,6 +27,8 @@ export interface TransactionFilterCriteria {
   maxAmount?: number
   /** Only transactions generated from a recurring payment. */
   recurringOnly?: boolean
+  /** Only transactions created by purchasing a wishlist item. */
+  wishlistOnly?: boolean
 }
 
 /**
@@ -57,7 +59,7 @@ export function isIncomeLedgerCategory(ledgerCategory: string | null | undefined
 export function matchesTransactionFilters(t: Transaction, criteria: TransactionFilterCriteria): boolean {
   if (t.ledgerCategory === 'Discarded') return false
 
-  const { search, buckets, categories, txType, startDate, endDate, minAmount, maxAmount, recurringOnly } = criteria
+  const { search, buckets, categories, txType, startDate, endDate, minAmount, maxAmount, recurringOnly, wishlistOnly } = criteria
 
   if (startDate && t.date < startDate) return false
   if (endDate && t.date > endDate) return false
@@ -67,6 +69,7 @@ export function matchesTransactionFilters(t: Transaction, criteria: TransactionF
   if (maxAmount !== undefined && absoluteAmount > maxAmount) return false
 
   if (recurringOnly && !t.recurringPaymentId) return false
+  if (wishlistOnly && t.wishlistItemId == null) return false
 
   if (search) {
     const q = search.toLowerCase()

@@ -12,7 +12,7 @@ describe('app URL state', () => {
   })
 
   it('parses a deep-linked ledger state', () => {
-    window.history.replaceState({}, '', '/ledger?month=Jul&year=2026&filters=Essentials%2CFood&q=coffee&from=2026-07-01&to=2026-07-31&min=5&max=50&recurring=1&type=outflow&all=1&range=3month&tx=tx-1')
+    window.history.replaceState({}, '', '/ledger?month=Jul&year=2026&filters=Essentials%2CFood&q=coffee&from=2026-07-01&to=2026-07-31&min=5&max=50&recurring=1&wishlist=1&type=outflow&all=1&range=3month&tx=tx-1')
 
     expect(readAppLocation()).toEqual({
       tab: 'ledger',
@@ -26,6 +26,7 @@ describe('app URL state', () => {
         minAmount: '5',
         maxAmount: '50',
         recurringOnly: true,
+        wishlistOnly: true,
         txType: 'outflow',
         showAllCycles: true,
         range: '3month',

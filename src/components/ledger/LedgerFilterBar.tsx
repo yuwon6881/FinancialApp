@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { Search, Filter, X, Loader2, CalendarDays, Banknote, Repeat2, ChevronDown } from 'lucide-react'
+import { Search, Filter, X, Loader2, CalendarDays, Banknote, Repeat2, ChevronDown, ShoppingBag } from 'lucide-react'
 import type { TransactionCategory } from '../../types'
 import { BottomSheet } from '../ui/BottomSheet'
 import { AnchoredPopover } from '../ui/AnchoredPopover'
@@ -40,6 +40,8 @@ interface LedgerFilterBarProps {
   onMaxAmountChange: (value: string) => void
   recurringOnly: boolean
   onRecurringOnlyChange: (value: boolean) => void
+  wishlistOnly: boolean
+  onWishlistOnlyChange: (value: boolean) => void
   txType: 'inflow' | 'outflow' | 'transfer' | null
   onTxTypeChange: (value: 'inflow' | 'outflow' | 'transfer' | null) => void
   activeAdvancedFilterCount: number
@@ -76,6 +78,8 @@ export function LedgerFilterBar({
   onMaxAmountChange,
   recurringOnly,
   onRecurringOnlyChange,
+  wishlistOnly,
+  onWishlistOnlyChange,
   txType,
   onTxTypeChange,
   activeAdvancedFilterCount,
@@ -91,6 +95,7 @@ export function LedgerFilterBar({
     (startDate || endDate ? 1 : 0) +
     (minAmount || maxAmount ? 1 : 0) +
     (recurringOnly ? 1 : 0) +
+    (wishlistOnly ? 1 : 0) +
     (txType ? 1 : 0)
   const draftFilterCount = checkboxFilters.length + draftAdvancedFilterCount
   const parsedMin = minAmount === '' ? undefined : Number(minAmount)
@@ -199,6 +204,17 @@ export function LedgerFilterBar({
           checked={recurringOnly}
           onChange={onRecurringOnlyChange}
           ariaLabel="Recurring transactions only"
+        />
+      </div>
+
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2.5">
+        <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
+          <ShoppingBag className="size-3.5 text-blue-500" /> Wishlist purchases only
+        </span>
+        <PillSwitch
+          checked={wishlistOnly}
+          onChange={onWishlistOnlyChange}
+          ariaLabel="Wishlist purchases only"
         />
       </div>
     </div>

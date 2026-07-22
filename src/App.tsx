@@ -685,6 +685,7 @@ function App() {
                         incomingMinAmount={nav.ledgerIncomingMinAmount}
                         incomingMaxAmount={nav.ledgerIncomingMaxAmount}
                         incomingRecurringOnly={nav.ledgerIncomingRecurringOnly}
+                        incomingWishlistOnly={nav.ledgerIncomingWishlistOnly}
                         incomingTxType={nav.ledgerIncomingTxType}
                         highlightedTxId={nav.highlightedTxId}
                         onClearIncomingFilters={nav.clearIncomingFilters}

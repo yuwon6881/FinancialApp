@@ -61,6 +61,7 @@ export interface TransactionQuery {
   minAmount?: number
   maxAmount?: number
   recurringOnly?: boolean
+  wishlistOnly?: boolean
 }
 
 function appendTransactionQuery(params: URLSearchParams, query: TransactionQuery): void {
@@ -73,6 +74,7 @@ function appendTransactionQuery(params: URLSearchParams, query: TransactionQuery
   if (query.minAmount !== undefined) params.append('minAmount', query.minAmount.toString())
   if (query.maxAmount !== undefined) params.append('maxAmount', query.maxAmount.toString())
   if (query.recurringOnly) params.append('recurringOnly', 'true')
+  if (query.wishlistOnly) params.append('wishlistOnly', 'true')
 }
 
 export async function exportTransactionsCsv(params: TransactionQuery): Promise<{ blob: Blob; filename: string }> {

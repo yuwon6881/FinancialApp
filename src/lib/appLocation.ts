@@ -11,6 +11,7 @@ export interface LedgerRouteState {
   minAmount: string
   maxAmount: string
   recurringOnly: boolean
+  wishlistOnly: boolean
   txType: LedgerRouteTxType
   showAllCycles: boolean
   range: LedgerRouteRange
@@ -51,6 +52,7 @@ const LEDGER_PARAM_KEYS = [
   'min',
   'max',
   'recurring',
+  'wishlist',
   'type',
   'all',
   'range',
@@ -69,6 +71,7 @@ const emptyLedgerRouteState = (): LedgerRouteState => ({
   minAmount: '',
   maxAmount: '',
   recurringOnly: false,
+  wishlistOnly: false,
   txType: null,
   showAllCycles: false,
   range: 'monthly',
@@ -106,6 +109,7 @@ export const readAppLocation = (): AppLocationState => {
       minAmount: params.get('min') || '',
       maxAmount: params.get('max') || '',
       recurringOnly: params.get('recurring') === '1',
+      wishlistOnly: params.get('wishlist') === '1',
       txType: txType && TX_TYPES.has(txType) ? txType : null,
       showAllCycles: params.get('all') === '1',
       range: range && RANGES.has(range) ? range : 'monthly',
@@ -167,6 +171,7 @@ export const ledgerRouteSearch = (state: Partial<LedgerRouteState>) => ({
   min: state.minAmount || null,
   max: state.maxAmount || null,
   recurring: state.recurringOnly || null,
+  wishlist: state.wishlistOnly || null,
   type: state.txType || null,
   all: state.showAllCycles || null,
   range: state.range && state.range !== 'monthly' ? state.range : null,
