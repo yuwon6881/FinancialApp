@@ -115,7 +115,7 @@ export function CategoryLimitsCard({
 
       <CollapsibleBody open={isOpen}>
         <div className="pt-4 space-y-4">
-          <div className="space-y-2.5">
+          <div className="max-h-80 sm:max-h-96 overflow-y-auto overscroll-contain pr-1 space-y-2.5 touch-pan-y" data-no-pull-refresh="true">
             {categories.map(category => {
               const enabled = drafts[category.id] != null
               const isSyncing = activeSyncId === category.id

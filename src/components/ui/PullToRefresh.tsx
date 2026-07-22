@@ -52,7 +52,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
         refreshingRef.current ||
         e.touches.length !== 1 ||
         window.scrollY > 0 ||
-        target?.closest('.sheet-backdrop, .sheet-panel')
+        target?.closest('.sheet-backdrop, .sheet-panel, [data-no-pull-refresh], .no-pull-refresh, .overflow-y-auto')
       ) {
         drag.current.active = false
         return
@@ -63,6 +63,13 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
     const onMove = (e: TouchEvent) => {
       const s = drag.current
       if (!s.active || refreshingRef.current) return
+      const target = e.target as HTMLElement | null
+      if (target?.closest('[data-no-pull-refresh], .no-pull-refresh, .overflow-y-auto')) {
+        s.active = false
+        s.pulling = false
+        if (pullRef.current) resetPullState()
+        return
+      }
       if (isSwipeLocked()) {
         s.active = false
         s.pulling = false
