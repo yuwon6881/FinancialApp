@@ -40,7 +40,7 @@ export function buildCycleSummary(
   const topCategories = [...(data.monthlyCategoryBreakdown || [])]
     .filter(category => category.amount > 0)
     .sort((a, b) => b.amount - a.amount)
-    .slice(0, 5)
+    .slice(0, 8)
   const topMax = topCategories.reduce((max, category) => Math.max(max, category.amount), 0)
   const bills = data.activeRecurringPayments || []
   const paidBills = bills.filter(bill => bill.status === 'Paid')

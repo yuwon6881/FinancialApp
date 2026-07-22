@@ -95,6 +95,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
 
   const ledger = useLedgerView({
     ...props,
+    isMobile,
     hideSensitive,
     activeSyncId,
     deletingTxId,

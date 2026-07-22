@@ -81,6 +81,18 @@ describe('buildCycleSummary', () => {
     ])
   })
 
+  it('shows up to eight categories in Where it went', () => {
+    const monthlyCategoryBreakdown = Array.from({ length: 10 }, (_, index) => ({
+      category: `Category ${index + 1}`,
+      amount: index + 1,
+    }))
+
+    const summary = buildCycleSummary(dashboard({ monthlyCategoryBreakdown }), null, [], 2026, 7, 1)
+
+    expect(summary.topCategories).toHaveLength(8)
+    expect(summary.topCategories.map(category => category.amount)).toEqual([10, 9, 8, 7, 6, 5, 4, 3])
+  })
+
   it('includes only wishlist items purchased inside the summarized cycle', () => {
     const summary = buildCycleSummary(
       dashboard(),

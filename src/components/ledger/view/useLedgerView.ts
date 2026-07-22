@@ -7,6 +7,7 @@ import { matchesTransactionFilters, splitFilterSelections, LEDGER_BUCKETS as LED
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../../../lib/csvExport'
 import { compareTransactionsNewestFirst, mergeTransactionsNewestFirst } from '../../../lib/transactionOrdering'
 import { ledgerRouteSearch, updateAppSearch } from '../../../lib/appLocation'
+import { getLedgerTransactionRowElement } from '../../../lib/ledgerTransactionTarget'
 
 export interface UseLedgerViewOptions {
   transactions: Transaction[]
@@ -14,6 +15,7 @@ export interface UseLedgerViewOptions {
   selectedMonth: string
   selectedYear: number
   cycleDay: number
+  isMobile: boolean
   incomingCategory?: string | null | undefined
   incomingFilters?: string[] | undefined
   incomingSearch?: string | null | undefined
@@ -69,6 +71,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     selectedMonth,
     selectedYear,
     cycleDay,
+    isMobile,
     incomingCategory,
     incomingFilters,
     incomingSearch,
@@ -627,7 +630,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
 
         let clearTimer: ReturnType<typeof setTimeout> | undefined
         const timer = setTimeout(() => {
-          const rowEl = document.getElementById(`tx-row-${highlightedTxId}`)
+          const rowEl = getLedgerTransactionRowElement(highlightedTxId, isMobile)
           if (rowEl) {
             rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
             rowEl.classList.add('ledger-transaction-highlight')
@@ -640,12 +643,12 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         return () => {
           clearTimeout(timer)
           if (clearTimer) clearTimeout(clearTimer)
-          const rowEl = document.getElementById(`tx-row-${highlightedTxId}`)
+          const rowEl = getLedgerTransactionRowElement(highlightedTxId, isMobile)
           rowEl?.classList.remove('ledger-transaction-highlight')
         }
       }
     }
-  }, [highlightedTxId, filteredTransactions, pageSize, onClearIncomingFilters])
+  }, [highlightedTxId, filteredTransactions, pageSize, onClearIncomingFilters, isMobile])
 
   const handleDeleteClickRef = useRef(handleDeleteClick)
   useEffect(() => {

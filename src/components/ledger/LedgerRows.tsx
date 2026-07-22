@@ -9,6 +9,7 @@ import { RowSyncStatus } from '../ui/RowSyncBadge'
 import { SwipeableRow } from '../ui/SwipeableRow'
 import { Button } from '../ui/Button'
 import { LedgerAllocationBadge } from './LedgerAllocationBadge'
+import { ledgerTransactionRowId } from '../../lib/ledgerTransactionTarget'
 
 export interface LedgerRowProps {
   transaction: Transaction
@@ -33,7 +34,7 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
   const transfer = transaction.ledgerCategory.startsWith('Transfer:')
   const money = (value: number) => <Amount value={formatCurrencyVal(value, props.currency)} hidden={props.hideSensitive} />
   return (
-    <motion.tr variants={rowFadeVariants} id={`tx-row-${transaction.id}`} className="hover:bg-muted/10 transition">
+    <motion.tr variants={rowFadeVariants} id={ledgerTransactionRowId(transaction.id, 'desktop')} className="hover:bg-muted/10 transition">
       <td className="p-4 font-medium text-muted-foreground">{transaction.date}</td>
       <td className="p-4 font-semibold text-foreground">
         <div className="flex items-center gap-2">
@@ -75,7 +76,7 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
   return (
     <motion.div variants={rowFadeVariants} className="cv-row">
       <SwipeableRow
-        id={`tx-row-${transaction.id}`}
+        id={ledgerTransactionRowId(transaction.id, 'mobile')}
         hint={props.hint}
         disabled={props.isDeleting}
         className="rounded-2xl border border-border shadow-xs"
