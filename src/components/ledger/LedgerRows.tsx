@@ -35,7 +35,12 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
   return (
     <motion.tr variants={rowFadeVariants} id={`tx-row-${transaction.id}`} className="hover:bg-muted/10 transition">
       <td className="p-4 font-medium text-muted-foreground">{transaction.date}</td>
-      <td className="p-4 font-semibold text-foreground flex items-center gap-2"><span>{transaction.description}</span><RowSyncStatus isDeleting={props.isDeleting} isSyncing={props.isSyncing} isPending={transaction.isPendingSync} entityLabel="transaction" /></td>
+      <td className="p-4 font-semibold text-foreground">
+        <div className="flex items-center gap-2">
+          <span>{transaction.description}</span>
+          <RowSyncStatus isDeleting={props.isDeleting} isSyncing={props.isSyncing} isPending={transaction.isPendingSync} entityLabel="transaction" />
+        </div>
+      </td>
       <td className="p-4"><span className={`inline-block text-[10px] px-2 py-0.5 font-semibold rounded-md border ${getCategoryBadgeClass(transaction.category)}`}>{transaction.category}</span></td>
       <td className="p-4">
         <span className="inline-flex flex-col items-start gap-1">
