@@ -22,6 +22,7 @@ import type {
   InvestmentRange,
   InvestmentTransactionType,
 } from '../types'
+import type { ToastAction } from './ui/ToastViewport'
 import * as api from '../lib/api'
 import type { InstrumentSearchResult } from '../lib/api/investments'
 import { useAppContext } from '../contexts/AppContext'
@@ -142,16 +143,30 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
     if (refreshTimerRef.current !== null) window.clearTimeout(refreshTimerRef.current)
   }, [])
 
-  const mutate = async (work: () => Promise<unknown>, success: string) => {
+  const mutateUndo = async (work: () => Promise<unknown>, success: string) => {
+    setBusy(true)
+    try {
+      await work()
+      await load(range, true)
+      showToast(success, 'Growth Investments', 'info')
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not undo.', 'Undo failed', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const mutate = async <T,>(work: () => Promise<T>, success: string, createUndo?: (result: T) => ToastAction | undefined) => {
     if (isOffline) {
       showToast('Reconnect to make investment changes.', 'Offline', 'warning')
       return false
     }
     setBusy(true)
     try {
-      await work()
+      const result = await work()
       await load(range, true)
-      showToast(success, 'Growth Investments', 'success')
+      const undoAction = createUndo ? createUndo(result) : undefined
+      showToast(success, 'Growth Investments', 'success', undoAction)
       closePanel()
       return true
     } catch (error) {
@@ -210,7 +225,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
             <p className="mt-1 text-xs text-muted-foreground">Broker-neutral portfolio tracker.</p>
           </div>
         </div>
-        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
           <Button
             variant="ghost"
             className="w-full justify-center sm:w-auto"
@@ -242,19 +257,61 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
       )}
 
       <BottomSheet isOpen={panel === 'account'} title="Add investment account" onClose={closePanel} maxWidthClassName="max-w-lg">
-        <AccountForm key={`account-${formKey}`} busy={busy} onCancel={closePanel} onSave={value => mutate(() => api.createInvestmentAccount(value), 'Account added.')} />
+        <AccountForm key={`account-${formKey}`} busy={busy} onCancel={closePanel} onSave={value => mutate(() => api.createInvestmentAccount(value), 'Account added.', (res) => ({
+          label: 'Undo',
+          onAction: () => mutateUndo(() => api.deleteInvestmentAccount((res as any).id), 'Account addition undone.')
+        }))} />
       </BottomSheet>
       <BottomSheet isOpen={panel === 'instrument'} title="Add investment" onClose={closePanel} maxWidthClassName="max-w-2xl">
-        <InstrumentForm key={`instrument-${formKey}`} busy={busy} offline={isOffline} onCancel={closePanel} onSave={value => mutate(() => api.createInvestmentInstrument(value), 'Investment added.')} />
+        <InstrumentForm key={`instrument-${formKey}`} busy={busy} offline={isOffline} onCancel={closePanel} onSave={value => mutate(() => api.createInvestmentInstrument(value), 'Investment added.', (res) => ({
+          label: 'Undo',
+          onAction: () => mutateUndo(() => api.deleteInvestmentInstrument((res as any).id), 'Investment addition undone.')
+        }))} />
       </BottomSheet>
       <BottomSheet isOpen={panel === 'activity'} title={editingActivity ? 'Edit investment activity' : 'Add activity'} onClose={closePanel} maxWidthClassName="max-w-3xl">
-        <ActivityForm key={`activity-${formKey}`} portfolio={portfolio} initial={editingActivity} busy={busy} onCancel={closePanel} onSave={value => mutate(() => editingActivity ? api.updateInvestmentActivity(editingActivity.id, value) : api.createInvestmentActivity(value), editingActivity ? 'Activity updated.' : 'Activity added.')} onNeedAccount={() => openPanel('account')} onNeedInstrument={() => openPanel('instrument')} />
+        <ActivityForm key={`activity-${formKey}`} portfolio={portfolio} initial={editingActivity} busy={busy} onCancel={closePanel} onSave={value => mutate(
+          async () => {
+            if (editingActivity) {
+              await api.updateInvestmentActivity(editingActivity.id, value)
+              return null
+            } else {
+              return await api.createInvestmentActivity(value)
+            }
+          },
+          editingActivity ? 'Activity updated.' : 'Activity added.',
+          (res) => editingActivity ? {
+            label: 'Undo',
+            onAction: () => mutateUndo(() => api.updateInvestmentActivity(editingActivity.id, {
+              accountId: editingActivity.accountId,
+              instrumentId: editingActivity.instrumentId,
+              type: editingActivity.type,
+              tradeDate: editingActivity.tradeDate,
+              units: editingActivity.units,
+              unitPrice: editingActivity.unitPrice,
+              cashAmount: editingActivity.cashAmount,
+              fees: editingActivity.fees,
+              taxes: editingActivity.taxes,
+              tradeFxRate: editingActivity.tradeFxRate,
+              notes: editingActivity.notes,
+              linkedTransferId: editingActivity.linkedTransferId,
+            }), 'Activity update reverted.')
+          } : res ? {
+            label: 'Undo',
+            onAction: () => mutateUndo(() => api.deleteInvestmentActivity(res.id), 'Activity addition undone.')
+          } : undefined
+        )} onNeedAccount={() => openPanel('account')} onNeedInstrument={() => openPanel('instrument')} />
       </BottomSheet>
       <BottomSheet isOpen={panel === 'price'} title="Add manual closing price" onClose={closePanel} maxWidthClassName="max-w-2xl">
-        <ManualPriceForm key={`price-${formKey}`} portfolio={portfolio} busy={busy} onCancel={closePanel} onSave={value => mutate(() => api.createManualInvestmentPrice(value), 'Manual price added.')} />
+        <ManualPriceForm key={`price-${formKey}`} portfolio={portfolio} busy={busy} onCancel={closePanel} onSave={value => mutate(() => api.createManualInvestmentPrice(value), 'Manual price added.', (res) => ({
+          label: 'Undo',
+          onAction: () => mutateUndo(() => api.deleteManualInvestmentPrice((res as any).id), 'Manual price addition undone.')
+        }))} />
       </BottomSheet>
       <BottomSheet isOpen={panel === 'cash'} title="Record cash movement" onClose={closePanel} maxWidthClassName="max-w-lg">
-        <CashForm key={`cash-${formKey}`} portfolio={portfolio} busy={busy} onCancel={closePanel} onSave={value => mutate(() => api.createInvestmentCashFlow(value), value.type === 'Withdrawal' ? 'Withdrawal recorded.' : 'Deposit recorded.')} onNeedAccount={() => openPanel('account')} />
+        <CashForm key={`cash-${formKey}`} portfolio={portfolio} busy={busy} onCancel={closePanel} onSave={value => mutate(() => api.createInvestmentCashFlow(value), value.type === 'Withdrawal' ? 'Withdrawal recorded.' : 'Deposit recorded.', (res) => ({
+          label: 'Undo',
+          onAction: () => mutateUndo(() => api.deleteInvestmentCashFlow((res as any).id), 'Cash movement undone.')
+        }))} onNeedAccount={() => openPanel('account')} />
       </BottomSheet>
 
       {!portfolio || (portfolio.accounts.length === 0 && portfolio.instruments.length === 0 && portfolio.activity.length === 0) ? (
@@ -281,32 +338,78 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
               title: flow.type === 'Withdrawal' ? 'Delete withdrawal?' : 'Delete deposit?',
               message: 'The account cash balance and total value will be recalculated.',
               confirmText: 'Delete',
-              onConfirm: () => { void mutate(() => api.deleteInvestmentCashFlow(flow.id), 'Cash movement deleted.') },
+              onConfirm: () => { void mutate(() => api.deleteInvestmentCashFlow(flow.id), 'Cash movement deleted.', () => ({
+                label: 'Undo',
+                onAction: () => mutateUndo(() => api.createInvestmentCashFlow({
+                  accountId: flow.accountId,
+                  currency: flow.currency,
+                  type: flow.type,
+                  amount: Math.abs(flow.amount),
+                  date: flow.date,
+                  notes: flow.notes
+                }), 'Cash movement restored.')
+              })) },
             })}
           />
           <AccountsAndInstruments
             portfolio={portfolio}
             offline={isOffline}
-            onArchiveAccount={id => void mutate(() => api.archiveInvestmentAccount(id), 'Account archived.')}
-            onUnarchiveAccount={(id, name, currency) => void mutate(() => api.unarchiveInvestmentAccount(id, name, currency), 'Account unarchived.')}
-            onDeleteAccount={id => confirm({
-              title: 'Delete investment account?',
-              message: 'Only accounts without activity can be deleted.',
-              confirmText: 'Delete',
-              onConfirm: () => { void mutate(() => api.deleteInvestmentAccount(id), 'Account deleted.') },
+            onArchiveAccount={id => void mutate(() => api.archiveInvestmentAccount(id), 'Account archived.', () => {
+              const account = portfolio.accounts.find(a => a.id === id)
+              return account ? {
+                label: 'Undo',
+                onAction: () => mutateUndo(() => api.unarchiveInvestmentAccount(id, account.name, account.baseCurrency), 'Account unarchived.')
+              } : undefined
             })}
-            onDeleteInstrument={id => confirm({
-              title: 'Delete investment?',
-              message: 'Only investments without activity can be deleted.',
-              confirmText: 'Delete',
-              onConfirm: () => { void mutate(() => api.deleteInvestmentInstrument(id), 'Investment deleted.') },
-            })}
-            onDeleteManualPrice={id => confirm({
-              title: 'Delete manual price?',
-              message: 'The cached provider close, if available, will become active again.',
-              confirmText: 'Delete',
-              onConfirm: () => { void mutate(() => api.deleteManualInvestmentPrice(id), 'Manual price deleted.') },
-            })}
+            onUnarchiveAccount={(id, name, currency) => void mutate(() => api.unarchiveInvestmentAccount(id, name, currency), 'Account unarchived.', () => ({
+              label: 'Undo',
+              onAction: () => mutateUndo(() => api.archiveInvestmentAccount(id), 'Account archived.')
+            }))}
+            onDeleteAccount={id => {
+              const account = portfolio.accounts.find(a => a.id === id)
+              confirm({
+                title: 'Delete investment account?',
+                message: 'Only accounts without activity can be deleted.',
+                confirmText: 'Delete',
+                onConfirm: () => { void mutate(() => api.deleteInvestmentAccount(id), 'Account deleted.', () => account ? {
+                  label: 'Undo',
+                  onAction: () => mutateUndo(() => api.createInvestmentAccount({ name: account.name, baseCurrency: account.baseCurrency }), 'Account restored.')
+                } : undefined) },
+              })
+            }}
+            onDeleteInstrument={id => {
+              const instrument = portfolio.instruments.find(i => i.id === id)
+              confirm({
+                title: 'Delete investment?',
+                message: 'Only investments without activity can be deleted.',
+                confirmText: 'Delete',
+                onConfirm: () => { void mutate(() => api.deleteInvestmentInstrument(id), 'Investment deleted.', () => instrument ? {
+                  label: 'Undo',
+                  onAction: () => mutateUndo(() => api.createInvestmentInstrument({
+                    symbol: instrument.symbol,
+                    name: instrument.name,
+                    type: instrument.type,
+                    currency: instrument.currency,
+                    exchange: instrument.exchange,
+                    mic: instrument.mic,
+                    country: instrument.country,
+                    isCustom: instrument.isCustom
+                  }), 'Investment restored.')
+                } : undefined) },
+              })
+            }}
+            onDeleteManualPrice={id => {
+              const mp = portfolio.manualPrices.find(p => p.id === id)
+              confirm({
+                title: 'Delete manual price?',
+                message: 'The cached provider close, if available, will become active again.',
+                confirmText: 'Delete',
+                onConfirm: () => { void mutate(() => api.deleteManualInvestmentPrice(id), 'Manual price deleted.', () => mp ? {
+                  label: 'Undo',
+                  onAction: () => mutateUndo(() => api.createManualInvestmentPrice(mp), 'Manual price restored.')
+                } : undefined) },
+              })
+            }}
           />
           {portfolio.warnings.length > 0 && (
             <section aria-labelledby="calculation-warnings" className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
@@ -331,18 +434,34 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
               title: 'Delete investment activity?',
               message: 'All later holding results will be recalculated.',
               confirmText: 'Delete',
-              onConfirm: () => { void mutate(() => api.deleteInvestmentActivity(activity.id), 'Activity deleted.') },
+              onConfirm: () => { void mutate(() => api.deleteInvestmentActivity(activity.id), 'Activity deleted.', () => ({
+                label: 'Undo',
+                onAction: () => mutateUndo(() => api.createInvestmentActivity({
+                  accountId: activity.accountId,
+                  instrumentId: activity.instrumentId,
+                  type: activity.type,
+                  tradeDate: activity.tradeDate,
+                  units: activity.units,
+                  unitPrice: activity.unitPrice,
+                  cashAmount: activity.cashAmount,
+                  fees: activity.fees,
+                  taxes: activity.taxes,
+                  tradeFxRate: activity.tradeFxRate,
+                  notes: activity.notes,
+                  linkedTransferId: activity.linkedTransferId,
+                }), 'Activity restored.')
+              })) },
             })}
           />
           <section aria-labelledby="quick-insights" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
             <h2 id="quick-insights" className="text-base font-bold text-foreground">Quick insights</h2>
             <ul className="mt-3 grid gap-3 sm:grid-cols-2">
               {portfolio.insights.map(value => (
-                <li key={value} className="flex items-start gap-3 rounded-xl border border-blue-500/10 bg-blue-500/5 p-4 text-xs leading-relaxed text-blue-700 dark:text-blue-300">
-                  <div className="mt-0.5 shrink-0 rounded-full bg-blue-500/20 p-1 text-blue-600 dark:text-blue-400">
-                    <TrendingUp className="size-3.5" />
+                <li key={value} className="flex items-start gap-3 rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 text-xs leading-relaxed text-blue-700 shadow-sm dark:text-blue-300">
+                  <div className="mt-0.5 shrink-0 rounded-full bg-blue-500/20 p-1.5 text-blue-600 dark:text-blue-400">
+                    <TrendingUp className="size-4" />
                   </div>
-                  {value}
+                  <span className="pt-0.5">{value}</span>
                 </li>
               ))}
             </ul>
@@ -380,23 +499,30 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
     return 'text-foreground'
   }
 
+  const getStyle = (val?: number) => {
+    if (val === undefined) return 'bg-card/92 border-border/60'
+    if (val > 0) return 'bg-emerald-500/5 border-emerald-500/20'
+    if (val < 0) return 'bg-orange-500/5 border-orange-500/20'
+    return 'bg-card/92 border-border/60'
+  }
+
   const cards = [
-    { label: 'Total value', value: format(portfolio.summary.totalValue), note: 'Holdings plus uninvested cash', color: portfolio.summary.totalValue === undefined ? 'text-amber-500' : 'text-foreground', isIncomplete: portfolio.summary.totalValue === undefined },
-    { label: 'Portfolio value', value: format(portfolio.summary.marketValue), note: 'Latest cached or manual prices', color: portfolio.summary.marketValue === undefined ? 'text-amber-500' : 'text-foreground', isIncomplete: portfolio.summary.marketValue === undefined },
-    { label: 'Cash', value: format(portfolio.summary.cashValue), note: 'Uninvested settlement cash', color: portfolio.summary.cashValue === undefined ? 'text-amber-500' : 'text-foreground', isIncomplete: portfolio.summary.cashValue === undefined },
-    { label: 'Growth ledger balance', value: format(portfolio.summary.growthLedgerBalance), note: 'Read-only ledger context', color: portfolio.summary.growthLedgerBalance === undefined ? 'text-amber-500' : 'text-foreground', isIncomplete: false },
-    { label: 'Cost basis', value: format(portfolio.summary.costBasis), note: 'Historical trade FX where needed', color: portfolio.summary.costBasis === undefined ? 'text-amber-500' : 'text-foreground', isIncomplete: portfolio.summary.costBasis === undefined },
-    { label: 'Unrealised P/L', value: unrealised === undefined ? 'Incomplete' : masked ? '••••' : `${unrealised > 0 ? '+' : ''}${money(unrealised, portfolio.appCurrency)} · ${((portfolio.summary.unrealisedPercent ?? 0) > 0 ? '+' : '')}${(portfolio.summary.unrealisedPercent ?? 0).toFixed(1)}%`, note: 'Market value minus cost basis', color: getColor(unrealised), isIncomplete: unrealised === undefined },
-    { label: 'Realised P/L', value: realised === undefined ? 'Incomplete' : masked ? '••••' : `${realised > 0 ? '+' : ''}${money(realised, portfolio.appCurrency)}`, note: 'Closed units and fees', color: getColor(realised), isIncomplete: realised === undefined },
-    { label: 'Net dividends', value: format(portfolio.summary.netDividends), note: 'Separate from capital gains', color: portfolio.summary.netDividends === undefined ? 'text-amber-500' : 'text-foreground', isIncomplete: portfolio.summary.netDividends === undefined },
-    { label: 'Daily change', value: daily === undefined ? 'Incomplete' : masked ? '••••' : `${daily > 0 ? '+' : ''}${money(daily, portfolio.appCurrency)}`, note: 'Based on cached daily closes', color: getColor(daily), isIncomplete: daily === undefined },
+    { label: 'Total value', value: format(portfolio.summary.totalValue), note: 'Holdings plus uninvested cash', color: portfolio.summary.totalValue === undefined ? 'text-amber-500' : 'text-foreground', bg: 'bg-card/92 border-border/60', isIncomplete: portfolio.summary.totalValue === undefined },
+    { label: 'Portfolio value', value: format(portfolio.summary.marketValue), note: 'Latest cached or manual prices', color: portfolio.summary.marketValue === undefined ? 'text-amber-500' : 'text-foreground', bg: 'bg-card/92 border-border/60', isIncomplete: portfolio.summary.marketValue === undefined },
+    { label: 'Cash', value: format(portfolio.summary.cashValue), note: 'Uninvested settlement cash', color: portfolio.summary.cashValue === undefined ? 'text-amber-500' : 'text-foreground', bg: 'bg-card/92 border-border/60', isIncomplete: portfolio.summary.cashValue === undefined },
+    { label: 'Growth ledger balance', value: format(portfolio.summary.growthLedgerBalance), note: 'Read-only ledger context', color: portfolio.summary.growthLedgerBalance === undefined ? 'text-amber-500' : 'text-foreground', bg: 'bg-card/92 border-border/60', isIncomplete: false },
+    { label: 'Cost basis', value: format(portfolio.summary.costBasis), note: 'Historical trade FX where needed', color: portfolio.summary.costBasis === undefined ? 'text-amber-500' : 'text-foreground', bg: 'bg-card/92 border-border/60', isIncomplete: portfolio.summary.costBasis === undefined },
+    { label: 'Unrealised P/L', value: unrealised === undefined ? 'Incomplete' : masked ? '••••' : `${unrealised > 0 ? '+' : ''}${money(unrealised, portfolio.appCurrency)} · ${((portfolio.summary.unrealisedPercent ?? 0) > 0 ? '+' : '')}${(portfolio.summary.unrealisedPercent ?? 0).toFixed(1)}%`, note: 'Market value minus cost basis', color: getColor(unrealised), bg: getStyle(unrealised), isIncomplete: unrealised === undefined },
+    { label: 'Realised P/L', value: realised === undefined ? 'Incomplete' : masked ? '••••' : `${realised > 0 ? '+' : ''}${money(realised, portfolio.appCurrency)}`, note: 'Closed units and fees', color: getColor(realised), bg: getStyle(realised), isIncomplete: realised === undefined },
+    { label: 'Net dividends', value: format(portfolio.summary.netDividends), note: 'Separate from capital gains', color: portfolio.summary.netDividends === undefined ? 'text-amber-500' : 'text-foreground', bg: 'bg-card/92 border-border/60', isIncomplete: portfolio.summary.netDividends === undefined },
+    { label: 'Daily change', value: daily === undefined ? 'Incomplete' : masked ? '••••' : `${daily > 0 ? '+' : ''}${money(daily, portfolio.appCurrency)}`, note: 'Based on cached daily closes', color: getColor(daily), bg: getStyle(daily), isIncomplete: daily === undefined },
   ]
   return (
     <section aria-label="Investment summary" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {cards.map(({ label, value, note, color, isIncomplete }) => (
-        <div key={label} className="app-panel rounded-2xl border border-border/60 bg-card/92 p-4">
+      {cards.map(({ label, value, note, color, bg, isIncomplete }) => (
+        <div key={label} className={`app-panel rounded-2xl border p-4 ${bg}`}>
           <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
-          <p className={`mt-2 text-lg font-black ${color}`}>{value}</p>
+          <p className={`mt-2 truncate text-lg font-black ${color}`} title={value}>{value}</p>
           <p className="mt-1 text-[10px] text-muted-foreground">{note}</p>
           {isIncomplete && <p className="mt-1 text-[9px] text-amber-500/80">See calculation notes below</p>}
         </div>
@@ -492,8 +618,14 @@ const AccountsAndInstruments = ({
         aria-expanded={open}
         className="flex w-full cursor-pointer items-center justify-between p-4 text-left"
       >
-        <span className="flex flex-col sm:flex-row sm:items-baseline"><strong className="text-sm text-foreground">Accounts, investments, and manual prices</strong><span className="mt-1 text-[10px] text-muted-foreground sm:ml-2 sm:mt-0">{portfolio.accounts.length} account{portfolio.accounts.length === 1 ? '' : 's'} · {portfolio.instruments.length} investment{portfolio.instruments.length === 1 ? '' : 's'}</span></span>
-        <ChevronDown className={`size-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
+        <span className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
+          <strong className="text-sm text-foreground">Accounts, investments, and manual prices</strong>
+          <span className="mt-2 flex flex-wrap items-center gap-2 sm:mt-0">
+            <span className="rounded-full bg-blue-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-blue-600 dark:text-blue-400">{portfolio.accounts.length} ACCOUNT{portfolio.accounts.length === 1 ? '' : 'S'}</span>
+            <span className="rounded-full bg-violet-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-violet-600 dark:text-violet-400">{portfolio.instruments.length} INVESTMENT{portfolio.instruments.length === 1 ? '' : 'S'}</span>
+          </span>
+        </span>
+        <ChevronDown className={`size-4 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
         <div className="grid gap-5 border-t border-border/50 p-4 lg:grid-cols-3">
@@ -607,13 +739,13 @@ const ValueChart = ({ portfolio, masked, range, onRangeChange }: { portfolio: In
           <h2 id="value-chart-title" className="text-base font-bold text-foreground">Portfolio value</h2>
           <p className="mt-1 text-xs text-muted-foreground">Market value, cost basis, and net contributions.</p>
         </div>
-        <div className="flex shrink-0 gap-1 self-start rounded-xl bg-muted/40 p-1" role="group" aria-label="Chart range">
+        <div className="flex max-w-full shrink-0 gap-1 self-start overflow-x-auto rounded-xl bg-muted/40 p-1" role="group" aria-label="Chart range">
           {ranges.map(item => (
             <button
               key={item.value}
               type="button"
               onClick={() => onRangeChange(item.value)}
-              className={`cursor-pointer rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${range === item.value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`cursor-pointer whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${range === item.value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
               aria-pressed={range === item.value}
             >
               {item.label}
@@ -728,14 +860,14 @@ const AllocationChart = ({ portfolio, masked, selected, onSelect }: { portfolio:
               aria-pressed={mode === 'instrument'
                 ? selected?.key === name.split(' · ')[0]
                 : selected?.mode === filterMode && selected?.key === name}
-              className={`flex w-full cursor-pointer items-center justify-between rounded-lg px-2 py-1.5 text-xs transition-colors hover:bg-muted/60 ${
+              className={`flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-xs transition-colors hover:bg-muted/60 ${
                 (mode === 'instrument' ? selected?.key === name.split(' · ')[0] : selected?.mode === filterMode && selected?.key === name)
                   ? 'bg-muted'
                   : ''
               }`}
             >
-              <span className="truncate"><i className="mr-2 inline-block size-2 rounded-full" style={{ background: colors[index % colors.length] }} />{name}</span>
-              <span className="font-bold">{masked ? '••' : `${total ? (value / total * 100).toFixed(1) : 0}%`}</span>
+              <span className="min-w-0 flex-1 truncate text-left"><i className="mr-2 inline-block size-2 shrink-0 rounded-full" style={{ background: colors[index % colors.length] }} />{name}</span>
+              <span className="shrink-0 font-bold">{masked ? '••' : `${total ? (value / total * 100).toFixed(1) : 0}%`}</span>
             </button>
           ))}
           {groups.length === 0 && <p className="text-xs text-muted-foreground">Add prices to see allocation.</p>}
