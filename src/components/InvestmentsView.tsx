@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowLeft,
   Building2,
-  ChevronDown,
   CircleDollarSign,
   CloudOff,
   Loader2,
@@ -25,6 +24,8 @@ import type { InstrumentSearchResult } from '../lib/api/investments'
 import { useAppContext } from '../contexts/AppContext'
 import { Button } from './ui/Button'
 import { CycleSkeleton } from './ui/Skeleton'
+import { CustomSelect } from './ui/CustomSelect'
+import { DatePicker } from './ui/DatePicker'
 
 interface InvestmentsViewProps {
   onNavigate: (tab: AppTab) => void
@@ -188,7 +189,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
           </button>
           <div>
             <h1 className="text-2xl font-black tracking-tight text-foreground">Growth Investments</h1>
-            <p className="mt-1 text-xs text-muted-foreground">Broker-neutral holdings and performance. Your Growth ledger stays read-only.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Broker-neutral portfolio tracker.</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -297,7 +298,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
             onEdit={activity => { setEditingActivity(activity); setPanel('activity'); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
             onDelete={activity => confirm({
               title: 'Delete investment activity?',
-              message: 'All later holding results will be recalculated. Your Growth ledger and Reports are not changed.',
+              message: 'All later holding results will be recalculated.',
               confirmText: 'Delete',
               onConfirm: () => { void mutate(() => api.deleteInvestmentActivity(activity.id), 'Activity deleted.') },
             })}
@@ -319,7 +320,7 @@ const EmptyState = ({ offline, onAddAccount, onAddInvestment }: { offline: boole
     <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-violet-500/10 text-violet-500"><TrendingUp className="size-7" /></div>
     <h2 className="mt-5 text-xl font-black text-foreground">Build your investment view</h2>
     <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-muted-foreground">
-      Add a generic broker account and an opening position. This tracker never connects to your broker and never creates ledger transactions.
+      Add an account and an opening position to get started.
     </p>
     <div className="mt-6 flex flex-col justify-center gap-2 sm:flex-row">
       <Button variant="primary" disabled={offline} onClick={onAddAccount}><Building2 className="size-4" /> Add account</Button>
@@ -468,13 +469,21 @@ const AllocationChart = ({ portfolio, masked, selected, onSelect }: { portfolio:
     cursor += value
     return `${colors[index % colors.length]} ${start}% ${total ? cursor / total * 100 : 0}%`
   }).join(', ')
+  const allocationModeOptions: Array<{ value: AllocationMode; label: string }> = [
+    { value: 'asset', label: 'Asset' },
+    { value: 'account', label: 'Account' },
+  ]
   return (
     <section aria-labelledby="allocation-title" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
       <div className="flex items-start justify-between gap-2">
         <div><h2 id="allocation-title" className="text-base font-bold text-foreground">Allocation</h2><p className="mt-1 text-xs text-muted-foreground">Select a segment to highlight matching holdings.</p></div>
-        <select value={mode} onChange={event => { setMode(event.target.value as AllocationMode); onSelect(null) }} className="rounded-lg border border-border/60 bg-background px-2 py-1.5 text-xs">
-          <option value="asset">Asset</option><option value="account">Account</option>
-        </select>
+        <CustomSelect
+          value={mode}
+          onChange={value => { setMode(value as AllocationMode); onSelect(null) }}
+          options={allocationModeOptions}
+          ariaLabel="Group allocation by"
+          align="right"
+        />
       </div>
       <div className="mt-5 flex items-center gap-5">
         <div
@@ -577,16 +586,19 @@ const ActivityTable = ({ portfolio, masked, onEdit, onDelete }: { portfolio: Inv
     (!to || value.tradeDate <= to))
   const accounts = new Map(portfolio.accounts.map(value => [value.id, value.name]))
   const instruments = new Map(portfolio.instruments.map(value => [value.id, value]))
+  const accountOptions = [{ value: '', label: 'All accounts' }, ...portfolio.accounts.map(a => ({ value: a.id, label: a.name }))]
+  const instrumentOptions = [{ value: '', label: 'All investments' }, ...portfolio.instruments.map(i => ({ value: i.id, label: i.symbol }))]
+  const typeOptions = [{ value: '', label: 'All types' }, ...activityTypes.map(t => ({ value: t.value, label: t.label }))]
   return (
     <section aria-labelledby="activity-title" className="app-panel overflow-hidden rounded-2xl border border-border/60 bg-card/92">
       <div className="p-5">
         <div className="flex items-center gap-2"><SlidersHorizontal className="size-4 text-blue-500" /><h2 id="activity-title" className="text-base font-bold text-foreground">Activity</h2></div>
         <div className="mt-4 grid gap-2 sm:grid-cols-5">
-          <select aria-label="Filter by account" value={account} onChange={event => setAccount(event.target.value)} className={inputClass}><option value="">All accounts</option>{portfolio.accounts.map(value => <option key={value.id} value={value.id}>{value.name}</option>)}</select>
-          <select aria-label="Filter by investment" value={instrument} onChange={event => setInstrument(event.target.value)} className={inputClass}><option value="">All investments</option>{portfolio.instruments.map(value => <option key={value.id} value={value.id}>{value.symbol}</option>)}</select>
-          <select aria-label="Filter by type" value={type} onChange={event => setType(event.target.value)} className={inputClass}><option value="">All types</option>{activityTypes.map(value => <option key={value.value} value={value.value}>{value.label}</option>)}</select>
-          <input aria-label="From date" type="date" value={from} onChange={event => setFrom(event.target.value)} className={inputClass} />
-          <input aria-label="To date" type="date" value={to} onChange={event => setTo(event.target.value)} className={inputClass} />
+          <CustomSelect value={account} onChange={v => setAccount(v as string)} options={accountOptions} ariaLabel="Filter by account" className="w-full" />
+          <CustomSelect value={instrument} onChange={v => setInstrument(v as string)} options={instrumentOptions} ariaLabel="Filter by investment" className="w-full" />
+          <CustomSelect value={type} onChange={v => setType(v as string)} options={typeOptions} ariaLabel="Filter by type" className="w-full" />
+          <DatePicker value={from} onChange={setFrom} placeholder="From date" className="w-full" />
+          <DatePicker value={to} onChange={setTo} placeholder="To date" className="w-full" />
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -660,7 +672,7 @@ const InstrumentForm = ({ busy, offline, onCancel, onSave }: { busy: boolean; of
     {manual ? <form className="grid gap-4 sm:grid-cols-4" onSubmit={saveManual}>
       <label className={labelClass}>Ticker<input required maxLength={32} value={symbol} onChange={event => setSymbol(event.target.value.toUpperCase())} className={inputClass} /></label>
       <label className={`${labelClass} sm:col-span-2`}>Full name<input required maxLength={200} value={name} onChange={event => setName(event.target.value)} className={inputClass} /></label>
-      <label className={labelClass}>Type<select value={type} onChange={event => setType(event.target.value as 'Stock' | 'ETF')} className={inputClass}><option>Stock</option><option>ETF</option></select></label>
+      <div className={labelClass}>Type<CustomSelect value={type} onChange={v => setType(v as 'Stock' | 'ETF')} options={[{ value: 'Stock', label: 'Stock' }, { value: 'ETF', label: 'ETF' }]} ariaLabel="Investment type" className="mt-1.5 w-full" /></div>
       <label className={labelClass}>Currency<input required pattern="[A-Za-z]{3}" maxLength={3} value={currency} onChange={event => setCurrency(event.target.value.toUpperCase())} className={inputClass} /></label>
       <Button type="submit" disabled={busy} className="self-end sm:col-start-4">{busy && <Loader2 className="size-4 animate-spin" />} Save investment</Button>
     </form> : <>
@@ -713,16 +725,16 @@ const ActivityForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccoun
     })
   }
   return <FormShell title={initial ? 'Edit investment activity' : type === 'OpeningPosition' ? 'Add opening position' : 'Add historical activity'} onCancel={onCancel}><form onSubmit={submit} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-    <label className={labelClass}>Activity type<select value={type} onChange={event => setType(event.target.value as InvestmentTransactionType)} className={inputClass}>{activityTypes.map(value => <option key={value.value} value={value.value}>{value.label}</option>)}</select></label>
-    <label className={labelClass}>Account<select required value={accountId} onChange={event => setAccountId(event.target.value)} className={inputClass}>{accounts.map(value => <option key={value.id} value={value.id}>{value.name}</option>)}</select></label>
-    <label className={labelClass}>Investment<select required value={instrumentId} onChange={event => setInstrumentId(event.target.value)} className={inputClass}>{instruments.map(value => <option key={value.id} value={value.id}>{value.symbol} · {value.name}</option>)}</select></label>
-    <label className={labelClass}>Trade date<input required type="date" max={today()} value={tradeDate} onChange={event => setTradeDate(event.target.value)} className={inputClass} /></label>
+    <div className={labelClass}>Activity type<CustomSelect value={type} onChange={v => setType(v as InvestmentTransactionType)} options={activityTypes.map(t => ({ value: t.value, label: t.label }))} ariaLabel="Activity type" className="mt-1.5 w-full" /></div>
+    <div className={labelClass}>Account<CustomSelect value={accountId} onChange={v => setAccountId(v as string)} options={accounts.map(a => ({ value: a.id, label: a.name }))} ariaLabel="Account" className="mt-1.5 w-full" /></div>
+    <div className={labelClass}>Investment<CustomSelect value={instrumentId} onChange={v => setInstrumentId(v as string)} options={instruments.map(i => ({ value: i.id, label: `${i.symbol} · ${i.name}` }))} ariaLabel="Investment" className="mt-1.5 w-full" /></div>
+    <div className={labelClass}>Trade date<DatePicker value={tradeDate} onChange={setTradeDate} max={today()} className="mt-1.5 w-full" /></div>
     {needsUnits && <label className={labelClass}>{type === 'Split' ? 'Split ratio' : 'Units'}<input required={type === 'Split' || type.includes('Transfer')} type="number" min="0" step="0.0000000001" value={units} onChange={event => setUnits(event.target.value)} className={inputClass} /></label>}
     {trade && <label className={labelClass}>Unit price ({selectedInstrument?.currency})<input type="number" min="0" step="0.0000000001" value={unitPrice} onChange={event => setUnitPrice(event.target.value)} className={inputClass} /></label>}
     {type !== 'Split' && type !== 'TransferOut' && <label className={labelClass}>{type === 'TransferIn' ? 'Transferred cost basis' : type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} ({selectedInstrument?.currency})<input type="number" min="0" step="0.0000000001" value={cashAmount} onChange={event => setCashAmount(event.target.value)} className={inputClass} /></label>}
     {!['Split', 'TransferIn', 'TransferOut'].includes(type) && <><label className={labelClass}>Fees<input type="number" min="0" step="0.0000000001" value={fees} onChange={event => setFees(event.target.value)} className={inputClass} /></label><label className={labelClass}>Taxes<input type="number" min="0" step="0.0000000001" value={taxes} onChange={event => setTaxes(event.target.value)} className={inputClass} /></label></>}
     {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && <label className={labelClass}>Trade FX ({selectedInstrument.currency} → {portfolio?.appCurrency})<input type="number" min="0" step="0.0000000001" value={fx} onChange={event => setFx(event.target.value)} className={inputClass} /></label>}
-    {type === 'TransferOut' && <label className={labelClass}>Destination (optional internal transfer)<select value={destination} onChange={event => setDestination(event.target.value)} className={inputClass}><option value="">External transfer out</option>{accounts.filter(value => value.id !== accountId).map(value => <option key={value.id} value={value.id}>{value.name}</option>)}</select></label>}
+    {type === 'TransferOut' && <div className={labelClass}>Destination<CustomSelect value={destination} onChange={v => setDestination(v as string)} options={[{ value: '', label: 'External transfer out' }, ...accounts.filter(a => a.id !== accountId).map(a => ({ value: a.id, label: a.name }))]} ariaLabel="Transfer destination" className="mt-1.5 w-full" /></div>}
     <label className={`${labelClass} sm:col-span-2`}>Notes<input maxLength={1000} value={notes} onChange={event => setNotes(event.target.value)} className={inputClass} /></label>
     <div className="flex items-end justify-end sm:col-span-2"><Button type="submit" disabled={busy}>{busy && <Loader2 className="size-4 animate-spin" />} Save activity</Button></div>
   </form>{trade && <p className="mt-3 text-[10px] text-muted-foreground">Enter any two of units, unit price, and gross amount; the missing value is calculated.</p>}</FormShell>
@@ -736,8 +748,8 @@ const ManualPriceForm = ({ portfolio, busy, onCancel, onSave }: { portfolio: Inv
   const [fx, setFx] = useState('')
   const instrument = instruments.find(value => value.id === instrumentId)
   return <FormShell title="Add manual closing price" onCancel={onCancel}><form className="grid gap-4 sm:grid-cols-4" onSubmit={event => { event.preventDefault(); void onSave({ instrumentId, marketDate: date, price: Number(price), fxRate: numberOrUndefined(fx) }) }}>
-    <label className={labelClass}>Investment<select value={instrumentId} onChange={event => setInstrumentId(event.target.value)} className={inputClass}>{instruments.map(value => <option key={value.id} value={value.id}>{value.symbol}</option>)}</select></label>
-    <label className={labelClass}>Market date<input required type="date" max={today()} value={date} onChange={event => setDate(event.target.value)} className={inputClass} /></label>
+    <div className={labelClass}>Investment<CustomSelect value={instrumentId} onChange={v => setInstrumentId(v as string)} options={instruments.map(i => ({ value: i.id, label: i.symbol }))} ariaLabel="Investment" className="mt-1.5 w-full" /></div>
+    <div className={labelClass}>Market date<DatePicker value={date} onChange={setDate} max={today()} className="mt-1.5 w-full" /></div>
     <label className={labelClass}>Close ({instrument?.currency})<input required type="number" min="0.0000000001" step="0.0000000001" value={price} onChange={event => setPrice(event.target.value)} className={inputClass} /></label>
     {instrument && instrument.currency !== portfolio?.appCurrency && <label className={labelClass}>FX to {portfolio?.appCurrency} (optional)<input type="number" min="0.0000000001" step="0.0000000001" value={fx} onChange={event => setFx(event.target.value)} className={inputClass} /></label>}
     <div className="flex items-end justify-end sm:col-start-4"><Button type="submit" disabled={busy || !instrumentId}>{busy && <Loader2 className="size-4 animate-spin" />} Save price</Button></div>

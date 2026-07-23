@@ -132,7 +132,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </span>
           <span>
             <strong className="block text-sm text-foreground">Growth Investments</strong>
-            <span className="mt-1 block text-xs text-muted-foreground">Track broker accounts and market performance without changing your ledger.</span>
+            <span className="mt-1 block text-xs text-muted-foreground">Track broker accounts and market performance.</span>
           </span>
         </span>
         <span className="shrink-0 text-right">
