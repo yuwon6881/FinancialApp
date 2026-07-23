@@ -16,6 +16,25 @@ Object.defineProperty(window, 'scrollTo', {
   value: () => undefined,
 })
 
+// jsdom does not implement matchMedia. Modal dialogs (BottomSheet -> useDialog /
+// useIsMobile) query it, so provide a desktop-defaulting stub for every test.
+if (!window.matchMedia) {
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    writable: true,
+    value: (query: string): MediaQueryList => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      dispatchEvent: () => false,
+    }),
+  })
+}
+
 beforeEach(() => {
   resetBackend()
   localStorage.clear()

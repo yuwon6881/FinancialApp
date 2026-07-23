@@ -32,6 +32,12 @@ const emptyPortfolio: InvestmentPortfolio = {
   marketDataConfigured: true,
 }
 
+const tradablePortfolio: InvestmentPortfolio = {
+  ...emptyPortfolio,
+  accounts: [{ id: 'a1', name: 'Broker', baseCurrency: 'USD', isArchived: false, createdAt: '', updatedAt: '' }],
+  instruments: [{ id: 'i1', symbol: 'VOO', name: 'Vanguard S&P 500', type: 'ETF', currency: 'USD', isCustom: false, isArchived: false }],
+}
+
 const context: AppContextValue = {
   hideSensitive: false,
   currency: 'USD',
@@ -122,5 +128,30 @@ describe('InvestmentsView provider call boundaries', () => {
 
     await waitFor(() => expect(api.createInvestmentInstrument).toHaveBeenCalledTimes(1))
     expect(api.refreshInvestmentMarketData).not.toHaveBeenCalled()
+  })
+
+  it('derives the missing one of units / unit price / gross and keeps it in sync', async () => {
+    vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(tradablePortfolio)
+    renderView()
+    fireEvent.click(await screen.findByRole('button', { name: 'Add activity' }))
+
+    const units = screen.getByLabelText('Units') as HTMLInputElement
+    const price = screen.getByLabelText(/Unit price/) as HTMLInputElement
+    const gross = screen.getByLabelText(/Gross amount/) as HTMLInputElement
+
+    // units + price -> gross derives, and re-derives live when units changes.
+    fireEvent.change(units, { target: { value: '10' } })
+    fireEvent.change(price, { target: { value: '10' } })
+    await waitFor(() => expect(gross.value).toBe('100'))
+    fireEvent.change(units, { target: { value: '20' } })
+    await waitFor(() => expect(gross.value).toBe('200'))
+
+    // Editing gross now makes gross + units the two most-recent (authoritative)
+    // fields, so the untouched one -- unit price -- derives (250 / 20 = 12.5),
+    // and the user-entered units and gross are left intact.
+    fireEvent.change(gross, { target: { value: '250' } })
+    await waitFor(() => expect(price.value).toBe('12.5'))
+    expect(units.value).toBe('20')
+    expect(gross.value).toBe('250')
   })
 })

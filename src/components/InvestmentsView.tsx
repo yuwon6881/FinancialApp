@@ -24,6 +24,7 @@ import * as api from '../lib/api'
 import type { InstrumentSearchResult } from '../lib/api/investments'
 import { useAppContext } from '../contexts/AppContext'
 import { Button } from './ui/Button'
+import { BottomSheet } from './ui/BottomSheet'
 import { CycleSkeleton } from './ui/Skeleton'
 import { CustomSelect } from './ui/CustomSelect'
 import { DatePicker } from './ui/DatePicker'
@@ -74,11 +75,25 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
   const [loadError, setLoadError] = useState('')
   const [panel, setPanel] = useState<Panel>(null)
   const [editingActivity, setEditingActivity] = useState<InvestmentActivity | null>(null)
+  // Bumped on every open so each form's `key` changes and it remounts with
+  // fresh internal state -- reopening (or switching from edit to add) never
+  // shows a previously entered or edited record.
+  const [formKey, setFormKey] = useState(0)
   const [busy, setBusy] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [allocationFilter, setAllocationFilter] = useState<AllocationFilter>(null)
   const cancelRefreshRef = useRef(false)
   const refreshTimerRef = useRef<number | null>(null)
+
+  const openPanel = (next: Exclude<Panel, null>, activity: InvestmentActivity | null = null) => {
+    setEditingActivity(activity)
+    setFormKey(value => value + 1)
+    setPanel(next)
+  }
+  const closePanel = () => {
+    setPanel(null)
+    setEditingActivity(null)
+  }
 
   const load = async (nextRange = range, quiet = false) => {
     if (!quiet) setLoading(!portfolio)
@@ -135,7 +150,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
       await work()
       await load(range, true)
       showToast(success, 'Growth Investments', 'success')
-      setPanel(null)
+      closePanel()
       return true
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'The change could not be saved.', 'Could not save', 'warning')
@@ -194,18 +209,17 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {refreshing ? (
-            <Button variant="danger" onClick={() => { cancelRefreshRef.current = true }}><X className="size-4" /> Cancel</Button>
-          ) : (
-            <Button
-              variant="ghost"
-              disabled={isOffline || !portfolio?.marketDataConfigured || !portfolio.holdings.length}
-              onClick={() => void updatePrices()}
-            >
-              <RefreshCw className="size-4" /> Update prices
-            </Button>
-          )}
-          <Button variant="primary" disabled={isOffline} onClick={() => { setEditingActivity(null); setPanel('activity') }}>
+          <Button
+            variant="ghost"
+            disabled={isOffline || refreshing || !portfolio?.marketDataConfigured || !portfolio.holdings.length}
+            aria-busy={refreshing}
+            onClick={() => void updatePrices()}
+          >
+            {refreshing
+              ? <><Loader2 className="size-4 animate-spin" /> Updating…</>
+              : <><RefreshCw className="size-4" /> Update prices</>}
+          </Button>
+          <Button variant="primary" disabled={isOffline} onClick={() => openPanel('activity')}>
             <Plus className="size-4" /> Add activity
           </Button>
         </div>
@@ -224,24 +238,32 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
         </div>
       )}
 
-      {panel === 'account' && <AccountForm busy={busy} onCancel={() => setPanel(null)} onSave={value => mutate(() => api.createInvestmentAccount(value), 'Account added.')} />}
-      {panel === 'instrument' && <InstrumentForm busy={busy} offline={isOffline} onCancel={() => setPanel(null)} onSave={value => mutate(() => api.createInvestmentInstrument(value), 'Investment added.')} />}
-      {panel === 'activity' && <ActivityForm portfolio={portfolio} initial={editingActivity} busy={busy} onCancel={() => { setEditingActivity(null); setPanel(null) }} onSave={value => mutate(() => editingActivity ? api.updateInvestmentActivity(editingActivity.id, value) : api.createInvestmentActivity(value), editingActivity ? 'Activity updated.' : 'Activity added.')} onNeedAccount={() => setPanel('account')} onNeedInstrument={() => setPanel('instrument')} />}
-      {panel === 'price' && <ManualPriceForm portfolio={portfolio} busy={busy} onCancel={() => setPanel(null)} onSave={value => mutate(() => api.createManualInvestmentPrice(value), 'Manual price added.')} />}
+      <BottomSheet isOpen={panel === 'account'} title="Add investment account" onClose={closePanel} maxWidthClassName="max-w-lg">
+        <AccountForm key={`account-${formKey}`} busy={busy} onCancel={closePanel} onSave={value => mutate(() => api.createInvestmentAccount(value), 'Account added.')} />
+      </BottomSheet>
+      <BottomSheet isOpen={panel === 'instrument'} title="Add investment" onClose={closePanel} maxWidthClassName="max-w-2xl">
+        <InstrumentForm key={`instrument-${formKey}`} busy={busy} offline={isOffline} onCancel={closePanel} onSave={value => mutate(() => api.createInvestmentInstrument(value), 'Investment added.')} />
+      </BottomSheet>
+      <BottomSheet isOpen={panel === 'activity'} title={editingActivity ? 'Edit investment activity' : 'Add activity'} onClose={closePanel} maxWidthClassName="max-w-3xl">
+        <ActivityForm key={`activity-${formKey}`} portfolio={portfolio} initial={editingActivity} busy={busy} onCancel={closePanel} onSave={value => mutate(() => editingActivity ? api.updateInvestmentActivity(editingActivity.id, value) : api.createInvestmentActivity(value), editingActivity ? 'Activity updated.' : 'Activity added.')} onNeedAccount={() => openPanel('account')} onNeedInstrument={() => openPanel('instrument')} />
+      </BottomSheet>
+      <BottomSheet isOpen={panel === 'price'} title="Add manual closing price" onClose={closePanel} maxWidthClassName="max-w-2xl">
+        <ManualPriceForm key={`price-${formKey}`} portfolio={portfolio} busy={busy} onCancel={closePanel} onSave={value => mutate(() => api.createManualInvestmentPrice(value), 'Manual price added.')} />
+      </BottomSheet>
 
       {!portfolio || (portfolio.accounts.length === 0 && portfolio.instruments.length === 0 && portfolio.activity.length === 0) ? (
         <EmptyState
           offline={isOffline}
-          onAddAccount={() => setPanel('account')}
-          onAddInvestment={() => setPanel('instrument')}
+          onAddAccount={() => openPanel('account')}
+          onAddInvestment={() => openPanel('instrument')}
         />
       ) : (
         <>
           <SummaryCards portfolio={portfolio} masked={hideSensitive} />
           <div className="flex flex-wrap gap-2">
-            <Button variant="ghost" disabled={isOffline} onClick={() => setPanel('account')}><Building2 className="size-4" /> Add account</Button>
-            <Button variant="ghost" disabled={isOffline} onClick={() => setPanel('instrument')}><Search className="size-4" /> Add investment</Button>
-            <Button variant="ghost" disabled={isOffline || portfolio.instruments.length === 0} onClick={() => setPanel('price')}><CircleDollarSign className="size-4" /> Manual price</Button>
+            <Button variant="ghost" disabled={isOffline} onClick={() => openPanel('account')}><Building2 className="size-4" /> Add account</Button>
+            <Button variant="ghost" disabled={isOffline} onClick={() => openPanel('instrument')}><Search className="size-4" /> Add investment</Button>
+            <Button variant="ghost" disabled={isOffline || portfolio.instruments.length === 0} onClick={() => openPanel('price')}><CircleDollarSign className="size-4" /> Manual price</Button>
           </div>
           <AccountsAndInstruments
             portfolio={portfolio}
@@ -270,27 +292,14 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
           {portfolio.warnings.length > 0 && (
             <section aria-labelledby="calculation-warnings" className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
               <h2 id="calculation-warnings" className="text-sm font-bold text-foreground">Calculation notes</h2>
-              <p className="mt-1 text-[10px] text-muted-foreground">These warnings explain why some values show as incomplete above. Fix them by supplying missing FX rates via the "Manual price" button, or by entering the trade FX rate when editing the activity.</p>
+              <p className="mt-1 text-[10px] text-muted-foreground">These warnings explain why some values show as incomplete above. Most clear once you run "Update prices" (which fetches the market FX rates for each trade date automatically). If the provider has no rate for a date, supply one via the "Manual price" button or by entering the trade FX rate when editing the activity.</p>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-muted-foreground">
                 {portfolio.warnings.map(warning => <li key={warning}>{warning}</li>)}
               </ul>
             </section>
           )}
-          <div className="flex gap-1 rounded-xl bg-muted/40 p-1 w-fit" aria-label="Chart range">
-            {ranges.map(item => (
-              <button
-                key={item.value}
-                type="button"
-                onClick={() => setRange(item.value)}
-                className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${range === item.value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-                aria-pressed={range === item.value}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
           <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-            <ValueChart portfolio={portfolio} masked={hideSensitive} />
+            <ValueChart portfolio={portfolio} masked={hideSensitive} range={range} onRangeChange={setRange} />
             <AllocationChart portfolio={portfolio} masked={hideSensitive} selected={allocationFilter} onSelect={setAllocationFilter} />
           </div>
           <PerformanceBars portfolio={portfolio} masked={hideSensitive} />
@@ -298,7 +307,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
           <ActivityTable
             portfolio={portfolio}
             masked={hideSensitive}
-            onEdit={activity => { setEditingActivity(activity); setPanel('activity'); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+            onEdit={activity => openPanel('activity', activity)}
             onDelete={activity => confirm({
               title: 'Delete investment activity?',
               message: 'All later holding results will be recalculated.',
@@ -476,7 +485,7 @@ const AccountsAndInstruments = ({
   )
 }
 
-const ValueChart = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; masked: boolean }) => {
+const ValueChart = ({ portfolio, masked, range, onRangeChange }: { portfolio: InvestmentPortfolio; masked: boolean; range: InvestmentRange; onRangeChange: (value: InvestmentRange) => void }) => {
   const values = portfolio.chart.flatMap(point => [point.marketValue, point.costBasis, point.netContributions]).filter((value): value is number => value !== undefined)
   const max = Math.max(...values, 1)
   const min = Math.min(...values, 0)
@@ -496,8 +505,25 @@ const ValueChart = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; mas
     : 'No chart data is available.'
   return (
     <section aria-labelledby="value-chart-title" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
-      <h2 id="value-chart-title" className="text-base font-bold text-foreground">Portfolio value</h2>
-      <p className="mt-1 text-xs text-muted-foreground">Market value, cost basis, and net contributions.</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 id="value-chart-title" className="text-base font-bold text-foreground">Portfolio value</h2>
+          <p className="mt-1 text-xs text-muted-foreground">Market value, cost basis, and net contributions.</p>
+        </div>
+        <div className="flex shrink-0 gap-1 self-start rounded-xl bg-muted/40 p-1" role="group" aria-label="Chart range">
+          {ranges.map(item => (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() => onRangeChange(item.value)}
+              className={`cursor-pointer rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${range === item.value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              aria-pressed={range === item.value}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
       <p className="sr-only">{summary}</p>
       {portfolio.chart.length === 0 ? (
         <div className="flex h-60 items-center justify-center text-xs text-muted-foreground">Add activity to create a value history.</div>
@@ -686,6 +712,8 @@ const ActivityTable = ({ portfolio, masked, onEdit, onDelete }: { portfolio: Inv
     (!type || value.type === type) &&
     (!from || value.tradeDate >= from) &&
     (!to || value.tradeDate <= to))
+  const hasFilters = !!(account || instrument || type || from || to)
+  const clearFilters = () => { setAccount(''); setInstrument(''); setType(''); setFrom(''); setTo('') }
   const accounts = new Map(portfolio.accounts.map(value => [value.id, value.name]))
   const instruments = new Map(portfolio.instruments.map(value => [value.id, value]))
   const accountOptions = [{ value: '', label: 'All accounts' }, ...portfolio.accounts.map(a => ({ value: a.id, label: a.name }))]
@@ -694,13 +722,30 @@ const ActivityTable = ({ portfolio, masked, onEdit, onDelete }: { portfolio: Inv
   return (
     <section aria-labelledby="activity-title" className="app-panel overflow-hidden rounded-2xl border border-border/60 bg-card/92">
       <div className="p-5">
-        <div className="flex items-center gap-2"><SlidersHorizontal className="size-4 text-blue-500" /><h2 id="activity-title" className="text-base font-bold text-foreground">Activity</h2></div>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2"><SlidersHorizontal className="size-4 text-blue-500" /><h2 id="activity-title" className="text-base font-bold text-foreground">Activity</h2></div>
+          {hasFilters && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-blue-600 transition-colors hover:bg-blue-500/10 dark:text-blue-400"
+            >
+              <X className="size-3" /> Clear filters
+            </button>
+          )}
+        </div>
         <div className="mt-4 grid gap-2 sm:grid-cols-5">
           <CustomSelect value={account} onChange={v => setAccount(v as string)} options={accountOptions} ariaLabel="Filter by account" className="w-full" />
           <CustomSelect value={instrument} onChange={v => setInstrument(v as string)} options={instrumentOptions} ariaLabel="Filter by investment" className="w-full" />
           <CustomSelect value={type} onChange={v => setType(v as string)} options={typeOptions} ariaLabel="Filter by type" className="w-full" />
-          <DatePicker value={from} onChange={setFrom} placeholder="From date" className="w-full" />
-          <DatePicker value={to} onChange={setTo} placeholder="To date" className="w-full" />
+          <div className="flex items-center gap-1">
+            <DatePicker value={from} onChange={setFrom} placeholder="From date" className="w-full" />
+            {from && <button type="button" onClick={() => setFrom('')} aria-label="Clear from date" className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><X className="size-3.5" /></button>}
+          </div>
+          <div className="flex items-center gap-1">
+            <DatePicker value={to} onChange={setTo} placeholder="To date" className="w-full" />
+            {to && <button type="button" onClick={() => setTo('')} aria-label="Clear to date" className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><X className="size-3.5" /></button>}
+          </div>
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -735,31 +780,24 @@ const ActivityTable = ({ portfolio, masked, onEdit, onDelete }: { portfolio: Inv
   )
 }
 
-const FormShell = ({ title, children, onCancel }: { title: string; children: React.ReactNode; onCancel: () => void }) => (
-  <section className="app-panel rounded-2xl border border-blue-500/25 bg-card/95 p-5" aria-label={title}>
-    <div className="mb-5 flex items-center justify-between">
-      <h2 className="text-base font-bold text-foreground">{title}</h2>
-      <button
-        type="button"
-        onClick={onCancel}
-        aria-label="Close form"
-        className="cursor-pointer rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-      >
-        <X className="size-4" />
-      </button>
-    </div>
-    {children}
-  </section>
+const FormActions = ({ busy, onCancel, submitLabel, disabled }: { busy: boolean; onCancel: () => void; submitLabel: string; disabled?: boolean }) => (
+  <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
+    <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
+    <Button type="submit" disabled={busy || disabled}>{busy && <Loader2 className="size-4 animate-spin" />} {submitLabel}</Button>
+  </div>
 )
 
 const AccountForm = ({ busy, onCancel, onSave }: { busy: boolean; onCancel: () => void; onSave: (value: api.AccountMutation) => Promise<boolean> }) => {
   const [name, setName] = useState('')
   const [currency, setCurrency] = useState('USD')
-  return <FormShell title="Add investment account" onCancel={onCancel}><form className="grid gap-4 sm:grid-cols-[2fr_1fr_auto]" onSubmit={event => { event.preventDefault(); void onSave({ name, baseCurrency: currency }) }}>
-    <label className={labelClass}>Account name<input required maxLength={120} value={name} onChange={event => setName(event.target.value)} placeholder="e.g. Moomoo" className={inputClass} /></label>
-    <label className={labelClass}>Base currency<input required pattern="[A-Za-z]{3}" maxLength={3} value={currency} onChange={event => setCurrency(event.target.value.toUpperCase())} className={inputClass} /></label>
-    <Button type="submit" disabled={busy} className="self-end">{busy && <Loader2 className="size-4 animate-spin" />} Add account</Button>
-  </form><p className="mt-3 text-[10px] text-muted-foreground">Only a display name is stored. Broker credentials and broker API connections are not supported.</p></FormShell>
+  return <form className="space-y-4" onSubmit={event => { event.preventDefault(); void onSave({ name, baseCurrency: currency }) }}>
+    <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
+      <label className={labelClass}>Account name<input required maxLength={120} value={name} onChange={event => setName(event.target.value)} placeholder="e.g. Moomoo" className={inputClass} /></label>
+      <label className={labelClass}>Base currency<input required pattern="[A-Za-z]{3}" maxLength={3} value={currency} onChange={event => setCurrency(event.target.value.toUpperCase())} className={inputClass} /></label>
+    </div>
+    <p className="text-[10px] text-muted-foreground">Only a display name is stored. Broker credentials and broker API connections are not supported.</p>
+    <FormActions busy={busy} onCancel={onCancel} submitLabel="Add account" />
+  </form>
 }
 
 const InstrumentForm = ({ busy, offline, onCancel, onSave }: { busy: boolean; offline: boolean; onCancel: () => void; onSave: (value: api.InstrumentMutation) => Promise<boolean> }) => {
@@ -795,30 +833,35 @@ const InstrumentForm = ({ busy, offline, onCancel, onSave }: { busy: boolean; of
     event.preventDefault()
     void onSave({ symbol, name, type, currency, isCustom: true })
   }
-  return <FormShell title="Add investment" onCancel={onCancel}>
-    <div className="mb-4 flex gap-1 rounded-xl bg-muted/40 p-1 w-fit">
+  return <div className="space-y-4">
+    <div className="flex gap-1 rounded-xl bg-muted/40 p-1 w-fit">
       <button type="button" onClick={() => setManual(false)} className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${!manual ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>Search markets</button>
       <button type="button" onClick={() => setManual(true)} className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${manual ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>Custom / manual</button>
     </div>
-    {manual ? <form className="grid gap-4 sm:grid-cols-4" onSubmit={saveManual}>
-      <label className={labelClass}>Ticker<input required maxLength={32} value={symbol} onChange={event => setSymbol(event.target.value.toUpperCase())} className={inputClass} /></label>
-      <label className={`${labelClass} sm:col-span-2`}>Full name<input required maxLength={200} value={name} onChange={event => setName(event.target.value)} className={inputClass} /></label>
-      <div className={labelClass}>Type<CustomSelect value={type} onChange={v => setType(v as 'Stock' | 'ETF')} options={[{ value: 'Stock', label: 'Stock' }, { value: 'ETF', label: 'ETF' }]} ariaLabel="Investment type" className="mt-1.5 w-full" /></div>
-      <label className={labelClass}>Currency<input required pattern="[A-Za-z]{3}" maxLength={3} value={currency} onChange={event => setCurrency(event.target.value.toUpperCase())} className={inputClass} /></label>
-      <Button type="submit" disabled={busy} className="self-end sm:col-start-4">{busy && <Loader2 className="size-4 animate-spin" />} Save investment</Button>
+    {manual ? <form className="space-y-4" onSubmit={saveManual}>
+      <div className="grid gap-4 sm:grid-cols-4">
+        <label className={labelClass}>Ticker<input required maxLength={32} value={symbol} onChange={event => setSymbol(event.target.value.toUpperCase())} className={inputClass} /></label>
+        <label className={`${labelClass} sm:col-span-2`}>Full name<input required maxLength={200} value={name} onChange={event => setName(event.target.value)} className={inputClass} /></label>
+        <div className={labelClass}>Type<CustomSelect value={type} onChange={v => setType(v as 'Stock' | 'ETF')} options={[{ value: 'Stock', label: 'Stock' }, { value: 'ETF', label: 'ETF' }]} ariaLabel="Investment type" className="mt-1.5 w-full" /></div>
+        <label className={labelClass}>Currency<input required pattern="[A-Za-z]{3}" maxLength={3} value={currency} onChange={event => setCurrency(event.target.value.toUpperCase())} className={inputClass} /></label>
+      </div>
+      <FormActions busy={busy} onCancel={onCancel} submitLabel="Save investment" />
     </form> : <>
       <label className={labelClass}>Symbol or company / fund name<div className="relative mt-1.5"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><input value={query} onChange={event => { setQuery(event.target.value); setSelected(null) }} placeholder="Search at least 3 characters" className={`${inputClass} pl-9`} />{searching && <Loader2 className="absolute right-3 top-3 size-4 animate-spin text-blue-500" />}</div></label>
-      {message && <p className="mt-2 text-xs text-muted-foreground">{message}</p>}
-      <div className="mt-3 grid gap-2">
+      {message && <p className="text-xs text-muted-foreground">{message}</p>}
+      <div className="grid gap-2">
         {results.map(result => <button type="button" key={`${result.symbol}-${result.mic ?? result.exchange}`} onClick={() => setSelected(result)} className={`cursor-pointer rounded-xl border p-3 text-left transition-colors ${selected === result ? 'border-blue-500 bg-blue-500/5' : 'border-border/50 hover:bg-muted/30'}`}>
           <span className="flex flex-wrap items-center gap-2"><strong className="text-sm text-foreground">{result.symbol}</strong><span className="rounded bg-muted px-1.5 py-0.5 text-[9px] font-bold">{result.type}</span><span className={`rounded px-1.5 py-0.5 text-[9px] font-bold ${result.availableOnBasic ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>{result.availableOnBasic ? 'Basic available' : 'Plan unavailable'}</span></span>
           <span className="mt-1 block text-xs text-muted-foreground">{result.name}</span>
           <span className="mt-1 block text-[10px] text-muted-foreground">{[result.exchange, result.mic, result.currency, result.country].filter(Boolean).join(' · ')}</span>
         </button>)}
       </div>
-      {selected && <div className="mt-4 flex justify-end"><Button disabled={busy || !selected.availableOnBasic} onClick={() => void onSave({ symbol: selected.symbol, name: selected.name, type: selected.type, currency: selected.currency, exchange: selected.exchange, mic: selected.mic, country: selected.country, providerSymbol: selected.symbol, providerMic: selected.mic, isCustom: false })}>{busy && <Loader2 className="size-4 animate-spin" />} Save investment</Button></div>}
+      <div className="flex justify-end gap-2 border-t border-border/40 pt-4">
+        <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
+        <Button disabled={busy || !selected || !selected.availableOnBasic} onClick={() => selected && void onSave({ symbol: selected.symbol, name: selected.name, type: selected.type, currency: selected.currency, exchange: selected.exchange, mic: selected.mic, country: selected.country, providerSymbol: selected.symbol, providerMic: selected.mic, isCustom: false })}>{busy && <Loader2 className="size-4 animate-spin" />} Save investment</Button>
+      </div>
     </>}
-  </FormShell>
+  </div>
 }
 
 const ActivityForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccount, onNeedInstrument }: { portfolio: InvestmentPortfolio | null; initial: InvestmentActivity | null; busy: boolean; onCancel: () => void; onSave: (value: api.InvestmentActivityMutation) => Promise<boolean>; onNeedAccount: () => void; onNeedInstrument: () => void }) => {
@@ -837,13 +880,29 @@ const ActivityForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccoun
   const [notes, setNotes] = useState(initial?.notes ?? '')
   const [destination, setDestination] = useState('')
   const selectedInstrument = instruments.find(value => value.id === instrumentId)
+  // "Enter any two of units, unit price, gross; the third is derived" (gross =
+  // units x price). We track the two most recently edited fields and only ever
+  // recompute the remaining one, so no user-entered value is clobbered and there
+  // is no derivation loop. Prefilled values on an edit are left alone until the
+  // user has edited at least two of the three fields.
+  const editOrder = useRef<Array<'units' | 'price' | 'gross'>>([])
+  const noteEdit = (field: 'units' | 'price' | 'gross') => {
+    editOrder.current = [field, ...editOrder.current.filter(value => value !== field)]
+  }
   useEffect(() => {
+    if (!['OpeningPosition', 'Buy', 'Sell'].includes(type)) return
+    const recent = editOrder.current.slice(0, 2)
+    if (recent.length < 2) return
+    const fmt = (value: number) => value.toFixed(6).replace(/\.?0+$/, '')
+    const derive = (['units', 'price', 'gross'] as const).find(value => !recent.includes(value))!
     const u = numberOrUndefined(units)
     const p = numberOrUndefined(unitPrice)
     const c = numberOrUndefined(cashAmount)
-    if (u && p && !c) setCashAmount((u * p).toFixed(6).replace(/\.?0+$/, ''))
-  }, [units, unitPrice])
-  if (!accounts.length || !instruments.length) return <FormShell title="Add activity" onCancel={onCancel}><p className="text-sm text-muted-foreground">Add both an account and an investment before recording activity.</p><div className="mt-4 flex gap-2">{!accounts.length && <Button onClick={onNeedAccount}>Add account</Button>}{!instruments.length && <Button variant="ghost" onClick={onNeedInstrument}>Add investment</Button>}</div></FormShell>
+    if (derive === 'gross' && u && p) setCashAmount(fmt(u * p))
+    else if (derive === 'units' && c && p) setUnits(fmt(c / p))
+    else if (derive === 'price' && c && u) setUnitPrice(fmt(c / u))
+  }, [units, unitPrice, cashAmount, type])
+  if (!accounts.length || !instruments.length) return <div><p className="text-sm text-muted-foreground">Add both an account and an investment before recording activity.</p><div className="mt-4 flex gap-2">{!accounts.length && <Button onClick={onNeedAccount}>Add account</Button>}{!instruments.length && <Button variant="ghost" onClick={onNeedInstrument}>Add investment</Button>}</div></div>
   const needsUnits = !['Dividend', 'FeeTax'].includes(type)
   const trade = ['OpeningPosition', 'Buy', 'Sell'].includes(type)
   const submit = (event: React.FormEvent) => {
@@ -855,20 +914,25 @@ const ActivityForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccoun
       destinationAccountId: type === 'TransferOut' && destination ? destination : undefined,
     })
   }
-  return <FormShell title={initial ? 'Edit investment activity' : type === 'OpeningPosition' ? 'Add opening position' : 'Add historical activity'} onCancel={onCancel}><form onSubmit={submit} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+  const feesLabelSuffix = selectedInstrument ? ` (${selectedInstrument.currency})` : ''
+  return <form onSubmit={submit} className="space-y-4">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
     <div className={labelClass}>Activity type<CustomSelect value={type} onChange={v => setType(v as InvestmentTransactionType)} options={activityTypes.map(t => ({ value: t.value, label: t.label }))} ariaLabel="Activity type" className="mt-1.5 w-full" /></div>
     <div className={labelClass}>Account<CustomSelect value={accountId} onChange={v => setAccountId(v as string)} options={accounts.map(a => ({ value: a.id, label: a.name }))} ariaLabel="Account" className="mt-1.5 w-full" /></div>
     <div className={labelClass}>Investment<CustomSelect value={instrumentId} onChange={v => setInstrumentId(v as string)} options={instruments.map(i => ({ value: i.id, label: `${i.symbol} · ${i.name}` }))} ariaLabel="Investment" className="mt-1.5 w-full" /></div>
     <div className={labelClass}>Trade date<DatePicker value={tradeDate} onChange={setTradeDate} max={today()} className="mt-1.5 w-full" /></div>
-    {needsUnits && <label className={labelClass}>{type === 'Split' ? 'Split ratio' : 'Units'}<input required={type === 'Split' || type.includes('Transfer')} type="number" min="0" step="0.0000000001" value={units} onChange={event => setUnits(event.target.value)} className={inputClass} /></label>}
-    {trade && <label className={labelClass}>Unit price ({selectedInstrument?.currency})<input type="number" min="0" step="0.0000000001" value={unitPrice} onChange={event => setUnitPrice(event.target.value)} className={inputClass} /></label>}
-    {type !== 'Split' && type !== 'TransferOut' && <label className={labelClass}>{type === 'TransferIn' ? 'Transferred cost basis' : type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} ({selectedInstrument?.currency})<input type="number" min="0" step="0.0000000001" value={cashAmount} onChange={event => setCashAmount(event.target.value)} className={inputClass} /></label>}
-    {!['Split', 'TransferIn', 'TransferOut'].includes(type) && <><label className={labelClass}>Fees<input type="number" min="0" step="0.0000000001" value={fees} onChange={event => setFees(event.target.value)} className={inputClass} /></label><label className={labelClass}>Taxes<input type="number" min="0" step="0.0000000001" value={taxes} onChange={event => setTaxes(event.target.value)} className={inputClass} /></label></>}
-    {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && <label className={labelClass}>Trade FX ({selectedInstrument.currency} → {portfolio?.appCurrency})<input type="number" min="0" step="0.0000000001" value={fx} onChange={event => setFx(event.target.value)} className={inputClass} /></label>}
+    {needsUnits && <label className={labelClass}>{type === 'Split' ? 'Split ratio' : 'Units'}<input required={type === 'Split' || type.includes('Transfer')} type="number" min="0" step="0.0000000001" value={units} onChange={event => { noteEdit('units'); setUnits(event.target.value) }} className={inputClass} /></label>}
+    {trade && <label className={labelClass}>Unit price ({selectedInstrument?.currency})<input type="number" min="0" step="0.0000000001" value={unitPrice} onChange={event => { noteEdit('price'); setUnitPrice(event.target.value) }} className={inputClass} /></label>}
+    {type !== 'Split' && type !== 'TransferOut' && <label className={labelClass}>{type === 'TransferIn' ? 'Transferred cost basis' : type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} ({selectedInstrument?.currency})<input type="number" min="0" step="0.0000000001" value={cashAmount} onChange={event => { noteEdit('gross'); setCashAmount(event.target.value) }} className={inputClass} /></label>}
+    {!['Split', 'TransferIn', 'TransferOut'].includes(type) && <><label className={labelClass}>Fees{feesLabelSuffix}<input type="number" min="0" step="0.0000000001" value={fees} onChange={event => setFees(event.target.value)} className={inputClass} /></label><label className={labelClass}>Taxes{feesLabelSuffix}<input type="number" min="0" step="0.0000000001" value={taxes} onChange={event => setTaxes(event.target.value)} className={inputClass} /></label></>}
+    {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && <label className={labelClass}>Trade FX ({selectedInstrument.currency} → {portfolio?.appCurrency}, optional)<input type="number" min="0" step="0.0000000001" value={fx} onChange={event => setFx(event.target.value)} className={inputClass} /></label>}
     {type === 'TransferOut' && <div className={labelClass}>Destination<CustomSelect value={destination} onChange={v => setDestination(v as string)} options={[{ value: '', label: 'External transfer out' }, ...accounts.filter(a => a.id !== accountId).map(a => ({ value: a.id, label: a.name }))]} ariaLabel="Transfer destination" className="mt-1.5 w-full" /></div>}
     <label className={`${labelClass} sm:col-span-2`}>Notes<input maxLength={1000} value={notes} onChange={event => setNotes(event.target.value)} className={inputClass} /></label>
-    <div className="flex items-end justify-end sm:col-span-2"><Button type="submit" disabled={busy}>{busy && <Loader2 className="size-4 animate-spin" />} Save activity</Button></div>
-  </form>{trade && <p className="mt-3 text-[10px] text-muted-foreground">Enter any two of units, unit price, and gross amount; the missing value is calculated.</p>}</FormShell>
+    </div>
+    {trade && <p className="text-[10px] text-muted-foreground">Enter any two of units, unit price, and gross amount; the missing value is calculated.</p>}
+    {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && <p className="text-[10px] text-muted-foreground">Amounts above stay in {selectedInstrument.currency}. Leave Trade FX blank to value them in {portfolio?.appCurrency} at the market rate for the trade date (fetched via "Update prices"); enter a rate only to override with your broker's executed rate.</p>}
+    <FormActions busy={busy} onCancel={onCancel} submitLabel="Save activity" />
+  </form>
 }
 
 const ManualPriceForm = ({ portfolio, busy, onCancel, onSave }: { portfolio: InvestmentPortfolio | null; busy: boolean; onCancel: () => void; onSave: (value: { instrumentId: string; marketDate: string; price: number; fxRate?: number }) => Promise<boolean> }) => {
@@ -878,13 +942,16 @@ const ManualPriceForm = ({ portfolio, busy, onCancel, onSave }: { portfolio: Inv
   const [price, setPrice] = useState('')
   const [fx, setFx] = useState('')
   const instrument = instruments.find(value => value.id === instrumentId)
-  return <FormShell title="Add manual closing price" onCancel={onCancel}><form className="grid gap-4 sm:grid-cols-4" onSubmit={event => { event.preventDefault(); void onSave({ instrumentId, marketDate: date, price: Number(price), fxRate: numberOrUndefined(fx) }) }}>
-    <div className={labelClass}>Investment<CustomSelect value={instrumentId} onChange={v => setInstrumentId(v as string)} options={instruments.map(i => ({ value: i.id, label: i.symbol }))} ariaLabel="Investment" className="mt-1.5 w-full" /></div>
-    <div className={labelClass}>Market date<DatePicker value={date} onChange={setDate} max={today()} className="mt-1.5 w-full" /></div>
-    <label className={labelClass}>Close ({instrument?.currency})<input required type="number" min="0.0000000001" step="0.0000000001" value={price} onChange={event => setPrice(event.target.value)} className={inputClass} /></label>
-    {instrument && instrument.currency !== portfolio?.appCurrency && <label className={labelClass}>FX to {portfolio?.appCurrency} (optional)<input type="number" min="0.0000000001" step="0.0000000001" value={fx} onChange={event => setFx(event.target.value)} className={inputClass} /></label>}
-    <div className="flex items-end justify-end sm:col-start-4"><Button type="submit" disabled={busy || !instrumentId}>{busy && <Loader2 className="size-4 animate-spin" />} Save price</Button></div>
-  </form><p className="mt-3 text-[10px] text-muted-foreground">A manual value takes precedence over provider data for the same date. Deleting it restores the cached provider close.</p></FormShell>
+  return <form className="space-y-4" onSubmit={event => { event.preventDefault(); void onSave({ instrumentId, marketDate: date, price: Number(price), fxRate: numberOrUndefined(fx) }) }}>
+    <div className="grid gap-4 sm:grid-cols-4">
+      <div className={labelClass}>Investment<CustomSelect value={instrumentId} onChange={v => setInstrumentId(v as string)} options={instruments.map(i => ({ value: i.id, label: i.symbol }))} ariaLabel="Investment" className="mt-1.5 w-full" /></div>
+      <div className={labelClass}>Market date<DatePicker value={date} onChange={setDate} max={today()} className="mt-1.5 w-full" /></div>
+      <label className={labelClass}>Close ({instrument?.currency})<input required type="number" min="0.0000000001" step="0.0000000001" value={price} onChange={event => setPrice(event.target.value)} className={inputClass} /></label>
+      {instrument && instrument.currency !== portfolio?.appCurrency && <label className={labelClass}>FX to {portfolio?.appCurrency} (optional)<input type="number" min="0.0000000001" step="0.0000000001" value={fx} onChange={event => setFx(event.target.value)} className={inputClass} /></label>}
+    </div>
+    <p className="text-[10px] text-muted-foreground">A manual value takes precedence over provider data for the same date. Deleting it restores the cached provider close.</p>
+    <FormActions busy={busy} onCancel={onCancel} submitLabel="Save price" disabled={!instrumentId} />
+  </form>
 }
 
 export default InvestmentsView
