@@ -111,12 +111,14 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
   const toOutboxPayload = (value: object): OutboxPayload => ({ ...value })
 
+  const [directSyncId, setDirectSyncId] = useState<string | null>(null)
+
   const {
     pendingOps,
     failedOps,
     activeOps,
     isBackgroundSyncing,
-    activeSyncId,
+    activeSyncId: outboxActiveSyncId,
     deletingId: deletingTxId,
     syncCountdownMs,
     editingPendingId,
@@ -180,6 +182,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       await loadAll(selectedMonth || undefined, selectedYear || undefined, true, true)
     },
   })
+
+  const activeSyncId = outboxActiveSyncId || directSyncId
 
   // Fetch initial ledger and dashboard statistics
   const loadAll = useCallback(async (
@@ -877,7 +881,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
   const handleUpdateReminder = async (id: string, settings: RecurringReminderSettings) => {
     if (!guardSensitive()) return
-    setActiveSyncId(id)
+    setDirectSyncId(id)
     const previous = recurringPayments.find(p => p.id === id)
     setRecurringPayments(prev => prev.map(p => p.id === id
       ? { ...p, reminderEnabled: settings.enabled, reminderMode: settings.mode, reminderLeadDays: settings.leadDays }
@@ -889,7 +893,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       setRecurringPayments(prev => prev.map(p => p.id === id && previous ? previous : p))
       showToast(getErrorMessage(err, 'Could not update the payment reminder.'), 'Reminder Update Failed', 'error')
     } finally {
-      setActiveSyncId(null)
+      setDirectSyncId(null)
     }
   }
 
