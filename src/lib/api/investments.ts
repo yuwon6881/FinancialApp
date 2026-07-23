@@ -203,6 +203,28 @@ export function deleteManualInvestmentPrice(id: string): Promise<void> {
   })
 }
 
+export function createInvestmentCashFlow(value: {
+  accountId: string
+  currency: string
+  type: 'Deposit' | 'Withdrawal'
+  amount: number
+  date: string
+  notes?: string
+}): Promise<{ id: string }> {
+  return request('/investments/cash-flows', {
+    method: 'POST',
+    ...jsonBody(value),
+    errorMessage: 'Could not save cash movement',
+  })
+}
+
+export function deleteInvestmentCashFlow(id: string): Promise<void> {
+  return requestVoid(`/investments/cash-flows/${id}`, {
+    method: 'DELETE',
+    errorMessage: 'Could not delete cash movement',
+  })
+}
+
 export function refreshInvestmentMarketData(): Promise<MarketRefreshResponse> {
   return request('/investments/market-data/refresh', {
     method: 'POST',

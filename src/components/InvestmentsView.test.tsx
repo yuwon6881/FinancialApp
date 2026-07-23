@@ -27,6 +27,8 @@ const emptyPortfolio: InvestmentPortfolio = {
   activity: [],
   manualPrices: [],
   chart: [],
+  cashBalances: [],
+  cashFlows: [],
   insights: [],
   warnings: [],
   marketDataConfigured: true,

@@ -361,10 +361,10 @@ const TopNav: React.FC<TopNavProps> = ({
             role="status"
             aria-live="polite"
             aria-atomic="true"
-            className={`border-t px-4 py-1.5 text-center text-[11px] font-semibold ${
+            className={`absolute left-0 top-full w-full border-b px-4 py-1.5 text-center text-[11px] font-semibold backdrop-blur-xl shadow-sm transition-all ${
               sensitivePreferenceStatus === 'pending'
-                ? 'border-blue-500/15 bg-blue-500/8 text-blue-600 dark:text-blue-400'
-                : 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                ? 'border-blue-500/20 bg-blue-50/95 text-blue-700 dark:border-blue-500/30 dark:bg-blue-950/95 dark:text-blue-400'
+                : 'border-amber-500/20 bg-amber-50/95 text-amber-700 dark:border-amber-500/30 dark:bg-amber-950/95 dark:text-amber-400'
             }`}
           >
             <span className="inline-flex items-center justify-center gap-1.5">

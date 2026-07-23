@@ -11,11 +11,13 @@ import {
   Search,
   SlidersHorizontal,
   TrendingUp,
+  Wallet,
   X,
 } from 'lucide-react'
 import type {
   AppTab,
   InvestmentActivity,
+  InvestmentCashFlow,
   InvestmentPortfolio,
   InvestmentRange,
   InvestmentTransactionType,
@@ -33,7 +35,7 @@ interface InvestmentsViewProps {
   onNavigate: (tab: AppTab) => void
 }
 
-type Panel = 'account' | 'instrument' | 'activity' | 'price' | null
+type Panel = 'account' | 'instrument' | 'activity' | 'price' | 'cash' | null
 type AllocationMode = 'asset' | 'account' | 'instrument'
 type AllocationFilter = { mode: AllocationMode; key: string } | null
 
@@ -251,6 +253,9 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
       <BottomSheet isOpen={panel === 'price'} title="Add manual closing price" onClose={closePanel} maxWidthClassName="max-w-2xl">
         <ManualPriceForm key={`price-${formKey}`} portfolio={portfolio} busy={busy} onCancel={closePanel} onSave={value => mutate(() => api.createManualInvestmentPrice(value), 'Manual price added.')} />
       </BottomSheet>
+      <BottomSheet isOpen={panel === 'cash'} title="Record cash movement" onClose={closePanel} maxWidthClassName="max-w-lg">
+        <CashForm key={`cash-${formKey}`} portfolio={portfolio} busy={busy} onCancel={closePanel} onSave={value => mutate(() => api.createInvestmentCashFlow(value), value.type === 'Withdrawal' ? 'Withdrawal recorded.' : 'Deposit recorded.')} onNeedAccount={() => openPanel('account')} />
+      </BottomSheet>
 
       {!portfolio || (portfolio.accounts.length === 0 && portfolio.instruments.length === 0 && portfolio.activity.length === 0) ? (
         <EmptyState
@@ -264,8 +269,21 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
           <div className="flex flex-wrap gap-2">
             <Button variant="ghost" disabled={isOffline} onClick={() => openPanel('account')}><Building2 className="size-4" /> Add account</Button>
             <Button variant="ghost" disabled={isOffline} onClick={() => openPanel('instrument')}><Search className="size-4" /> Add investment</Button>
+            <Button variant="ghost" disabled={isOffline || portfolio.accounts.length === 0} onClick={() => openPanel('cash')}><Wallet className="size-4" /> Deposit / withdraw</Button>
             <Button variant="ghost" disabled={isOffline || portfolio.instruments.length === 0} onClick={() => openPanel('price')}><CircleDollarSign className="size-4" /> Manual price</Button>
           </div>
+          <CashPanel
+            portfolio={portfolio}
+            offline={isOffline}
+            masked={hideSensitive}
+            onAdd={() => openPanel('cash')}
+            onDeleteCashFlow={flow => confirm({
+              title: flow.type === 'Withdrawal' ? 'Delete withdrawal?' : 'Delete deposit?',
+              message: 'The account cash balance and total value will be recalculated.',
+              confirmText: 'Delete',
+              onConfirm: () => { void mutate(() => api.deleteInvestmentCashFlow(flow.id), 'Cash movement deleted.') },
+            })}
+          />
           <AccountsAndInstruments
             portfolio={portfolio}
             offline={isOffline}
@@ -363,8 +381,10 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
   }
 
   const cards = [
-    { label: 'Growth ledger balance', value: format(portfolio.summary.growthLedgerBalance), note: 'Read-only ledger context', color: portfolio.summary.growthLedgerBalance === undefined ? 'text-amber-500' : 'text-foreground', isIncomplete: false },
+    { label: 'Total value', value: format(portfolio.summary.totalValue), note: 'Holdings plus uninvested cash', color: portfolio.summary.totalValue === undefined ? 'text-amber-500' : 'text-foreground', isIncomplete: portfolio.summary.totalValue === undefined },
     { label: 'Portfolio value', value: format(portfolio.summary.marketValue), note: 'Latest cached or manual prices', color: portfolio.summary.marketValue === undefined ? 'text-amber-500' : 'text-foreground', isIncomplete: portfolio.summary.marketValue === undefined },
+    { label: 'Cash', value: format(portfolio.summary.cashValue), note: 'Uninvested settlement cash', color: portfolio.summary.cashValue === undefined ? 'text-amber-500' : 'text-foreground', isIncomplete: portfolio.summary.cashValue === undefined },
+    { label: 'Growth ledger balance', value: format(portfolio.summary.growthLedgerBalance), note: 'Read-only ledger context', color: portfolio.summary.growthLedgerBalance === undefined ? 'text-amber-500' : 'text-foreground', isIncomplete: false },
     { label: 'Cost basis', value: format(portfolio.summary.costBasis), note: 'Historical trade FX where needed', color: portfolio.summary.costBasis === undefined ? 'text-amber-500' : 'text-foreground', isIncomplete: portfolio.summary.costBasis === undefined },
     { label: 'Unrealised P/L', value: unrealised === undefined ? 'Incomplete' : masked ? '••••' : `${unrealised > 0 ? '+' : ''}${money(unrealised, portfolio.appCurrency)} · ${((portfolio.summary.unrealisedPercent ?? 0) > 0 ? '+' : '')}${(portfolio.summary.unrealisedPercent ?? 0).toFixed(1)}%`, note: 'Market value minus cost basis', color: getColor(unrealised), isIncomplete: unrealised === undefined },
     { label: 'Realised P/L', value: realised === undefined ? 'Incomplete' : masked ? '••••' : `${realised > 0 ? '+' : ''}${money(realised, portfolio.appCurrency)}`, note: 'Closed units and fees', color: getColor(realised), isIncomplete: realised === undefined },
@@ -381,6 +401,64 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
           {isIncomplete && <p className="mt-1 text-[9px] text-amber-500/80">See calculation notes below</p>}
         </div>
       ))}
+    </section>
+  )
+}
+
+const CashPanel = ({ portfolio, offline, masked, onAdd, onDeleteCashFlow }: {
+  portfolio: InvestmentPortfolio
+  offline: boolean
+  masked: boolean
+  onAdd: () => void
+  onDeleteCashFlow: (flow: InvestmentCashFlow) => void
+}) => {
+  const accountNames = new Map(portfolio.accounts.map(value => [value.id, value.name]))
+  const hasCash = portfolio.cashBalances.length > 0 || portfolio.cashFlows.length > 0
+  return (
+    <section aria-labelledby="cash-title" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2"><Wallet className="size-4 text-emerald-500" /><h2 id="cash-title" className="text-base font-bold text-foreground">Cash</h2></div>
+        <Button variant="ghost" size="sm" disabled={offline || portfolio.accounts.length === 0} onClick={onAdd}><Plus className="size-4" /> Deposit / withdraw</Button>
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">Uninvested settlement cash held at your broker. Dividends and sale proceeds add to it; buys and fees draw it down. It counts toward your total value.</p>
+      {!hasCash ? (
+        <p className="mt-4 rounded-xl bg-muted/30 p-3 text-xs text-muted-foreground">No uninvested cash tracked yet. Record a deposit to reflect the settlement cash sitting in your broker account.</p>
+      ) : (
+        <>
+          {portfolio.cashBalances.length > 0 && (
+            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {portfolio.cashBalances.map(balance => (
+                <div key={`${balance.accountId}-${balance.currency}`} className="rounded-xl bg-muted/25 p-3">
+                  <p className="truncate text-xs font-bold text-foreground">{balance.accountName}</p>
+                  <p className={`mt-1 text-base font-black ${balance.amount < 0 ? 'text-orange-500' : 'text-foreground'}`}>{masked ? '••••' : money(balance.amount, balance.currency)}</p>
+                  {balance.currency !== portfolio.appCurrency && (
+                    <p className="mt-0.5 text-[10px] text-muted-foreground">{balance.amountApp === undefined ? 'FX needed for conversion' : `≈ ${masked ? '••••' : money(balance.amountApp, portfolio.appCurrency)}`}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {portfolio.cashFlows.length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Deposits &amp; withdrawals</h3>
+              <div className="mt-2 space-y-2">
+                {portfolio.cashFlows.map(flow => (
+                  <div key={flow.id} className="flex items-center justify-between gap-2 rounded-xl bg-muted/25 p-3">
+                    <span className="min-w-0">
+                      <strong className="block truncate text-xs text-foreground">{flow.type} · {accountNames.get(flow.accountId) ?? 'Account'}</strong>
+                      <span className="block truncate text-[10px] text-muted-foreground">{flow.date}{flow.notes ? ` · ${flow.notes}` : ''}</span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <span className={`text-xs font-bold ${flow.amount < 0 ? 'text-orange-500' : 'text-emerald-500'}`}>{masked ? '••••' : money(flow.amount, flow.currency)}</span>
+                      <Button variant="danger" size="sm" disabled={offline} onClick={() => onDeleteCashFlow(flow)}>Delete</Button>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </section>
   )
 }
@@ -588,8 +666,16 @@ const AllocationChart = ({ portfolio, masked, selected, onSelect }: { portfolio:
       const key = mode === 'asset' ? holding.type : mode === 'account' ? holding.accountName : `${holding.symbol} · ${holding.name}`
       map.set(key, (map.get(key) ?? 0) + (holding.valueApp ?? 0))
     })
+    // Fold uninvested cash into the mix so the donut reflects total assets, like a
+    // broker app. Per-account cash merges into its account slice; otherwise it is a
+    // single "Cash" slice. Negative or unconvertible balances are omitted.
+    portfolio.cashBalances.forEach(balance => {
+      if (balance.amountApp === undefined || balance.amountApp <= 0) return
+      const key = mode === 'account' ? balance.accountName : 'Cash'
+      map.set(key, (map.get(key) ?? 0) + balance.amountApp)
+    })
     return [...map].sort((a, b) => b[1] - a[1])
-  }, [portfolio.holdings, mode])
+  }, [portfolio.holdings, portfolio.cashBalances, mode])
   const total = groups.reduce((sum, [, value]) => sum + value, 0)
   const colors = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#64748b']
   let cursor = 0
@@ -605,9 +691,9 @@ const AllocationChart = ({ portfolio, masked, selected, onSelect }: { portfolio:
   ]
   const filterMode: AllocationMode = mode === 'instrument' ? 'asset' : mode
   return (
-    <section aria-labelledby="allocation-title" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
+    <section aria-labelledby="allocation-title" className="app-panel flex flex-col rounded-2xl border border-border/60 bg-card/92 p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0"><h2 id="allocation-title" className="text-base font-bold text-foreground">Allocation</h2><p className="mt-1 text-xs text-muted-foreground">Select a segment to highlight matching holdings.</p></div>
+        <div className="min-w-0"><h2 id="allocation-title" className="text-base font-bold text-foreground">Allocation</h2><p className="mt-1 text-xs text-muted-foreground">Total assets by segment, including cash. Select a segment to highlight matching holdings.</p></div>
         <div className="w-full shrink-0 sm:w-auto">
           <CustomSelect
             value={mode}
@@ -619,22 +705,23 @@ const AllocationChart = ({ portfolio, masked, selected, onSelect }: { portfolio:
           />
         </div>
       </div>
-      <div className="mt-5 flex flex-col items-center gap-5 sm:flex-row">
+      <div className="mt-5 flex flex-1 flex-col items-center justify-center gap-6 sm:flex-row lg:flex-col lg:justify-start">
         <div
           role="img"
           aria-label={groups.map(([name, value]) => `${name} ${total ? (value / total * 100).toFixed(1) : 0}%`).join(', ') || 'No valued holdings'}
-          className={`relative size-32 shrink-0 rounded-full ${masked ? 'blur-md' : ''}`}
+          className={`relative size-36 shrink-0 rounded-full lg:size-44 ${masked ? 'blur-md' : ''}`}
           style={{ background: groups.length ? `conic-gradient(${stops})` : 'var(--muted)' }}
         >
-          <div className="absolute inset-7 rounded-full bg-card" />
+          <div className="absolute inset-8 rounded-full bg-card lg:inset-10" />
         </div>
-        <div className="min-w-0 flex-1 space-y-2">
+        <div className="min-w-0 w-full flex-1 space-y-2 lg:flex-none">
           {groups.map(([name, value], index) => (
             <button
               key={name}
               type="button"
               onClick={() => {
                 const symbol = mode === 'instrument' ? name.split(' · ')[0] : name
+                if (symbol === 'Cash' && mode !== 'account') { onSelect(null); return }
                 const fMode = mode === 'instrument' ? 'asset' : mode
                 onSelect(selected?.mode === fMode && selected.key === symbol ? null : { mode: fMode, key: symbol })
               }}
@@ -973,6 +1060,39 @@ const ManualPriceForm = ({ portfolio, busy, onCancel, onSave }: { portfolio: Inv
     </div>
     <p className="text-[10px] text-muted-foreground">A manual value takes precedence over provider data for the same date. Deleting it restores the cached provider close.</p>
     <FormActions busy={busy} onCancel={onCancel} submitLabel="Save price" disabled={!instrumentId} />
+  </form>
+}
+
+const CashForm = ({ portfolio, busy, onCancel, onSave, onNeedAccount }: {
+  portfolio: InvestmentPortfolio | null
+  busy: boolean
+  onCancel: () => void
+  onSave: (value: { accountId: string; currency: string; type: 'Deposit' | 'Withdrawal'; amount: number; date: string; notes?: string }) => Promise<boolean>
+  onNeedAccount: () => void
+}) => {
+  const accounts = portfolio?.accounts.filter(value => !value.isArchived) ?? []
+  const [accountId, setAccountId] = useState(accounts[0]?.id ?? '')
+  const [type, setType] = useState<'Deposit' | 'Withdrawal'>('Deposit')
+  const [currency, setCurrency] = useState(accounts[0]?.baseCurrency ?? portfolio?.appCurrency ?? 'USD')
+  const [amount, setAmount] = useState('')
+  const [date, setDate] = useState(today())
+  const [notes, setNotes] = useState('')
+  if (!accounts.length) return <div><p className="text-sm text-muted-foreground">Add an investment account before recording cash.</p><div className="mt-4"><Button onClick={onNeedAccount}>Add account</Button></div></div>
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault()
+    void onSave({ accountId, currency: currency.toUpperCase(), type, amount: Number(amount || 0), date, notes: notes.trim() || undefined })
+  }
+  return <form onSubmit={submit} className="space-y-4">
+    <div className="grid gap-4 sm:grid-cols-2">
+      <div className={labelClass}>Account<CustomSelect value={accountId} onChange={v => { const id = v as string; setAccountId(id); const next = accounts.find(value => value.id === id); if (next) setCurrency(next.baseCurrency) }} options={accounts.map(a => ({ value: a.id, label: a.name }))} ariaLabel="Account" className="mt-1.5 w-full" /></div>
+      <div className={labelClass}>Type<CustomSelect value={type} onChange={v => setType(v as 'Deposit' | 'Withdrawal')} options={[{ value: 'Deposit', label: 'Deposit (cash in)' }, { value: 'Withdrawal', label: 'Withdrawal (cash out)' }]} ariaLabel="Cash movement type" className="mt-1.5 w-full" /></div>
+      <label className={labelClass}>Amount ({currency})<input required type="number" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => setAmount(event.target.value)} className={inputClass} /></label>
+      <label className={labelClass}>Currency<input required pattern="[A-Za-z]{3}" maxLength={3} value={currency} onChange={event => setCurrency(event.target.value.toUpperCase())} className={inputClass} /></label>
+      <div className={labelClass}>Date<DatePicker value={date} onChange={setDate} max={today()} className="mt-1.5 w-full" /></div>
+      <label className={`${labelClass} sm:col-span-2`}>Notes<input maxLength={1000} value={notes} onChange={event => setNotes(event.target.value)} className={inputClass} /></label>
+    </div>
+    <p className="text-[10px] text-muted-foreground">Record cash you moved into or out of the broker account itself — not a stock purchase. Buys, sells, dividends, and fees adjust cash automatically.</p>
+    <FormActions busy={busy} onCancel={onCancel} submitLabel={type === 'Withdrawal' ? 'Record withdrawal' : 'Record deposit'} disabled={!accountId} />
   </form>
 }
 

@@ -124,20 +124,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <button
         type="button"
         onClick={() => onNavigate('investments')}
-        className="interactive-card app-panel flex w-full items-center justify-between gap-4 rounded-2xl border border-violet-500/20 bg-violet-500/5 p-5 text-left"
+        className="interactive-card app-panel flex w-full flex-col gap-3 rounded-2xl border border-violet-500/20 bg-violet-500/5 p-5 text-left sm:flex-row sm:items-center sm:justify-between sm:gap-4"
       >
-        <span className="flex items-center gap-3">
+        <span className="flex min-w-0 items-center gap-3">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/12 text-violet-500">
             <TrendingUp className="size-5" />
           </span>
-          <span>
+          <span className="min-w-0">
             <strong className="block text-sm text-foreground">Growth Investments</strong>
             <span className="mt-1 block text-xs text-muted-foreground">Track broker accounts and market performance.</span>
           </span>
         </span>
-        <span className="shrink-0 text-right">
+        <span className="min-w-0 sm:shrink-0 sm:text-right">
           <span className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Growth ledger balance</span>
-          <span className="mt-1 block text-lg font-black text-foreground">
+          <span className="mt-1 block break-words text-lg font-black text-foreground">
             {view.formatSensitive(dashboardData?.categories?.find(category => category.name === 'Growth')?.remaining ?? 0)}
           </span>
         </span>

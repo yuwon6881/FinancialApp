@@ -70,6 +70,26 @@ export interface InvestmentHolding {
   fxIncomplete: boolean
 }
 
+export type InvestmentCashFlowType = 'Deposit' | 'Withdrawal'
+
+export interface InvestmentCashBalance {
+  accountId: string
+  accountName: string
+  currency: string
+  amount: number
+  amountApp?: number
+}
+
+export interface InvestmentCashFlow {
+  id: string
+  accountId: string
+  currency: string
+  type: InvestmentCashFlowType
+  amount: number
+  date: string
+  notes?: string
+}
+
 export interface InvestmentPortfolio {
   appCurrency: string
   summary: {
@@ -81,6 +101,8 @@ export interface InvestmentPortfolio {
     realisedProfitLoss?: number
     netDividends?: number
     dailyChange?: number
+    cashValue?: number
+    totalValue?: number
   }
   accounts: InvestmentAccount[]
   instruments: InvestmentInstrument[]
@@ -88,6 +110,8 @@ export interface InvestmentPortfolio {
   activity: InvestmentActivity[]
   manualPrices: Array<{ id: string; instrumentId: string; marketDate: string; price: number; fxRate?: number }>
   chart: Array<{ date: string; marketValue?: number; costBasis?: number; netContributions?: number }>
+  cashBalances: InvestmentCashBalance[]
+  cashFlows: InvestmentCashFlow[]
   insights: string[]
   warnings: string[]
   pricesUpdatedAt?: string
