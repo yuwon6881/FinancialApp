@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "entry": ["scripts/generate-icons.mjs"],
+  "entry": ["scripts/generate-icons.mjs", "src/sw.ts"],
   "project": ["src/**/*.{ts,tsx}"],
   "ignoreDependencies": ["@capacitor/android", "@capacitor/cli", "shadcn", "tailwindcss", "@fontsource-variable/inter"]
 }
