@@ -31,7 +31,8 @@ vi.mock('@/lib/api', async () => {
     }),
     selectPeriod: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn().mockResolvedValue({ success: true }),
-    pingServer: vi.fn().mockResolvedValue({ status: 'healthy' })
+    pingServer: vi.fn().mockResolvedValue({ status: 'healthy' }),
+    updateHideSensitive: vi.fn().mockResolvedValue(undefined)
   }
 })
 
@@ -229,6 +230,36 @@ describe('App behaviors', () => {
       expect(screen.queryByText(/Checking privacy settings/)).toBeNull()
       expect(screen.getByRole('main').getAttribute('aria-busy')).toBe('false')
     })
+  })
+
+  it('preserves a queued sensitive-off choice when startup fetch returns the older server value', async () => {
+    localStorage.setItem('auth_session', '1')
+    localStorage.setItem('auth_username', 'alice')
+    localStorage.setItem('cached_dashboard_data', JSON.stringify({
+      setting: { selectedMonth: 'Jun', selectedYear: 2026, cycleDay: 28, currency: 'USD', hideSensitive: true, darkMode: false },
+      stats: { pastThreeMonthsRewardsAverage: 120, hasRewardsHistory: true },
+      categories: [],
+      pendingNotifications: []
+    }))
+    localStorage.setItem('pending_operations', JSON.stringify([{
+      id: 'privacy-off',
+      entity: 'settings',
+      type: 'update',
+      targetId: 'hideSensitive',
+      payload: { hideSensitive: false },
+      createdAt: Date.now(),
+      retryCount: 0
+    }]))
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dashboard-view')).toBeDefined()
+      expect(screen.queryByText(/Checking privacy settings/)).toBeNull()
+      expect(localStorage.getItem('hide_sensitive:alice')).toBe('false')
+    }, { timeout: 20000 })
+    expect(api.updateHideSensitive).toHaveBeenCalledWith(false)
+    expect(JSON.parse(localStorage.getItem('cached_dashboard_data') || '{}').setting.hideSensitive).toBe(false)
   })
 
   it('keeps Today on the current cycle after Reports selects a historical cycle', async () => {

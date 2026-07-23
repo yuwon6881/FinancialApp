@@ -48,6 +48,30 @@ export interface QueuedOp {
   lastError?: string
 }
 
+/**
+ * A queued privacy preference is the user's newest choice and must win over a
+ * dashboard response that may have started before that write reached the
+ * server. This is especially important during PWA startup, where the dashboard
+ * refresh and outbox replay run concurrently.
+ */
+export function projectHideSensitivePreference(serverValue: boolean, ops: ReadonlyArray<QueuedOp>): boolean {
+  const latestPreferenceOp = ops.reduce<QueuedOp | undefined>((latest, op) => {
+    if (
+      op.entity !== 'settings'
+      || op.type !== 'update'
+      || op.targetId !== 'hideSensitive'
+      || typeof op.payload?.hideSensitive !== 'boolean'
+    ) {
+      return latest
+    }
+    return !latest || op.createdAt >= latest.createdAt ? op : latest
+  }, undefined)
+
+  return typeof latestPreferenceOp?.payload?.hideSensitive === 'boolean'
+    ? latestPreferenceOp.payload.hideSensitive
+    : serverValue
+}
+
 type ToastTone = 'info' | 'success' | 'warning' | 'error'
 
 export interface ToastCopy {

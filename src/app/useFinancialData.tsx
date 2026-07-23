@@ -7,7 +7,7 @@ import { useOptimisticList } from '../lib/useOptimisticList'
 import { computeOptimisticDashboard } from '../lib/optimisticDashboard'
 import { useOutbox } from '../lib/useOutbox'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from '../lib/modalDrafts'
-import { createFinalId, createLocalWishlistId, sanitizeQueuedOps, type OutboxPayload } from '../lib/outbox'
+import { createFinalId, createLocalWishlistId, projectHideSensitivePreference, sanitizeQueuedOps, type OutboxPayload } from '../lib/outbox'
 import { triggerHaptic } from '../lib/haptics'
 import { getErrorMessage, getErrorName } from '../lib/errors'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
@@ -235,8 +235,16 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         setWalletBalance(wallet)
         setCachedJSON(CACHE_KEYS.walletBalance, wallet)
       }
+      const effectiveHideSensitive = projectHideSensitivePreference(
+        dbData.setting.hideSensitive ?? true,
+        activeOps,
+      )
       const mergedDashboard: DashboardData = {
         ...dbData,
+        setting: {
+          ...dbData.setting,
+          hideSensitive: effectiveHideSensitive,
+        },
         last3CategoryBreakdown: insights.last3CategoryBreakdown,
         last6CategoryBreakdown: insights.last6CategoryBreakdown,
         yearlyCategoryBreakdown: insights.yearlyCategoryBreakdown,
@@ -282,8 +290,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         setDarkMode(osDark)
       }
 
-      const serverHideSensitive = dbData.setting.hideSensitive ?? true
-      resolveHideSensitive(serverHideSensitive)
+      resolveHideSensitive(effectiveHideSensitive)
 
       if (dbData.pendingNotifications && dbData.pendingNotifications.length > 0 && !hasShownModalThisSession) {
         if (notifyOnLogin) {
@@ -320,7 +327,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         setIsBackgroundSyncing(false)
       }
     }
-  }, [token, lastUnlockedTimeRef, handleLogout, markSessionLocked, setDarkMode, resolveHideSensitive, markSensitivePreferenceUnavailable, notifyOnLogin, hasShownModalThisSession, setShowLoginModal, loadAllAbortRef, setSelectedMonth, setSelectedYear])
+  }, [token, lastUnlockedTimeRef, handleLogout, markSessionLocked, setDarkMode, resolveHideSensitive, markSensitivePreferenceUnavailable, notifyOnLogin, hasShownModalThisSession, setShowLoginModal, loadAllAbortRef, setSelectedMonth, setSelectedYear, activeOps])
 
   // Backup outbox/drafts on logout
   const handleLogoutCleanup = useCallback(async (currentOwner: string, createBackup = true) => {
@@ -593,6 +600,18 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   }
 
   const handleUpdateHideSensitivePreference = (value: boolean) => {
+    setDashboardData(previous => {
+      if (!previous) return previous
+      const next = {
+        ...previous,
+        setting: {
+          ...previous.setting,
+          hideSensitive: value,
+        },
+      }
+      setCachedJSON(CACHE_KEYS.dashboardData, next)
+      return next
+    })
     mutateQueue(prev => enqueue(prev, 'settings', 'update', 'hideSensitive', { hideSensitive: value }))
   }
 
