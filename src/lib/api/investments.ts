@@ -122,6 +122,14 @@ export function archiveInvestmentAccount(id: string): Promise<void> {
   })
 }
 
+export function unarchiveInvestmentAccount(id: string, name: string, baseCurrency: string): Promise<void> {
+  return requestVoid(`/investments/accounts/${id}`, {
+    method: 'PUT',
+    ...jsonBody({ name, baseCurrency, isArchived: false }),
+    errorMessage: 'Could not unarchive account',
+  })
+}
+
 export function deleteInvestmentAccount(id: string): Promise<void> {
   return requestVoid(`/investments/accounts/${id}`, {
     method: 'DELETE',

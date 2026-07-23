@@ -823,3 +823,16 @@ tr.ledger-transaction-highlight > td:last-child {
         background-color: transparent !important;
     }
 }
+
+/* ── Global pointer cursor ──────────────────────────────────────────────────
+   All buttons and links should show a hand cursor for clear affordance.
+   The Button component already sets cursor-pointer via Tailwind, but plain
+   <button> elements elsewhere in the app were missing it.              */
+button:not([disabled]),
+a[href],
+[role="button"] {
+    cursor: pointer;
+}
+button[disabled] {
+    cursor: not-allowed;
+}
