@@ -353,10 +353,12 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   />
                 </div>
                 {props.pushGuidance && (
-                  <p className="text-[10px] font-semibold text-amber-500 flex items-center gap-1">
-                    <AlertCircle className="size-3 shrink-0" />
-                    {props.pushGuidance}
-                  </p>
+                  <div className="mt-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-2 text-amber-500 dark:text-amber-400">
+                    <AlertCircle className="size-4 text-amber-500 shrink-0 mt-0.5" />
+                    <p className="text-xs font-medium leading-relaxed flex-1">
+                      {props.pushGuidance}
+                    </p>
+                  </div>
                 )}
               </div>
               <div className="flex items-center justify-between text-sm py-1">

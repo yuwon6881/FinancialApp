@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Calendar, CreditCard, Edit, Repeat, Trash2, Zap } from 'lucide-react'
+import { Calendar, CreditCard, Edit, FastForward, Repeat, Trash2 } from 'lucide-react'
 import type { RecurringPayment, RecurringReminderSettings } from '../../types'
 import { listContainerVariants, listItemVariants, listItemExit } from '../../lib/animations'
 import { isEligibleForPayEarly, normalizeRecurringFrequency } from '../../lib/recurringPayments'
@@ -77,7 +77,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
     <motion.div
       initial="hidden" animate="show"
       variants={listContainerVariants}
-      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start"
     >
       <AnimatePresence>
       {payments.map(rp => {
@@ -163,6 +163,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
               payment={rp}
               globalPushEnabled={globalPushEnabled}
               disabled={isBusy || hideSensitive}
+              isSyncing={isPaymentSyncing(rp.id)}
               onUpdateReminder={onUpdateReminder}
             />
 
@@ -174,7 +175,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                   disabled={isBusy || hideSensitive}
                   title={hideSensitive ? 'Unhide balances to pay early' : 'Pay this subscription now'}
                 >
-                  <Zap className="size-3.5" /> Pay Early
+                  <FastForward className="size-3.5" /> Pay Early
                 </Button>
               ) : <span />}
               <div className="flex items-center gap-2">

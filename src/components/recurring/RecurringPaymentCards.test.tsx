@@ -50,10 +50,12 @@ describe('RecurringPaymentCards reminder controls', () => {
     expect(screen.queryByRole('radiogroup', { name: 'Reminder frequency for Netflix' })).toBeNull()
   })
 
-  it('enables the reminder with default Once/3-day settings when the toggle is clicked', () => {
+  it('enables the reminder with default Once/3-day settings when saved', () => {
     const onUpdateReminder = vi.fn()
     renderCards([basePayment], { onUpdateReminder })
     fireEvent.click(screen.getByRole('switch', { name: 'Turn on payment reminder for Netflix' }))
+    expect(screen.getByRole('button', { name: 'Save Reminder' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Save Reminder' }))
     expect(onUpdateReminder).toHaveBeenCalledWith('rp-1', { enabled: true, mode: 'Once', leadDays: 3 })
   })
 
@@ -67,21 +69,23 @@ describe('RecurringPaymentCards reminder controls', () => {
     expect(screen.getByText("One reminder 7 days before it's due.")).toBeTruthy()
   })
 
-  it('switches to Daily mode while preserving the current lead days', () => {
+  it('switches to Daily mode while preserving the current lead days on save', () => {
     const onUpdateReminder = vi.fn()
     const configured: RecurringPayment = { ...basePayment, reminderEnabled: true, reminderMode: 'Once', reminderLeadDays: 2 }
     renderCards([configured], { onUpdateReminder })
 
     fireEvent.click(screen.getByRole('radio', { name: 'Daily' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save Reminder' }))
     expect(onUpdateReminder).toHaveBeenCalledWith('rp-1', { enabled: true, mode: 'Daily', leadDays: 2 })
   })
 
-  it('changes the lead time when a different chip is clicked', () => {
+  it('changes the lead time when a different chip is clicked and saved', () => {
     const onUpdateReminder = vi.fn()
     const configured: RecurringPayment = { ...basePayment, reminderEnabled: true, reminderMode: 'Once', reminderLeadDays: 3 }
     renderCards([configured], { onUpdateReminder })
 
     fireEvent.click(screen.getByRole('radio', { name: '1d' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save Reminder' }))
     expect(onUpdateReminder).toHaveBeenCalledWith('rp-1', { enabled: true, mode: 'Once', leadDays: 1 })
   })
 

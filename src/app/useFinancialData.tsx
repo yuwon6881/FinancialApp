@@ -875,20 +875,22 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     })
   }
 
-  // Direct (non-outbox) server call: reminder settings are a lightweight per-subscription
-  // preference, not a ledger-affecting mutation, so it's applied optimistically and rolled
-  // back on failure rather than routed through the offline outbox.
-  const handleUpdateReminder = (id: string, settings: RecurringReminderSettings) => {
+  const handleUpdateReminder = async (id: string, settings: RecurringReminderSettings) => {
     if (!guardSensitive()) return
+    setActiveSyncId(id)
     const previous = recurringPayments.find(p => p.id === id)
     setRecurringPayments(prev => prev.map(p => p.id === id
       ? { ...p, reminderEnabled: settings.enabled, reminderMode: settings.mode, reminderLeadDays: settings.leadDays }
       : p
     ))
-    void api.updateRecurringPaymentReminder(id, settings).catch((err: unknown) => {
+    try {
+      await api.updateRecurringPaymentReminder(id, settings)
+    } catch (err: unknown) {
       setRecurringPayments(prev => prev.map(p => p.id === id && previous ? previous : p))
       showToast(getErrorMessage(err, 'Could not update the payment reminder.'), 'Reminder Update Failed', 'error')
-    })
+    } finally {
+      setActiveSyncId(null)
+    }
   }
 
   const handlePayEarly = async (id: string) => {
