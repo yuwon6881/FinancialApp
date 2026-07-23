@@ -1,5 +1,5 @@
 import React from 'react'
-import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Bell, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap, Moon, Sun, Eye, EyeOff, HardDrive } from 'lucide-react'
+import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Bell, BellRing, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap, Moon, Sun, Eye, EyeOff, HardDrive } from 'lucide-react'
 import { motion } from 'framer-motion'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
@@ -9,6 +9,7 @@ import { PerimeterBeam } from './ui/PerimeterBeam'
 import type { CategoryCleanupSuggestion } from '../lib/api'
 import type { ToastTone } from './ui/ToastViewport'
 import { ToggleButton } from './ui/ToggleButton'
+import { NOTIFY_ON_LOGIN_DESCRIPTION, PUSH_DESCRIPTION } from '../lib/push/messages'
 const TwoFactorSection = React.lazy(() => import('./TwoFactorSection').then(m => ({ default: m.TwoFactorSection })))
 const ChangePasswordSection = React.lazy(() => import('./ChangePasswordSection').then(m => ({ default: m.ChangePasswordSection })))
 import { CollapsibleBody } from './ui/CollapsibleBody'
@@ -47,6 +48,11 @@ interface SettingsViewProps {
   onToast?: (message: string, title?: string, tone?: ToastTone) => void
   onNavigateToLedger?: (options: any) => void
   onClearLocalFinancialData?: () => void
+  pushEnabled?: boolean
+  pushSupported?: boolean
+  pushBusy?: boolean
+  pushGuidance?: string | null
+  onTogglePushEnabled?: (checked: boolean) => void
 }
 
 const getDayWithSuffix = (day: number) => {
@@ -320,12 +326,38 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                 </div>
                 <ToggleButton active={hideSensitive} onClick={props.onToggleHideSensitive || (() => {})} label="Sensitive mode" />
               </div>
-              <div className="flex items-center justify-between text-sm py-1 border-b border-border/20 md:border-b-0">
+              <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
                 <div className="flex items-center gap-2">
-                  <Bell className="size-4 text-muted-foreground" />
-                  <span className="font-medium text-foreground">Notify Bills</span>
+                  <Bell className="size-4 text-muted-foreground shrink-0" />
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-medium text-foreground">Notify Bills</span>
+                    <span className="text-[10px] text-muted-foreground">{NOTIFY_ON_LOGIN_DESCRIPTION}</span>
+                  </div>
                 </div>
                 <ToggleButton active={props.notifyOnLoginEnabled || false} onClick={() => props.onToggleNotifyOnLogin?.(!props.notifyOnLoginEnabled)} label="Notify Bills" />
+              </div>
+              <div className="py-1 border-b border-border/20 md:border-b-0 space-y-1.5">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <BellRing className="size-4 text-muted-foreground shrink-0" />
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-medium text-foreground">Push Payment Reminders</span>
+                      <span className="text-[10px] text-muted-foreground">{PUSH_DESCRIPTION}</span>
+                    </div>
+                  </div>
+                  <ToggleButton
+                    active={props.pushEnabled || false}
+                    onClick={() => props.onTogglePushEnabled?.(!props.pushEnabled)}
+                    label="Push Payment Reminders"
+                    disabled={props.pushBusy || props.pushSupported === false}
+                  />
+                </div>
+                {props.pushGuidance && (
+                  <p className="text-[10px] font-semibold text-amber-500 flex items-center gap-1">
+                    <AlertCircle className="size-3 shrink-0" />
+                    {props.pushGuidance}
+                  </p>
+                )}
               </div>
               <div className="flex items-center justify-between text-sm py-1">
                 <div className="flex items-center gap-2">

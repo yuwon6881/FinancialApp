@@ -1,14 +1,15 @@
 import React, { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Bell, Calendar, CreditCard, Edit, Repeat, Trash2 } from 'lucide-react'
-import type { RecurringPayment } from '../../types'
+import { Calendar, CreditCard, Edit, Repeat, Trash2, Zap } from 'lucide-react'
+import type { RecurringPayment, RecurringReminderSettings } from '../../types'
 import { listContainerVariants, listItemVariants, listItemExit } from '../../lib/animations'
-import { normalizeRecurringFrequency } from '../../lib/recurringPayments'
+import { isEligibleForPayEarly, normalizeRecurringFrequency } from '../../lib/recurringPayments'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
 import { Button } from '../ui/Button'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
 import { ToggleButton } from '../ui/ToggleButton'
 import { getDayWithSuffix } from './formatters'
+import { ReminderControls } from './ReminderControls'
 
 interface RecurringPaymentCardsProps {
   payments: RecurringPayment[]
@@ -22,6 +23,9 @@ interface RecurringPaymentCardsProps {
   onEditPayment: (payment: RecurringPayment) => void
   highlightedId?: string | null
   onClearHighlight?: () => void
+  globalPushEnabled: boolean
+  onUpdateReminder?: (id: string, settings: RecurringReminderSettings) => void
+  onRequestPayEarly?: (id: string) => void
 }
 
 const HIGHLIGHT_CLASSES = ['ring-2', 'ring-blue-500/60', 'ring-offset-2', 'ring-offset-background', 'bg-blue-500/[0.06]', 'shadow-lg']
@@ -39,6 +43,9 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
   onEditPayment,
   highlightedId = null,
   onClearHighlight,
+  globalPushEnabled,
+  onUpdateReminder,
+  onRequestPayEarly,
 }) => {
   // When navigated here from the dashboard subscription card, scroll the target
   // card into view and apply a highlight ring that fades out on its own.
@@ -152,10 +159,24 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
               </div>
             </div>
 
-            <div className="mt-6 flex items-center justify-between border-t border-border/30 pt-4 gap-2">
-              <span className="text-[10px] text-muted-foreground flex items-center gap-1 shrink-0">
-                <Bell className="size-3 text-blue-500" /> Auto-notify
-              </span>
+            <ReminderControls
+              payment={rp}
+              globalPushEnabled={globalPushEnabled}
+              disabled={isBusy || hideSensitive}
+              onUpdateReminder={onUpdateReminder}
+            />
+
+            <div className="mt-4 flex items-center justify-between border-t border-border/30 pt-4 gap-2">
+              {isEligibleForPayEarly(rp) ? (
+                <Button
+                  variant="ghost"
+                  onClick={() => onRequestPayEarly?.(rp.id)}
+                  disabled={isBusy || hideSensitive}
+                  title={hideSensitive ? 'Unhide balances to pay early' : 'Pay this subscription now'}
+                >
+                  <Zap className="size-3.5" /> Pay Early
+                </Button>
+              ) : <span />}
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"

@@ -1,5 +1,91 @@
-import type { RecurringFrequency } from '../types'
+import type { RecurringFrequency, RecurringPayment, RecurringReminderMode, RecurringReminderSettings } from '../types'
+import { RECURRING_PAUSED_LABEL } from './push/messages'
 
 export function normalizeRecurringFrequency(value: unknown): RecurringFrequency {
   return value === 'Annually' ? 'Annually' : 'Monthly'
+}
+
+// Default reminder configuration for a subscription that has never had one saved --
+// new and previously-migrated recurring payments start disabled (opt-in only).
+export const DEFAULT_REMINDER_SETTINGS: RecurringReminderSettings = {
+  enabled: false,
+  mode: 'Once',
+  leadDays: 3,
+}
+
+export const REMINDER_LEAD_DAY_OPTIONS: readonly number[] = [7, 3, 2, 1]
+
+function parseDateOnly(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number)
+  return new Date(year, (month || 1) - 1, day || 1)
+}
+
+function formatDateOnly(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// Advances a recurring payment's due date by one cycle (Monthly/Annually), clamping to the
+// last valid day of the resulting month so e.g. Jan 31 -> Feb 28/29 rather than overflowing
+// into March.
+export function computeNextOccurrenceDate(payment: Pick<RecurringPayment, 'nextDueDate' | 'frequency'>): string {
+  const current = parseDateOnly(payment.nextDueDate)
+  const day = current.getDate()
+  const monthsToAdd = payment.frequency === 'Annually' ? 12 : 1
+  const targetMonthIndex = current.getMonth() + monthsToAdd
+  const targetYear = current.getFullYear() + Math.floor(targetMonthIndex / 12)
+  const targetMonth = ((targetMonthIndex % 12) + 12) % 12
+  const lastDayOfTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate()
+  const clampedDay = Math.min(day, lastDayOfTargetMonth)
+  return formatDateOnly(new Date(targetYear, targetMonth, clampedDay))
+}
+
+// "Pay Early" is only offered for an active subscription whose next due date is strictly in
+// the future -- due-today/overdue subscriptions keep the normal pay flow unchanged.
+export function isEligibleForPayEarly(payment: Pick<RecurringPayment, 'active' | 'nextDueDate'>, today: Date = new Date()): boolean {
+  if (!payment.active) return false
+  const dueDate = parseDateOnly(payment.nextDueDate)
+  const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  return dueDate.getTime() > todayDateOnly.getTime()
+}
+
+export function getEffectiveReminderSettings(
+  payment: Pick<RecurringPayment, 'reminderEnabled' | 'reminderMode' | 'reminderLeadDays'>
+): RecurringReminderSettings {
+  return {
+    enabled: payment.reminderEnabled ?? DEFAULT_REMINDER_SETTINGS.enabled,
+    mode: payment.reminderMode ?? DEFAULT_REMINDER_SETTINGS.mode,
+    leadDays: payment.reminderLeadDays ?? DEFAULT_REMINDER_SETTINGS.leadDays,
+  }
+}
+
+export type ReminderEffectiveState = 'off' | 'paused' | 'active'
+
+// The reminder's effective state folds in the *global* Push Payment Reminders toggle: a
+// per-subscription reminder that is configured "on" is only ever actually sent while the
+// global feature is enabled, so the card must visually distinguish "off" from "paused".
+export function getReminderEffectiveState(
+  payment: Pick<RecurringPayment, 'reminderEnabled' | 'reminderMode' | 'reminderLeadDays'>,
+  globalPushEnabled: boolean
+): ReminderEffectiveState {
+  const settings = getEffectiveReminderSettings(payment)
+  if (!settings.enabled) return 'off'
+  return globalPushEnabled ? 'active' : 'paused'
+}
+
+function formatLeadDaysLabel(leadDays: number): string {
+  return `${leadDays} day${leadDays === 1 ? '' : 's'}`
+}
+
+// Exact human-readable preview of when a reminder will fire, shown live in the card editor.
+export function buildReminderPreview(mode: RecurringReminderMode, leadDays: number): string {
+  return mode === 'Daily'
+    ? `Daily reminders from ${formatLeadDaysLabel(leadDays)} before until it's due.`
+    : `One reminder ${formatLeadDaysLabel(leadDays)} before it's due.`
+}
+
+export function getRecurringPausedLabel(): string {
+  return RECURRING_PAUSED_LABEL
 }

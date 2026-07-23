@@ -8,6 +8,7 @@ import {
   prefetchFingerprintAssertOptions,
 } from '../lib/fingerprintOptionsCache'
 import { useAutoLock } from '../lib/useAutoLock'
+import { getExistingDeviceId } from '../lib/push/deviceId'
 
 export interface UseAppSessionOptions {
   onLogoutBackupAndCleanup: (username: string) => void | Promise<void>
@@ -163,6 +164,14 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
   async function handleLogout() {
     const currentOwner = usernameRef.current
     onPreferenceOwnerChange(null)
+    const pushDeviceId = getExistingDeviceId()
+    if (pushDeviceId) {
+      try {
+        await api.deletePushSubscription(pushDeviceId)
+      } catch (error) {
+        console.error('Could not unregister push notifications for this device; continuing sign-out.', error)
+      }
+    }
     try {
       await onLogoutBackupAndCleanup(currentOwner)
     } catch (error) {

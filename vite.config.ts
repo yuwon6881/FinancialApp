@@ -25,7 +25,13 @@ function cspMetaPlugin(apiUrl: string | undefined): Plugin {
       try {
         if (apiUrl && /^https?:\/\//i.test(apiUrl)) apiOrigin = new URL(apiUrl).origin
       } catch { /* malformed VITE_API_URL -> treat API as same-origin */ }
-      const connectSrc = ["'self'", apiOrigin].filter(Boolean).join(' ')
+      const connectSrc = [
+        "'self'",
+        apiOrigin,
+        'https://firebaseinstallations.googleapis.com',
+        'https://fcmregistrations.googleapis.com',
+        'https://fcm.googleapis.com',
+      ].filter(Boolean).join(' ')
       const csp = [
         "default-src 'self'",
         "script-src 'self'",
@@ -62,6 +68,9 @@ export default defineConfig(({ mode }) => {
     tailwindcss(), 
     cspMetaPlugin(env.VITE_API_URL),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
@@ -109,7 +118,7 @@ export default defineConfig(({ mode }) => {
           }
         ]
       },
-      workbox: {
+      injectManifest: {
         // Precache only the latin Inter subsets for offline first paint; the other
         // unicode-range subsets are never requested for this app's English UI.
         globPatterns: ['**/*.{js,css,html,ico,png,svg}', '**/inter-latin*.woff2']
@@ -176,6 +185,11 @@ export default defineConfig(({ mode }) => {
           // than the app shell and is large enough to benefit from a parallel,
           // independently cached chunk.
           if (id.includes('/src/lib/outboxSync') || id.includes('\\src\\lib\\outboxSync')) return 'sync-engine'
+          // Web-push support is used only after authentication and changes independently of
+          // the app shell. Keep the orchestration helpers in their own cacheable chunk; the
+          // much larger Firebase SDK is additionally loaded on demand by firebaseMessaging.
+          if (id.includes('/src/lib/push/') || id.includes('\\src\\lib\\push\\') ||
+              id.includes('/src/app/usePushNotifications') || id.includes('\\src\\app\\usePushNotifications')) return 'push-client'
           // DatePicker is shared between the eager app shell (TopNav bell) and
           // several lazy views; keep it in its own parallel-loaded chunk instead
           // of pinning it into the main bundle (mirrors CustomSelect/SearchableSelect).

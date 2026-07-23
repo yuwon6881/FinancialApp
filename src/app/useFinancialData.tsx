@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import * as api from '../lib/api'
-import type { Transaction, RecurringPayment, TransactionCategory, WishlistItem, DashboardData, AutocompleteSuggestion, PendingNotification } from '../types'
+import type { Transaction, RecurringPayment, RecurringReminderSettings, TransactionCategory, WishlistItem, DashboardData, AutocompleteSuggestion, PendingNotification } from '../types'
 import { CACHE_KEYS, getCachedJSON, getCachedTransactions, getCachedWishlist, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod, setCachedCycleSnapshot } from '../lib/cache'
+import { computeNextOccurrenceDate } from '../lib/recurringPayments'
 import { useOptimisticList } from '../lib/useOptimisticList'
 import { computeOptimisticDashboard } from '../lib/optimisticDashboard'
 import { useOutbox } from '../lib/useOutbox'
@@ -819,7 +820,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       amount: -Math.abs(noti.amount),
       category: noti.category,
       ledgerCategory: noti.ledgerCategory,
-      recurringPaymentId: noti.recurringPaymentId
+      recurringPaymentId: noti.recurringPaymentId,
+      recurringOccurrenceDate: noti.billingDate
     }))
   }
 
@@ -833,7 +835,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       amount: 0,
       category: noti.category,
       ledgerCategory: 'Discarded',
-      recurringPaymentId: noti.recurringPaymentId
+      recurringPaymentId: noti.recurringPaymentId,
+      recurringOccurrenceDate: noti.billingDate
     }))
   }
 
@@ -869,6 +872,59 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       message: `Delete "${payment?.name || 'this recurring subscription'}"? This will cancel all future notifications for this subscription.`,
       confirmText: 'Delete',
       onConfirm: () => { handleDeletePayment(id) }
+    })
+  }
+
+  // Direct (non-outbox) server call: reminder settings are a lightweight per-subscription
+  // preference, not a ledger-affecting mutation, so it's applied optimistically and rolled
+  // back on failure rather than routed through the offline outbox.
+  const handleUpdateReminder = (id: string, settings: RecurringReminderSettings) => {
+    if (!guardSensitive()) return
+    const previous = recurringPayments.find(p => p.id === id)
+    setRecurringPayments(prev => prev.map(p => p.id === id
+      ? { ...p, reminderEnabled: settings.enabled, reminderMode: settings.mode, reminderLeadDays: settings.leadDays }
+      : p
+    ))
+    void api.updateRecurringPaymentReminder(id, settings).catch((err: unknown) => {
+      setRecurringPayments(prev => prev.map(p => p.id === id && previous ? previous : p))
+      showToast(getErrorMessage(err, 'Could not update the payment reminder.'), 'Reminder Update Failed', 'error')
+    })
+  }
+
+  const handlePayEarly = async (id: string) => {
+    const payment = allRecurringPayments.find(p => p.id === id)
+    try {
+      const result = await api.payRecurringPaymentEarly(id, payment?.nextDueDate || '')
+      await loadAll(selectedMonth || undefined, selectedYear || undefined, true)
+      setRecurringPayments(prev => prev.map(p => p.id === id
+        ? { ...p, nextDueDate: result.nextOccurrenceDate || computeNextOccurrenceDate({ nextDueDate: result.settledOccurrenceDate, frequency: p.frequency }) }
+        : p
+      ))
+      showToast(
+        `${payment?.name || 'Subscription'} was paid early. Reminders for this cycle have stopped.`,
+        'Paid Early',
+        'success'
+      )
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, 'Could not pay this subscription early.'), 'Pay Early Failed', 'error')
+    }
+  }
+
+  const requestPayEarly = (id: string) => {
+    if (!guardSensitive()) return
+    const payment = allRecurringPayments.find(p => p.id === id)
+    if (!payment) return
+    setConfirmModalData({
+      title: 'Pay Early',
+      message: (
+        <div className="space-y-1.5">
+          <p>Pay <strong>{payment.name}</strong> for {formatSensitive(Math.abs(payment.amount))} now?</p>
+          <p>Scheduled date: {payment.nextDueDate}</p>
+          <p className="text-muted-foreground">Transaction date: Today.</p>
+        </div>
+      ),
+      confirmText: 'Pay Now',
+      onConfirm: () => { void handlePayEarly(id) }
     })
   }
 
@@ -1003,6 +1059,9 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     handleUpdatePayment,
     handleDeletePayment,
     requestDeletePayment,
+    handleUpdateReminder,
+    handlePayEarly,
+    requestPayEarly,
     handleAddWishlistItem,
     handleUpdateWishlistItem,
     handleDeleteWishlistItem,

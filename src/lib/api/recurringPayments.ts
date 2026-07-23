@@ -1,6 +1,6 @@
-import type { RecurringPayment } from '../../types'
-import type { WireRecurringPayment } from '../apiTypes'
-import { deobfuscateRecurringPayment, obfuscateAmount } from './amounts'
+import type { PayEarlyResult, RecurringPayment, RecurringReminderSettings } from '../../types'
+import type { WirePayEarlyResult, WireRecurringPayment } from '../apiTypes'
+import { deobfuscateRecurringPayment, deobfuscateTransaction, obfuscateAmount } from './amounts'
 import { cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
 
 export function fetchRecurringPayments(signal?: AbortSignal): Promise<RecurringPayment[]> {
@@ -51,4 +51,27 @@ export async function deleteRecurringPayment(id: string): Promise<void> {
     errorMessage: 'Failed to delete recurring payment',
   })
   invalidateCache()
+}
+
+export async function updateRecurringPaymentReminder(id: string, settings: RecurringReminderSettings): Promise<void> {
+  await requestVoid(`/recurring-payments/${id}/reminder`, {
+    method: 'PUT',
+    ...jsonBody(settings),
+    errorMessage: 'Failed to update the payment reminder',
+  })
+  invalidateCache()
+}
+
+export async function payRecurringPaymentEarly(id: string, occurrenceDate: string): Promise<PayEarlyResult> {
+  const data = await request<WirePayEarlyResult>(`/recurring-payments/${id}/pay-early`, {
+    method: 'POST',
+    ...jsonBody({ occurrenceDate }),
+    errorMessage: 'Failed to pay this subscription early',
+  })
+  invalidateCache()
+  return {
+    transaction: deobfuscateTransaction(data.transaction),
+    settledOccurrenceDate: data.settledOccurrenceDate,
+    nextOccurrenceDate: data.nextOccurrenceDate,
+  }
 }

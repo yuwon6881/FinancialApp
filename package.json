@@ -25,6 +25,7 @@
     "@fontsource-variable/inter": "^5.2.8",
     "@tailwindcss/vite": "^4.3.0",
     "clsx": "^2.1.1",
+    "firebase": "^11.10.0",
     "framer-motion": "^12.42.2",
     "lucide-react": "^1.16.0",
     "qrcode": "^1.5.4",

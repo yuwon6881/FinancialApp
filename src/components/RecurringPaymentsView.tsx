@@ -1,5 +1,5 @@
 import React from 'react'
-import type { RecurringPayment, TransactionCategory, ActiveRecurringPayment, Transaction } from '../types'
+import type { RecurringPayment, RecurringReminderSettings, TransactionCategory, ActiveRecurringPayment, Transaction } from '../types'
 import { CycleSkeleton } from './ui/Skeleton'
 import { useIsMobile } from '../lib/useIsMobile'
 import { useAppContext } from '../contexts/AppContext'
@@ -35,6 +35,9 @@ interface RecurringPaymentsViewProps {
   aiEditDraft?: { nonce: number; id: string; changes: Record<string, unknown> } | null
   onAiDraftConsumed?: () => void
   onAiEditDraftConsumed?: () => void
+  globalPushEnabled?: boolean
+  onUpdateReminder?: (id: string, settings: RecurringReminderSettings) => void
+  onRequestPayEarly?: (id: string) => void
 }
 
 export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
@@ -61,7 +64,10 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   aiDraft = null,
   aiEditDraft = null,
   onAiDraftConsumed,
-  onAiEditDraftConsumed
+  onAiEditDraftConsumed,
+  globalPushEnabled = false,
+  onUpdateReminder,
+  onRequestPayEarly,
 }) => {
   const app = useAppContext()
   const hideSensitive = hideSensitiveProp ?? app.hideSensitive
@@ -168,6 +174,9 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         onEditPayment={view.beginEditPayment}
         highlightedId={highlightedRecurringId}
         onClearHighlight={onClearHighlightedRecurring}
+        globalPushEnabled={globalPushEnabled}
+        onUpdateReminder={onUpdateReminder}
+        onRequestPayEarly={onRequestPayEarly}
       />
     </div>
   )

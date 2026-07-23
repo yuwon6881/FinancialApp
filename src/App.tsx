@@ -48,6 +48,7 @@ import { useCycleNavigation } from './app/useCycleNavigation'
 import { useAiActionRouter } from './app/useAiActionRouter'
 import { useAppDialogs } from './app/useAppDialogs'
 import { useCycleSummary } from './app/useCycleSummary'
+import { usePushNotifications } from './app/usePushNotifications'
 import { buildAppContextValue } from './app/buildAppContextValue'
 import { getErrorName } from './lib/errors'
 import { prefetchFingerprintAssertOptions } from './lib/fingerprintOptionsCache'
@@ -175,6 +176,11 @@ function App() {
     onLogoutBackupAndCleanup: (username) => financial.handleLogoutCleanup(username),
     onLoginSuccessRestore: (username) => financial.handleLoginSuccessRestore(username),
   })
+
+  const push = usePushNotifications(
+    !!session.token && !session.isLocked,
+    dialogs.showToast,
+  )
 
   // 4. Cycle Navigation
   const nav = useCycleNavigation({
@@ -658,6 +664,14 @@ function App() {
                           prefs.setNotifyOnLogin(checked)
                           dialogs.showToast('Notification preference updated.', 'Settings Saved', 'success')
                         }}
+                        pushEnabled={push.enabled}
+                        pushSupported={push.supported}
+                        pushBusy={push.busy || push.loading}
+                        pushGuidance={push.guidance}
+                        onTogglePushEnabled={(checked) => {
+                          if (checked) void push.enable()
+                          else void push.disable()
+                        }}
                         onNavigateToLedger={nav.handleNavigateToLedger}
                         onClearLocalFinancialData={() => {
                           const month = nav.selectedMonth
@@ -697,6 +711,9 @@ function App() {
                         isSwitchingCycle={nav.isSwitchingCycle}
                         highlightedRecurringId={nav.highlightedRecurringId}
                         onClearHighlightedRecurring={nav.clearHighlightedRecurring}
+                        globalPushEnabled={push.accountEnabled}
+                        onUpdateReminder={financial.handleUpdateReminder}
+                        onRequestPayEarly={financial.requestPayEarly}
                         aiDraft={aiRouter.state.aiRecurringDraft}
                         aiEditDraft={aiRouter.state.aiRecurringEditDraft}
                         onAiDraftConsumed={() => aiRouter.dispatch({ type: 'CONSUME_RECURRING_DRAFT' })}

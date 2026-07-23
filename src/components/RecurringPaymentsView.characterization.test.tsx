@@ -100,7 +100,7 @@ const getCard = (name: string): HTMLElement => {
 }
 
 const getToggleButton = (card: HTMLElement): HTMLElement => {
-  return within(card).getByRole('switch')
+  return within(card).getByRole('switch', { name: /^(Pause|Resume) / })
 }
 
 describe('RecurringPaymentsView characterization', () => {

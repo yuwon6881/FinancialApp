@@ -30,6 +30,23 @@ export interface WireWish {
   isActive: boolean
 }
 
+export interface WireRecurringPaymentForTest {
+  id: string
+  name: string
+  amount: string
+  frequency: string
+  category: string
+  ledgerCategory: string
+  nextDueDate: string
+  dueDate: number
+  startDate: string
+  active: boolean
+  endDate?: string
+  reminderEnabled?: boolean
+  reminderMode?: string
+  reminderLeadDays?: number
+}
+
 interface BackendState {
   registered: boolean
   username: string
@@ -53,6 +70,9 @@ interface BackendState {
     currency: string
     stabilityOverflowRedirect: string
   }
+  recurringPayments: Map<string, WireRecurringPaymentForTest>
+  pushEnabled: boolean
+  pushRegisteredDeviceIds: Set<string>
 }
 
 function freshState(): BackendState {
@@ -79,6 +99,9 @@ function freshState(): BackendState {
       currency: 'USD',
       stabilityOverflowRedirect: 'Split: Growth 50%, Rewards 50%',
     },
+    recurringPayments: new Map(),
+    pushEnabled: false,
+    pushRegisteredDeviceIds: new Set(),
   }
 }
 

@@ -5,6 +5,7 @@ import type {
   DashboardData,
   DashboardStats,
   FinancialSetting,
+  PayEarlyResult,
   PendingNotification,
   RecurringPayment,
   Transaction,
@@ -178,4 +179,8 @@ export interface WirePagedWishlistResult {
   total?: number
   page?: number
   pageSize?: number
+}
+
+export type WirePayEarlyResult = Omit<PayEarlyResult, 'transaction'> & {
+  transaction: WireTransaction
 }
