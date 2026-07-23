@@ -190,6 +190,16 @@ describe('DashboardView focused Today experience', () => {
     expect(props.onNavigateToLedger).toHaveBeenCalledWith({ category: 'Essentials' })
   })
 
+  it('opens Growth Investments from the Today card', () => {
+    const props = makeProps()
+    render(<DashboardView {...props} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /Growth Investments/ }))
+
+    expect(props.onNavigate).toHaveBeenCalledWith('investments')
+    expect(screen.getByText('Growth ledger balance')).toBeTruthy()
+  })
+
   it('masks amounts in sensitive mode', () => {
     render(<DashboardView {...makeProps({ hideSensitive: true })} />)
     expect(screen.queryByText('$1,234.56')).toBeNull()

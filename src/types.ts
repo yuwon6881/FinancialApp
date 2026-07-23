@@ -1,5 +1,98 @@
-export const APP_TABS = ['dashboard', 'reports', 'recurring', 'ledger', 'wishlist', 'drafts', 'settings'] as const
+export const APP_TABS = ['dashboard', 'reports', 'recurring', 'ledger', 'wishlist', 'drafts', 'settings', 'investments'] as const
 export type AppTab = typeof APP_TABS[number]
+
+export type InvestmentRange = '1m' | '3m' | '6m' | '1y' | 'all'
+export type InvestmentInstrumentType = 'Stock' | 'ETF'
+export type InvestmentTransactionType =
+  | 'OpeningPosition' | 'Buy' | 'Sell' | 'Dividend' | 'FeeTax'
+  | 'Split' | 'TransferIn' | 'TransferOut'
+
+export interface InvestmentAccount {
+  id: string
+  name: string
+  baseCurrency: string
+  isArchived: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface InvestmentInstrument {
+  id: string
+  symbol: string
+  name: string
+  type: InvestmentInstrumentType
+  exchange?: string
+  mic?: string
+  country?: string
+  currency: string
+  providerSymbol?: string
+  providerMic?: string
+  isCustom: boolean
+  isArchived: boolean
+}
+
+export interface InvestmentActivity {
+  id: string
+  accountId: string
+  instrumentId: string
+  type: InvestmentTransactionType
+  tradeDate: string
+  units: number
+  unitPrice?: number
+  cashAmount?: number
+  fees: number
+  taxes: number
+  tradeFxRate?: number
+  notes?: string
+  linkedTransferId?: string
+  createdAt: string
+}
+
+export interface InvestmentHolding {
+  accountId: string
+  accountName: string
+  instrumentId: string
+  symbol: string
+  name: string
+  type: InvestmentInstrumentType
+  currency: string
+  units: number
+  averageCostNative: number
+  latestPriceNative?: number
+  valueNative?: number
+  valueApp?: number
+  dailyChangeApp?: number
+  unrealisedProfitLossApp?: number
+  unrealisedPercent?: number
+  priceDate?: string
+  priceFetchedAt?: string
+  usesManualPrice: boolean
+  fxIncomplete: boolean
+}
+
+export interface InvestmentPortfolio {
+  appCurrency: string
+  summary: {
+    growthLedgerBalance: number
+    marketValue?: number
+    costBasis?: number
+    unrealisedProfitLoss?: number
+    unrealisedPercent?: number
+    realisedProfitLoss?: number
+    netDividends?: number
+    dailyChange?: number
+  }
+  accounts: InvestmentAccount[]
+  instruments: InvestmentInstrument[]
+  holdings: InvestmentHolding[]
+  activity: InvestmentActivity[]
+  manualPrices: Array<{ id: string; instrumentId: string; marketDate: string; price: number; fxRate?: number }>
+  chart: Array<{ date: string; marketValue?: number; costBasis?: number; netContributions?: number }>
+  insights: string[]
+  warnings: string[]
+  pricesUpdatedAt?: string
+  marketDataConfigured: boolean
+}
 
 export interface Transaction {
   id: string

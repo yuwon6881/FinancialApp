@@ -12,6 +12,7 @@ export const CACHE_KEYS = {
   pendingTransactions: 'pending_transactions',
   pendingOperations: 'pending_operations',
   walletBalance: 'cached_wallet_balance',
+  investmentPortfolio: 'cached_investment_portfolio',
 } as const
 
 // Local amount masking only discourages casual inspection. It is deliberately
@@ -26,6 +27,7 @@ const DISPOSABLE_CACHE_KEYS = new Set<string>([
   CACHE_KEYS.categories,
   CACHE_KEYS.wishlist,
   CACHE_KEYS.walletBalance,
+  CACHE_KEYS.investmentPortfolio,
   CYCLE_SNAPSHOTS_KEY,
 ])
 const EXPIRING_CACHE_KEYS = DISPOSABLE_CACHE_KEYS

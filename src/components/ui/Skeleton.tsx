@@ -72,7 +72,7 @@ const ListRowSkeleton: React.FC = () => (
  * and cycle refreshes. Keeping them here prevents placeholders from drifting
  * away from the current page structures.
  */
-export type PageSkeletonVariant = 'dashboard' | 'reports' | 'ledger' | 'recurring' | 'wishlist' | 'drafts' | 'settings'
+export type PageSkeletonVariant = 'dashboard' | 'reports' | 'ledger' | 'recurring' | 'wishlist' | 'drafts' | 'settings' | 'investments'
 
 const PanelSkeleton = ({ height = 'h-40' }: { height?: string }) => (
   <div className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
@@ -186,6 +186,22 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
             {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
           </div>
         </div>
+      </div>
+    )
+  }
+
+  if (variant === 'investments') {
+    return (
+      <div data-testid="investments-skeleton" className="space-y-6 soft-rise">
+        <CycleHeaderSkeleton titleWidth="w-52" subtitleWidth="w-80" controlWidth="w-44" />
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {[1, 2, 3, 4].map(i => <StatTileSkeleton key={i} />)}
+        </div>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <PanelSkeleton height="h-64" />
+          <PanelSkeleton height="h-64" />
+        </div>
+        <PanelSkeleton height="h-72" />
       </div>
     )
   }

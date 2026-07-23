@@ -18,6 +18,7 @@ const LedgerView = lazy(() => import('./components/LedgerView').then(m => ({ def
 const WishlistView = lazy(() => import('./components/WishlistView').then(m => ({ default: m.WishlistView })))
 const SettingsView = lazy(() => import('./components/SettingsView').then(m => ({ default: m.SettingsView })))
 const DraftStagingView = lazy(() => import('./components/DraftStagingView').then(m => ({ default: m.DraftStagingView })))
+const InvestmentsView = lazy(() => import('./components/InvestmentsView').then(m => ({ default: m.InvestmentsView })))
 
 import { CustomAlertModal } from './components/ui/CustomAlertModal'
 import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
@@ -838,6 +839,10 @@ function App() {
                           nav.setAutoOpenLedgerAdd(true)
                         }}
                       />
+                    )}
+
+                    {prefs.activeTab === 'investments' && (
+                      <InvestmentsView onNavigate={prefs.setActiveTab} />
                     )}
                   </motion.div>
                 </LaunchReady>

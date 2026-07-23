@@ -6,7 +6,7 @@ import { DashboardHeader } from './dashboard/DashboardHeader'
 import { TodayFocusCards } from './dashboard/TodayFocusCards'
 import { CategoryLimitPerformance } from './dashboard/CategoryLimitPerformance'
 import { useDashboardView } from './dashboard/useDashboardView'
-import { AlertCircle, BarChart3, CheckCircle2, ShieldCheck } from 'lucide-react'
+import { AlertCircle, BarChart3, CheckCircle2, ShieldCheck, TrendingUp } from 'lucide-react'
 import { Button } from './ui/Button'
 import { getCycleProgress, MONTH_NAMES } from '../lib/cycle'
 
@@ -120,6 +120,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         formatSensitive={view.formatSensitive}
         onNavigate={onNavigate}
       />
+
+      <button
+        type="button"
+        onClick={() => onNavigate('investments')}
+        className="interactive-card app-panel flex w-full items-center justify-between gap-4 rounded-2xl border border-violet-500/20 bg-violet-500/5 p-5 text-left"
+      >
+        <span className="flex items-center gap-3">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/12 text-violet-500">
+            <TrendingUp className="size-5" />
+          </span>
+          <span>
+            <strong className="block text-sm text-foreground">Growth Investments</strong>
+            <span className="mt-1 block text-xs text-muted-foreground">Track broker accounts and market performance without changing your ledger.</span>
+          </span>
+        </span>
+        <span className="shrink-0 text-right">
+          <span className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Growth ledger balance</span>
+          <span className="mt-1 block text-lg font-black text-foreground">
+            {view.formatSensitive(dashboardData?.categories?.find(category => category.name === 'Growth')?.remaining ?? 0)}
+          </span>
+        </span>
+      </button>
 
       <div data-testid="today-plan-grid">
         <section aria-labelledby="plan-snapshot-heading" className="app-panel flex flex-col rounded-2xl border border-border/60 bg-card/92 p-5">

@@ -38,6 +38,7 @@ const PATH_BY_TAB: Record<AppTab, string> = {
   wishlist: '/wishlist',
   drafts: '/drafts',
   settings: '/settings',
+  investments: '/investments',
 }
 
 const TAB_BY_PATH = Object.fromEntries(
