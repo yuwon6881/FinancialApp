@@ -208,9 +208,10 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
             <p className="mt-1 text-xs text-muted-foreground">Broker-neutral portfolio tracker.</p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
           <Button
             variant="ghost"
+            className="w-full justify-center sm:w-auto"
             disabled={isOffline || refreshing || !portfolio?.marketDataConfigured || !portfolio.holdings.length}
             aria-busy={refreshing}
             onClick={() => void updatePrices()}
@@ -219,7 +220,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
               ? <><Loader2 className="size-4 animate-spin" /> Updating…</>
               : <><RefreshCw className="size-4" /> Update prices</>}
           </Button>
-          <Button variant="primary" disabled={isOffline} onClick={() => openPanel('activity')}>
+          <Button variant="primary" className="w-full justify-center sm:w-auto" disabled={isOffline} onClick={() => openPanel('activity')}>
             <Plus className="size-4" /> Add activity
           </Button>
         </div>
@@ -317,8 +318,15 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
           />
           <section aria-labelledby="quick-insights" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
             <h2 id="quick-insights" className="text-base font-bold text-foreground">Quick insights</h2>
-            <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-              {portfolio.insights.map(value => <li key={value} className="rounded-xl bg-muted/30 p-3 text-xs text-muted-foreground">{value}</li>)}
+            <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+              {portfolio.insights.map(value => (
+                <li key={value} className="flex items-start gap-3 rounded-xl border border-blue-500/10 bg-blue-500/5 p-4 text-xs leading-relaxed text-blue-700 dark:text-blue-300">
+                  <div className="mt-0.5 shrink-0 rounded-full bg-blue-500/20 p-1 text-blue-600 dark:text-blue-400">
+                    <TrendingUp className="size-3.5" />
+                  </div>
+                  {value}
+                </li>
+              ))}
             </ul>
           </section>
         </>
@@ -343,21 +351,32 @@ const EmptyState = ({ offline, onAddAccount, onAddInvestment }: { offline: boole
 
 const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; masked: boolean }) => {
   const format = (value?: number, suffix = '') => value === undefined ? 'Incomplete' : masked ? '••••' : `${money(value, portfolio.appCurrency)}${suffix}`
+  const unrealised = portfolio.summary.unrealisedProfitLoss
+  const realised = portfolio.summary.realisedProfitLoss
+  const daily = portfolio.summary.dailyChange
+
+  const getColor = (val?: number) => {
+    if (val === undefined) return 'text-amber-500'
+    if (val > 0) return 'text-emerald-500'
+    if (val < 0) return 'text-orange-500'
+    return 'text-foreground'
+  }
+
   const cards = [
-    ['Growth ledger balance', format(portfolio.summary.growthLedgerBalance), 'Read-only ledger context', false],
-    ['Portfolio value', format(portfolio.summary.marketValue), 'Latest cached or manual prices', portfolio.summary.marketValue === undefined],
-    ['Cost basis', format(portfolio.summary.costBasis), 'Historical trade FX where needed', portfolio.summary.costBasis === undefined],
-    ['Unrealised P/L', portfolio.summary.unrealisedProfitLoss === undefined ? 'Incomplete' : masked ? '••••' : `${money(portfolio.summary.unrealisedProfitLoss, portfolio.appCurrency)} · ${(portfolio.summary.unrealisedPercent ?? 0).toFixed(1)}%`, 'Market value minus cost basis', portfolio.summary.unrealisedProfitLoss === undefined],
-    ['Realised P/L', format(portfolio.summary.realisedProfitLoss), 'Closed units and fees', portfolio.summary.realisedProfitLoss === undefined],
-    ['Net dividends', format(portfolio.summary.netDividends), 'Separate from capital gains', portfolio.summary.netDividends === undefined],
-    ['Daily change', format(portfolio.summary.dailyChange), 'Based on cached daily closes', portfolio.summary.dailyChange === undefined],
-  ] as const
+    { label: 'Growth ledger balance', value: format(portfolio.summary.growthLedgerBalance), note: 'Read-only ledger context', color: portfolio.summary.growthLedgerBalance === undefined ? 'text-amber-500' : 'text-foreground', isIncomplete: false },
+    { label: 'Portfolio value', value: format(portfolio.summary.marketValue), note: 'Latest cached or manual prices', color: portfolio.summary.marketValue === undefined ? 'text-amber-500' : 'text-foreground', isIncomplete: portfolio.summary.marketValue === undefined },
+    { label: 'Cost basis', value: format(portfolio.summary.costBasis), note: 'Historical trade FX where needed', color: portfolio.summary.costBasis === undefined ? 'text-amber-500' : 'text-foreground', isIncomplete: portfolio.summary.costBasis === undefined },
+    { label: 'Unrealised P/L', value: unrealised === undefined ? 'Incomplete' : masked ? '••••' : `${unrealised > 0 ? '+' : ''}${money(unrealised, portfolio.appCurrency)} · ${((portfolio.summary.unrealisedPercent ?? 0) > 0 ? '+' : '')}${(portfolio.summary.unrealisedPercent ?? 0).toFixed(1)}%`, note: 'Market value minus cost basis', color: getColor(unrealised), isIncomplete: unrealised === undefined },
+    { label: 'Realised P/L', value: realised === undefined ? 'Incomplete' : masked ? '••••' : `${realised > 0 ? '+' : ''}${money(realised, portfolio.appCurrency)}`, note: 'Closed units and fees', color: getColor(realised), isIncomplete: realised === undefined },
+    { label: 'Net dividends', value: format(portfolio.summary.netDividends), note: 'Separate from capital gains', color: portfolio.summary.netDividends === undefined ? 'text-amber-500' : 'text-foreground', isIncomplete: portfolio.summary.netDividends === undefined },
+    { label: 'Daily change', value: daily === undefined ? 'Incomplete' : masked ? '••••' : `${daily > 0 ? '+' : ''}${money(daily, portfolio.appCurrency)}`, note: 'Based on cached daily closes', color: getColor(daily), isIncomplete: daily === undefined },
+  ]
   return (
     <section aria-label="Investment summary" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {cards.map(([label, value, note, isIncomplete]) => (
+      {cards.map(({ label, value, note, color, isIncomplete }) => (
         <div key={label} className="app-panel rounded-2xl border border-border/60 bg-card/92 p-4">
           <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
-          <p className={`mt-2 text-lg font-black ${isIncomplete ? 'text-amber-500' : 'text-foreground'}`}>{value}</p>
+          <p className={`mt-2 text-lg font-black ${color}`}>{value}</p>
           <p className="mt-1 text-[10px] text-muted-foreground">{note}</p>
           {isIncomplete && <p className="mt-1 text-[9px] text-amber-500/80">See calculation notes below</p>}
         </div>
@@ -395,7 +414,7 @@ const AccountsAndInstruments = ({
         aria-expanded={open}
         className="flex w-full cursor-pointer items-center justify-between p-4 text-left"
       >
-        <span><strong className="text-sm text-foreground">Accounts, investments, and manual prices</strong><span className="ml-2 text-[10px] text-muted-foreground">{portfolio.accounts.length} accounts · {portfolio.instruments.length} investments</span></span>
+        <span className="flex flex-col sm:flex-row sm:items-baseline"><strong className="text-sm text-foreground">Accounts, investments, and manual prices</strong><span className="mt-1 text-[10px] text-muted-foreground sm:ml-2 sm:mt-0">{portfolio.accounts.length} account{portfolio.accounts.length === 1 ? '' : 's'} · {portfolio.instruments.length} investment{portfolio.instruments.length === 1 ? '' : 's'}</span></span>
         <ChevronDown className={`size-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
@@ -534,16 +553,16 @@ const ValueChart = ({ portfolio, masked, range, onRangeChange }: { portfolio: In
         </div>
       ) : (
         <div className={`mt-5 overflow-hidden ${masked ? 'blur-md select-none' : ''}`} aria-hidden={masked}>
-          <svg viewBox={`0 0 ${width} ${height}`} className="h-60 w-full" role="img" aria-label={summary}>
+          <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="h-48 w-full sm:h-60" role="img" aria-label={summary}>
             <defs>
               <pattern id="investment-grid" width="72" height="48" patternUnits="userSpaceOnUse">
                 <path d="M 72 0 L 0 0 0 48" fill="none" className="stroke-border" strokeWidth="1" opacity=".45" />
               </pattern>
             </defs>
             <rect width={width} height={height} fill="url(#investment-grid)" />
-            <polyline points={line('marketValue')} fill="none" stroke="#8b5cf6" strokeWidth="4" strokeLinejoin="round" />
-            <polyline points={line('costBasis')} fill="none" stroke="#3b82f6" strokeWidth="3" strokeLinejoin="round" />
-            <polyline points={line('netContributions')} fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 6" strokeLinejoin="round" />
+            <polyline points={line('marketValue')} fill="none" stroke="#8b5cf6" strokeWidth="4" strokeLinejoin="round" vectorEffect="nonScalingStroke" />
+            <polyline points={line('costBasis')} fill="none" stroke="#3b82f6" strokeWidth="3" strokeLinejoin="round" vectorEffect="nonScalingStroke" />
+            <polyline points={line('netContributions')} fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 6" strokeLinejoin="round" vectorEffect="nonScalingStroke" />
           </svg>
         </div>
       )}
@@ -587,17 +606,20 @@ const AllocationChart = ({ portfolio, masked, selected, onSelect }: { portfolio:
   const filterMode: AllocationMode = mode === 'instrument' ? 'asset' : mode
   return (
     <section aria-labelledby="allocation-title" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
-      <div className="flex items-start justify-between gap-2">
-        <div><h2 id="allocation-title" className="text-base font-bold text-foreground">Allocation</h2><p className="mt-1 text-xs text-muted-foreground">Select a segment to highlight matching holdings.</p></div>
-        <CustomSelect
-          value={mode}
-          onChange={value => { setMode(value as AllocationMode); onSelect(null) }}
-          options={allocationModeOptions}
-          ariaLabel="Group allocation by"
-          align="right"
-        />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0"><h2 id="allocation-title" className="text-base font-bold text-foreground">Allocation</h2><p className="mt-1 text-xs text-muted-foreground">Select a segment to highlight matching holdings.</p></div>
+        <div className="w-full shrink-0 sm:w-auto">
+          <CustomSelect
+            value={mode}
+            onChange={value => { setMode(value as AllocationMode); onSelect(null) }}
+            options={allocationModeOptions}
+            ariaLabel="Group allocation by"
+            className="w-full sm:w-auto"
+            align="right"
+          />
+        </div>
       </div>
-      <div className="mt-5 flex items-center gap-5">
+      <div className="mt-5 flex flex-col items-center gap-5 sm:flex-row">
         <div
           role="img"
           aria-label={groups.map(([name, value]) => `${name} ${total ? (value / total * 100).toFixed(1) : 0}%`).join(', ') || 'No valued holdings'}
