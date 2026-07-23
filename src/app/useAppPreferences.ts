@@ -2,11 +2,17 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import type { AppTab } from '../types'
 import { navigateToAppTab, readAppLocation, type AppNavigationOptions } from '../lib/appLocation'
 
+export type SensitivePreferenceStatus = 'pending' | 'resolved' | 'unavailable'
+
 export interface AppPreferences {
   activeTab: AppTab
   setActiveTab: (tab: AppTab, options?: AppNavigationOptions) => void
   hideSensitive: boolean
   setHideSensitive: (value: boolean) => void
+  sensitivePreferenceStatus: SensitivePreferenceStatus
+  beginSensitivePreferenceResolution: () => void
+  resolveHideSensitive: (value: boolean) => void
+  markSensitivePreferenceUnavailable: () => void
   hideBalanceAmounts: boolean
   setHideBalanceAmounts: (value: boolean) => void
   darkMode: boolean
@@ -27,6 +33,7 @@ export function useAppPreferences(): AppPreferences {
   const [hideSensitive, setHideSensitiveState] = useState<boolean>(() => {
     return true
   })
+  const [sensitivePreferenceStatus, setSensitivePreferenceStatus] = useState<SensitivePreferenceStatus>('pending')
 
   const [hideBalanceAmounts, setHideBalanceAmountsState] = useState<boolean>(() => {
     return false
@@ -82,6 +89,7 @@ export function useAppPreferences(): AppPreferences {
     // Sensitive mode is server-backed. Keep the safe state until the signed-in
     // account's dashboard settings have loaded instead of reusing browser state.
     setHideSensitiveState(true)
+    setSensitivePreferenceStatus(username ? 'pending' : 'resolved')
     setHideBalanceAmountsState(readBooleanPreference('hide_balance_amounts', false))
     setNotifyOnLoginState(readBooleanPreference('show_notifications_on_login', true))
 
@@ -101,6 +109,21 @@ export function useAppPreferences(): AppPreferences {
     setHideSensitiveState(value)
     const key = preferenceKey('hide_sensitive')
     if (key) localStorage.setItem(key, value.toString())
+  }
+
+  const beginSensitivePreferenceResolution = () => {
+    setHideSensitiveState(true)
+    setSensitivePreferenceStatus('pending')
+  }
+
+  const resolveHideSensitive = (value: boolean) => {
+    setHideSensitive(value)
+    setSensitivePreferenceStatus('resolved')
+  }
+
+  const markSensitivePreferenceUnavailable = () => {
+    setHideSensitiveState(true)
+    setSensitivePreferenceStatus(current => current === 'pending' ? 'unavailable' : current)
   }
 
   const setHideBalanceAmounts = (value: boolean) => {
@@ -126,6 +149,10 @@ export function useAppPreferences(): AppPreferences {
     setActiveTab,
     hideSensitive,
     setHideSensitive,
+    sensitivePreferenceStatus,
+    beginSensitivePreferenceResolution,
+    resolveHideSensitive,
+    markSensitivePreferenceUnavailable,
     hideBalanceAmounts,
     setHideBalanceAmounts,
     darkMode,

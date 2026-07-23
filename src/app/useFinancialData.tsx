@@ -10,7 +10,7 @@ import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDraf
 import { createFinalId, createLocalWishlistId, sanitizeQueuedOps, type OutboxPayload } from '../lib/outbox'
 import { triggerHaptic } from '../lib/haptics'
 import { getErrorMessage, getErrorName } from '../lib/errors'
-import { formatCurrencyVal } from '../lib/utils'
+import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
 import { CategoryReplacementSelect } from '../components/ui/CategoryReplacementSelect'
 
 const errorMessageIncludes = (err: unknown, sub: string) => {
@@ -32,7 +32,8 @@ export interface UseFinancialDataOptions {
   showToast: (message: string, title?: string, tone?: any, action?: any) => void
   guardSensitive: () => boolean
   setConfirmModalData: (data: any) => void
-  setHideSensitive: (value: boolean) => void
+  resolveHideSensitive: (value: boolean) => void
+  markSensitivePreferenceUnavailable: () => void
   setDarkMode: (value: boolean) => void
   notifyOnLogin: boolean
   loadAllAbortRef: React.MutableRefObject<AbortController | null>
@@ -62,7 +63,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     showToast,
     guardSensitive,
     setConfirmModalData,
-    setHideSensitive,
+    resolveHideSensitive,
+    markSensitivePreferenceUnavailable,
     setDarkMode,
     notifyOnLogin,
     loadAllAbortRef,
@@ -281,7 +283,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       }
 
       const serverHideSensitive = dbData.setting.hideSensitive ?? true
-      setHideSensitive(serverHideSensitive)
+      resolveHideSensitive(serverHideSensitive)
 
       if (dbData.pendingNotifications && dbData.pendingNotifications.length > 0 && !hasShownModalThisSession) {
         if (notifyOnLogin) {
@@ -309,6 +311,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       } else {
         setError('Could not connect to the database API server. Running in offline view mode.')
         isServerAwakeRef.current = false
+        markSensitivePreferenceUnavailable()
         if (rethrowOnError) throw err
       }
     } finally {
@@ -317,7 +320,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         setIsBackgroundSyncing(false)
       }
     }
-  }, [token, lastUnlockedTimeRef, handleLogout, markSessionLocked, setDarkMode, setHideSensitive, notifyOnLogin, hasShownModalThisSession, setShowLoginModal, loadAllAbortRef, setSelectedMonth, setSelectedYear])
+  }, [token, lastUnlockedTimeRef, handleLogout, markSessionLocked, setDarkMode, resolveHideSensitive, markSensitivePreferenceUnavailable, notifyOnLogin, hasShownModalThisSession, setShowLoginModal, loadAllAbortRef, setSelectedMonth, setSelectedYear])
 
   // Backup outbox/drafts on logout
   const handleLogoutCleanup = useCallback(async (currentOwner: string, createBackup = true) => {
@@ -559,9 +562,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   )
 
   const formatSensitive = useCallback((val: number) => {
-    // SENSITIVE_AMOUNT_MASK = '••••'
     const formatted = formatCurrencyVal(val, optimisticDashboardData?.setting?.currency || 'USD')
-    return hideSensitive ? '••••' : formatted
+    return hideSensitive ? SENSITIVE_AMOUNT_MASK : formatted
   }, [hideSensitive, optimisticDashboardData?.setting?.currency])
 
   const totalBalance = walletBalance ?? allTransactions.reduce((acc, t) => acc + t.amount, 0)

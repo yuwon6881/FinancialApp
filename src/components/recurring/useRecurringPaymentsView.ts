@@ -4,7 +4,7 @@ import { maskCurrencyInput } from '../../lib/utils'
 import { useSyncStatus } from '../../lib/useOptimisticList'
 import { useAutoOpenModal } from '../../lib/useAutoOpenModal'
 import { normalizeRecurringFrequency } from '../../lib/recurringPayments'
-import { formatBlurSensitiveAmount, formatCurrencyAmount } from './formatters'
+import { formatSensitiveAmount, formatCurrencyAmount } from './formatters'
 
 export const RECURRING_LEDGER_CATEGORIES = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const
 export type RecurringLedgerCategory = typeof RECURRING_LEDGER_CATEGORIES[number]
@@ -340,7 +340,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
   )
 
   const formatSensitive = React.useCallback(
-    (val: number) => formatBlurSensitiveAmount(val, hideSensitive, currency),
+    (val: number) => formatSensitiveAmount(val, hideSensitive, currency),
     [hideSensitive, currency]
   )
 

@@ -70,7 +70,7 @@ export function LedgerToolbar({
               ? 'opacity-40 cursor-not-allowed bg-background text-muted-foreground'
               : 'bg-background hover:bg-muted text-foreground cursor-pointer'
           }`}
-          title={hideSensitive ? 'CSV Export disabled in blur mode' : 'Export CSV'}
+          title={hideSensitive ? 'CSV export disabled while sensitive amounts are masked' : 'Export CSV'}
         >
           <Download className="size-3.5 text-muted-foreground" />
           Export CSV

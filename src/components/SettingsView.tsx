@@ -19,12 +19,14 @@ const FingerprintSection = React.lazy(() => import('./settings/FingerprintSectio
 
 import { useSettingsView } from './settings/view/useSettingsView'
 import { CategoryLimitsCard } from './settings/CategoryLimitsCard'
+import type { SensitivePreferenceStatus } from '../app/useAppPreferences'
 
 interface SettingsViewProps {
   dashboardData: DashboardData | null
   categoriesList: TransactionCategory[]
   darkMode?: boolean
   hideSensitive?: boolean
+  sensitivePreferenceStatus?: SensitivePreferenceStatus
   onToggleDarkMode?: () => void
   onToggleHideSensitive?: () => void
   onUpdateSettings: (settings: {
@@ -322,9 +324,20 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
               <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
                 <div className="flex items-center gap-2">
                   {hideSensitive ? <EyeOff className="size-4 text-muted-foreground" /> : <Eye className="size-4 text-muted-foreground" />}
-                  <span className="font-medium text-foreground">Sensitive Mode (Blur)</span>
+                  <span className="font-medium text-foreground">Sensitive Mode (Masked)</span>
                 </div>
-                <ToggleButton active={hideSensitive} onClick={props.onToggleHideSensitive || (() => {})} label="Sensitive mode" />
+                <ToggleButton
+                  active={hideSensitive}
+                  onClick={props.onToggleHideSensitive || (() => {})}
+                  label={
+                    props.sensitivePreferenceStatus === 'pending'
+                      ? 'Sensitive mode, checking privacy settings'
+                      : props.sensitivePreferenceStatus === 'unavailable'
+                        ? 'Sensitive mode, privacy setting unavailable'
+                        : 'Sensitive mode'
+                  }
+                  disabled={props.sensitivePreferenceStatus !== undefined && props.sensitivePreferenceStatus !== 'resolved'}
+                />
               </div>
               <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
                 <div className="flex items-center gap-2">

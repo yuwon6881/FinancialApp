@@ -205,7 +205,8 @@ function App() {
     showToast: dialogs.showToast,
     guardSensitive,
     setConfirmModalData: dialogs.setConfirmModalData,
-    setHideSensitive: prefs.setHideSensitive,
+    resolveHideSensitive: prefs.resolveHideSensitive,
+    markSensitivePreferenceUnavailable: prefs.markSensitivePreferenceUnavailable,
     setDarkMode: prefs.setDarkMode,
     notifyOnLogin: prefs.notifyOnLogin,
     loadAllAbortRef,
@@ -432,6 +433,7 @@ function App() {
   })
 
   const handleToggleHideSensitive = async () => {
+    if (prefs.sensitivePreferenceStatus !== 'resolved') return
     if (prefs.hideSensitive) {
       session.setShowPasswordPrompt(true)
     } else {
@@ -441,6 +443,11 @@ function App() {
       }
       financial.handleUpdateHideSensitivePreference(true)
     }
+  }
+
+  const retrySensitivePreference = () => {
+    prefs.beginSensitivePreferenceResolution()
+    void financial.loadAll(nav.selectedMonth || undefined, nav.selectedYear || undefined, true)
   }
 
   const handleToggleBalanceAmounts = () => {
@@ -502,7 +509,12 @@ function App() {
   if (financial.loading && !financial.optimisticDashboardData) {
     return (
       <LaunchReady>
-        <div data-testid="app-loading-skeleton" className="app-shell min-h-screen text-foreground">
+        <div
+          data-testid="app-loading-skeleton"
+          className="app-shell min-h-screen text-foreground"
+          aria-busy="true"
+          aria-label="Loading your financial data securely"
+        >
           <div className="mx-auto w-full max-w-[1440px] px-4 py-6 space-y-6 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -512,7 +524,10 @@ function App() {
                   <Skeleton className="mt-2 h-2 w-20" />
                 </div>
               </div>
-              <Loader2 className="animate-spin text-blue-500 size-5" />
+              <div role="status" aria-live="polite" aria-atomic="true" className="flex items-center gap-2 text-xs font-semibold text-blue-500">
+                <Loader2 className="animate-spin size-5" aria-hidden="true" />
+                <span className="hidden sm:inline">Loading your financial data securely…</span>
+              </div>
             </div>
             <CycleSkeleton variant={getPageSkeletonVariant(prefs.activeTab)} fullPage />
           </div>
@@ -550,7 +565,9 @@ function App() {
           onQuickAction={nav.handleQuickAction}
           onAskAI={() => setIsAiOpen(true)}
           hideSensitive={prefs.hideSensitive}
+          sensitivePreferenceStatus={prefs.sensitivePreferenceStatus}
           onToggleHideSensitive={handleToggleHideSensitive}
+          onRetrySensitivePreference={retrySensitivePreference}
           onLogout={session.handleLogout}
           username={session.username}
           pendingNotifications={currentPendingNotifications}
@@ -602,7 +619,10 @@ function App() {
           onRefresh={() => financial.loadAll(nav.selectedMonth || undefined, nav.selectedYear || undefined, true)}
           disabled={financial.loading || session.isLocked}
         >
-          <main className="relative mx-auto w-full min-w-0 max-w-[1440px] flex-1 px-4 py-6 pb-24 sm:px-6 sm:py-8 md:pb-8 lg:px-8">
+          <main
+            className="relative mx-auto w-full min-w-0 max-w-[1440px] flex-1 px-4 py-6 pb-24 sm:px-6 sm:py-8 md:pb-8 lg:px-8"
+            aria-busy={prefs.sensitivePreferenceStatus === 'pending' || financial.loading}
+          >
             <ErrorBoundary variant="inline" resetKey={prefs.activeTab}>
               <Suspense fallback={<ContentViewFallback tab={prefs.activeTab} />}>
                 <LaunchReady>
@@ -654,6 +674,7 @@ function App() {
                         categoriesList={financial.allCategories}
                         onToggleDarkMode={handleToggleDarkMode}
                         onToggleHideSensitive={handleToggleHideSensitive}
+                        sensitivePreferenceStatus={prefs.sensitivePreferenceStatus}
                         onUpdateSettings={financial.handleUpdateSettings}
                         onAddCategory={financial.handleAddCategory}
                         onUpdateCategoryCycleLimit={financial.handleUpdateCategoryCycleLimit}

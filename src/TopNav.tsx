@@ -23,11 +23,14 @@ import {
   FileText,
   Settings,
   Sparkles,
-  BarChart3
+  BarChart3,
+  Loader2,
+  ShieldAlert,
 } from 'lucide-react'
 import { triggerHaptic } from './lib/haptics'
 import { AppLogo } from './components/ui/AppLogo'
 import type { AppTab, PendingNotification } from './types'
+import type { SensitivePreferenceStatus } from './app/useAppPreferences'
 
 interface TopNavProps {
   activeTab: AppTab
@@ -35,7 +38,9 @@ interface TopNavProps {
   onQuickAction?: (action: 'transaction' | 'subscription' | 'wishlist') => void
   onAskAI?: () => void
   hideSensitive: boolean
+  sensitivePreferenceStatus: SensitivePreferenceStatus
   onToggleHideSensitive: () => void
+  onRetrySensitivePreference: () => void
   onLogout: () => void
   username: string
   pendingNotifications: PendingNotification[]
@@ -56,7 +61,9 @@ const TopNav: React.FC<TopNavProps> = ({
   onQuickAction,
   onAskAI,
   hideSensitive,
+  sensitivePreferenceStatus,
   onToggleHideSensitive,
+  onRetrySensitivePreference,
   onLogout,
   username,
   pendingNotifications,
@@ -304,12 +311,23 @@ const TopNav: React.FC<TopNavProps> = ({
                     <span>Settings</span>
                   </MenubarItem>
 
-                  <MenubarItem 
-                    onClick={onToggleHideSensitive}
-                    className="flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground"
+                  <MenubarItem
+                    onClick={sensitivePreferenceStatus === 'resolved' ? onToggleHideSensitive : undefined}
+                    disabled={sensitivePreferenceStatus !== 'resolved'}
+                    className="flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground disabled:cursor-not-allowed"
                   >
-                    {hideSensitive ? <Eye className="size-3.5 text-blue-500" /> : <EyeOff className="size-3.5 text-blue-500" />}
-                    <span>{hideSensitive ? 'Show Sensitive' : 'Hide Sensitive'}</span>
+                    {sensitivePreferenceStatus === 'pending'
+                      ? <Loader2 className="size-3.5 animate-spin text-blue-500" />
+                      : hideSensitive
+                        ? <Eye className="size-3.5 text-blue-500" />
+                        : <EyeOff className="size-3.5 text-blue-500" />}
+                    <span>
+                      {sensitivePreferenceStatus === 'pending'
+                        ? 'Checking Privacy Settings'
+                        : sensitivePreferenceStatus === 'unavailable'
+                          ? 'Privacy Setting Unavailable'
+                          : hideSensitive ? 'Show Sensitive' : 'Hide Sensitive'}
+                    </span>
                   </MenubarItem>
 
                   <MenubarItem 
@@ -336,8 +354,42 @@ const TopNav: React.FC<TopNavProps> = ({
           </div>
           
         </div>
-      </div>
-    </header>
+        </div>
+
+        {sensitivePreferenceStatus !== 'resolved' && (
+          <div
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className={`border-t px-4 py-1.5 text-center text-[11px] font-semibold ${
+              sensitivePreferenceStatus === 'pending'
+                ? 'border-blue-500/15 bg-blue-500/8 text-blue-600 dark:text-blue-400'
+                : 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-400'
+            }`}
+          >
+            <span className="inline-flex items-center justify-center gap-1.5">
+              {sensitivePreferenceStatus === 'pending' ? (
+                <>
+                  <Loader2 className="size-3 animate-spin shrink-0" aria-hidden="true" />
+                  Checking privacy settings — amounts stay hidden until complete.
+                </>
+              ) : (
+                <>
+                  <ShieldAlert className="size-3 shrink-0" aria-hidden="true" />
+                  Privacy settings couldn’t be verified — amounts remain hidden.
+                  <button
+                    type="button"
+                    onClick={onRetrySensitivePreference}
+                    className="ml-1 font-extrabold underline underline-offset-2 hover:no-underline cursor-pointer"
+                  >
+                    Retry
+                  </button>
+                </>
+              )}
+            </span>
+          </div>
+        )}
+      </header>
 
     {/* Mobile Navigation bar (Sticky Bottom Nav) */}
     <div

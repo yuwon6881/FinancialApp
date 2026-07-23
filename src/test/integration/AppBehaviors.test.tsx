@@ -199,6 +199,38 @@ describe('App behaviors', () => {
     expect(window.location.pathname).toBe('/reports')
   })
 
+  it('keeps cached amounts protected while the server privacy preference is loading', async () => {
+    localStorage.setItem('auth_session', '1')
+    localStorage.setItem('auth_username', 'alice')
+    localStorage.setItem('cached_dashboard_data', JSON.stringify({
+      setting: { selectedMonth: 'Jun', selectedYear: 2026, cycleDay: 28, currency: 'USD', hideSensitive: true, darkMode: false },
+      stats: { pastThreeMonthsRewardsAverage: 120, hasRewardsHistory: true },
+      categories: [],
+      pendingNotifications: []
+    }))
+
+    let resolveDashboard!: (value: any) => void
+    vi.mocked(api.fetchDashboard).mockReturnValueOnce(new Promise(resolve => { resolveDashboard = resolve }))
+
+    render(<App />)
+
+    await waitFor(() => expect(screen.getByTestId('dashboard-view')).toBeDefined())
+    expect(screen.getByText(/Checking privacy settings/)).toBeDefined()
+    expect(screen.getByRole('main').getAttribute('aria-busy')).toBe('true')
+
+    resolveDashboard({
+      setting: { selectedMonth: 'Jun', selectedYear: 2026, cycleDay: 28, currency: 'USD', hideSensitive: false, darkMode: false },
+      stats: { pastThreeMonthsRewardsAverage: 120, hasRewardsHistory: true },
+      categories: [],
+      pendingNotifications: []
+    })
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Checking privacy settings/)).toBeNull()
+      expect(screen.getByRole('main').getAttribute('aria-busy')).toBe('false')
+    })
+  })
+
   it('keeps Today on the current cycle after Reports selects a historical cycle', async () => {
     localStorage.setItem('auth_session', '1')
     localStorage.setItem('auth_username', 'alice')

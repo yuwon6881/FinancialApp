@@ -1,5 +1,6 @@
 import type React from 'react'
-import { formatCurrencyVal, getCurrencySymbol, SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
+import { formatCurrencyVal, getCurrencySymbol } from '../../lib/utils'
+import { SensitiveMask } from '../ui/SensitiveAmount'
 
 // Format currency
 export const formatCurrencyAmount = (val: number, currency: string | undefined): string => {
@@ -12,12 +13,7 @@ export const formatSensitiveAmount = (
   currency: string | undefined
 ): React.ReactNode => {
   return hideSensitive ? (
-    <span
-      title="Sensitive data masked (Privacy Mode active)"
-      className="inline-block font-mono font-semibold tracking-wide text-foreground select-none"
-    >
-      {SENSITIVE_AMOUNT_MASK}
-    </span>
+    <SensitiveMask className="text-foreground" />
   ) : (
     <span className="transition-[filter] duration-200">{formatCurrencyAmount(val, currency)}</span>
   )
@@ -41,12 +37,7 @@ export const formatCompactSensitiveAmount = (
   currency: string | undefined
 ): React.ReactNode => {
   return hideSensitive ? (
-    <span
-      title="Sensitive data masked (Privacy Mode active)"
-      className="inline-block font-mono font-semibold tracking-wide text-foreground select-none"
-    >
-      {SENSITIVE_AMOUNT_MASK}
-    </span>
+    <SensitiveMask className="text-foreground" />
   ) : (
     <span className="transition-[filter] duration-200">{formatCompactNetValue(val, currency)}</span>
   )

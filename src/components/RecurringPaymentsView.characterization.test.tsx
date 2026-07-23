@@ -348,14 +348,13 @@ describe('RecurringPaymentsView characterization', () => {
   })
 
   describe('hideSensitive masking', () => {
-    it('blurs amounts and disables edit, delete and toggle', () => {
+    it('replaces amounts with the shared mask and disables edit, delete and toggle', () => {
       const onDeletePayment = vi.fn()
       render(<RecurringPaymentsView {...makeProps({ hideSensitive: true, onDeletePayment })} />)
 
       const netflix = getCard('Netflix')
-      const amount = within(netflix).getByText('$15.99')
-      expect(amount.className).toContain('blur-sm')
-      expect(amount.className).toContain('select-none')
+      expect(within(netflix).queryByText('$15.99')).toBeNull()
+      expect(within(netflix).getByRole('img', { name: 'Sensitive amount hidden' })).toBeTruthy()
 
       const editButton = within(netflix).getByRole('button', { name: /Edit/ }) as HTMLButtonElement
       const deleteButton = within(netflix).getByRole('button', { name: /Delete/ }) as HTMLButtonElement
@@ -368,9 +367,9 @@ describe('RecurringPaymentsView characterization', () => {
       expect(onDeletePayment).not.toHaveBeenCalled()
     })
 
-    it('does not blur amounts when hideSensitive is off', () => {
+    it('shows amounts when hideSensitive is off', () => {
       render(<RecurringPaymentsView {...makeProps()} />)
-      expect(within(getCard('Netflix')).getByText('$15.99').className).not.toContain('blur-sm')
+      expect(within(getCard('Netflix')).getByText('$15.99')).toBeTruthy()
     })
   })
 

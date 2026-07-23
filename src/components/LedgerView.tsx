@@ -13,6 +13,7 @@ import { calculateLedgerTotals } from '../lib/ledgerTotals'
 import { useIsMobile } from '../lib/useIsMobile'
 import { formatCurrencyVal } from '../lib/utils'
 import { X } from 'lucide-react'
+import { SensitiveMask } from './ui/SensitiveAmount'
 
 // Hooks and sub-components
 import { useLedgerView } from './ledger/view/useLedgerView'
@@ -108,11 +109,9 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
   }
 
   const formatSensitive = (val: number) => {
-    return (
-      <span className={hideSensitive ? 'blur-sm select-none pointer-events-none inline-block transition-[filter] duration-200' : 'transition-[filter] duration-200'}>
-        {formatCurrency(val)}
-      </span>
-    )
+    return hideSensitive
+      ? <SensitiveMask />
+      : <span className="transition-[filter] duration-200">{formatCurrency(val)}</span>
   }
 
   const pageTotals = React.useMemo(() => calculateLedgerTotals(ledger.displayTransactions), [ledger.displayTransactions])

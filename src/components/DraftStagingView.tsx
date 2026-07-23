@@ -11,6 +11,7 @@ import { DatePicker } from './ui/DatePicker'
 import { PerimeterBeam } from './ui/PerimeterBeam'
 import { AnchoredPopover } from './ui/AnchoredPopover'
 import { LedgerAllocationBadge } from './ledger/LedgerAllocationBadge'
+import { SensitiveMask } from './ui/SensitiveAmount'
 import { useTransactionSuggestions } from './ledger/transaction-form/useTransactionSuggestions'
 
 const TRANSFER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards']
@@ -100,11 +101,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
   }
 
   const formatSensitive = (val: number) => {
-    return (
-      <span className={hideSensitive ? 'blur-xs select-none pointer-events-none' : ''}>
-        {formatCurrency(val)}
-      </span>
-    )
+    return hideSensitive ? <SensitiveMask /> : <span>{formatCurrency(val)}</span>
   }
 
   const handleStartEdit = (draft: Transaction) => {

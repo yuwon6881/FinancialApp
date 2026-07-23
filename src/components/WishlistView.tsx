@@ -8,7 +8,6 @@ import { DatePicker } from './ui/DatePicker'
 import { CycleSkeleton } from './ui/Skeleton'
 import { Card } from './ui/Card'
 import { RowSyncStatus } from './ui/RowSyncBadge'
-import { formatCurrencyVal } from '../lib/utils'
 import { MONTH_NAMES, getCycleYearAndMonthForDate } from '../lib/cycle'
 import { claimedWishlistChangeSignal, selectClaimedWishlistPage } from '../lib/claimedWishlist'
 import { useSyncStatus } from '../lib/useOptimisticList'
@@ -445,9 +444,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                           </span>
                           <span className="text-[9px] text-muted-foreground block font-medium">
                             Based on target budget (
-                            <span className={hideSensitive ? 'blur-sm select-none pointer-events-none inline-block' : 'inline-block'}>
-                              {formatCurrencyVal(rewardsTarget, currency)}
-                            </span>
+                            {formatSensitive(rewardsTarget)}
                             /mo)
                           </span>
                         </div>
@@ -463,9 +460,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                             {hasRewardsHistory ? (
                               <>
                                 Based on past 3-mo savings (
-                                <span className={hideSensitive ? 'blur-sm select-none pointer-events-none inline-block' : 'inline-block'}>
-                                  {formatCurrencyVal(pastThreeMonthsRewardsAverage, currency)}
-                                </span>
+                                {formatSensitive(pastThreeMonthsRewardsAverage)}
                                 /mo)
                               </>
                             ) : (

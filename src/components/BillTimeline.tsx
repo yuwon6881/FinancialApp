@@ -6,6 +6,7 @@ import { getCategoryBadgeClass, getCategoryDotClass } from '../lib/categoryColor
 import { ordinalSuffix } from '../lib/cycleLabels'
 import { BottomSheet } from './ui/BottomSheet'
 import { Card } from './ui/Card'
+import { SensitiveMask } from './ui/SensitiveAmount'
 import { getCycleRangeDates } from '../lib/cycle'
 
 interface BillTimelineProps {
@@ -74,11 +75,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
   }
 
   const formatSensitive = (val: number) => {
-    return (
-      <span className={hideSensitive ? 'blur-xs select-none pointer-events-none' : ''}>
-        {formatCurrency(val)}
-      </span>
-    )
+    return hideSensitive ? <SensitiveMask /> : <span>{formatCurrency(val)}</span>
   }
 
   // Calculate payments for this cycle

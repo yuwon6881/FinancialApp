@@ -5,6 +5,7 @@ import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { BottomSheet } from './ui/BottomSheet'
 import { ToggleButton } from './ui/ToggleButton'
 import { DatePicker } from './ui/DatePicker'
+import { SensitiveMask } from './ui/SensitiveAmount'
 import { BellRing, CheckCircle2 } from 'lucide-react'
 
 interface PendingSubscriptionsModalProps {
@@ -91,8 +92,8 @@ export function PendingSubscriptionsModal({
                 </div>
               </div>
               <div className="text-right">
-                <span className={`text-orange-500 font-extrabold text-xs block transition-all duration-300 ${hideSensitive ? 'blur-sm select-none pointer-events-none' : ''}`}>
-                  -{formatCurrencyVal(noti.amount, currency)}
+                <span className="text-orange-500 font-extrabold text-xs block transition-all duration-300">
+                  {hideSensitive ? <SensitiveMask /> : <>-{formatCurrencyVal(noti.amount, currency)}</>}
                 </span>
                 <span className="text-[9px] text-muted-foreground">{noti.cycleLabel}</span>
               </div>

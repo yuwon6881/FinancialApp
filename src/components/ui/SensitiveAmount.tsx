@@ -11,6 +11,25 @@ interface SensitiveAmountProps {
   className?: string
 }
 
+interface SensitiveMaskProps {
+  mask?: string
+  className?: string
+}
+
+export const SensitiveMask: React.FC<SensitiveMaskProps> = ({
+  mask = SENSITIVE_AMOUNT_MASK,
+  className = '',
+}) => (
+  <span
+    role="img"
+    aria-label="Sensitive amount hidden"
+    title="Sensitive amount hidden"
+    className={`inline-block font-mono font-semibold tracking-wide select-none ${className}`}
+  >
+    <span aria-hidden="true">{mask}</span>
+  </span>
+)
+
 export const SensitiveAmount: React.FC<SensitiveAmountProps> = ({
   value,
   isMasked = false,
@@ -27,9 +46,12 @@ export const SensitiveAmount: React.FC<SensitiveAmountProps> = ({
           animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
           exit={{ opacity: 0.4, filter: 'blur(4px)', scale: 0.98 }}
           transition={{ duration: 0.2, ease: 'easeOut' }}
-          className={`font-mono tracking-wide ${className}`}
+          role="img"
+          aria-label="Sensitive amount hidden"
+          title="Sensitive amount hidden"
+          className={`font-mono font-semibold tracking-wide select-none ${className}`}
         >
-          {mask}
+          <span aria-hidden="true">{mask}</span>
         </motion.span>
       ) : (
         <motion.span

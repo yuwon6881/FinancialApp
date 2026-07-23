@@ -10,6 +10,7 @@ import { SwipeableRow } from '../ui/SwipeableRow'
 import { Button } from '../ui/Button'
 import { LedgerAllocationBadge } from './LedgerAllocationBadge'
 import { ledgerTransactionRowId } from '../../lib/ledgerTransactionTarget'
+import { SensitiveMask } from '../ui/SensitiveAmount'
 
 export interface LedgerRowProps {
   transaction: Transaction
@@ -23,7 +24,7 @@ export interface LedgerRowProps {
 }
 
 const Amount = ({ value, hidden }: { value: ReactNode; hidden: boolean }) => (
-  <span className={hidden ? 'blur-sm select-none pointer-events-none inline-block' : ''}>{value}</span>
+  hidden ? <SensitiveMask /> : <span>{value}</span>
 )
 
 export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: LedgerRowProps) {
@@ -86,7 +87,7 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
         <div className={`h-0.5 w-full ${transfer ? 'bg-blue-500/60' : outflow ? 'bg-orange-500/60' : 'bg-emerald-500/60'}`} />
         <div className="p-4 space-y-3">
           <div className="flex items-center justify-between"><span className="text-[10px] text-muted-foreground font-mono">{transaction.date}</span><span className={`text-[10px] px-2 py-0.5 font-semibold rounded-full border ${getCategoryBadgeClass(transaction.category)}`}>{transaction.category}</span></div>
-          <div className="flex items-center justify-between gap-3"><div className="flex-1 flex items-center gap-1.5 min-w-0"><h4 className="text-sm font-bold truncate">{transaction.description}</h4><RowSyncStatus isDeleting={props.isDeleting} isSyncing={props.isSyncing} isPending={transaction.isPendingSync} entityLabel="transaction" /></div><span className={`${props.hideSensitive ? 'blur-sm' : ''} text-sm font-bold ${transfer ? 'text-blue-400' : outflow ? 'text-orange-400' : 'text-emerald-400'}`}>{transfer ? '' : outflow ? '-' : '+'}{formatted}</span></div>
+          <div className="flex items-center justify-between gap-3"><div className="flex-1 flex items-center gap-1.5 min-w-0"><h4 className="text-sm font-bold truncate">{transaction.description}</h4><RowSyncStatus isDeleting={props.isDeleting} isSyncing={props.isSyncing} isPending={transaction.isPendingSync} entityLabel="transaction" /></div><span className={`text-sm font-bold ${transfer ? 'text-blue-400' : outflow ? 'text-orange-400' : 'text-emerald-400'}`}>{props.hideSensitive ? <SensitiveMask /> : <>{transfer ? '' : outflow ? '-' : '+'}{formatted}</>}</span></div>
           <div className="flex items-center justify-between pt-2 border-t border-border/30"><span className="text-[10px] text-muted-foreground flex items-center gap-1.5">Ledger:<LedgerAllocationBadge ledgerCategory={transaction.ledgerCategory} transactionId={transaction.id} compact /></span></div>
         </div>
       </SwipeableRow>
