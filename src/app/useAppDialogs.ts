@@ -10,6 +10,7 @@ export interface AppDialogs {
     message: React.ReactNode
     confirmText?: string
     confirmDisabled?: boolean
+    variant?: 'danger' | 'primary'
     onConfirm: () => void
   } | null
   setConfirmModalData: (data: any) => void
@@ -30,6 +31,7 @@ export function useAppDialogs(): AppDialogs {
     message: React.ReactNode
     confirmText?: string
     confirmDisabled?: boolean
+    variant?: 'danger' | 'primary'
     onConfirm: () => void
   } | null>(null)
   const [toasts, setToasts] = useState<ToastMessage[]>([])

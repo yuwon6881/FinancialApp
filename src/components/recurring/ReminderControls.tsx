@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Bell, Check, Loader2 } from 'lucide-react'
 import type { RecurringPayment, RecurringReminderMode, RecurringReminderSettings } from '../../types'
-import { buildReminderPreview, DEFAULT_REMINDER_SETTINGS, getEffectiveReminderSettings, REMINDER_LEAD_DAY_OPTIONS } from '../../lib/recurringPayments'
+import { buildReminderPreview, getEffectiveReminderSettings, REMINDER_LEAD_DAY_OPTIONS } from '../../lib/recurringPayments'
 import { RECURRING_PAUSED_LABEL } from '../../lib/push/messages'
 import { ToggleButton } from '../ui/ToggleButton'
 
@@ -34,8 +34,10 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
 
   const isDirty =
     draftSettings.enabled !== savedSettings.enabled ||
-    draftSettings.mode !== savedSettings.mode ||
-    draftSettings.leadDays !== savedSettings.leadDays
+    (draftSettings.enabled && (
+      draftSettings.mode !== savedSettings.mode ||
+      draftSettings.leadDays !== savedSettings.leadDays
+    ))
 
   const paused = draftSettings.enabled && !globalPushEnabled
 
@@ -43,7 +45,7 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
     if (draftSettings.enabled) {
       setDraftSettings(prev => ({ ...prev, enabled: false }))
     } else {
-      setDraftSettings({ ...DEFAULT_REMINDER_SETTINGS, enabled: true })
+      setDraftSettings(prev => ({ ...prev, enabled: true }))
     }
   }
 

@@ -1,5 +1,5 @@
 import React from 'react'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, Info } from 'lucide-react'
 import { BottomSheet } from './BottomSheet'
 
 interface CustomConfirmModalProps {
@@ -9,6 +9,7 @@ interface CustomConfirmModalProps {
   confirmText?: string
   cancelText?: string
   confirmDisabled?: boolean
+  variant?: 'danger' | 'primary'
   onConfirm: () => void
   onCancel: () => void
 }
@@ -20,18 +21,27 @@ export const CustomConfirmModal: React.FC<CustomConfirmModalProps> = ({
   confirmText = 'Confirm',
   cancelText = 'Cancel',
   confirmDisabled = false,
+  variant = 'danger',
   onConfirm,
   onCancel
 }) => {
+  const isPrimary = variant === 'primary'
+  const Icon = isPrimary ? Info : AlertCircle
+  const colorClass = isPrimary ? 'text-blue-500' : 'text-orange-500'
+  const bgClass = isPrimary ? 'bg-blue-500/10' : 'bg-orange-500/10'
+  const buttonClass = isPrimary 
+    ? 'bg-blue-600 hover:bg-blue-700 disabled:hover:bg-blue-600' 
+    : 'bg-orange-600 hover:bg-orange-700 disabled:hover:bg-orange-600'
+
   return (
     <BottomSheet
       isOpen={isOpen}
       onClose={onCancel}
       maxWidthClassName="max-w-md"
       title={
-        <div className="flex items-center gap-2 text-orange-500">
-          <span className="p-1.5 rounded-lg bg-orange-500/10 text-orange-500">
-            <AlertCircle className="size-5" />
+        <div className={`flex items-center gap-2 ${colorClass}`}>
+          <span className={`p-1.5 rounded-lg ${bgClass} ${colorClass}`}>
+            <Icon className="size-5" />
           </span>
           <span>{title}</span>
         </div>
@@ -49,7 +59,7 @@ export const CustomConfirmModal: React.FC<CustomConfirmModalProps> = ({
             type="button"
             onClick={onConfirm}
             disabled={confirmDisabled}
-            className="px-5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-md transition cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:bg-orange-600"
+            className={`px-5 py-2 rounded-xl text-white text-xs font-semibold shadow-md transition cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed ${buttonClass}`}
           >
             {confirmText}
           </button>

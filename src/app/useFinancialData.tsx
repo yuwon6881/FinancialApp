@@ -922,6 +922,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     if (!payment) return
     setConfirmModalData({
       title: 'Pay Early',
+      variant: 'primary',
       message: (
         <div className="space-y-1.5">
           <p>Pay <strong>{payment.name}</strong> for {formatSensitive(Math.abs(payment.amount))} now?</p>

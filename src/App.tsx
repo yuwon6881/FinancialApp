@@ -914,6 +914,7 @@ function App() {
           message={dialogs.confirmModalData?.message || ''}
           confirmText={dialogs.confirmModalData?.confirmText || 'Confirm'}
           cancelText="Cancel"
+          variant={dialogs.confirmModalData?.variant || 'danger'}
           confirmDisabled={dialogs.confirmModalData?.confirmDisabled || false}
           onConfirm={() => {
             if (dialogs.confirmModalData) {
