@@ -558,15 +558,7 @@ const AllocationChart = ({ portfolio, masked, selected, onSelect }: { portfolio:
     { value: 'asset', label: 'Asset type' },
     { value: 'account', label: 'Account' },
   ]
-  // Map instrument display key back to the correct filter key for holdings table
-  const toFilterKey = (displayKey: string) => {
-    if (mode === 'instrument') {
-      // Extract symbol from "SYMBOL · Name"
-      return displayKey.split(' · ')[0] ?? displayKey
-    }
-    return displayKey
-  }
-  const filterMode: AllocationFilter['mode'] = mode === 'instrument' ? 'asset' : mode
+  const filterMode: AllocationMode = mode === 'instrument' ? 'asset' : mode
   return (
     <section aria-labelledby="allocation-title" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
       <div className="flex items-start justify-between gap-2">
@@ -600,9 +592,9 @@ const AllocationChart = ({ portfolio, masked, selected, onSelect }: { portfolio:
               }}
               aria-pressed={mode === 'instrument'
                 ? selected?.key === name.split(' · ')[0]
-                : selected?.mode === filterMode && selected.key === name}
+                : selected?.mode === filterMode && selected?.key === name}
               className={`flex w-full cursor-pointer items-center justify-between rounded-lg px-2 py-1.5 text-xs transition-colors hover:bg-muted/60 ${
-                (mode === 'instrument' ? selected?.key === name.split(' · ')[0] : selected?.mode === filterMode && selected.key === name)
+                (mode === 'instrument' ? selected?.key === name.split(' · ')[0] : selected?.mode === filterMode && selected?.key === name)
                   ? 'bg-muted'
                   : ''
               }`}
