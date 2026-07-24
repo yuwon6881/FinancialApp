@@ -147,7 +147,14 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       const ops = successfulOps.map(({ op }) => op)
       const onlyInvestments = ops.length > 0 && ops.every(op => op.entity.startsWith('investment'))
       if (onlyInvestments) {
-        window.dispatchEvent(new CustomEvent('investment-sync', { detail: { operations: ops.map(op => op.id) } }))
+        const reconciliations: Promise<void>[] = []
+        window.dispatchEvent(new CustomEvent('investment-sync', {
+          detail: {
+            operations: ops.map(op => op.id),
+            acknowledge: (work: Promise<void>) => { reconciliations.push(work) },
+          },
+        }))
+        await Promise.all(reconciliations)
         setError(null)
         isServerAwakeRef.current = true
         return

@@ -16,7 +16,7 @@ export function useInvestmentPortfolio() {
   const cancelRefreshRef = useRef(false)
   const refreshTimerRef = useRef<number | null>(null)
 
-  const load = useCallback(async (nextRange: InvestmentRange, quiet = false) => {
+  const load = useCallback(async (nextRange: InvestmentRange, quiet = false, rethrow = false) => {
     if (!quiet) setLoading(!portfolio)
     setLoadError('')
     try {
@@ -31,6 +31,7 @@ export function useInvestmentPortfolio() {
       } else {
         setLoadError(error instanceof Error ? error.message : 'Could not load investments.')
       }
+      if (rethrow) throw error
     } finally {
       setLoading(false)
     }
@@ -62,7 +63,14 @@ export function useInvestmentPortfolio() {
   }, [range])
 
   useEffect(() => {
-    const refreshAfterSync = () => { void load(range, true) }
+    const refreshAfterSync = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        acknowledge?: (work: Promise<void>) => void
+      }>).detail
+      const work = load(range, true, Boolean(detail?.acknowledge))
+      if (detail?.acknowledge) detail.acknowledge(work)
+      else void work
+    }
     window.addEventListener('investment-sync', refreshAfterSync)
     return () => window.removeEventListener('investment-sync', refreshAfterSync)
   }, [load, range])

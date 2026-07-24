@@ -93,12 +93,16 @@ export function buildUndoAction(
         ? action('investmentManualPrice', 'add', String(op.targetId), { ...(persisted as object), id: op.targetId })
         : undefined
     case 'investmentActivity:delete':
-      return persisted && typeof persisted === 'object'
-        ? action('investmentActivity', 'restore', String(op.targetId), persisted as OutboxPayload)
-        : undefined
+      return result && typeof result === 'object' && 'transactions' in result
+        ? action('investmentActivity', 'restore', String(op.targetId), result as unknown as OutboxPayload)
+        : persisted && typeof persisted === 'object'
+          ? action('investmentActivity', 'restore', String(op.targetId), persisted as OutboxPayload)
+          : undefined
     case 'investmentCashFlow:delete':
-      return persisted && typeof persisted === 'object'
-        ? action('investmentCashFlow', 'restore', String(op.targetId), persisted as OutboxPayload)
+      return result && typeof result === 'object' && 'id' in result
+        ? action('investmentCashFlow', 'restore', String(op.targetId), result as OutboxPayload)
+        : persisted && typeof persisted === 'object'
+          ? action('investmentCashFlow', 'restore', String(op.targetId), persisted as OutboxPayload)
         : undefined
     case 'transaction:update':
       return before ? action('transaction', 'update', String(op.targetId), toPayload(before)) : undefined

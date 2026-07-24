@@ -462,7 +462,7 @@ function App() {
     showToast: dialogs.showToast,
     guardSensitive: guardSensitive,
     confirm: dialogs.setConfirmModalData,
-    investmentOps: financial.pendingOps.filter(op => op.entity.startsWith('investment')),
+    investmentOps: financial.activeOps.filter(op => op.entity.startsWith('investment')),
     queueInvestmentMutation: (entity, type, targetId, payload, isUndo) => {
       financial.mutateQueue(previous => financial.enqueue(previous, entity, type, targetId, payload, isUndo))
     },

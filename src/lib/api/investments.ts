@@ -7,8 +7,8 @@ import type {
   InvestmentRange,
   InvestmentTransactionType,
 } from '../../types'
-import { CACHE_KEYS, getCachedJSON, setCachedJSON } from '../cache'
-import { jsonBody, request, requestVoid } from './client'
+import { CACHE_KEYS, clearCachedInvestmentPages, getCachedJSON, setCachedJSON } from '../cache'
+import { cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
 
 export interface InstrumentSearchResult {
   selectedInstrumentId?: string
@@ -141,108 +141,116 @@ const pageQuery = (filters: InvestmentPageFilters) => {
   return query.toString()
 }
 
-export async function fetchInvestmentActivity(
+export function fetchInvestmentActivity(
   filters: InvestmentPageFilters,
   signal?: AbortSignal,
 ): Promise<PagedResult<InvestmentActivity>> {
   const query = pageQuery(filters)
   const cacheKey = `cached_investment_activity:${query}`
-  try {
-    const result = await request<PagedResult<InvestmentActivity>>(`/investments/transactions?${query}`, {
-      signal,
-      errorMessage: 'Could not load investment activity',
-    })
-    setCachedJSON(cacheKey, result)
-    return result
-  } catch (error) {
-    if (signal?.aborted) throw error
-    const cached = getCachedJSON<PagedResult<InvestmentActivity> | null>(cacheKey, null)
-    if (cached) return cached
-    throw error
-  }
+  return cachedGet(cacheKey, async () => {
+    try {
+      const result = await request<PagedResult<InvestmentActivity>>(`/investments/transactions?${query}`, {
+        errorMessage: 'Could not load investment activity',
+      })
+      setCachedJSON(cacheKey, result)
+      return result
+    } catch (error) {
+      const cached = getCachedJSON<PagedResult<InvestmentActivity> | null>(cacheKey, null)
+      if (cached) return cached
+      throw error
+    }
+  }, { signal })
 }
 
-export async function fetchInvestmentCashFlows(
+export function fetchInvestmentCashFlows(
   filters: Omit<InvestmentPageFilters, 'instrumentId'>,
   signal?: AbortSignal,
 ): Promise<PagedResult<InvestmentCashFlow>> {
   const query = pageQuery(filters)
   const cacheKey = `cached_investment_cash_flows:${query}`
-  try {
-    const result = await request<PagedResult<InvestmentCashFlow>>(`/investments/cash-flows?${query}`, {
-      signal,
-      errorMessage: 'Could not load cash flow activity',
-    })
-    setCachedJSON(cacheKey, result)
+  return cachedGet(cacheKey, async () => {
+    try {
+      const result = await request<PagedResult<InvestmentCashFlow>>(`/investments/cash-flows?${query}`, {
+        errorMessage: 'Could not load cash flow activity',
+      })
+      setCachedJSON(cacheKey, result)
+      return result
+    } catch (error) {
+      const cached = getCachedJSON<PagedResult<InvestmentCashFlow> | null>(cacheKey, null)
+      if (cached) return cached
+      throw error
+    }
+  }, { signal })
+}
+
+function invalidateAfter<T>(work: Promise<T>): Promise<T> {
+  return work.then(result => {
+    invalidateCache()
+    clearCachedInvestmentPages()
     return result
-  } catch (error) {
-    if (signal?.aborted) throw error
-    const cached = getCachedJSON<PagedResult<InvestmentCashFlow> | null>(cacheKey, null)
-    if (cached) return cached
-    throw error
-  }
+  })
 }
 
 export function createInvestmentAccount(value: AccountMutation): Promise<InvestmentAccount> {
-  return request('/investments/accounts', {
+  return invalidateAfter(request('/investments/accounts', {
     method: 'POST',
     ...jsonBody(value),
     errorMessage: 'Could not create account',
-  })
+  }))
 }
 
 export function updateInvestmentAccount(id: string, value: AccountMutation): Promise<void> {
-  return requestVoid(`/investments/accounts/${id}`, {
+  return invalidateAfter(requestVoid(`/investments/accounts/${id}`, {
     method: 'PUT',
     ...jsonBody(value),
     errorMessage: 'Could not update account',
-  })
+  }))
 }
 
 export function deleteInvestmentAccount(id: string): Promise<void> {
-  return requestVoid(`/investments/accounts/${id}`, {
+  return invalidateAfter(requestVoid(`/investments/accounts/${id}`, {
     method: 'DELETE',
     errorMessage: 'Could not delete account',
-  })
+  }))
 }
 
 export function createInvestmentInstrument(value: InstrumentMutation): Promise<InvestmentInstrument> {
-  return request('/investments/instruments', {
+  return invalidateAfter(request('/investments/instruments', {
     method: 'POST',
     ...jsonBody(value),
     errorMessage: 'Could not save investment',
-  })
+  }))
 }
 
 export function updateInvestmentInstrument(id: string, value: InstrumentMutation): Promise<void> {
-  return requestVoid(`/investments/instruments/${id}`, {
+  return invalidateAfter(requestVoid(`/investments/instruments/${id}`, {
     method: 'PUT',
     ...jsonBody(value),
     errorMessage: 'Could not update investment',
-  })
+  }))
 }
 
 export function deleteInvestmentInstrument(id: string): Promise<void> {
-  return requestVoid(`/investments/instruments/${id}`, {
+  return invalidateAfter(requestVoid(`/investments/instruments/${id}`, {
     method: 'DELETE',
     errorMessage: 'Could not delete investment',
-  })
+  }))
 }
 
 export function createInvestmentActivity(value: InvestmentActivityMutation): Promise<InvestmentActivity> {
-  return request('/investments/transactions', {
+  return invalidateAfter(request('/investments/transactions', {
     method: 'POST',
     ...jsonBody(value),
     errorMessage: 'Could not save investment activity',
-  })
+  }))
 }
 
 export function updateInvestmentActivity(id: string, value: InvestmentActivityMutation): Promise<void> {
-  return requestVoid(`/investments/transactions/${id}`, {
+  return invalidateAfter(requestVoid(`/investments/transactions/${id}`, {
     method: 'PUT',
     ...jsonBody(value),
     errorMessage: 'Could not update investment activity',
-  })
+  }))
 }
 
 export interface DeletedTransactionsSnapshot {
@@ -250,18 +258,18 @@ export interface DeletedTransactionsSnapshot {
 }
 
 export function deleteInvestmentActivity(id: string): Promise<DeletedTransactionsSnapshot> {
-  return request(`/investments/transactions/${id}`, {
+  return invalidateAfter(request(`/investments/transactions/${id}`, {
     method: 'DELETE',
     errorMessage: 'Could not delete investment activity',
-  })
+  }))
 }
 
 export function restoreInvestmentActivity(snapshot: DeletedTransactionsSnapshot): Promise<void> {
-  return requestVoid('/investments/transactions/restore', {
+  return invalidateAfter(requestVoid('/investments/transactions/restore', {
     method: 'POST',
     ...jsonBody(snapshot),
     errorMessage: 'Could not restore investment activity',
-  })
+  }))
 }
 
 export function createManualInvestmentPrice(value: {
@@ -271,18 +279,18 @@ export function createManualInvestmentPrice(value: {
   price: number
   fxRate?: number
 }): Promise<{ id: string }> {
-  return request('/investments/manual-prices', {
+  return invalidateAfter(request('/investments/manual-prices', {
     method: 'POST',
     ...jsonBody(value),
     errorMessage: 'Could not save manual price',
-  })
+  }))
 }
 
 export function deleteManualInvestmentPrice(id: string): Promise<void> {
-  return requestVoid(`/investments/manual-prices/${id}`, {
+  return invalidateAfter(requestVoid(`/investments/manual-prices/${id}`, {
     method: 'DELETE',
     errorMessage: 'Could not delete manual price',
-  })
+  }))
 }
 
 export function createInvestmentCashFlow(value: {
@@ -294,31 +302,31 @@ export function createInvestmentCashFlow(value: {
   date: string
   notes?: string
 }): Promise<{ id: string }> {
-  return request('/investments/cash-flows', {
+  return invalidateAfter(request('/investments/cash-flows', {
     method: 'POST',
     ...jsonBody(value),
     errorMessage: 'Could not save cash movement',
-  })
+  }))
 }
 
 export function deleteInvestmentCashFlow(id: string): Promise<InvestmentCashFlow> {
-  return request(`/investments/cash-flows/${id}`, {
+  return invalidateAfter(request(`/investments/cash-flows/${id}`, {
     method: 'DELETE',
     errorMessage: 'Could not delete cash movement',
-  })
+  }))
 }
 
 export function restoreInvestmentCashFlow(snapshot: InvestmentCashFlow): Promise<void> {
-  return requestVoid('/investments/cash-flows/restore', {
+  return invalidateAfter(requestVoid('/investments/cash-flows/restore', {
     method: 'POST',
     ...jsonBody(snapshot),
     errorMessage: 'Could not restore cash movement',
-  })
+  }))
 }
 
 export function refreshInvestmentMarketData(): Promise<MarketRefreshResponse> {
-  return request('/investments/market-data/refresh', {
+  return invalidateAfter(request('/investments/market-data/refresh', {
     method: 'POST',
     errorMessage: 'Could not update prices',
-  })
+  }))
 }

@@ -167,6 +167,22 @@ export function hasCachedKey(key: string): boolean {
   return getCachedJSON<unknown>(key, null) !== null
 }
 
+export function clearCachedInvestmentPages(): void {
+  try {
+    const keys: string[] = []
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index)
+      if (key?.startsWith('cached_investment_activity:') || key?.startsWith('cached_investment_cash_flows:')) {
+        keys.push(key)
+      }
+    }
+    keys.forEach(removeCachedKey)
+  } catch {
+    // Investment page caches are stale-while-revalidate only. Clearing them is
+    // best-effort when storage is unavailable or restricted.
+  }
+}
+
 export function clearLocalFinancialData(): void {
   for (const key of [...Object.values(CACHE_KEYS), CYCLE_SNAPSHOTS_KEY]) {
     try {
@@ -176,18 +192,7 @@ export function clearLocalFinancialData(): void {
       // should not prevent the remaining caches and drafts from being removed.
     }
   }
-  try {
-    const investmentPageKeys: string[] = []
-    for (let index = 0; index < localStorage.length; index += 1) {
-      const key = localStorage.key(index)
-      if (key?.startsWith('cached_investment_activity:') || key?.startsWith('cached_investment_cash_flows:')) {
-        investmentPageKeys.push(key)
-      }
-    }
-    investmentPageKeys.forEach(removeCachedKey)
-  } catch {
-    // Best-effort, consistent with the fixed cache keys above.
-  }
+  clearCachedInvestmentPages()
   for (const key of [
     'draft_transactions', 'pending_operations_backup', 'pending_transactions_backup',
     'draft_transactions_backup', 'failed_operations', 'failed_operations_backup',

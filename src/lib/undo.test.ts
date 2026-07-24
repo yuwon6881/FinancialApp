@@ -49,4 +49,57 @@ describe('undo helpers', () => {
     expect(buildUndoAction(snapshots, op('category', 'delete', '1', { replacementCategoryId: '2' }), undefined, vi.fn()))
       .toBeUndefined()
   })
+
+  it('uses the authoritative server snapshot when undoing linked investment activity deletion', () => {
+    const enqueue = vi.fn()
+    const persisted = { transactions: [{ id: 'out', type: 'TransferOut' }] }
+    const serverSnapshot = {
+      transactions: [
+        { id: 'out', type: 'TransferOut' },
+        { id: 'in', type: 'TransferIn', linkedTransferId: 'out' },
+      ],
+    }
+    const action = buildUndoAction(
+      new Map(),
+      op('investmentActivity', 'delete', 'out', { undoSnapshot: persisted }),
+      serverSnapshot as never,
+      enqueue,
+    )
+
+    action?.onAction()
+    expect(enqueue).toHaveBeenCalledWith(
+      'investmentActivity',
+      'restore',
+      'out',
+      serverSnapshot,
+    )
+  })
+
+  it('uses the normalized server record when undoing cash-flow deletion', () => {
+    const enqueue = vi.fn()
+    const serverSnapshot = {
+      id: 'flow-1',
+      accountId: 'account-1',
+      currency: 'USD',
+      type: 'Withdrawal',
+      amount: -25,
+      date: '2026-07-24',
+    }
+    const action = buildUndoAction(
+      new Map(),
+      op('investmentCashFlow', 'delete', 'flow-1', {
+        undoSnapshot: { ...serverSnapshot, amount: 25 },
+      }),
+      serverSnapshot as never,
+      enqueue,
+    )
+
+    action?.onAction()
+    expect(enqueue).toHaveBeenCalledWith(
+      'investmentCashFlow',
+      'restore',
+      'flow-1',
+      serverSnapshot,
+    )
+  })
 })
