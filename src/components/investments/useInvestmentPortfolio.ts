@@ -17,7 +17,7 @@ export function useInvestmentPortfolio() {
   const refreshTimerRef = useRef<number | null>(null)
 
   const load = useCallback(async (nextRange: InvestmentRange, quiet = false, rethrow = false) => {
-    if (!quiet) setLoading(!portfolio)
+    if (!quiet) setLoading(true)
     setLoadError('')
     try {
       const result = await api.fetchInvestmentPortfolio(nextRange)
@@ -39,7 +39,7 @@ export function useInvestmentPortfolio() {
 
   useEffect(() => {
     const abort = new AbortController()
-    setLoading(!portfolio)
+    setLoading(true)
     setLoadError('')
     api.fetchInvestmentPortfolio(range, abort.signal)
       .then(result => {

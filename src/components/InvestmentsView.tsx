@@ -227,7 +227,12 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
             <Button variant="ghost" disabled={portfolio.instruments.length === 0} onClick={() => openPanel('price')}><CircleDollarSign className="size-4" /> Manual price</Button>
           </div>
           {investmentOps.length > 0 && <div role="status" className="flex items-center gap-2 rounded-xl border border-blue-500/20 bg-blue-500/8 px-4 py-3 text-xs text-blue-700 dark:text-blue-300"><Loader2 className={`size-3.5 ${isOffline ? '' : 'animate-spin'}`} /> Pending changes · confirmed totals remain visible until synchronization completes.</div>}
-          <InvestmentPlanPanel allocation={portfolio.allocation} masked={hideSensitive} onNavigate={onNavigate} />
+          <InvestmentPlanPanel
+            allocation={portfolio.allocation}
+            usdRate={portfolio.holdings.find(h => h.currency === 'USD' && h.fxRate)?.fxRate}
+            masked={hideSensitive}
+            onNavigate={onNavigate}
+          />
           <AccountsAndInstruments
             portfolio={setupPortfolio ?? portfolio}
             offline={isOffline}
@@ -274,7 +279,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
             </details>
           )}
           <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-            <ValueChart portfolio={portfolio} masked={hideSensitive} range={range} onRangeChange={setRange} />
+            <ValueChart portfolio={portfolio} masked={hideSensitive} range={range} isFetching={loading} onRangeChange={setRange} />
             <AllocationChart portfolio={portfolio} masked={hideSensitive} selected={allocationFilter} onSelect={setAllocationFilter} />
           </div>
           <PerformanceBars portfolio={portfolio} masked={hideSensitive} />
@@ -514,7 +519,7 @@ const AccountsAndInstruments = ({
   )
 }
 
-const ValueChart = ({ portfolio, masked, range, onRangeChange }: { portfolio: InvestmentPortfolio; masked: boolean; range: InvestmentRange; onRangeChange: (value: InvestmentRange) => void }) => {
+const ValueChart = ({ portfolio, masked, range, isFetching, onRangeChange }: { portfolio: InvestmentPortfolio; masked: boolean; range: InvestmentRange; isFetching?: boolean; onRangeChange: (value: InvestmentRange) => void }) => {
   const reduceMotion = useReducedMotion()
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
@@ -571,15 +576,24 @@ const ValueChart = ({ portfolio, masked, range, onRangeChange }: { portfolio: In
           <span className="max-w-xs">Market values cannot be plotted because prices or FX rates are missing. Supply prices via "Update prices" or "Manual price", and add missing trade FX rates by editing each activity.</span>
         </div>
       ) : (
-        <div
-          className={`relative mt-5 cursor-crosshair ${masked ? 'select-none blur-md pointer-events-none' : ''}`}
-          aria-hidden={masked}
-          onMouseMove={event => selectNearest(event.clientX)}
-          onMouseLeave={() => setHoveredIndex(null)}
-          onTouchStart={event => selectNearest(event.touches[0].clientX)}
-          onTouchMove={event => selectNearest(event.touches[0].clientX)}
-        >
-          <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="h-48 w-full overflow-visible sm:h-60" role="img" aria-label={summary}>
+        <div className="relative mt-5">
+          {isFetching && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+              <div className="flex items-center gap-2 rounded-lg bg-background/80 px-4 py-2 shadow-sm backdrop-blur-sm border border-border/50">
+                <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                <span className="text-xs font-semibold text-muted-foreground">Loading…</span>
+              </div>
+            </div>
+          )}
+          <div
+            className={`relative cursor-crosshair ${masked || isFetching ? 'select-none blur-md pointer-events-none transition-all duration-200' : 'transition-all duration-200'}`}
+            aria-hidden={masked}
+            onMouseMove={event => selectNearest(event.clientX)}
+            onMouseLeave={() => setHoveredIndex(null)}
+            onTouchStart={event => selectNearest(event.touches[0].clientX)}
+            onTouchMove={event => selectNearest(event.touches[0].clientX)}
+          >
+            <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="h-48 w-full overflow-visible sm:h-60" role="img" aria-label={summary}>
             <defs>
               <linearGradient id="investmentValueGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.24" />
@@ -618,6 +632,7 @@ const ValueChart = ({ portfolio, masked, range, onRangeChange }: { portfolio: In
               </span>
             </div>
           )}
+          </div>
         </div>
       )}
       <div className="mt-3 flex flex-wrap gap-4 text-[10px] font-semibold text-muted-foreground">
@@ -996,9 +1011,8 @@ const PagedActivityTable = ({
             <Button variant="ghost" className="h-10 px-3 text-xs" onClick={clearAll}>Clear all</Button>
           </div>
         </div>
-      </div>
-      {loading && rows.length === 0 ? <p className="p-5 text-xs text-muted-foreground">Loading activity…</p> : rows.length === 0 ? <p className="p-5 text-xs text-muted-foreground">No activity matches these filters.</p> : (
-        <div className="relative">
+        </div>
+        <div className="relative min-h-[160px]">
           {loading && (
             <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
               <div className="flex items-center gap-2 rounded-lg bg-background/80 px-4 py-2 shadow-sm backdrop-blur-sm border border-border/50">
@@ -1008,43 +1022,52 @@ const PagedActivityTable = ({
             </div>
           )}
           <div className={loading ? 'opacity-50 blur-[2px] pointer-events-none transition-all duration-200' : 'transition-all duration-200'} aria-busy={loading}>
-            <div className="space-y-2 p-3 sm:hidden">
-            {mode === 'investments' ? displayTransactions.map(value => {
-              const instrument = instruments.get(value.instrumentId)
-              const isActive = activeSyncId === value.id
-              const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
-              return <article key={value.id} className="interactive-card min-w-0 rounded-xl border border-border/50 p-3">
-                <div className="flex min-w-0 items-start justify-between gap-2"><div className="min-w-0"><strong className="block truncate text-xs">{activityTypes.find(item => item.value === value.type)?.label} · {instrument?.symbol}</strong><span className="text-[10px] text-muted-foreground">{value.tradeDate} · {accounts.get(value.accountId)}</span><RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></div><span className="shrink-0 text-xs font-bold">{masked || value.cashAmount === undefined ? '—' : money(value.cashAmount, instrument?.currency ?? portfolio.appCurrency)}</span></div>
-                {value.notes && <p className="mt-2 break-words text-[10px] text-muted-foreground">{value.notes}</p>}
-                <div className="mt-2 flex justify-end gap-1"><Button variant="ghost" size="sm" disabled={isBusy} onClick={() => onEdit(value)}>Edit</Button><Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDelete(value)}>Delete</Button></div>
-              </article>
-            }) : displayCashFlows.map(value => {
-              const isActive = activeSyncId === value.id
-              const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
-              return <article key={value.id} className="interactive-card min-w-0 rounded-xl border border-border/50 p-3">
-                <div className="flex items-start justify-between gap-2"><div className="min-w-0"><strong className="block truncate text-xs">{value.type} · {accounts.get(value.accountId)}</strong><span className="text-[10px] text-muted-foreground">{value.date}</span><RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></div><strong className={value.amount < 0 ? 'text-orange-500' : 'text-emerald-500'}>{masked ? '••••' : money(value.amount, value.currency)}</strong></div>
-                {value.notes && <p className="mt-2 break-words text-[10px] text-muted-foreground">{value.notes}</p>}
-                <div className="mt-2 flex justify-end"><Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDeleteCashFlow(value)}>Delete</Button></div>
-              </article>
-            })}
-          </div>
-          <div className="hidden overflow-x-auto sm:block">
-            <table className="w-full text-left text-xs">
-              <thead className="border-y border-border/50 bg-muted/25 text-[10px] uppercase text-muted-foreground"><tr><th className="px-4 py-3">Date</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Account</th>{mode === 'investments' && <th className="px-4 py-3">Investment</th>}<th className="px-4 py-3 text-right">Amount</th><th className="px-4 py-3" /></tr></thead>
-              <tbody className="divide-y divide-border/40">{mode === 'investments' ? displayTransactions.map(value => {
-                const isActive = activeSyncId === value.id
-                const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
-                return <tr key={value.id}><td className="px-4 py-3">{value.tradeDate}</td><td className="px-4 py-3"><span className="flex items-center gap-2 font-bold">{activityTypes.find(item => item.value === value.type)?.label}<RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3">{instruments.get(value.instrumentId)?.symbol}</td><td className="px-4 py-3 text-right">{masked || value.cashAmount === undefined ? '—' : money(value.cashAmount, instruments.get(value.instrumentId)?.currency ?? portfolio.appCurrency)}</td><td className="px-4 py-3"><span className="flex justify-end gap-1"><Button variant="ghost" size="sm" disabled={isBusy} onClick={() => onEdit(value)}>Edit</Button><Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDelete(value)}>Delete</Button></span></td></tr>
-              }) : displayCashFlows.map(value => {
-                const isActive = activeSyncId === value.id
-                const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
-                return <tr key={value.id}><td className="px-4 py-3">{value.date}</td><td className="px-4 py-3"><span className="flex items-center gap-2 font-bold">{value.type}<RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3 text-right">{masked ? '••••' : money(value.amount, value.currency)}</td><td className="px-4 py-3 text-right"><Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDeleteCashFlow(value)}>Delete</Button></td></tr>
-              })}</tbody>
-            </table>
+            {rows.length === 0 ? (
+              <p className="p-5 text-xs text-muted-foreground">
+                {total === 0 && !appliedFilters.type && !appliedFilters.accountId && !appliedFilters.instrumentId && !appliedFilters.from && !appliedFilters.to
+                  ? 'No activity matches these filters.'
+                  : 'No activity matches these filters.'}
+              </p>
+            ) : (
+              <>
+                <div className="space-y-2 p-3 sm:hidden">
+                {mode === 'investments' ? displayTransactions.map(value => {
+                  const instrument = instruments.get(value.instrumentId)
+                  const isActive = activeSyncId === value.id
+                  const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
+                  return <article key={value.id} className="interactive-card min-w-0 rounded-xl border border-border/50 p-3">
+                    <div className="flex min-w-0 items-start justify-between gap-2"><div className="min-w-0"><strong className="block truncate text-xs">{activityTypes.find(item => item.value === value.type)?.label} · {instrument?.symbol}</strong><span className="text-[10px] text-muted-foreground">{value.tradeDate} · {accounts.get(value.accountId)}</span><RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></div><span className="shrink-0 text-xs font-bold">{masked || value.cashAmount === undefined ? '—' : money(value.cashAmount, instrument?.currency ?? portfolio.appCurrency)}</span></div>
+                    {value.notes && <p className="mt-2 break-words text-[10px] text-muted-foreground">{value.notes}</p>}
+                    <div className="mt-2 flex justify-end gap-1"><Button variant="ghost" size="sm" disabled={isBusy} onClick={() => onEdit(value)}>Edit</Button><Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDelete(value)}>Delete</Button></div>
+                  </article>
+                }) : displayCashFlows.map(value => {
+                  const isActive = activeSyncId === value.id
+                  const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
+                  return <article key={value.id} className="interactive-card min-w-0 rounded-xl border border-border/50 p-3">
+                    <div className="flex items-start justify-between gap-2"><div className="min-w-0"><strong className="block truncate text-xs">{value.type} · {accounts.get(value.accountId)}</strong><span className="text-[10px] text-muted-foreground">{value.date}</span><RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></div><strong className={value.amount < 0 ? 'text-orange-500' : 'text-emerald-500'}>{masked ? '••••' : money(value.amount, value.currency)}</strong></div>
+                    {value.notes && <p className="mt-2 break-words text-[10px] text-muted-foreground">{value.notes}</p>}
+                    <div className="mt-2 flex justify-end"><Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDeleteCashFlow(value)}>Delete</Button></div>
+                  </article>
+                })}
+                </div>
+                <div className="hidden overflow-x-auto sm:block">
+                  <table className="w-full text-left text-xs">
+                    <thead className="border-y border-border/50 bg-muted/25 text-[10px] uppercase text-muted-foreground"><tr><th className="px-4 py-3">Date</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Account</th>{mode === 'investments' && <th className="px-4 py-3">Investment</th>}<th className="px-4 py-3 text-right">Amount</th><th className="px-4 py-3" /></tr></thead>
+                    <tbody className="divide-y divide-border/40">{mode === 'investments' ? displayTransactions.map(value => {
+                      const isActive = activeSyncId === value.id
+                      const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
+                      return <tr key={value.id}><td className="px-4 py-3">{value.tradeDate}</td><td className="px-4 py-3"><span className="flex items-center gap-2 font-bold">{activityTypes.find(item => item.value === value.type)?.label}<RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3">{instruments.get(value.instrumentId)?.symbol}</td><td className="px-4 py-3 text-right">{masked || value.cashAmount === undefined ? '—' : money(value.cashAmount, instruments.get(value.instrumentId)?.currency ?? portfolio.appCurrency)}</td><td className="px-4 py-3"><span className="flex justify-end gap-1"><Button variant="ghost" size="sm" disabled={isBusy} onClick={() => onEdit(value)}>Edit</Button><Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDelete(value)}>Delete</Button></span></td></tr>
+                    }) : displayCashFlows.map(value => {
+                      const isActive = activeSyncId === value.id
+                      const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
+                      return <tr key={value.id}><td className="px-4 py-3">{value.date}</td><td className="px-4 py-3"><span className="flex items-center gap-2 font-bold">{value.type}<RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3 text-right">{masked ? '••••' : money(value.amount, value.currency)}</td><td className="px-4 py-3 text-right"><Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDeleteCashFlow(value)}>Delete</Button></td></tr>
+                    })}</tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </div>
         </div>
-        </div>
-      )}
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/50 p-3">
         <CustomSelect value={pageSize} onChange={value => resetPage(() => setPageSize(Number(value) as 10 | 25 | 50))} options={[10, 25, 50].map(value => ({ value, label: `${value} per page` }))} ariaLabel="Rows per page" />
         <div className="flex items-center gap-2 text-xs"><Button variant="ghost" size="sm" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>Previous</Button><span>{page} / {pages}</span><Button variant="ghost" size="sm" disabled={page >= pages} onClick={() => setPage(value => value + 1)}>Next</Button></div>

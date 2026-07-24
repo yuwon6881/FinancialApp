@@ -10,24 +10,33 @@ const tone: Record<InvestmentAllocationStatus, string> = {
   Alert: 'border-orange-500/30 bg-orange-500/8 text-orange-600 dark:text-orange-300',
 }
 
-const colors = ['bg-blue-500', 'bg-violet-500', 'bg-emerald-500']
+const colors = ['bg-blue-500', 'bg-fuchsia-500', 'bg-emerald-500']
+
+import { useState } from 'react'
 
 export function InvestmentPlanPanel({
   allocation,
+  usdRate,
   masked,
   onNavigate,
 }: {
   allocation: InvestmentAllocationOverview
+  usdRate?: number
   masked: boolean
   onNavigate: (tab: AppTab) => void
 }) {
+  const [showUsd, setShowUsd] = useState(true)
+  const isUsd = showUsd && usdRate !== undefined
+  const rate = isUsd ? usdRate : 1
+  const currency = isUsd ? 'USD' : allocation.appCurrency
+
   const money = (value?: number) => value === undefined
     ? 'Incomplete'
     : masked ? '••••' : new Intl.NumberFormat(undefined, {
       style: 'currency',
-      currency: allocation.appCurrency,
+      currency,
       maximumFractionDigits: 2,
-    }).format(value)
+    }).format(isUsd ? value / rate : value)
   const configure = () => {
     const next = new URL(window.location.href)
     next.searchParams.set('section', 'investment-plan')
@@ -97,7 +106,7 @@ export function InvestmentPlanPanel({
               <div className="mb-1 flex justify-between text-[10px] text-muted-foreground"><span>Target</span><span>100%</span></div>
               <div className="flex h-3 overflow-hidden rounded-full bg-muted">
                 {allocation.sleeves.map((sleeve, index) => (
-                  <div key={sleeve.sleeve} className={`${colors[index]} opacity-55`} style={{ width: `${sleeve.targetPercentage}%` }} />
+                  <div key={sleeve.sleeve} className={`${colors[index]} opacity-80`} style={{ width: `${sleeve.targetPercentage}%` }} />
                 ))}
               </div>
             </div>
@@ -111,19 +120,39 @@ export function InvestmentPlanPanel({
         </div>
 
         <div className="rounded-xl border border-border/50 bg-muted/20 p-4">
-          <h3 className="text-xs font-bold text-foreground">Priority guidance</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-foreground">Priority guidance</h3>
+            {usdRate !== undefined && allocation.appCurrency !== 'USD' && (
+              <div className="flex rounded-xl bg-muted/40 p-1">
+                <button type="button" onClick={() => setShowUsd(true)} className={`rounded-lg px-2 py-1 text-[10px] font-bold ${showUsd ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}>USD</button>
+                <button type="button" onClick={() => setShowUsd(false)} className={`rounded-lg px-2 py-1 text-[10px] font-bold ${!showUsd ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}>{allocation.appCurrency}</button>
+              </div>
+            )}
+          </div>
           {allocation.incompleteReasons.length > 0 ? (
             <ul className="mt-3 space-y-2 text-xs text-muted-foreground">
               {allocation.incompleteReasons.map(reason => <li key={reason}>• {reason}</li>)}
             </ul>
           ) : allocation.recommendations.length > 0 ? (
             <ol className="mt-3 space-y-2">
-              {allocation.recommendations.slice(0, 5).map((recommendation, index) => (
-                <li key={`${recommendation.kind}-${recommendation.sleeve ?? index}`} className="flex gap-2 text-xs text-muted-foreground">
-                  <span className="font-bold text-foreground">{index + 1}.</span>
-                  <span>{masked ? recommendation.message.replace(/[A-Z]{3} [\d,.]+/g, '••••') : recommendation.message}</span>
-                </li>
-              ))}
+              {allocation.recommendations.slice(0, 5).map((recommendation, index) => {
+                const amountStr = money(recommendation.amount)
+                const sleeve = recommendation.sleeve ? allocation.sleeves.find(s => s.sleeve === recommendation.sleeve)?.label : ''
+                let customMessage = masked ? recommendation.message.replace(/[A-Z]{3} [\d,.]+/g, '••••') : recommendation.message
+                switch(recommendation.kind) {
+                  case 'UseCash': customMessage = `Allocate ${amountStr} from uninvested cash to begin.`; break;
+                  case 'TopUp': customMessage = `Deposit an additional ${amountStr} to reach your targets without selling.`; break;
+                  case 'Buy': customMessage = `Buy ${amountStr} of ${sleeve}.`; break;
+                  case 'Sell': customMessage = `Sell ${amountStr} of ${sleeve}.`; break;
+                  case 'TransferBuy': customMessage = `Reinvest ${amountStr} into ${sleeve}.`; break;
+                }
+                return (
+                  <li key={`${recommendation.kind}-${recommendation.sleeve ?? index}`} className="flex gap-2 text-xs text-muted-foreground">
+                    <span className="font-bold text-foreground">{index + 1}.</span>
+                    <span>{customMessage}</span>
+                  </li>
+                )
+              })}
             </ol>
           ) : (
             <p className="mt-3 text-xs text-muted-foreground">
