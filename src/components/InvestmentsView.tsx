@@ -1,11 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  AlertCircle,
+  AlertTriangle,
   ArrowLeft,
   Building2,
   ChevronDown,
   CircleDollarSign,
   CloudOff,
+  Info,
   Loader2,
+  PieChart,
   Plus,
   RefreshCw,
   Search,
@@ -216,7 +220,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
       ) : (
         <>
           <SummaryCards portfolio={portfolio} masked={hideSensitive} />
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
             <Button variant="ghost" onClick={() => openPanel('account')}><Building2 className="size-4" /> Add account</Button>
             <Button variant="ghost" onClick={() => openPanel('instrument')}><Search className="size-4" /> Add investment</Button>
             <Button variant="ghost" disabled={portfolio.accounts.length === 0} onClick={() => openPanel('cash')}><Wallet className="size-4" /> Deposit / withdraw</Button>
@@ -226,12 +230,21 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
           <section aria-labelledby="quick-insights" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
             <h2 id="quick-insights" className="text-base font-bold text-foreground">Quick insights</h2>
             <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {portfolio.insights.map(value => (
-                <li key={value} className="flex items-start gap-3 rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 text-xs leading-relaxed text-blue-700 shadow-sm dark:text-blue-300">
-                  <div className="mt-0.5 shrink-0 rounded-full bg-blue-500/20 p-1.5 text-blue-600 dark:text-blue-400"><TrendingUp className="size-4" /></div>
-                  <span className="pt-0.5">{value}</span>
-                </li>
-              ))}
+              {portfolio.insights.map((value, index) => {
+                const isLargest = value.toLowerCase().includes('largest holding');
+                const isBest = value.toLowerCase().includes('best performer');
+                const isConcentration = value.toLowerCase().includes('concentration');
+                const Icon = isLargest ? PieChart : isBest ? TrendingUp : isConcentration ? AlertCircle : Info;
+                
+                return (
+                  <li key={index} className="flex items-center gap-3 rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 text-xs leading-relaxed text-blue-700 shadow-sm dark:text-blue-300">
+                    <div className="shrink-0 rounded-full bg-blue-500/20 p-1.5 text-blue-600 dark:text-blue-400">
+                      <Icon className="size-4" />
+                    </div>
+                    <span>{value}</span>
+                  </li>
+                );
+              })}
             </ul>
           </section>
           <AccountsAndInstruments
@@ -424,8 +437,14 @@ const AccountsAndInstruments = ({
               {portfolio.accounts.filter(value => matches(`${value.name} ${value.baseCurrency}`)).map(value => (
                 <div key={value.id} className="flex items-center justify-between gap-2 rounded-xl bg-muted/25 p-3">
                   <span className="min-w-0">
-                    <strong className="block truncate text-xs text-foreground">{value.name}</strong>
-                    {!value.isArchived && value.archiveUnavailableReason && <span className="mt-1 block max-w-sm text-[9px] text-amber-600 dark:text-amber-400">{value.archiveUnavailableReason}</span>}
+                    <strong className="flex items-center gap-2 truncate text-xs text-foreground">
+                      {value.name}
+                      {!value.canDelete && !value.canArchive && !value.isArchived && (
+                        <span title="Close every position and bring all cash balances to zero before archiving." className="text-orange-500">
+                          <AlertTriangle className="size-3.5" />
+                        </span>
+                      )}
+                    </strong>
                     <span className="text-[10px] text-muted-foreground">{value.baseCurrency}{value.isArchived ? ' · Archived' : ''}</span>
                   </span>
                   <div className="flex shrink-0 gap-1">
@@ -453,7 +472,7 @@ const AccountsAndInstruments = ({
                 </div>
               ))}
             </div>
-            <p className="mt-3 text-[10px] text-muted-foreground">Archive preserves closed-account history. Close every position and bring all cash balances to zero before archiving.</p>
+            <p className="mt-3 text-[10px] text-muted-foreground">Archive preserves closed-account history.</p>
           </div>}
           {tab === 'investments' && <div>
             <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Investments</h3>
@@ -870,19 +889,29 @@ const PagedActivityTable = ({
             <button type="button" onClick={() => resetPage(() => { setMode('cash'); setType(''); setInstrumentId(''); setAppliedFilters(value => ({ ...value, type: '', instrumentId: '' })) })} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${mode === 'cash' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}>Cash flow</button>
           </div>
         </div>
-        <div className="grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-6" onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); applySearch() } }}>
-          <CustomSelect value={accountId} onChange={value => setAccountId(String(value))} options={[{ value: '', label: 'All accounts' }, ...portfolio.accounts.map(value => ({ value: value.id, label: value.name }))]} ariaLabel="Filter by account" className="min-w-0 w-full" />
-          {mode === 'investments' && <CustomSelect value={instrumentId} onChange={value => setInstrumentId(String(value))} options={[{ value: '', label: 'All investments' }, ...portfolio.instruments.map(value => ({ value: value.id, label: value.symbol }))]} ariaLabel="Filter by investment" className="min-w-0 w-full" />}
-          <CustomSelect value={type} onChange={value => setType(String(value))} options={typeOptions} ariaLabel="Filter by type" className="min-w-0 w-full" />
-          <DatePicker value={from} onChange={setFrom} placeholder="From date" clearable clearAriaLabel="Clear from date" className="min-w-0 w-full" />
-          <DatePicker value={to} onChange={setTo} placeholder="To date" clearable clearAriaLabel="Clear to date" className="min-w-0 w-full" />
-          <div className="flex gap-1"><Button variant="primary" size="sm" onClick={applySearch}><Search className="size-3.5" /> Search</Button><Button variant="ghost" size="sm" onClick={clearAll}>Clear all</Button></div>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end" onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); applySearch() } }}>
+          <div className="grid min-w-0 flex-1 gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+            <CustomSelect value={accountId} onChange={value => setAccountId(String(value))} options={[{ value: '', label: 'All accounts' }, ...portfolio.accounts.map(value => ({ value: value.id, label: value.name }))]} ariaLabel="Filter by account" className="min-w-0 w-full" />
+            {mode === 'investments' && <CustomSelect value={instrumentId} onChange={value => setInstrumentId(String(value))} options={[{ value: '', label: 'All investments' }, ...portfolio.instruments.map(value => ({ value: value.id, label: value.symbol }))]} ariaLabel="Filter by investment" className="min-w-0 w-full" />}
+            <CustomSelect value={type} onChange={value => setType(String(value))} options={typeOptions} ariaLabel="Filter by type" className="min-w-0 w-full" />
+            <DatePicker value={from} onChange={setFrom} placeholder="From date" clearable clearAriaLabel="Clear from date" className="min-w-0 w-full" />
+            <DatePicker value={to} onChange={setTo} placeholder="To date" clearable clearAriaLabel="Clear to date" className="min-w-0 w-full" />
+          </div>
+          <div className="flex shrink-0 gap-1 self-end lg:self-auto"><Button variant="primary" size="sm" onClick={applySearch}><Search className="size-3.5" /> Search</Button><Button variant="ghost" size="sm" onClick={clearAll}>Clear all</Button></div>
         </div>
       </div>
       {loading && rows.length === 0 ? <p className="p-5 text-xs text-muted-foreground">Loading activity…</p> : rows.length === 0 ? <p className="p-5 text-xs text-muted-foreground">No activity matches these filters.</p> : (
-        <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'} aria-busy={loading}>
-          {loading && <p role="status" className="flex items-center gap-2 px-4 pt-3 text-[10px] font-semibold text-muted-foreground"><Loader2 className="size-3 animate-spin" /> Updating…</p>}
-          <div className="space-y-2 p-3 sm:hidden">
+        <div className="relative">
+          {loading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+              <div className="flex items-center gap-2 rounded-lg bg-background/80 px-4 py-2 shadow-sm backdrop-blur-sm border border-border/50">
+                <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                <span className="text-xs font-semibold text-muted-foreground">Updating…</span>
+              </div>
+            </div>
+          )}
+          <div className={loading ? 'opacity-50 blur-[2px] pointer-events-none transition-all duration-200' : 'transition-all duration-200'} aria-busy={loading}>
+            <div className="space-y-2 p-3 sm:hidden">
             {mode === 'investments' ? displayTransactions.map(value => {
               const instrument = instruments.get(value.instrumentId)
               return <article key={value.id} className="min-w-0 rounded-xl border border-border/50 p-3">
@@ -902,6 +931,7 @@ const PagedActivityTable = ({
               <tbody className="divide-y divide-border/40">{mode === 'investments' ? displayTransactions.map(value => <tr key={value.id}><td className="px-4 py-3">{value.tradeDate}</td><td className="px-4 py-3 font-bold">{activityTypes.find(item => item.value === value.type)?.label}</td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3">{instruments.get(value.instrumentId)?.symbol}</td><td className="px-4 py-3 text-right">{masked || value.cashAmount === undefined ? '—' : money(value.cashAmount, instruments.get(value.instrumentId)?.currency ?? portfolio.appCurrency)}</td><td className="px-4 py-3"><span className="flex justify-end gap-1"><Button variant="ghost" size="sm" onClick={() => onEdit(value)}>Edit</Button><Button variant="danger" size="sm" onClick={() => onDelete(value)}>Delete</Button></span></td></tr>) : displayCashFlows.map(value => <tr key={value.id}><td className="px-4 py-3">{value.date}</td><td className="px-4 py-3 font-bold">{value.type}</td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3 text-right">{masked ? '••••' : money(value.amount, value.currency)}</td><td className="px-4 py-3 text-right"><Button variant="danger" size="sm" onClick={() => onDeleteCashFlow(value)}>Delete</Button></td></tr>)}</tbody>
             </table>
           </div>
+        </div>
         </div>
       )}
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/50 p-3">
