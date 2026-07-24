@@ -2,6 +2,7 @@ import { AlertTriangle, ArrowRight, CheckCircle2, CircleHelp, Settings2 } from '
 import { motion, useReducedMotion } from 'framer-motion'
 import type { AppTab, InvestmentAllocationOverview, InvestmentAllocationStatus } from '../../types'
 import { Button } from '../ui/Button'
+import { formatCurrencyVal } from '../../lib/utils'
 import { useState } from 'react'
 
 const tone: Record<InvestmentAllocationStatus, string> = {
@@ -33,11 +34,7 @@ export function InvestmentPlanPanel({
 
   const money = (value?: number) => value === undefined
     ? 'Incomplete'
-    : masked ? '••••' : new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 2,
-    }).format(isUsd ? value / rate : value)
+    : masked ? '••••' : formatCurrencyVal(isUsd ? value / rate : value, currency)
   const configure = () => {
     const next = new URL(window.location.href)
     next.searchParams.set('section', 'investment-plan')
