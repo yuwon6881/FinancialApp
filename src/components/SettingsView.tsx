@@ -3,6 +3,7 @@ import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Bell, BellRing
 import { motion } from 'framer-motion'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
+import { CurrencySelect } from './ui/CurrencySelect'
 import { RowSyncStatus } from './ui/RowSyncBadge'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { PerimeterBeam } from './ui/PerimeterBeam'
@@ -222,18 +223,10 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
 
               <label className="space-y-1 block">
                 <span className="text-xs font-semibold text-muted-foreground block">Default Account Currency</span>
-                <CustomSelect
+                <CurrencySelect
                   ariaLabel="Default account currency"
                   value={view.currencyInput}
-                  onChange={val => view.setCurrencyInput(String(val))}
-                  options={[
-                    { value: 'USD', label: 'USD ($)' },
-                    { value: 'EUR', label: 'EUR (€)' },
-                    { value: 'GBP', label: 'GBP (£)' },
-                    { value: 'MYR', label: 'MYR (RM)' },
-                    { value: 'SGD', label: 'SGD (S$)' },
-                    { value: 'CNY', label: 'CNY (¥)' }
-                  ]}
+                  onChange={view.setCurrencyInput}
                   className="w-full"
                 />
               </label>

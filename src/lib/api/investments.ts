@@ -1,6 +1,7 @@
 import type {
   InvestmentAccount,
   InvestmentActivity,
+  InvestmentCashFlow,
   InvestmentInstrument,
   InvestmentPortfolio,
   InvestmentRange,
@@ -38,6 +39,30 @@ export interface MarketRefreshResponse {
   complete: boolean
   warnings: string[]
   message?: string
+}
+
+export interface CurrencyCatalogItem {
+  code: string
+  symbol: string
+  name: string
+  label: string
+}
+
+export interface PagedResult<T> {
+  items: T[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+export interface InvestmentPageFilters {
+  accountId?: string
+  instrumentId?: string
+  type?: string
+  from?: string
+  to?: string
+  page?: number
+  pageSize?: 10 | 25 | 50
 }
 
 export interface AccountMutation {
@@ -84,18 +109,51 @@ export async function fetchInvestmentPortfolio(
   range: InvestmentRange,
   signal?: AbortSignal,
 ): Promise<InvestmentPortfolio> {
-  const data = await request<InvestmentPortfolio>(`/investments/portfolio?range=${range}`, {
+  const data = await request<Omit<InvestmentPortfolio, 'activity' | 'cashFlows'>>(`/investments/portfolio?range=${range}`, {
     signal,
     errorMessage: 'Could not load investments',
   })
-  setCachedJSON(CACHE_KEYS.investmentPortfolio, data)
-  return data
+  const portfolio: InvestmentPortfolio = { ...data, activity: [], cashFlows: [] }
+  setCachedJSON(CACHE_KEYS.investmentPortfolio, portfolio)
+  return portfolio
 }
 
 export function searchInvestmentInstruments(query: string, signal?: AbortSignal): Promise<InvestmentSearchResponse> {
   return request(`/investments/instruments/search?q=${encodeURIComponent(query)}`, {
     signal,
     errorMessage: 'Could not search investments',
+  })
+}
+
+export function fetchCurrencyCatalog(signal?: AbortSignal): Promise<CurrencyCatalogItem[]> {
+  return request('/investments/currencies', { signal, errorMessage: 'Could not load currencies' })
+}
+
+const pageQuery = (filters: InvestmentPageFilters) => {
+  const query = new URLSearchParams()
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') query.set(key, String(value))
+  })
+  return query.toString()
+}
+
+export function fetchInvestmentActivity(
+  filters: InvestmentPageFilters,
+  signal?: AbortSignal,
+): Promise<PagedResult<InvestmentActivity>> {
+  return request(`/investments/transactions?${pageQuery(filters)}`, {
+    signal,
+    errorMessage: 'Could not load investment activity',
+  })
+}
+
+export function fetchInvestmentCashFlows(
+  filters: Omit<InvestmentPageFilters, 'instrumentId'>,
+  signal?: AbortSignal,
+): Promise<PagedResult<InvestmentCashFlow>> {
+  return request(`/investments/cash-flows?${pageQuery(filters)}`, {
+    signal,
+    errorMessage: 'Could not load cash flow activity',
   })
 }
 
@@ -176,10 +234,22 @@ export function updateInvestmentActivity(id: string, value: InvestmentActivityMu
   })
 }
 
-export function deleteInvestmentActivity(id: string): Promise<void> {
-  return requestVoid(`/investments/transactions/${id}`, {
+export interface DeletedTransactionsSnapshot {
+  transactions: InvestmentActivity[]
+}
+
+export function deleteInvestmentActivity(id: string): Promise<DeletedTransactionsSnapshot> {
+  return request(`/investments/transactions/${id}`, {
     method: 'DELETE',
     errorMessage: 'Could not delete investment activity',
+  })
+}
+
+export function restoreInvestmentActivity(snapshot: DeletedTransactionsSnapshot): Promise<void> {
+  return requestVoid('/investments/transactions/restore', {
+    method: 'POST',
+    ...jsonBody(snapshot),
+    errorMessage: 'Could not restore investment activity',
   })
 }
 
@@ -218,10 +288,18 @@ export function createInvestmentCashFlow(value: {
   })
 }
 
-export function deleteInvestmentCashFlow(id: string): Promise<void> {
-  return requestVoid(`/investments/cash-flows/${id}`, {
+export function deleteInvestmentCashFlow(id: string): Promise<InvestmentCashFlow> {
+  return request(`/investments/cash-flows/${id}`, {
     method: 'DELETE',
     errorMessage: 'Could not delete cash movement',
+  })
+}
+
+export function restoreInvestmentCashFlow(snapshot: InvestmentCashFlow): Promise<void> {
+  return requestVoid('/investments/cash-flows/restore', {
+    method: 'POST',
+    ...jsonBody(snapshot),
+    errorMessage: 'Could not restore cash movement',
   })
 }
 

@@ -50,6 +50,7 @@ import { useAiActionRouter } from './app/useAiActionRouter'
 import { useAppDialogs } from './app/useAppDialogs'
 import { useCycleSummary } from './app/useCycleSummary'
 import { usePushNotifications } from './app/usePushNotifications'
+import { useFabMenu } from './app/useFabMenu'
 import { buildAppContextValue } from './app/buildAppContextValue'
 import { getErrorName } from './lib/errors'
 import { prefetchFingerprintAssertOptions } from './lib/fingerprintOptionsCache'
@@ -294,20 +295,7 @@ function App() {
   useVisualViewportVars()
 
   const [isAiOpen, setIsAiOpen] = useState(false)
-  const [isFabOpen, setIsFabOpen] = useState(false)
-
-  useEffect(() => {
-    setIsFabOpen(false)
-  }, [prefs.activeTab])
-
-  useEffect(() => {
-    if (!isFabOpen) return
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setIsFabOpen(false)
-    }
-    window.addEventListener('keydown', closeOnEscape)
-    return () => window.removeEventListener('keydown', closeOnEscape)
-  }, [isFabOpen])
+  const fabMenu = useFabMenu(prefs.activeTab)
 
   // Redirect from drafts if empty
   useEffect(() => {
@@ -954,21 +942,21 @@ function App() {
         {session.token && (
           <>
             <AnimatePresence>
-              {isFabOpen && prefs.activeTab !== 'drafts' && (
+              {fabMenu.isOpen && prefs.activeTab !== 'drafts' && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.25 }}
                   className="md:hidden fixed inset-0 z-30 bg-background/45 backdrop-blur-sm cursor-pointer"
-                  onClick={() => setIsFabOpen(false)}
+                  onClick={fabMenu.close}
                   aria-hidden="true"
                 />
               )}
             </AnimatePresence>
 
             <AnimatePresence>
-              {isFabOpen && prefs.activeTab !== 'drafts' && (
+              {fabMenu.isOpen && prefs.activeTab !== 'drafts' && (
                 <motion.div
                   variants={fabMenuVariants}
                   initial="hidden"
@@ -994,7 +982,7 @@ function App() {
                         } else {
                           nav.handleQuickAction(key)
                         }
-                        setIsFabOpen(false)
+                        fabMenu.close()
                       }}
                       className="flex items-center gap-2.5 group cursor-pointer"
                     >
@@ -1011,7 +999,7 @@ function App() {
                 if (prefs.activeTab === 'drafts') {
                   financial.handleSyncDraftBatch()
                 } else {
-                  setIsFabOpen(prev => !prev)
+                  fabMenu.toggle()
                 }
               }}
               className={`fixed right-6 flex items-center justify-center size-14 rounded-full text-white shadow-xl cursor-pointer ${
@@ -1022,13 +1010,13 @@ function App() {
               style={{
                 bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))'
               }}
-              title={prefs.activeTab === 'drafts' ? 'Sync Batch to Server' : isFabOpen ? 'Close Menu' : 'Open Menu'}
-              aria-label={prefs.activeTab === 'drafts' ? 'Sync Batch to Server' : isFabOpen ? 'Close Menu' : 'Open Menu'}
-              aria-expanded={prefs.activeTab === 'drafts' ? undefined : isFabOpen}
+              title={prefs.activeTab === 'drafts' ? 'Sync Batch to Server' : fabMenu.isOpen ? 'Close Menu' : 'Open Menu'}
+              aria-label={prefs.activeTab === 'drafts' ? 'Sync Batch to Server' : fabMenu.isOpen ? 'Close Menu' : 'Open Menu'}
+              aria-expanded={prefs.activeTab === 'drafts' ? undefined : fabMenu.isOpen}
             >
               {prefs.activeTab === 'drafts' ? (
                 <Upload className="size-6" />
-              ) : isFabOpen ? (
+              ) : fabMenu.isOpen ? (
                 <X className="size-6" />
               ) : (
                 <Zap className="size-6" />

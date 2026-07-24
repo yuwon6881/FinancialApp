@@ -14,6 +14,9 @@ export interface InvestmentAccount {
   isArchived: boolean
   createdAt: string
   updatedAt: string
+  canDelete?: boolean
+  canArchive?: boolean
+  archiveUnavailableReason?: string
 }
 
 export interface InvestmentInstrument {
@@ -29,6 +32,9 @@ export interface InvestmentInstrument {
   providerMic?: string
   isCustom: boolean
   isArchived: boolean
+  canDelete?: boolean
+  canArchive?: boolean
+  archiveUnavailableReason?: string
 }
 
 export interface InvestmentActivity {
@@ -68,6 +74,11 @@ export interface InvestmentHolding {
   priceFetchedAt?: string
   usesManualPrice: boolean
   fxIncomplete: boolean
+  fxRate?: number
+  fxDate?: string
+  fxSource?: string
+  priceSource?: string
+  valuationAsOf?: string
 }
 
 export type InvestmentCashFlowType = 'Deposit' | 'Withdrawal'
@@ -107,11 +118,15 @@ export interface InvestmentPortfolio {
   accounts: InvestmentAccount[]
   instruments: InvestmentInstrument[]
   holdings: InvestmentHolding[]
+  /** Loaded separately by the paged activity endpoint; retained for cache compatibility. */
   activity: InvestmentActivity[]
   manualPrices: Array<{ id: string; instrumentId: string; marketDate: string; price: number; fxRate?: number }>
-  chart: Array<{ date: string; marketValue?: number; costBasis?: number; netContributions?: number }>
+  chart: Array<{ date: string; totalValue?: number; netDeposits?: number }>
   cashBalances: InvestmentCashBalance[]
+  /** Loaded separately by the paged cash-flow endpoint; retained for cache compatibility. */
   cashFlows: InvestmentCashFlow[]
+  activityCount?: number
+  cashFlowCount?: number
   insights: string[]
   warnings: string[]
   pricesUpdatedAt?: string

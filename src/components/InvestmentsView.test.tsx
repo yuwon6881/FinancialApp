@@ -9,6 +9,9 @@ import * as api from '../lib/api'
 vi.mock('../lib/api', () => ({
   readCachedInvestmentPortfolio: vi.fn(),
   fetchInvestmentPortfolio: vi.fn(),
+  fetchInvestmentActivity: vi.fn(),
+  fetchInvestmentCashFlows: vi.fn(),
+  fetchCurrencyCatalog: vi.fn(),
   searchInvestmentInstruments: vi.fn(),
   createInvestmentAccount: vi.fn(),
   createInvestmentInstrument: vi.fn(),
@@ -29,6 +32,8 @@ const emptyPortfolio: InvestmentPortfolio = {
   chart: [],
   cashBalances: [],
   cashFlows: [],
+  activityCount: 0,
+  cashFlowCount: 0,
   insights: [],
   warnings: [],
   marketDataConfigured: true,
@@ -64,6 +69,9 @@ describe('InvestmentsView provider call boundaries', () => {
   beforeEach(() => {
     vi.mocked(api.readCachedInvestmentPortfolio).mockReturnValue(null)
     vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(emptyPortfolio)
+    vi.mocked(api.fetchInvestmentActivity).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 10 })
+    vi.mocked(api.fetchInvestmentCashFlows).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 10 })
+    vi.mocked(api.fetchCurrencyCatalog).mockResolvedValue([])
     vi.mocked(api.searchInvestmentInstruments).mockReset()
     vi.mocked(api.createInvestmentInstrument).mockReset()
     vi.mocked(api.refreshInvestmentMarketData).mockReset()
