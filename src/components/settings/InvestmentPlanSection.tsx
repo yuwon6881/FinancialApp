@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertCircle, Loader2, Save, SlidersHorizontal } from 'lucide-react'
+import { AlertCircle, Loader2, Save, SlidersHorizontal, Lock, Unlock } from 'lucide-react'
 import type {
   InvestmentAllocationOverview,
   InvestmentAllocationSleeve,
@@ -26,11 +26,11 @@ export function InvestmentPlanSection() {
     isOffline,
     investmentOps = [],
     queueInvestmentMutation = () => undefined,
-    showToast,
   } = useAppContext()
   const cachedOverview = () => api.readCachedInvestmentPortfolio()?.allocation ?? null
   const [overview, setOverview] = useState<InvestmentAllocationOverview | null>(() => cachedOverview())
   const [plan, setPlan] = useState<InvestmentPlan>(() => cachedOverview()?.plan ?? defaults)
+  const [lockedSleeve, setLockedSleeve] = useState<TargetKey | null>(null)
   const [loading, setLoading] = useState(() => !cachedOverview())
   const [error, setError] = useState('')
 
@@ -92,7 +92,7 @@ export function InvestmentPlanSection() {
   const changeTarget = (key: TargetKey, value: number) => {
     setPlan(previous => ({
       ...previous,
-      ...redistributeInvestmentTargets(previous, key, value),
+      ...redistributeInvestmentTargets(previous, key, value, lockedSleeve ?? undefined),
     }))
   }
 
@@ -107,11 +107,6 @@ export function InvestmentPlanSection() {
     }
     setOverview(previous => previous ? { ...previous, plan: { ...previous.plan, ...payload } } : previous)
     queueInvestmentMutation('investmentPlan', 'update', 'three-fund', payload)
-    showToast(
-      isOffline ? 'Saved on this device and queued for synchronization.' : 'Saving in the background.',
-      'Investment plan',
-      'info',
-    )
   }
 
   const classify = (instrumentId: string, sleeve?: InvestmentAllocationSleeve) => {
@@ -121,11 +116,6 @@ export function InvestmentPlanSection() {
         value.instrumentId === instrumentId ? { ...value, sleeve } : value),
     } : previous)
     queueInvestmentMutation('investmentAllocation', 'update', instrumentId, { sleeve: sleeve ?? null })
-    showToast(
-      isOffline ? 'Classification queued until you reconnect.' : 'Classification is saving in the background.',
-      'Investment classification',
-      'info',
-    )
   }
 
   if (loading && !overview) {
@@ -150,7 +140,18 @@ export function InvestmentPlanSection() {
           ] as const).map(([label, key]) => (
             <label key={key} className="block">
               <span className="flex justify-between text-xs font-bold text-muted-foreground">
-                <span>{label}</span><span className="text-foreground">{plan[key]}%</span>
+                <span className="flex items-center gap-1.5 uppercase">
+                  {label}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); setLockedSleeve(lockedSleeve === key ? null : key) }}
+                    className="text-muted-foreground hover:text-foreground"
+                    title={lockedSleeve === key ? "Unlock target" : "Lock target"}
+                  >
+                    {lockedSleeve === key ? <Lock className="size-3" /> : <Unlock className="size-3" />}
+                  </button>
+                </span>
+                <span className="text-foreground">{plan[key]}%</span>
               </span>
               <input
                 aria-label={`${label} target`}
@@ -158,9 +159,10 @@ export function InvestmentPlanSection() {
                 min="1"
                 max="98"
                 step="1"
+                disabled={lockedSleeve === key}
                 value={plan[key]}
                 onChange={event => changeTarget(key, Number(event.target.value))}
-                className="mt-2 h-2 w-full cursor-pointer accent-violet-500"
+                className={`mt-2 h-2 w-full accent-violet-500 ${lockedSleeve === key ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
               />
             </label>
           ))}
@@ -183,7 +185,7 @@ export function InvestmentPlanSection() {
       <section className="rounded-2xl border border-border/60 bg-card p-5 sm:p-6">
         <h3 className="text-sm font-bold text-foreground">Investment classification</h3>
         <p className="mt-1 text-[11px] text-muted-foreground">Every open holding needs an explicit sleeve. Multiple funds may share one sleeve.</p>
-        <div className="mt-4 space-y-3">
+        <div className="mt-4 space-y-3 max-h-[300px] overflow-y-auto pr-2">
           {overview?.assignments.map(value => (
             <div key={value.instrumentId} className="grid gap-2 rounded-xl border border-border/50 bg-muted/20 p-3 sm:grid-cols-[minmax(0,1fr)_190px] sm:items-center">
               <div className="min-w-0">

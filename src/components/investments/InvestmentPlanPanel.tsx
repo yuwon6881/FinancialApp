@@ -10,7 +10,7 @@ const tone: Record<InvestmentAllocationStatus, string> = {
   Alert: 'border-orange-500/30 bg-orange-500/8 text-orange-600 dark:text-orange-300',
 }
 
-const colors = ['bg-blue-500', 'bg-fuchsia-500', 'bg-emerald-500']
+const colors = ['bg-blue-500', 'bg-amber-500', 'bg-emerald-500']
 
 import { useState } from 'react'
 

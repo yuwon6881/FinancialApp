@@ -98,6 +98,7 @@ describe('InvestmentsView provider call boundaries', () => {
     vi.mocked(api.searchInvestmentInstruments).mockReset()
     vi.mocked(api.createInvestmentInstrument).mockReset()
     vi.mocked(context.queueInvestmentMutation!).mockReset()
+    vi.mocked(context.showToast).mockReset()
     vi.mocked(api.refreshInvestmentMarketData).mockReset()
   })
 
@@ -168,6 +169,7 @@ describe('InvestmentsView provider call boundaries', () => {
     ))
     expect(api.createInvestmentInstrument).not.toHaveBeenCalled()
     expect(api.refreshInvestmentMarketData).not.toHaveBeenCalled()
+    expect(context.showToast).not.toHaveBeenCalled()
   })
 
   it('derives the missing one of units / unit price / gross and keeps it in sync', async () => {

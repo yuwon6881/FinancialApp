@@ -31,4 +31,51 @@ describe('TopNav mobile primary navigation', () => {
     expect(within(primary).getByRole('button', { name: 'Wishlist' })).toBeTruthy()
     expect(within(primary).queryByRole('button', { name: /Investments/ })).toBeNull()
   })
+
+  it('shows global synchronization feedback in the top-left brand area', () => {
+    render(
+      <TopNav
+        activeTab="dashboard"
+        onTabChange={vi.fn()}
+        hideSensitive
+        sensitivePreferenceStatus="resolved"
+        onToggleHideSensitive={vi.fn()}
+        onRetrySensitivePreference={vi.fn()}
+        onLogout={vi.fn()}
+        username="Test User"
+        pendingNotifications={[]}
+        onOpenNotifications={vi.fn()}
+        darkMode={false}
+        onToggleDarkMode={vi.fn()}
+        isSyncing
+      />,
+    )
+
+    expect(screen.getByText('Syncing...')).toBeTruthy()
+  })
+
+  it('renders privacy resolution as a floating overlay that does not take layout space', () => {
+    render(
+      <TopNav
+        activeTab="dashboard"
+        onTabChange={vi.fn()}
+        hideSensitive
+        sensitivePreferenceStatus="pending"
+        onToggleHideSensitive={vi.fn()}
+        onRetrySensitivePreference={vi.fn()}
+        onLogout={vi.fn()}
+        username="Test User"
+        pendingNotifications={[]}
+        onOpenNotifications={vi.fn()}
+        darkMode={false}
+        onToggleDarkMode={vi.fn()}
+      />,
+    )
+
+    const privacyStatus = screen.getByTestId('privacy-status')
+    expect(privacyStatus.className).toContain('absolute')
+    expect(privacyStatus.className).toContain('pointer-events-none')
+    expect(screen.getByText('Protecting your amounts')).toBeTruthy()
+    expect(screen.getByText(/Checking privacy settings before anything is revealed/)).toBeTruthy()
+  })
 })

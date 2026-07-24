@@ -76,7 +76,7 @@ const number = (value: number, digits = 4) =>
   new Intl.NumberFormat(undefined, { maximumFractionDigits: digits }).format(value)
 
 export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) => {
-  const { hideSensitive, isOffline, showToast, confirm, activeSyncId, investmentOps = [], queueInvestmentMutation = () => undefined } = useAppContext()
+  const { hideSensitive, isOffline, confirm, activeSyncId, investmentOps = [], queueInvestmentMutation = () => undefined } = useAppContext()
   const {
     activityRevision,
     loadError,
@@ -105,11 +105,9 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
     type: 'add' | 'update' | 'delete' | 'restore',
     targetId: string,
     payload: Record<string, unknown> | undefined,
-    message: string,
   ) => {
     queueInvestmentMutation(entity, type, targetId, payload)
     closePanel()
-    showToast(isOffline ? 'Saved on this device and will sync when you reconnect.' : 'Saving in the background.', message, 'info')
     return true
   }
 
@@ -176,13 +174,13 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
       <BottomSheet isOpen={panel === 'account'} title="Add investment account" onClose={closePanel} maxWidthClassName="max-w-lg">
         <AccountForm key={`account-${formKey}`} busy={busy} onCancel={closePanel} onSave={value => {
           const id = crypto.randomUUID()
-          return queueInvestment('investmentAccount', 'add', id, { ...value, id }, 'Account queued')
+          return queueInvestment('investmentAccount', 'add', id, { ...value, id })
         }} />
       </BottomSheet>
       <BottomSheet isOpen={panel === 'instrument'} title="Add investment" onClose={closePanel} maxWidthClassName="max-w-2xl">
         <InstrumentForm key={`instrument-${formKey}`} busy={busy} offline={isOffline} onCancel={closePanel} onSave={value => {
           const id = crypto.randomUUID()
-          return queueInvestment('investmentInstrument', 'add', id, { ...value, id }, 'Investment queued')
+          return queueInvestment('investmentInstrument', 'add', id, { ...value, id })
         }} />
       </BottomSheet>
       <BottomSheet isOpen={panel === 'activity'} title={editingActivity ? 'Edit investment activity' : 'Add activity'} onClose={closePanel} maxWidthClassName="max-w-3xl">
@@ -194,20 +192,19 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
             editingActivity ? 'update' : 'add',
             id,
             { ...value, id, destinationLegId, undoSnapshot: editingActivity ?? undefined },
-            editingActivity ? 'Activity update queued' : 'Activity queued',
           )
         }} onNeedAccount={() => openPanel('account')} onNeedInstrument={() => openPanel('instrument')} />
       </BottomSheet>
       <BottomSheet isOpen={panel === 'price'} title="Add manual closing price" onClose={closePanel} maxWidthClassName="max-w-2xl">
         <ManualPriceForm key={`price-${formKey}`} portfolio={setupPortfolio} busy={busy} onCancel={closePanel} onSave={value => {
           const id = crypto.randomUUID()
-          return queueInvestment('investmentManualPrice', 'add', id, { ...value, id }, 'Manual price queued')
+          return queueInvestment('investmentManualPrice', 'add', id, { ...value, id })
         }} />
       </BottomSheet>
       <BottomSheet isOpen={panel === 'cash'} title="Record cash movement" onClose={closePanel} maxWidthClassName="max-w-lg">
         <CashForm key={`cash-${formKey}`} portfolio={setupPortfolio} busy={busy} onCancel={closePanel} onSave={value => {
           const id = crypto.randomUUID()
-          return queueInvestment('investmentCashFlow', 'add', id, { ...value, id }, 'Cash movement queued')
+          return queueInvestment('investmentCashFlow', 'add', id, { ...value, id })
         }} onNeedAccount={() => openPanel('account')} />
       </BottomSheet>
 
@@ -226,7 +223,6 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
             <Button variant="ghost" disabled={portfolio.accounts.length === 0} onClick={() => openPanel('cash')}><Wallet className="size-4" /> Deposit / withdraw</Button>
             <Button variant="ghost" disabled={portfolio.instruments.length === 0} onClick={() => openPanel('price')}><CircleDollarSign className="size-4" /> Manual price</Button>
           </div>
-          {investmentOps.length > 0 && <div role="status" className="flex items-center gap-2 rounded-xl border border-blue-500/20 bg-blue-500/8 px-4 py-3 text-xs text-blue-700 dark:text-blue-300"><Loader2 className={`size-3.5 ${isOffline ? '' : 'animate-spin'}`} /> Pending changes · confirmed totals remain visible until synchronization completes.</div>}
           <InvestmentPlanPanel
             allocation={portfolio.allocation}
             usdRate={portfolio.holdings.find(h => h.currency === 'USD' && h.fxRate)?.fxRate}
@@ -238,16 +234,16 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
             offline={isOffline}
             onArchiveAccount={id => {
               const account = portfolio.accounts.find(a => a.id === id)
-              if (account) queueInvestment('investmentAccount', 'update', id, { name: account.name, baseCurrency: account.baseCurrency, isArchived: true, undoSnapshot: account }, 'Account archive queued')
+              if (account) queueInvestment('investmentAccount', 'update', id, { name: account.name, baseCurrency: account.baseCurrency, isArchived: true, undoSnapshot: account })
             }}
-            onUnarchiveAccount={(id, name, currency) => queueInvestment('investmentAccount', 'update', id, { name, baseCurrency: currency, isArchived: false }, 'Account restore queued')}
+            onUnarchiveAccount={(id, name, currency) => queueInvestment('investmentAccount', 'update', id, { name, baseCurrency: currency, isArchived: false })}
             onDeleteAccount={id => {
               const account = portfolio.accounts.find(a => a.id === id)
               confirm({
                 title: 'Delete investment account?',
                 message: 'Only accounts without activity can be deleted.',
                 confirmText: 'Delete',
-                onConfirm: () => { queueInvestment('investmentAccount', 'delete', id, { undoSnapshot: account }, 'Account deletion queued') },
+                onConfirm: () => { queueInvestment('investmentAccount', 'delete', id, { undoSnapshot: account }) },
               })
             }}
             onDeleteInstrument={id => {
@@ -256,7 +252,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
                 title: 'Delete investment?',
                 message: 'Only investments without activity can be deleted.',
                 confirmText: 'Delete',
-                onConfirm: () => { queueInvestment('investmentInstrument', 'delete', id, { undoSnapshot: instrument }, 'Investment deletion queued') },
+                onConfirm: () => { queueInvestment('investmentInstrument', 'delete', id, { undoSnapshot: instrument }) },
               })
             }}
             onDeleteManualPrice={id => {
@@ -265,7 +261,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
                 title: 'Delete manual price?',
                 message: 'The cached provider close, if available, will become active again.',
                 confirmText: 'Delete',
-                onConfirm: () => { queueInvestment('investmentManualPrice', 'delete', id, { undoSnapshot: mp }, 'Manual price deletion queued') },
+                onConfirm: () => { queueInvestment('investmentManualPrice', 'delete', id, { undoSnapshot: mp }) },
               })
             }}
           />
@@ -295,13 +291,13 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
               title: 'Delete investment activity?',
               message: 'All later holding results will be recalculated.',
               confirmText: 'Delete',
-              onConfirm: () => { queueInvestment('investmentActivity', 'delete', activity.id, { undoSnapshot: { transactions: [activity] } }, 'Activity deletion queued') },
+              onConfirm: () => { queueInvestment('investmentActivity', 'delete', activity.id, { undoSnapshot: { transactions: [activity] } }) },
             })}
             onDeleteCashFlow={flow => confirm({
               title: flow.type === 'Withdrawal' ? 'Delete withdrawal?' : 'Delete deposit?',
               message: 'The cash balance and total portfolio value will be recalculated.',
               confirmText: 'Delete',
-              onConfirm: () => { queueInvestment('investmentCashFlow', 'delete', flow.id, { undoSnapshot: flow }, 'Cash movement deletion queued') },
+              onConfirm: () => { queueInvestment('investmentCashFlow', 'delete', flow.id, { undoSnapshot: flow }) },
             })}
           />
         </>
