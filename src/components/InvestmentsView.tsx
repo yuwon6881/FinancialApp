@@ -843,12 +843,12 @@ const PagedActivityTable = ({
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const operationsRef = useRef(operations)
-  operationsRef.current = operations
   const [projectedOperations, setProjectedOperations] = useState(operations)
   const accounts = new Map(portfolio.accounts.map(value => [value.id, value.name]))
   const instruments = new Map(portfolio.instruments.map(value => [value.id, value]))
 
   useEffect(() => {
+    operationsRef.current = operations
     setProjectedOperations(previous => {
       const currentIds = new Set(operations.map(operation => operation.id))
       return [...operations, ...previous.filter(operation => !currentIds.has(operation.id))]
