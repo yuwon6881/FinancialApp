@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import {
-  AlertCircle,
   ArrowLeft,
   Building2,
   ChevronDown,
@@ -9,7 +8,6 @@ import {
   CloudOff,
   Info,
   Loader2,
-  PieChart,
   Plus,
   RefreshCw,
   Search,
@@ -36,6 +34,7 @@ import { CurrencySelect } from './ui/CurrencySelect'
 import { useInvestmentPortfolio } from './investments/useInvestmentPortfolio'
 import { applyOpsToList } from '../lib/outbox'
 import { RowSyncStatus } from './ui/RowSyncBadge'
+import { InvestmentPlanPanel } from './investments/InvestmentPlanPanel'
 
 interface InvestmentsViewProps {
   onNavigate: (tab: AppTab) => void
@@ -228,26 +227,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
             <Button variant="ghost" disabled={portfolio.instruments.length === 0} onClick={() => openPanel('price')}><CircleDollarSign className="size-4" /> Manual price</Button>
           </div>
           {investmentOps.length > 0 && <div role="status" className="flex items-center gap-2 rounded-xl border border-blue-500/20 bg-blue-500/8 px-4 py-3 text-xs text-blue-700 dark:text-blue-300"><Loader2 className={`size-3.5 ${isOffline ? '' : 'animate-spin'}`} /> Pending changes · confirmed totals remain visible until synchronization completes.</div>}
-          <section aria-labelledby="quick-insights" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
-            <h2 id="quick-insights" className="text-base font-bold text-foreground">Quick insights</h2>
-            <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {portfolio.insights.map((value, index) => {
-                const isLargest = value.toLowerCase().includes('largest holding');
-                const isBest = value.toLowerCase().includes('best performer');
-                const isConcentration = value.toLowerCase().includes('concentration');
-                const Icon = isLargest ? PieChart : isBest ? TrendingUp : isConcentration ? AlertCircle : Info;
-                
-                return (
-                  <li key={index} className="interactive-card flex items-center gap-3 rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 text-xs leading-relaxed text-blue-700 shadow-sm dark:text-blue-300">
-                    <div className="shrink-0 rounded-full bg-blue-500/20 p-1.5 text-blue-600 dark:text-blue-400">
-                      <Icon className="size-4" />
-                    </div>
-                    <span>{value}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
+          <InvestmentPlanPanel allocation={portfolio.allocation} masked={hideSensitive} onNavigate={onNavigate} />
           <AccountsAndInstruments
             portfolio={setupPortfolio ?? portfolio}
             offline={isOffline}
@@ -1102,7 +1082,7 @@ const InstrumentForm = ({ busy, offline, onCancel, onSave }: { busy: boolean; of
   const [selected, setSelected] = useState<InstrumentSearchResult | null>(null)
   const [symbol, setSymbol] = useState('')
   const [name, setName] = useState('')
-  const [type, setType] = useState<'Stock' | 'ETF'>('Stock')
+  const [type, setType] = useState<'Stock' | 'ETF' | 'MutualFund'>('Stock')
   const [currency, setCurrency] = useState('USD')
   useEffect(() => {
     if (manual || offline || query.trim().length < 3) {
@@ -1135,7 +1115,7 @@ const InstrumentForm = ({ busy, offline, onCancel, onSave }: { busy: boolean; of
       <div className="grid gap-4 sm:grid-cols-4">
         <label className={labelClass}>Ticker<input required maxLength={32} value={symbol} onChange={event => setSymbol(event.target.value.toUpperCase())} className={inputClass} /></label>
         <label className={`${labelClass} sm:col-span-2`}>Full name<input required maxLength={200} value={name} onChange={event => setName(event.target.value)} className={inputClass} /></label>
-        <div className={labelClass}>Type<CustomSelect value={type} onChange={v => setType(v as 'Stock' | 'ETF')} options={[{ value: 'Stock', label: 'Stock' }, { value: 'ETF', label: 'ETF' }]} ariaLabel="Investment type" className="mt-1.5 w-full" /></div>
+        <div className={labelClass}>Type<CustomSelect value={type} onChange={v => setType(v as 'Stock' | 'ETF' | 'MutualFund')} options={[{ value: 'Stock', label: 'Stock' }, { value: 'ETF', label: 'ETF' }, { value: 'MutualFund', label: 'Mutual fund' }]} ariaLabel="Investment type" className="mt-1.5 w-full" /></div>
         <label className={labelClass}>Currency<CurrencySelect value={currency} onChange={setCurrency} className="mt-1.5" ariaLabel="Investment currency" /></label>
       </div>
       <FormActions busy={busy} onCancel={onCancel} submitLabel="Save investment" />

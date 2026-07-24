@@ -1,0 +1,142 @@
+import { AlertTriangle, ArrowRight, CheckCircle2, CircleHelp, Settings2 } from 'lucide-react'
+import type { AppTab, InvestmentAllocationOverview, InvestmentAllocationStatus } from '../../types'
+import { Button } from '../ui/Button'
+
+const tone: Record<InvestmentAllocationStatus, string> = {
+  NotStarted: 'border-border/60 bg-muted/20 text-muted-foreground',
+  Incomplete: 'border-amber-500/30 bg-amber-500/8 text-amber-600 dark:text-amber-300',
+  OnTrack: 'border-emerald-500/25 bg-emerald-500/7 text-emerald-600 dark:text-emerald-300',
+  Watch: 'border-amber-500/25 bg-amber-500/7 text-amber-600 dark:text-amber-300',
+  Alert: 'border-orange-500/30 bg-orange-500/8 text-orange-600 dark:text-orange-300',
+}
+
+const colors = ['bg-blue-500', 'bg-violet-500', 'bg-emerald-500']
+
+export function InvestmentPlanPanel({
+  allocation,
+  masked,
+  onNavigate,
+}: {
+  allocation: InvestmentAllocationOverview
+  masked: boolean
+  onNavigate: (tab: AppTab) => void
+}) {
+  const money = (value?: number) => value === undefined
+    ? 'Incomplete'
+    : masked ? '••••' : new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: allocation.appCurrency,
+      maximumFractionDigits: 2,
+    }).format(value)
+  const configure = () => {
+    const next = new URL(window.location.href)
+    next.searchParams.set('section', 'investment-plan')
+    window.history.replaceState(window.history.state, '', next)
+    onNavigate('settings')
+  }
+  const StatusIcon = allocation.status === 'OnTrack'
+    ? CheckCircle2
+    : allocation.status === 'Incomplete' || allocation.status === 'NotStarted' ? CircleHelp : AlertTriangle
+
+  return (
+    <section aria-labelledby="investment-plan-heading" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className={`mt-0.5 rounded-xl border p-2 ${tone[allocation.status]}`}>
+            <StatusIcon className="size-4" />
+          </div>
+          <div>
+            <h2 id="investment-plan-heading" className="text-base font-bold text-foreground">Three-fund investment plan</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Portfolio-wide allocation across every brokerage account · {allocation.status.replace(/([A-Z])/g, ' $1').trim()}
+            </p>
+          </div>
+        </div>
+        <Button variant="ghost" size="sm" onClick={configure}><Settings2 className="size-4" /> Configure</Button>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        {allocation.sleeves.map((sleeve, index) => (
+          <article key={sleeve.sleeve} className={`rounded-xl border p-4 ${tone[sleeve.status]}`}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold">{sleeve.label}</span>
+              <span className="rounded-full bg-background/60 px-2 py-0.5 text-[10px] font-bold">{sleeve.status}</span>
+            </div>
+            <div className="mt-3 flex items-end gap-2">
+              <strong className="text-2xl text-foreground">
+                {sleeve.currentPercentage === undefined ? '—' : `${sleeve.currentPercentage.toFixed(1)}%`}
+              </strong>
+              <span className="pb-1 text-xs text-muted-foreground">/ {sleeve.targetPercentage}% target</span>
+            </div>
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              {money(sleeve.value)}
+              {sleeve.driftPercentagePoints !== undefined
+                ? ` · ${sleeve.driftPercentagePoints > 0 ? '+' : ''}${sleeve.driftPercentagePoints.toFixed(1)} pp`
+                : ''}
+            </p>
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-background/70">
+              <div className={`h-full ${colors[index]}`} style={{ width: `${Math.min(100, sleeve.currentPercentage ?? 0)}%` }} />
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+        <div className="rounded-xl border border-border/50 bg-muted/20 p-4">
+          <h3 className="text-xs font-bold text-foreground">Actual versus target</h3>
+          <div className="mt-3 space-y-3">
+            <div>
+              <div className="mb-1 flex justify-between text-[10px] text-muted-foreground"><span>Actual</span><span>100%</span></div>
+              <div className="flex h-3 overflow-hidden rounded-full bg-muted">
+                {allocation.sleeves.map((sleeve, index) => (
+                  <div key={sleeve.sleeve} className={colors[index]} style={{ width: `${sleeve.currentPercentage ?? 0}%` }} />
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="mb-1 flex justify-between text-[10px] text-muted-foreground"><span>Target</span><span>100%</span></div>
+              <div className="flex h-3 overflow-hidden rounded-full bg-muted">
+                {allocation.sleeves.map((sleeve, index) => (
+                  <div key={sleeve.sleeve} className={`${colors[index]} opacity-55`} style={{ width: `${sleeve.targetPercentage}%` }} />
+                ))}
+              </div>
+            </div>
+          </div>
+          <p className="mt-3 text-[10px] text-muted-foreground">
+            {allocation.freshness.asOf
+              ? `Required market data checked ${new Date(allocation.freshness.asOf).toLocaleString()}.`
+              : 'Market-data freshness is not available yet.'}
+            {allocation.freshness.isStale ? ' A quiet refresh is due.' : ''}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-border/50 bg-muted/20 p-4">
+          <h3 className="text-xs font-bold text-foreground">Priority guidance</h3>
+          {allocation.incompleteReasons.length > 0 ? (
+            <ul className="mt-3 space-y-2 text-xs text-muted-foreground">
+              {allocation.incompleteReasons.map(reason => <li key={reason}>• {reason}</li>)}
+            </ul>
+          ) : allocation.recommendations.length > 0 ? (
+            <ol className="mt-3 space-y-2">
+              {allocation.recommendations.slice(0, 5).map((recommendation, index) => (
+                <li key={`${recommendation.kind}-${recommendation.sleeve ?? index}`} className="flex gap-2 text-xs text-muted-foreground">
+                  <span className="font-bold text-foreground">{index + 1}.</span>
+                  <span>{masked ? recommendation.message.replace(/[A-Z]{3} [\d,.]+/g, '••••') : recommendation.message}</span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="mt-3 text-xs text-muted-foreground">
+              {allocation.status === 'OnTrack' ? 'No rebalancing action is needed.' : 'Complete your holdings to begin allocation guidance.'}
+            </p>
+          )}
+          {allocation.status === 'Incomplete' && (
+            <Button variant="ghost" size="sm" onClick={configure} className="mt-3">
+              Finish classification <ArrowRight className="size-4" />
+            </Button>
+          )}
+        </div>
+      </div>
+    </section>
+  )
+}

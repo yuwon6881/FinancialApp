@@ -72,7 +72,11 @@ export function useInvestmentPortfolio() {
       else void work
     }
     window.addEventListener('investment-sync', refreshAfterSync)
-    return () => window.removeEventListener('investment-sync', refreshAfterSync)
+    window.addEventListener('investment-market-data-refreshed', refreshAfterSync)
+    return () => {
+      window.removeEventListener('investment-sync', refreshAfterSync)
+      window.removeEventListener('investment-market-data-refreshed', refreshAfterSync)
+    }
   }, [load, range])
 
   useEffect(() => () => {

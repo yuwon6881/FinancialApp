@@ -1,5 +1,5 @@
 import React from 'react'
-import type { DashboardData, WishlistItem, AppTab } from '../types'
+import type { DashboardData, WishlistItem, AppTab, InvestmentAllocationOverview } from '../types'
 import { CycleSkeleton } from './ui/Skeleton'
 import { useAppContext } from '../contexts/AppContext'
 import { DashboardHeader } from './dashboard/DashboardHeader'
@@ -9,6 +9,7 @@ import { useDashboardView } from './dashboard/useDashboardView'
 import { AlertCircle, BarChart3, CheckCircle2, ShieldCheck } from 'lucide-react'
 import { Button } from './ui/Button'
 import { getCycleProgress, MONTH_NAMES } from '../lib/cycle'
+import { InvestmentPlanExceptionCard } from './dashboard/InvestmentPlanExceptionCard'
 
 interface DashboardViewProps {
   dashboardData: DashboardData | null
@@ -29,6 +30,7 @@ interface DashboardViewProps {
   }) => void
   wishlist?: WishlistItem[]
   isSwitchingCycle?: boolean
+  investmentAllocation?: InvestmentAllocationOverview | null
 }
 export const DashboardView: React.FC<DashboardViewProps> = ({
   dashboardData,
@@ -41,7 +43,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenNotifications,
   onNavigateToLedger,
   wishlist = [],
-  isSwitchingCycle = false
+  isSwitchingCycle = false,
+  investmentAllocation = null,
 }) => {
   const { hideSensitive: contextHideSensitive } = useAppContext()
   const hideSensitive = hideSensitiveProp ?? contextHideSensitive
@@ -108,6 +111,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           )}
         </div>
       </section>
+
+      <InvestmentPlanExceptionCard allocation={investmentAllocation} onNavigate={onNavigate} />
 
       {/* Today-focused metric cards: cycle progress, safe-to-spend, and the active wish goal */}
       <TodayFocusCards

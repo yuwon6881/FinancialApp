@@ -17,6 +17,7 @@ import { CollapsibleBody } from './ui/CollapsibleBody'
 import { useAppContext } from '../contexts/AppContext'
 const ActiveDevicesSection = React.lazy(() => import('./settings/ActiveDevicesSection').then(m => ({ default: m.ActiveDevicesSection })))
 const FingerprintSection = React.lazy(() => import('./settings/FingerprintSection').then(m => ({ default: m.FingerprintSection })))
+const InvestmentPlanSection = React.lazy(() => import('./settings/InvestmentPlanSection').then(m => ({ default: m.InvestmentPlanSection })))
 
 import { useSettingsView } from './settings/view/useSettingsView'
 import { CategoryLimitsCard } from './settings/CategoryLimitsCard'
@@ -83,10 +84,11 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
     onToast,
   })
 
-  const [activeTab, setActiveTab] = React.useState<'financial-model' | 'categories-preferences' | 'security'>(() => {
+  const [activeTab, setActiveTab] = React.useState<'financial-model' | 'investment-plan' | 'categories-preferences' | 'security'>(() => {
     if (typeof window !== 'undefined') {
       const search = window.location.search
       const hash = window.location.hash
+      if (search.includes('investment-plan') || hash.includes('investment-plan')) return 'investment-plan'
       if (search.includes('category') || search.includes('limits') || hash.includes('category') || hash.includes('limits')) {
         return 'categories-preferences'
       }
@@ -98,6 +100,10 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
     if (typeof window !== 'undefined') {
       const search = window.location.search
       const hash = window.location.hash
+      if (search.includes('investment-plan') || hash.includes('investment-plan')) {
+        setActiveTab('investment-plan')
+        return
+      }
       if (search.includes('category') || search.includes('limits') || hash.includes('category') || hash.includes('limits')) {
         setActiveTab('categories-preferences')
         requestAnimationFrame(() => {
@@ -135,6 +141,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       <div role="tablist" aria-label="Settings sections" className="flex border-b border-border/30 gap-x-7 sm:gap-6 select-none overflow-x-auto no-scrollbar pb-1">
         {([
           ['financial-model', 'Plan & Preferences'],
+          ['investment-plan', 'Investment Plan'],
           ['categories-preferences', 'Categories & Limits'],
           ['security', 'Security & Devices']
         ] as const).map(([id, label]) => (
@@ -386,6 +393,12 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             </div>
           </div>
         </div>
+      )}
+
+      {activeTab === 'investment-plan' && (
+        <React.Suspense fallback={<div className="flex h-40 items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>}>
+          <InvestmentPlanSection />
+        </React.Suspense>
       )}
 
       {activeTab === 'categories-preferences' && (

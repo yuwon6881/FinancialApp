@@ -135,6 +135,36 @@ function atob0(obf: string): string {
 }
 
 export const handlers = [
+  http.get(`${API}/investments/allocation`, () => HttpResponse.json({
+    status: 'NotStarted',
+    appCurrency: 'USD',
+    plan: {
+      usEquityTarget: 66,
+      internationalExUsTarget: 10,
+      bondsTarget: 24,
+      watchDrift: 3,
+      alertDrift: 5,
+    },
+    assignments: [],
+    sleeves: [
+      { sleeve: 'USEquity', label: 'US Equity', targetPercentage: 66, value: 0, status: 'NotStarted' },
+      { sleeve: 'InternationalExUS', label: 'International ex-US', targetPercentage: 10, value: 0, status: 'NotStarted' },
+      { sleeve: 'Bonds', label: 'Bonds', targetPercentage: 24, value: 0, status: 'NotStarted' },
+    ],
+    recommendations: [],
+    incompleteReasons: [],
+    freshness: { isStale: false, hasMissingData: false, maxAgeMinutes: 60, staleInputs: [] },
+    investedValue: 0,
+    availableCash: 0,
+    minimumContribution: 0,
+  })),
+  http.post(`${API}/investments/market-data/refresh`, () => HttpResponse.json({
+    status: 'Fresh',
+    updated: 0,
+    total: 0,
+    complete: true,
+    warnings: [],
+  })),
   http.get(`${API}/auth/status`, () =>
     HttpResponse.json({ isRegistered: state.registered, hasFingerprint: false })),
 

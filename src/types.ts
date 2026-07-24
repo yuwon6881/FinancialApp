@@ -2,7 +2,9 @@ export const APP_TABS = ['dashboard', 'reports', 'recurring', 'ledger', 'wishlis
 export type AppTab = typeof APP_TABS[number]
 
 export type InvestmentRange = '1m' | '3m' | '6m' | '1y' | 'all'
-type InvestmentInstrumentType = 'Stock' | 'ETF'
+export type InvestmentInstrumentType = 'Stock' | 'ETF' | 'MutualFund'
+export type InvestmentAllocationSleeve = 'USEquity' | 'InternationalExUS' | 'Bonds'
+export type InvestmentAllocationStatus = 'NotStarted' | 'Incomplete' | 'OnTrack' | 'Watch' | 'Alert'
 export type InvestmentTransactionType =
   | 'OpeningPosition' | 'Buy' | 'Sell' | 'Dividend' | 'FeeTax'
   | 'Split' | 'TransferIn' | 'TransferOut'
@@ -34,6 +36,7 @@ export interface InvestmentInstrument {
   providerMic?: string
   isCustom: boolean
   isArchived: boolean
+  allocationSleeve?: InvestmentAllocationSleeve
   canDelete?: boolean
   canArchive?: boolean
   archiveUnavailableReason?: string
@@ -139,6 +142,57 @@ export interface InvestmentPortfolio {
   warnings: string[]
   pricesUpdatedAt?: string
   marketDataConfigured: boolean
+  allocation: InvestmentAllocationOverview
+}
+
+export interface InvestmentPlan {
+  id?: string
+  usEquityTarget: number
+  internationalExUsTarget: number
+  bondsTarget: number
+  watchDrift: number
+  alertDrift: number
+  updatedAt?: string
+}
+
+export interface InvestmentAllocationOverview {
+  status: InvestmentAllocationStatus
+  appCurrency: string
+  plan: InvestmentPlan
+  assignments: Array<{
+    instrumentId: string
+    symbol: string
+    name: string
+    sleeve?: InvestmentAllocationSleeve
+  }>
+  sleeves: Array<{
+    sleeve: InvestmentAllocationSleeve
+    label: string
+    targetPercentage: number
+    currentPercentage?: number
+    value?: number
+    driftPercentagePoints?: number
+    driftAmount?: number
+    status: InvestmentAllocationStatus
+  }>
+  recommendations: Array<{
+    priority: number
+    kind: 'UseCash' | 'TopUp' | 'Buy' | 'Sell' | 'TransferBuy'
+    sleeve?: InvestmentAllocationSleeve
+    amount: number
+    message: string
+  }>
+  incompleteReasons: string[]
+  freshness: {
+    asOf?: string
+    isStale: boolean
+    hasMissingData: boolean
+    maxAgeMinutes: number
+    staleInputs: string[]
+  }
+  investedValue?: number
+  availableCash: number
+  minimumContribution?: number
 }
 
 export interface Transaction {

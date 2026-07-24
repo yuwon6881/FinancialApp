@@ -50,6 +50,7 @@ import { useAiActionRouter } from './app/useAiActionRouter'
 import { useAppDialogs } from './app/useAppDialogs'
 import { useCycleSummary } from './app/useCycleSummary'
 import { usePushNotifications } from './app/usePushNotifications'
+import { useInvestmentRefreshCoordinator } from './app/useInvestmentRefreshCoordinator'
 import { useFabMenu } from './app/useFabMenu'
 import { buildAppContextValue } from './app/buildAppContextValue'
 import { getErrorName } from './lib/errors'
@@ -220,6 +221,11 @@ function App() {
     hasShownModalThisSession,
     setShowLoginModal: dialogs.setShowLoginModal,
   })
+
+  const investmentAllocation = useInvestmentRefreshCoordinator(
+    Boolean(session.token) && !session.isLocked,
+    financial.isOffline,
+  )
 
   const [isLedgerAddOpen, setIsLedgerAddOpen] = useState(false)
   const isLedgerAddOpenRef = useRef(isLedgerAddOpen)
@@ -645,6 +651,7 @@ function App() {
                         })}
                         wishlist={financial.allWishlist}
                         isSwitchingCycle={isCurrentCycleLoading || !todayDashboardData}
+                        investmentAllocation={investmentAllocation}
                       />
                     )}
 

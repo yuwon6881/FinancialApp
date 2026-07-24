@@ -36,7 +36,28 @@ const emptyPortfolio: InvestmentPortfolio = {
   cashFlowCount: 0,
   insights: [],
   warnings: [],
-  marketDataConfigured: true,
+      marketDataConfigured: true,
+      allocation: {
+        status: 'NotStarted',
+        appCurrency: 'USD',
+        plan: {
+          usEquityTarget: 66,
+          internationalExUsTarget: 10,
+          bondsTarget: 24,
+          watchDrift: 3,
+          alertDrift: 5,
+        },
+        assignments: [],
+        sleeves: [
+          { sleeve: 'USEquity', label: 'US Equity', targetPercentage: 66, status: 'NotStarted' },
+          { sleeve: 'InternationalExUS', label: 'International ex-US', targetPercentage: 10, status: 'NotStarted' },
+          { sleeve: 'Bonds', label: 'Bonds', targetPercentage: 24, status: 'NotStarted' },
+        ],
+        recommendations: [],
+        incompleteReasons: [],
+        freshness: { isStale: false, hasMissingData: false, maxAgeMinutes: 60, staleInputs: [] },
+        availableCash: 0,
+      },
 }
 
 const tradablePortfolio: InvestmentPortfolio = {

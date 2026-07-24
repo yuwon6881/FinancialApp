@@ -1,8 +1,9 @@
 import * as api from './api'
-import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, RecurringPayment, Transaction, TransactionCategory, WishlistItem } from '../types'
+import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, RecurringPayment, Transaction, TransactionCategory, WishlistItem } from '../types'
 
 export type EntityKind = 'transaction' | 'recurringPayment' | 'wishlistItem' | 'category' | 'settings'
   | 'investmentAccount' | 'investmentInstrument' | 'investmentActivity' | 'investmentManualPrice' | 'investmentCashFlow'
+  | 'investmentPlan' | 'investmentAllocation'
 export type OpType = 'add' | 'update' | 'delete' | 'restore' | 'toggle' | 'purchase' | 'unpurchase'
 export interface OutboxPayload {
   [key: string]: unknown
@@ -32,6 +33,7 @@ export type DispatchResult =
   | InvestmentInstrument
   | InvestmentActivity
   | InvestmentCashFlow
+  | InvestmentPlan
   | api.DeletedTransactionsSnapshot
   | { id: string }
   | { item: WishlistItem; transaction: Transaction; id?: undefined }
@@ -98,6 +100,8 @@ const ENTITY_LABELS: Record<EntityKind, string> = {
   , investmentActivity: 'Investment activity'
   , investmentManualPrice: 'Manual price'
   , investmentCashFlow: 'Cash movement'
+  , investmentPlan: 'Investment plan'
+  , investmentAllocation: 'Investment classification'
 }
 
 const TYPE_VERBS: Record<OpType, string> = {
@@ -543,6 +547,12 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
   'investmentCashFlow:add': (op) => api.createInvestmentCashFlow({ ...(op.payload as any), id: op.targetId }),
   'investmentCashFlow:delete': (op) => api.deleteInvestmentCashFlow(op.targetId),
   'investmentCashFlow:restore': (op) => api.restoreInvestmentCashFlow(op.payload as unknown as InvestmentCashFlow),
+
+  'investmentPlan:update': (op) => api.updateInvestmentPlan(op.payload as unknown as Parameters<typeof api.updateInvestmentPlan>[0]),
+  'investmentAllocation:update': (op) => api.updateInvestmentAllocationSleeve(
+    op.targetId,
+    typeof op.payload?.sleeve === 'string' ? op.payload.sleeve as any : undefined,
+  ),
 }
 
 function isWellFormedOp(op: unknown): op is QueuedOp {
@@ -551,7 +561,7 @@ function isWellFormedOp(op: unknown): op is QueuedOp {
   return (
     typeof o.id === 'string' &&
     typeof o.entity === 'string' &&
-    ['transaction', 'recurringPayment', 'wishlistItem', 'category', 'settings', 'investmentAccount', 'investmentInstrument', 'investmentActivity', 'investmentManualPrice', 'investmentCashFlow'].includes(o.entity as string) &&
+    ['transaction', 'recurringPayment', 'wishlistItem', 'category', 'settings', 'investmentAccount', 'investmentInstrument', 'investmentActivity', 'investmentManualPrice', 'investmentCashFlow', 'investmentPlan', 'investmentAllocation'].includes(o.entity as string) &&
     typeof o.type === 'string' &&
     ['add', 'update', 'delete', 'restore', 'toggle', 'purchase', 'unpurchase'].includes(o.type as string) &&
     (typeof o.targetId === 'string' || typeof o.targetId === 'number') &&
