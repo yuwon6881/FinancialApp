@@ -92,6 +92,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
   const isServerAwakeRef = useRef<boolean>(false)
   const loadAllSeqRef = useRef(0)
+  const wakeUpCancelledRef = useRef(false)
+  const wakeUpTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [draftTransactions, setDraftTransactions] = useState<Transaction[]>(() => {
     try {
@@ -520,26 +522,28 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   // Server wake-up and background sync task
   const wakeUpAndSync = useCallback(async () => {
     if (!token) return
+    wakeUpCancelledRef.current = false
     let attempts = 0
     const maxAttempts = 15
     const runPing = async () => {
-      if (!token || isServerAwakeRef.current) return
+      if (wakeUpCancelledRef.current || !token || isServerAwakeRef.current) return
       try {
         const res = await api.pingServer()
+        if (wakeUpCancelledRef.current) return
         if (res && res.status !== 'waking_up') {
           console.log('Server is awake! Performing initial load and processing queue...')
           isServerAwakeRef.current = true
           const { month: cachedMonth, year: cachedYear } = getCachedDashboardPeriod()
           await loadAll(cachedMonth, cachedYear, true)
-          processQueue()
+          if (!wakeUpCancelledRef.current) processQueue()
           return
         }
       } catch (err) {
-        console.log('Wake-up ping failed:', err)
+        if (!wakeUpCancelledRef.current) console.log('Wake-up ping failed:', err)
       }
       attempts++
-      if (attempts < maxAttempts) {
-        setTimeout(runPing, 5000)
+      if (attempts < maxAttempts && !wakeUpCancelledRef.current) {
+        wakeUpTimeoutRef.current = setTimeout(runPing, 5000)
       }
     }
     runPing()
@@ -572,6 +576,11 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     window.addEventListener('online', handleOnline)
     return () => {
       window.removeEventListener('online', handleOnline)
+      wakeUpCancelledRef.current = true
+      if (wakeUpTimeoutRef.current) {
+        clearTimeout(wakeUpTimeoutRef.current)
+        wakeUpTimeoutRef.current = null
+      }
     }
   }, [token, wakeUpAndSync])
 
