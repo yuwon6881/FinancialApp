@@ -7,7 +7,7 @@ import { obfuscateAmount } from '@/lib/api/amounts'
 
 const API = 'http://localhost/api'
 
-export interface WireTx {
+interface WireTx {
   id: string
   date: string
   description: string
@@ -18,7 +18,7 @@ export interface WireTx {
   wishlistItemId?: number | null
 }
 
-export interface WireWish {
+interface WireWish {
   id: number
   name: string
   price: string
@@ -30,7 +30,7 @@ export interface WireWish {
   isActive: boolean
 }
 
-export interface WireRecurringPaymentForTest {
+interface WireRecurringPaymentForTest {
   id: string
   name: string
   amount: string

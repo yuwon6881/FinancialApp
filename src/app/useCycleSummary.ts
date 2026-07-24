@@ -6,7 +6,7 @@ import { getErrorName } from '../lib/errors'
 
 // Stable identity for a budget cycle, e.g. { year: 2026, monthIndex: 8 } -> "2026-08".
 // This is what the backend persists in FinancialSetting.lastSummaryCycleSeen.
-export function cycleKeyOf(year: number, monthIndex: number): string {
+function cycleKeyOf(year: number, monthIndex: number): string {
   return `${year}-${String(monthIndex).padStart(2, '0')}`
 }
 

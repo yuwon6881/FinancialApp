@@ -1,7 +1,7 @@
 import { APP_TABS, type AppTab } from '../types'
 
 export type LedgerRouteRange = 'monthly' | '3month' | '6month' | 'yearly'
-export type LedgerRouteTxType = 'inflow' | 'outflow' | 'transfer' | null
+type LedgerRouteTxType = 'inflow' | 'outflow' | 'transfer' | null
 
 export interface LedgerRouteState {
   filters: string[]

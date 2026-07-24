@@ -145,6 +145,13 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     onLockError: markSessionLocked,
     refresh: async successfulOps => {
       const ops = successfulOps.map(({ op }) => op)
+      const onlyInvestments = ops.length > 0 && ops.every(op => op.entity.startsWith('investment'))
+      if (onlyInvestments) {
+        window.dispatchEvent(new CustomEvent('investment-sync', { detail: { operations: ops.map(op => op.id) } }))
+        setError(null)
+        isServerAwakeRef.current = true
+        return
+      }
       // NOTE: `delete` is intentionally excluded from this wishlist-only fast path.
       // Deleting a *purchased* wishlist item cascade-deletes its linked ledger
       // transaction on the backend (see WishlistService.DeleteWishlistItemAsync),

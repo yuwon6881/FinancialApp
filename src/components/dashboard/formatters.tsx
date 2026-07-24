@@ -19,7 +19,7 @@ export const formatSensitiveAmount = (
   )
 }
 
-export const formatCompactNetValue = (val: number, currency: string | undefined): string => {
+const formatCompactNetValue = (val: number, currency: string | undefined): string => {
   const abs = Math.abs(Math.round(val))
   const symbol = getCurrencySymbol(currency || 'USD')
   if (abs >= 1000000) {

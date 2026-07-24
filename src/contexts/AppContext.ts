@@ -1,7 +1,8 @@
 import { createContext, useContext, type ReactNode } from 'react'
 import type { ToastAction, ToastTone } from '../components/ui/ToastViewport'
+import type { EntityKind, OpType, OutboxPayload, QueuedOp } from '../lib/outbox'
 
-export interface ConfirmRequest {
+interface ConfirmRequest {
   title: string
   message: ReactNode
   confirmText?: string
@@ -21,6 +22,8 @@ export interface AppContextValue {
   showToast: (message: string, title?: string, tone?: ToastTone, action?: ToastAction) => void
   guardSensitive: () => boolean
   confirm: (request: ConfirmRequest) => void
+  investmentOps?: QueuedOp[]
+  queueInvestmentMutation?: (entity: EntityKind, type: OpType, targetId: string, payload?: OutboxPayload, isUndo?: boolean) => void
 }
 
 const defaultValue: AppContextValue = {
@@ -35,6 +38,8 @@ const defaultValue: AppContextValue = {
   showToast: () => undefined,
   guardSensitive: () => true,
   confirm: () => undefined,
+  investmentOps: [],
+  queueInvestmentMutation: () => undefined,
 }
 
 export const AppContext = createContext<AppContextValue>(defaultValue)

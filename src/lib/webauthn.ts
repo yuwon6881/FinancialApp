@@ -27,7 +27,7 @@ export function base64UrlToHex(base64Url: string): string {
   return hex.toUpperCase()
 }
 
-export function isFingerprintSupported(): boolean {
+function isFingerprintSupported(): boolean {
   return typeof window !== 'undefined' && !!window.PublicKeyCredential
 }
 

@@ -38,7 +38,7 @@ const STATE_LABEL: Record<RowSyncState, string> = {
  * Shared across Ledger/Wishlist/Settings/RecurringPayments so the three sync
  * states read identically everywhere instead of six near-duplicate blocks.
  */
-export const RowSyncBadge: React.FC<{ state: RowSyncState; entityLabel: string }> = ({ state, entityLabel }) => {
+const RowSyncBadge: React.FC<{ state: RowSyncState; entityLabel: string }> = ({ state, entityLabel }) => {
   const title = state === 'pending' ? 'Pending sync (offline)' : `${state === 'deleting' ? 'Deleting' : 'Updating'} ${entityLabel}...`
   const Icon = state === 'pending' ? Clock : Loader2
 

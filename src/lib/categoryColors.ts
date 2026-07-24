@@ -1,7 +1,7 @@
-export const CATEGORY_BADGE_FALLBACK = 'bg-slate-500/10 text-slate-500 border-slate-500/20'
-export const CATEGORY_DOT_FALLBACK = 'bg-slate-500'
-export const CATEGORY_CHART_FALLBACK = 'var(--color-slate-500, #5d6978)'
-export const CATEGORY_FILTER_FALLBACK = 'bg-background/50 border-border hover:bg-muted text-muted-foreground'
+const CATEGORY_BADGE_FALLBACK = 'bg-slate-500/10 text-slate-500 border-slate-500/20'
+const CATEGORY_DOT_FALLBACK = 'bg-slate-500'
+const CATEGORY_CHART_FALLBACK = 'var(--color-slate-500, #5d6978)'
+const CATEGORY_FILTER_FALLBACK = 'bg-background/50 border-border hover:bg-muted text-muted-foreground'
 
 function normalizeCategoryName(category: string): string {
   if (category.startsWith('Transfer:')) return 'Transfer'

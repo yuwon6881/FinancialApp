@@ -6,7 +6,7 @@ import { SensitiveAmount } from '../ui/SensitiveAmount'
 import { getCycleProgress, MONTH_NAMES } from '../../lib/cycle'
 import { activateOnKeyboard } from './activateOnKeyboard'
 
-export interface WishlistGoal {
+interface WishlistGoal {
   item: WishlistItem
   rewardsBalance: number
   pct: number

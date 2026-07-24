@@ -1,7 +1,7 @@
 import type { Transaction } from '../types'
 import { displayLedgerCategory } from './utils'
 
-export function escapeCsvField(val: string | number): string {
+function escapeCsvField(val: string | number): string {
   const str = String(val)
   // Wrap in quotes if it contains comma, quote, or newline
   if (str.includes(',') || str.includes('"') || str.includes('\n')) {
@@ -15,7 +15,7 @@ export function escapeCsvField(val: string | number): string {
 // evaluate a leading =, +, -, or @ as a formula (CSV injection). Prefix with
 // an apostrophe to force it to render as literal text.
 const FORMULA_TRIGGER = /^[=+\-@\t\r]/
-export function escapeCsvTextField(val: string): string {
+function escapeCsvTextField(val: string): string {
   return escapeCsvField(FORMULA_TRIGGER.test(val) ? `'${val}` : val)
 }
 

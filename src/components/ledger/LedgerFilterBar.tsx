@@ -117,6 +117,8 @@ export function LedgerFilterBar({
               value={startDate}
               max={endDate || undefined}
               onChange={onStartDateChange}
+              clearable
+              clearAriaLabel="Clear ledger from date"
               className="w-full"
               popoverClassName="ledger-filter-dropdown"
             />
@@ -127,6 +129,8 @@ export function LedgerFilterBar({
               value={endDate}
               min={startDate || undefined}
               onChange={onEndDateChange}
+              clearable
+              clearAriaLabel="Clear ledger to date"
               className="w-full"
               popoverClassName="ledger-filter-dropdown"
             />

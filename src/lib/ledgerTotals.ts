@@ -5,7 +5,7 @@ export interface LedgerTotalTransaction {
   ledgerCategory?: string | null
 }
 
-export function isTransferTransaction(transaction: LedgerTotalTransaction): boolean {
+function isTransferTransaction(transaction: LedgerTotalTransaction): boolean {
   return (transaction.ledgerCategory ?? '').toLowerCase().startsWith('transfer:') ||
     (transaction.category ?? '').toLowerCase() === 'transfer'
 }

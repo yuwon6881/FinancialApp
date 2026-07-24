@@ -2,7 +2,7 @@ export const APP_TABS = ['dashboard', 'reports', 'recurring', 'ledger', 'wishlis
 export type AppTab = typeof APP_TABS[number]
 
 export type InvestmentRange = '1m' | '3m' | '6m' | '1y' | 'all'
-export type InvestmentInstrumentType = 'Stock' | 'ETF'
+type InvestmentInstrumentType = 'Stock' | 'ETF'
 export type InvestmentTransactionType =
   | 'OpeningPosition' | 'Buy' | 'Sell' | 'Dividend' | 'FeeTax'
   | 'Split' | 'TransferIn' | 'TransferOut'
@@ -17,6 +17,8 @@ export interface InvestmentAccount {
   canDelete?: boolean
   canArchive?: boolean
   archiveUnavailableReason?: string
+  isPendingSync?: boolean
+  isPendingDelete?: boolean
 }
 
 export interface InvestmentInstrument {
@@ -35,6 +37,8 @@ export interface InvestmentInstrument {
   canDelete?: boolean
   canArchive?: boolean
   archiveUnavailableReason?: string
+  isPendingSync?: boolean
+  isPendingDelete?: boolean
 }
 
 export interface InvestmentActivity {
@@ -52,9 +56,11 @@ export interface InvestmentActivity {
   notes?: string
   linkedTransferId?: string
   createdAt: string
+  isPendingSync?: boolean
+  isPendingDelete?: boolean
 }
 
-export interface InvestmentHolding {
+interface InvestmentHolding {
   accountId: string
   accountName: string
   instrumentId: string
@@ -81,9 +87,9 @@ export interface InvestmentHolding {
   valuationAsOf?: string
 }
 
-export type InvestmentCashFlowType = 'Deposit' | 'Withdrawal'
+type InvestmentCashFlowType = 'Deposit' | 'Withdrawal'
 
-export interface InvestmentCashBalance {
+interface InvestmentCashBalance {
   accountId: string
   accountName: string
   currency: string
@@ -99,6 +105,8 @@ export interface InvestmentCashFlow {
   amount: number
   date: string
   notes?: string
+  isPendingSync?: boolean
+  isPendingDelete?: boolean
 }
 
 export interface InvestmentPortfolio {
@@ -310,7 +318,7 @@ export interface TodayPlanInsights {
   projectedEssentialsEndingBalance: number
 }
 
-export type CategoryLimitStatus = 'OnTrack' | 'Watch' | 'Exceeded'
+type CategoryLimitStatus = 'OnTrack' | 'Watch' | 'Exceeded'
 
 export interface CategoryLimitProgress {
   category: string
@@ -323,7 +331,7 @@ export interface CategoryLimitProgress {
   status: CategoryLimitStatus
 }
 
-export interface CycleSummaryInsights {
+interface CycleSummaryInsights {
   largestExpenseDescription?: string
   largestExpenseAmount?: number
   biggestDayDate?: string

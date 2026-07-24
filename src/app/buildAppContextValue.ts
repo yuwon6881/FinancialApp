@@ -1,5 +1,6 @@
 import type { AppContextValue } from '../contexts/AppContext'
 import type { ToastAction, ToastTone } from '../components/ui/ToastViewport'
+import type { EntityKind, OpType, OutboxPayload, QueuedOp } from '../lib/outbox'
 
 export function buildAppContextValue(params: {
   hideSensitive: boolean
@@ -13,6 +14,8 @@ export function buildAppContextValue(params: {
   showToast: (message: string, title?: string, tone?: ToastTone, action?: ToastAction) => void
   guardSensitive: () => boolean
   confirm: (request: any) => void
+  investmentOps: QueuedOp[]
+  queueInvestmentMutation: (entity: EntityKind, type: OpType, targetId: string, payload?: OutboxPayload, isUndo?: boolean) => void
 }): AppContextValue {
   return {
     hideSensitive: params.hideSensitive,
@@ -26,5 +29,7 @@ export function buildAppContextValue(params: {
     showToast: params.showToast,
     guardSensitive: params.guardSensitive,
     confirm: params.confirm,
+    investmentOps: params.investmentOps,
+    queueInvestmentMutation: params.queueInvestmentMutation,
   }
 }

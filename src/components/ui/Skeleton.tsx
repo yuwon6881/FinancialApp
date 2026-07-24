@@ -11,7 +11,7 @@ export const Skeleton: React.FC<{ className?: string }> = ({ className }) => (
   <div className={cn('skeleton-shimmer rounded-md', className)} />
 )
 
-export const CardSkeleton: React.FC = () => (
+const CardSkeleton: React.FC = () => (
   <div className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
     <div className="flex items-center justify-between">
       <Skeleton className="h-3 w-24" />
@@ -28,7 +28,7 @@ export const CardSkeleton: React.FC = () => (
  * Used as the top of CycleSkeleton so all cycle-switch skeletons line up
  * with the real header layout instead of drifting apart per-view.
  */
-export const CycleHeaderSkeleton: React.FC<{
+const CycleHeaderSkeleton: React.FC<{
   titleWidth?: string
   subtitleWidth?: string
   controlWidth?: string
@@ -43,7 +43,7 @@ export const CycleHeaderSkeleton: React.FC<{
 )
 
 /** A single stat tile placeholder, matching the small banner cards used on Wishlist/Dashboard. */
-export const StatTileSkeleton: React.FC = () => (
+const StatTileSkeleton: React.FC = () => (
   <Card className="p-5 flex items-center justify-between">
     <div className="space-y-2">
       <Skeleton className="h-2.5 w-24" />

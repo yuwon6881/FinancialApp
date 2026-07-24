@@ -1,5 +1,4 @@
 import type { RecurringFrequency, RecurringPayment, RecurringReminderMode, RecurringReminderSettings } from '../types'
-import { RECURRING_PAUSED_LABEL } from './push/messages'
 
 export function normalizeRecurringFrequency(value: unknown): RecurringFrequency {
   return value === 'Annually' ? 'Annually' : 'Monthly'
@@ -84,8 +83,4 @@ export function buildReminderPreview(mode: RecurringReminderMode, leadDays: numb
   return mode === 'Daily'
     ? `Daily reminders from ${formatLeadDaysLabel(leadDays)} before until it's due.`
     : `One reminder ${formatLeadDaysLabel(leadDays)} before it's due.`
-}
-
-export function getRecurringPausedLabel(): string {
-  return RECURRING_PAUSED_LABEL
 }

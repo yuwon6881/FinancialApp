@@ -462,6 +462,10 @@ function App() {
     showToast: dialogs.showToast,
     guardSensitive: guardSensitive,
     confirm: dialogs.setConfirmModalData,
+    investmentOps: financial.pendingOps.filter(op => op.entity.startsWith('investment')),
+    queueInvestmentMutation: (entity, type, targetId, payload, isUndo) => {
+      financial.mutateQueue(previous => financial.enqueue(previous, entity, type, targetId, payload, isUndo))
+    },
   }), [
     prefs.hideSensitive,
     financial.optimisticDashboardData?.setting?.currency,
@@ -470,6 +474,9 @@ function App() {
     financial.deletingTxId,
     financial.isBackgroundSyncing,
     financial.pendingOps.length,
+    financial.pendingOps,
+    financial.mutateQueue,
+    financial.enqueue,
     financial.isOffline,
     financial.formatSensitive,
     dialogs.showToast,

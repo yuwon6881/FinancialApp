@@ -61,6 +61,12 @@ export function useInvestmentPortfolio() {
     return () => abort.abort()
   }, [range])
 
+  useEffect(() => {
+    const refreshAfterSync = () => { void load(range, true) }
+    window.addEventListener('investment-sync', refreshAfterSync)
+    return () => window.removeEventListener('investment-sync', refreshAfterSync)
+  }, [load, range])
+
   useEffect(() => () => {
     cancelRefreshRef.current = true
     if (refreshTimerRef.current !== null) window.clearTimeout(refreshTimerRef.current)

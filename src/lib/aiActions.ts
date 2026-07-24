@@ -23,7 +23,7 @@ export function getPayloadString(payload: Record<string, unknown>, key: string):
  * so assistant-added records read cleanly (e.g. "bills" → "Bills"). Non-string or
  * blank values are left untouched.
  */
-export function capitalizePayloadField(payload: Record<string, unknown>, key: string): Record<string, unknown> {
+function capitalizePayloadField(payload: Record<string, unknown>, key: string): Record<string, unknown> {
   const value = payload[key]
   if (typeof value !== 'string' || !value.trim()) return payload
   return { ...payload, [key]: capitalizeWords(value) }

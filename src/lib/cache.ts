@@ -17,7 +17,7 @@ export const CACHE_KEYS = {
 
 // Local amount masking only discourages casual inspection. It is deliberately
 // not described as encryption: code running in this origin can reverse it.
-export const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 const CACHE_TIMESTAMP_SUFFIX = ':cached_at'
 const CYCLE_SNAPSHOTS_KEY = 'cached_cycle_snapshots'
 const DISPOSABLE_CACHE_KEYS = new Set<string>([
@@ -117,7 +117,7 @@ function isWellFormedWishlistItem(item: unknown): item is WishlistItem {
   )
 }
 
-export function sanitizeWishlist(value: unknown): WishlistItem[] {
+function sanitizeWishlist(value: unknown): WishlistItem[] {
   if (!Array.isArray(value)) return []
   return value
     .filter(isWellFormedWishlistItem)
@@ -175,6 +175,18 @@ export function clearLocalFinancialData(): void {
       // Clearing local data is best-effort. One rejected storage operation
       // should not prevent the remaining caches and drafts from being removed.
     }
+  }
+  try {
+    const investmentPageKeys: string[] = []
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index)
+      if (key?.startsWith('cached_investment_activity:') || key?.startsWith('cached_investment_cash_flows:')) {
+        investmentPageKeys.push(key)
+      }
+    }
+    investmentPageKeys.forEach(removeCachedKey)
+  } catch {
+    // Best-effort, consistent with the fixed cache keys above.
   }
   for (const key of [
     'draft_transactions', 'pending_operations_backup', 'pending_transactions_backup',

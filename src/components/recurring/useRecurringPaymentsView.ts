@@ -6,10 +6,10 @@ import { useAutoOpenModal } from '../../lib/useAutoOpenModal'
 import { normalizeRecurringFrequency } from '../../lib/recurringPayments'
 import { formatSensitiveAmount, formatCurrencyAmount } from './formatters'
 
-export const RECURRING_LEDGER_CATEGORIES = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const
+const RECURRING_LEDGER_CATEGORIES = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const
 export type RecurringLedgerCategory = typeof RECURRING_LEDGER_CATEGORIES[number]
 
-export function isRecurringLedgerCategory(value: string): value is RecurringLedgerCategory {
+function isRecurringLedgerCategory(value: string): value is RecurringLedgerCategory {
   return (RECURRING_LEDGER_CATEGORIES as readonly string[]).includes(value)
 }
 

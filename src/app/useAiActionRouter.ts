@@ -3,7 +3,7 @@ import * as api from '../lib/api'
 import { dispatchAiActions, requestAiLedgerDelete } from '../lib/aiActions'
 import type { Transaction, TransactionCategory } from '../types'
 
-export interface AiActionRouterState {
+interface AiActionRouterState {
   aiLedgerEditDraft: { nonce: number; id: string; changes: Record<string, unknown> } | null
   aiRecurringDraft: { nonce: number; fields: Record<string, unknown> } | null
   aiRecurringEditDraft: { nonce: number; id: string; changes: Record<string, unknown> } | null

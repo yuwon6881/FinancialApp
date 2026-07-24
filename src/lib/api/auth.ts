@@ -4,7 +4,7 @@ import type { QuestionAnswerDto, SecurityQuestionsRecoveryStartResponse } from '
 import { apiFetch, invalidateCache, jsonBody, request, requestVoid } from './client'
 import { tokenStore } from '../auth'
 
-export function getDeviceInfo(): { deviceId: string; deviceName: string } {
+function getDeviceInfo(): { deviceId: string; deviceName: string } {
   let deviceId = localStorage.getItem('deviceId')
   if (!deviceId) {
     deviceId = typeof crypto !== 'undefined' && crypto.randomUUID

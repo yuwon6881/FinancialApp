@@ -27,12 +27,12 @@ function storeIds(key: string, ids: string[]): void {
   }
 }
 
-export interface ReceiptScanDraft {
+interface ReceiptScanDraft {
   jobId: string
   result: ReceiptScanResult
 }
 
-export interface FailedScanJob {
+interface FailedScanJob {
   jobId: string
   errorMessage: string
 }

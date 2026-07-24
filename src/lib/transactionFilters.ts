@@ -8,7 +8,7 @@ import type { Transaction } from '../types'
 /** The ledger "bucket" pseudo-categories, distinct from user sub-categories. */
 export const LEDGER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income'] as const
 
-export type TxTypeFilter = '' | 'inflow' | 'outflow' | 'transfer' | null | undefined
+type TxTypeFilter = '' | 'inflow' | 'outflow' | 'transfer' | null | undefined
 
 export interface TransactionFilterCriteria {
   /** Free-text search; empty/undefined matches everything. */

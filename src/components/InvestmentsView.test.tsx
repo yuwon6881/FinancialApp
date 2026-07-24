@@ -57,6 +57,8 @@ const context: AppContextValue = {
   showToast: vi.fn(),
   guardSensitive: () => true,
   confirm: vi.fn(),
+  investmentOps: [],
+  queueInvestmentMutation: vi.fn(),
 }
 
 const renderView = () => render(
@@ -74,6 +76,7 @@ describe('InvestmentsView provider call boundaries', () => {
     vi.mocked(api.fetchCurrencyCatalog).mockResolvedValue([])
     vi.mocked(api.searchInvestmentInstruments).mockReset()
     vi.mocked(api.createInvestmentInstrument).mockReset()
+    vi.mocked(context.queueInvestmentMutation!).mockReset()
     vi.mocked(api.refreshInvestmentMarketData).mockReset()
   })
 
@@ -105,7 +108,7 @@ describe('InvestmentsView provider call boundaries', () => {
     expect(api.searchInvestmentInstruments).toHaveBeenCalledWith('VOO', expect.any(AbortSignal))
   })
 
-  it('saving a discovered instrument does not trigger a price refresh', async () => {
+  it('queues a discovered instrument without triggering a price refresh', async () => {
     vi.mocked(api.searchInvestmentInstruments).mockResolvedValue({
       results: [{
         symbol: 'VOO',
@@ -136,7 +139,13 @@ describe('InvestmentsView provider call boundaries', () => {
     fireEvent.click(await screen.findByRole('button', { name: /VOO/ }, { timeout: 1500 }))
     fireEvent.click(screen.getByRole('button', { name: 'Save investment' }))
 
-    await waitFor(() => expect(api.createInvestmentInstrument).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(context.queueInvestmentMutation).toHaveBeenCalledWith(
+      'investmentInstrument',
+      'add',
+      expect.any(String),
+      expect.objectContaining({ symbol: 'VOO', name: 'Vanguard ETF' }),
+    ))
+    expect(api.createInvestmentInstrument).not.toHaveBeenCalled()
     expect(api.refreshInvestmentMarketData).not.toHaveBeenCalled()
   })
 

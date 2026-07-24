@@ -41,7 +41,7 @@ export function getCycleRangeDates(year: number, monthIndex: number, cycleDay: n
   return { start, end }
 }
 
-export type CyclePhase = 'upcoming' | 'active' | 'ended'
+type CyclePhase = 'upcoming' | 'active' | 'ended'
 
 export interface CycleProgress {
   phase: CyclePhase

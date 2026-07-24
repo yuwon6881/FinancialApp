@@ -1,8 +1,9 @@
 import * as api from './api'
-import type { FinancialSetting, RecurringPayment, Transaction, TransactionCategory, WishlistItem } from '../types'
+import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, RecurringPayment, Transaction, TransactionCategory, WishlistItem } from '../types'
 
 export type EntityKind = 'transaction' | 'recurringPayment' | 'wishlistItem' | 'category' | 'settings'
-export type OpType = 'add' | 'update' | 'delete' | 'toggle' | 'purchase' | 'unpurchase'
+  | 'investmentAccount' | 'investmentInstrument' | 'investmentActivity' | 'investmentManualPrice' | 'investmentCashFlow'
+export type OpType = 'add' | 'update' | 'delete' | 'restore' | 'toggle' | 'purchase' | 'unpurchase'
 export interface OutboxPayload {
   [key: string]: unknown
   id?: string | number
@@ -27,6 +28,12 @@ export type DispatchResult =
   | RecurringPayment
   | WishlistItem
   | TransactionCategory
+  | InvestmentAccount
+  | InvestmentInstrument
+  | InvestmentActivity
+  | InvestmentCashFlow
+  | api.DeletedTransactionsSnapshot
+  | { id: string }
   | { item: WishlistItem; transaction: Transaction; id?: undefined }
   | void
 
@@ -86,12 +93,18 @@ const ENTITY_LABELS: Record<EntityKind, string> = {
   wishlistItem: 'Wishlist item',
   category: 'Category',
   settings: 'Settings'
+  , investmentAccount: 'Investment account'
+  , investmentInstrument: 'Investment'
+  , investmentActivity: 'Investment activity'
+  , investmentManualPrice: 'Manual price'
+  , investmentCashFlow: 'Cash movement'
 }
 
 const TYPE_VERBS: Record<OpType, string> = {
   add: 'added',
   update: 'updated',
   delete: 'deleted',
+  restore: 'restored',
   toggle: 'toggled',
   purchase: 'purchased',
   unpurchase: 'purchase undone'
@@ -509,7 +522,27 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
     if (op.targetId === 'hideSensitive') return api.updateHideSensitive(op.payload?.hideSensitive === true)
     if (op.targetId === 'summarySeen') return api.updateSummarySeen(typeof op.payload?.cycleKey === 'string' ? op.payload.cycleKey : null)
     return api.updateSettings(op.payload as unknown as Pick<FinancialSetting, 'targetStabilityFund' | 'essentialsAlloc' | 'growthAlloc' | 'stabilityAlloc' | 'rewardsAlloc' | 'cycleDay'> & Partial<FinancialSetting>)
-  }
+  },
+
+  'investmentAccount:add': (op) => api.createInvestmentAccount({ ...(op.payload as unknown as api.AccountMutation), id: op.targetId }),
+  'investmentAccount:update': (op) => api.updateInvestmentAccount(op.targetId, op.payload as unknown as api.AccountMutation),
+  'investmentAccount:delete': (op) => api.deleteInvestmentAccount(op.targetId),
+
+  'investmentInstrument:add': (op) => api.createInvestmentInstrument({ ...(op.payload as unknown as api.InstrumentMutation), id: op.targetId }),
+  'investmentInstrument:update': (op) => api.updateInvestmentInstrument(op.targetId, op.payload as unknown as api.InstrumentMutation),
+  'investmentInstrument:delete': (op) => api.deleteInvestmentInstrument(op.targetId),
+
+  'investmentActivity:add': (op) => api.createInvestmentActivity({ ...(op.payload as unknown as api.InvestmentActivityMutation), id: op.targetId }),
+  'investmentActivity:update': (op) => api.updateInvestmentActivity(op.targetId, op.payload as unknown as api.InvestmentActivityMutation),
+  'investmentActivity:delete': (op) => api.deleteInvestmentActivity(op.targetId),
+  'investmentActivity:restore': (op) => api.restoreInvestmentActivity(op.payload as unknown as api.DeletedTransactionsSnapshot),
+
+  'investmentManualPrice:add': (op) => api.createManualInvestmentPrice({ ...(op.payload as any), id: op.targetId }),
+  'investmentManualPrice:delete': (op) => api.deleteManualInvestmentPrice(op.targetId),
+
+  'investmentCashFlow:add': (op) => api.createInvestmentCashFlow({ ...(op.payload as any), id: op.targetId }),
+  'investmentCashFlow:delete': (op) => api.deleteInvestmentCashFlow(op.targetId),
+  'investmentCashFlow:restore': (op) => api.restoreInvestmentCashFlow(op.payload as unknown as InvestmentCashFlow),
 }
 
 function isWellFormedOp(op: unknown): op is QueuedOp {
@@ -518,9 +551,9 @@ function isWellFormedOp(op: unknown): op is QueuedOp {
   return (
     typeof o.id === 'string' &&
     typeof o.entity === 'string' &&
-    ['transaction', 'recurringPayment', 'wishlistItem', 'category', 'settings'].includes(o.entity as string) &&
+    ['transaction', 'recurringPayment', 'wishlistItem', 'category', 'settings', 'investmentAccount', 'investmentInstrument', 'investmentActivity', 'investmentManualPrice', 'investmentCashFlow'].includes(o.entity as string) &&
     typeof o.type === 'string' &&
-    ['add', 'update', 'delete', 'toggle', 'purchase', 'unpurchase'].includes(o.type as string) &&
+    ['add', 'update', 'delete', 'restore', 'toggle', 'purchase', 'unpurchase'].includes(o.type as string) &&
     (typeof o.targetId === 'string' || typeof o.targetId === 'number') &&
     typeof o.createdAt === 'number' &&
     typeof o.retryCount === 'number'

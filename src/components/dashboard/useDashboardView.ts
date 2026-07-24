@@ -14,7 +14,7 @@ import {
   formatSensitiveAmount,
 } from './formatters'
 
-export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 export interface PendingBalanceAdjustment {
   transaction: Omit<Transaction, 'id'>

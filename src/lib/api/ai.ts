@@ -10,7 +10,7 @@ export interface AiUiAction {
   payload: Record<string, unknown>
 }
 
-export interface AiAmountThreshold {
+interface AiAmountThreshold {
   comparator: string
   low: number
   high?: number | null

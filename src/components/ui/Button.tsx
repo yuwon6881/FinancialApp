@@ -1,8 +1,8 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react'
 import { cn } from '../../lib/utils'
 
-export type ButtonVariant = 'primary' | 'ghost' | 'danger'
-export type ButtonSize = 'sm' | 'md' | 'lg'
+type ButtonVariant = 'primary' | 'ghost' | 'danger'
+type ButtonSize = 'sm' | 'md' | 'lg'
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: 'text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 border border-transparent',

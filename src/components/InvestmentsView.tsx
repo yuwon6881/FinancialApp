@@ -9,10 +9,8 @@ import {
   Plus,
   RefreshCw,
   Search,
-  SlidersHorizontal,
   TrendingUp,
   Wallet,
-  X,
 } from 'lucide-react'
 import type {
   AppTab,
@@ -22,7 +20,6 @@ import type {
   InvestmentRange,
   InvestmentTransactionType,
 } from '../types'
-import type { ToastAction } from './ui/ToastViewport'
 import * as api from '../lib/api'
 import type { InstrumentSearchResult } from '../lib/api/investments'
 import { useAppContext } from '../contexts/AppContext'
@@ -33,6 +30,8 @@ import { CustomSelect } from './ui/CustomSelect'
 import { DatePicker } from './ui/DatePicker'
 import { CurrencySelect } from './ui/CurrencySelect'
 import { useInvestmentPortfolio } from './investments/useInvestmentPortfolio'
+import { applyOpsToList } from '../lib/outbox'
+import { RowSyncStatus } from './ui/RowSyncBadge'
 
 interface InvestmentsViewProps {
   onNavigate: (tab: AppTab) => void
@@ -73,10 +72,9 @@ const number = (value: number, digits = 4) =>
   new Intl.NumberFormat(undefined, { maximumFractionDigits: digits }).format(value)
 
 export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) => {
-  const { hideSensitive, isOffline, showToast, confirm } = useAppContext()
+  const { hideSensitive, isOffline, showToast, confirm, activeSyncId, investmentOps = [], queueInvestmentMutation = () => undefined } = useAppContext()
   const {
     activityRevision,
-    load,
     loadError,
     loading,
     portfolio,
@@ -91,8 +89,25 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
   // fresh internal state -- reopening (or switching from edit to add) never
   // shows a previously entered or edited record.
   const [formKey, setFormKey] = useState(0)
-  const [busy, setBusy] = useState(false)
+  const busy = false
   const [allocationFilter, setAllocationFilter] = useState<AllocationFilter>(null)
+  const setupPortfolio = useMemo(() => portfolio ? {
+    ...portfolio,
+    accounts: applyOpsToList(portfolio.accounts, investmentOps, 'investmentAccount'),
+    instruments: applyOpsToList(portfolio.instruments, investmentOps, 'investmentInstrument'),
+  } : null, [portfolio, investmentOps])
+  const queueInvestment = async (
+    entity: 'investmentAccount' | 'investmentInstrument' | 'investmentActivity' | 'investmentManualPrice' | 'investmentCashFlow',
+    type: 'add' | 'update' | 'delete' | 'restore',
+    targetId: string,
+    payload: Record<string, unknown> | undefined,
+    message: string,
+  ) => {
+    queueInvestmentMutation(entity, type, targetId, payload)
+    closePanel()
+    showToast(isOffline ? 'Saved on this device and will sync when you reconnect.' : 'Saving in the background.', message, 'info')
+    return true
+  }
 
   const openPanel = (next: Exclude<Panel, null>, activity: InvestmentActivity | null = null) => {
     setEditingActivity(activity)
@@ -102,40 +117,6 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
   const closePanel = () => {
     setPanel(null)
     setEditingActivity(null)
-  }
-
-  const mutateUndo = async (work: () => Promise<unknown>, success: string) => {
-    setBusy(true)
-    try {
-      await work()
-      await load(range, true)
-      showToast(success, 'Growth Investments', 'info')
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Could not undo.', 'Undo failed', 'error')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const mutate = async <T,>(work: () => Promise<T>, success: string, createUndo?: (result: T) => ToastAction | undefined) => {
-    if (isOffline) {
-      showToast('Reconnect to make investment changes.', 'Offline', 'warning')
-      return false
-    }
-    setBusy(true)
-    try {
-      const result = await work()
-      await load(range, true)
-      const undoAction = createUndo ? createUndo(result) : undefined
-      showToast(success, 'Growth Investments', 'success', undoAction)
-      closePanel()
-      return true
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : 'The change could not be saved.', 'Could not save', 'warning')
-      return false
-    } finally {
-      setBusy(false)
-    }
   }
 
   if (loading && !portfolio) return <CycleSkeleton variant="investments" />
@@ -169,7 +150,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
               ? <><Loader2 className="size-4 animate-spin" /> Updating…</>
               : <><RefreshCw className="size-4" /> Update prices</>}
           </Button>
-          <Button variant="primary" className="w-full justify-center sm:w-auto" disabled={isOffline} onClick={() => openPanel('activity')}>
+          <Button variant="primary" className="w-full justify-center sm:w-auto" onClick={() => openPanel('activity')}>
             <Plus className="size-4" /> Add activity
           </Button>
         </div>
@@ -178,7 +159,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
       {(isOffline || loadError) && (
         <div role="status" className="flex items-center gap-2 rounded-xl border border-amber-500/25 bg-amber-500/8 px-4 py-3 text-xs text-amber-700 dark:text-amber-300">
           <CloudOff className="size-4 shrink-0" />
-          {isOffline ? 'Offline: showing the last cached snapshot. Editing and market refresh are unavailable.' : loadError}
+          {isOffline ? 'Offline: showing the last cached snapshot. Changes will be queued; market refresh remains unavailable.' : loadError}
         </div>
       )}
 
@@ -189,61 +170,41 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
       )}
 
       <BottomSheet isOpen={panel === 'account'} title="Add investment account" onClose={closePanel} maxWidthClassName="max-w-lg">
-        <AccountForm key={`account-${formKey}`} busy={busy} onCancel={closePanel} onSave={value => mutate(() => api.createInvestmentAccount(value), 'Account added.', (res) => ({
-          label: 'Undo',
-          onAction: () => mutateUndo(() => api.deleteInvestmentAccount(res.id), 'Account addition undone.')
-        }))} />
+        <AccountForm key={`account-${formKey}`} busy={busy} onCancel={closePanel} onSave={value => {
+          const id = crypto.randomUUID()
+          return queueInvestment('investmentAccount', 'add', id, { ...value, id }, 'Account queued')
+        }} />
       </BottomSheet>
       <BottomSheet isOpen={panel === 'instrument'} title="Add investment" onClose={closePanel} maxWidthClassName="max-w-2xl">
-        <InstrumentForm key={`instrument-${formKey}`} busy={busy} offline={isOffline} onCancel={closePanel} onSave={value => mutate(() => api.createInvestmentInstrument(value), 'Investment added.', (res) => ({
-          label: 'Undo',
-          onAction: () => mutateUndo(() => api.deleteInvestmentInstrument(res.id), 'Investment addition undone.')
-        }))} />
+        <InstrumentForm key={`instrument-${formKey}`} busy={busy} offline={isOffline} onCancel={closePanel} onSave={value => {
+          const id = crypto.randomUUID()
+          return queueInvestment('investmentInstrument', 'add', id, { ...value, id }, 'Investment queued')
+        }} />
       </BottomSheet>
       <BottomSheet isOpen={panel === 'activity'} title={editingActivity ? 'Edit investment activity' : 'Add activity'} onClose={closePanel} maxWidthClassName="max-w-3xl">
-        <ActivityForm key={`activity-${formKey}`} portfolio={portfolio} initial={editingActivity} busy={busy} onCancel={closePanel} onSave={value => mutate(
-          async () => {
-            if (editingActivity) {
-              await api.updateInvestmentActivity(editingActivity.id, value)
-              return null
-            } else {
-              return await api.createInvestmentActivity(value)
-            }
-          },
-          editingActivity ? 'Activity updated.' : 'Activity added.',
-          (res) => editingActivity ? {
-            label: 'Undo',
-            onAction: () => mutateUndo(() => api.updateInvestmentActivity(editingActivity.id, {
-              accountId: editingActivity.accountId,
-              instrumentId: editingActivity.instrumentId,
-              type: editingActivity.type,
-              tradeDate: editingActivity.tradeDate,
-              units: editingActivity.units,
-              unitPrice: editingActivity.unitPrice,
-              cashAmount: editingActivity.cashAmount,
-              fees: editingActivity.fees,
-              taxes: editingActivity.taxes,
-              tradeFxRate: editingActivity.tradeFxRate,
-              notes: editingActivity.notes,
-              linkedTransferId: editingActivity.linkedTransferId,
-            }), 'Activity update reverted.')
-          } : res ? {
-            label: 'Undo',
-            onAction: () => mutateUndo(() => api.deleteInvestmentActivity(res.id), 'Activity addition undone.')
-          } : undefined
-        )} onNeedAccount={() => openPanel('account')} onNeedInstrument={() => openPanel('instrument')} />
+        <ActivityForm key={`activity-${formKey}`} portfolio={setupPortfolio} initial={editingActivity} busy={busy} onCancel={closePanel} onSave={value => {
+          const id = editingActivity?.id ?? crypto.randomUUID()
+          const destinationLegId = value.destinationAccountId ? crypto.randomUUID() : undefined
+          return queueInvestment(
+            'investmentActivity',
+            editingActivity ? 'update' : 'add',
+            id,
+            { ...value, id, destinationLegId, undoSnapshot: editingActivity ?? undefined },
+            editingActivity ? 'Activity update queued' : 'Activity queued',
+          )
+        }} onNeedAccount={() => openPanel('account')} onNeedInstrument={() => openPanel('instrument')} />
       </BottomSheet>
       <BottomSheet isOpen={panel === 'price'} title="Add manual closing price" onClose={closePanel} maxWidthClassName="max-w-2xl">
-        <ManualPriceForm key={`price-${formKey}`} portfolio={portfolio} busy={busy} onCancel={closePanel} onSave={value => mutate(() => api.createManualInvestmentPrice(value), 'Manual price added.', (res) => ({
-          label: 'Undo',
-          onAction: () => mutateUndo(() => api.deleteManualInvestmentPrice(res.id), 'Manual price addition undone.')
-        }))} />
+        <ManualPriceForm key={`price-${formKey}`} portfolio={setupPortfolio} busy={busy} onCancel={closePanel} onSave={value => {
+          const id = crypto.randomUUID()
+          return queueInvestment('investmentManualPrice', 'add', id, { ...value, id }, 'Manual price queued')
+        }} />
       </BottomSheet>
       <BottomSheet isOpen={panel === 'cash'} title="Record cash movement" onClose={closePanel} maxWidthClassName="max-w-lg">
-        <CashForm key={`cash-${formKey}`} portfolio={portfolio} busy={busy} onCancel={closePanel} onSave={value => mutate(() => api.createInvestmentCashFlow(value), value.type === 'Withdrawal' ? 'Withdrawal recorded.' : 'Deposit recorded.', (res) => ({
-          label: 'Undo',
-          onAction: () => mutateUndo(() => api.deleteInvestmentCashFlow(res.id), 'Cash movement undone.')
-        }))} onNeedAccount={() => openPanel('account')} />
+        <CashForm key={`cash-${formKey}`} portfolio={setupPortfolio} busy={busy} onCancel={closePanel} onSave={value => {
+          const id = crypto.randomUUID()
+          return queueInvestment('investmentCashFlow', 'add', id, { ...value, id }, 'Cash movement queued')
+        }} onNeedAccount={() => openPanel('account')} />
       </BottomSheet>
 
       {!portfolio || (portfolio.accounts.length === 0 && portfolio.instruments.length === 0 && (portfolio.activityCount ?? portfolio.activity.length) === 0 && (portfolio.cashFlowCount ?? portfolio.cashFlows.length) === 0) ? (
@@ -256,57 +217,38 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
         <>
           <SummaryCards portfolio={portfolio} masked={hideSensitive} />
           <div className="flex flex-wrap gap-2">
-            <Button variant="ghost" disabled={isOffline} onClick={() => openPanel('account')}><Building2 className="size-4" /> Add account</Button>
-            <Button variant="ghost" disabled={isOffline} onClick={() => openPanel('instrument')}><Search className="size-4" /> Add investment</Button>
-            <Button variant="ghost" disabled={isOffline || portfolio.accounts.length === 0} onClick={() => openPanel('cash')}><Wallet className="size-4" /> Deposit / withdraw</Button>
-            <Button variant="ghost" disabled={isOffline || portfolio.instruments.length === 0} onClick={() => openPanel('price')}><CircleDollarSign className="size-4" /> Manual price</Button>
+            <Button variant="ghost" onClick={() => openPanel('account')}><Building2 className="size-4" /> Add account</Button>
+            <Button variant="ghost" onClick={() => openPanel('instrument')}><Search className="size-4" /> Add investment</Button>
+            <Button variant="ghost" disabled={portfolio.accounts.length === 0} onClick={() => openPanel('cash')}><Wallet className="size-4" /> Deposit / withdraw</Button>
+            <Button variant="ghost" disabled={portfolio.instruments.length === 0} onClick={() => openPanel('price')}><CircleDollarSign className="size-4" /> Manual price</Button>
           </div>
-          <CashPanel
-            portfolio={portfolio}
-            offline={isOffline}
-            masked={hideSensitive}
-            onAdd={() => openPanel('cash')}
-            onDeleteCashFlow={flow => confirm({
-              title: flow.type === 'Withdrawal' ? 'Delete withdrawal?' : 'Delete deposit?',
-              message: 'The account cash balance and total value will be recalculated.',
-              confirmText: 'Delete',
-              onConfirm: () => { void mutate(() => api.deleteInvestmentCashFlow(flow.id), 'Cash movement deleted.', () => ({
-                label: 'Undo',
-                onAction: () => mutateUndo(() => api.createInvestmentCashFlow({
-                  accountId: flow.accountId,
-                  currency: flow.currency,
-                  type: flow.type,
-                  amount: Math.abs(flow.amount),
-                  date: flow.date,
-                  notes: flow.notes
-                }), 'Cash movement restored.')
-              })) },
-            })}
-          />
+          {investmentOps.length > 0 && <div role="status" className="flex items-center gap-2 rounded-xl border border-blue-500/20 bg-blue-500/8 px-4 py-3 text-xs text-blue-700 dark:text-blue-300"><Loader2 className={`size-3.5 ${isOffline ? '' : 'animate-spin'}`} /> Pending changes · confirmed totals remain visible until synchronization completes.</div>}
+          <section aria-labelledby="quick-insights" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
+            <h2 id="quick-insights" className="text-base font-bold text-foreground">Quick insights</h2>
+            <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {portfolio.insights.map(value => (
+                <li key={value} className="flex items-start gap-3 rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 text-xs leading-relaxed text-blue-700 shadow-sm dark:text-blue-300">
+                  <div className="mt-0.5 shrink-0 rounded-full bg-blue-500/20 p-1.5 text-blue-600 dark:text-blue-400"><TrendingUp className="size-4" /></div>
+                  <span className="pt-0.5">{value}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
           <AccountsAndInstruments
-            portfolio={portfolio}
+            portfolio={setupPortfolio ?? portfolio}
             offline={isOffline}
-            onArchiveAccount={id => void mutate(() => api.archiveInvestmentAccount(id), 'Account archived.', () => {
+            onArchiveAccount={id => {
               const account = portfolio.accounts.find(a => a.id === id)
-              return account ? {
-                label: 'Undo',
-                onAction: () => mutateUndo(() => api.unarchiveInvestmentAccount(id, account.name, account.baseCurrency), 'Account unarchived.')
-              } : undefined
-            })}
-            onUnarchiveAccount={(id, name, currency) => void mutate(() => api.unarchiveInvestmentAccount(id, name, currency), 'Account unarchived.', () => ({
-              label: 'Undo',
-              onAction: () => mutateUndo(() => api.archiveInvestmentAccount(id), 'Account archived.')
-            }))}
+              if (account) queueInvestment('investmentAccount', 'update', id, { name: account.name, baseCurrency: account.baseCurrency, isArchived: true, undoSnapshot: account }, 'Account archive queued')
+            }}
+            onUnarchiveAccount={(id, name, currency) => queueInvestment('investmentAccount', 'update', id, { name, baseCurrency: currency, isArchived: false }, 'Account restore queued')}
             onDeleteAccount={id => {
               const account = portfolio.accounts.find(a => a.id === id)
               confirm({
                 title: 'Delete investment account?',
                 message: 'Only accounts without activity can be deleted.',
                 confirmText: 'Delete',
-                onConfirm: () => { void mutate(() => api.deleteInvestmentAccount(id), 'Account deleted.', () => account ? {
-                  label: 'Undo',
-                  onAction: () => mutateUndo(() => api.createInvestmentAccount({ name: account.name, baseCurrency: account.baseCurrency }), 'Account restored.')
-                } : undefined) },
+                onConfirm: () => { queueInvestment('investmentAccount', 'delete', id, { undoSnapshot: account }, 'Account deletion queued') },
               })
             }}
             onDeleteInstrument={id => {
@@ -315,21 +257,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
                 title: 'Delete investment?',
                 message: 'Only investments without activity can be deleted.',
                 confirmText: 'Delete',
-                onConfirm: () => { void mutate(() => api.deleteInvestmentInstrument(id), 'Investment deleted.', () => instrument ? {
-                  label: 'Undo',
-                  onAction: () => mutateUndo(() => api.createInvestmentInstrument({
-                    symbol: instrument.symbol,
-                    name: instrument.name,
-                    type: instrument.type,
-                    currency: instrument.currency,
-                    exchange: instrument.exchange,
-                    mic: instrument.mic,
-                    country: instrument.country,
-                    providerSymbol: instrument.providerSymbol,
-                    providerMic: instrument.providerMic,
-                    isCustom: instrument.isCustom
-                  }), 'Investment restored.')
-                } : undefined) },
+                onConfirm: () => { queueInvestment('investmentInstrument', 'delete', id, { undoSnapshot: instrument }, 'Investment deletion queued') },
               })
             }}
             onDeleteManualPrice={id => {
@@ -338,21 +266,18 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
                 title: 'Delete manual price?',
                 message: 'The cached provider close, if available, will become active again.',
                 confirmText: 'Delete',
-                onConfirm: () => { void mutate(() => api.deleteManualInvestmentPrice(id), 'Manual price deleted.', () => mp ? {
-                  label: 'Undo',
-                  onAction: () => mutateUndo(() => api.createManualInvestmentPrice(mp), 'Manual price restored.')
-                } : undefined) },
+                onConfirm: () => { queueInvestment('investmentManualPrice', 'delete', id, { undoSnapshot: mp }, 'Manual price deletion queued') },
               })
             }}
           />
           {portfolio.warnings.length > 0 && (
-            <section aria-labelledby="calculation-warnings" className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
-              <h2 id="calculation-warnings" className="text-sm font-bold text-foreground">Calculation notes</h2>
+            <details className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
+              <summary id="calculation-warnings" className="cursor-pointer text-sm font-bold text-foreground">Calculation notes</summary>
               <p className="mt-1 text-[10px] text-muted-foreground">These warnings explain why some values show as incomplete above. Most clear once you run "Update prices" (which fetches the market FX rates for each trade date automatically). If the provider has no rate for a date, supply one via the "Manual price" button or by entering the trade FX rate when editing the activity.</p>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-muted-foreground">
                 {portfolio.warnings.map(warning => <li key={warning}>{warning}</li>)}
               </ul>
-            </section>
+            </details>
           )}
           <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
             <ValueChart portfolio={portfolio} masked={hideSensitive} range={range} onRangeChange={setRange} />
@@ -364,39 +289,22 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
             portfolio={portfolio}
             masked={hideSensitive}
             refreshToken={activityRevision}
+            operations={investmentOps}
+            activeSyncId={activeSyncId}
             onEdit={activity => openPanel('activity', activity)}
             onDelete={activity => confirm({
               title: 'Delete investment activity?',
               message: 'All later holding results will be recalculated.',
               confirmText: 'Delete',
-              onConfirm: () => { void mutate(() => api.deleteInvestmentActivity(activity.id), 'Activity deleted.', snapshot => ({
-                label: 'Undo',
-                onAction: () => mutateUndo(() => api.restoreInvestmentActivity(snapshot), 'Activity restored.')
-              })) },
+              onConfirm: () => { queueInvestment('investmentActivity', 'delete', activity.id, { undoSnapshot: { transactions: [activity] } }, 'Activity deletion queued') },
             })}
             onDeleteCashFlow={flow => confirm({
               title: flow.type === 'Withdrawal' ? 'Delete withdrawal?' : 'Delete deposit?',
               message: 'The cash balance and total portfolio value will be recalculated.',
               confirmText: 'Delete',
-              onConfirm: () => { void mutate(() => api.deleteInvestmentCashFlow(flow.id), 'Cash movement deleted.', snapshot => ({
-                label: 'Undo',
-                onAction: () => mutateUndo(() => api.restoreInvestmentCashFlow(snapshot), 'Cash movement restored.')
-              })) },
+              onConfirm: () => { queueInvestment('investmentCashFlow', 'delete', flow.id, { undoSnapshot: flow }, 'Cash movement deletion queued') },
             })}
           />
-          <section aria-labelledby="quick-insights" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
-            <h2 id="quick-insights" className="text-base font-bold text-foreground">Quick insights</h2>
-            <ul className="mt-3 grid gap-3 sm:grid-cols-2">
-              {portfolio.insights.map(value => (
-                <li key={value} className="flex items-start gap-3 rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 text-xs leading-relaxed text-blue-700 shadow-sm dark:text-blue-300">
-                  <div className="mt-0.5 shrink-0 rounded-full bg-blue-500/20 p-1.5 text-blue-600 dark:text-blue-400">
-                    <TrendingUp className="size-4" />
-                  </div>
-                  <span className="pt-0.5">{value}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
         </>
       )}
     </div>
@@ -441,7 +349,7 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
     { label: 'Total value', value: format(portfolio.summary.totalValue), note: 'Holdings plus uninvested cash', color: portfolio.summary.totalValue === undefined ? 'text-amber-500' : 'text-foreground', bg: 'bg-card/92 border-border/60', isIncomplete: portfolio.summary.totalValue === undefined },
     { label: 'Investments', value: format(portfolio.summary.marketValue), note: 'End-of-day closing value', color: portfolio.summary.marketValue === undefined ? 'text-amber-500' : 'text-foreground', bg: 'bg-card/92 border-border/60', isIncomplete: portfolio.summary.marketValue === undefined },
     { label: 'Cash', value: format(portfolio.summary.cashValue), note: 'Uninvested settlement cash', color: portfolio.summary.cashValue === undefined ? 'text-amber-500' : 'text-foreground', bg: 'bg-card/92 border-border/60', isIncomplete: portfolio.summary.cashValue === undefined },
-    { label: 'Cost basis', value: format(portfolio.summary.costBasis), note: 'Historical trade FX where needed', color: portfolio.summary.costBasis === undefined ? 'text-amber-500' : 'text-foreground', bg: 'bg-card/92 border-border/60', isIncomplete: portfolio.summary.costBasis === undefined },
+    { label: 'Cost basis', value: format(portfolio.summary.costBasis), note: 'Purchase cost of units still held, including applicable charges; foreign trades use transaction-date FX.', color: portfolio.summary.costBasis === undefined ? 'text-amber-500' : 'text-foreground', bg: 'bg-card/92 border-border/60', isIncomplete: portfolio.summary.costBasis === undefined },
     { label: 'Unrealised P/L', value: unrealised === undefined ? 'Incomplete' : masked ? '••••' : `${unrealised > 0 ? '+' : ''}${money(unrealised, portfolio.appCurrency)} · ${((portfolio.summary.unrealisedPercent ?? 0) > 0 ? '+' : '')}${(portfolio.summary.unrealisedPercent ?? 0).toFixed(1)}%`, note: 'Market value minus cost basis', color: getColor(unrealised), bg: getStyle(unrealised), isIncomplete: unrealised === undefined },
     { label: 'Realised P/L', value: realised === undefined ? 'Incomplete' : masked ? '••••' : `${realised > 0 ? '+' : ''}${money(realised, portfolio.appCurrency)}`, note: 'Closed units and fees', color: getColor(realised), bg: getStyle(realised), isIncomplete: realised === undefined },
     { label: 'Net dividends', value: format(portfolio.summary.netDividends), note: 'Separate from capital gains', color: portfolio.summary.netDividends === undefined ? 'text-amber-500' : 'text-foreground', bg: 'bg-card/92 border-border/60', isIncomplete: portfolio.summary.netDividends === undefined },
@@ -453,68 +361,10 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
         <div key={label} className={`app-panel rounded-2xl border p-4 ${bg}`}>
           <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
           <p className={`mt-2 break-words text-lg font-black ${color}`} title={value}>{value}</p>
-          <p className="mt-1 text-[10px] text-muted-foreground">{note}</p>
+          <p className="mt-1 text-[10px] text-muted-foreground" title={label === 'Cost basis' ? 'Current FX is not used to calculate historical purchase cost.' : undefined}>{note}</p>
           {isIncomplete && <p className="mt-1 text-[9px] text-amber-500/80">See calculation notes below</p>}
         </div>
       ))}
-    </section>
-  )
-}
-
-const CashPanel = ({ portfolio, offline, masked, onAdd, onDeleteCashFlow }: {
-  portfolio: InvestmentPortfolio
-  offline: boolean
-  masked: boolean
-  onAdd: () => void
-  onDeleteCashFlow: (flow: InvestmentCashFlow) => void
-}) => {
-  const accountNames = new Map(portfolio.accounts.map(value => [value.id, value.name]))
-  const hasCash = portfolio.cashBalances.length > 0 || portfolio.cashFlows.length > 0
-  return (
-    <section aria-labelledby="cash-title" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2"><Wallet className="size-4 text-emerald-500" /><h2 id="cash-title" className="text-base font-bold text-foreground">Cash</h2></div>
-        <Button variant="ghost" size="sm" disabled={offline || portfolio.accounts.length === 0} onClick={onAdd}><Plus className="size-4" /> Deposit / withdraw</Button>
-      </div>
-      <p className="mt-1 text-xs text-muted-foreground">Uninvested settlement cash held at your broker. Dividends and sale proceeds add to it; buys and fees draw it down. It counts toward your total value.</p>
-      {!hasCash ? (
-        <p className="mt-4 rounded-xl bg-muted/30 p-3 text-xs text-muted-foreground">No uninvested cash tracked yet. Record a deposit to reflect the settlement cash sitting in your broker account.</p>
-      ) : (
-        <>
-          {portfolio.cashBalances.length > 0 && (
-            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {portfolio.cashBalances.map(balance => (
-                <div key={`${balance.accountId}-${balance.currency}`} className="rounded-xl bg-muted/25 p-3">
-                  <p className="truncate text-xs font-bold text-foreground">{balance.accountName}</p>
-                  <p className={`mt-1 text-base font-black ${balance.amount < 0 ? 'text-orange-500' : 'text-foreground'}`}>{masked ? '••••' : money(balance.amount, balance.currency)}</p>
-                  {balance.currency !== portfolio.appCurrency && (
-                    <p className="mt-0.5 text-[10px] text-muted-foreground">{balance.amountApp === undefined ? 'FX needed for conversion' : `≈ ${masked ? '••••' : money(balance.amountApp, portfolio.appCurrency)}`}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-          {portfolio.cashFlows.length > 0 && (
-            <div className="mt-4">
-              <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Deposits &amp; withdrawals</h3>
-              <div className="mt-2 space-y-2">
-                {portfolio.cashFlows.map(flow => (
-                  <div key={flow.id} className="flex items-center justify-between gap-2 rounded-xl bg-muted/25 p-3">
-                    <span className="min-w-0">
-                      <strong className="block truncate text-xs text-foreground">{flow.type} · {accountNames.get(flow.accountId) ?? 'Account'}</strong>
-                      <span className="block truncate text-[10px] text-muted-foreground">{flow.date}{flow.notes ? ` · ${flow.notes}` : ''}</span>
-                    </span>
-                    <span className="flex shrink-0 items-center gap-2">
-                      <span className={`text-xs font-bold ${flow.amount < 0 ? 'text-orange-500' : 'text-emerald-500'}`}>{masked ? '••••' : money(flow.amount, flow.currency)}</span>
-                      <Button variant="danger" size="sm" disabled={offline} onClick={() => onDeleteCashFlow(flow)}>Delete</Button>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
-      )}
     </section>
   )
 }
@@ -657,8 +507,7 @@ const AccountsAndInstruments = ({
 }
 
 const ValueChart = ({ portfolio, masked, range, onRangeChange }: { portfolio: InvestmentPortfolio; masked: boolean; range: InvestmentRange; onRangeChange: (value: InvestmentRange) => void }) => {
-  const [showDeposits, setShowDeposits] = useState(false)
-  const values = portfolio.chart.flatMap(point => [point.totalValue, showDeposits ? point.netDeposits : undefined]).filter((value): value is number => value !== undefined)
+  const values = portfolio.chart.flatMap(point => [point.totalValue, point.netDeposits]).filter((value): value is number => value !== undefined)
   const max = Math.max(...values, 1)
   const min = Math.min(...values, 0)
   const width = 720
@@ -673,7 +522,7 @@ const ValueChart = ({ portfolio, masked, range, onRangeChange }: { portfolio: In
   const latest = portfolio.chart.at(-1)
   const hasAnyMarketValue = portfolio.chart.some(p => p.totalValue !== undefined)
   const summary = latest
-    ? `Latest total portfolio value: ${masked || latest.totalValue === undefined ? 'hidden or incomplete' : money(latest.totalValue, portfolio.appCurrency)}${showDeposits ? `; net deposits ${masked || latest.netDeposits === undefined ? 'hidden or incomplete' : money(latest.netDeposits, portfolio.appCurrency)}` : ''}.`
+    ? `Latest total portfolio value: ${masked || latest.totalValue === undefined ? 'hidden or incomplete' : money(latest.totalValue, portfolio.appCurrency)}; net deposits ${masked || latest.netDeposits === undefined ? 'hidden or incomplete' : money(latest.netDeposits, portfolio.appCurrency)}.`
     : 'No chart data is available.'
   return (
     <section aria-labelledby="value-chart-title" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
@@ -708,15 +557,13 @@ const ValueChart = ({ portfolio, masked, range, onRangeChange }: { portfolio: In
         <div className={`mt-5 overflow-hidden ${masked ? 'blur-md select-none' : ''}`} aria-hidden={masked}>
           <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="h-48 w-full sm:h-60" role="img" aria-label={summary}>
             <polyline points={line('totalValue')} fill="none" stroke="#8b5cf6" strokeWidth="4" strokeLinejoin="round" vectorEffect="nonScalingStroke" />
-            {showDeposits && <polyline points={line('netDeposits')} fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 6" strokeLinejoin="round" vectorEffect="nonScalingStroke" />}
+            <polyline points={line('netDeposits')} fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 6" strokeLinejoin="round" vectorEffect="nonScalingStroke" />
           </svg>
         </div>
       )}
       <div className="mt-3 flex flex-wrap gap-4 text-[10px] font-semibold text-muted-foreground">
         <span><i className="mr-1 inline-block size-2 rounded-full bg-violet-500" /> Total value</span>
-        <button type="button" onClick={() => setShowDeposits(value => !value)} className="rounded-lg px-2 py-1 hover:bg-muted" aria-pressed={showDeposits}>
-          <i className="mr-1 inline-block size-2 rounded-full bg-amber-500" /> {showDeposits ? 'Hide' : 'Show'} net deposits
-        </button>
+        <span><i className="mr-1 inline-block w-4 border-t-2 border-dashed border-amber-500 align-middle" /> Net deposits</span>
       </div>
       <table className="sr-only">
         <caption>Portfolio value chart data</caption>
@@ -848,9 +695,35 @@ const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: InvestmentPor
   const holdings = portfolio.holdings.filter(holding =>
     !filter ||
     (filter.mode === 'asset' ? holding.type === filter.key || holding.symbol === filter.key : holding.accountName === filter.key))
+  const accountGroups = portfolio.accounts
+    .map(account => {
+      const accountHoldings = holdings.filter(holding => holding.accountId === account.id)
+      const cash = portfolio.cashBalances.filter(balance => balance.accountId === account.id)
+      const total = [...accountHoldings.map(value => value.valueApp), ...cash.map(value => value.amountApp)]
+        .reduce<number | undefined>((sum, value) => sum === undefined || value === undefined ? undefined : sum + value, 0)
+      return { account, holdings: accountHoldings, cash, total }
+    })
+    .filter(group => group.holdings.length > 0 || group.cash.length > 0)
   return (
   <section aria-labelledby="holdings-title" className="app-panel overflow-hidden rounded-2xl border border-border/60 bg-card/92">
-    <div className="p-5"><h2 id="holdings-title" className="text-base font-bold text-foreground">Holdings</h2><p className="mt-1 text-xs text-muted-foreground">Current positions by account and investment.{filter ? ` Filtered by ${filter.key}.` : ''}</p></div>
+    <div className="p-5"><h2 id="holdings-title" className="text-base font-bold text-foreground">Holdings by account</h2><p className="mt-1 text-xs text-muted-foreground">Recording opening, buy, or transfer activity places a reusable investment in an account.{filter ? ` Filtered by ${filter.key}.` : ''}</p></div>
+    <div className="grid gap-3 px-3 pb-3 sm:grid-cols-2 lg:grid-cols-3">
+      {accountGroups.map(({ account, holdings: accountHoldings, cash, total }) => (
+        <article key={account.id} className="rounded-xl border border-border/50 bg-muted/15 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0"><h3 className="truncate text-sm font-bold">{account.name}</h3><p className="text-[10px] text-muted-foreground">Base currency {account.baseCurrency} · {accountHoldings.length} holding{accountHoldings.length === 1 ? '' : 's'}</p></div>
+            <strong className="shrink-0 text-xs">{masked ? '••••' : total === undefined ? 'Incomplete FX' : money(total, portfolio.appCurrency)}</strong>
+          </div>
+          {cash.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{cash.map(balance => (
+            <span key={balance.currency} className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+              Cash · {masked ? '••••' : money(balance.amount, balance.currency)}
+            </span>
+          ))}</div>}
+          {accountHoldings.length > 0 && <p className="mt-3 truncate text-[10px] text-muted-foreground">{accountHoldings.map(value => value.symbol).join(' · ')}</p>}
+        </article>
+      ))}
+      {accountGroups.length === 0 && <p className="text-xs text-muted-foreground">Record an opening position, buy, transfer, or cash movement to populate an account.</p>}
+    </div>
     <div className="space-y-3 px-3 pb-3 sm:hidden">
       {holdings.map(holding => (
         <article key={`${holding.accountId}-${holding.instrumentId}`} className="min-w-0 rounded-xl border border-border/50 p-4">
@@ -903,6 +776,8 @@ const PagedActivityTable = ({
   portfolio,
   masked,
   refreshToken,
+  operations,
+  activeSyncId,
   onEdit,
   onDelete,
   onDeleteCashFlow,
@@ -910,6 +785,8 @@ const PagedActivityTable = ({
   portfolio: InvestmentPortfolio
   masked: boolean
   refreshToken: number
+  operations: import('../lib/outbox').QueuedOp[]
+  activeSyncId: string | null
   onEdit: (activity: InvestmentActivity) => void
   onDelete: (activity: InvestmentActivity) => void
   onDeleteCashFlow: (flow: InvestmentCashFlow) => void
@@ -920,6 +797,7 @@ const PagedActivityTable = ({
   const [type, setType] = useState('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
+  const [appliedFilters, setAppliedFilters] = useState({ accountId: '', instrumentId: '', type: '', from: '', to: '' })
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState<10 | 25 | 50>(10)
   const [transactions, setTransactions] = useState<InvestmentActivity[]>([])
@@ -932,27 +810,51 @@ const PagedActivityTable = ({
   useEffect(() => {
     const abort = new AbortController()
     setLoading(true)
-    const filters = { accountId, type, from, to, page, pageSize }
+    const requestMode = mode
+    const filters = { ...appliedFilters, page, pageSize }
     const work = mode === 'investments'
-      ? api.fetchInvestmentActivity({ ...filters, instrumentId }, abort.signal)
+      ? api.fetchInvestmentActivity(filters, abort.signal)
       : api.fetchInvestmentCashFlows(filters, abort.signal)
     work.then(result => {
       setTotal(result.total)
-      if (mode === 'investments') setTransactions(result.items as InvestmentActivity[])
+      if (requestMode === 'investments') setTransactions(result.items as InvestmentActivity[])
       else setCashFlows(result.items as InvestmentCashFlow[])
       const lastPage = Math.max(1, Math.ceil(result.total / pageSize))
       if (page > lastPage) setPage(lastPage)
-    }).catch(error => {
-      if (!(error instanceof DOMException && error.name === 'AbortError')) {
-        setTransactions([])
-        setCashFlows([])
-      }
-    }).finally(() => { if (!abort.signal.aborted) setLoading(false) })
+    }).catch(() => undefined)
+      .finally(() => { if (!abort.signal.aborted) setLoading(false) })
     return () => abort.abort()
-  }, [mode, accountId, instrumentId, type, from, to, page, pageSize, refreshToken])
+  }, [mode, appliedFilters, page, pageSize, refreshToken])
 
   const resetPage = (work: () => void) => { work(); setPage(1) }
-  const rows = mode === 'investments' ? transactions : cashFlows
+  const applySearch = () => {
+    setAppliedFilters({ accountId, instrumentId: mode === 'investments' ? instrumentId : '', type, from, to })
+    setPage(1)
+  }
+  const clearAll = () => {
+    setAccountId(''); setInstrumentId(''); setType(''); setFrom(''); setTo('')
+    setAppliedFilters({ accountId: '', instrumentId: '', type: '', from: '', to: '' })
+    setPage(1)
+  }
+  const displayTransactions = applyOpsToList(transactions, operations, 'investmentActivity').filter(value =>
+    (!appliedFilters.accountId || value.accountId === appliedFilters.accountId) &&
+    (!appliedFilters.instrumentId || value.instrumentId === appliedFilters.instrumentId) &&
+    (!appliedFilters.type || value.type === appliedFilters.type) &&
+    (!appliedFilters.from || value.tradeDate >= appliedFilters.from) &&
+    (!appliedFilters.to || value.tradeDate <= appliedFilters.to))
+  const displayCashFlows = applyOpsToList(cashFlows, operations, 'investmentCashFlow')
+    .map(value => value.isPendingSync && value.type === 'Withdrawal' && value.amount > 0 ? { ...value, amount: -value.amount } : value)
+    .filter(value =>
+      (!appliedFilters.accountId || value.accountId === appliedFilters.accountId) &&
+      (!appliedFilters.type || value.type === appliedFilters.type) &&
+      (!appliedFilters.from || value.date >= appliedFilters.from) &&
+      (!appliedFilters.to || value.date <= appliedFilters.to))
+  const rows = mode === 'investments' ? displayTransactions : displayCashFlows
+  const activeOperation = operations.find(operation => operation.targetId === activeSyncId)
+  const activeLabel = activeOperation?.type === 'delete' ? 'Deleting…'
+    : activeOperation?.type === 'restore' ? 'Undoing…'
+    : activeOperation?.type === 'add' ? 'Saving…'
+    : activeOperation ? 'Syncing…' : null
   const pages = Math.max(1, Math.ceil(total / pageSize))
   const typeOptions = mode === 'investments'
     ? [{ value: '', label: 'All types' }, ...activityTypes]
@@ -962,32 +864,34 @@ const PagedActivityTable = ({
     <section aria-labelledby="activity-title" className="app-panel min-w-0 overflow-hidden rounded-2xl border border-border/60 bg-card/92">
       <div className="space-y-4 p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div><h2 id="activity-title" className="text-base font-bold text-foreground">Activity</h2><p className="mt-1 text-xs text-muted-foreground">{total} matching record{total === 1 ? '' : 's'}</p></div>
+          <div><h2 id="activity-title" className="text-base font-bold text-foreground">Activity</h2><p className="mt-1 text-xs text-muted-foreground">{total} matching record{total === 1 ? '' : 's'}{activeLabel ? ` · ${activeLabel}` : ''}</p></div>
           <div className="flex rounded-xl bg-muted/40 p-1">
-            <button type="button" onClick={() => resetPage(() => { setMode('investments'); setType('') })} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${mode === 'investments' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}>Investments</button>
-            <button type="button" onClick={() => resetPage(() => { setMode('cash'); setType(''); setInstrumentId('') })} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${mode === 'cash' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}>Cash flow</button>
+            <button type="button" onClick={() => resetPage(() => { setMode('investments'); setType(''); setAppliedFilters(value => ({ ...value, type: '' })) })} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${mode === 'investments' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}>Investments</button>
+            <button type="button" onClick={() => resetPage(() => { setMode('cash'); setType(''); setInstrumentId(''); setAppliedFilters(value => ({ ...value, type: '', instrumentId: '' })) })} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${mode === 'cash' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}>Cash flow</button>
           </div>
         </div>
-        <div className="grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-5">
-          <CustomSelect value={accountId} onChange={value => resetPage(() => setAccountId(String(value)))} options={[{ value: '', label: 'All accounts' }, ...portfolio.accounts.map(value => ({ value: value.id, label: value.name }))]} ariaLabel="Filter by account" className="min-w-0 w-full" />
-          {mode === 'investments' && <CustomSelect value={instrumentId} onChange={value => resetPage(() => setInstrumentId(String(value)))} options={[{ value: '', label: 'All investments' }, ...portfolio.instruments.map(value => ({ value: value.id, label: value.symbol }))]} ariaLabel="Filter by investment" className="min-w-0 w-full" />}
-          <CustomSelect value={type} onChange={value => resetPage(() => setType(String(value)))} options={typeOptions} ariaLabel="Filter by type" className="min-w-0 w-full" />
-          <DatePicker value={from} onChange={value => resetPage(() => setFrom(value))} placeholder="From date" className="min-w-0 w-full" />
-          <DatePicker value={to} onChange={value => resetPage(() => setTo(value))} placeholder="To date" className="min-w-0 w-full" />
+        <div className="grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-6" onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); applySearch() } }}>
+          <CustomSelect value={accountId} onChange={value => setAccountId(String(value))} options={[{ value: '', label: 'All accounts' }, ...portfolio.accounts.map(value => ({ value: value.id, label: value.name }))]} ariaLabel="Filter by account" className="min-w-0 w-full" />
+          {mode === 'investments' && <CustomSelect value={instrumentId} onChange={value => setInstrumentId(String(value))} options={[{ value: '', label: 'All investments' }, ...portfolio.instruments.map(value => ({ value: value.id, label: value.symbol }))]} ariaLabel="Filter by investment" className="min-w-0 w-full" />}
+          <CustomSelect value={type} onChange={value => setType(String(value))} options={typeOptions} ariaLabel="Filter by type" className="min-w-0 w-full" />
+          <DatePicker value={from} onChange={setFrom} placeholder="From date" clearable clearAriaLabel="Clear from date" className="min-w-0 w-full" />
+          <DatePicker value={to} onChange={setTo} placeholder="To date" clearable clearAriaLabel="Clear to date" className="min-w-0 w-full" />
+          <div className="flex gap-1"><Button variant="primary" size="sm" onClick={applySearch}><Search className="size-3.5" /> Search</Button><Button variant="ghost" size="sm" onClick={clearAll}>Clear all</Button></div>
         </div>
       </div>
-      {loading ? <p className="p-5 text-xs text-muted-foreground">Loading activity…</p> : rows.length === 0 ? <p className="p-5 text-xs text-muted-foreground">No activity matches these filters.</p> : (
-        <div>
+      {loading && rows.length === 0 ? <p className="p-5 text-xs text-muted-foreground">Loading activity…</p> : rows.length === 0 ? <p className="p-5 text-xs text-muted-foreground">No activity matches these filters.</p> : (
+        <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'} aria-busy={loading}>
+          {loading && <p role="status" className="flex items-center gap-2 px-4 pt-3 text-[10px] font-semibold text-muted-foreground"><Loader2 className="size-3 animate-spin" /> Updating…</p>}
           <div className="space-y-2 p-3 sm:hidden">
-            {mode === 'investments' ? transactions.map(value => {
+            {mode === 'investments' ? displayTransactions.map(value => {
               const instrument = instruments.get(value.instrumentId)
               return <article key={value.id} className="min-w-0 rounded-xl border border-border/50 p-3">
-                <div className="flex min-w-0 items-start justify-between gap-2"><div className="min-w-0"><strong className="block truncate text-xs">{activityTypes.find(item => item.value === value.type)?.label} · {instrument?.symbol}</strong><span className="text-[10px] text-muted-foreground">{value.tradeDate} · {accounts.get(value.accountId)}</span></div><span className="shrink-0 text-xs font-bold">{masked || value.cashAmount === undefined ? '—' : money(value.cashAmount, instrument?.currency ?? portfolio.appCurrency)}</span></div>
+                <div className="flex min-w-0 items-start justify-between gap-2"><div className="min-w-0"><strong className="block truncate text-xs">{activityTypes.find(item => item.value === value.type)?.label} · {instrument?.symbol}</strong><span className="text-[10px] text-muted-foreground">{value.tradeDate} · {accounts.get(value.accountId)}</span><RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete && activeSyncId === value.id} isSyncing={activeSyncId === value.id && !value.isPendingDelete} isPending={value.isPendingSync && activeSyncId !== value.id} /></div><span className="shrink-0 text-xs font-bold">{masked || value.cashAmount === undefined ? '—' : money(value.cashAmount, instrument?.currency ?? portfolio.appCurrency)}</span></div>
                 {value.notes && <p className="mt-2 break-words text-[10px] text-muted-foreground">{value.notes}</p>}
                 <div className="mt-2 flex justify-end gap-1"><Button variant="ghost" size="sm" onClick={() => onEdit(value)}>Edit</Button><Button variant="danger" size="sm" onClick={() => onDelete(value)}>Delete</Button></div>
               </article>
-            }) : cashFlows.map(value => <article key={value.id} className="min-w-0 rounded-xl border border-border/50 p-3">
-              <div className="flex items-start justify-between gap-2"><div className="min-w-0"><strong className="block truncate text-xs">{value.type} · {accounts.get(value.accountId)}</strong><span className="text-[10px] text-muted-foreground">{value.date}</span></div><strong className={value.amount < 0 ? 'text-orange-500' : 'text-emerald-500'}>{masked ? '••••' : money(value.amount, value.currency)}</strong></div>
+            }) : displayCashFlows.map(value => <article key={value.id} className="min-w-0 rounded-xl border border-border/50 p-3">
+              <div className="flex items-start justify-between gap-2"><div className="min-w-0"><strong className="block truncate text-xs">{value.type} · {accounts.get(value.accountId)}</strong><span className="text-[10px] text-muted-foreground">{value.date}</span><RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete && activeSyncId === value.id} isSyncing={activeSyncId === value.id && !value.isPendingDelete} isPending={value.isPendingSync && activeSyncId !== value.id} /></div><strong className={value.amount < 0 ? 'text-orange-500' : 'text-emerald-500'}>{masked ? '••••' : money(value.amount, value.currency)}</strong></div>
               {value.notes && <p className="mt-2 break-words text-[10px] text-muted-foreground">{value.notes}</p>}
               <div className="mt-2 flex justify-end"><Button variant="danger" size="sm" onClick={() => onDeleteCashFlow(value)}>Delete</Button></div>
             </article>)}
@@ -995,7 +899,7 @@ const PagedActivityTable = ({
           <div className="hidden overflow-x-auto sm:block">
             <table className="w-full text-left text-xs">
               <thead className="border-y border-border/50 bg-muted/25 text-[10px] uppercase text-muted-foreground"><tr><th className="px-4 py-3">Date</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Account</th>{mode === 'investments' && <th className="px-4 py-3">Investment</th>}<th className="px-4 py-3 text-right">Amount</th><th className="px-4 py-3" /></tr></thead>
-              <tbody className="divide-y divide-border/40">{mode === 'investments' ? transactions.map(value => <tr key={value.id}><td className="px-4 py-3">{value.tradeDate}</td><td className="px-4 py-3 font-bold">{activityTypes.find(item => item.value === value.type)?.label}</td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3">{instruments.get(value.instrumentId)?.symbol}</td><td className="px-4 py-3 text-right">{masked || value.cashAmount === undefined ? '—' : money(value.cashAmount, instruments.get(value.instrumentId)?.currency ?? portfolio.appCurrency)}</td><td className="px-4 py-3"><span className="flex justify-end gap-1"><Button variant="ghost" size="sm" onClick={() => onEdit(value)}>Edit</Button><Button variant="danger" size="sm" onClick={() => onDelete(value)}>Delete</Button></span></td></tr>) : cashFlows.map(value => <tr key={value.id}><td className="px-4 py-3">{value.date}</td><td className="px-4 py-3 font-bold">{value.type}</td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3 text-right">{masked ? '••••' : money(value.amount, value.currency)}</td><td className="px-4 py-3 text-right"><Button variant="danger" size="sm" onClick={() => onDeleteCashFlow(value)}>Delete</Button></td></tr>)}</tbody>
+              <tbody className="divide-y divide-border/40">{mode === 'investments' ? displayTransactions.map(value => <tr key={value.id}><td className="px-4 py-3">{value.tradeDate}</td><td className="px-4 py-3 font-bold">{activityTypes.find(item => item.value === value.type)?.label}</td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3">{instruments.get(value.instrumentId)?.symbol}</td><td className="px-4 py-3 text-right">{masked || value.cashAmount === undefined ? '—' : money(value.cashAmount, instruments.get(value.instrumentId)?.currency ?? portfolio.appCurrency)}</td><td className="px-4 py-3"><span className="flex justify-end gap-1"><Button variant="ghost" size="sm" onClick={() => onEdit(value)}>Edit</Button><Button variant="danger" size="sm" onClick={() => onDelete(value)}>Delete</Button></span></td></tr>) : displayCashFlows.map(value => <tr key={value.id}><td className="px-4 py-3">{value.date}</td><td className="px-4 py-3 font-bold">{value.type}</td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3 text-right">{masked ? '••••' : money(value.amount, value.currency)}</td><td className="px-4 py-3 text-right"><Button variant="danger" size="sm" onClick={() => onDeleteCashFlow(value)}>Delete</Button></td></tr>)}</tbody>
             </table>
           </div>
         </div>
@@ -1004,86 +908,6 @@ const PagedActivityTable = ({
         <CustomSelect value={pageSize} onChange={value => resetPage(() => setPageSize(Number(value) as 10 | 25 | 50))} options={[10, 25, 50].map(value => ({ value, label: `${value} per page` }))} ariaLabel="Rows per page" />
         <div className="flex items-center gap-2 text-xs"><Button variant="ghost" size="sm" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>Previous</Button><span>{page} / {pages}</span><Button variant="ghost" size="sm" disabled={page >= pages} onClick={() => setPage(value => value + 1)}>Next</Button></div>
       </div>
-    </section>
-  )
-}
-
-export const ActivityTable = ({ portfolio, masked, onEdit, onDelete }: { portfolio: InvestmentPortfolio; masked: boolean; onEdit: (activity: InvestmentActivity) => void; onDelete: (activity: InvestmentActivity) => void }) => {
-  const [account, setAccount] = useState('')
-  const [instrument, setInstrument] = useState('')
-  const [type, setType] = useState('')
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
-  const filtered = portfolio.activity.filter(value =>
-    (!account || value.accountId === account) &&
-    (!instrument || value.instrumentId === instrument) &&
-    (!type || value.type === type) &&
-    (!from || value.tradeDate >= from) &&
-    (!to || value.tradeDate <= to))
-  const hasFilters = !!(account || instrument || type || from || to)
-  const clearFilters = () => { setAccount(''); setInstrument(''); setType(''); setFrom(''); setTo('') }
-  const accounts = new Map(portfolio.accounts.map(value => [value.id, value.name]))
-  const instruments = new Map(portfolio.instruments.map(value => [value.id, value]))
-  const accountOptions = [{ value: '', label: 'All accounts' }, ...portfolio.accounts.map(a => ({ value: a.id, label: a.name }))]
-  const instrumentOptions = [{ value: '', label: 'All investments' }, ...portfolio.instruments.map(i => ({ value: i.id, label: i.symbol }))]
-  const typeOptions = [{ value: '', label: 'All types' }, ...activityTypes.map(t => ({ value: t.value, label: t.label }))]
-  return (
-    <section aria-labelledby="activity-title" className="app-panel overflow-hidden rounded-2xl border border-border/60 bg-card/92">
-      <div className="p-5">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2"><SlidersHorizontal className="size-4 text-blue-500" /><h2 id="activity-title" className="text-base font-bold text-foreground">Activity</h2></div>
-          {hasFilters && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-blue-600 transition-colors hover:bg-blue-500/10 dark:text-blue-400"
-            >
-              <X className="size-3" /> Clear filters
-            </button>
-          )}
-        </div>
-        <div className="mt-4 grid gap-2 sm:grid-cols-5">
-          <CustomSelect value={account} onChange={v => setAccount(v as string)} options={accountOptions} ariaLabel="Filter by account" className="w-full" />
-          <CustomSelect value={instrument} onChange={v => setInstrument(v as string)} options={instrumentOptions} ariaLabel="Filter by investment" className="w-full" />
-          <CustomSelect value={type} onChange={v => setType(v as string)} options={typeOptions} ariaLabel="Filter by type" className="w-full" />
-          <div className="flex items-center gap-1">
-            <DatePicker value={from} onChange={setFrom} placeholder="From date" className="w-full" />
-            {from && <button type="button" onClick={() => setFrom('')} aria-label="Clear from date" className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><X className="size-3.5" /></button>}
-          </div>
-          <div className="flex items-center gap-1">
-            <DatePicker value={to} onChange={setTo} placeholder="To date" className="w-full" />
-            {to && <button type="button" onClick={() => setTo('')} aria-label="Clear to date" className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><X className="size-3.5" /></button>}
-          </div>
-        </div>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[850px] text-left text-xs">
-          <thead className="border-y border-border/50 bg-muted/25 text-[10px] uppercase tracking-wide text-muted-foreground"><tr><th className="px-4 py-3">Date</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Investment</th><th className="px-4 py-3">Account</th><th className="px-4 py-3 text-right">Units</th><th className="px-4 py-3 text-right">Gross</th><th className="px-4 py-3">Notes</th><th className="px-4 py-3" /></tr></thead>
-          <tbody className="divide-y divide-border/40">
-            {filtered.map(value => {
-              const item = instruments.get(value.instrumentId)
-              return (
-                <tr key={value.id} className="hover:bg-muted/20">
-                  <td className="px-4 py-3">{value.tradeDate}</td>
-                  <td className="px-4 py-3 font-bold">{activityTypes.find(type => type.value === value.type)?.label}</td>
-                  <td className="px-4 py-3">{item?.symbol}</td>
-                  <td className="px-4 py-3">{accounts.get(value.accountId)}</td>
-                  <td className="px-4 py-3 text-right">{masked ? '••••' : number(value.units, 8)}</td>
-                  <td className="px-4 py-3 text-right">{masked ? '••••' : value.cashAmount === undefined ? '—' : money(value.cashAmount, item?.currency ?? portfolio.appCurrency)}</td>
-                  <td className="max-w-52 truncate px-4 py-3 text-muted-foreground">{value.notes ?? '—'}</td>
-                  <td className="px-4 py-3">
-                    <span className="flex gap-1.5">
-                      <Button variant="ghost" size="sm" onClick={() => onEdit(value)}>Edit</Button>
-                      <Button variant="danger" size="sm" onClick={() => onDelete(value)}>Delete</Button>
-                    </span>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-      {filtered.length === 0 && <p className="p-5 text-xs text-muted-foreground">No activity matches these filters.</p>}
     </section>
   )
 }
@@ -1237,7 +1061,7 @@ const ActivityForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccoun
     {trade && <label className={labelClass}>Unit price ({selectedInstrument?.currency})<input type="number" min="0" step="0.0000000001" value={unitPrice} onChange={event => { noteEdit('price'); setUnitPrice(event.target.value) }} className={inputClass} /></label>}
     {type !== 'Split' && type !== 'TransferOut' && <label className={labelClass}>{type === 'TransferIn' ? 'Transferred cost basis' : type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} ({selectedInstrument?.currency})<input type="number" min="0" step="0.0000000001" value={cashAmount} onChange={event => { noteEdit('gross'); setCashAmount(event.target.value) }} className={inputClass} /></label>}
     {!['Split', 'TransferIn', 'TransferOut', 'FeeTax'].includes(type) && <><label className={labelClass}>Fees{feesLabelSuffix}<input type="number" min="0" step="0.0000000001" value={fees} onChange={event => setFees(event.target.value)} className={inputClass} /></label><label className={labelClass}>Taxes{feesLabelSuffix}<input type="number" min="0" step="0.0000000001" value={taxes} onChange={event => setTaxes(event.target.value)} className={inputClass} /></label></>}
-    {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && <label className={labelClass}>Trade FX ({selectedInstrument.currency} → {portfolio?.appCurrency}, optional)<input type="number" min="0" step="0.0000000001" value={fx} onChange={event => setFx(event.target.value)} className={inputClass} /></label>}
+    {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && <label className={labelClass}>Trade FX rate<span className="block text-[10px] font-medium text-muted-foreground">{selectedInstrument.currency} → {portfolio?.appCurrency} · Optional</span><input type="number" min="0" step="0.0000000001" value={fx} onChange={event => setFx(event.target.value)} className={inputClass} /></label>}
     {type === 'TransferOut' && <div className={labelClass}>Destination<CustomSelect value={destination} onChange={v => setDestination(v as string)} options={[{ value: '', label: 'External transfer out' }, ...accounts.filter(a => a.id !== accountId).map(a => ({ value: a.id, label: a.name }))]} ariaLabel="Transfer destination" className="mt-1.5 w-full" /></div>}
     <label className={`${labelClass} sm:col-span-2`}>Notes<input maxLength={1000} value={notes} onChange={event => setNotes(event.target.value)} className={inputClass} /></label>
     </div>

@@ -108,7 +108,7 @@ function handleApiResponse(response: Response, url: string): Response {
   return response
 }
 
-export async function getHeadersAsync(additionalHeaders: HeadersInit = {}): Promise<HeadersInit> {
+async function getHeadersAsync(additionalHeaders: HeadersInit = {}): Promise<HeadersInit> {
   const token = await tokenStore.getToken()
   return {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -116,7 +116,7 @@ export async function getHeadersAsync(additionalHeaders: HeadersInit = {}): Prom
   }
 }
 
-export function apiUrl(path: string): string {
+function apiUrl(path: string): string {
   return path.startsWith('http://') || path.startsWith('https://')
     ? path
     : `${API_BASE_URL}${path}`

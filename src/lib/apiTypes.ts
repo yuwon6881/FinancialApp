@@ -17,7 +17,7 @@ import type {
 
 type WireAmount = string | number
 
-export interface WireCycleSummaryInsights {
+interface WireCycleSummaryInsights {
   largestExpenseDescription?: string
   largestExpenseAmount?: WireAmount
   biggestDayDate?: string
@@ -92,7 +92,7 @@ export type WireCategoryBreakdown = Omit<CategoryBreakdown, 'amount'> & {
   amount: WireAmount
 }
 
-export type WireTodayPlanInsights = Omit<
+type WireTodayPlanInsights = Omit<
   TodayPlanInsights,
   | 'unpaidRecurringTotal'
   | 'unpaidEssentialsTotal'
@@ -107,7 +107,7 @@ export type WireTodayPlanInsights = Omit<
   projectedEssentialsEndingBalance: WireAmount
 }
 
-export type WireCategoryLimitProgress = Omit<
+type WireCategoryLimitProgress = Omit<
   CategoryLimitProgress,
   'limit' | 'spent' | 'remaining' | 'pendingCommitted' | 'projectedSpend'
 > & {

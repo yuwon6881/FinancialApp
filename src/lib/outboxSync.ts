@@ -20,7 +20,7 @@ export const MAX_RETRIES = 5
 export const AUTH_RACE_BACKOFF_MS = 3000
 export const SERVER_WAKE_BACKOFF_MS = 15000
 /** A 401 within this window of a fresh unlock/login is treated as a race, not a real auth failure. */
-export const JUST_LOGGED_IN_WINDOW_MS = 10000
+const JUST_LOGGED_IN_WINDOW_MS = 10000
 
 export interface SuccessfulSyncOp {
   op: QueuedOp

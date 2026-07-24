@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { AnchoredPopover } from './AnchoredPopover'
 
 interface DatePickerProps {
@@ -14,6 +14,8 @@ interface DatePickerProps {
   min?: string
   max?: string
   popoverClassName?: string
+  clearable?: boolean
+  clearAriaLabel?: string
 }
 
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
@@ -53,6 +55,8 @@ export function DatePicker({
   min,
   max,
   popoverClassName = '',
+  clearable = false,
+  clearAriaLabel = 'Clear date',
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -141,7 +145,27 @@ export function DatePicker({
         <span className={`truncate ${display ? '' : 'text-muted-foreground font-medium'}`}>
           {display ?? placeholder}
         </span>
-        <Calendar className="size-3.5 text-muted-foreground/80 shrink-0" />
+        <span className="flex shrink-0 items-center gap-1">
+          {clearable && value && (
+            <span
+              role="button"
+              tabIndex={0}
+              aria-label={clearAriaLabel}
+              onClick={event => { event.stopPropagation(); onChange('') }}
+              onKeyDown={event => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  onChange('')
+                }
+              }}
+              className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <X className="size-3.5" />
+            </span>
+          )}
+          <Calendar className="size-3.5 text-muted-foreground/80" />
+        </span>
       </button>
 
       <AnchoredPopover

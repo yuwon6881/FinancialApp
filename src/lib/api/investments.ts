@@ -66,12 +66,14 @@ export interface InvestmentPageFilters {
 }
 
 export interface AccountMutation {
+  id?: string
   name: string
   baseCurrency: string
   isArchived?: boolean
 }
 
 export interface InstrumentMutation {
+  id?: string
   symbol: string
   name: string
   type: 'Stock' | 'ETF'
@@ -86,6 +88,8 @@ export interface InstrumentMutation {
 }
 
 export interface InvestmentActivityMutation {
+  id?: string
+  destinationLegId?: string
   accountId: string
   instrumentId: string
   type: InvestmentTransactionType
@@ -137,24 +141,46 @@ const pageQuery = (filters: InvestmentPageFilters) => {
   return query.toString()
 }
 
-export function fetchInvestmentActivity(
+export async function fetchInvestmentActivity(
   filters: InvestmentPageFilters,
   signal?: AbortSignal,
 ): Promise<PagedResult<InvestmentActivity>> {
-  return request(`/investments/transactions?${pageQuery(filters)}`, {
-    signal,
-    errorMessage: 'Could not load investment activity',
-  })
+  const query = pageQuery(filters)
+  const cacheKey = `cached_investment_activity:${query}`
+  try {
+    const result = await request<PagedResult<InvestmentActivity>>(`/investments/transactions?${query}`, {
+      signal,
+      errorMessage: 'Could not load investment activity',
+    })
+    setCachedJSON(cacheKey, result)
+    return result
+  } catch (error) {
+    if (signal?.aborted) throw error
+    const cached = getCachedJSON<PagedResult<InvestmentActivity> | null>(cacheKey, null)
+    if (cached) return cached
+    throw error
+  }
 }
 
-export function fetchInvestmentCashFlows(
+export async function fetchInvestmentCashFlows(
   filters: Omit<InvestmentPageFilters, 'instrumentId'>,
   signal?: AbortSignal,
 ): Promise<PagedResult<InvestmentCashFlow>> {
-  return request(`/investments/cash-flows?${pageQuery(filters)}`, {
-    signal,
-    errorMessage: 'Could not load cash flow activity',
-  })
+  const query = pageQuery(filters)
+  const cacheKey = `cached_investment_cash_flows:${query}`
+  try {
+    const result = await request<PagedResult<InvestmentCashFlow>>(`/investments/cash-flows?${query}`, {
+      signal,
+      errorMessage: 'Could not load cash flow activity',
+    })
+    setCachedJSON(cacheKey, result)
+    return result
+  } catch (error) {
+    if (signal?.aborted) throw error
+    const cached = getCachedJSON<PagedResult<InvestmentCashFlow> | null>(cacheKey, null)
+    if (cached) return cached
+    throw error
+  }
 }
 
 export function createInvestmentAccount(value: AccountMutation): Promise<InvestmentAccount> {
@@ -170,21 +196,6 @@ export function updateInvestmentAccount(id: string, value: AccountMutation): Pro
     method: 'PUT',
     ...jsonBody(value),
     errorMessage: 'Could not update account',
-  })
-}
-
-export function archiveInvestmentAccount(id: string): Promise<void> {
-  return requestVoid(`/investments/accounts/${id}/archive`, {
-    method: 'POST',
-    errorMessage: 'Could not archive account',
-  })
-}
-
-export function unarchiveInvestmentAccount(id: string, name: string, baseCurrency: string): Promise<void> {
-  return requestVoid(`/investments/accounts/${id}`, {
-    method: 'PUT',
-    ...jsonBody({ name, baseCurrency, isArchived: false }),
-    errorMessage: 'Could not unarchive account',
   })
 }
 
@@ -254,6 +265,7 @@ export function restoreInvestmentActivity(snapshot: DeletedTransactionsSnapshot)
 }
 
 export function createManualInvestmentPrice(value: {
+  id?: string
   instrumentId: string
   marketDate: string
   price: number
@@ -274,6 +286,7 @@ export function deleteManualInvestmentPrice(id: string): Promise<void> {
 }
 
 export function createInvestmentCashFlow(value: {
+  id?: string
   accountId: string
   currency: string
   type: 'Deposit' | 'Withdrawal'
