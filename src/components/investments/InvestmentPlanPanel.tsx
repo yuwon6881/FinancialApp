@@ -25,7 +25,7 @@ export function InvestmentPlanPanel({
   masked: boolean
   onNavigate: (tab: AppTab) => void
 }) {
-  const [showUsd, setShowUsd] = useState(true)
+  const [showUsd, setShowUsd] = useState(false)
   const reduceMotion = useReducedMotion()
   const isUsd = showUsd && usdRate !== undefined
   const rate = isUsd ? usdRate : 1
@@ -47,6 +47,8 @@ export function InvestmentPlanPanel({
   const StatusIcon = allocation.status === 'OnTrack'
     ? CheckCircle2
     : allocation.status === 'Incomplete' || allocation.status === 'NotStarted' ? CircleHelp : AlertTriangle
+  const showGuidance = allocation.status !== 'OnTrack' &&
+    (allocation.incompleteReasons.length > 0 || allocation.recommendations.length > 0)
 
   return (
     <motion.section
@@ -112,7 +114,7 @@ export function InvestmentPlanPanel({
         ))}
       </div>
 
-      <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+      <div className={`mt-5 grid gap-4 ${showGuidance ? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]' : ''}`}>
         <div className="rounded-xl border border-border/50 bg-muted/20 p-4 transition-all duration-300 hover:border-primary/20 hover:bg-muted/30 hover:shadow-sm">
           <h3 className="text-xs font-bold text-foreground">Actual versus target</h3>
           <div className="mt-3 space-y-3">
@@ -141,7 +143,7 @@ export function InvestmentPlanPanel({
           </p>
         </div>
 
-        <div className="rounded-xl border border-border/50 bg-muted/20 p-4 transition-all duration-300 hover:border-primary/20 hover:bg-muted/30 hover:shadow-sm">
+        {showGuidance && <div className="rounded-xl border border-border/50 bg-muted/20 p-4 transition-all duration-300 hover:border-primary/20 hover:bg-muted/30 hover:shadow-sm">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold text-foreground">Priority guidance</h3>
             {usdRate !== undefined && allocation.appCurrency !== 'USD' && (
@@ -157,19 +159,16 @@ export function InvestmentPlanPanel({
             </ul>
           ) : allocation.recommendations.length > 0 ? (
             <ol className="mt-3 space-y-2">
-              {allocation.recommendations.slice(0, 5).map((recommendation, index) => {
+              {allocation.recommendations.map((recommendation, index) => {
                 const amountStr = money(recommendation.amount)
                 const sleeve = recommendation.sleeve ? allocation.sleeves.find(s => s.sleeve === recommendation.sleeve)?.label : ''
                 let customMessage = masked ? recommendation.message.replace(/[A-Z]{3} [\d,.]+/g, '••••') : recommendation.message
                 switch(recommendation.kind) {
-                  case 'UseCash': customMessage = `Allocate ${amountStr} from uninvested cash to begin.`; break;
-                  case 'TopUp': customMessage = recommendation.message.includes('without selling')
-                    ? `Add your usual ${amountStr} cycle contribution and invest it with the available cash; this can restore your targets without selling.`
-                    : `Add your usual ${amountStr} cycle contribution and invest it with the available cash; a small sale may still be needed.`;
-                    break;
-                  case 'Buy': customMessage = `Buy ${amountStr} of ${sleeve}.`; break;
-                  case 'Sell': customMessage = `Sell ${amountStr} of ${sleeve}.`; break;
-                  case 'TransferBuy': customMessage = `Reinvest ${amountStr} into ${sleeve}.`; break;
+                  case 'TopUp': customMessage = `Use your usual completed-cycle Growth deposit of ${amountStr} before considering any sale.`; break
+                  case 'UseCash': customMessage = `Invest ${amountStr} of available cash before selling any holding.`; break
+                  case 'Buy': customMessage = `Buy ${amountStr} of ${sleeve} with new money.`; break
+                  case 'Sell': customMessage = `Only after investing new money, sell ${amountStr} of ${sleeve}.`; break
+                  case 'TransferBuy': customMessage = `Reinvest ${amountStr} of sale proceeds into ${sleeve}.`; break
                 }
                 return (
                   <motion.li
@@ -195,7 +194,7 @@ export function InvestmentPlanPanel({
               Finish classification <ArrowRight className="size-4" />
             </Button>
           )}
-        </div>
+        </div>}
       </div>
     </motion.section>
   )

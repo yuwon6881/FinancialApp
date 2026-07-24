@@ -35,7 +35,7 @@ export function useInvestmentPortfolio() {
     } finally {
       setLoading(false)
     }
-  }, [portfolio])
+  }, [])
 
   useEffect(() => {
     const abort = new AbortController()

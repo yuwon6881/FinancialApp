@@ -35,6 +35,7 @@ import { useInvestmentPortfolio } from './investments/useInvestmentPortfolio'
 import { applyOpsToList } from '../lib/outbox'
 import { RowSyncStatus } from './ui/RowSyncBadge'
 import { InvestmentPlanPanel } from './investments/InvestmentPlanPanel'
+import { InteractiveDoughnutChart } from './ui/InteractiveDoughnutChart'
 
 interface InvestmentsViewProps {
   onNavigate: (tab: AppTab) => void
@@ -63,7 +64,13 @@ const activityTypes: Array<{ value: InvestmentTransactionType; label: string }> 
   { value: 'TransferOut', label: 'Transfer out' },
 ]
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => {
+  const value = new Date()
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, '0')
+  const day = String(value.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 const numberOrUndefined = (value: string) => value.trim() === '' ? undefined : Number(value)
 const inputClass = 'w-full rounded-xl border border-border/60 bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:border-blue-500'
 const labelClass = 'space-y-1.5 text-xs font-semibold text-muted-foreground'
@@ -172,13 +179,13 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
       )}
 
       <BottomSheet isOpen={panel === 'account'} title="Add investment account" onClose={closePanel} maxWidthClassName="max-w-lg">
-        <AccountForm key={`account-${formKey}`} busy={busy} onCancel={closePanel} onSave={value => {
+        <AccountForm key={`account-${formKey}`} appCurrency={portfolio?.appCurrency} busy={busy} onCancel={closePanel} onSave={value => {
           const id = crypto.randomUUID()
           return queueInvestment('investmentAccount', 'add', id, { ...value, id })
         }} />
       </BottomSheet>
       <BottomSheet isOpen={panel === 'instrument'} title="Add investment" onClose={closePanel} maxWidthClassName="max-w-2xl">
-        <InstrumentForm key={`instrument-${formKey}`} busy={busy} offline={isOffline} onCancel={closePanel} onSave={value => {
+        <InstrumentForm key={`instrument-${formKey}`} appCurrency={portfolio?.appCurrency} busy={busy} offline={isOffline} onCancel={closePanel} onSave={value => {
           const id = crypto.randomUUID()
           return queueInvestment('investmentInstrument', 'add', id, { ...value, id })
         }} />
@@ -210,7 +217,6 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
 
       {!portfolio || (portfolio.accounts.length === 0 && portfolio.instruments.length === 0 && (portfolio.activityCount ?? portfolio.activity.length) === 0 && (portfolio.cashFlowCount ?? portfolio.cashFlows.length) === 0) ? (
         <EmptyState
-          offline={isOffline}
           onAddAccount={() => openPanel('account')}
           onAddInvestment={() => openPanel('instrument')}
         />
@@ -225,13 +231,12 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
           </div>
           <InvestmentPlanPanel
             allocation={portfolio.allocation}
-            usdRate={portfolio.holdings.find(h => h.currency === 'USD' && h.fxRate)?.fxRate}
+            usdRate={portfolio.usdRate}
             masked={hideSensitive}
             onNavigate={onNavigate}
           />
           <AccountsAndInstruments
             portfolio={setupPortfolio ?? portfolio}
-            offline={isOffline}
             onArchiveAccount={id => {
               const account = portfolio.accounts.find(a => a.id === id)
               if (account) queueInvestment('investmentAccount', 'update', id, { name: account.name, baseCurrency: account.baseCurrency, isArchived: true, undoSnapshot: account })
@@ -253,6 +258,22 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
                 message: 'Only investments without activity can be deleted.',
                 confirmText: 'Delete',
                 onConfirm: () => { queueInvestment('investmentInstrument', 'delete', id, { undoSnapshot: instrument }) },
+              })
+            }}
+            onArchiveInstrument={id => {
+              const instrument = portfolio.instruments.find(value => value.id === id)
+              if (instrument) queueInvestment('investmentInstrument', 'update', id, {
+                ...instrument,
+                isArchived: true,
+                undoSnapshot: instrument,
+              })
+            }}
+            onUnarchiveInstrument={id => {
+              const instrument = portfolio.instruments.find(value => value.id === id)
+              if (instrument) queueInvestment('investmentInstrument', 'update', id, {
+                ...instrument,
+                isArchived: false,
+                undoSnapshot: instrument,
               })
             }}
             onDeleteManualPrice={id => {
@@ -306,7 +327,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
   )
 }
 
-const EmptyState = ({ offline, onAddAccount, onAddInvestment }: { offline: boolean; onAddAccount: () => void; onAddInvestment: () => void }) => (
+const EmptyState = ({ onAddAccount, onAddInvestment }: { onAddAccount: () => void; onAddInvestment: () => void }) => (
   <section className="app-panel rounded-2xl border border-border/60 bg-card/92 px-6 py-14 text-center">
     <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-violet-500/10 text-violet-500"><TrendingUp className="size-7" /></div>
     <h2 className="mt-5 text-xl font-black text-foreground">Build your investment view</h2>
@@ -314,8 +335,8 @@ const EmptyState = ({ offline, onAddAccount, onAddInvestment }: { offline: boole
       Add an account and an opening position to get started.
     </p>
     <div className="mt-6 flex flex-col justify-center gap-2 sm:flex-row">
-      <Button variant="primary" disabled={offline} onClick={onAddAccount}><Building2 className="size-4" /> Add account</Button>
-      <Button variant="ghost" disabled={offline} onClick={onAddInvestment}><Search className="size-4" /> Add investment</Button>
+      <Button variant="primary" onClick={onAddAccount}><Building2 className="size-4" /> Add account</Button>
+      <Button variant="ghost" onClick={onAddInvestment}><Search className="size-4" /> Add investment</Button>
     </div>
   </section>
 )
@@ -341,19 +362,50 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
     return 'bg-card/92 border-border/60'
   }
 
-  const cards = [
-    { label: 'Total value', value: format(portfolio.summary.totalValue), note: 'Holdings plus uninvested cash', color: portfolio.summary.totalValue === undefined ? 'text-amber-500' : 'text-foreground', bg: 'bg-card/92 border-border/60', isIncomplete: portfolio.summary.totalValue === undefined },
-    { label: 'Investments', value: format(portfolio.summary.marketValue), note: 'End-of-day closing value', color: portfolio.summary.marketValue === undefined ? 'text-amber-500' : 'text-foreground', bg: 'bg-card/92 border-border/60', isIncomplete: portfolio.summary.marketValue === undefined },
-    { label: 'Cash', value: format(portfolio.summary.cashValue), note: 'Uninvested settlement cash', color: portfolio.summary.cashValue === undefined ? 'text-amber-500' : 'text-foreground', bg: 'bg-card/92 border-border/60', isIncomplete: portfolio.summary.cashValue === undefined },
-    { label: 'Cost basis', value: format(portfolio.summary.costBasis), note: 'Purchase cost of units still held, including applicable charges; foreign trades use transaction-date FX.', color: portfolio.summary.costBasis === undefined ? 'text-amber-500' : 'text-foreground', bg: 'bg-card/92 border-border/60', isIncomplete: portfolio.summary.costBasis === undefined },
-    { label: 'Unrealised P/L', value: unrealised === undefined ? 'Incomplete' : masked ? '••••' : `${unrealised > 0 ? '+' : ''}${money(unrealised, portfolio.appCurrency)} · ${((portfolio.summary.unrealisedPercent ?? 0) > 0 ? '+' : '')}${(portfolio.summary.unrealisedPercent ?? 0).toFixed(1)}%`, note: 'Market value minus cost basis', color: getColor(unrealised), bg: getStyle(unrealised), isIncomplete: unrealised === undefined },
-    { label: 'Realised P/L', value: realised === undefined ? 'Incomplete' : masked ? '••••' : `${realised > 0 ? '+' : ''}${money(realised, portfolio.appCurrency)}`, note: 'Closed units and fees', color: getColor(realised), bg: getStyle(realised), isIncomplete: realised === undefined },
-    { label: 'Net dividends', value: format(portfolio.summary.netDividends), note: 'Separate from capital gains', color: portfolio.summary.netDividends === undefined ? 'text-amber-500' : 'text-foreground', bg: 'bg-card/92 border-border/60', isIncomplete: portfolio.summary.netDividends === undefined },
-    { label: 'Daily change', value: daily === undefined ? 'Incomplete' : masked ? '••••' : `${daily > 0 ? '+' : ''}${money(daily, portfolio.appCurrency)}`, note: 'Based on cached daily closes', color: getColor(daily), bg: getStyle(daily), isIncomplete: daily === undefined },
+  const groups = [
+    {
+      label: 'Portfolio value',
+      bg: 'bg-card/92 border-border/60',
+      metrics: [
+        { label: 'Current total', value: format(portfolio.summary.totalValue), color: portfolio.summary.totalValue === undefined ? 'text-amber-500' : 'text-foreground' },
+        { label: 'Invested', value: format(portfolio.summary.marketValue), color: portfolio.summary.marketValue === undefined ? 'text-amber-500' : 'text-foreground' },
+        { label: 'Cash', value: format(portfolio.summary.cashValue), color: portfolio.summary.cashValue === undefined ? 'text-amber-500' : 'text-foreground' },
+        { label: 'Open cost basis', value: format(portfolio.summary.costBasis), color: portfolio.summary.costBasis === undefined ? 'text-amber-500' : 'text-foreground' },
+      ],
+      note: 'Holdings and settlement cash in the reporting currency.',
+    },
+    {
+      label: 'Funding',
+      bg: 'bg-blue-500/5 border-blue-500/20',
+      metrics: [
+        { label: 'Net broker deposits', value: format(portfolio.summary.netDeposits), color: portfolio.summary.netDeposits === undefined ? 'text-amber-500' : 'text-foreground' },
+        { label: 'Allocated to Growth', value: format(portfolio.summary.growthContributions ?? 0), color: 'text-blue-500' },
+        { label: 'Growth ledger available', value: format(portfolio.summary.growthLedgerBalance), color: portfolio.summary.growthLedgerBalance >= 0 ? 'text-foreground' : 'text-orange-500' },
+      ],
+      note: 'Growth allocated is historical funding; some may remain in the Growth ledger instead of the broker.',
+    },
+    {
+      label: 'Investment returns',
+      bg: getStyle(unrealised),
+      metrics: [
+        { label: 'Unrealised', value: unrealised === undefined ? 'Incomplete' : masked ? '••••' : `${unrealised > 0 ? '+' : ''}${money(unrealised, portfolio.appCurrency)} · ${((portfolio.summary.unrealisedPercent ?? 0) > 0 ? '+' : '')}${(portfolio.summary.unrealisedPercent ?? 0).toFixed(1)}%`, color: getColor(unrealised) },
+        { label: 'Realised', value: realised === undefined ? 'Incomplete' : masked ? '••••' : `${realised > 0 ? '+' : ''}${money(realised, portfolio.appCurrency)}`, color: getColor(realised) },
+      ],
+      note: 'Unrealised uses current value; realised reflects closed units and charges.',
+    },
+    {
+      label: 'Income & movement',
+      bg: getStyle(daily),
+      metrics: [
+        { label: 'Net dividends', value: format(portfolio.summary.netDividends), color: portfolio.summary.netDividends === undefined ? 'text-amber-500' : 'text-foreground' },
+        { label: 'Daily change', value: daily === undefined ? 'Incomplete' : masked ? '••••' : `${daily > 0 ? '+' : ''}${money(daily, portfolio.appCurrency)}`, color: getColor(daily) },
+      ],
+      note: 'Dividends are after charges; daily change uses the latest cached closes.',
+    },
   ]
   return (
-    <section aria-label="Investment summary" className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-      {cards.map(({ label, value, note, color, bg, isIncomplete }, index) => (
+    <section aria-label="Investment summary" className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {groups.map(({ label, metrics, note, bg }, index) => (
         <motion.article
           key={label}
           className={`interactive-card app-panel rounded-2xl border p-4 ${bg}`}
@@ -362,9 +414,15 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
           transition={{ duration: 0.3, delay: reduceMotion ? 0 : index * 0.035, ease: 'easeOut' }}
         >
           <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
-          <p className={`mt-2 break-words text-lg font-black ${color}`} title={value}>{value}</p>
-          <p className="mt-1 text-[10px] text-muted-foreground" title={label === 'Cost basis' ? 'Current FX is not used to calculate historical purchase cost.' : undefined}>{note}</p>
-          {isIncomplete && <p className="mt-1 text-[9px] text-amber-500/80">See calculation notes below</p>}
+          <div className="mt-3 divide-y divide-border/40">
+            {metrics.map(metric => (
+              <div key={metric.label} className="flex items-start justify-between gap-3 py-2 first:pt-0">
+                <span className="text-[10px] text-muted-foreground">{metric.label}</span>
+                <strong className={`min-w-0 break-words text-right text-sm ${metric.color}`}>{metric.value}</strong>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">{note}</p>
         </motion.article>
       ))}
     </section>
@@ -373,19 +431,21 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
 
 const AccountsAndInstruments = ({
   portfolio,
-  offline,
   onArchiveAccount,
   onUnarchiveAccount,
   onDeleteAccount,
   onDeleteInstrument,
+  onArchiveInstrument,
+  onUnarchiveInstrument,
   onDeleteManualPrice,
 }: {
   portfolio: InvestmentPortfolio
-  offline: boolean
   onArchiveAccount: (id: string) => void
   onUnarchiveAccount: (id: string, name: string, currency: string) => void
   onDeleteAccount: (id: string) => void
   onDeleteInstrument: (id: string) => void
+  onArchiveInstrument: (id: string) => void
+  onUnarchiveInstrument: (id: string) => void
   onDeleteManualPrice: (id: string) => void
 }) => {
   const [open, setOpen] = useState(false)
@@ -442,7 +502,6 @@ const AccountsAndInstruments = ({
                       <Button
                         variant="ghost"
                         size="sm"
-                        disabled={offline}
                         onClick={() => onUnarchiveAccount(value.id, value.name, value.baseCurrency)}
                       >
                         Unarchive
@@ -451,7 +510,7 @@ const AccountsAndInstruments = ({
                       <Button
                         variant="danger"
                         size="sm"
-                        disabled={offline || (!value.canDelete && !value.canArchive)}
+                        disabled={!value.canDelete && !value.canArchive}
                         title={value.archiveUnavailableReason}
                         onClick={() => value.canDelete ? onDeleteAccount(value.id) : onArchiveAccount(value.id)}
                       >
@@ -473,16 +532,19 @@ const AccountsAndInstruments = ({
                     <strong className="block truncate text-xs text-foreground">{value.symbol} · {value.name}</strong>
                     <span className="text-[10px] text-muted-foreground">{value.type} · {value.currency} · {value.isCustom ? 'Manual' : value.mic ?? value.exchange ?? 'Provider'}</span>
                   </span>
-                  {value.canDelete && (
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      disabled={offline}
-                      onClick={() => onDeleteInstrument(value.id)}
-                    >
-                      Delete
-                    </Button>
-                  )}
+                  <Button
+                    variant={value.isArchived ? 'ghost' : 'danger'}
+                    size="sm"
+                    disabled={!value.isArchived && !value.canDelete && !value.canArchive}
+                    title={value.archiveUnavailableReason}
+                    onClick={() => value.isArchived
+                      ? onUnarchiveInstrument(value.id)
+                      : value.canDelete
+                        ? onDeleteInstrument(value.id)
+                        : onArchiveInstrument(value.id)}
+                  >
+                    {value.isArchived ? 'Unarchive' : value.canDelete ? 'Delete' : 'Archive'}
+                  </Button>
                 </div>
               ))}
             </div>
@@ -499,7 +561,6 @@ const AccountsAndInstruments = ({
                   <Button
                     variant="danger"
                     size="sm"
-                    disabled={offline}
                     onClick={() => onDeleteManualPrice(value.id)}
                   >
                     Delete
@@ -646,8 +707,6 @@ const ValueChart = ({ portfolio, masked, range, isFetching, onRangeChange }: { p
 
 const AllocationChart = ({ portfolio, masked, selected, onSelect }: { portfolio: InvestmentPortfolio; masked: boolean; selected: AllocationFilter; onSelect: (value: AllocationFilter) => void }) => {
   const [mode, setMode] = useState<AllocationMode>('instrument')
-  const [hoveredGroup, setHoveredGroup] = useState<number | null>(null)
-  const reduceMotion = useReducedMotion()
   const groups = useMemo(() => {
     const map = new Map<string, number>()
     portfolio.holdings.forEach(holding => {
@@ -667,18 +726,26 @@ const AllocationChart = ({ portfolio, masked, selected, onSelect }: { portfolio:
   const total = groups.reduce((sum, [, value]) => sum + value, 0)
   // Keep adjacent slices visually distinct in both themes.
   const colors = ['#7c3aed', '#06b6d4', '#f59e0b', '#e11d48', '#10b981', '#2563eb', '#c2410c', '#64748b']
-  let cursor = 0
-  const stops = groups.map(([, value], index) => {
-    const start = total ? cursor / total * 100 : 0
-    cursor += value
-    return `${colors[index % colors.length]} ${start}% ${total ? cursor / total * 100 : 0}%`
-  }).join(', ')
+  const slices = groups.map(([name, value], index) => ({
+    key: name,
+    label: name,
+    value,
+    color: colors[index % colors.length],
+  }))
   const allocationModeOptions: Array<{ value: AllocationMode; label: string }> = [
     { value: 'instrument', label: 'Instrument' },
     { value: 'asset', label: 'Asset type' },
     { value: 'account', label: 'Account' },
   ]
-  const filterMode: AllocationMode = mode === 'instrument' ? 'asset' : mode
+  const selectedKey = selected?.mode === mode ? selected.key : undefined
+  const selectSlice = (name: string) => {
+    if (name === 'Cash' && mode !== 'account') {
+      onSelect(null)
+      return
+    }
+    const key = mode === 'instrument' ? name.split(' · ')[0] : name
+    onSelect(selected?.mode === mode && selected.key === key ? null : { mode, key })
+  }
   return (
     <section aria-labelledby="allocation-title" className="app-panel flex flex-col rounded-2xl border border-border/60 bg-card/92 p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -695,55 +762,23 @@ const AllocationChart = ({ portfolio, masked, selected, onSelect }: { portfolio:
         </div>
       </div>
       <div className="mt-5 flex flex-1 flex-col items-center justify-center gap-6 sm:flex-row lg:flex-col lg:justify-start">
-        <motion.div
-          key={mode}
-          role="img"
-          aria-label={groups.map(([name, value]) => `${name} ${total ? (value / total * 100).toFixed(1) : 0}%`).join(', ') || 'No valued holdings'}
-          className={`relative size-36 shrink-0 rounded-full shadow-[0_12px_35px_rgba(76,29,149,0.12)] lg:size-44 ${masked ? 'blur-md' : ''}`}
-          style={{ background: groups.length ? `conic-gradient(${stops})` : 'var(--muted)' }}
-          initial={reduceMotion ? false : { opacity: 0, scale: 0.88, rotate: -8 }}
-          animate={{ opacity: 1, scale: hoveredGroup === null ? 1 : 1.025, rotate: 0 }}
-          transition={{ duration: 0.4, ease: 'easeOut' }}
-        >
-          <div className="absolute inset-8 flex flex-col items-center justify-center rounded-full border border-border/30 bg-card lg:inset-10">
-            <span className="max-w-20 truncate px-1 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
-              {hoveredGroup === null ? 'Segments' : groups[hoveredGroup]?.[0]}
-            </span>
-            <span className="text-sm font-black text-foreground">
-              {masked ? '••' : hoveredGroup === null ? `${groups.length}` : `${total ? (groups[hoveredGroup][1] / total * 100).toFixed(1) : 0}%`}
-            </span>
-          </div>
-        </motion.div>
-        <div className="min-w-0 w-full flex-1 space-y-2 lg:flex-none">
-          {groups.map(([name, value], index) => (
-            <button
-              key={name}
-              type="button"
-              onClick={() => {
-                const symbol = mode === 'instrument' ? name.split(' · ')[0] : name
-                if (symbol === 'Cash' && mode !== 'account') { onSelect(null); return }
-                const fMode = mode === 'instrument' ? 'asset' : mode
-                onSelect(selected?.mode === fMode && selected.key === symbol ? null : { mode: fMode, key: symbol })
-              }}
-              aria-pressed={mode === 'instrument'
-                ? selected?.key === name.split(' · ')[0]
-                : selected?.mode === filterMode && selected?.key === name}
-              onMouseEnter={() => setHoveredGroup(index)}
-              onMouseLeave={() => setHoveredGroup(null)}
-              onFocus={() => setHoveredGroup(index)}
-              onBlur={() => setHoveredGroup(null)}
-              className={`flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-xs transition-colors hover:bg-muted/60 ${
-                (mode === 'instrument' ? selected?.key === name.split(' · ')[0] : selected?.mode === filterMode && selected?.key === name)
-                  ? 'bg-muted'
-                  : ''
-              }`}
-            >
-              <span className="min-w-0 flex-1 truncate text-left"><i className="mr-2 inline-block size-2 shrink-0 rounded-full" style={{ background: colors[index % colors.length] }} />{name}</span>
-              <span className="shrink-0 font-bold">{masked ? '••' : `${total ? (value / total * 100).toFixed(1) : 0}%`}</span>
-            </button>
-          ))}
-          {groups.length === 0 && <p className="text-xs text-muted-foreground">Add prices to see allocation.</p>}
-        </div>
+        {groups.length > 0 ? (
+          <InteractiveDoughnutChart
+            key={mode}
+            slices={slices}
+            ariaLabel={groups.map(([name, value]) => `${name} ${total ? (value / total * 100).toFixed(1) : 0}%`).join(', ')}
+            centerLabel="Total"
+            centerValue={money(total, portfolio.appCurrency)}
+            formatValue={value => money(value, portfolio.appCurrency)}
+            masked={masked}
+            selectedKey={mode === 'instrument'
+              ? slices.find(slice => slice.label.startsWith(`${selectedKey} ·`))?.key
+              : selectedKey}
+            onActivate={slice => selectSlice(slice.label)}
+            chartClassName="size-36 shadow-[0_12px_35px_rgba(76,29,149,0.12)] lg:size-44"
+            legendClassName="w-full min-w-0 flex-1 space-y-1 lg:flex-none"
+          />
+        ) : <p className="text-xs text-muted-foreground">Add prices to see allocation.</p>}
       </div>
       {selected && <p className="mt-3 text-[10px] text-muted-foreground">Selected: {selected.key}. The holdings table is filtered to this allocation.</p>}
     </section>
@@ -787,7 +822,9 @@ const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: InvestmentPor
 
   const holdings = portfolio.holdings.filter(holding =>
     !filter ||
-    (filter.mode === 'asset' ? holding.type === filter.key || holding.symbol === filter.key : holding.accountName === filter.key))
+    (filter.mode === 'asset' ? holding.type === filter.key :
+      filter.mode === 'instrument' ? holding.symbol === filter.key :
+        holding.accountName === filter.key))
 
   const total = holdings.length
   const pages = Math.max(1, Math.ceil(total / pageSize))
@@ -1034,7 +1071,12 @@ const PagedActivityTable = ({
                   return <article key={value.id} className="interactive-card min-w-0 rounded-xl border border-border/50 p-3">
                     <div className="flex min-w-0 items-start justify-between gap-2"><div className="min-w-0"><strong className="block truncate text-xs">{activityTypes.find(item => item.value === value.type)?.label} · {instrument?.symbol}</strong><span className="text-[10px] text-muted-foreground">{value.tradeDate} · {accounts.get(value.accountId)}</span><RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></div><span className="shrink-0 text-xs font-bold">{masked || value.cashAmount === undefined ? '—' : money(value.cashAmount, instrument?.currency ?? portfolio.appCurrency)}</span></div>
                     {value.notes && <p className="mt-2 break-words text-[10px] text-muted-foreground">{value.notes}</p>}
-                    <div className="mt-2 flex justify-end gap-1"><Button variant="ghost" size="sm" disabled={isBusy} onClick={() => onEdit(value)}>Edit</Button><Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDelete(value)}>Delete</Button></div>
+                    <div className="mt-2 flex items-center justify-end gap-1">
+                      {value.isPairedTransfer || value.linkedTransferId
+                        ? <span className="mr-auto text-[10px] text-muted-foreground">Paired transfer: delete and recreate to change it.</span>
+                        : <Button variant="ghost" size="sm" disabled={isBusy} onClick={() => onEdit(value)}>Edit</Button>}
+                      <Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDelete(value)}>Delete</Button>
+                    </div>
                   </article>
                 }) : displayCashFlows.map(value => {
                   const isActive = activeSyncId === value.id
@@ -1052,7 +1094,7 @@ const PagedActivityTable = ({
                     <tbody className="divide-y divide-border/40">{mode === 'investments' ? displayTransactions.map(value => {
                       const isActive = activeSyncId === value.id
                       const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
-                      return <tr key={value.id}><td className="px-4 py-3">{value.tradeDate}</td><td className="px-4 py-3"><span className="flex items-center gap-2 font-bold">{activityTypes.find(item => item.value === value.type)?.label}<RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3">{instruments.get(value.instrumentId)?.symbol}</td><td className="px-4 py-3 text-right">{masked || value.cashAmount === undefined ? '—' : money(value.cashAmount, instruments.get(value.instrumentId)?.currency ?? portfolio.appCurrency)}</td><td className="px-4 py-3"><span className="flex justify-end gap-1"><Button variant="ghost" size="sm" disabled={isBusy} onClick={() => onEdit(value)}>Edit</Button><Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDelete(value)}>Delete</Button></span></td></tr>
+                      return <tr key={value.id}><td className="px-4 py-3">{value.tradeDate}</td><td className="px-4 py-3"><span className="flex items-center gap-2 font-bold">{activityTypes.find(item => item.value === value.type)?.label}<RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3">{instruments.get(value.instrumentId)?.symbol}</td><td className="px-4 py-3 text-right">{masked || value.cashAmount === undefined ? '—' : money(value.cashAmount, instruments.get(value.instrumentId)?.currency ?? portfolio.appCurrency)}</td><td className="px-4 py-3"><span className="flex justify-end gap-1">{value.isPairedTransfer || value.linkedTransferId ? <span className="self-center text-[10px] text-muted-foreground" title="Delete and recreate paired transfers to change them.">Paired</span> : <Button variant="ghost" size="sm" disabled={isBusy} onClick={() => onEdit(value)}>Edit</Button>}<Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDelete(value)}>Delete</Button></span></td></tr>
                     }) : displayCashFlows.map(value => {
                       const isActive = activeSyncId === value.id
                       const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
@@ -1079,9 +1121,9 @@ const FormActions = ({ busy, onCancel, submitLabel, disabled }: { busy: boolean;
   </div>
 )
 
-const AccountForm = ({ busy, onCancel, onSave }: { busy: boolean; onCancel: () => void; onSave: (value: api.AccountMutation) => Promise<boolean> }) => {
+const AccountForm = ({ appCurrency = 'USD', busy, onCancel, onSave }: { appCurrency?: string; busy: boolean; onCancel: () => void; onSave: (value: api.AccountMutation) => Promise<boolean> }) => {
   const [name, setName] = useState('')
-  const [currency, setCurrency] = useState('USD')
+  const [currency, setCurrency] = useState(appCurrency)
   return <form className="space-y-4" onSubmit={event => { event.preventDefault(); void onSave({ name, baseCurrency: currency }) }}>
     <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
       <label className={labelClass}>Account name<input required maxLength={120} value={name} onChange={event => setName(event.target.value)} placeholder="e.g. Moomoo" className={inputClass} /></label>
@@ -1092,7 +1134,7 @@ const AccountForm = ({ busy, onCancel, onSave }: { busy: boolean; onCancel: () =
   </form>
 }
 
-const InstrumentForm = ({ busy, offline, onCancel, onSave }: { busy: boolean; offline: boolean; onCancel: () => void; onSave: (value: api.InstrumentMutation) => Promise<boolean> }) => {
+const InstrumentForm = ({ appCurrency = 'USD', busy, offline, onCancel, onSave }: { appCurrency?: string; busy: boolean; offline: boolean; onCancel: () => void; onSave: (value: api.InstrumentMutation) => Promise<boolean> }) => {
   const [manual, setManual] = useState(false)
   const [query, setQuery] = useState('')
   const [searching, setSearching] = useState(false)
@@ -1102,7 +1144,7 @@ const InstrumentForm = ({ busy, offline, onCancel, onSave }: { busy: boolean; of
   const [symbol, setSymbol] = useState('')
   const [name, setName] = useState('')
   const [type, setType] = useState<'Stock' | 'ETF' | 'MutualFund'>('Stock')
-  const [currency, setCurrency] = useState('USD')
+  const [currency, setCurrency] = useState(appCurrency)
   useEffect(() => {
     if (manual || offline || query.trim().length < 3) {
       setResults([])
@@ -1219,7 +1261,7 @@ const ActivityForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccoun
     <div className={labelClass}>Trade date<DatePicker value={tradeDate} onChange={setTradeDate} max={today()} className="mt-1.5 w-full" /></div>
     {needsUnits && <label className={labelClass}>{type === 'Split' ? 'Split ratio' : 'Units'}<input required={type === 'Split' || type.includes('Transfer')} type="number" min="0" step="0.0000000001" value={units} onChange={event => { noteEdit('units'); setUnits(event.target.value) }} className={inputClass} /></label>}
     {trade && <label className={labelClass}>Unit price ({selectedInstrument?.currency})<input type="number" min="0" step="0.0000000001" value={unitPrice} onChange={event => { noteEdit('price'); setUnitPrice(event.target.value) }} className={inputClass} /></label>}
-    {type !== 'Split' && type !== 'TransferOut' && <label className={labelClass}>{type === 'TransferIn' ? 'Transferred cost basis' : type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} ({selectedInstrument?.currency})<input type="number" min="0" step="0.0000000001" value={cashAmount} onChange={event => { noteEdit('gross'); setCashAmount(event.target.value) }} className={inputClass} /></label>}
+    {type !== 'Split' && type !== 'TransferOut' && <label className={labelClass}>{type === 'TransferIn' ? 'Transferred cost basis' : type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} ({selectedInstrument?.currency})<input required={type === 'Dividend'} type="number" min={type === 'Dividend' ? '0.0000000001' : '0'} step="0.0000000001" value={cashAmount} onChange={event => { noteEdit('gross'); setCashAmount(event.target.value) }} className={inputClass} /></label>}
     {!['Split', 'TransferIn', 'TransferOut', 'FeeTax'].includes(type) && <><label className={labelClass}>Fees{feesLabelSuffix}<input type="number" min="0" step="0.0000000001" value={fees} onChange={event => setFees(event.target.value)} className={inputClass} /></label><label className={labelClass}>Taxes{feesLabelSuffix}<input type="number" min="0" step="0.0000000001" value={taxes} onChange={event => setTaxes(event.target.value)} className={inputClass} /></label></>}
     {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && <label className={labelClass}>Trade FX rate<span className="block text-[10px] font-medium text-muted-foreground">{selectedInstrument.currency} → {portfolio?.appCurrency} · Optional</span><input type="number" min="0" step="0.0000000001" value={fx} onChange={event => setFx(event.target.value)} className={inputClass} /></label>}
     {type === 'TransferOut' && <div className={labelClass}>Destination<CustomSelect value={destination} onChange={v => setDestination(v as string)} options={[{ value: '', label: 'External transfer out' }, ...accounts.filter(a => a.id !== accountId).map(a => ({ value: a.id, label: a.name }))]} ariaLabel="Transfer destination" className="mt-1.5 w-full" /></div>}

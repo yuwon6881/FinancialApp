@@ -196,6 +196,9 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       // Reconcile those together and propagate any failure so completed
       // optimistic operations remain projected until a later successful fetch.
       await loadAll(selectedMonth || undefined, selectedYear || undefined, true, true)
+      if (ops.some(op => op.entity === 'settings' && typeof op.payload?.currency === 'string')) {
+        window.dispatchEvent(new CustomEvent('investment-sync'))
+      }
     },
   })
 

@@ -22,11 +22,13 @@ export function useInvestmentRefreshCoordinator(enabled: boolean, isOffline: boo
     sharedRefresh = (async () => {
       const overview = await api.fetchInvestmentAllocation()
       if (mounted.current) setAllocation(overview)
-      if (!overview.freshness.isStale && !overview.freshness.hasMissingData) return
+      const allocationNeedsRefresh = overview.freshness.isStale || overview.freshness.hasMissingData
 
       let complete = false
+      let marketDataChanged = false
       while (!complete) {
         const result = await api.refreshInvestmentMarketDataAutomatically()
+        marketDataChanged ||= result.updated > 0 || result.total > 0
         complete = result.complete
         if (!complete && result.retryAfterSeconds) {
           await new Promise(resolve => window.setTimeout(resolve, result.retryAfterSeconds! * 1000))
@@ -34,6 +36,7 @@ export function useInvestmentRefreshCoordinator(enabled: boolean, isOffline: boo
           break
         }
       }
+      if (!allocationNeedsRefresh && !marketDataChanged) return
       const updated = await api.fetchInvestmentAllocation()
       if (mounted.current) setAllocation(updated)
       window.dispatchEvent(new CustomEvent('investment-market-data-refreshed', { detail: updated }))

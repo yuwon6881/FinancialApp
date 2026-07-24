@@ -58,6 +58,7 @@ export interface InvestmentActivity {
   tradeFxRate?: number
   notes?: string
   linkedTransferId?: string
+  isPairedTransfer?: boolean
   createdAt: string
   isPendingSync?: boolean
   isPendingDelete?: boolean
@@ -114,8 +115,11 @@ export interface InvestmentCashFlow {
 
 export interface InvestmentPortfolio {
   appCurrency: string
+  usdRate?: number
   summary: {
     growthLedgerBalance: number
+    growthContributions?: number
+    netDeposits?: number
     marketValue?: number
     costBasis?: number
     unrealisedProfitLoss?: number

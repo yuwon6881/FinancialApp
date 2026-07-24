@@ -30,7 +30,7 @@ export function CycleCalendar(props: CycleCalendarProps) {
         <h3 className="text-base font-semibold text-foreground">Cycle Calendar</h3>
         <p className="text-[10px] text-muted-foreground mt-0.5">{props.cycleLabel}</p>
       </div>
-      <div className="overflow-hidden">
+      <div className="px-0.5 py-1 sm:px-1">
         <div aria-label="Cycle days" className="grid w-full min-w-0 grid-cols-[repeat(7,minmax(0,1fr))] gap-1 text-center sm:gap-2">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
             <div key={day} className="pb-2 text-[9px] font-bold text-muted-foreground sm:text-xs">{day}</div>
@@ -41,7 +41,7 @@ export function CycleCalendar(props: CycleCalendarProps) {
             const positive = hasNet && day.net! >= 0
             const isToday = day.dateKey === today
             const color = isToday
-              ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-card bg-blue-500/10 border-blue-500/30'
+              ? 'border-blue-500 bg-blue-500/10 ring-2 ring-inset ring-blue-500'
               : hasNet
                 ? positive ? 'bg-blue-500/8 border-blue-500/20' : 'bg-orange-500/8 border-orange-500/20'
                 : 'bg-muted/5 border-border/40 hover:bg-muted/20'

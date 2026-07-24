@@ -1,5 +1,5 @@
 import * as api from './api'
-import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, RecurringPayment, Transaction, TransactionCategory, WishlistItem } from '../types'
+import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentAllocationSleeve, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, RecurringPayment, Transaction, TransactionCategory, WishlistItem } from '../types'
 
 export type EntityKind = 'transaction' | 'recurringPayment' | 'wishlistItem' | 'category' | 'settings'
   | 'investmentAccount' | 'investmentInstrument' | 'investmentActivity' | 'investmentManualPrice' | 'investmentCashFlow'
@@ -541,17 +541,23 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
   'investmentActivity:delete': (op) => api.deleteInvestmentActivity(op.targetId),
   'investmentActivity:restore': (op) => api.restoreInvestmentActivity(op.payload as unknown as api.DeletedTransactionsSnapshot),
 
-  'investmentManualPrice:add': (op) => api.createManualInvestmentPrice({ ...(op.payload as any), id: op.targetId }),
+  'investmentManualPrice:add': (op) => api.createManualInvestmentPrice({
+    ...(op.payload as unknown as Parameters<typeof api.createManualInvestmentPrice>[0]),
+    id: op.targetId,
+  }),
   'investmentManualPrice:delete': (op) => api.deleteManualInvestmentPrice(op.targetId),
 
-  'investmentCashFlow:add': (op) => api.createInvestmentCashFlow({ ...(op.payload as any), id: op.targetId }),
+  'investmentCashFlow:add': (op) => api.createInvestmentCashFlow({
+    ...(op.payload as unknown as Parameters<typeof api.createInvestmentCashFlow>[0]),
+    id: op.targetId,
+  }),
   'investmentCashFlow:delete': (op) => api.deleteInvestmentCashFlow(op.targetId),
   'investmentCashFlow:restore': (op) => api.restoreInvestmentCashFlow(op.payload as unknown as InvestmentCashFlow),
 
   'investmentPlan:update': (op) => api.updateInvestmentPlan(op.payload as unknown as Parameters<typeof api.updateInvestmentPlan>[0]),
   'investmentAllocation:update': (op) => api.updateInvestmentAllocationSleeve(
     op.targetId,
-    typeof op.payload?.sleeve === 'string' ? op.payload.sleeve as any : undefined,
+    typeof op.payload?.sleeve === 'string' ? op.payload.sleeve as InvestmentAllocationSleeve : undefined,
   ),
 }
 
