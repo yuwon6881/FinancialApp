@@ -1,6 +1,8 @@
 import { AlertTriangle, ArrowRight, CheckCircle2, CircleHelp, Settings2 } from 'lucide-react'
+import { motion, useReducedMotion } from 'framer-motion'
 import type { AppTab, InvestmentAllocationOverview, InvestmentAllocationStatus } from '../../types'
 import { Button } from '../ui/Button'
+import { useState } from 'react'
 
 const tone: Record<InvestmentAllocationStatus, string> = {
   NotStarted: 'border-border/60 bg-muted/20 text-muted-foreground',
@@ -11,8 +13,6 @@ const tone: Record<InvestmentAllocationStatus, string> = {
 }
 
 const colors = ['bg-blue-500', 'bg-amber-500', 'bg-emerald-500']
-
-import { useState } from 'react'
 
 export function InvestmentPlanPanel({
   allocation,
@@ -26,6 +26,7 @@ export function InvestmentPlanPanel({
   onNavigate: (tab: AppTab) => void
 }) {
   const [showUsd, setShowUsd] = useState(true)
+  const reduceMotion = useReducedMotion()
   const isUsd = showUsd && usdRate !== undefined
   const rate = isUsd ? usdRate : 1
   const currency = isUsd ? 'USD' : allocation.appCurrency
@@ -48,10 +49,16 @@ export function InvestmentPlanPanel({
     : allocation.status === 'Incomplete' || allocation.status === 'NotStarted' ? CircleHelp : AlertTriangle
 
   return (
-    <section aria-labelledby="investment-plan-heading" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
+    <motion.section
+      aria-labelledby="investment-plan-heading"
+      initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
+      className="app-panel group/plan rounded-2xl border border-border/60 bg-card/92 p-5 transition-[border-color,box-shadow] duration-300 hover:border-primary/25 hover:shadow-lg hover:shadow-primary/5"
+    >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
-          <div className={`mt-0.5 rounded-xl border p-2 ${tone[allocation.status]}`}>
+          <div className={`mt-0.5 rounded-xl border p-2 transition-transform duration-300 group-hover/plan:scale-105 ${tone[allocation.status]}`}>
             <StatusIcon className="size-4" />
           </div>
           <div>
@@ -61,15 +68,24 @@ export function InvestmentPlanPanel({
             </p>
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={configure}><Settings2 className="size-4" /> Configure</Button>
+        <Button variant="ghost" size="sm" onClick={configure} className="group/configure">
+          <Settings2 className="size-4 transition-transform duration-300 group-hover/configure:rotate-45" /> Configure
+        </Button>
       </div>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
         {allocation.sleeves.map((sleeve, index) => (
-          <article key={sleeve.sleeve} className={`rounded-xl border p-4 ${tone[sleeve.status]}`}>
+          <motion.article
+            key={sleeve.sleeve}
+            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: reduceMotion ? 0 : index * 0.07 }}
+            whileHover={reduceMotion ? undefined : { y: -4, scale: 1.01 }}
+            className={`group/sleeve rounded-xl border p-4 shadow-sm transition-[border-color,box-shadow] duration-300 hover:border-current/30 hover:shadow-md ${tone[sleeve.status]}`}
+          >
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-bold">{sleeve.label}</span>
-              <span className="rounded-full bg-background/60 px-2 py-0.5 text-[10px] font-bold">{sleeve.status}</span>
+              <span className="rounded-full bg-background/60 px-2 py-0.5 text-[10px] font-bold transition-transform duration-300 group-hover/sleeve:scale-105">{sleeve.status}</span>
             </div>
             <div className="mt-3 flex items-end gap-2">
               <strong className="text-2xl text-foreground">
@@ -84,21 +100,27 @@ export function InvestmentPlanPanel({
                 : ''}
             </p>
             <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-background/70">
-              <div className={`h-full ${colors[index]}`} style={{ width: `${Math.min(100, sleeve.currentPercentage ?? 0)}%` }} />
+              <motion.div
+                className={`h-full origin-left ${colors[index]}`}
+                initial={reduceMotion ? false : { scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ duration: 0.55, delay: reduceMotion ? 0 : 0.12 + index * 0.08, ease: 'easeOut' }}
+                style={{ width: `${Math.min(100, sleeve.currentPercentage ?? 0)}%` }}
+              />
             </div>
-          </article>
+          </motion.article>
         ))}
       </div>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-        <div className="rounded-xl border border-border/50 bg-muted/20 p-4">
+        <div className="rounded-xl border border-border/50 bg-muted/20 p-4 transition-all duration-300 hover:border-primary/20 hover:bg-muted/30 hover:shadow-sm">
           <h3 className="text-xs font-bold text-foreground">Actual versus target</h3>
           <div className="mt-3 space-y-3">
             <div>
               <div className="mb-1 flex justify-between text-[10px] text-muted-foreground"><span>Actual</span><span>100%</span></div>
               <div className="flex h-3 overflow-hidden rounded-full bg-muted">
                 {allocation.sleeves.map((sleeve, index) => (
-                  <div key={sleeve.sleeve} className={colors[index]} style={{ width: `${sleeve.currentPercentage ?? 0}%` }} />
+                  <motion.div key={sleeve.sleeve} className={colors[index]} initial={reduceMotion ? false : { scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.5, delay: index * 0.06 }} style={{ width: `${sleeve.currentPercentage ?? 0}%`, transformOrigin: 'left' }} />
                 ))}
               </div>
             </div>
@@ -106,7 +128,7 @@ export function InvestmentPlanPanel({
               <div className="mb-1 flex justify-between text-[10px] text-muted-foreground"><span>Target</span><span>100%</span></div>
               <div className="flex h-3 overflow-hidden rounded-full bg-muted">
                 {allocation.sleeves.map((sleeve, index) => (
-                  <div key={sleeve.sleeve} className={`${colors[index]} opacity-80`} style={{ width: `${sleeve.targetPercentage}%` }} />
+                  <motion.div key={sleeve.sleeve} className={`${colors[index]} opacity-80`} initial={reduceMotion ? false : { scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.5, delay: 0.12 + index * 0.06 }} style={{ width: `${sleeve.targetPercentage}%`, transformOrigin: 'left' }} />
                 ))}
               </div>
             </div>
@@ -119,13 +141,13 @@ export function InvestmentPlanPanel({
           </p>
         </div>
 
-        <div className="rounded-xl border border-border/50 bg-muted/20 p-4">
+        <div className="rounded-xl border border-border/50 bg-muted/20 p-4 transition-all duration-300 hover:border-primary/20 hover:bg-muted/30 hover:shadow-sm">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold text-foreground">Priority guidance</h3>
             {usdRate !== undefined && allocation.appCurrency !== 'USD' && (
               <div className="flex rounded-xl bg-muted/40 p-1">
-                <button type="button" onClick={() => setShowUsd(true)} className={`rounded-lg px-2 py-1 text-[10px] font-bold ${showUsd ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}>USD</button>
-                <button type="button" onClick={() => setShowUsd(false)} className={`rounded-lg px-2 py-1 text-[10px] font-bold ${!showUsd ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}>{allocation.appCurrency}</button>
+                <button type="button" onClick={() => setShowUsd(true)} className={`rounded-lg px-2 py-1 text-[10px] font-bold transition-all duration-200 hover:text-foreground ${showUsd ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}>USD</button>
+                <button type="button" onClick={() => setShowUsd(false)} className={`rounded-lg px-2 py-1 text-[10px] font-bold transition-all duration-200 hover:text-foreground ${!showUsd ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}>{allocation.appCurrency}</button>
               </div>
             )}
           </div>
@@ -141,16 +163,25 @@ export function InvestmentPlanPanel({
                 let customMessage = masked ? recommendation.message.replace(/[A-Z]{3} [\d,.]+/g, '••••') : recommendation.message
                 switch(recommendation.kind) {
                   case 'UseCash': customMessage = `Allocate ${amountStr} from uninvested cash to begin.`; break;
-                  case 'TopUp': customMessage = `Deposit an additional ${amountStr} to reach your targets without selling.`; break;
+                  case 'TopUp': customMessage = recommendation.message.includes('without selling')
+                    ? `Add your usual ${amountStr} cycle contribution and invest it with the available cash; this can restore your targets without selling.`
+                    : `Add your usual ${amountStr} cycle contribution and invest it with the available cash; a small sale may still be needed.`;
+                    break;
                   case 'Buy': customMessage = `Buy ${amountStr} of ${sleeve}.`; break;
                   case 'Sell': customMessage = `Sell ${amountStr} of ${sleeve}.`; break;
                   case 'TransferBuy': customMessage = `Reinvest ${amountStr} into ${sleeve}.`; break;
                 }
                 return (
-                  <li key={`${recommendation.kind}-${recommendation.sleeve ?? index}`} className="flex gap-2 text-xs text-muted-foreground">
-                    <span className="font-bold text-foreground">{index + 1}.</span>
+                  <motion.li
+                    key={`${recommendation.kind}-${recommendation.sleeve ?? index}`}
+                    initial={reduceMotion ? false : { opacity: 0, x: -6 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.25, delay: reduceMotion ? 0 : index * 0.05 }}
+                    className="group/guidance flex gap-2 rounded-lg px-2 py-1.5 text-xs text-muted-foreground transition-colors duration-200 hover:bg-background/70 hover:text-foreground"
+                  >
+                    <span className="font-bold text-foreground transition-transform duration-200 group-hover/guidance:translate-x-0.5">{index + 1}.</span>
                     <span>{customMessage}</span>
-                  </li>
+                  </motion.li>
                 )
               })}
             </ol>
@@ -166,6 +197,6 @@ export function InvestmentPlanPanel({
           )}
         </div>
       </div>
-    </section>
+    </motion.section>
   )
 }

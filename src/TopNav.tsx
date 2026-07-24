@@ -362,7 +362,7 @@ const TopNav: React.FC<TopNavProps> = ({
             aria-live="polite"
             aria-atomic="true"
             data-testid="privacy-status"
-            className={`pointer-events-none absolute left-1/2 top-[calc(100%+0.5rem)] z-50 w-[calc(100%_-_2rem)] max-w-xl -translate-x-1/2 rounded-2xl border px-3 py-2 text-center text-[11px] font-semibold shadow-lg backdrop-blur-xl transition-[opacity,transform] duration-200 ${
+            className={`pointer-events-none absolute left-1/2 top-[calc(100%+0.5rem)] z-50 w-fit max-w-[calc(100%_-_2rem)] -translate-x-1/2 rounded-2xl border px-3 py-2 text-center text-[11px] font-semibold shadow-lg backdrop-blur-xl transition-[opacity,transform] duration-200 ${
               sensitivePreferenceStatus === 'pending'
                 ? 'border-blue-500/25 bg-card/94 text-blue-700 shadow-blue-500/10 dark:border-blue-500/35 dark:text-blue-300'
                 : 'border-amber-500/30 bg-card/96 text-amber-700 shadow-amber-500/10 dark:border-amber-500/40 dark:text-amber-300'

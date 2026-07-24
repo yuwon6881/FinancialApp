@@ -31,6 +31,7 @@ export function InvestmentPlanSection() {
   const [overview, setOverview] = useState<InvestmentAllocationOverview | null>(() => cachedOverview())
   const [plan, setPlan] = useState<InvestmentPlan>(() => cachedOverview()?.plan ?? defaults)
   const [lockedSleeve, setLockedSleeve] = useState<TargetKey | null>(null)
+  const [globalTargetLock, setGlobalTargetLock] = useState(true)
   const [loading, setLoading] = useState(() => !cachedOverview())
   const [error, setError] = useState('')
 
@@ -125,12 +126,22 @@ export function InvestmentPlanSection() {
   return (
     <div id="settings-panel-investment-plan" role="tabpanel" aria-labelledby="settings-tab-investment-plan" className="grid gap-6 lg:grid-cols-2 animate-in fade-in duration-200">
       <section className="rounded-2xl border border-border/60 bg-card p-5 sm:p-6">
-        <div className="flex items-start gap-3 border-b border-border/40 pb-4">
-          <div className="rounded-xl bg-violet-500/10 p-2 text-violet-500"><SlidersHorizontal className="size-4" /></div>
-          <div>
-            <h3 className="text-sm font-bold text-foreground">Portfolio targets</h3>
-            <p className="mt-1 text-[11px] text-muted-foreground">Changing one sleeve automatically redistributes the other two.</p>
+        <div className="flex items-start justify-between gap-2 border-b border-border/40 pb-4">
+          <div className="flex items-start gap-3">
+            <div className="rounded-xl bg-violet-500/10 p-2 text-violet-500 shrink-0"><SlidersHorizontal className="size-4" /></div>
+            <div>
+              <h3 className="text-sm font-bold text-foreground">Portfolio targets</h3>
+              <p className="mt-1 text-[11px] text-muted-foreground">Changing one sleeve automatically redistributes the other two.</p>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={() => setGlobalTargetLock(!globalTargetLock)}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/60 bg-secondary/60 text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer shrink-0 mt-1"
+          >
+            {globalTargetLock ? <Lock className="size-3" /> : <Unlock className="size-3" />}
+            {globalTargetLock ? 'Locked' : 'Unlocked'}
+          </button>
         </div>
         <div className="mt-5 space-y-5">
           {([
@@ -138,31 +149,21 @@ export function InvestmentPlanSection() {
             ['International ex-US', 'internationalExUsTarget'],
             ['Bonds', 'bondsTarget'],
           ] as const).map(([label, key]) => (
-            <label key={key} className="block">
-              <span className="flex justify-between text-xs font-bold text-muted-foreground">
-                <span className="flex items-center gap-1.5 uppercase">
-                  {label}
-                  <button
-                    type="button"
-                    onClick={(e) => { e.preventDefault(); setLockedSleeve(lockedSleeve === key ? null : key) }}
-                    className="text-muted-foreground hover:text-foreground"
-                    title={lockedSleeve === key ? "Unlock target" : "Lock target"}
-                  >
-                    {lockedSleeve === key ? <Lock className="size-3" /> : <Unlock className="size-3" />}
-                  </button>
-                </span>
-                <span className="text-foreground">{plan[key]}%</span>
-              </span>
+            <label key={key} className="space-y-2 block">
+              <div className="flex justify-between items-center text-[11px] font-bold">
+                <span className="text-muted-foreground flex items-center gap-1.5"><span className="uppercase tracking-wider">{label}</span><button type="button" onClick={(e) => { e.preventDefault(); setLockedSleeve(lockedSleeve === key ? null : key) }} className="p-1 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer" title={lockedSleeve === key ? "Unlock target" : "Lock target"}>{lockedSleeve === key ? <Lock className="size-3.5 text-violet-500" /> : <Unlock className="size-3.5" />}</button></span>
+                <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md">{plan[key]}%</span>
+              </div>
               <input
                 aria-label={`${label} target`}
                 type="range"
                 min="1"
                 max="98"
                 step="1"
-                disabled={lockedSleeve === key}
+                disabled={globalTargetLock || lockedSleeve === key}
                 value={plan[key]}
                 onChange={event => changeTarget(key, Number(event.target.value))}
-                className={`mt-2 h-2 w-full accent-violet-500 ${lockedSleeve === key ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                className="w-full h-2 rounded-full cursor-pointer accent-violet-500 bg-border disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </label>
           ))}
