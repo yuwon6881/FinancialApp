@@ -6,7 +6,7 @@ import { DashboardHeader } from './dashboard/DashboardHeader'
 import { TodayFocusCards } from './dashboard/TodayFocusCards'
 import { CategoryLimitPerformance } from './dashboard/CategoryLimitPerformance'
 import { useDashboardView } from './dashboard/useDashboardView'
-import { AlertCircle, BarChart3, CheckCircle2, ShieldCheck, TrendingUp } from 'lucide-react'
+import { AlertCircle, BarChart3, CheckCircle2, ShieldCheck } from 'lucide-react'
 import { Button } from './ui/Button'
 import { getCycleProgress, MONTH_NAMES } from '../lib/cycle'
 
@@ -120,28 +120,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         formatSensitive={view.formatSensitive}
         onNavigate={onNavigate}
       />
-
-      <button
-        type="button"
-        onClick={() => onNavigate('investments')}
-        className="interactive-card app-panel flex w-full flex-col gap-3 rounded-2xl border border-violet-500/20 bg-violet-500/5 p-4 text-left sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-5"
-      >
-        <span className="flex min-w-0 items-center gap-3 sm:gap-4">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/12 text-violet-500 sm:size-11">
-            <TrendingUp className="size-5" />
-          </span>
-          <span className="min-w-0">
-            <strong className="block truncate text-sm text-foreground">Growth Investments</strong>
-            <span className="mt-0.5 block truncate text-xs text-muted-foreground sm:mt-1">Track broker accounts and market performance.</span>
-          </span>
-        </span>
-        <span className="flex items-center justify-between border-t border-violet-500/10 pt-3 sm:block sm:shrink-0 sm:border-0 sm:pt-0 sm:text-right">
-          <span className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Growth ledger balance</span>
-          <span className="block truncate text-lg font-black text-foreground sm:mt-1">
-            {view.formatSensitive(dashboardData?.categories?.find(category => category.name === 'Growth')?.remaining ?? 0)}
-          </span>
-        </span>
-      </button>
 
       <div data-testid="today-plan-grid">
         <section aria-labelledby="plan-snapshot-heading" className="app-panel flex flex-col rounded-2xl border border-border/60 bg-card/92 p-5">

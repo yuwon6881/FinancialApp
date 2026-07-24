@@ -87,6 +87,23 @@ describe('ReportsView', () => {
     expect(onNavigateToLedger).toHaveBeenCalledWith({ date: '2026-07-30' })
   })
 
+  it('opens long-term Growth Investments from Reports', () => {
+    const onNavigate = vi.fn()
+    render(
+      <ReportsView
+        dashboardData={null}
+        transactions={[]}
+        hideBalanceAmounts={false}
+        onSelectPeriod={vi.fn()}
+        onNavigate={onNavigate}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /Growth Investments/ }))
+    expect(onNavigate).toHaveBeenCalledWith('investments')
+    expect(screen.getByText('Growth ledger balance')).toBeTruthy()
+  })
+
   it('offers a compact summary action for an ended cycle', () => {
     const onViewCycleSummary = vi.fn()
     render(

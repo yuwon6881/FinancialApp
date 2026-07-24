@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import {
   AlertCircle,
   ArrowLeft,
@@ -67,6 +68,7 @@ const today = () => new Date().toISOString().slice(0, 10)
 const numberOrUndefined = (value: string) => value.trim() === '' ? undefined : Number(value)
 const inputClass = 'w-full rounded-xl border border-border/60 bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:border-blue-500'
 const labelClass = 'space-y-1.5 text-xs font-semibold text-muted-foreground'
+const interactivePanelClass = 'interactive-card app-panel rounded-2xl border border-border/60 bg-card/92'
 
 const money = (value: number, currency: string) =>
   new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(value)
@@ -236,7 +238,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
                 const Icon = isLargest ? PieChart : isBest ? TrendingUp : isConcentration ? AlertCircle : Info;
                 
                 return (
-                  <li key={index} className="flex items-center gap-3 rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 text-xs leading-relaxed text-blue-700 shadow-sm dark:text-blue-300">
+                  <li key={index} className="interactive-card flex items-center gap-3 rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 text-xs leading-relaxed text-blue-700 shadow-sm dark:text-blue-300">
                     <div className="shrink-0 rounded-full bg-blue-500/20 p-1.5 text-blue-600 dark:text-blue-400">
                       <Icon className="size-4" />
                     </div>
@@ -338,6 +340,7 @@ const EmptyState = ({ offline, onAddAccount, onAddInvestment }: { offline: boole
 )
 
 const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; masked: boolean }) => {
+  const reduceMotion = useReducedMotion()
   const format = (value?: number, suffix = '') => value === undefined ? 'Incomplete' : masked ? '••••' : `${money(value, portfolio.appCurrency)}${suffix}`
   const unrealised = portfolio.summary.unrealisedProfitLoss
   const realised = portfolio.summary.realisedProfitLoss
@@ -369,13 +372,19 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
   ]
   return (
     <section aria-label="Investment summary" className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-      {cards.map(({ label, value, note, color, bg, isIncomplete }) => (
-        <div key={label} className={`app-panel rounded-2xl border p-4 ${bg}`}>
+      {cards.map(({ label, value, note, color, bg, isIncomplete }, index) => (
+        <motion.article
+          key={label}
+          className={`interactive-card app-panel rounded-2xl border p-4 ${bg}`}
+          initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: reduceMotion ? 0 : index * 0.035, ease: 'easeOut' }}
+        >
           <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
           <p className={`mt-2 break-words text-lg font-black ${color}`} title={value}>{value}</p>
           <p className="mt-1 text-[10px] text-muted-foreground" title={label === 'Cost basis' ? 'Current FX is not used to calculate historical purchase cost.' : undefined}>{note}</p>
           {isIncomplete && <p className="mt-1 text-[9px] text-amber-500/80">See calculation notes below</p>}
-        </div>
+        </motion.article>
       ))}
     </section>
   )
@@ -409,7 +418,7 @@ const AccountsAndInstruments = ({
         type="button"
         onClick={() => setOpen(true)}
         aria-expanded={open}
-        className="app-panel flex w-full cursor-pointer items-center justify-between rounded-2xl border border-border/60 bg-card/92 p-4 text-left"
+        className={`${interactivePanelClass} group flex w-full cursor-pointer items-center justify-between p-4 text-left`}
       >
         <span className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
           <strong className="text-sm text-foreground">Manage portfolio</strong>
@@ -418,7 +427,7 @@ const AccountsAndInstruments = ({
             <span className="rounded-full bg-violet-500/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-violet-600 dark:text-violet-400">{portfolio.instruments.length} INVESTMENT{portfolio.instruments.length === 1 ? '' : 'S'}</span>
           </span>
         </span>
-        <ChevronDown className="size-4 -rotate-90 shrink-0 text-muted-foreground" />
+        <ChevronDown className="size-4 -rotate-90 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-foreground" />
       </button>
       <BottomSheet isOpen={open} onClose={() => setOpen(false)} title="Manage portfolio" maxWidthClassName="max-w-2xl">
         <div className="space-y-4">
@@ -526,6 +535,9 @@ const AccountsAndInstruments = ({
 }
 
 const ValueChart = ({ portfolio, masked, range, onRangeChange }: { portfolio: InvestmentPortfolio; masked: boolean; range: InvestmentRange; onRangeChange: (value: InvestmentRange) => void }) => {
+  const reduceMotion = useReducedMotion()
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
+  const svgRef = useRef<SVGSVGElement>(null)
   const values = portfolio.chart.flatMap(point => [point.totalValue, point.netDeposits]).filter((value): value is number => value !== undefined)
   const max = Math.max(...values, 1)
   const min = Math.min(...values, 0)
@@ -540,6 +552,12 @@ const ValueChart = ({ portfolio, masked, range, onRangeChange }: { portfolio: In
       .join(' ')
   const latest = portfolio.chart.at(-1)
   const hasAnyMarketValue = portfolio.chart.some(p => p.totalValue !== undefined)
+  const selectNearest = (clientX: number) => {
+    if (!svgRef.current || portfolio.chart.length === 0 || masked) return
+    const rect = svgRef.current.getBoundingClientRect()
+    const index = Math.round(((clientX - rect.left) / rect.width) * (portfolio.chart.length - 1))
+    setHoveredIndex(Math.max(0, Math.min(portfolio.chart.length - 1, index)))
+  }
   const summary = latest
     ? `Latest total portfolio value: ${masked || latest.totalValue === undefined ? 'hidden or incomplete' : money(latest.totalValue, portfolio.appCurrency)}; net deposits ${masked || latest.netDeposits === undefined ? 'hidden or incomplete' : money(latest.netDeposits, portfolio.appCurrency)}.`
     : 'No chart data is available.'
@@ -573,11 +591,53 @@ const ValueChart = ({ portfolio, masked, range, onRangeChange }: { portfolio: In
           <span className="max-w-xs">Market values cannot be plotted because prices or FX rates are missing. Supply prices via "Update prices" or "Manual price", and add missing trade FX rates by editing each activity.</span>
         </div>
       ) : (
-        <div className={`mt-5 overflow-hidden ${masked ? 'blur-md select-none' : ''}`} aria-hidden={masked}>
-          <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="h-48 w-full sm:h-60" role="img" aria-label={summary}>
-            <polyline points={line('totalValue')} fill="none" stroke="#8b5cf6" strokeWidth="4" strokeLinejoin="round" vectorEffect="nonScalingStroke" />
-            <polyline points={line('netDeposits')} fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 6" strokeLinejoin="round" vectorEffect="nonScalingStroke" />
+        <div
+          className={`relative mt-5 cursor-crosshair ${masked ? 'select-none blur-md pointer-events-none' : ''}`}
+          aria-hidden={masked}
+          onMouseMove={event => selectNearest(event.clientX)}
+          onMouseLeave={() => setHoveredIndex(null)}
+          onTouchStart={event => selectNearest(event.touches[0].clientX)}
+          onTouchMove={event => selectNearest(event.touches[0].clientX)}
+        >
+          <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="h-48 w-full overflow-visible sm:h-60" role="img" aria-label={summary}>
+            <defs>
+              <linearGradient id="investmentValueGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.24" />
+                <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <motion.polygon
+              key={`investment-area-${range}`}
+              points={`0,${height} ${line('totalValue')} ${width},${height}`}
+              fill="url(#investmentValueGradient)"
+              initial={reduceMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.45 }}
+            />
+            <motion.polyline key={`investment-total-${range}`} points={line('totalValue')} fill="none" stroke="#8b5cf6" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" vectorEffect="nonScalingStroke" initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.45 }} />
+            <motion.polyline key={`investment-deposits-${range}`} points={line('netDeposits')} fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 6" strokeLinecap="round" strokeLinejoin="round" vectorEffect="nonScalingStroke" initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.45, delay: 0.08 }} />
+            {hoveredIndex !== null && portfolio.chart[hoveredIndex]?.totalValue !== undefined && (
+              <>
+                <line x1={x(hoveredIndex)} x2={x(hoveredIndex)} y1="0" y2={height} stroke="var(--border)" strokeWidth="1" strokeDasharray="3 4" vectorEffect="nonScalingStroke" />
+                <circle cx={x(hoveredIndex)} cy={y(portfolio.chart[hoveredIndex].totalValue!)} r="5" fill="#8b5cf6" stroke="var(--card)" strokeWidth="3" vectorEffect="nonScalingStroke" />
+              </>
+            )}
           </svg>
+          {hoveredIndex !== null && portfolio.chart[hoveredIndex] && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute z-20 w-36 rounded-xl border border-border/60 bg-card/95 p-2 text-center shadow-xl backdrop-blur-md"
+              style={{ left: `clamp(0px, calc(${portfolio.chart.length <= 1 ? 50 : hoveredIndex / (portfolio.chart.length - 1) * 100}% - 72px), calc(100% - 144px))`, top: 4 }}
+            >
+              <b className="block text-[10px] text-muted-foreground">{portfolio.chart[hoveredIndex].date}</b>
+              <span className="mt-0.5 block text-xs font-black text-violet-500">
+                {portfolio.chart[hoveredIndex].totalValue === undefined ? 'Incomplete' : money(portfolio.chart[hoveredIndex].totalValue!, portfolio.appCurrency)}
+              </span>
+              <span className="block text-[9px] text-muted-foreground">
+                Deposits {portfolio.chart[hoveredIndex].netDeposits === undefined ? 'incomplete' : money(portfolio.chart[hoveredIndex].netDeposits!, portfolio.appCurrency)}
+              </span>
+            </div>
+          )}
         </div>
       )}
       <div className="mt-3 flex flex-wrap gap-4 text-[10px] font-semibold text-muted-foreground">
@@ -595,6 +655,8 @@ const ValueChart = ({ portfolio, masked, range, onRangeChange }: { portfolio: In
 
 const AllocationChart = ({ portfolio, masked, selected, onSelect }: { portfolio: InvestmentPortfolio; masked: boolean; selected: AllocationFilter; onSelect: (value: AllocationFilter) => void }) => {
   const [mode, setMode] = useState<AllocationMode>('instrument')
+  const [hoveredGroup, setHoveredGroup] = useState<number | null>(null)
+  const reduceMotion = useReducedMotion()
   const groups = useMemo(() => {
     const map = new Map<string, number>()
     portfolio.holdings.forEach(holding => {
@@ -612,7 +674,8 @@ const AllocationChart = ({ portfolio, masked, selected, onSelect }: { portfolio:
     return [...map].sort((a, b) => b[1] - a[1])
   }, [portfolio.holdings, portfolio.cashBalances, mode])
   const total = groups.reduce((sum, [, value]) => sum + value, 0)
-  const colors = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#64748b']
+  // Keep adjacent slices visually distinct in both themes.
+  const colors = ['#7c3aed', '#06b6d4', '#f59e0b', '#e11d48', '#10b981', '#2563eb', '#c2410c', '#64748b']
   let cursor = 0
   const stops = groups.map(([, value], index) => {
     const start = total ? cursor / total * 100 : 0
@@ -641,14 +704,25 @@ const AllocationChart = ({ portfolio, masked, selected, onSelect }: { portfolio:
         </div>
       </div>
       <div className="mt-5 flex flex-1 flex-col items-center justify-center gap-6 sm:flex-row lg:flex-col lg:justify-start">
-        <div
+        <motion.div
+          key={mode}
           role="img"
           aria-label={groups.map(([name, value]) => `${name} ${total ? (value / total * 100).toFixed(1) : 0}%`).join(', ') || 'No valued holdings'}
-          className={`relative size-36 shrink-0 rounded-full lg:size-44 ${masked ? 'blur-md' : ''}`}
+          className={`relative size-36 shrink-0 rounded-full shadow-[0_12px_35px_rgba(76,29,149,0.12)] lg:size-44 ${masked ? 'blur-md' : ''}`}
           style={{ background: groups.length ? `conic-gradient(${stops})` : 'var(--muted)' }}
+          initial={reduceMotion ? false : { opacity: 0, scale: 0.88, rotate: -8 }}
+          animate={{ opacity: 1, scale: hoveredGroup === null ? 1 : 1.025, rotate: 0 }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
         >
-          <div className="absolute inset-8 rounded-full bg-card lg:inset-10" />
-        </div>
+          <div className="absolute inset-8 flex flex-col items-center justify-center rounded-full border border-border/30 bg-card lg:inset-10">
+            <span className="max-w-20 truncate px-1 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
+              {hoveredGroup === null ? 'Segments' : groups[hoveredGroup]?.[0]}
+            </span>
+            <span className="text-sm font-black text-foreground">
+              {masked ? '••' : hoveredGroup === null ? `${groups.length}` : `${total ? (groups[hoveredGroup][1] / total * 100).toFixed(1) : 0}%`}
+            </span>
+          </div>
+        </motion.div>
         <div className="min-w-0 w-full flex-1 space-y-2 lg:flex-none">
           {groups.map(([name, value], index) => (
             <button
@@ -663,6 +737,10 @@ const AllocationChart = ({ portfolio, masked, selected, onSelect }: { portfolio:
               aria-pressed={mode === 'instrument'
                 ? selected?.key === name.split(' · ')[0]
                 : selected?.mode === filterMode && selected?.key === name}
+              onMouseEnter={() => setHoveredGroup(index)}
+              onMouseLeave={() => setHoveredGroup(null)}
+              onFocus={() => setHoveredGroup(index)}
+              onBlur={() => setHoveredGroup(null)}
               className={`flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-xs transition-colors hover:bg-muted/60 ${
                 (mode === 'instrument' ? selected?.key === name.split(' · ')[0] : selected?.mode === filterMode && selected?.key === name)
                   ? 'bg-muted'
@@ -682,6 +760,7 @@ const AllocationChart = ({ portfolio, masked, selected, onSelect }: { portfolio:
 }
 
 const PerformanceBars = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; masked: boolean }) => {
+  const reduceMotion = useReducedMotion()
   const holdings = [...portfolio.holdings].filter(value => value.unrealisedPercent !== undefined).sort((a, b) => (b.unrealisedPercent ?? 0) - (a.unrealisedPercent ?? 0))
   const scale = Math.max(...holdings.map(value => Math.abs(value.unrealisedPercent ?? 0)), 1)
   return (
@@ -694,11 +773,12 @@ const PerformanceBars = ({ portfolio, masked }: { portfolio: InvestmentPortfolio
             <span className="truncate font-bold text-foreground">{holding.symbol}</span>
             <div className="relative h-3 rounded-full bg-muted">
               <div className="absolute left-1/2 top-0 h-full w-px bg-border" />
-              <div
+              <motion.div
                 className={`absolute top-0 h-full rounded-full ${(holding.unrealisedPercent ?? 0) >= 0 ? 'bg-emerald-500' : 'bg-orange-500'}`}
-                style={(holding.unrealisedPercent ?? 0) >= 0
-                  ? { left: '50%', width: `${Math.abs(holding.unrealisedPercent ?? 0) / scale * 50}%` }
-                  : { right: '50%', width: `${Math.abs(holding.unrealisedPercent ?? 0) / scale * 50}%` }}
+                initial={reduceMotion ? false : { width: 0 }}
+                animate={{ width: `${Math.abs(holding.unrealisedPercent ?? 0) / scale * 50}%` }}
+                transition={{ duration: 0.55, ease: 'easeOut' }}
+                style={(holding.unrealisedPercent ?? 0) >= 0 ? { left: '50%' } : { right: '50%' }}
               />
             </div>
             <span className="text-right font-bold">{masked ? '••' : `${(holding.unrealisedPercent ?? 0).toFixed(1)}%`}</span>
@@ -741,7 +821,7 @@ const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: InvestmentPor
     <div className="p-5"><h2 id="holdings-title" className="text-base font-bold text-foreground">Holdings by account</h2><p className="mt-1 text-xs text-muted-foreground">Recording opening, buy, or transfer activity places a reusable investment in an account.{filter ? ` Filtered by ${filter.key}.` : ''}</p></div>
     <div className="grid gap-3 px-3 pb-3 sm:grid-cols-2 lg:grid-cols-3">
       {accountGroups.map(({ account, holdings: accountHoldings, cash, total }) => (
-        <article key={account.id} className="rounded-xl border border-border/50 bg-muted/15 p-4">
+        <article key={account.id} className="interactive-card rounded-xl border border-border/50 bg-muted/15 p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0"><h3 className="truncate text-sm font-bold">{account.name}</h3><p className="text-[10px] text-muted-foreground">Base currency {account.baseCurrency} · {accountHoldings.length} holding{accountHoldings.length === 1 ? '' : 's'}</p></div>
             <strong className="shrink-0 text-xs">{masked ? '••••' : total === undefined ? 'Incomplete FX' : money(total, portfolio.appCurrency)}</strong>
@@ -758,7 +838,7 @@ const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: InvestmentPor
     </div>
     <div className="space-y-3 px-3 pb-3 sm:hidden">
       {paginatedHoldings.map(holding => (
-        <article key={`${holding.accountId}-${holding.instrumentId}`} className="min-w-0 rounded-xl border border-border/50 p-4">
+        <article key={`${holding.accountId}-${holding.instrumentId}`} className="interactive-card min-w-0 rounded-xl border border-border/50 p-4">
           <div className="flex min-w-0 items-start justify-between gap-3">
             <div className="min-w-0"><strong className="block truncate text-sm">{holding.symbol} · {holding.name}</strong><span className="text-[10px] text-muted-foreground">{holding.accountName} · {holding.type}</span></div>
             <strong className="shrink-0 text-sm">{masked ? '••••' : holding.valueApp === undefined ? 'Incomplete FX' : money(holding.valueApp, portfolio.appCurrency)}</strong>
@@ -931,7 +1011,10 @@ const PagedActivityTable = ({
             <DatePicker value={from} onChange={setFrom} placeholder="From date" clearable clearAriaLabel="Clear from date" className="min-w-0 w-full" />
             <DatePicker value={to} onChange={setTo} placeholder="To date" clearable clearAriaLabel="Clear to date" className="min-w-0 w-full" />
           </div>
-          <div className="flex shrink-0 gap-1 self-end lg:self-auto"><Button variant="primary" size="sm" onClick={applySearch}><Search className="size-3.5" /> Search</Button><Button variant="ghost" size="sm" onClick={clearAll}>Clear all</Button></div>
+          <div className="grid w-full shrink-0 grid-cols-2 gap-2 sm:w-auto lg:flex lg:self-auto">
+            <Button variant="primary" className="h-10 px-3 text-xs" onClick={applySearch}><Search className="size-3.5" /> Search</Button>
+            <Button variant="ghost" className="h-10 px-3 text-xs" onClick={clearAll}>Clear all</Button>
+          </div>
         </div>
       </div>
       {loading && rows.length === 0 ? <p className="p-5 text-xs text-muted-foreground">Loading activity…</p> : rows.length === 0 ? <p className="p-5 text-xs text-muted-foreground">No activity matches these filters.</p> : (
@@ -950,7 +1033,7 @@ const PagedActivityTable = ({
               const instrument = instruments.get(value.instrumentId)
               const isActive = activeSyncId === value.id
               const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
-              return <article key={value.id} className="min-w-0 rounded-xl border border-border/50 p-3">
+              return <article key={value.id} className="interactive-card min-w-0 rounded-xl border border-border/50 p-3">
                 <div className="flex min-w-0 items-start justify-between gap-2"><div className="min-w-0"><strong className="block truncate text-xs">{activityTypes.find(item => item.value === value.type)?.label} · {instrument?.symbol}</strong><span className="text-[10px] text-muted-foreground">{value.tradeDate} · {accounts.get(value.accountId)}</span><RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></div><span className="shrink-0 text-xs font-bold">{masked || value.cashAmount === undefined ? '—' : money(value.cashAmount, instrument?.currency ?? portfolio.appCurrency)}</span></div>
                 {value.notes && <p className="mt-2 break-words text-[10px] text-muted-foreground">{value.notes}</p>}
                 <div className="mt-2 flex justify-end gap-1"><Button variant="ghost" size="sm" disabled={isBusy} onClick={() => onEdit(value)}>Edit</Button><Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDelete(value)}>Delete</Button></div>
@@ -958,7 +1041,7 @@ const PagedActivityTable = ({
             }) : displayCashFlows.map(value => {
               const isActive = activeSyncId === value.id
               const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
-              return <article key={value.id} className="min-w-0 rounded-xl border border-border/50 p-3">
+              return <article key={value.id} className="interactive-card min-w-0 rounded-xl border border-border/50 p-3">
                 <div className="flex items-start justify-between gap-2"><div className="min-w-0"><strong className="block truncate text-xs">{value.type} · {accounts.get(value.accountId)}</strong><span className="text-[10px] text-muted-foreground">{value.date}</span><RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></div><strong className={value.amount < 0 ? 'text-orange-500' : 'text-emerald-500'}>{masked ? '••••' : money(value.amount, value.currency)}</strong></div>
                 {value.notes && <p className="mt-2 break-words text-[10px] text-muted-foreground">{value.notes}</p>}
                 <div className="mt-2 flex justify-end"><Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDeleteCashFlow(value)}>Delete</Button></div>

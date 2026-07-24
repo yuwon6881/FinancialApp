@@ -1,5 +1,5 @@
 import React from 'react'
-import { BarChart3, ChartNoAxesCombined } from 'lucide-react'
+import { BarChart3, ChartNoAxesCombined, ChevronRight, TrendingUp } from 'lucide-react'
 import type { AppTab, DashboardData, Transaction, WishlistItem } from '../types'
 import { useAppContext } from '../contexts/AppContext'
 import { getCycleLabelForDropdown } from '../lib/cycleLabels'
@@ -136,6 +136,31 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         formatSensitive={view.formatSensitive}
         onNavigateToLedger={onNavigateToLedger}
       />
+
+      <button
+        type="button"
+        onClick={() => onNavigate('investments')}
+        className="interactive-card app-panel group flex w-full flex-col gap-3 rounded-2xl border border-violet-500/20 bg-violet-500/5 p-4 text-left sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-5"
+      >
+        <span className="flex min-w-0 items-center gap-3 sm:gap-4">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/12 text-violet-500 transition-transform duration-200 group-hover:scale-105 sm:size-11">
+            <TrendingUp className="size-5" />
+          </span>
+          <span className="min-w-0">
+            <strong className="block truncate text-sm text-foreground">Growth Investments</strong>
+            <span className="mt-0.5 block text-xs text-muted-foreground sm:mt-1">Open your long-term portfolio, broker accounts, and market performance.</span>
+          </span>
+        </span>
+        <span className="flex items-center justify-between gap-4 border-t border-violet-500/10 pt-3 sm:shrink-0 sm:border-0 sm:pt-0 sm:text-right">
+          <span>
+            <span className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Growth ledger balance</span>
+            <span className="block truncate text-lg font-black text-foreground sm:mt-1">
+              {view.formatSensitive(view.categories.find(category => category.name === 'Growth')?.remaining ?? 0)}
+            </span>
+          </span>
+          <ChevronRight className="size-4 text-violet-500 transition-transform duration-200 group-hover:translate-x-1" />
+        </span>
+      </button>
 
       {/* Cycle inflow / outflow summary — moved here from the Today tab so the
           dashboard stays focused on daily status while Reports holds analysis. */}
