@@ -118,9 +118,11 @@ const number = (value: number, digits = 4) =>
 // A conversion has two legs, so a single signed figure cannot describe it.
 const cashFlowAmount = (flow: InvestmentCashFlow, masked: boolean) => {
   if (masked) return '••••'
-  const sold = money(flow.amount, flow.currency)
-  if (flow.type !== 'Conversion' || flow.toCurrency === undefined || flow.toAmount === undefined) return sold
-  return `${sold} → ${money(flow.toAmount, flow.toCurrency)}`
+  const amount = money(Math.abs(flow.amount), flow.currency)
+  if (flow.type === 'Deposit') return `+${amount}`
+  if (flow.type === 'Withdrawal') return `−${amount}`
+  if (flow.toCurrency === undefined || flow.toAmount === undefined) return amount
+  return `${amount} → ${money(flow.toAmount, flow.toCurrency)}`
 }
 
 export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) => {
@@ -235,7 +237,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
         }} />
       </BottomSheet>
       <BottomSheet isOpen={panel === 'instrument'} title="Add investment" onClose={closePanel} maxWidthClassName="max-w-2xl">
-        <InstrumentForm key={`instrument-${formKey}`} appCurrency={portfolio?.appCurrency} busy={busy} offline={isOffline} onCancel={closePanel} onSave={value => {
+        <InstrumentForm key={`instrument-${formKey}`} busy={busy} offline={isOffline} onCancel={closePanel} onSave={value => {
           const id = crypto.randomUUID()
           return queueInvestment('investmentInstrument', 'add', id, { ...value, id })
         }} />
@@ -281,7 +283,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
             <Button variant="ghost" onClick={() => openPanel('account')}><Building2 className="size-4" /> Add account</Button>
             <Button variant="ghost" onClick={() => openPanel('instrument')}><Search className="size-4" /> Add investment</Button>
-            <Button variant="ghost" disabled={portfolio.accounts.length === 0} onClick={() => openPanel('cash')}><Wallet className="size-4" /> Deposit / withdraw</Button>
+            <Button variant="ghost" disabled={portfolio.accounts.length === 0} onClick={() => openPanel('cash')}><Wallet className="size-4" /> Manage cash</Button>
             <Button variant="ghost" disabled={portfolio.instruments.length === 0} onClick={() => openPanel('price')}><CircleDollarSign className="size-4" /> Manual price</Button>
           </div>
           <InvestmentPlanPanel
@@ -1161,7 +1163,6 @@ const PagedActivityTable = ({
                   const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
                   return <article key={value.id} className="interactive-card min-w-0 rounded-xl border border-border/50 p-3">
                     <div className="flex min-w-0 items-start justify-between gap-2"><div className="min-w-0"><strong className="block truncate text-xs">{activityTypes.find(item => item.value === value.type)?.label} · {instrument?.symbol}</strong><span className="text-[10px] text-muted-foreground">{value.tradeDate} · {accounts.get(value.accountId)}</span><RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></div><span className="shrink-0 text-xs font-bold">{masked || value.cashAmount === undefined ? '—' : money(value.cashAmount, instrument?.currency ?? portfolio.appCurrency)}</span></div>
-                    {value.notes && <p className="mt-2 break-words text-[10px] text-muted-foreground">{value.notes}</p>}
                     <div className="mt-2 flex items-center justify-end gap-1">
                       {value.isPairedTransfer || value.linkedTransferId
                         ? <span className="mr-auto text-[10px] text-muted-foreground">Paired transfer: delete and recreate to change it.</span>
@@ -1174,7 +1175,6 @@ const PagedActivityTable = ({
                   const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
                   return <article key={value.id} className="interactive-card min-w-0 rounded-xl border border-border/50 p-3">
                     <div className="flex items-start justify-between gap-2"><div className="min-w-0"><strong className="block truncate text-xs">{value.type} · {accounts.get(value.accountId)}</strong><span className="text-[10px] text-muted-foreground">{value.date}</span><RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></div><strong className={value.type === 'Conversion' ? 'shrink-0 text-xs font-bold' : value.amount < 0 ? 'text-orange-500' : 'text-emerald-500'}>{cashFlowAmount(value, masked)}</strong></div>
-                    {value.notes && <p className="mt-2 break-words text-[10px] text-muted-foreground">{value.notes}</p>}
                     <div className="mt-2 flex items-center justify-end gap-1">
                       <Button variant="ghost" size="sm" disabled={isBusy} onClick={() => onEditCashFlow(value)}>Edit</Button>
                       <Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDeleteCashFlow(value)}>Delete</Button>
@@ -1234,20 +1234,14 @@ const AccountForm = ({ appCurrency = 'USD', busy, onCancel, onSave }: { appCurre
   </form>
 }
 
-const InstrumentForm = ({ appCurrency = 'USD', busy, offline, onCancel, onSave }: { appCurrency?: string; busy: boolean; offline: boolean; onCancel: () => void; onSave: (value: api.InstrumentMutation) => Promise<boolean> }) => {
-  const [manual, setManual] = useState(false)
+const InstrumentForm = ({ busy, offline, onCancel, onSave }: { busy: boolean; offline: boolean; onCancel: () => void; onSave: (value: api.InstrumentMutation) => Promise<boolean> }) => {
   const [query, setQuery] = useState('')
   const [searching, setSearching] = useState(false)
   const [results, setResults] = useState<InstrumentSearchResult[]>([])
   const [message, setMessage] = useState('')
   const [selected, setSelected] = useState<InstrumentSearchResult | null>(null)
-  const [symbol, setSymbol] = useState('')
-  const [name, setName] = useState('')
-  const [type, setType] = useState<'Stock' | 'ETF' | 'MutualFund'>('Stock')
-  const [currency, setCurrency] = useState(appCurrency)
-  const [errors, setErrors] = useState<Record<string, string>>({})
   useEffect(() => {
-    if (manual || offline || query.trim().length < 3) {
+    if (offline || query.trim().length < 3) {
       setResults([])
       setMessage(query.trim().length > 0 && query.trim().length < 3 ? 'Enter at least three characters.' : '')
       return
@@ -1263,28 +1257,9 @@ const InstrumentForm = ({ appCurrency = 'USD', busy, offline, onCancel, onSave }
         .finally(() => { if (!abort.signal.aborted) setSearching(false) })
     }, 600)
     return () => { window.clearTimeout(timer); abort.abort() }
-  }, [query, manual, offline])
-  const saveManual = (event: React.FormEvent) => {
-    event.preventDefault()
-    if (!symbol.trim()) { setErrors({ symbol: 'Ticker is required.' }); return; }
-    if (!name.trim()) { setErrors({ name: 'Full name is required.' }); return; }
-    setErrors({})
-    void onSave({ symbol, name, type, currency, isCustom: true })
-  }
+  }, [query, offline])
   return <div className="space-y-4">
-    <div className="flex gap-1 rounded-xl bg-muted/40 p-1 w-fit">
-      <button type="button" onClick={() => setManual(false)} className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${!manual ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>Search markets</button>
-      <button type="button" onClick={() => setManual(true)} className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${manual ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>Custom / manual</button>
-    </div>
-    {manual ? <form noValidate className="space-y-4" onSubmit={saveManual}>
-      <div className={formGridWideClass}>
-        <Field label="Ticker" error={errors.symbol}><input maxLength={32} value={symbol} onChange={event => { setSymbol(event.target.value.toUpperCase()); setErrors(prev => ({ ...prev, symbol: '' })) }} className={getInputClass(!!errors.symbol)} /></Field>
-        <Field label="Full name" error={errors.name} className="lg:col-span-2"><input maxLength={200} value={name} onChange={event => { setName(event.target.value); setErrors(prev => ({ ...prev, name: '' })) }} className={getInputClass(!!errors.name)} /></Field>
-        <Field label="Type" plain><CustomSelect value={type} onChange={v => setType(v as 'Stock' | 'ETF' | 'MutualFund')} options={[{ value: 'Stock', label: 'Stock' }, { value: 'ETF', label: 'ETF' }, { value: 'MutualFund', label: 'Mutual fund' }]} ariaLabel="Investment type" className="w-full" /></Field>
-        <Field label="Currency" plain><CurrencySelect value={currency} onChange={setCurrency} className="w-full" ariaLabel="Investment currency" /></Field>
-      </div>
-      <FormActions busy={busy} onCancel={onCancel} submitLabel="Save investment" />
-    </form> : <>
+    <>
       <Field label="Symbol or company / fund name"><span className="relative block"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><input value={query} onChange={event => { setQuery(event.target.value); setSelected(null) }} placeholder="Search at least 3 characters" className={`${inputClass} pl-9`} />{searching && <Loader2 className="absolute right-3 top-3 size-4 animate-spin text-blue-500" />}</span></Field>
       {message && <p className="text-xs text-muted-foreground">{message}</p>}
       {selected ? (
@@ -1302,7 +1277,7 @@ const InstrumentForm = ({ appCurrency = 'USD', busy, offline, onCancel, onSave }
         <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
         <Button disabled={busy || !selected || !selected.availableOnBasic} onClick={() => selected && void onSave({ symbol: selected.symbol, name: selected.name, type: selected.type, currency: selected.currency, exchange: selected.exchange, mic: selected.mic, country: selected.country, providerSymbol: selected.symbol, providerMic: selected.mic, isCustom: false })}>{busy && <Loader2 className="size-4 animate-spin" />} Save investment</Button>
       </div>
-    </>}
+    </>
   </div>
 }
 
@@ -1319,7 +1294,6 @@ const ActivityForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccoun
   const [fees, setFees] = useState(String(initial?.fees ?? 0))
   const [taxes, setTaxes] = useState(String(initial?.taxes ?? 0))
   const [fx, setFx] = useState(initial?.tradeFxRate ? String(initial.tradeFxRate) : '')
-  const [notes, setNotes] = useState(initial?.notes ?? '')
   const [destination, setDestination] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const selectedInstrument = instruments.find(value => value.id === instrumentId)
@@ -1374,7 +1348,7 @@ const ActivityForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccoun
     void onSave({
       accountId, instrumentId, type, tradeDate,
       units: numberOrUndefined(units), unitPrice: numberOrUndefined(unitPrice), cashAmount: numberOrUndefined(cashAmount),
-      fees: Number(fees || 0), taxes: Number(taxes || 0), tradeFxRate: numberOrUndefined(fx), notes,
+      fees: Number(fees || 0), taxes: Number(taxes || 0), tradeFxRate: numberOrUndefined(fx),
       destinationAccountId: type === 'TransferOut' && destination ? destination : undefined,
     })
   }
@@ -1398,7 +1372,6 @@ const ActivityForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccoun
       </Field>
     )}
     {type === 'TransferOut' && <Field label="Destination" error={errors.destination} plain><CustomSelect value={destination} onChange={v => { setDestination(v as string); setErrors(prev => ({ ...prev, destination: '' })) }} options={[{ value: '', label: 'External transfer out' }, ...accounts.filter(a => a.id !== accountId).map(a => ({ value: a.id, label: a.name }))]} ariaLabel="Transfer destination" className={`w-full ${errors.destination ? 'border border-destructive rounded-xl' : ''}`} /></Field>}
-    <Field label="Notes" className="sm:col-span-2 lg:col-span-4"><input maxLength={1000} value={notes} onChange={event => setNotes(event.target.value)} className={inputClass} /></Field>
     </div>
     {trade && <p className="text-[10px] text-muted-foreground">Fill any two of units, unit price, and gross amount — the third is worked out for you.</p>}
     {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && <p className="text-[10px] text-muted-foreground">Amounts stay in {selectedInstrument.currency}. Leave Trade FX blank to convert at the market rate for that date.</p>}
@@ -1437,7 +1410,7 @@ const CashForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccount }:
   initial?: InvestmentCashFlow | null
   busy: boolean
   onCancel: () => void
-  onSave: (value: { accountId: string; currency: string; type: 'Deposit' | 'Withdrawal' | 'Conversion'; amount: number; date: string; notes?: string; toCurrency?: string; toAmount?: number; fxRate?: number }) => Promise<boolean>
+  onSave: (value: { accountId: string; currency: string; type: 'Deposit' | 'Withdrawal' | 'Conversion'; amount: number; date: string; toCurrency?: string; toAmount?: number }) => Promise<boolean>
   onNeedAccount: () => void
 }) => {
   const accounts = portfolio?.accounts.filter(value => !value.isArchived) ?? []
@@ -1447,9 +1420,7 @@ const CashForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccount }:
   const [amount, setAmount] = useState(initial?.amount ? String(Math.abs(initial.amount)) : '')
   const [toCurrency, setToCurrency] = useState(initial?.toCurrency ?? currency)
   const [toAmount, setToAmount] = useState(initial?.toAmount ? String(initial.toAmount) : '')
-  const [fxRate, setFxRate] = useState(initial?.fxRate ? initial.fxRate.toFixed(10).replace(/\.?0+$/, '') : '')
   const [date, setDate] = useState(initial?.date ?? today())
-  const [notes, setNotes] = useState(initial?.notes ?? '')
   const [errors, setErrors] = useState<Record<string, string>>({})
   if (!accounts.length) return <div><p className="text-sm text-muted-foreground">Add an investment account before recording cash.</p><div className="mt-4"><Button onClick={onNeedAccount}>Add account</Button></div></div>
   const submit = (event: React.FormEvent) => {
@@ -1467,10 +1438,8 @@ const CashForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccount }:
       type,
       amount: Number(amount || 0),
       date, 
-      notes: notes.trim() || undefined,
       toCurrency: type === 'Conversion' ? toCurrency.toUpperCase() : undefined,
       toAmount: type === 'Conversion' ? Number(toAmount || 0) : undefined,
-      fxRate: type === 'Conversion' && fxRate ? Number(fxRate) : undefined,
     })
   }
   return <form noValidate onSubmit={submit} className="space-y-4">
@@ -1483,9 +1452,6 @@ const CashForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccount }:
           <Field label="From currency" plain><CurrencySelect value={currency} onChange={setCurrency} className="w-full" ariaLabel="From currency" /></Field>
           <Field label="To amount" error={errors.toAmount}><input type="number" min="0.0000000001" step="0.0000000001" value={toAmount} onChange={event => { setToAmount(event.target.value); setErrors(prev => ({ ...prev, toAmount: '' })) }} className={getInputClass(!!errors.toAmount)} /></Field>
           <Field label="To currency" plain><CurrencySelect value={toCurrency} onChange={setToCurrency} className="w-full" ariaLabel="To currency" /></Field>
-          <Field label={`Rate ${currency}→${toCurrency} (optional)`} hint="Left blank, it is worked out for you.">
-            <input type="number" min="0" step="0.0000000001" value={fxRate} onChange={event => setFxRate(event.target.value)} className={inputClass} />
-          </Field>
         </>
       ) : (
         <>
@@ -1494,7 +1460,6 @@ const CashForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccount }:
         </>
       )}
       <Field label="Date" plain><DatePicker value={date} onChange={setDate} max={today()} className="w-full" /></Field>
-      <Field label="Notes" className="sm:col-span-2"><input maxLength={1000} value={notes} onChange={event => setNotes(event.target.value)} className={inputClass} /></Field>
     </div>
     <p className="text-[10px] text-muted-foreground">For money moved in or out of the broker account itself. Buys, sells, dividends, and fees adjust cash on their own.</p>
     <FormActions busy={busy} onCancel={onCancel} submitLabel={initial ? 'Save changes' : type === 'Conversion' ? 'Record conversion' : type === 'Withdrawal' ? 'Record withdrawal' : 'Record deposit'} disabled={!accountId} />

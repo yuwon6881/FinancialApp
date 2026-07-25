@@ -56,7 +56,6 @@ export interface InvestmentActivity {
   fees: number
   taxes: number
   tradeFxRate?: number
-  notes?: string
   linkedTransferId?: string
   isPairedTransfer?: boolean
   createdAt: string
@@ -107,12 +106,10 @@ export interface InvestmentCashFlow {
   currency: string
   type: InvestmentCashFlowType
   amount: number
-  // Conversions only: the currency bought, its amount, and the rate applied.
+  // Conversions only: the currency bought and its amount.
   toCurrency?: string
   toAmount?: number
-  fxRate?: number
   date: string
-  notes?: string
   isPendingSync?: boolean
   isPendingDelete?: boolean
 }

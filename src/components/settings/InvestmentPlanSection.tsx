@@ -128,7 +128,7 @@ export function InvestmentPlanSection() {
     queueInvestmentMutation('investmentAllocation', 'update', instrumentId, { sleeve: sleeve ?? null })
   }
 
-  if (loading && !overview) {
+  if (!overview && (loading || isOffline)) {
     return <div className="flex h-40 items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>
   }
 
