@@ -31,8 +31,8 @@ describe('InvestmentPlanPanel guidance', () => {
   it('omits the guidance section when every sleeve is within its configured drift', () => {
     render(<InvestmentPlanPanel allocation={allocation} usdRate={0.25} masked={false} onNavigate={vi.fn()} />)
 
-    expect(screen.getByText('Actual versus target')).toBeTruthy()
-    expect(screen.queryByText('Priority guidance')).toBeNull()
+    expect(screen.getByText('What you hold vs your target')).toBeTruthy()
+    expect(screen.queryByText('What to do next')).toBeNull()
   })
 
   it('shows every ordered scenario step and defaults to reporting currency', () => {
@@ -48,7 +48,7 @@ describe('InvestmentPlanPanel guidance', () => {
     }
     render(<InvestmentPlanPanel allocation={watch} usdRate={0.25} masked={false} onNavigate={vi.fn()} />)
 
-    expect(screen.getByText('Priority guidance')).toBeTruthy()
+    expect(screen.getByText('What to do next')).toBeTruthy()
     expect(screen.getByText(/usual completed-cycle Growth deposit/).textContent).toContain('RM')
     expect(screen.getByText(/Only after investing new money/)).toBeTruthy()
     expect(screen.getByText(/Reinvest/)).toBeTruthy()

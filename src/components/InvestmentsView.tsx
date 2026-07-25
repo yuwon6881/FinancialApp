@@ -31,8 +31,10 @@ import { CycleSkeleton } from './ui/Skeleton'
 import { CustomSelect } from './ui/CustomSelect'
 import { DatePicker } from './ui/DatePicker'
 import { CurrencySelect } from './ui/CurrencySelect'
+import { InfoHint } from './ui/InfoHint'
 import { useInvestmentPortfolio } from './investments/useInvestmentPortfolio'
 import { applyOpsToList } from '../lib/outbox'
+import { sortActivityNewestFirst, sortCashFlowsNewestFirst } from '../lib/investmentOrdering'
 import { RowSyncStatus } from './ui/RowSyncBadge'
 import { InvestmentPlanPanel } from './investments/InvestmentPlanPanel'
 import { InteractiveDoughnutChart } from './ui/InteractiveDoughnutChart'
@@ -72,10 +74,39 @@ const today = () => {
   return `${year}-${month}-${day}`
 }
 const numberOrUndefined = (value: string) => value.trim() === '' ? undefined : Number(value)
-const inputClass = 'w-full rounded-xl border border-border/60 bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:border-blue-500'
-const getInputClass = (hasError?: boolean) => hasError ? 'w-full rounded-xl border border-destructive bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:border-destructive focus:ring-1 focus:ring-destructive transition duration-200' : inputClass
+// Height matches CustomSelect / DatePicker / CurrencySelect (h-10) so every control
+// in a modal row lines up and measures the same, whatever kind of input it is.
+const inputClass = 'h-10 w-full rounded-xl border border-border/60 bg-background px-3 text-sm text-foreground outline-none focus:border-blue-500'
+const getInputClass = (hasError?: boolean) => hasError ? 'h-10 w-full rounded-xl border border-destructive bg-background px-3 text-sm text-foreground outline-none focus:border-destructive focus:ring-1 focus:ring-destructive transition duration-200' : inputClass
 const InputError = ({ error }: { error?: string }) => error ? <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">{error}</p> : null
-const labelClass = 'space-y-1.5 text-xs font-semibold text-muted-foreground'
+// One column per control on mobile, aligned rows from `sm` up. `items-start` keeps
+// every field pinned to the top of its row so a field with a hint or an error cannot
+// shift its neighbours.
+const formGridClass = 'grid items-start gap-4 sm:grid-cols-2'
+const formGridWideClass = 'grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-4'
+
+/**
+ * A single modal field: fixed-height caption, then the control, then optional hint or
+ * error. Every field is built this way so controls share one baseline across the row.
+ */
+const Field = ({ label, hint, error, className = '', plain, children }: {
+  label: React.ReactNode
+  hint?: string
+  error?: string
+  className?: string
+  /** Set for popover controls (select, date picker) so a caption click cannot re-toggle them. */
+  plain?: boolean
+  children: React.ReactNode
+}) => {
+  const Wrapper = plain ? 'div' : 'label'
+  return (
+    <Wrapper className={`flex min-w-0 flex-col ${className}`}>
+      <span className="mb-1.5 block h-4 truncate text-xs font-semibold leading-4 text-muted-foreground">{label}</span>
+      {children}
+      {error ? <InputError error={error} /> : hint ? <span className="mt-1 block text-[10px] font-normal leading-relaxed text-muted-foreground">{hint}</span> : null}
+    </Wrapper>
+  )
+}
 const interactivePanelClass = 'interactive-card app-panel rounded-2xl border border-border/60 bg-card/92'
 
 const money = (value: number, currency: string) =>
@@ -163,7 +194,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
           </button>
           <div>
             <h1 className="text-2xl font-black tracking-tight text-foreground">Growth Investments</h1>
-            <p className="mt-1 text-xs text-muted-foreground">Broker-neutral portfolio tracker.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Track what you own, across any broker.</p>
           </div>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
@@ -187,13 +218,13 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
       {(isOffline || loadError) && (
         <div role="status" className="flex items-center gap-2 rounded-xl border border-amber-500/25 bg-amber-500/8 px-4 py-3 text-xs text-amber-700 dark:text-amber-300">
           <CloudOff className="size-4 shrink-0" />
-          {isOffline ? 'Offline: showing the last cached snapshot. Changes will be queued; market refresh remains unavailable.' : loadError}
+          {isOffline ? 'You are offline, so this is the last saved copy. Edits are queued and prices cannot refresh yet.' : loadError}
         </div>
       )}
 
       {!portfolio?.marketDataConfigured && (
         <div className="rounded-xl border border-blue-500/20 bg-blue-500/7 px-4 py-3 text-xs text-muted-foreground">
-          Live market data is not configured. Accounts, custom investments, activity, and manual prices remain available.
+          Live prices are not switched on yet. You can still add accounts, investments, activity, and your own prices.
         </div>
       )}
 
@@ -312,8 +343,8 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
           />
           {portfolio.warnings.length > 0 && (
             <details className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
-              <summary id="calculation-warnings" className="cursor-pointer text-sm font-bold text-foreground">Calculation notes</summary>
-              <p className="mt-1 text-[10px] text-muted-foreground">These warnings explain why some values show as incomplete above. Most clear once you run "Update prices" (which fetches the market FX rates for each trade date automatically). If the provider has no rate for a date, supply one via the "Manual price" button or by entering the trade FX rate when editing the activity.</p>
+              <summary id="calculation-warnings" className="cursor-pointer text-sm font-bold text-foreground">Why some figures are missing</summary>
+              <p className="mt-1 text-[10px] text-muted-foreground">Most clear up after "Update prices"; otherwise add the missing price yourself with "Manual price".</p>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-muted-foreground">
                 {portfolio.warnings.map(warning => <li key={warning}>{warning}</li>)}
               </ul>
@@ -368,88 +399,117 @@ const EmptyState = ({ onAddAccount, onAddInvestment }: { onAddAccount: () => voi
   </section>
 )
 
+interface SummaryMetric {
+  label: string
+  value: string
+  hint: string
+  color?: string
+}
+
 const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; masked: boolean }) => {
   const reduceMotion = useReducedMotion()
-  const format = (value?: number, suffix = '') => value === undefined ? 'Incomplete' : masked ? '••••' : `${money(value, portfolio.appCurrency)}${suffix}`
+  const currency = portfolio.appCurrency
+  const format = (value?: number) => value === undefined ? 'Not available yet' : masked ? '••••' : money(value, currency)
+  const signed = (value?: number) => value === undefined
+    ? 'Not available yet'
+    : masked ? '••••' : `${value > 0 ? '+' : ''}${money(value, currency)}`
   const unrealised = portfolio.summary.unrealisedProfitLoss
   const realised = portfolio.summary.realisedProfitLoss
   const daily = portfolio.summary.dailyChange
+  const percent = portfolio.summary.unrealisedPercent
 
-  const getColor = (val?: number) => {
-    if (val === undefined) return 'text-amber-500'
-    if (val > 0) return 'text-emerald-500'
-    if (val < 0) return 'text-orange-500'
+  const tone = (value?: number) => {
+    if (value === undefined) return 'text-amber-500'
+    if (value > 0) return 'text-emerald-500'
+    if (value < 0) return 'text-orange-500'
     return 'text-foreground'
   }
-
-  const getStyle = (val?: number) => {
-    if (val === undefined) return 'bg-card/92 border-border/60'
-    if (val > 0) return 'bg-emerald-500/5 border-emerald-500/20'
-    if (val < 0) return 'bg-orange-500/5 border-orange-500/20'
-    return 'bg-card/92 border-border/60'
+  const cardTone = (value?: number) => {
+    if (value === undefined || value === 0) return 'bg-card/92 border-border/60'
+    return value > 0 ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-orange-500/5 border-orange-500/20'
   }
 
-  const groups = [
+  const cards: Array<{
+    label: string
+    hint: string
+    bg: string
+    hero: { label: string; value: string; color?: string }
+    rows: SummaryMetric[]
+  }> = [
     {
-      label: 'Portfolio value',
+      label: 'What it is worth',
+      hint: `Everything in your broker accounts right now, shown in ${currency}.`,
       bg: 'bg-card/92 border-border/60',
-      metrics: [
-        { label: 'Current total', value: format(portfolio.summary.totalValue), color: portfolio.summary.totalValue === undefined ? 'text-amber-500' : 'text-foreground' },
-        { label: 'Invested', value: format(portfolio.summary.marketValue), color: portfolio.summary.marketValue === undefined ? 'text-amber-500' : 'text-foreground' },
-        { label: 'Cash', value: format(portfolio.summary.cashValue), color: portfolio.summary.cashValue === undefined ? 'text-amber-500' : 'text-foreground' },
-        { label: 'Open cost basis', value: format(portfolio.summary.costBasis), color: portfolio.summary.costBasis === undefined ? 'text-amber-500' : 'text-foreground' },
+      hero: { label: 'Total today', value: format(portfolio.summary.totalValue), color: portfolio.summary.totalValue === undefined ? 'text-amber-500' : 'text-foreground' },
+      rows: [
+        { label: 'In investments', value: format(portfolio.summary.marketValue), hint: 'Value of the shares and funds you hold, at their latest prices.' },
+        { label: 'In cash', value: format(portfolio.summary.cashValue), hint: 'Uninvested money sitting in your broker accounts.' },
+        { label: 'You paid', value: format(portfolio.summary.costBasis), hint: 'What the investments you still hold originally cost you.' },
       ],
-      note: 'Holdings and settlement cash in the reporting currency.',
     },
     {
-      label: 'Funding',
+      label: 'Money you put in',
+      hint: 'How much of your own money has gone towards investing, before any gains.',
       bg: 'bg-blue-500/5 border-blue-500/20',
-      metrics: [
-        { label: 'Net broker deposits', value: format(portfolio.summary.netDeposits), color: portfolio.summary.netDeposits === undefined ? 'text-amber-500' : 'text-foreground' },
-        { label: 'Allocated to Growth', value: format(portfolio.summary.growthContributions ?? 0), color: 'text-blue-500' },
-        { label: 'Growth ledger available', value: format(portfolio.summary.growthLedgerBalance), color: portfolio.summary.growthLedgerBalance >= 0 ? 'text-foreground' : 'text-orange-500' },
+      hero: { label: 'Sent to broker', value: format(portfolio.summary.netDeposits), color: portfolio.summary.netDeposits === undefined ? 'text-amber-500' : 'text-foreground' },
+      rows: [
+        { label: 'Set aside to invest', value: format(portfolio.summary.growthContributions ?? 0), hint: 'Total you have earmarked for investing in your budget so far.', color: 'text-blue-500' },
+        { label: 'Not yet sent', value: format(portfolio.summary.growthLedgerBalance), hint: 'Money earmarked for investing that is still in your budget, not with the broker.', color: portfolio.summary.growthLedgerBalance >= 0 ? 'text-foreground' : 'text-orange-500' },
       ],
-      note: 'Growth allocated is historical funding; some may remain in the Growth ledger instead of the broker.',
     },
     {
-      label: 'Investment returns',
-      bg: getStyle(unrealised),
-      metrics: [
-        { label: 'Unrealised', value: unrealised === undefined ? 'Incomplete' : masked ? '••••' : `${unrealised > 0 ? '+' : ''}${money(unrealised, portfolio.appCurrency)} · ${((portfolio.summary.unrealisedPercent ?? 0) > 0 ? '+' : '')}${(portfolio.summary.unrealisedPercent ?? 0).toFixed(1)}%`, color: getColor(unrealised) },
-        { label: 'Realised', value: realised === undefined ? 'Incomplete' : masked ? '••••' : `${realised > 0 ? '+' : ''}${money(realised, portfolio.appCurrency)}`, color: getColor(realised) },
+      label: 'Profit and loss',
+      hint: 'Your gain or loss so far: what is still on paper, plus what you have already banked.',
+      bg: cardTone(unrealised),
+      hero: {
+        label: 'On paper',
+        value: unrealised === undefined || masked
+          ? signed(unrealised)
+          : `${signed(unrealised)} · ${(percent ?? 0) > 0 ? '+' : ''}${(percent ?? 0).toFixed(1)}%`,
+        color: tone(unrealised),
+      },
+      rows: [
+        { label: 'Already banked', value: signed(realised), hint: 'Profit or loss locked in on investments you have sold, after fees and taxes.', color: tone(realised) },
       ],
-      note: 'Unrealised uses current value; realised reflects closed units and charges.',
     },
     {
-      label: 'Income & movement',
-      bg: getStyle(daily),
-      metrics: [
-        { label: 'Net dividends', value: format(portfolio.summary.netDividends), color: portfolio.summary.netDividends === undefined ? 'text-amber-500' : 'text-foreground' },
-        { label: 'Daily change', value: daily === undefined ? 'Incomplete' : masked ? '••••' : `${daily > 0 ? '+' : ''}${money(daily, portfolio.appCurrency)}`, color: getColor(daily) },
+      label: 'Income and today',
+      hint: 'Cash your investments paid you, and how much their value moved today.',
+      bg: cardTone(daily),
+      hero: { label: 'Change today', value: signed(daily), color: tone(daily) },
+      rows: [
+        { label: 'Dividends received', value: format(portfolio.summary.netDividends), hint: 'Payouts your investments have paid you, after any tax withheld.' },
       ],
-      note: 'Dividends are after charges; daily change uses the latest cached closes.',
     },
   ]
+
   return (
     <section aria-label="Investment summary" className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      {groups.map(({ label, metrics, note, bg }, index) => (
+      {cards.map(({ label, hint, hero, rows, bg }, index) => (
         <motion.article
           key={label}
-          className={`interactive-card app-panel rounded-2xl border p-4 ${bg}`}
+          className={`interactive-card app-panel flex flex-col rounded-2xl border p-4 ${bg}`}
           initial={reduceMotion ? false : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: reduceMotion ? 0 : index * 0.035, ease: 'easeOut' }}
         >
-          <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
-          <div className="mt-3 divide-y divide-border/40">
-            {metrics.map(metric => (
-              <div key={metric.label} className="flex items-start justify-between gap-3 py-2 first:pt-0">
-                <span className="text-[10px] text-muted-foreground">{metric.label}</span>
-                <strong className={`min-w-0 break-words text-right text-sm ${metric.color}`}>{metric.value}</strong>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
+            <InfoHint label={label} text={hint} />
+          </div>
+          <p className="mt-2 text-[10px] text-muted-foreground">{hero.label}</p>
+          <strong className={`block break-words text-xl font-black leading-tight ${hero.color ?? 'text-foreground'}`}>{hero.value}</strong>
+          <div className="mt-3 divide-y divide-border/40 border-t border-border/40 pt-1">
+            {rows.map(row => (
+              <div key={row.label} className="flex items-center justify-between gap-2 py-2">
+                <span className="flex min-w-0 items-center gap-0.5 text-[11px] text-muted-foreground">
+                  <span className="truncate">{row.label}</span>
+                  <InfoHint label={row.label} text={row.hint} />
+                </span>
+                <strong className={`shrink-0 break-words text-right text-sm ${row.color ?? 'text-foreground'}`}>{row.value}</strong>
               </div>
             ))}
           </div>
-          <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">{note}</p>
         </motion.article>
       ))}
     </section>
@@ -635,7 +695,7 @@ const ValueChart = ({ portfolio, masked, range, isFetching, onRangeChange }: { p
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 id="value-chart-title" className="text-base font-bold text-foreground">Portfolio value</h2>
-          <p className="mt-1 text-xs text-muted-foreground">Historical holdings plus reconstructed settlement cash.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Your investments plus cash, over time.</p>
         </div>
         <div className="flex max-w-full shrink-0 gap-1 self-start overflow-x-auto rounded-xl bg-muted/40 p-1" role="group" aria-label="Chart range">
           {ranges.map(item => (
@@ -653,11 +713,11 @@ const ValueChart = ({ portfolio, masked, range, isFetching, onRangeChange }: { p
       </div>
       <p className="sr-only">{summary}</p>
       {portfolio.chart.length === 0 ? (
-        <div className="flex h-60 items-center justify-center text-xs text-muted-foreground">Add activity to create a value history.</div>
+        <div className="flex h-60 items-center justify-center text-xs text-muted-foreground">Add some activity to start the history.</div>
       ) : !hasAnyMarketValue ? (
         <div className="flex h-60 flex-col items-center justify-center gap-2 text-center text-xs text-muted-foreground">
           <span className="text-amber-500 font-semibold">Chart unavailable</span>
-          <span className="max-w-xs">Market values cannot be plotted because prices or FX rates are missing. Supply prices via "Update prices" or "Manual price", and add missing trade FX rates by editing each activity.</span>
+          <span className="max-w-xs">Some prices are missing. Try "Update prices", or add them yourself with "Manual price".</span>
         </div>
       ) : (
         <div className="relative mt-5">
@@ -1026,19 +1086,21 @@ const PagedActivityTable = ({
     setAppliedFilters({ accountId: '', instrumentId: '', type: '', from: '', to: '' })
     setPage(1)
   }
-  const displayTransactions = applyOpsToList(transactions, projectedOperations, 'investmentActivity').filter(value =>
+  // Re-sorted locally with the same key the server uses, so editing a date moves the
+  // row straight away and the server response only confirms where it landed.
+  const displayTransactions = sortActivityNewestFirst(applyOpsToList(transactions, projectedOperations, 'investmentActivity').filter(value =>
     (!appliedFilters.accountId || value.accountId === appliedFilters.accountId) &&
     (!appliedFilters.instrumentId || value.instrumentId === appliedFilters.instrumentId) &&
     (!appliedFilters.type || value.type === appliedFilters.type) &&
     (!appliedFilters.from || value.tradeDate >= appliedFilters.from) &&
-    (!appliedFilters.to || value.tradeDate <= appliedFilters.to))
-  const displayCashFlows = applyOpsToList(cashFlows, projectedOperations, 'investmentCashFlow')
+    (!appliedFilters.to || value.tradeDate <= appliedFilters.to)))
+  const displayCashFlows = sortCashFlowsNewestFirst(applyOpsToList(cashFlows, projectedOperations, 'investmentCashFlow')
     .map(value => value.isPendingSync && value.type === 'Withdrawal' && value.amount > 0 ? { ...value, amount: -value.amount } : value)
     .filter(value =>
       (!appliedFilters.accountId || value.accountId === appliedFilters.accountId) &&
       (!appliedFilters.type || value.type === appliedFilters.type) &&
       (!appliedFilters.from || value.date >= appliedFilters.from) &&
-      (!appliedFilters.to || value.date <= appliedFilters.to))
+      (!appliedFilters.to || value.date <= appliedFilters.to)))
   const rows = mode === 'investments' ? displayTransactions : displayCashFlows
   const activeOperation = projectedOperations.find(operation => operation.targetId === activeSyncId)
   const activeLabel = activeOperation?.type === 'delete' ? 'Deleting…'
@@ -1163,11 +1225,11 @@ const AccountForm = ({ appCurrency = 'USD', busy, onCancel, onSave }: { appCurre
     setErrors({})
     void onSave({ name, baseCurrency: currency }) 
   }}>
-    <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
-      <label className={labelClass}>Account name<input maxLength={120} value={name} onChange={event => { setName(event.target.value); setErrors({}) }} placeholder="e.g. Moomoo" className={getInputClass(!!errors.name)} /><InputError error={errors.name} /></label>
-      <label className={labelClass}>Base currency<CurrencySelect value={currency} onChange={setCurrency} className="mt-1.5" ariaLabel="Base currency" /></label>
+    <div className={formGridClass}>
+      <Field label="Account name" error={errors.name}><input maxLength={120} value={name} onChange={event => { setName(event.target.value); setErrors({}) }} placeholder="e.g. Moomoo" className={getInputClass(!!errors.name)} /></Field>
+      <Field label="Base currency" plain><CurrencySelect value={currency} onChange={setCurrency} className="w-full" ariaLabel="Base currency" /></Field>
     </div>
-    <p className="text-[10px] text-muted-foreground">Only a display name is stored. Broker credentials and broker API connections are not supported.</p>
+    <p className="text-[10px] text-muted-foreground">A display name only — no broker login is stored.</p>
     <FormActions busy={busy} onCancel={onCancel} submitLabel="Add account" />
   </form>
 }
@@ -1215,15 +1277,15 @@ const InstrumentForm = ({ appCurrency = 'USD', busy, offline, onCancel, onSave }
       <button type="button" onClick={() => setManual(true)} className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${manual ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>Custom / manual</button>
     </div>
     {manual ? <form className="space-y-4" onSubmit={saveManual}>
-      <div className="grid gap-4 sm:grid-cols-4">
-        <label className={labelClass}>Ticker<input maxLength={32} value={symbol} onChange={event => { setSymbol(event.target.value.toUpperCase()); setErrors(prev => ({ ...prev, symbol: '' })) }} className={getInputClass(!!errors.symbol)} /><InputError error={errors.symbol} /></label>
-        <label className={`${labelClass} sm:col-span-2`}>Full name<input maxLength={200} value={name} onChange={event => { setName(event.target.value); setErrors(prev => ({ ...prev, name: '' })) }} className={getInputClass(!!errors.name)} /><InputError error={errors.name} /></label>
-        <div className={labelClass}>Type<CustomSelect value={type} onChange={v => setType(v as 'Stock' | 'ETF' | 'MutualFund')} options={[{ value: 'Stock', label: 'Stock' }, { value: 'ETF', label: 'ETF' }, { value: 'MutualFund', label: 'Mutual fund' }]} ariaLabel="Investment type" className="mt-1.5 w-full" /></div>
-        <label className={labelClass}>Currency<CurrencySelect value={currency} onChange={setCurrency} className="mt-1.5" ariaLabel="Investment currency" /></label>
+      <div className={formGridWideClass}>
+        <Field label="Ticker" error={errors.symbol}><input maxLength={32} value={symbol} onChange={event => { setSymbol(event.target.value.toUpperCase()); setErrors(prev => ({ ...prev, symbol: '' })) }} className={getInputClass(!!errors.symbol)} /></Field>
+        <Field label="Full name" error={errors.name} className="lg:col-span-2"><input maxLength={200} value={name} onChange={event => { setName(event.target.value); setErrors(prev => ({ ...prev, name: '' })) }} className={getInputClass(!!errors.name)} /></Field>
+        <Field label="Type" plain><CustomSelect value={type} onChange={v => setType(v as 'Stock' | 'ETF' | 'MutualFund')} options={[{ value: 'Stock', label: 'Stock' }, { value: 'ETF', label: 'ETF' }, { value: 'MutualFund', label: 'Mutual fund' }]} ariaLabel="Investment type" className="w-full" /></Field>
+        <Field label="Currency" plain><CurrencySelect value={currency} onChange={setCurrency} className="w-full" ariaLabel="Investment currency" /></Field>
       </div>
       <FormActions busy={busy} onCancel={onCancel} submitLabel="Save investment" />
     </form> : <>
-      <label className={labelClass}>Symbol or company / fund name<div className="relative mt-1.5"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><input value={query} onChange={event => { setQuery(event.target.value); setSelected(null) }} placeholder="Search at least 3 characters" className={`${inputClass} pl-9`} />{searching && <Loader2 className="absolute right-3 top-3 size-4 animate-spin text-blue-500" />}</div></label>
+      <Field label="Symbol or company / fund name"><span className="relative block"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><input value={query} onChange={event => { setQuery(event.target.value); setSelected(null) }} placeholder="Search at least 3 characters" className={`${inputClass} pl-9`} />{searching && <Loader2 className="absolute right-3 top-3 size-4 animate-spin text-blue-500" />}</span></Field>
       {message && <p className="text-xs text-muted-foreground">{message}</p>}
       {selected ? (
         <div className="rounded-xl border border-blue-500 bg-blue-500/5 p-3">
@@ -1318,29 +1380,28 @@ const ActivityForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccoun
   }
   const feesLabelSuffix = selectedInstrument ? ` (${selectedInstrument.currency})` : ''
   return <form onSubmit={submit} className="space-y-4">
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-    <div className={labelClass}>Activity type<CustomSelect value={type} onChange={v => setType(v as InvestmentTransactionType)} options={activityTypes.map(t => ({ value: t.value, label: t.label }))} ariaLabel="Activity type" className="mt-1.5 w-full" /></div>
-    <div className={labelClass}>Account<CustomSelect value={accountId} onChange={v => setAccountId(v as string)} options={accounts.map(a => ({ value: a.id, label: a.name }))} ariaLabel="Account" className="mt-1.5 w-full" /></div>
-    <div className={labelClass}>Investment<CustomSelect value={instrumentId} onChange={v => setInstrumentId(v as string)} options={instruments.map(i => ({ value: i.id, label: `${i.symbol} · ${i.name}` }))} ariaLabel="Investment" className="mt-1.5 w-full" /></div>
-    <div className={labelClass}>Trade date<DatePicker value={tradeDate} onChange={setTradeDate} max={today()} className="mt-1.5 w-full" /></div>
-    {needsUnits && <label className={labelClass}>{type === 'Split' ? 'Split ratio' : 'Units'}<input type="number" min="0" step="0.0000000001" value={units} onChange={event => { noteEdit('units'); setUnits(event.target.value); setErrors(prev => ({ ...prev, units: '', form: '' })) }} className={getInputClass(!!errors.units)} /><InputError error={errors.units} /></label>}
-    {trade && <label className={labelClass}>Unit price ({selectedInstrument?.currency})<input type="number" min="0" step="0.0000000001" value={unitPrice} onChange={event => { noteEdit('price'); setUnitPrice(event.target.value); setErrors(prev => ({ ...prev, unitPrice: '', form: '' })) }} className={getInputClass(!!errors.unitPrice)} /><InputError error={errors.unitPrice} /></label>}
-    {type !== 'Split' && type !== 'TransferOut' && <label className={labelClass}>{type === 'TransferIn' ? 'Transferred cost basis' : type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} ({selectedInstrument?.currency})<input type="number" min={type === 'Dividend' ? '0.0000000001' : '0'} step="0.0000000001" value={cashAmount} onChange={event => { noteEdit('gross'); setCashAmount(event.target.value); setErrors(prev => ({ ...prev, cashAmount: '', form: '' })) }} className={getInputClass(!!errors.cashAmount)} /><InputError error={errors.cashAmount} /></label>}
-    {!['Split', 'TransferIn', 'TransferOut', 'FeeTax'].includes(type) && <><label className={labelClass}>Fees{feesLabelSuffix}<input type="number" min="0" step="0.0000000001" value={fees} onChange={event => setFees(event.target.value)} className={inputClass} /></label><label className={labelClass}>Taxes{feesLabelSuffix}<input type="number" min="0" step="0.0000000001" value={taxes} onChange={event => setTaxes(event.target.value)} className={inputClass} /></label></>}
+    <div className={formGridWideClass}>
+    <Field label="Activity type" plain><CustomSelect value={type} onChange={v => setType(v as InvestmentTransactionType)} options={activityTypes.map(t => ({ value: t.value, label: t.label }))} ariaLabel="Activity type" className="w-full" /></Field>
+    <Field label="Account" plain><CustomSelect value={accountId} onChange={v => setAccountId(v as string)} options={accounts.map(a => ({ value: a.id, label: a.name }))} ariaLabel="Account" className="w-full" /></Field>
+    <Field label="Investment" plain><CustomSelect value={instrumentId} onChange={v => setInstrumentId(v as string)} options={instruments.map(i => ({ value: i.id, label: `${i.symbol} · ${i.name}` }))} ariaLabel="Investment" className="w-full" /></Field>
+    <Field label="Trade date" plain><DatePicker value={tradeDate} onChange={setTradeDate} max={today()} className="w-full" /></Field>
+    {needsUnits && <Field label={type === 'Split' ? 'Split ratio' : 'Units'} error={errors.units}><input type="number" min="0" step="0.0000000001" value={units} onChange={event => { noteEdit('units'); setUnits(event.target.value); setErrors(prev => ({ ...prev, units: '', form: '' })) }} className={getInputClass(!!errors.units)} /></Field>}
+    {trade && <Field label={`Unit price (${selectedInstrument?.currency})`} error={errors.unitPrice}><input type="number" min="0" step="0.0000000001" value={unitPrice} onChange={event => { noteEdit('price'); setUnitPrice(event.target.value); setErrors(prev => ({ ...prev, unitPrice: '', form: '' })) }} className={getInputClass(!!errors.unitPrice)} /></Field>}
+    {type !== 'Split' && type !== 'TransferOut' && <Field label={`${type === 'TransferIn' ? 'Transferred cost' : type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} (${selectedInstrument?.currency})`} error={errors.cashAmount}><input type="number" min={type === 'Dividend' ? '0.0000000001' : '0'} step="0.0000000001" value={cashAmount} onChange={event => { noteEdit('gross'); setCashAmount(event.target.value); setErrors(prev => ({ ...prev, cashAmount: '', form: '' })) }} className={getInputClass(!!errors.cashAmount)} /></Field>}
+    {!['Split', 'TransferIn', 'TransferOut', 'FeeTax'].includes(type) && <>
+      <Field label={`Fees${feesLabelSuffix}`}><input type="number" min="0" step="0.0000000001" value={fees} onChange={event => setFees(event.target.value)} className={inputClass} /></Field>
+      <Field label={`Taxes${feesLabelSuffix}`}><input type="number" min="0" step="0.0000000001" value={taxes} onChange={event => setTaxes(event.target.value)} className={inputClass} /></Field>
+    </>}
     {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && (
-      <div>
-        <label className={labelClass}>
-          Trade FX {selectedInstrument.currency}→{portfolio?.appCurrency}
-          <input type="number" min="0" step="0.0000000001" value={fx} onChange={event => setFx(event.target.value)} className={inputClass} />
-        </label>
-        <div className="mt-1.5 text-[10px] text-muted-foreground">(Optional) executed broker rate.</div>
-      </div>
+      <Field label={`Trade FX ${selectedInstrument.currency}→${portfolio?.appCurrency}`} hint="Optional broker rate.">
+        <input type="number" min="0" step="0.0000000001" value={fx} onChange={event => setFx(event.target.value)} className={inputClass} />
+      </Field>
     )}
-    {type === 'TransferOut' && <div className={labelClass}>Destination<CustomSelect value={destination} onChange={v => { setDestination(v as string); setErrors(prev => ({ ...prev, destination: '' })) }} options={[{ value: '', label: 'External transfer out' }, ...accounts.filter(a => a.id !== accountId).map(a => ({ value: a.id, label: a.name }))]} ariaLabel="Transfer destination" className={`mt-1.5 w-full ${errors.destination ? 'border border-destructive rounded-xl' : ''}`} /><InputError error={errors.destination} /></div>}
-    <label className={`${labelClass} sm:col-span-2`}>Notes<input maxLength={1000} value={notes} onChange={event => setNotes(event.target.value)} className={inputClass} /></label>
+    {type === 'TransferOut' && <Field label="Destination" error={errors.destination} plain><CustomSelect value={destination} onChange={v => { setDestination(v as string); setErrors(prev => ({ ...prev, destination: '' })) }} options={[{ value: '', label: 'External transfer out' }, ...accounts.filter(a => a.id !== accountId).map(a => ({ value: a.id, label: a.name }))]} ariaLabel="Transfer destination" className={`w-full ${errors.destination ? 'border border-destructive rounded-xl' : ''}`} /></Field>}
+    <Field label="Notes" className="sm:col-span-2 lg:col-span-4"><input maxLength={1000} value={notes} onChange={event => setNotes(event.target.value)} className={inputClass} /></Field>
     </div>
-    {trade && <p className="text-[10px] text-muted-foreground">Enter any two of units, unit price, and gross amount; the missing value is calculated.</p>}
-    {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && <p className="text-[10px] text-muted-foreground">Amounts above stay in {selectedInstrument.currency}. Leave Trade FX blank to value them in {portfolio?.appCurrency} at the market rate for the trade date (fetched via "Update prices"); enter a rate only to override with your broker's executed rate.</p>}
+    {trade && <p className="text-[10px] text-muted-foreground">Fill any two of units, unit price, and gross amount — the third is worked out for you.</p>}
+    {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && <p className="text-[10px] text-muted-foreground">Amounts stay in {selectedInstrument.currency}. Leave Trade FX blank to convert at the market rate for that date.</p>}
     {errors.form && <p className="text-[11px] text-destructive font-medium animate-in fade-in slide-in-from-top-1 duration-150">{errors.form}</p>}
     <FormActions busy={busy} onCancel={onCancel} submitLabel="Save activity" />
   </form>
@@ -1360,13 +1421,13 @@ const ManualPriceForm = ({ portfolio, busy, onCancel, onSave }: { portfolio: Inv
     setErrors({})
     void onSave({ instrumentId, marketDate: date, price: Number(price), fxRate: numberOrUndefined(fx) }) 
   }}>
-    <div className="grid gap-4 sm:grid-cols-4">
-      <div className={labelClass}>Investment<CustomSelect value={instrumentId} onChange={v => setInstrumentId(v as string)} options={instruments.map(i => ({ value: i.id, label: i.symbol }))} ariaLabel="Investment" className="mt-1.5 w-full" /></div>
-      <div className={labelClass}>Market date<DatePicker value={date} onChange={setDate} max={today()} className="mt-1.5 w-full" /></div>
-      <label className={labelClass}>Close ({instrument?.currency})<input type="number" min="0.0000000001" step="0.0000000001" value={price} onChange={event => { setPrice(event.target.value); setErrors(prev => ({ ...prev, price: '' })) }} className={getInputClass(!!errors.price)} /><InputError error={errors.price} /></label>
-      {instrument && instrument.currency !== portfolio?.appCurrency && <label className={labelClass}>FX to {portfolio?.appCurrency} (optional)<input type="number" min="0.0000000001" step="0.0000000001" value={fx} onChange={event => setFx(event.target.value)} className={inputClass} /></label>}
+    <div className={formGridWideClass}>
+      <Field label="Investment" plain><CustomSelect value={instrumentId} onChange={v => setInstrumentId(v as string)} options={instruments.map(i => ({ value: i.id, label: i.symbol }))} ariaLabel="Investment" className="w-full" /></Field>
+      <Field label="Market date" plain><DatePicker value={date} onChange={setDate} max={today()} className="w-full" /></Field>
+      <Field label={`Close (${instrument?.currency})`} error={errors.price}><input type="number" min="0.0000000001" step="0.0000000001" value={price} onChange={event => { setPrice(event.target.value); setErrors(prev => ({ ...prev, price: '' })) }} className={getInputClass(!!errors.price)} /></Field>
+      {instrument && instrument.currency !== portfolio?.appCurrency && <Field label={`FX to ${portfolio?.appCurrency} (optional)`}><input type="number" min="0.0000000001" step="0.0000000001" value={fx} onChange={event => setFx(event.target.value)} className={inputClass} /></Field>}
     </div>
-    <p className="text-[10px] text-muted-foreground">A manual value takes precedence over provider data for the same date. Deleting it restores the cached provider close.</p>
+    <p className="text-[10px] text-muted-foreground">A price you enter wins over the provider for that date. Delete it to go back.</p>
     <FormActions busy={busy} onCancel={onCancel} submitLabel="Save price" disabled={!instrumentId} />
   </form>
 }
@@ -1413,36 +1474,29 @@ const CashForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccount }:
     })
   }
   return <form onSubmit={submit} className="space-y-4">
-    <div className="grid gap-4 sm:grid-cols-2">
-      <div className={labelClass}>Account<CustomSelect value={accountId} onChange={v => { const id = v as string; setAccountId(id); const next = accounts.find(value => value.id === id); if (next) { setCurrency(next.baseCurrency); if (!initial) setToCurrency(next.baseCurrency) } }} options={accounts.map(a => ({ value: a.id, label: a.name }))} ariaLabel="Account" className="mt-1.5 w-full" /></div>
-      <div className={labelClass}>Type<CustomSelect value={type} onChange={v => setType(v as 'Deposit' | 'Withdrawal' | 'Conversion')} options={[{ value: 'Deposit', label: 'Deposit (cash in)' }, { value: 'Withdrawal', label: 'Withdrawal (cash out)' }, { value: 'Conversion', label: 'Conversion (currency exchange)' }]} ariaLabel="Cash movement type" className="mt-1.5 w-full" /></div>
-      <div className={labelClass}>Date<DatePicker value={date} onChange={setDate} max={today()} className="mt-1.5 w-full" /></div>
-      
+    <div className={formGridClass}>
+      <Field label="Account" plain><CustomSelect value={accountId} onChange={v => { const id = v as string; setAccountId(id); const next = accounts.find(value => value.id === id); if (next) { setCurrency(next.baseCurrency); if (!initial) setToCurrency(next.baseCurrency) } }} options={accounts.map(a => ({ value: a.id, label: a.name }))} ariaLabel="Account" className="w-full" /></Field>
+      <Field label="Type" plain><CustomSelect value={type} onChange={v => setType(v as 'Deposit' | 'Withdrawal' | 'Conversion')} options={[{ value: 'Deposit', label: 'Deposit (cash in)' }, { value: 'Withdrawal', label: 'Withdrawal (cash out)' }, { value: 'Conversion', label: 'Convert currency' }]} ariaLabel="Cash movement type" className="w-full" /></Field>
       {type === 'Conversion' ? (
         <>
-          <label className={labelClass}>From amount<input type="number" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => { setAmount(event.target.value); setErrors(prev => ({ ...prev, amount: '' })) }} className={getInputClass(!!errors.amount)} /><InputError error={errors.amount} /></label>
-          <label className={labelClass}>From currency<CurrencySelect value={currency} onChange={setCurrency} className="mt-1.5" ariaLabel="From currency" /></label>
-          <label className={labelClass}>To amount<input type="number" min="0.0000000001" step="0.0000000001" value={toAmount} onChange={event => { setToAmount(event.target.value); setErrors(prev => ({ ...prev, toAmount: '' })) }} className={getInputClass(!!errors.toAmount)} /><InputError error={errors.toAmount} /></label>
-          <label className={labelClass}>To currency<CurrencySelect value={toCurrency} onChange={setToCurrency} className="mt-1.5" ariaLabel="To currency" /></label>
-          <div className="sm:col-span-2">
-            <label className={labelClass}>
-              Exchange rate {currency}→{toCurrency} (optional)
-              <input type="number" min="0" step="0.0000000001" value={fxRate} onChange={event => setFxRate(event.target.value)} className={inputClass} />
-            </label>
-            <div className="mt-1.5 text-[10px] text-muted-foreground font-normal">Derived automatically as To Amount / From Amount if left blank.</div>
-          </div>
+          <Field label="From amount" error={errors.amount}><input type="number" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => { setAmount(event.target.value); setErrors(prev => ({ ...prev, amount: '' })) }} className={getInputClass(!!errors.amount)} /></Field>
+          <Field label="From currency" plain><CurrencySelect value={currency} onChange={setCurrency} className="w-full" ariaLabel="From currency" /></Field>
+          <Field label="To amount" error={errors.toAmount}><input type="number" min="0.0000000001" step="0.0000000001" value={toAmount} onChange={event => { setToAmount(event.target.value); setErrors(prev => ({ ...prev, toAmount: '' })) }} className={getInputClass(!!errors.toAmount)} /></Field>
+          <Field label="To currency" plain><CurrencySelect value={toCurrency} onChange={setToCurrency} className="w-full" ariaLabel="To currency" /></Field>
+          <Field label={`Rate ${currency}→${toCurrency} (optional)`} hint="Left blank, it is worked out for you.">
+            <input type="number" min="0" step="0.0000000001" value={fxRate} onChange={event => setFxRate(event.target.value)} className={inputClass} />
+          </Field>
         </>
       ) : (
         <>
-          <label className={labelClass}>Amount ({currency})<input type="number" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => { setAmount(event.target.value); setErrors(prev => ({ ...prev, amount: '' })) }} className={getInputClass(!!errors.amount)} /><InputError error={errors.amount} /></label>
-          <label className={labelClass}>Currency<CurrencySelect value={currency} onChange={setCurrency} className="mt-1.5" ariaLabel="Cash currency" /></label>
+          <Field label={`Amount (${currency})`} error={errors.amount}><input type="number" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => { setAmount(event.target.value); setErrors(prev => ({ ...prev, amount: '' })) }} className={getInputClass(!!errors.amount)} /></Field>
+          <Field label="Currency" plain><CurrencySelect value={currency} onChange={setCurrency} className="w-full" ariaLabel="Cash currency" /></Field>
         </>
       )}
-      
-      <div className={labelClass}>Date<DatePicker value={date} onChange={setDate} max={today()} className="mt-1.5 w-full" /></div>
-      <label className={`${labelClass} sm:col-span-2`}>Notes<input maxLength={1000} value={notes} onChange={event => setNotes(event.target.value)} className={inputClass} /></label>
+      <Field label="Date" plain><DatePicker value={date} onChange={setDate} max={today()} className="w-full" /></Field>
+      <Field label="Notes" className="sm:col-span-2"><input maxLength={1000} value={notes} onChange={event => setNotes(event.target.value)} className={inputClass} /></Field>
     </div>
-    <p className="text-[10px] text-muted-foreground">Record cash you moved into or out of the broker account itself — not a stock purchase. Buys, sells, dividends, and fees adjust cash automatically.</p>
+    <p className="text-[10px] text-muted-foreground">For money moved in or out of the broker account itself. Buys, sells, dividends, and fees adjust cash on their own.</p>
     <FormActions busy={busy} onCancel={onCancel} submitLabel={initial ? 'Save changes' : type === 'Conversion' ? 'Record conversion' : type === 'Withdrawal' ? 'Record withdrawal' : 'Record deposit'} disabled={!accountId} />
   </form>
 }

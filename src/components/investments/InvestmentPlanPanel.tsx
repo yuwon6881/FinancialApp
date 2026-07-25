@@ -2,6 +2,7 @@ import { AlertTriangle, ArrowRight, CheckCircle2, CircleHelp, Settings2 } from '
 import { motion, useReducedMotion } from 'framer-motion'
 import type { AppTab, InvestmentAllocationOverview, InvestmentAllocationStatus } from '../../types'
 import { Button } from '../ui/Button'
+import { InfoHint } from '../ui/InfoHint'
 import { formatCurrencyVal } from '../../lib/utils'
 import { useState } from 'react'
 
@@ -61,9 +62,16 @@ export function InvestmentPlanPanel({
             <StatusIcon className="size-4" />
           </div>
           <div>
-            <h2 id="investment-plan-heading" className="text-base font-bold text-foreground">Three-fund investment plan</h2>
+            <h2 id="investment-plan-heading" className="flex items-center gap-1 text-base font-bold text-foreground">
+              Three-fund investment plan
+              <InfoHint
+                label="the three-fund plan"
+                align="left"
+                text="You pick a target mix of three baskets. This card shows the mix you actually hold across all your brokers, and what to buy next to get back to target."
+              />
+            </h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Portfolio-wide allocation across every brokerage account · {allocation.status.replace(/([A-Z])/g, ' $1').trim()}
+              Across every brokerage account · {allocation.status.replace(/([A-Z])/g, ' $1').trim()}
             </p>
           </div>
         </div>
@@ -95,7 +103,7 @@ export function InvestmentPlanPanel({
             <p className="mt-1 text-[10px] text-muted-foreground">
               {money(sleeve.value)}
               {sleeve.driftPercentagePoints !== undefined
-                ? ` · ${sleeve.driftPercentagePoints > 0 ? '+' : ''}${sleeve.driftPercentagePoints.toFixed(1)} pp`
+                ? ` · ${sleeve.driftPercentagePoints > 0 ? '+' : ''}${sleeve.driftPercentagePoints.toFixed(1)}% off target`
                 : ''}
             </p>
             <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-background/70">
@@ -113,7 +121,14 @@ export function InvestmentPlanPanel({
 
       <div className={`mt-5 grid gap-4 ${showGuidance ? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]' : ''}`}>
         <div className="rounded-xl border border-border/50 bg-muted/20 p-4 transition-all duration-300 hover:border-primary/20 hover:bg-muted/30 hover:shadow-sm">
-          <h3 className="text-xs font-bold text-foreground">Actual versus target</h3>
+          <h3 className="flex items-center gap-1 text-xs font-bold text-foreground">
+            What you hold vs your target
+            <InfoHint
+              label="what you hold versus your target"
+              align="left"
+              text="The top bar is the mix you hold today; the bottom bar is the mix you are aiming for. The closer they look, the better."
+            />
+          </h3>
           <div className="mt-3 space-y-3">
             <div>
               <div className="mb-1 flex justify-between text-[10px] text-muted-foreground"><span>Actual</span><span>100%</span></div>
@@ -142,7 +157,14 @@ export function InvestmentPlanPanel({
 
         {showGuidance && <div className="rounded-xl border border-border/50 bg-muted/20 p-4 transition-all duration-300 hover:border-primary/20 hover:bg-muted/30 hover:shadow-sm">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-foreground">Priority guidance</h3>
+            <h3 className="flex items-center gap-1 text-xs font-bold text-foreground">
+              What to do next
+              <InfoHint
+                label="what to do next"
+                align="left"
+                text="Steps in order, cheapest first: add new money before selling anything."
+              />
+            </h3>
             {usdRate !== undefined && allocation.appCurrency !== 'USD' && (
               <div className="flex rounded-xl bg-muted/40 p-1">
                 <button type="button" onClick={() => setShowUsd(true)} className={`rounded-lg px-2 py-1 text-[10px] font-bold transition-all duration-200 hover:text-foreground ${showUsd ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}>USD</button>
