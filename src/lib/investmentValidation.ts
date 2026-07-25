@@ -83,6 +83,29 @@ const activityCashEffect = (draft: ActivityBalanceDraft) => {
   }
 }
 
+/** Cash and units after applying activity records that have been queued locally. */
+export const availableActivityCash = (
+  portfolio: InvestmentPortfolio | null,
+  accountId: string,
+  currency: string,
+  pendingActivities: InvestmentActivity[] = [],
+) => availableCash(portfolio, accountId, currency) + pendingActivities
+  .filter(activity => activity.accountId === accountId)
+  .filter(activity => {
+    const instrument = portfolio?.instruments.find(value => value.id === activity.instrumentId)
+    return instrument && same(instrument.currency, currency)
+  })
+  .reduce((total, activity) => total + activityCashEffect(activity), 0)
+
+export const availableActivityUnits = (
+  portfolio: InvestmentPortfolio | null,
+  accountId: string,
+  instrumentId: string,
+  pendingActivities: InvestmentActivity[] = [],
+) => availableUnits(portfolio, accountId, instrumentId) + pendingActivities
+  .filter(activity => activity.accountId === accountId && activity.instrumentId === instrumentId)
+  .reduce((total, activity) => total + activityUnitsEffect(activity), 0)
+
 /** Signed effect of an activity on the units held. */
 const activityUnitsEffect = (draft: ActivityBalanceDraft) => {
   switch (draft.type) {
@@ -107,6 +130,7 @@ export function validateActivityBalances(
   portfolio: InvestmentPortfolio | null,
   draft: ActivityBalanceDraft,
   initial?: InvestmentActivity | null,
+  pendingActivities: InvestmentActivity[] = [],
 ): BalanceIssue | null {
   if (!portfolio) return null
   const account = portfolio.accounts.find(value => value.id === draft.accountId)
@@ -115,11 +139,12 @@ export function validateActivityBalances(
 
   const replaced = initial && initial.accountId === draft.accountId ? initial : null
   const sameInstrument = replaced && replaced.instrumentId === draft.instrumentId ? replaced : null
+  const pending = pendingActivities.filter(activity => activity.id !== initial?.id)
 
   const needed = -activityCashEffect(draft)
   if (needed > tolerance) {
-    const heldCash = availableCash(portfolio, draft.accountId, instrument.currency) -
-      (sameInstrument ? activityCashEffect(sameInstrument) : 0)
+    const heldCash = availableActivityCash(portfolio, draft.accountId, instrument.currency, pending) -
+      (sameInstrument && !initial?.isPendingSync ? activityCashEffect(sameInstrument) : 0)
     if (needed > heldCash + tolerance) {
       return {
         field: 'cashAmount',
@@ -132,8 +157,8 @@ export function validateActivityBalances(
 
   const removed = -activityUnitsEffect(draft)
   if (removed > tolerance) {
-    const heldUnits = availableUnits(portfolio, draft.accountId, draft.instrumentId) -
-      (sameInstrument ? activityUnitsEffect(sameInstrument) : 0)
+    const heldUnits = availableActivityUnits(portfolio, draft.accountId, draft.instrumentId, pending) -
+      (sameInstrument && !initial?.isPendingSync ? activityUnitsEffect(sameInstrument) : 0)
     if (removed > heldUnits + tolerance) {
       return {
         field: 'units',

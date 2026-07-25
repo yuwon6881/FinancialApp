@@ -34,7 +34,7 @@ import { CurrencySelect } from './ui/CurrencySelect'
 import { InfoHint } from './ui/InfoHint'
 import { useInvestmentPortfolio } from './investments/useInvestmentPortfolio'
 import { applyOpsToList } from '../lib/outbox'
-import { availableCash, availableUnits, validateActivityBalances, validateCashFlowBalances } from '../lib/investmentValidation'
+import { availableActivityCash, availableActivityUnits, availableCash, validateActivityBalances, validateCashFlowBalances } from '../lib/investmentValidation'
 import { sortActivityNewestFirst, sortCashFlowsNewestFirst } from '../lib/investmentOrdering'
 import { RowSyncStatus } from './ui/RowSyncBadge'
 import { InvestmentPlanPanel } from './investments/InvestmentPlanPanel'
@@ -159,6 +159,13 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
       id: operation.targetId,
       isPendingSync: true,
     })), [investmentOps])
+  const pendingActivities = useMemo(() => investmentOps
+    .filter(operation => operation.entity === 'investmentActivity' && operation.type === 'add' && operation.payload)
+    .map(operation => ({
+      ...(operation.payload as unknown as InvestmentActivity),
+      id: operation.targetId,
+      isPendingSync: true,
+    })), [investmentOps])
   const queueInvestment = async (
     entity: 'investmentAccount' | 'investmentInstrument' | 'investmentActivity' | 'investmentManualPrice' | 'investmentCashFlow',
     type: 'add' | 'update' | 'delete' | 'restore',
@@ -233,7 +240,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
         }} />
       </BottomSheet>
       <BottomSheet isOpen={panel === 'activity'} title={editingActivity ? 'Edit investment activity' : 'Add activity'} onClose={closePanel} maxWidthClassName="max-w-3xl">
-        <ActivityForm key={`activity-${formKey}`} portfolio={setupPortfolio} initial={editingActivity} busy={busy} onCancel={closePanel} onSave={value => {
+        <ActivityForm key={`activity-${formKey}`} portfolio={setupPortfolio} initial={editingActivity} pendingActivities={pendingActivities} busy={busy} onCancel={closePanel} onSave={value => {
           const id = editingActivity?.id ?? crypto.randomUUID()
           const destinationLegId = value.destinationAccountId ? crypto.randomUUID() : undefined
           return queueInvestment(
@@ -1329,7 +1336,7 @@ const InstrumentForm = ({ busy, offline, onCancel, onSave }: { busy: boolean; of
   </div>
 }
 
-const ActivityForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccount, onNeedInstrument }: { portfolio: InvestmentPortfolio | null; initial: InvestmentActivity | null; busy: boolean; onCancel: () => void; onSave: (value: api.InvestmentActivityMutation) => Promise<boolean>; onNeedAccount: () => void; onNeedInstrument: () => void }) => {
+const ActivityForm = ({ portfolio, initial, pendingActivities, busy, onCancel, onSave, onNeedAccount, onNeedInstrument }: { portfolio: InvestmentPortfolio | null; initial: InvestmentActivity | null; pendingActivities: InvestmentActivity[]; busy: boolean; onCancel: () => void; onSave: (value: api.InvestmentActivityMutation) => Promise<boolean>; onNeedAccount: () => void; onNeedInstrument: () => void }) => {
   const accounts = portfolio?.accounts.filter(value => !value.isArchived) ?? []
   const instruments = portfolio?.instruments.filter(value => !value.isArchived) ?? []
   const [type, setType] = useState<InvestmentTransactionType>(initial?.type ?? 'OpeningPosition')
@@ -1401,7 +1408,7 @@ const ActivityForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccoun
       cashAmount: numberOrUndefined(cashAmount),
       fees: Number(fees || 0),
       taxes: Number(taxes || 0),
-    }, initial)
+    }, initial, pendingActivities)
     if (issue) {
       setErrors({ [issue.field]: issue.message })
       return
@@ -1415,8 +1422,8 @@ const ActivityForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccoun
     })
   }
   const feesLabelSuffix = selectedInstrument ? ` (${selectedInstrument.currency})` : ''
-  const heldUnits = availableUnits(portfolio, accountId, instrumentId)
-  const heldCash = selectedInstrument ? availableCash(portfolio, accountId, selectedInstrument.currency) : 0
+  const heldUnits = availableActivityUnits(portfolio, accountId, instrumentId, pendingActivities)
+  const heldCash = selectedInstrument ? availableActivityCash(portfolio, accountId, selectedInstrument.currency, pendingActivities) : 0
   return <form noValidate onSubmit={submit} className="space-y-4">
     <div className={formGridWideClass}>
     <Field label="Activity type" plain><CustomSelect value={type} onChange={v => setType(v as InvestmentTransactionType)} options={activityTypes.map(t => ({ value: t.value, label: t.label }))} ariaLabel="Activity type" className="w-full" /></Field>

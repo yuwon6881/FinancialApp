@@ -55,6 +55,27 @@ describe('validateActivityBalances', () => {
     expect(issue?.message).toContain('available in Moomoo')
   })
 
+  it('counts a queued buy before validating another buy in the same account and currency', () => {
+    const pendingBuy = {
+      id: 'pending-buy',
+      accountId: 'a1',
+      instrumentId: 'i1',
+      type: 'Buy' as const,
+      tradeDate: '2026-06-01',
+      units: 1,
+      unitPrice: 400,
+      cashAmount: 400,
+      fees: 0,
+      taxes: 0,
+      createdAt: '',
+    }
+
+    const issue = validateActivityBalances(portfolio, buy(101), undefined, [pendingBuy])
+
+    expect(issue?.field).toBe('cashAmount')
+    expect(issue?.message).toContain('needs US$101.00')
+  })
+
   it('allows selling the units held and rejects selling more', () => {
     expect(validateActivityBalances(portfolio, sell(4))).toBeNull()
     const issue = validateActivityBalances(portfolio, sell(4.5))
