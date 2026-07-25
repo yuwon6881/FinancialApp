@@ -91,7 +91,7 @@ interface InvestmentHolding {
   valuationAsOf?: string
 }
 
-type InvestmentCashFlowType = 'Deposit' | 'Withdrawal'
+type InvestmentCashFlowType = 'Deposit' | 'Withdrawal' | 'Conversion'
 
 interface InvestmentCashBalance {
   accountId: string
@@ -107,6 +107,10 @@ export interface InvestmentCashFlow {
   currency: string
   type: InvestmentCashFlowType
   amount: number
+  // Conversions only: the currency bought, its amount, and the rate applied.
+  toCurrency?: string
+  toAmount?: number
+  fxRate?: number
   date: string
   notes?: string
   isPendingSync?: boolean

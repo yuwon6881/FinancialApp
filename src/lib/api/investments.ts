@@ -329,19 +329,35 @@ export function deleteManualInvestmentPrice(id: string): Promise<void> {
   }))
 }
 
-export function createInvestmentCashFlow(value: {
+export interface InvestmentCashFlowInput {
   id?: string
   accountId: string
   currency: string
-  type: 'Deposit' | 'Withdrawal'
+  type: 'Deposit' | 'Withdrawal' | 'Conversion'
   amount: number
   date: string
   notes?: string
-}): Promise<{ id: string }> {
+  toCurrency?: string
+  toAmount?: number
+  fxRate?: number
+}
+
+export function createInvestmentCashFlow(value: InvestmentCashFlowInput): Promise<{ id: string }> {
   return invalidateAfter(request('/investments/cash-flows', {
     method: 'POST',
     ...jsonBody(value),
     errorMessage: 'Could not save cash movement',
+  }))
+}
+
+export function updateInvestmentCashFlow(
+  id: string,
+  value: InvestmentCashFlowInput,
+): Promise<InvestmentCashFlow> {
+  return invalidateAfter(request(`/investments/cash-flows/${id}`, {
+    method: 'PUT',
+    ...jsonBody(value),
+    errorMessage: 'Could not update cash movement',
   }))
 }
 

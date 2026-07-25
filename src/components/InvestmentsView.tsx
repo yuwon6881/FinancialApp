@@ -82,6 +82,14 @@ const money = (value: number, currency: string) =>
 const number = (value: number, digits = 4) =>
   new Intl.NumberFormat(undefined, { maximumFractionDigits: digits }).format(value)
 
+// A conversion has two legs, so a single signed figure cannot describe it.
+const cashFlowAmount = (flow: InvestmentCashFlow, masked: boolean) => {
+  if (masked) return '••••'
+  const sold = money(flow.amount, flow.currency)
+  if (flow.type !== 'Conversion' || flow.toCurrency === undefined || flow.toAmount === undefined) return sold
+  return `${sold} → ${money(flow.toAmount, flow.toCurrency)}`
+}
+
 export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) => {
   const { hideSensitive, isOffline, confirm, activeSyncId, investmentOps = [], queueInvestmentMutation = () => undefined } = useAppContext()
   const {
@@ -96,6 +104,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
   } = useInvestmentPortfolio()
   const [panel, setPanel] = useState<Panel>(null)
   const [editingActivity, setEditingActivity] = useState<InvestmentActivity | null>(null)
+  const [editingCashFlow, setEditingCashFlow] = useState<InvestmentCashFlow | null>(null)
   // Bumped on every open so each form's `key` changes and it remounts with
   // fresh internal state -- reopening (or switching from edit to add) never
   // shows a previously entered or edited record.
@@ -120,12 +129,20 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
 
   const openPanel = (next: Exclude<Panel, null>, activity: InvestmentActivity | null = null) => {
     setEditingActivity(activity)
+    setEditingCashFlow(null)
     setFormKey(value => value + 1)
     setPanel(next)
+  }
+  const openCashPanel = (flow: InvestmentCashFlow | null = null) => {
+    setEditingActivity(null)
+    setEditingCashFlow(flow)
+    setFormKey(value => value + 1)
+    setPanel('cash')
   }
   const closePanel = () => {
     setPanel(null)
     setEditingActivity(null)
+    setEditingCashFlow(null)
   }
 
   if (loading && !portfolio) return <CycleSkeleton variant="investments" />
@@ -208,10 +225,15 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
           return queueInvestment('investmentManualPrice', 'add', id, { ...value, id })
         }} />
       </BottomSheet>
-      <BottomSheet isOpen={panel === 'cash'} title="Record cash movement" onClose={closePanel} maxWidthClassName="max-w-lg">
-        <CashForm key={`cash-${formKey}`} portfolio={setupPortfolio} busy={busy} onCancel={closePanel} onSave={value => {
-          const id = crypto.randomUUID()
-          return queueInvestment('investmentCashFlow', 'add', id, { ...value, id })
+      <BottomSheet isOpen={panel === 'cash'} title={editingCashFlow ? 'Edit cash movement' : 'Record cash movement'} onClose={closePanel} maxWidthClassName="max-w-lg">
+        <CashForm key={`cash-${formKey}`} portfolio={setupPortfolio} initial={editingCashFlow} busy={busy} onCancel={closePanel} onSave={value => {
+          const id = editingCashFlow?.id ?? crypto.randomUUID()
+          return queueInvestment(
+            'investmentCashFlow',
+            editingCashFlow ? 'update' : 'add',
+            id,
+            { ...value, id, undoSnapshot: editingCashFlow ?? undefined },
+          )
         }} onNeedAccount={() => openPanel('account')} />
       </BottomSheet>
 
@@ -314,8 +336,11 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
               confirmText: 'Delete',
               onConfirm: () => { queueInvestment('investmentActivity', 'delete', activity.id, { undoSnapshot: { transactions: [activity] } }) },
             })}
+            onEditCashFlow={flow => openCashPanel(flow)}
             onDeleteCashFlow={flow => confirm({
-              title: flow.type === 'Withdrawal' ? 'Delete withdrawal?' : 'Delete deposit?',
+              title: flow.type === 'Conversion'
+                ? 'Delete conversion?'
+                : flow.type === 'Withdrawal' ? 'Delete withdrawal?' : 'Delete deposit?',
               message: 'The cash balance and total portfolio value will be recalculated.',
               confirmText: 'Delete',
               onConfirm: () => { queueInvestment('investmentCashFlow', 'delete', flow.id, { undoSnapshot: flow }) },
@@ -855,7 +880,7 @@ const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: InvestmentPor
             <strong className="shrink-0 text-xs">{masked ? '••••' : total === undefined ? 'Incomplete FX' : money(total, portfolio.appCurrency)}</strong>
           </div>
           {cash.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{cash.map(balance => (
-            <span key={balance.currency} className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+            <span key={balance.currency} className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${balance.amount < 0 ? 'bg-orange-500/10 text-orange-700 dark:text-orange-300' : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'}`}>
               Cash · {masked ? '••••' : money(balance.amount, balance.currency)}
             </span>
           ))}</div>}
@@ -926,6 +951,7 @@ const PagedActivityTable = ({
   activeSyncId,
   onEdit,
   onDelete,
+  onEditCashFlow,
   onDeleteCashFlow,
 }: {
   portfolio: InvestmentPortfolio
@@ -935,6 +961,7 @@ const PagedActivityTable = ({
   activeSyncId: string | null
   onEdit: (activity: InvestmentActivity) => void
   onDelete: (activity: InvestmentActivity) => void
+  onEditCashFlow: (flow: InvestmentCashFlow) => void
   onDeleteCashFlow: (flow: InvestmentCashFlow) => void
 }) => {
   const [mode, setMode] = useState<'investments' | 'cash'>('investments')
@@ -1019,7 +1046,7 @@ const PagedActivityTable = ({
   const pages = Math.max(1, Math.ceil(total / pageSize))
   const typeOptions = mode === 'investments'
     ? [{ value: '', label: 'All types' }, ...activityTypes]
-    : [{ value: '', label: 'All types' }, { value: 'Deposit', label: 'Deposit' }, { value: 'Withdrawal', label: 'Withdrawal' }]
+    : [{ value: '', label: 'All types' }, { value: 'Deposit', label: 'Deposit' }, { value: 'Withdrawal', label: 'Withdrawal' }, { value: 'Conversion', label: 'Conversion' }]
 
   return (
     <section aria-labelledby="activity-title" className="app-panel min-w-0 overflow-hidden rounded-2xl border border-border/60 bg-card/92">
@@ -1082,9 +1109,12 @@ const PagedActivityTable = ({
                   const isActive = activeSyncId === value.id
                   const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
                   return <article key={value.id} className="interactive-card min-w-0 rounded-xl border border-border/50 p-3">
-                    <div className="flex items-start justify-between gap-2"><div className="min-w-0"><strong className="block truncate text-xs">{value.type} · {accounts.get(value.accountId)}</strong><span className="text-[10px] text-muted-foreground">{value.date}</span><RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></div><strong className={value.amount < 0 ? 'text-orange-500' : 'text-emerald-500'}>{masked ? '••••' : money(value.amount, value.currency)}</strong></div>
+                    <div className="flex items-start justify-between gap-2"><div className="min-w-0"><strong className="block truncate text-xs">{value.type} · {accounts.get(value.accountId)}</strong><span className="text-[10px] text-muted-foreground">{value.date}</span><RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></div><strong className={value.type === 'Conversion' ? 'shrink-0 text-xs font-bold' : value.amount < 0 ? 'text-orange-500' : 'text-emerald-500'}>{cashFlowAmount(value, masked)}</strong></div>
                     {value.notes && <p className="mt-2 break-words text-[10px] text-muted-foreground">{value.notes}</p>}
-                    <div className="mt-2 flex justify-end"><Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDeleteCashFlow(value)}>Delete</Button></div>
+                    <div className="mt-2 flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="sm" disabled={isBusy} onClick={() => onEditCashFlow(value)}>Edit</Button>
+                      <Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDeleteCashFlow(value)}>Delete</Button>
+                    </div>
                   </article>
                 })}
                 </div>
@@ -1098,7 +1128,7 @@ const PagedActivityTable = ({
                     }) : displayCashFlows.map(value => {
                       const isActive = activeSyncId === value.id
                       const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
-                      return <tr key={value.id}><td className="px-4 py-3">{value.date}</td><td className="px-4 py-3"><span className="flex items-center gap-2 font-bold">{value.type}<RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3 text-right">{masked ? '••••' : money(value.amount, value.currency)}</td><td className="px-4 py-3 text-right"><Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDeleteCashFlow(value)}>Delete</Button></td></tr>
+                      return <tr key={value.id}><td className="px-4 py-3">{value.date}</td><td className="px-4 py-3"><span className="flex items-center gap-2 font-bold">{value.type}<RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3 text-right">{cashFlowAmount(value, masked)}</td><td className="px-4 py-3"><span className="flex justify-end gap-1"><Button variant="ghost" size="sm" disabled={isBusy} onClick={() => onEditCashFlow(value)}>Edit</Button><Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDeleteCashFlow(value)}>Delete</Button></span></td></tr>
                     })}</tbody>
                   </table>
                 </div>
@@ -1263,7 +1293,15 @@ const ActivityForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccoun
     {trade && <label className={labelClass}>Unit price ({selectedInstrument?.currency})<input type="number" min="0" step="0.0000000001" value={unitPrice} onChange={event => { noteEdit('price'); setUnitPrice(event.target.value) }} className={inputClass} /></label>}
     {type !== 'Split' && type !== 'TransferOut' && <label className={labelClass}>{type === 'TransferIn' ? 'Transferred cost basis' : type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} ({selectedInstrument?.currency})<input required={type === 'Dividend'} type="number" min={type === 'Dividend' ? '0.0000000001' : '0'} step="0.0000000001" value={cashAmount} onChange={event => { noteEdit('gross'); setCashAmount(event.target.value) }} className={inputClass} /></label>}
     {!['Split', 'TransferIn', 'TransferOut', 'FeeTax'].includes(type) && <><label className={labelClass}>Fees{feesLabelSuffix}<input type="number" min="0" step="0.0000000001" value={fees} onChange={event => setFees(event.target.value)} className={inputClass} /></label><label className={labelClass}>Taxes{feesLabelSuffix}<input type="number" min="0" step="0.0000000001" value={taxes} onChange={event => setTaxes(event.target.value)} className={inputClass} /></label></>}
-    {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && <label className={labelClass}>Trade FX rate<span className="block text-[10px] font-medium text-muted-foreground">{selectedInstrument.currency} → {portfolio?.appCurrency} · Optional</span><input type="number" min="0" step="0.0000000001" value={fx} onChange={event => setFx(event.target.value)} className={inputClass} /></label>}
+    {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && (
+      <div>
+        <label className={labelClass}>
+          Trade FX {selectedInstrument.currency}→{portfolio?.appCurrency}
+          <input type="number" min="0" step="0.0000000001" value={fx} onChange={event => setFx(event.target.value)} className={inputClass} />
+        </label>
+        <div className="mt-1.5 text-[10px] text-muted-foreground">(Optional) executed broker rate.</div>
+      </div>
+    )}
     {type === 'TransferOut' && <div className={labelClass}>Destination<CustomSelect value={destination} onChange={v => setDestination(v as string)} options={[{ value: '', label: 'External transfer out' }, ...accounts.filter(a => a.id !== accountId).map(a => ({ value: a.id, label: a.name }))]} ariaLabel="Transfer destination" className="mt-1.5 w-full" /></div>}
     <label className={`${labelClass} sm:col-span-2`}>Notes<input maxLength={1000} value={notes} onChange={event => setNotes(event.target.value)} className={inputClass} /></label>
     </div>
@@ -1292,36 +1330,70 @@ const ManualPriceForm = ({ portfolio, busy, onCancel, onSave }: { portfolio: Inv
   </form>
 }
 
-const CashForm = ({ portfolio, busy, onCancel, onSave, onNeedAccount }: {
+const CashForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccount }: {
   portfolio: InvestmentPortfolio | null
+  initial?: InvestmentCashFlow | null
   busy: boolean
   onCancel: () => void
-  onSave: (value: { accountId: string; currency: string; type: 'Deposit' | 'Withdrawal'; amount: number; date: string; notes?: string }) => Promise<boolean>
+  onSave: (value: { accountId: string; currency: string; type: 'Deposit' | 'Withdrawal' | 'Conversion'; amount: number; date: string; notes?: string; toCurrency?: string; toAmount?: number; fxRate?: number }) => Promise<boolean>
   onNeedAccount: () => void
 }) => {
   const accounts = portfolio?.accounts.filter(value => !value.isArchived) ?? []
-  const [accountId, setAccountId] = useState(accounts[0]?.id ?? '')
-  const [type, setType] = useState<'Deposit' | 'Withdrawal'>('Deposit')
-  const [currency, setCurrency] = useState(accounts[0]?.baseCurrency ?? portfolio?.appCurrency ?? 'USD')
-  const [amount, setAmount] = useState('')
-  const [date, setDate] = useState(today())
-  const [notes, setNotes] = useState('')
+  const [accountId, setAccountId] = useState(initial?.accountId ?? accounts[0]?.id ?? '')
+  const [type, setType] = useState<'Deposit' | 'Withdrawal' | 'Conversion'>(initial?.type ?? 'Deposit')
+  const [currency, setCurrency] = useState(initial?.currency ?? accounts[0]?.baseCurrency ?? portfolio?.appCurrency ?? 'USD')
+  const [amount, setAmount] = useState(initial?.amount ? String(initial.amount) : '')
+  const [toCurrency, setToCurrency] = useState(initial?.toCurrency ?? currency)
+  const [toAmount, setToAmount] = useState(initial?.toAmount ? String(initial.toAmount) : '')
+  const [fxRate, setFxRate] = useState(initial?.fxRate ? String(initial.fxRate) : '')
+  const [date, setDate] = useState(initial?.date ?? today())
+  const [notes, setNotes] = useState(initial?.notes ?? '')
   if (!accounts.length) return <div><p className="text-sm text-muted-foreground">Add an investment account before recording cash.</p><div className="mt-4"><Button onClick={onNeedAccount}>Add account</Button></div></div>
   const submit = (event: React.FormEvent) => {
     event.preventDefault()
-    void onSave({ accountId, currency: currency.toUpperCase(), type, amount: Number(amount || 0), date, notes: notes.trim() || undefined })
+    void onSave({ 
+      accountId, 
+      currency: currency.toUpperCase(), 
+      type, 
+      amount: Number(amount || 0), 
+      date, 
+      notes: notes.trim() || undefined,
+      toCurrency: type === 'Conversion' ? toCurrency.toUpperCase() : undefined,
+      toAmount: type === 'Conversion' ? Number(toAmount || 0) : undefined,
+      fxRate: type === 'Conversion' && fxRate ? Number(fxRate) : undefined,
+    })
   }
   return <form onSubmit={submit} className="space-y-4">
     <div className="grid gap-4 sm:grid-cols-2">
-      <div className={labelClass}>Account<CustomSelect value={accountId} onChange={v => { const id = v as string; setAccountId(id); const next = accounts.find(value => value.id === id); if (next) setCurrency(next.baseCurrency) }} options={accounts.map(a => ({ value: a.id, label: a.name }))} ariaLabel="Account" className="mt-1.5 w-full" /></div>
-      <div className={labelClass}>Type<CustomSelect value={type} onChange={v => setType(v as 'Deposit' | 'Withdrawal')} options={[{ value: 'Deposit', label: 'Deposit (cash in)' }, { value: 'Withdrawal', label: 'Withdrawal (cash out)' }]} ariaLabel="Cash movement type" className="mt-1.5 w-full" /></div>
-      <label className={labelClass}>Amount ({currency})<input required type="number" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => setAmount(event.target.value)} className={inputClass} /></label>
-      <label className={labelClass}>Currency<CurrencySelect value={currency} onChange={setCurrency} className="mt-1.5" ariaLabel="Cash currency" /></label>
+      <div className={labelClass}>Account<CustomSelect value={accountId} onChange={v => { const id = v as string; setAccountId(id); const next = accounts.find(value => value.id === id); if (next) { setCurrency(next.baseCurrency); if (!initial) setToCurrency(next.baseCurrency) } }} options={accounts.map(a => ({ value: a.id, label: a.name }))} ariaLabel="Account" className="mt-1.5 w-full" /></div>
+      <div className={labelClass}>Type<CustomSelect value={type} onChange={v => setType(v as 'Deposit' | 'Withdrawal' | 'Conversion')} options={[{ value: 'Deposit', label: 'Deposit (cash in)' }, { value: 'Withdrawal', label: 'Withdrawal (cash out)' }, { value: 'Conversion', label: 'Conversion (currency exchange)' }]} ariaLabel="Cash movement type" className="mt-1.5 w-full" /></div>
+      
+      {type === 'Conversion' ? (
+        <>
+          <label className={labelClass}>From amount<input required type="number" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => setAmount(event.target.value)} className={inputClass} /></label>
+          <label className={labelClass}>From currency<CurrencySelect value={currency} onChange={setCurrency} className="mt-1.5" ariaLabel="From currency" /></label>
+          <label className={labelClass}>To amount<input required type="number" min="0.0000000001" step="0.0000000001" value={toAmount} onChange={event => setToAmount(event.target.value)} className={inputClass} /></label>
+          <label className={labelClass}>To currency<CurrencySelect value={toCurrency} onChange={setToCurrency} className="mt-1.5" ariaLabel="To currency" /></label>
+          <div className="sm:col-span-2">
+            <label className={labelClass}>
+              Exchange rate {currency}→{toCurrency} (optional)
+              <input type="number" min="0" step="0.0000000001" value={fxRate} onChange={event => setFxRate(event.target.value)} className={inputClass} />
+            </label>
+            <div className="mt-1.5 text-[10px] text-muted-foreground font-normal">Derived automatically as To Amount / From Amount if left blank.</div>
+          </div>
+        </>
+      ) : (
+        <>
+          <label className={labelClass}>Amount ({currency})<input required type="number" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => setAmount(event.target.value)} className={inputClass} /></label>
+          <label className={labelClass}>Currency<CurrencySelect value={currency} onChange={setCurrency} className="mt-1.5" ariaLabel="Cash currency" /></label>
+        </>
+      )}
+      
       <div className={labelClass}>Date<DatePicker value={date} onChange={setDate} max={today()} className="mt-1.5 w-full" /></div>
       <label className={`${labelClass} sm:col-span-2`}>Notes<input maxLength={1000} value={notes} onChange={event => setNotes(event.target.value)} className={inputClass} /></label>
     </div>
     <p className="text-[10px] text-muted-foreground">Record cash you moved into or out of the broker account itself — not a stock purchase. Buys, sells, dividends, and fees adjust cash automatically.</p>
-    <FormActions busy={busy} onCancel={onCancel} submitLabel={type === 'Withdrawal' ? 'Record withdrawal' : 'Record deposit'} disabled={!accountId} />
+    <FormActions busy={busy} onCancel={onCancel} submitLabel={initial ? 'Save changes' : type === 'Conversion' ? 'Record conversion' : type === 'Withdrawal' ? 'Record withdrawal' : 'Record deposit'} disabled={!accountId} />
   </form>
 }
 

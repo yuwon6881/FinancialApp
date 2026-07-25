@@ -551,6 +551,7 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
     ...(op.payload as unknown as Parameters<typeof api.createInvestmentCashFlow>[0]),
     id: op.targetId,
   }),
+  'investmentCashFlow:update': (op) => api.updateInvestmentCashFlow(op.targetId, op.payload as unknown as api.InvestmentCashFlowInput),
   'investmentCashFlow:delete': (op) => api.deleteInvestmentCashFlow(op.targetId),
   'investmentCashFlow:restore': (op) => api.restoreInvestmentCashFlow(op.payload as unknown as InvestmentCashFlow),
 
