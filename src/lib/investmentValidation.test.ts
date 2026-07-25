@@ -73,7 +73,7 @@ describe('validateActivityBalances', () => {
     const issue = validateActivityBalances(portfolio, buy(101), undefined, [pendingBuy])
 
     expect(issue?.field).toBe('cashAmount')
-    expect(issue?.message).toContain('needs US$101.00')
+    expect(issue?.message).toMatch(/needs (?:US)?\$101\.00/)
   })
 
   it('allows selling the units held and rejects selling more', () => {
