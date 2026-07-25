@@ -43,7 +43,11 @@ function formatFieldValue(value: unknown): string {
 // so showing it is free -- no extra data threading needed.
 function getPayloadEntries(op: QueuedOp): Array<[string, unknown]> {
   if (!op.payload || typeof op.payload !== 'object') return []
-  return Object.entries(op.payload).filter(([key]) => key !== 'id' && key !== 'isPendingSync')
+  return Object.entries(op.payload).filter(([key]) => {
+    if (key === 'id' || key === 'isPendingSync') return false
+    if (key.endsWith('Id') || key === 'undoSnapshot') return false
+    return true
+  })
 }
 
 export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDiscardAll }: FailedSyncModalProps) {

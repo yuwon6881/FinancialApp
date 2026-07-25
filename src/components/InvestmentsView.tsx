@@ -986,7 +986,7 @@ const PagedActivityTable = ({
     operationsRef.current = operations
     setProjectedOperations(previous => {
       const currentIds = new Set(operations.map(operation => operation.id))
-      return [...operations, ...previous.filter(operation => !currentIds.has(operation.id))]
+      return [...operations, ...previous.filter(operation => !currentIds.has(operation.id) && operation.isCompleted)]
     })
   }, [operations])
 
@@ -1152,11 +1152,16 @@ const FormActions = ({ busy, onCancel, submitLabel, disabled }: { busy: boolean;
 )
 
 const AccountForm = ({ appCurrency = 'USD', busy, onCancel, onSave }: { appCurrency?: string; busy: boolean; onCancel: () => void; onSave: (value: api.AccountMutation) => Promise<boolean> }) => {
+  const { showToast } = useAppContext()
   const [name, setName] = useState('')
   const [currency, setCurrency] = useState(appCurrency)
-  return <form className="space-y-4" onSubmit={event => { event.preventDefault(); void onSave({ name, baseCurrency: currency }) }}>
+  return <form className="space-y-4" onSubmit={event => { 
+    event.preventDefault(); 
+    if (!name.trim()) { showToast('Account name is required.'); return; }
+    void onSave({ name, baseCurrency: currency }) 
+  }}>
     <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
-      <label className={labelClass}>Account name<input required maxLength={120} value={name} onChange={event => setName(event.target.value)} placeholder="e.g. Moomoo" className={inputClass} /></label>
+      <label className={labelClass}>Account name<input maxLength={120} value={name} onChange={event => setName(event.target.value)} placeholder="e.g. Moomoo" className={inputClass} /></label>
       <label className={labelClass}>Base currency<CurrencySelect value={currency} onChange={setCurrency} className="mt-1.5" ariaLabel="Base currency" /></label>
     </div>
     <p className="text-[10px] text-muted-foreground">Only a display name is stored. Broker credentials and broker API connections are not supported.</p>
@@ -1165,6 +1170,7 @@ const AccountForm = ({ appCurrency = 'USD', busy, onCancel, onSave }: { appCurre
 }
 
 const InstrumentForm = ({ appCurrency = 'USD', busy, offline, onCancel, onSave }: { appCurrency?: string; busy: boolean; offline: boolean; onCancel: () => void; onSave: (value: api.InstrumentMutation) => Promise<boolean> }) => {
+  const { showToast } = useAppContext()
   const [manual, setManual] = useState(false)
   const [query, setQuery] = useState('')
   const [searching, setSearching] = useState(false)
@@ -1195,6 +1201,8 @@ const InstrumentForm = ({ appCurrency = 'USD', busy, offline, onCancel, onSave }
   }, [query, manual, offline])
   const saveManual = (event: React.FormEvent) => {
     event.preventDefault()
+    if (!symbol.trim()) { showToast('Ticker is required.'); return; }
+    if (!name.trim()) { showToast('Full name is required.'); return; }
     void onSave({ symbol, name, type, currency, isCustom: true })
   }
   return <div className="space-y-4">
@@ -1204,8 +1212,8 @@ const InstrumentForm = ({ appCurrency = 'USD', busy, offline, onCancel, onSave }
     </div>
     {manual ? <form className="space-y-4" onSubmit={saveManual}>
       <div className="grid gap-4 sm:grid-cols-4">
-        <label className={labelClass}>Ticker<input required maxLength={32} value={symbol} onChange={event => setSymbol(event.target.value.toUpperCase())} className={inputClass} /></label>
-        <label className={`${labelClass} sm:col-span-2`}>Full name<input required maxLength={200} value={name} onChange={event => setName(event.target.value)} className={inputClass} /></label>
+        <label className={labelClass}>Ticker<input maxLength={32} value={symbol} onChange={event => setSymbol(event.target.value.toUpperCase())} className={inputClass} /></label>
+        <label className={`${labelClass} sm:col-span-2`}>Full name<input maxLength={200} value={name} onChange={event => setName(event.target.value)} className={inputClass} /></label>
         <div className={labelClass}>Type<CustomSelect value={type} onChange={v => setType(v as 'Stock' | 'ETF' | 'MutualFund')} options={[{ value: 'Stock', label: 'Stock' }, { value: 'ETF', label: 'ETF' }, { value: 'MutualFund', label: 'Mutual fund' }]} ariaLabel="Investment type" className="mt-1.5 w-full" /></div>
         <label className={labelClass}>Currency<CurrencySelect value={currency} onChange={setCurrency} className="mt-1.5" ariaLabel="Investment currency" /></label>
       </div>
@@ -1233,6 +1241,7 @@ const InstrumentForm = ({ appCurrency = 'USD', busy, offline, onCancel, onSave }
 }
 
 const ActivityForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccount, onNeedInstrument }: { portfolio: InvestmentPortfolio | null; initial: InvestmentActivity | null; busy: boolean; onCancel: () => void; onSave: (value: api.InvestmentActivityMutation) => Promise<boolean>; onNeedAccount: () => void; onNeedInstrument: () => void }) => {
+  const { showToast } = useAppContext()
   const accounts = portfolio?.accounts.filter(value => !value.isArchived) ?? []
   const instruments = portfolio?.instruments.filter(value => !value.isArchived) ?? []
   const [type, setType] = useState<InvestmentTransactionType>(initial?.type ?? 'OpeningPosition')
@@ -1275,6 +1284,26 @@ const ActivityForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccoun
   const trade = ['OpeningPosition', 'Buy', 'Sell'].includes(type)
   const submit = (event: React.FormEvent) => {
     event.preventDefault()
+    let numFields = 0
+    if (numberOrUndefined(units) !== undefined) numFields++
+    if (numberOrUndefined(unitPrice) !== undefined) numFields++
+    if (numberOrUndefined(cashAmount) !== undefined) numFields++
+    if (trade && numFields < 2) {
+      showToast('Enter any two of units, unit price, and gross amount; the missing value is calculated.')
+      return
+    }
+    if ((type === 'Split' || type.includes('Transfer')) && numberOrUndefined(units) === undefined) {
+      showToast(type === 'Split' ? 'Split ratio is required.' : 'Units are required.')
+      return
+    }
+    if (type === 'Dividend' && numberOrUndefined(cashAmount) === undefined) {
+      showToast('Gross dividend is required.')
+      return
+    }
+    if (type === 'TransferOut' && !destination) {
+      showToast('Destination is required.')
+      return
+    }
     void onSave({
       accountId, instrumentId, type, tradeDate,
       units: numberOrUndefined(units), unitPrice: numberOrUndefined(unitPrice), cashAmount: numberOrUndefined(cashAmount),
@@ -1289,9 +1318,9 @@ const ActivityForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccoun
     <div className={labelClass}>Account<CustomSelect value={accountId} onChange={v => setAccountId(v as string)} options={accounts.map(a => ({ value: a.id, label: a.name }))} ariaLabel="Account" className="mt-1.5 w-full" /></div>
     <div className={labelClass}>Investment<CustomSelect value={instrumentId} onChange={v => setInstrumentId(v as string)} options={instruments.map(i => ({ value: i.id, label: `${i.symbol} · ${i.name}` }))} ariaLabel="Investment" className="mt-1.5 w-full" /></div>
     <div className={labelClass}>Trade date<DatePicker value={tradeDate} onChange={setTradeDate} max={today()} className="mt-1.5 w-full" /></div>
-    {needsUnits && <label className={labelClass}>{type === 'Split' ? 'Split ratio' : 'Units'}<input required={type === 'Split' || type.includes('Transfer')} type="number" min="0" step="0.0000000001" value={units} onChange={event => { noteEdit('units'); setUnits(event.target.value) }} className={inputClass} /></label>}
+    {needsUnits && <label className={labelClass}>{type === 'Split' ? 'Split ratio' : 'Units'}<input type="number" min="0" step="0.0000000001" value={units} onChange={event => { noteEdit('units'); setUnits(event.target.value) }} className={inputClass} /></label>}
     {trade && <label className={labelClass}>Unit price ({selectedInstrument?.currency})<input type="number" min="0" step="0.0000000001" value={unitPrice} onChange={event => { noteEdit('price'); setUnitPrice(event.target.value) }} className={inputClass} /></label>}
-    {type !== 'Split' && type !== 'TransferOut' && <label className={labelClass}>{type === 'TransferIn' ? 'Transferred cost basis' : type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} ({selectedInstrument?.currency})<input required={type === 'Dividend'} type="number" min={type === 'Dividend' ? '0.0000000001' : '0'} step="0.0000000001" value={cashAmount} onChange={event => { noteEdit('gross'); setCashAmount(event.target.value) }} className={inputClass} /></label>}
+    {type !== 'Split' && type !== 'TransferOut' && <label className={labelClass}>{type === 'TransferIn' ? 'Transferred cost basis' : type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} ({selectedInstrument?.currency})<input type="number" min={type === 'Dividend' ? '0.0000000001' : '0'} step="0.0000000001" value={cashAmount} onChange={event => { noteEdit('gross'); setCashAmount(event.target.value) }} className={inputClass} /></label>}
     {!['Split', 'TransferIn', 'TransferOut', 'FeeTax'].includes(type) && <><label className={labelClass}>Fees{feesLabelSuffix}<input type="number" min="0" step="0.0000000001" value={fees} onChange={event => setFees(event.target.value)} className={inputClass} /></label><label className={labelClass}>Taxes{feesLabelSuffix}<input type="number" min="0" step="0.0000000001" value={taxes} onChange={event => setTaxes(event.target.value)} className={inputClass} /></label></>}
     {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && (
       <div>
@@ -1312,17 +1341,22 @@ const ActivityForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccoun
 }
 
 const ManualPriceForm = ({ portfolio, busy, onCancel, onSave }: { portfolio: InvestmentPortfolio | null; busy: boolean; onCancel: () => void; onSave: (value: { instrumentId: string; marketDate: string; price: number; fxRate?: number }) => Promise<boolean> }) => {
+  const { showToast } = useAppContext()
   const instruments = portfolio?.instruments.filter(value => !value.isArchived) ?? []
   const [instrumentId, setInstrumentId] = useState(instruments[0]?.id ?? '')
   const [date, setDate] = useState(today())
   const [price, setPrice] = useState('')
   const [fx, setFx] = useState('')
   const instrument = instruments.find(value => value.id === instrumentId)
-  return <form className="space-y-4" onSubmit={event => { event.preventDefault(); void onSave({ instrumentId, marketDate: date, price: Number(price), fxRate: numberOrUndefined(fx) }) }}>
+  return <form className="space-y-4" onSubmit={event => { 
+    event.preventDefault(); 
+    if (numberOrUndefined(price) === undefined) { showToast('Close price is required.'); return; }
+    void onSave({ instrumentId, marketDate: date, price: Number(price), fxRate: numberOrUndefined(fx) }) 
+  }}>
     <div className="grid gap-4 sm:grid-cols-4">
       <div className={labelClass}>Investment<CustomSelect value={instrumentId} onChange={v => setInstrumentId(v as string)} options={instruments.map(i => ({ value: i.id, label: i.symbol }))} ariaLabel="Investment" className="mt-1.5 w-full" /></div>
       <div className={labelClass}>Market date<DatePicker value={date} onChange={setDate} max={today()} className="mt-1.5 w-full" /></div>
-      <label className={labelClass}>Close ({instrument?.currency})<input required type="number" min="0.0000000001" step="0.0000000001" value={price} onChange={event => setPrice(event.target.value)} className={inputClass} /></label>
+      <label className={labelClass}>Close ({instrument?.currency})<input type="number" min="0.0000000001" step="0.0000000001" value={price} onChange={event => setPrice(event.target.value)} className={inputClass} /></label>
       {instrument && instrument.currency !== portfolio?.appCurrency && <label className={labelClass}>FX to {portfolio?.appCurrency} (optional)<input type="number" min="0.0000000001" step="0.0000000001" value={fx} onChange={event => setFx(event.target.value)} className={inputClass} /></label>}
     </div>
     <p className="text-[10px] text-muted-foreground">A manual value takes precedence over provider data for the same date. Deleting it restores the cached provider close.</p>
@@ -1338,6 +1372,7 @@ const CashForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccount }:
   onSave: (value: { accountId: string; currency: string; type: 'Deposit' | 'Withdrawal' | 'Conversion'; amount: number; date: string; notes?: string; toCurrency?: string; toAmount?: number; fxRate?: number }) => Promise<boolean>
   onNeedAccount: () => void
 }) => {
+  const { showToast } = useAppContext()
   const accounts = portfolio?.accounts.filter(value => !value.isArchived) ?? []
   const [accountId, setAccountId] = useState(initial?.accountId ?? accounts[0]?.id ?? '')
   const [type, setType] = useState<'Deposit' | 'Withdrawal' | 'Conversion'>(initial?.type ?? 'Deposit')
@@ -1351,6 +1386,12 @@ const CashForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccount }:
   if (!accounts.length) return <div><p className="text-sm text-muted-foreground">Add an investment account before recording cash.</p><div className="mt-4"><Button onClick={onNeedAccount}>Add account</Button></div></div>
   const submit = (event: React.FormEvent) => {
     event.preventDefault()
+    if (type === 'Conversion') {
+      if (numberOrUndefined(amount) === undefined) { showToast('From amount is required.'); return; }
+      if (numberOrUndefined(toAmount) === undefined) { showToast('To amount is required.'); return; }
+    } else {
+      if (numberOrUndefined(amount) === undefined) { showToast('Amount is required.'); return; }
+    }
     void onSave({ 
       accountId, 
       currency: currency.toUpperCase(), 
@@ -1370,9 +1411,9 @@ const CashForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccount }:
       
       {type === 'Conversion' ? (
         <>
-          <label className={labelClass}>From amount<input required type="number" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => setAmount(event.target.value)} className={inputClass} /></label>
+          <label className={labelClass}>From amount<input type="number" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => setAmount(event.target.value)} className={inputClass} /></label>
           <label className={labelClass}>From currency<CurrencySelect value={currency} onChange={setCurrency} className="mt-1.5" ariaLabel="From currency" /></label>
-          <label className={labelClass}>To amount<input required type="number" min="0.0000000001" step="0.0000000001" value={toAmount} onChange={event => setToAmount(event.target.value)} className={inputClass} /></label>
+          <label className={labelClass}>To amount<input type="number" min="0.0000000001" step="0.0000000001" value={toAmount} onChange={event => setToAmount(event.target.value)} className={inputClass} /></label>
           <label className={labelClass}>To currency<CurrencySelect value={toCurrency} onChange={setToCurrency} className="mt-1.5" ariaLabel="To currency" /></label>
           <div className="sm:col-span-2">
             <label className={labelClass}>
@@ -1384,7 +1425,7 @@ const CashForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccount }:
         </>
       ) : (
         <>
-          <label className={labelClass}>Amount ({currency})<input required type="number" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => setAmount(event.target.value)} className={inputClass} /></label>
+          <label className={labelClass}>Amount ({currency})<input type="number" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => setAmount(event.target.value)} className={inputClass} /></label>
           <label className={labelClass}>Currency<CurrencySelect value={currency} onChange={setCurrency} className="mt-1.5" ariaLabel="Cash currency" /></label>
         </>
       )}
