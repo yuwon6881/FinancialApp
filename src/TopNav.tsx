@@ -361,7 +361,7 @@ const TopNav: React.FC<TopNavProps> = ({
             aria-live="polite"
             aria-atomic="true"
             data-testid="privacy-status"
-            className={`pointer-events-none absolute left-1/2 top-[calc(100%+0.5rem)] z-50 w-max max-w-[min(22rem,calc(100vw_-_1.5rem))] -translate-x-1/2 rounded-2xl border px-3 py-2 text-center text-[11px] font-semibold shadow-lg backdrop-blur-xl transition-[opacity,transform] duration-200 ${
+            className={`pointer-events-none absolute left-1/2 top-[calc(100%+0.5rem)] z-50 w-max max-w-[calc(100vw_-_1.5rem)] -translate-x-1/2 rounded-2xl border px-3 py-2 text-center text-[11px] font-semibold shadow-lg backdrop-blur-xl transition-[opacity,transform] duration-200 ${
               sensitivePreferenceStatus === 'pending'
                 ? 'border-blue-500/25 bg-card/94 text-blue-700 shadow-blue-500/10 dark:border-blue-500/35 dark:text-blue-300'
                 : 'border-amber-500/30 bg-card/96 text-amber-700 shadow-amber-500/10 dark:border-amber-500/40 dark:text-amber-300'
@@ -374,7 +374,7 @@ const TopNav: React.FC<TopNavProps> = ({
                     <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
                   </span>
                   <span className="text-left leading-snug">
-                    <strong className="block font-extrabold text-foreground">Protecting your amounts</strong>
+                    <strong className="inline font-extrabold text-foreground mr-1.5">Protecting your amounts</strong>
                     Checking privacy settings before anything is revealed.
                   </span>
                 </>
@@ -384,7 +384,7 @@ const TopNav: React.FC<TopNavProps> = ({
                     <ShieldAlert className="size-3.5" aria-hidden="true" />
                   </span>
                   <span className="text-left leading-snug">
-                    <strong className="block font-extrabold text-foreground">Amounts remain protected</strong>
+                    <strong className="inline font-extrabold text-foreground mr-1.5">Amounts remain protected</strong>
                     Privacy settings couldn't be verified.
                   </span>
                   <button
