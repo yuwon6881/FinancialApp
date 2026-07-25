@@ -109,6 +109,7 @@ export interface InvestmentCashFlow {
   toCurrency?: string
   toAmount?: number
   date: string
+  createdAt?: string
   isPendingSync?: boolean
   isPendingDelete?: boolean
 }

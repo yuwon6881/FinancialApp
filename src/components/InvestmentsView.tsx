@@ -152,6 +152,13 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
     accounts: applyOpsToList(portfolio.accounts, investmentOps, 'investmentAccount'),
     instruments: applyOpsToList(portfolio.instruments, investmentOps, 'investmentInstrument'),
   } : null, [portfolio, investmentOps])
+  const pendingCashFlows = useMemo(() => investmentOps
+    .filter(operation => operation.entity === 'investmentCashFlow' && operation.type === 'add' && operation.payload)
+    .map(operation => ({
+      ...(operation.payload as unknown as InvestmentCashFlow),
+      id: operation.targetId,
+      isPendingSync: true,
+    })), [investmentOps])
   const queueInvestment = async (
     entity: 'investmentAccount' | 'investmentInstrument' | 'investmentActivity' | 'investmentManualPrice' | 'investmentCashFlow',
     type: 'add' | 'update' | 'delete' | 'restore',
@@ -244,7 +251,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
         }} />
       </BottomSheet>
       <BottomSheet isOpen={panel === 'cash'} title={editingCashFlow ? 'Edit cash movement' : 'Record cash movement'} onClose={closePanel} maxWidthClassName="max-w-lg">
-        <CashForm key={`cash-${formKey}`} portfolio={setupPortfolio} initial={editingCashFlow} busy={busy} onCancel={closePanel} onSave={value => {
+        <CashForm key={`cash-${formKey}`} portfolio={setupPortfolio} initial={editingCashFlow} pendingCashFlows={pendingCashFlows} busy={busy} onCancel={closePanel} onSave={value => {
           const id = editingCashFlow?.id ?? crypto.randomUUID()
           return queueInvestment(
             'investmentCashFlow',
@@ -1455,9 +1462,10 @@ const ManualPriceForm = ({ portfolio, busy, onCancel, onSave }: { portfolio: Inv
   </form>
 }
 
-const CashForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccount }: {
+const CashForm = ({ portfolio, initial, pendingCashFlows, busy, onCancel, onSave, onNeedAccount }: {
   portfolio: InvestmentPortfolio | null
   initial?: InvestmentCashFlow | null
+  pendingCashFlows?: InvestmentCashFlow[]
   busy: boolean
   onCancel: () => void
   onSave: (value: { accountId: string; currency: string; type: 'Deposit' | 'Withdrawal' | 'Conversion'; amount: number; date: string; toCurrency?: string; toAmount?: number }) => Promise<boolean>
@@ -1473,7 +1481,9 @@ const CashForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccount }:
   const [date, setDate] = useState(initial?.date ?? today())
   const [errors, setErrors] = useState<Record<string, string>>({})
   if (!accounts.length) return <div><p className="text-sm text-muted-foreground">Add an investment account before recording cash.</p><div className="mt-4"><Button onClick={onNeedAccount}>Add account</Button></div></div>
-  const heldCash = availableCash(portfolio, accountId, currency)
+  const heldCash = availableCash(portfolio, accountId, currency) + (pendingCashFlows ?? [])
+    .filter(flow => flow.accountId === accountId && flow.currency.toUpperCase() === currency.toUpperCase() && flow.id !== initial?.id)
+    .reduce((total, flow) => total + (flow.type === 'Deposit' ? Math.abs(flow.amount) : flow.type === 'Withdrawal' ? -Math.abs(flow.amount) : -Math.abs(flow.amount)), 0)
   const submit = (event: React.FormEvent) => {
     event.preventDefault()
     if (type === 'Conversion') {
@@ -1490,7 +1500,7 @@ const CashForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccount }:
       amount: numberOrUndefined(amount),
       toCurrency: type === 'Conversion' ? toCurrency.toUpperCase() : undefined,
       toAmount: type === 'Conversion' ? numberOrUndefined(toAmount) : undefined,
-    }, initial)
+    }, initial, pendingCashFlows)
     if (issue) {
       setErrors({ [issue.field]: issue.message })
       return

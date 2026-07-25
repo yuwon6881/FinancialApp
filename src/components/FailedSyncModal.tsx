@@ -14,7 +14,14 @@ const ENTITY_LABELS: Record<string, string> = {
   recurringPayment: 'Recurring payment',
   wishlistItem: 'Wishlist item',
   category: 'Category',
-  settings: 'Settings'
+  settings: 'Settings',
+  investmentAccount: 'Investment account',
+  investmentInstrument: 'Investment',
+  investmentActivity: 'Investment activity',
+  investmentManualPrice: 'Manual price',
+  investmentCashFlow: 'Cash movement',
+  investmentPlan: 'Investment plan',
+  investmentAllocation: 'Investment classification',
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -22,11 +29,13 @@ const TYPE_LABELS: Record<string, string> = {
   update: 'Update',
   delete: 'Delete',
   toggle: 'Toggle',
-  purchase: 'Purchase'
+  purchase: 'Purchase',
+  restore: 'Restore',
+  unpurchase: 'Undo purchase',
 }
 
 function describeOp(op: QueuedOp): string {
-  return op.payload?.description || op.payload?.name || `${ENTITY_LABELS[op.entity] || op.entity} ${op.targetId}`
+  return op.payload?.description || op.payload?.name || ENTITY_LABELS[op.entity] || 'Item'
 }
 
 function formatFieldName(key: string): string {
@@ -98,10 +107,10 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
                 <span className="font-bold text-foreground text-xs block truncate">{describeOp(op)}</span>
                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                   <span className="inline-block text-[9px] px-1.5 py-0.5 font-bold rounded border border-border/40 bg-muted/40 text-muted-foreground">
-                    {ENTITY_LABELS[op.entity] || op.entity}
+                    {ENTITY_LABELS[op.entity] || 'Item'}
                   </span>
                   <span className="inline-block text-[9px] px-1.5 py-0.5 font-bold rounded border border-border/40 bg-muted/40 text-muted-foreground">
-                    {TYPE_LABELS[op.type] || op.type}
+                    {TYPE_LABELS[op.type] || 'Change'}
                   </span>
                   <span className="text-[10px] text-muted-foreground">
                     {op.retryCount} {op.retryCount === 1 ? 'attempt' : 'attempts'}

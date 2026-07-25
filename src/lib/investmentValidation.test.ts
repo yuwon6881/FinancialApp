@@ -100,6 +100,19 @@ describe('validateCashFlowBalances', () => {
     expect(validateCashFlowBalances(portfolio, { accountId: 'a1', type: 'Conversion', currency: 'USD', amount: 100, toCurrency: 'MYR', toAmount: 470 })).toBeNull()
   })
 
+  it('counts a queued deposit before validating a conversion', () => {
+    const pendingDeposit: InvestmentCashFlow = {
+      id: 'deposit-1', accountId: 'a1', currency: 'MYR', type: 'Deposit', amount: 1000, date: '2026-06-01',
+    }
+
+    expect(validateCashFlowBalances(
+      portfolio,
+      { accountId: 'a1', type: 'Conversion', currency: 'MYR', amount: 1000, toCurrency: 'USD', toAmount: 250.27 },
+      undefined,
+      [pendingDeposit],
+    )).toBeNull()
+  })
+
   it('rejects a conversion between the same currency', () => {
     expect(validateCashFlowBalances(portfolio, { accountId: 'a1', type: 'Conversion', currency: 'USD', amount: 1, toCurrency: 'usd', toAmount: 1 })?.field).toBe('toCurrency')
   })

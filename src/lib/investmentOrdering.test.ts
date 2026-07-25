@@ -14,13 +14,14 @@ const activity = (id: string, tradeDate: string, createdAt?: string): Investment
   createdAt: createdAt ?? '',
 })
 
-const flow = (id: string, date: string): InvestmentCashFlow => ({
+const flow = (id: string, date: string, createdAt?: string): InvestmentCashFlow => ({
   id,
   accountId: 'a',
   currency: 'USD',
   type: 'Deposit',
   amount: 1,
   date,
+  createdAt,
 })
 
 describe('investment ordering', () => {
@@ -58,6 +59,15 @@ describe('investment ordering', () => {
     const rows = [flow('1', '2026-01-01'), flow('2', '2026-05-01'), flow('3', '2026-03-01')]
 
     expect(sortCashFlowsNewestFirst(rows).map(row => row.id)).toEqual(['2', '3', '1'])
+  })
+
+  it('orders same-day cash movements by creation time before their ids', () => {
+    const rows = [
+      flow('deposit', '2026-06-01', '2026-06-01T09:00:00Z'),
+      flow('conversion', '2026-06-01', '2026-06-01T10:00:00Z'),
+    ]
+
+    expect(sortCashFlowsNewestFirst(rows).map(row => row.id)).toEqual(['conversion', 'deposit'])
   })
 
   it('does not mutate the input list', () => {

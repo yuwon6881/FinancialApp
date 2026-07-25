@@ -178,6 +178,7 @@ export function validateCashFlowBalances(
   portfolio: InvestmentPortfolio | null,
   draft: CashFlowBalanceDraft,
   initial?: InvestmentCashFlow | null,
+  pendingCashFlows: InvestmentCashFlow[] = [],
 ): BalanceIssue | null {
   if (!portfolio) return null
   const account = portfolio.accounts.find(value => value.id === draft.accountId)
@@ -188,7 +189,11 @@ export function validateCashFlowBalances(
   if (draft.type === 'Deposit') return null
 
   const replaced = initial && initial.accountId === draft.accountId ? initial : null
-  const restored = replaced ? storedCashFlowEffects(replaced) : []
+  const initialIsPending = replaced && pendingCashFlows.some(flow => flow.id === replaced.id)
+  const restored = replaced && !initialIsPending ? storedCashFlowEffects(replaced) : []
+  const pending = pendingCashFlows
+    .filter(flow => !replaced || flow.id !== replaced.id)
+    .flatMap(storedCashFlowEffects)
   const spent = -cashFlowEffects(draft)
     .filter(effect => same(effect.currency, draft.currency))
     .reduce((total, effect) => total + effect.amount, 0)
@@ -196,6 +201,8 @@ export function validateCashFlowBalances(
 
   const held = availableCash(portfolio, draft.accountId, draft.currency) -
     restored.filter(effect => same(effect.currency, draft.currency))
+      .reduce((total, effect) => total + effect.amount, 0) +
+    pending.filter(effect => same(effect.currency, draft.currency))
       .reduce((total, effect) => total + effect.amount, 0)
   if (spent <= held + tolerance) return null
 

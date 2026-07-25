@@ -29,10 +29,13 @@ export function compareActivityNewestFirst(a: InvestmentActivity, b: InvestmentA
   return String(b.id).localeCompare(String(a.id))
 }
 
-/** Cash movements carry no created timestamp, so the id is the only stable tie-break. */
+/** Cash movements use creation time for same-day ordering, matching the server. */
 export function compareCashFlowNewestFirst(a: InvestmentCashFlow, b: InvestmentCashFlow): number {
   const dayDiff = day(b.date) - day(a.date)
   if (dayDiff !== 0) return dayDiff
+  const createdA = created(a.createdAt)
+  const createdB = created(b.createdAt)
+  if (createdA !== createdB) return createdB > createdA ? 1 : -1
   return String(b.id).localeCompare(String(a.id))
 }
 
