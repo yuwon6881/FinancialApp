@@ -181,21 +181,30 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
     const rawListRpIds = new Set(rawList.map(p => p.recurringPaymentId).filter(Boolean))
 
     const mappedList = rawList.map(p => {
-      // STEP 1: Look for a discard-marker transaction in this cycle for this bill.
+      // STEP 1: Look for a discard-marker transaction for this bill around this cycle.
       // This is the highest-priority signal — it overrides both the server-reported
       // status AND any payment transaction found in the cycle. The server can
       // incorrectly report status='Paid' when a pay-early transaction (for the NEXT
       // cycle) lands inside the current cycle's date window with the same
-      // recurringPaymentId. We detect the discard explicitly and return early so
-      // the order of find() results and the server's stale status cannot flip it.
+      // recurringPaymentId. We detect the discard explicitly and return early.
+      // We use a forgiving date check (within ~30 days of dueDate) instead of strict
+      // isInCycle to avoid missing discards that fall just outside the cycle boundary.
+      const pDueDateObj = new Date(toIsoDate(p.dueDate) || startIso)
+      const isDateNear = (tDateStr: string) => {
+        const tDate = new Date(toIsoDate(tDateStr) || '')
+        if (Number.isNaN(tDate.getTime())) return false
+        const diffDays = Math.abs(tDate.getTime() - pDueDateObj.getTime()) / (1000 * 60 * 60 * 24)
+        return diffDays <= 35
+      }
+
       const discardTxInCycle = p.recurringPaymentId
         ? (transactions || []).find(t =>
-            isInCycle(t.date) &&
+            isDateNear(t.date) &&
             t.recurringPaymentId === p.recurringPaymentId &&
             isDiscardedTx(t)
           )
         : (transactions || []).find(t => {
-            if (!isInCycle(t.date) || !isDiscardedTx(t)) return false
+            if (!isDateNear(t.date) || !isDiscardedTx(t)) return false
             const descLower = (t.description || '').toLowerCase().trim()
             const catLower  = (t.category  || '').toLowerCase().trim()
             const pNameLower = p.name.toLowerCase().trim()
