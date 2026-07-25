@@ -181,10 +181,37 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
     const rawListRpIds = new Set(rawList.map(p => p.recurringPaymentId).filter(Boolean))
 
     const mappedList = rawList.map(p => {
-      // Server-reported Discarded status is the authoritative signal — a pay-early
-      // transaction recorded TODAY (which is in the current cycle's date range) must
-      // NOT override a bill that the server has already confirmed as Discarded. We
-      // guard this BEFORE the transaction lookup so the match can never flip the status.
+      // STEP 1: Look for a discard-marker transaction in this cycle for this bill.
+      // This is the highest-priority signal — it overrides both the server-reported
+      // status AND any payment transaction found in the cycle. The server can
+      // incorrectly report status='Paid' when a pay-early transaction (for the NEXT
+      // cycle) lands inside the current cycle's date window with the same
+      // recurringPaymentId. We detect the discard explicitly and return early so
+      // the order of find() results and the server's stale status cannot flip it.
+      const discardTxInCycle = p.recurringPaymentId
+        ? (transactions || []).find(t =>
+            isInCycle(t.date) &&
+            t.recurringPaymentId === p.recurringPaymentId &&
+            isDiscardedTx(t)
+          )
+        : (transactions || []).find(t => {
+            if (!isInCycle(t.date) || !isDiscardedTx(t)) return false
+            const descLower = (t.description || '').toLowerCase().trim()
+            const catLower  = (t.category  || '').toLowerCase().trim()
+            const pNameLower = p.name.toLowerCase().trim()
+            const pCatLower  = (p.category || '').toLowerCase().trim()
+            const nameMatch     = descLower === pNameLower || (pNameLower.length > 2 && descLower.includes(pNameLower)) || (descLower.length > 2 && pNameLower.includes(descLower))
+            const categoryMatch = catLower !== '' && (catLower === pNameLower || catLower === pCatLower)
+            return nameMatch || categoryMatch
+          })
+
+      if (discardTxInCycle) {
+        matchedTxIds.add(String(discardTxInCycle.id))
+        return { ...p, isPaid: false, isDiscarded: true, status: 'Discarded' as const }
+      }
+
+      // STEP 2: Check server-reported Discarded status (covers cases where the server
+      // has the discard stored but no local transaction was found in STEP 1).
       const isServerDiscarded = p.isDiscarded || p.status === 'Discarded'
       if (isServerDiscarded) {
         return { ...p, isPaid: false, isDiscarded: true, status: 'Discarded' as const }
@@ -192,48 +219,42 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
 
       const isServerPaid = p.status === 'Paid'
 
+      // STEP 3: Find a matching payment transaction in this cycle.
+      // Discard markers are skipped here — they were handled in STEP 1.
+      // Pay-early transactions for the NEXT cycle are excluded by the date-range guard
+      // regardless of the server-reported status.
       const matchingTx = (transactions || []).find(t => {
         if (!isInCycle(t.date)) return false
-        // A pay-early transaction for the *next* cycle will share the same
-        // recurringPaymentId but its date will be the early-payment date (today),
-        // which happens to fall in the current cycle range. Exclude it from matching
-        // against the current cycle's bill by skipping non-discarded transactions
-        // whose date is after the bill's own due date when the server already knows
-        // the current cycle state (i.e. server hasn't marked it Paid yet).
-        if (!isServerPaid && t.recurringPaymentId && t.recurringPaymentId === p.recurringPaymentId) {
-          // Only accept the transaction as a same-cycle payment if its date is
-          // on or before the bill's due date, OR if the transaction itself is a
-          // discard marker (which is always current-cycle).
-          const txDateIso = toIsoDate(t.date)
+        if (isDiscardedTx(t)) return false // discard markers already handled in STEP 1
+        if (t.recurringPaymentId && t.recurringPaymentId === p.recurringPaymentId) {
+          // A pay-early transaction for the next cycle shares this recurringPaymentId but
+          // is dated after the bill's own due date — exclude it unconditionally.
+          const txDateIso    = toIsoDate(t.date)
           const billDueDateIso = toIsoDate(p.dueDate)
-          const isDiscardTx = isDiscardedTx(t)
-          if (!isDiscardTx && billDueDateIso && txDateIso > billDueDateIso) return false
+          if (billDueDateIso && txDateIso > billDueDateIso) return false
+          return true
         }
-        if (t.recurringPaymentId) return t.recurringPaymentId === p.recurringPaymentId
+        if (t.recurringPaymentId) return false // different ID — never fuzzy-match
 
-        const descLower = (t.description || '').toLowerCase().trim()
-        const catLower = (t.category || '').toLowerCase().trim()
+        const descLower  = (t.description || '').toLowerCase().trim()
+        const catLower   = (t.category  || '').toLowerCase().trim()
         const pNameLower = p.name.toLowerCase().trim()
-        const pCatLower = (p.category || '').toLowerCase().trim()
-
-        const nameMatch = descLower === pNameLower || (pNameLower.length > 2 && descLower.includes(pNameLower)) || (descLower.length > 2 && pNameLower.includes(descLower))
+        const pCatLower  = (p.category || '').toLowerCase().trim()
+        const nameMatch     = descLower === pNameLower || (pNameLower.length > 2 && descLower.includes(pNameLower)) || (descLower.length > 2 && pNameLower.includes(descLower))
         const categoryMatch = catLower !== '' && (catLower === pNameLower || catLower === pCatLower)
-
         return nameMatch || categoryMatch
       })
 
-      // For upcoming-cycle bills (cycleOffset > 0), also look for a pay-early transaction
-      // that was recorded in the previous cycle (before this cycle started) with a matching
-      // recurringPaymentId. A pay-early transaction will have: (a) date < this cycle's start,
-      // (b) date >= previous cycle's start (i.e. within a reasonable look-back window), and
-      // (c) not be a discard marker. We limit the look-back to 40 days to avoid false positives.
+      // STEP 4: For upcoming-cycle bills (cycleOffset > 0), also look for a pay-early
+      // transaction recorded in the previous cycle (before this cycle started) with a
+      // matching recurringPaymentId. We limit the look-back to 40 days to avoid
+      // accidentally matching a much-older payment.
       const payEarlyTx = !matchingTx && cycleOffset > 0 && p.recurringPaymentId
         ? (transactions || []).find(t => {
             if (!t.recurringPaymentId || t.recurringPaymentId !== p.recurringPaymentId) return false
             const txDate = toIsoDate(t.date)
             if (!txDate || txDate >= startIso) return false // must be before this cycle
-            if (isDiscardedTx(t)) return false // discard markers don't count as early payment
-            // Limit look-back to 40 days to avoid matching a payment from a much earlier cycle
+            if (isDiscardedTx(t)) return false
             const txDateObj = new Date(txDate)
             const lookBackStart = new Date(cycleStart)
             lookBackStart.setDate(lookBackStart.getDate() - 40)
@@ -243,13 +264,6 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
 
       if (payEarlyTx) matchedTxIds.add(String(payEarlyTx.id))
       if (matchingTx) matchedTxIds.add(String(matchingTx.id))
-
-      // A matching transaction can be a real payment or a discard marker — they must
-      // not collapse into the same "Paid" status.
-      const matchedIsDiscarded = matchingTx ? isDiscardedTx(matchingTx) : false
-      if (matchedIsDiscarded) {
-        return { ...p, isPaid: false, isDiscarded: true, status: 'Discarded' as const }
-      }
 
       const effectiveTx = matchingTx || payEarlyTx
       if (isServerPaid || effectiveTx) {
