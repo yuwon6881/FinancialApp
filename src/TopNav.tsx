@@ -374,7 +374,7 @@ const TopNav: React.FC<TopNavProps> = ({
                     <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
                   </span>
                   <span className="text-left leading-snug">
-                    <strong className="inline font-extrabold text-foreground mr-1.5">Protecting your amounts</strong>
+                    <strong className="block font-extrabold text-foreground">Protecting your amounts</strong>
                     Checking privacy settings before anything is revealed.
                   </span>
                 </>
@@ -384,7 +384,7 @@ const TopNav: React.FC<TopNavProps> = ({
                     <ShieldAlert className="size-3.5" aria-hidden="true" />
                   </span>
                   <span className="text-left leading-snug">
-                    <strong className="inline font-extrabold text-foreground mr-1.5">Amounts remain protected</strong>
+                    <strong className="block font-extrabold text-foreground">Amounts remain protected</strong>
                     Privacy settings couldn't be verified.
                   </span>
                   <button
