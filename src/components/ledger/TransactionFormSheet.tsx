@@ -61,7 +61,7 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
       onClose={form.handleCloseForm}
       title={title}
     >
-      <form onSubmit={form.handleSubmit} className="space-y-5">
+      <form noValidate onSubmit={form.handleSubmit} className="space-y-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <ReceiptScanPicker
             isScanning={form.scanner.isScanning}

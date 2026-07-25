@@ -1219,8 +1219,8 @@ const AccountForm = ({ appCurrency = 'USD', busy, onCancel, onSave }: { appCurre
   const [name, setName] = useState('')
   const [currency, setCurrency] = useState(appCurrency)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  return <form className="space-y-4" onSubmit={event => { 
-    event.preventDefault(); 
+  return <form noValidate className="space-y-4" onSubmit={event => {
+    event.preventDefault();
     if (!name.trim()) { setErrors({ name: 'Account name is required.' }); return; }
     setErrors({})
     void onSave({ name, baseCurrency: currency }) 
@@ -1276,7 +1276,7 @@ const InstrumentForm = ({ appCurrency = 'USD', busy, offline, onCancel, onSave }
       <button type="button" onClick={() => setManual(false)} className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${!manual ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>Search markets</button>
       <button type="button" onClick={() => setManual(true)} className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${manual ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>Custom / manual</button>
     </div>
-    {manual ? <form className="space-y-4" onSubmit={saveManual}>
+    {manual ? <form noValidate className="space-y-4" onSubmit={saveManual}>
       <div className={formGridWideClass}>
         <Field label="Ticker" error={errors.symbol}><input maxLength={32} value={symbol} onChange={event => { setSymbol(event.target.value.toUpperCase()); setErrors(prev => ({ ...prev, symbol: '' })) }} className={getInputClass(!!errors.symbol)} /></Field>
         <Field label="Full name" error={errors.name} className="lg:col-span-2"><input maxLength={200} value={name} onChange={event => { setName(event.target.value); setErrors(prev => ({ ...prev, name: '' })) }} className={getInputClass(!!errors.name)} /></Field>
@@ -1379,7 +1379,7 @@ const ActivityForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccoun
     })
   }
   const feesLabelSuffix = selectedInstrument ? ` (${selectedInstrument.currency})` : ''
-  return <form onSubmit={submit} className="space-y-4">
+  return <form noValidate onSubmit={submit} className="space-y-4">
     <div className={formGridWideClass}>
     <Field label="Activity type" plain><CustomSelect value={type} onChange={v => setType(v as InvestmentTransactionType)} options={activityTypes.map(t => ({ value: t.value, label: t.label }))} ariaLabel="Activity type" className="w-full" /></Field>
     <Field label="Account" plain><CustomSelect value={accountId} onChange={v => setAccountId(v as string)} options={accounts.map(a => ({ value: a.id, label: a.name }))} ariaLabel="Account" className="w-full" /></Field>
@@ -1415,8 +1415,8 @@ const ManualPriceForm = ({ portfolio, busy, onCancel, onSave }: { portfolio: Inv
   const [fx, setFx] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const instrument = instruments.find(value => value.id === instrumentId)
-  return <form className="space-y-4" onSubmit={event => { 
-    event.preventDefault(); 
+  return <form noValidate className="space-y-4" onSubmit={event => {
+    event.preventDefault();
     if (numberOrUndefined(price) === undefined) { setErrors({ price: 'Close price is required.' }); return; }
     setErrors({})
     void onSave({ instrumentId, marketDate: date, price: Number(price), fxRate: numberOrUndefined(fx) }) 
@@ -1444,10 +1444,10 @@ const CashForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccount }:
   const [accountId, setAccountId] = useState(initial?.accountId ?? accounts[0]?.id ?? '')
   const [type, setType] = useState<'Deposit' | 'Withdrawal' | 'Conversion'>(initial?.type ?? 'Deposit')
   const [currency, setCurrency] = useState(initial?.currency ?? accounts[0]?.baseCurrency ?? portfolio?.appCurrency ?? 'USD')
-  const [amount, setAmount] = useState(initial?.amount ? String(initial.amount) : '')
+  const [amount, setAmount] = useState(initial?.amount ? String(Math.abs(initial.amount)) : '')
   const [toCurrency, setToCurrency] = useState(initial?.toCurrency ?? currency)
   const [toAmount, setToAmount] = useState(initial?.toAmount ? String(initial.toAmount) : '')
-  const [fxRate, setFxRate] = useState(initial?.fxRate ? String(initial.fxRate) : '')
+  const [fxRate, setFxRate] = useState(initial?.fxRate ? initial.fxRate.toFixed(10).replace(/\.?0+$/, '') : '')
   const [date, setDate] = useState(initial?.date ?? today())
   const [notes, setNotes] = useState(initial?.notes ?? '')
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -1455,17 +1455,17 @@ const CashForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccount }:
   const submit = (event: React.FormEvent) => {
     event.preventDefault()
     if (type === 'Conversion') {
-      if (numberOrUndefined(amount) === undefined) { setErrors({ amount: 'From amount is required.' }); return; }
-      if (numberOrUndefined(toAmount) === undefined) { setErrors({ toAmount: 'To amount is required.' }); return; }
+      if (!(numberOrUndefined(amount)! > 0)) { setErrors({ amount: 'Enter a positive from amount.' }); return; }
+      if (!(numberOrUndefined(toAmount)! > 0)) { setErrors({ toAmount: 'Enter a positive to amount.' }); return; }
     } else {
-      if (numberOrUndefined(amount) === undefined) { setErrors({ amount: 'Amount is required.' }); return; }
+      if (!(numberOrUndefined(amount)! > 0)) { setErrors({ amount: 'Enter a positive amount.' }); return; }
     }
     setErrors({})
-    void onSave({ 
-      accountId, 
-      currency: currency.toUpperCase(), 
-      type, 
-      amount: Number(amount || 0), 
+    void onSave({
+      accountId,
+      currency: currency.toUpperCase(),
+      type,
+      amount: Number(amount || 0),
       date, 
       notes: notes.trim() || undefined,
       toCurrency: type === 'Conversion' ? toCurrency.toUpperCase() : undefined,
@@ -1473,7 +1473,7 @@ const CashForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccount }:
       fxRate: type === 'Conversion' && fxRate ? Number(fxRate) : undefined,
     })
   }
-  return <form onSubmit={submit} className="space-y-4">
+  return <form noValidate onSubmit={submit} className="space-y-4">
     <div className={formGridClass}>
       <Field label="Account" plain><CustomSelect value={accountId} onChange={v => { const id = v as string; setAccountId(id); const next = accounts.find(value => value.id === id); if (next) { setCurrency(next.baseCurrency); if (!initial) setToCurrency(next.baseCurrency) } }} options={accounts.map(a => ({ value: a.id, label: a.name }))} ariaLabel="Account" className="w-full" /></Field>
       <Field label="Type" plain><CustomSelect value={type} onChange={v => setType(v as 'Deposit' | 'Withdrawal' | 'Conversion')} options={[{ value: 'Deposit', label: 'Deposit (cash in)' }, { value: 'Withdrawal', label: 'Withdrawal (cash out)' }, { value: 'Conversion', label: 'Convert currency' }]} ariaLabel="Cash movement type" className="w-full" /></Field>

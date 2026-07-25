@@ -103,6 +103,7 @@ export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScre
         )}
 
         <form
+          noValidate
           onSubmit={async (e) => {
             e.preventDefault()
             setPasswordVerifying(true)

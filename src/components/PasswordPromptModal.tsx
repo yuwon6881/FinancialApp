@@ -68,6 +68,7 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified, onTryFingerpr
       )}
 
       <form
+        noValidate
         onSubmit={async (e) => {
           e.preventDefault()
           setPromptVerifying(true)
