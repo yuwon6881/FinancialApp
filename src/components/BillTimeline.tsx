@@ -181,8 +181,34 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
     const rawListRpIds = new Set(rawList.map(p => p.recurringPaymentId).filter(Boolean))
 
     const mappedList = rawList.map(p => {
+      // Server-reported Discarded status is the authoritative signal — a pay-early
+      // transaction recorded TODAY (which is in the current cycle's date range) must
+      // NOT override a bill that the server has already confirmed as Discarded. We
+      // guard this BEFORE the transaction lookup so the match can never flip the status.
+      const isServerDiscarded = p.isDiscarded || p.status === 'Discarded'
+      if (isServerDiscarded) {
+        return { ...p, isPaid: false, isDiscarded: true, status: 'Discarded' as const }
+      }
+
+      const isServerPaid = p.status === 'Paid'
+
       const matchingTx = (transactions || []).find(t => {
         if (!isInCycle(t.date)) return false
+        // A pay-early transaction for the *next* cycle will share the same
+        // recurringPaymentId but its date will be the early-payment date (today),
+        // which happens to fall in the current cycle range. Exclude it from matching
+        // against the current cycle's bill by skipping non-discarded transactions
+        // whose date is after the bill's own due date when the server already knows
+        // the current cycle state (i.e. server hasn't marked it Paid yet).
+        if (!isServerPaid && t.recurringPaymentId && t.recurringPaymentId === p.recurringPaymentId) {
+          // Only accept the transaction as a same-cycle payment if its date is
+          // on or before the bill's due date, OR if the transaction itself is a
+          // discard marker (which is always current-cycle).
+          const txDateIso = toIsoDate(t.date)
+          const billDueDateIso = toIsoDate(p.dueDate)
+          const isDiscardTx = isDiscardedTx(t)
+          if (!isDiscardTx && billDueDateIso && txDateIso > billDueDateIso) return false
+        }
         if (t.recurringPaymentId) return t.recurringPaymentId === p.recurringPaymentId
 
         const descLower = (t.description || '').toLowerCase().trim()
@@ -196,24 +222,42 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
         return nameMatch || categoryMatch
       })
 
+      // For upcoming-cycle bills (cycleOffset > 0), also look for a pay-early transaction
+      // that was recorded in the previous cycle (before this cycle started) with a matching
+      // recurringPaymentId. A pay-early transaction will have: (a) date < this cycle's start,
+      // (b) date >= previous cycle's start (i.e. within a reasonable look-back window), and
+      // (c) not be a discard marker. We limit the look-back to 40 days to avoid false positives.
+      const payEarlyTx = !matchingTx && cycleOffset > 0 && p.recurringPaymentId
+        ? (transactions || []).find(t => {
+            if (!t.recurringPaymentId || t.recurringPaymentId !== p.recurringPaymentId) return false
+            const txDate = toIsoDate(t.date)
+            if (!txDate || txDate >= startIso) return false // must be before this cycle
+            if (isDiscardedTx(t)) return false // discard markers don't count as early payment
+            // Limit look-back to 40 days to avoid matching a payment from a much earlier cycle
+            const txDateObj = new Date(txDate)
+            const lookBackStart = new Date(cycleStart)
+            lookBackStart.setDate(lookBackStart.getDate() - 40)
+            return txDateObj >= lookBackStart
+          })
+        : undefined
+
+      if (payEarlyTx) matchedTxIds.add(String(payEarlyTx.id))
       if (matchingTx) matchedTxIds.add(String(matchingTx.id))
 
-      // A matching transaction (server-reported or found here) only means "this cycle's bill was
-      // actioned" -- it can be a real payment or a discard marker, and those must not collapse
-      // into the same "Paid" status.
-      const isServerDiscarded = p.isDiscarded || p.status === 'Discarded'
+      // A matching transaction can be a real payment or a discard marker — they must
+      // not collapse into the same "Paid" status.
       const matchedIsDiscarded = matchingTx ? isDiscardedTx(matchingTx) : false
-      if (isServerDiscarded || matchedIsDiscarded) {
+      if (matchedIsDiscarded) {
         return { ...p, isPaid: false, isDiscarded: true, status: 'Discarded' as const }
       }
 
-      const isServerPaid = p.status === 'Paid'
-      if (isServerPaid || matchingTx) {
+      const effectiveTx = matchingTx || payEarlyTx
+      if (isServerPaid || effectiveTx) {
         return {
           ...p,
           isPaid: true,
           status: 'Paid' as const,
-          paidDate: p.paidDate || (matchingTx ? matchingTx.date : null)
+          paidDate: p.paidDate || (effectiveTx ? effectiveTx.date : null)
         }
       }
 

@@ -967,14 +967,28 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     if (!guardSensitive()) return
     const payment = allRecurringPayments.find(p => p.id === id)
     if (!payment) return
+    const todayFormatted = new Date().toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })
     setConfirmModalData({
       title: 'Pay Early',
       variant: 'primary',
       message: (
-        <div className="space-y-1.5">
-          <p>Pay <strong>{payment.name}</strong> for {formatSensitive(Math.abs(payment.amount))} now?</p>
-          <p>Scheduled date: {payment.nextDueDate}</p>
-          <p className="text-muted-foreground">Transaction date: Today.</p>
+        <div className="space-y-3">
+          <p className="text-sm">Pay <strong>{payment.name}</strong> before its scheduled date?</p>
+          <div className="rounded-xl border border-border/60 bg-muted/30 p-3 space-y-2 text-xs">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">Amount</span>
+              <strong className="text-foreground">{formatSensitive(Math.abs(payment.amount))}</strong>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">Scheduled date</span>
+              <span className="font-semibold text-foreground">{payment.nextDueDate}</span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">Transaction date</span>
+              <span className="font-semibold text-foreground">{todayFormatted}</span>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">The next due date will advance by one cycle after this payment.</p>
         </div>
       ),
       confirmText: 'Pay Now',
