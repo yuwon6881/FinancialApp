@@ -196,4 +196,37 @@ describe('InvestmentsView provider call boundaries', () => {
     expect(units.value).toBe('20')
     expect(gross.value).toBe('250')
   })
+
+  const choose = (ariaLabel: string, option: string) => {
+    fireEvent.click(screen.getByRole('combobox', { name: ariaLabel }))
+    fireEvent.click(screen.getByRole('option', { name: option }))
+  }
+
+  it('refuses a buy the account has no cash for', async () => {
+    vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(tradablePortfolio)
+    renderView()
+    fireEvent.click(await screen.findByRole('button', { name: 'Add activity' }))
+    choose('Activity type', 'Buy')
+
+    fireEvent.change(screen.getByLabelText('Units'), { target: { value: '1' } })
+    fireEvent.change(screen.getByLabelText(/Unit price/), { target: { value: '100' } })
+    await waitFor(() => expect((screen.getByLabelText(/Gross amount/) as HTMLInputElement).value).toBe('100'))
+    fireEvent.click(screen.getByRole('button', { name: 'Save activity' }))
+
+    expect(await screen.findByText(/is available in Broker/)).toBeTruthy()
+    expect(context.queueInvestmentMutation).not.toHaveBeenCalled()
+  })
+
+  it('refuses a withdrawal the account has no cash for', async () => {
+    vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(tradablePortfolio)
+    renderView()
+    fireEvent.click(await screen.findByRole('button', { name: 'Manage cash' }))
+    choose('Cash movement type', 'Withdrawal (cash out)')
+
+    fireEvent.change(screen.getByLabelText(/Amount/), { target: { value: '50' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Record withdrawal' }))
+
+    expect(await screen.findByText(/before withdrawing/)).toBeTruthy()
+    expect(context.queueInvestmentMutation).not.toHaveBeenCalled()
+  })
 })

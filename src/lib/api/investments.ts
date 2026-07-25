@@ -102,7 +102,6 @@ export interface InvestmentActivityMutation {
   cashAmount?: number
   fees: number
   taxes: number
-  tradeFxRate?: number
   linkedTransferId?: string
   destinationAccountId?: string
 }
@@ -280,7 +279,6 @@ export function createManualInvestmentPrice(value: {
   instrumentId: string
   marketDate: string
   price: number
-  fxRate?: number
 }): Promise<{ id: string }> {
   return invalidateAfter(request('/investments/manual-prices', {
     method: 'POST',
@@ -306,7 +304,6 @@ export interface InvestmentCashFlowInput {
   notes?: string
   toCurrency?: string
   toAmount?: number
-  fxRate?: number
 }
 
 export function createInvestmentCashFlow(value: InvestmentCashFlowInput): Promise<{ id: string }> {

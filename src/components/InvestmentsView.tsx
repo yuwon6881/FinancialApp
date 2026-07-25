@@ -34,6 +34,7 @@ import { CurrencySelect } from './ui/CurrencySelect'
 import { InfoHint } from './ui/InfoHint'
 import { useInvestmentPortfolio } from './investments/useInvestmentPortfolio'
 import { applyOpsToList } from '../lib/outbox'
+import { availableCash, availableUnits, validateActivityBalances, validateCashFlowBalances } from '../lib/investmentValidation'
 import { sortActivityNewestFirst, sortCashFlowsNewestFirst } from '../lib/investmentOrdering'
 import { RowSyncStatus } from './ui/RowSyncBadge'
 import { InvestmentPlanPanel } from './investments/InvestmentPlanPanel'
@@ -189,31 +190,13 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
 
   return (
     <div className="space-y-6 soft-rise">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <button type="button" onClick={back} className="mt-0.5 cursor-pointer rounded-xl border border-border/60 p-2 text-muted-foreground hover:text-foreground" aria-label="Back to Today">
-            <ArrowLeft className="size-4" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-black tracking-tight text-foreground">Growth Investments</h1>
-            <p className="mt-1 text-xs text-muted-foreground">Track what you own, across any broker.</p>
-          </div>
-        </div>
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-          <Button
-            variant="ghost"
-            className="w-full justify-center sm:w-auto"
-            disabled={isOffline || refreshing || !portfolio?.marketDataConfigured || !portfolio.holdings.length}
-            aria-busy={refreshing}
-            onClick={() => void updatePrices()}
-          >
-            {refreshing
-              ? <><Loader2 className="size-4 animate-spin" /> Updating…</>
-              : <><RefreshCw className="size-4" /> Update prices</>}
-          </Button>
-          <Button variant="primary" className="w-full justify-center sm:w-auto" onClick={() => openPanel('activity')}>
-            <Plus className="size-4" /> Add activity
-          </Button>
+      <header className="flex items-start gap-3">
+        <button type="button" onClick={back} className="mt-0.5 cursor-pointer rounded-xl border border-border/60 p-2 text-muted-foreground hover:text-foreground" aria-label="Back to Today">
+          <ArrowLeft className="size-4" />
+        </button>
+        <div>
+          <h1 className="text-2xl font-black tracking-tight text-foreground">Growth Investments</h1>
+          <p className="mt-1 text-xs text-muted-foreground">Track what you own, across any broker.</p>
         </div>
       </header>
 
@@ -280,12 +263,17 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
       ) : (
         <>
           <SummaryCards portfolio={portfolio} masked={hideSensitive} />
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-            <Button variant="ghost" onClick={() => openPanel('account')}><Building2 className="size-4" /> Add account</Button>
-            <Button variant="ghost" onClick={() => openPanel('instrument')}><Search className="size-4" /> Add investment</Button>
-            <Button variant="ghost" disabled={portfolio.accounts.length === 0} onClick={() => openPanel('cash')}><Wallet className="size-4" /> Manage cash</Button>
-            <Button variant="ghost" disabled={portfolio.instruments.length === 0} onClick={() => openPanel('price')}><CircleDollarSign className="size-4" /> Manual price</Button>
-          </div>
+          <ActionToolbar
+            portfolio={portfolio}
+            isOffline={isOffline}
+            refreshing={refreshing}
+            onAddActivity={() => openPanel('activity')}
+            onManageCash={() => openPanel('cash')}
+            onAddAccount={() => openPanel('account')}
+            onAddInvestment={() => openPanel('instrument')}
+            onManualPrice={() => openPanel('price')}
+            onUpdatePrices={() => void updatePrices()}
+          />
           <InvestmentPlanPanel
             allocation={portfolio.allocation}
             usdRate={portfolio.usdRate}
@@ -386,6 +374,59 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
     </div>
   )
 }
+
+/**
+ * A price you type in only matters where the market-data provider cannot supply one:
+ * custom instruments, an instrument the provider has no close for yet, a portfolio
+ * with live prices switched off, or prices already entered by hand. For a portfolio
+ * of well-tracked tickers the action stays hidden instead of adding noise.
+ */
+const needsManualPrices = (portfolio: InvestmentPortfolio) =>
+  portfolio.instruments.some(value => !value.isArchived && value.isCustom) ||
+  portfolio.holdings.some(value => value.latestPriceNative === undefined) ||
+  portfolio.manualPrices.length > 0 ||
+  !portfolio.marketDataConfigured
+
+/**
+ * Every page-level action in one place, in the order they are normally used, so
+ * nothing looks attached to the plan card above it. The one primary action is the
+ * record you add most; the rest share the same ghost pattern, and "Update prices"
+ * is separated because it changes market data rather than your records.
+ */
+const ActionToolbar = ({ portfolio, isOffline, refreshing, onAddActivity, onManageCash, onAddAccount, onAddInvestment, onManualPrice, onUpdatePrices }: {
+  portfolio: InvestmentPortfolio
+  isOffline: boolean
+  refreshing: boolean
+  onAddActivity: () => void
+  onManageCash: () => void
+  onAddAccount: () => void
+  onAddInvestment: () => void
+  onManualPrice: () => void
+  onUpdatePrices: () => void
+}) => (
+  <section aria-label="Investment actions" className="app-panel flex flex-col gap-3 rounded-2xl border border-border/60 bg-card/92 p-4 lg:flex-row lg:items-center lg:justify-between">
+    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+      <Button variant="primary" disabled={portfolio.accounts.length === 0 || portfolio.instruments.length === 0} onClick={onAddActivity}><Plus className="size-4" /> Add activity</Button>
+      <Button variant="ghost" disabled={portfolio.accounts.length === 0} onClick={onManageCash}><Wallet className="size-4" /> Manage cash</Button>
+      <Button variant="ghost" onClick={onAddAccount}><Building2 className="size-4" /> Add account</Button>
+      <Button variant="ghost" onClick={onAddInvestment}><Search className="size-4" /> Add investment</Button>
+      {needsManualPrices(portfolio) && (
+        <Button variant="ghost" disabled={portfolio.instruments.length === 0} onClick={onManualPrice}><CircleDollarSign className="size-4" /> Manual price</Button>
+      )}
+    </div>
+    <Button
+      variant="ghost"
+      className="justify-center lg:w-auto"
+      disabled={isOffline || refreshing || !portfolio.marketDataConfigured || !portfolio.holdings.length}
+      aria-busy={refreshing}
+      onClick={onUpdatePrices}
+    >
+      {refreshing
+        ? <><Loader2 className="size-4 animate-spin" /> Updating…</>
+        : <><RefreshCw className="size-4" /> Update prices</>}
+    </Button>
+  </section>
+)
 
 const EmptyState = ({ onAddAccount, onAddInvestment }: { onAddAccount: () => void; onAddInvestment: () => void }) => (
   <section className="app-panel rounded-2xl border border-border/60 bg-card/92 px-6 py-14 text-center">
@@ -1293,7 +1334,6 @@ const ActivityForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccoun
   const [cashAmount, setCashAmount] = useState(initial?.cashAmount ? String(initial.cashAmount) : '')
   const [fees, setFees] = useState(String(initial?.fees ?? 0))
   const [taxes, setTaxes] = useState(String(initial?.taxes ?? 0))
-  const [fx, setFx] = useState(initial?.tradeFxRate ? String(initial.tradeFxRate) : '')
   const [destination, setDestination] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const selectedInstrument = instruments.find(value => value.id === instrumentId)
@@ -1344,63 +1384,73 @@ const ActivityForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccoun
       setErrors({ destination: 'Destination is required.' })
       return
     }
+    // Cash and units are checked before queueing, so an impossible record is never
+    // sent and the reason lands on the field that caused it.
+    const issue = validateActivityBalances(portfolio, {
+      type,
+      accountId,
+      instrumentId,
+      units: numberOrUndefined(units),
+      cashAmount: numberOrUndefined(cashAmount),
+      fees: Number(fees || 0),
+      taxes: Number(taxes || 0),
+    }, initial)
+    if (issue) {
+      setErrors({ [issue.field]: issue.message })
+      return
+    }
     setErrors({})
     void onSave({
       accountId, instrumentId, type, tradeDate,
       units: numberOrUndefined(units), unitPrice: numberOrUndefined(unitPrice), cashAmount: numberOrUndefined(cashAmount),
-      fees: Number(fees || 0), taxes: Number(taxes || 0), tradeFxRate: numberOrUndefined(fx),
+      fees: Number(fees || 0), taxes: Number(taxes || 0),
       destinationAccountId: type === 'TransferOut' && destination ? destination : undefined,
     })
   }
   const feesLabelSuffix = selectedInstrument ? ` (${selectedInstrument.currency})` : ''
+  const heldUnits = availableUnits(portfolio, accountId, instrumentId)
+  const heldCash = selectedInstrument ? availableCash(portfolio, accountId, selectedInstrument.currency) : 0
   return <form noValidate onSubmit={submit} className="space-y-4">
     <div className={formGridWideClass}>
     <Field label="Activity type" plain><CustomSelect value={type} onChange={v => setType(v as InvestmentTransactionType)} options={activityTypes.map(t => ({ value: t.value, label: t.label }))} ariaLabel="Activity type" className="w-full" /></Field>
     <Field label="Account" plain><CustomSelect value={accountId} onChange={v => setAccountId(v as string)} options={accounts.map(a => ({ value: a.id, label: a.name }))} ariaLabel="Account" className="w-full" /></Field>
     <Field label="Investment" plain><CustomSelect value={instrumentId} onChange={v => setInstrumentId(v as string)} options={instruments.map(i => ({ value: i.id, label: `${i.symbol} · ${i.name}` }))} ariaLabel="Investment" className="w-full" /></Field>
     <Field label="Trade date" plain><DatePicker value={tradeDate} onChange={setTradeDate} max={today()} className="w-full" /></Field>
-    {needsUnits && <Field label={type === 'Split' ? 'Split ratio' : 'Units'} error={errors.units}><input type="number" min="0" step="0.0000000001" value={units} onChange={event => { noteEdit('units'); setUnits(event.target.value); setErrors(prev => ({ ...prev, units: '', form: '' })) }} className={getInputClass(!!errors.units)} /></Field>}
+    {needsUnits && <Field label={type === 'Split' ? 'Split ratio' : 'Units'} error={errors.units} hint={['Sell', 'TransferOut'].includes(type) ? `${number(heldUnits, 8)} units held` : undefined}><input type="number" min="0" step="0.0000000001" value={units} onChange={event => { noteEdit('units'); setUnits(event.target.value); setErrors(prev => ({ ...prev, units: '', form: '' })) }} className={getInputClass(!!errors.units)} /></Field>}
     {trade && <Field label={`Unit price (${selectedInstrument?.currency})`} error={errors.unitPrice}><input type="number" min="0" step="0.0000000001" value={unitPrice} onChange={event => { noteEdit('price'); setUnitPrice(event.target.value); setErrors(prev => ({ ...prev, unitPrice: '', form: '' })) }} className={getInputClass(!!errors.unitPrice)} /></Field>}
-    {type !== 'Split' && type !== 'TransferOut' && <Field label={`${type === 'TransferIn' ? 'Transferred cost' : type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} (${selectedInstrument?.currency})`} error={errors.cashAmount}><input type="number" min={type === 'Dividend' ? '0.0000000001' : '0'} step="0.0000000001" value={cashAmount} onChange={event => { noteEdit('gross'); setCashAmount(event.target.value); setErrors(prev => ({ ...prev, cashAmount: '', form: '' })) }} className={getInputClass(!!errors.cashAmount)} /></Field>}
+    {type !== 'Split' && type !== 'TransferOut' && <Field label={`${type === 'TransferIn' ? 'Transferred cost' : type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} (${selectedInstrument?.currency})`} error={errors.cashAmount} hint={['Buy', 'FeeTax'].includes(type) && selectedInstrument ? `${money(Math.max(heldCash, 0), selectedInstrument.currency)} cash available` : undefined}><input type="number" min={type === 'Dividend' ? '0.0000000001' : '0'} step="0.0000000001" value={cashAmount} onChange={event => { noteEdit('gross'); setCashAmount(event.target.value); setErrors(prev => ({ ...prev, cashAmount: '', form: '' })) }} className={getInputClass(!!errors.cashAmount)} /></Field>}
     {!['Split', 'TransferIn', 'TransferOut', 'FeeTax'].includes(type) && <>
       <Field label={`Fees${feesLabelSuffix}`}><input type="number" min="0" step="0.0000000001" value={fees} onChange={event => setFees(event.target.value)} className={inputClass} /></Field>
       <Field label={`Taxes${feesLabelSuffix}`}><input type="number" min="0" step="0.0000000001" value={taxes} onChange={event => setTaxes(event.target.value)} className={inputClass} /></Field>
     </>}
-    {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && (
-      <Field label={`Trade FX ${selectedInstrument.currency}→${portfolio?.appCurrency}`} hint="Optional broker rate.">
-        <input type="number" min="0" step="0.0000000001" value={fx} onChange={event => setFx(event.target.value)} className={inputClass} />
-      </Field>
-    )}
     {type === 'TransferOut' && <Field label="Destination" error={errors.destination} plain><CustomSelect value={destination} onChange={v => { setDestination(v as string); setErrors(prev => ({ ...prev, destination: '' })) }} options={[{ value: '', label: 'External transfer out' }, ...accounts.filter(a => a.id !== accountId).map(a => ({ value: a.id, label: a.name }))]} ariaLabel="Transfer destination" className={`w-full ${errors.destination ? 'border border-destructive rounded-xl' : ''}`} /></Field>}
     </div>
     {trade && <p className="text-[10px] text-muted-foreground">Fill any two of units, unit price, and gross amount — the third is worked out for you.</p>}
-    {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && <p className="text-[10px] text-muted-foreground">Amounts stay in {selectedInstrument.currency}. Leave Trade FX blank to convert at the market rate for that date.</p>}
+    {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && <p className="text-[10px] text-muted-foreground">Amounts stay in {selectedInstrument.currency} and are reported in {portfolio?.appCurrency} at that date's market rate. Use "Manage cash" to convert cash into {selectedInstrument.currency} before trading.</p>}
     {errors.form && <p className="text-[11px] text-destructive font-medium animate-in fade-in slide-in-from-top-1 duration-150">{errors.form}</p>}
     <FormActions busy={busy} onCancel={onCancel} submitLabel="Save activity" />
   </form>
 }
 
-const ManualPriceForm = ({ portfolio, busy, onCancel, onSave }: { portfolio: InvestmentPortfolio | null; busy: boolean; onCancel: () => void; onSave: (value: { instrumentId: string; marketDate: string; price: number; fxRate?: number }) => Promise<boolean> }) => {
+const ManualPriceForm = ({ portfolio, busy, onCancel, onSave }: { portfolio: InvestmentPortfolio | null; busy: boolean; onCancel: () => void; onSave: (value: { instrumentId: string; marketDate: string; price: number }) => Promise<boolean> }) => {
   const instruments = portfolio?.instruments.filter(value => !value.isArchived) ?? []
   const [instrumentId, setInstrumentId] = useState(instruments[0]?.id ?? '')
   const [date, setDate] = useState(today())
   const [price, setPrice] = useState('')
-  const [fx, setFx] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const instrument = instruments.find(value => value.id === instrumentId)
   return <form noValidate className="space-y-4" onSubmit={event => {
     event.preventDefault();
     if (numberOrUndefined(price) === undefined) { setErrors({ price: 'Close price is required.' }); return; }
     setErrors({})
-    void onSave({ instrumentId, marketDate: date, price: Number(price), fxRate: numberOrUndefined(fx) }) 
+    void onSave({ instrumentId, marketDate: date, price: Number(price) }) 
   }}>
     <div className={formGridWideClass}>
       <Field label="Investment" plain><CustomSelect value={instrumentId} onChange={v => setInstrumentId(v as string)} options={instruments.map(i => ({ value: i.id, label: i.symbol }))} ariaLabel="Investment" className="w-full" /></Field>
       <Field label="Market date" plain><DatePicker value={date} onChange={setDate} max={today()} className="w-full" /></Field>
       <Field label={`Close (${instrument?.currency})`} error={errors.price}><input type="number" min="0.0000000001" step="0.0000000001" value={price} onChange={event => { setPrice(event.target.value); setErrors(prev => ({ ...prev, price: '' })) }} className={getInputClass(!!errors.price)} /></Field>
-      {instrument && instrument.currency !== portfolio?.appCurrency && <Field label={`FX to ${portfolio?.appCurrency} (optional)`}><input type="number" min="0.0000000001" step="0.0000000001" value={fx} onChange={event => setFx(event.target.value)} className={inputClass} /></Field>}
     </div>
-    <p className="text-[10px] text-muted-foreground">A price you enter wins over the provider for that date. Delete it to go back.</p>
+    <p className="text-[10px] text-muted-foreground">Only needed when the price provider has no close for that date — for a well-tracked ETF, "Update prices" is enough. A price you enter wins over the provider for that date; delete it to go back.</p>
     <FormActions busy={busy} onCancel={onCancel} submitLabel="Save price" disabled={!instrumentId} />
   </form>
 }
@@ -1423,6 +1473,7 @@ const CashForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccount }:
   const [date, setDate] = useState(initial?.date ?? today())
   const [errors, setErrors] = useState<Record<string, string>>({})
   if (!accounts.length) return <div><p className="text-sm text-muted-foreground">Add an investment account before recording cash.</p><div className="mt-4"><Button onClick={onNeedAccount}>Add account</Button></div></div>
+  const heldCash = availableCash(portfolio, accountId, currency)
   const submit = (event: React.FormEvent) => {
     event.preventDefault()
     if (type === 'Conversion') {
@@ -1430,6 +1481,19 @@ const CashForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccount }:
       if (!(numberOrUndefined(toAmount)! > 0)) { setErrors({ toAmount: 'Enter a positive to amount.' }); return; }
     } else {
       if (!(numberOrUndefined(amount)! > 0)) { setErrors({ amount: 'Enter a positive amount.' }); return; }
+    }
+    // Withdrawals and conversions can only spend cash the account actually holds.
+    const issue = validateCashFlowBalances(portfolio, {
+      accountId,
+      type,
+      currency: currency.toUpperCase(),
+      amount: numberOrUndefined(amount),
+      toCurrency: type === 'Conversion' ? toCurrency.toUpperCase() : undefined,
+      toAmount: type === 'Conversion' ? numberOrUndefined(toAmount) : undefined,
+    }, initial)
+    if (issue) {
+      setErrors({ [issue.field]: issue.message })
+      return
     }
     setErrors({})
     void onSave({
@@ -1448,20 +1512,20 @@ const CashForm = ({ portfolio, initial, busy, onCancel, onSave, onNeedAccount }:
       <Field label="Type" plain><CustomSelect value={type} onChange={v => setType(v as 'Deposit' | 'Withdrawal' | 'Conversion')} options={[{ value: 'Deposit', label: 'Deposit (cash in)' }, { value: 'Withdrawal', label: 'Withdrawal (cash out)' }, { value: 'Conversion', label: 'Convert currency' }]} ariaLabel="Cash movement type" className="w-full" /></Field>
       {type === 'Conversion' ? (
         <>
-          <Field label="From amount" error={errors.amount}><input type="number" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => { setAmount(event.target.value); setErrors(prev => ({ ...prev, amount: '' })) }} className={getInputClass(!!errors.amount)} /></Field>
+          <Field label="From amount" error={errors.amount} hint={`${money(Math.max(heldCash, 0), currency.toUpperCase())} available`}><input type="number" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => { setAmount(event.target.value); setErrors(prev => ({ ...prev, amount: '' })) }} className={getInputClass(!!errors.amount)} /></Field>
           <Field label="From currency" plain><CurrencySelect value={currency} onChange={setCurrency} className="w-full" ariaLabel="From currency" /></Field>
           <Field label="To amount" error={errors.toAmount}><input type="number" min="0.0000000001" step="0.0000000001" value={toAmount} onChange={event => { setToAmount(event.target.value); setErrors(prev => ({ ...prev, toAmount: '' })) }} className={getInputClass(!!errors.toAmount)} /></Field>
-          <Field label="To currency" plain><CurrencySelect value={toCurrency} onChange={setToCurrency} className="w-full" ariaLabel="To currency" /></Field>
+          <Field label="To currency" error={errors.toCurrency} plain><CurrencySelect value={toCurrency} onChange={value => { setToCurrency(value); setErrors(prev => ({ ...prev, toCurrency: '' })) }} className="w-full" ariaLabel="To currency" /></Field>
         </>
       ) : (
         <>
-          <Field label={`Amount (${currency})`} error={errors.amount}><input type="number" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => { setAmount(event.target.value); setErrors(prev => ({ ...prev, amount: '' })) }} className={getInputClass(!!errors.amount)} /></Field>
+          <Field label={`Amount (${currency})`} error={errors.amount} hint={type === 'Withdrawal' ? `${money(Math.max(heldCash, 0), currency.toUpperCase())} available` : undefined}><input type="number" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => { setAmount(event.target.value); setErrors(prev => ({ ...prev, amount: '' })) }} className={getInputClass(!!errors.amount)} /></Field>
           <Field label="Currency" plain><CurrencySelect value={currency} onChange={setCurrency} className="w-full" ariaLabel="Cash currency" /></Field>
         </>
       )}
       <Field label="Date" plain><DatePicker value={date} onChange={setDate} max={today()} className="w-full" /></Field>
     </div>
-    <p className="text-[10px] text-muted-foreground">For money moved in or out of the broker account itself. Buys, sells, dividends, and fees adjust cash on their own.</p>
+    <p className="text-[10px] text-muted-foreground">For money moved in or out of the broker account itself, and for converting between currencies before a trade or after a sale. Buys, sells, dividends, and fees adjust cash on their own.</p>
     <FormActions busy={busy} onCancel={onCancel} submitLabel={initial ? 'Save changes' : type === 'Conversion' ? 'Record conversion' : type === 'Withdrawal' ? 'Record withdrawal' : 'Record deposit'} disabled={!accountId} />
   </form>
 }

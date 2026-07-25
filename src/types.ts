@@ -55,7 +55,6 @@ export interface InvestmentActivity {
   cashAmount?: number
   fees: number
   taxes: number
-  tradeFxRate?: number
   linkedTransferId?: string
   isPairedTransfer?: boolean
   createdAt: string
@@ -136,7 +135,7 @@ export interface InvestmentPortfolio {
   holdings: InvestmentHolding[]
   /** Loaded separately by the paged activity endpoint; retained for cache compatibility. */
   activity: InvestmentActivity[]
-  manualPrices: Array<{ id: string; instrumentId: string; marketDate: string; price: number; fxRate?: number }>
+  manualPrices: Array<{ id: string; instrumentId: string; marketDate: string; price: number }>
   chart: Array<{ date: string; totalValue?: number; netDeposits?: number }>
   cashBalances: InvestmentCashBalance[]
   /** Loaded separately by the paged cash-flow endpoint; retained for cache compatibility. */
