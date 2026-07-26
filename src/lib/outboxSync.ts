@@ -14,13 +14,17 @@
 
 import type { QueuedOp, DispatchResult, ToastCopy } from './outbox'
 import type { ToastAction } from '../components/ui/ToastViewport'
-import { errorMessageIncludes, errorMessageIncludesLower, getErrorMessage } from './errors'
+import {
+  getErrorMessage,
+  getStatus,
+  isAuthError,
+  isLockError,
+  JUST_LOGGED_IN_WINDOW_MS,
+} from './errors'
 
 export const MAX_RETRIES = 5
 export const AUTH_RACE_BACKOFF_MS = 3000
 export const SERVER_WAKE_BACKOFF_MS = 15000
-/** A 401 within this window of a fresh unlock/login is treated as a race, not a real auth failure. */
-const JUST_LOGGED_IN_WINDOW_MS = 10000
 
 export interface SuccessfulSyncOp {
   op: QueuedOp
@@ -79,17 +83,6 @@ export interface DrainQueueDeps {
   refresh: (successfulOps: ReadonlyArray<SuccessfulSyncOp>) => Promise<void>
   onSettled: () => void
   reTrigger: () => void
-}
-
-function getStatus(err: unknown): number | undefined {
-  if (!err || typeof err !== 'object' || !('status' in err)) return undefined
-  return typeof err.status === 'number' && Number.isFinite(err.status) ? err.status : undefined
-}
-
-function hasHttpStatus(err: unknown, expected: number): boolean {
-  const status = getStatus(err)
-  if (status !== undefined) return status === expected
-  return errorMessageIncludes(err, String(expected))
 }
 
 function isNetworkFailure(err: unknown, online: boolean): boolean {
@@ -229,9 +222,8 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
       } catch (err: unknown) {
         deps.setActiveSyncOpId?.(null)
         const status = getStatus(err)
-        const isAuthError = hasHttpStatus(err, 401)
-          || (status === undefined && errorMessageIncludesLower(err, 'unauthorized'))
-        const isLockError = hasHttpStatus(err, 423)
+        const authError = isAuthError(err)
+        const lockError = isLockError(err)
         const isJustLoggedIn = deps.now() - deps.getLastUnlockedTime() < JUST_LOGGED_IN_WINDOW_MS
         const isIdempotentMissingDelete = status === 404 &&
           (nextOp.type === 'delete' || nextOp.type === 'unpurchase')
@@ -261,13 +253,13 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
           const toastMsg = deps.getSyncSuccessToast(nextOp)
           if (toastMsg) deps.emitToast(toastMsg, undefined)
           continue
-        } else if (isAuthError && !isJustLoggedIn) {
+        } else if (authError && !isJustLoggedIn) {
           deps.onAuthError()
           break
-        } else if (isLockError) {
+        } else if (lockError) {
           deps.onLockError()
           break
-        } else if (isAuthError) {
+        } else if (authError) {
           // A spurious 401 can race a fresh login -- wait it out without
           // burning a retry or moving the op to failedOps.
           deps.setError('Sync pending: reconnecting...')
@@ -323,10 +315,8 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
           refreshSucceeded = true
         } catch (refreshErr) {
           console.error('Post-sync dashboard refresh failed:', refreshErr)
-          const refreshStatus = getStatus(refreshErr)
-          const isRefreshAuthError = hasHttpStatus(refreshErr, 401)
-            || (refreshStatus === undefined && errorMessageIncludesLower(refreshErr, 'unauthorized'))
-          const isRefreshLockError = hasHttpStatus(refreshErr, 423)
+          const isRefreshAuthError = isAuthError(refreshErr)
+          const isRefreshLockError = isLockError(refreshErr)
           const isJustLoggedIn = deps.now() - deps.getLastUnlockedTime() < JUST_LOGGED_IN_WINDOW_MS
 
           if (isRefreshAuthError && !isJustLoggedIn) {

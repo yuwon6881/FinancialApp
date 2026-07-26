@@ -9,15 +9,9 @@ import { useOutbox } from '../lib/useOutbox'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from '../lib/modalDrafts'
 import { createFinalId, createLocalWishlistId, projectHideSensitivePreference, sanitizeQueuedOps, type OutboxPayload } from '../lib/outbox'
 import { triggerHaptic } from '../lib/haptics'
-import { getErrorMessage, getErrorName } from '../lib/errors'
+import { getErrorMessage, getErrorName, isAuthError, isLockError, JUST_LOGGED_IN_WINDOW_MS } from '../lib/errors'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
 import { CategoryReplacementSelect } from '../components/ui/CategoryReplacementSelect'
-
-const errorMessageIncludes = (err: unknown, sub: string) => {
-  if (!err) return false
-  const msg = String(err).toLowerCase()
-  return msg.includes(sub.toLowerCase())
-}
 
 export interface UseFinancialDataOptions {
   token: string | null
@@ -45,6 +39,11 @@ export interface UseFinancialDataOptions {
   setHasShownModalThisSession: (value: boolean) => void
   hasShownModalThisSession: boolean
   setShowLoginModal: (value: boolean) => void
+}
+
+/** Wake-up/connectivity tracing is noisy in production; keep it to dev builds. */
+const debugLog = (...args: unknown[]) => {
+  if (import.meta.env.DEV) console.log(...args)
 }
 
 const createLocalId = (prefix: string, separator = '_') => {
@@ -206,6 +205,12 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
   const activeSyncId = outboxActiveSyncId || directSyncId
 
+  // `loadAll` reads the queue only to project the hide-sensitive preference. Routing
+  // it through a ref keeps the queue out of `loadAll`'s identity -- otherwise every
+  // enqueue/dequeue tears down and restarts the wake-up ping effect downstream.
+  const activeOpsRef = useRef(activeOps)
+  useEffect(() => { activeOpsRef.current = activeOps }, [activeOps])
+
   // Fetch initial ledger and dashboard statistics
   const loadAll = useCallback(async (
     month?: string,
@@ -256,7 +261,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       }
       const effectiveHideSensitive = projectHideSensitivePreference(
         dbData.setting.hideSensitive ?? true,
-        activeOps,
+        activeOpsRef.current,
       )
       const mergedDashboard: DashboardData = {
         ...dbData,
@@ -323,15 +328,15 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         return
       }
       console.error(err)
-      const isJustLoggedIn = Date.now() - lastUnlockedTimeRef.current < 10000
-      if (errorMessageIncludes(err, '401') || errorMessageIncludes(err, 'unauthorized')) {
+      const isJustLoggedIn = Date.now() - lastUnlockedTimeRef.current < JUST_LOGGED_IN_WINDOW_MS
+      if (isAuthError(err)) {
         if (rethrowOnError) throw err
         if (!isJustLoggedIn) {
           void handleLogout()
         } else {
           setError(null)
         }
-      } else if (errorMessageIncludes(err, '423')) {
+      } else if (isLockError(err)) {
         if (rethrowOnError) throw err
         markSessionLocked()
       } else {
@@ -346,7 +351,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         setIsBackgroundSyncing(false)
       }
     }
-  }, [token, lastUnlockedTimeRef, handleLogout, markSessionLocked, setDarkMode, resolveHideSensitive, markSensitivePreferenceUnavailable, notifyOnLogin, hasShownModalThisSession, setShowLoginModal, loadAllAbortRef, setSelectedMonth, setSelectedYear, activeOps])
+  }, [token, lastUnlockedTimeRef, handleLogout, markSessionLocked, setDarkMode, resolveHideSensitive, markSensitivePreferenceUnavailable, notifyOnLogin, hasShownModalThisSession, setShowLoginModal, loadAllAbortRef, setSelectedMonth, setSelectedYear])
 
   // Backup outbox/drafts on logout
   const handleLogoutCleanup = useCallback(async (currentOwner: string, createBackup = true) => {
@@ -531,7 +536,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         const res = await api.pingServer()
         if (wakeUpCancelledRef.current) return
         if (res && res.status !== 'waking_up') {
-          console.log('Server is awake! Performing initial load and processing queue...')
+          debugLog('Server is awake! Performing initial load and processing queue...')
           isServerAwakeRef.current = true
           const { month: cachedMonth, year: cachedYear } = getCachedDashboardPeriod()
           await loadAll(cachedMonth, cachedYear, true)
@@ -539,7 +544,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
           return
         }
       } catch (err) {
-        if (!wakeUpCancelledRef.current) console.log('Wake-up ping failed:', err)
+        if (!wakeUpCancelledRef.current) debugLog('Wake-up ping failed:', err)
       }
       attempts++
       if (attempts < maxAttempts && !wakeUpCancelledRef.current) {
@@ -570,7 +575,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
     void wakeUpAndSync()
     const handleOnline = () => {
-      console.log('Browser went online, starting wake-up ping...')
+      debugLog('Browser went online, starting wake-up ping...')
       void wakeUpAndSync()
     }
     window.addEventListener('online', handleOnline)
@@ -937,7 +942,15 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     try {
       await api.updateRecurringPaymentReminder(id, settings)
     } catch (err: unknown) {
-      setRecurringPayments(prev => prev.map(p => p.id === id && previous ? previous : p))
+      // Roll back only the three fields this handler owns, so a concurrent refresh
+      // that changed other fields survives. Falling back to the current row keeps
+      // the rollback sound when no pre-write snapshot was captured.
+      setRecurringPayments(prev => prev.map(p => p.id !== id ? p : {
+        ...p,
+        reminderEnabled: previous?.reminderEnabled ?? p.reminderEnabled,
+        reminderMode: previous?.reminderMode ?? p.reminderMode,
+        reminderLeadDays: previous?.reminderLeadDays ?? p.reminderLeadDays,
+      }))
       showToast(getErrorMessage(err, 'Could not update the payment reminder.'), 'Reminder Update Failed', 'error')
     } finally {
       setDirectSyncId(null)

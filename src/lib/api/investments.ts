@@ -378,8 +378,11 @@ export function updateInvestmentAllocationOrder(instrumentIds: string[]): Promis
   }))
 }
 
+// The backend applies its freshness gate to every refresh -- it is no longer selectable by
+// the caller, because a client-controlled bypass let one user drain the shared provider
+// quota. Kept as a distinct export so background callers still get their own error copy.
 export function refreshInvestmentMarketDataAutomatically(): Promise<MarketRefreshResponse> {
-  return invalidateAfter(request('/investments/market-data/refresh?automatic=true', {
+  return invalidateAfter(request('/investments/market-data/refresh', {
     method: 'POST',
     errorMessage: 'Could not update market data',
   }))
