@@ -149,6 +149,10 @@ export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDe
     return
   }
 
+  // An AI reply can occasionally include a follow-up navigation action after
+  // creating a ledger draft. Treat the staged draft as the final destination so
+  // a later action cannot leave the user on another tab with an unseen draft.
+  let stagedLedgerDraft = false
   for (const action of selectedActions) {
     const payload = (action.payload || {}) as Record<string, unknown>
     if (deps.hideSensitive && AI_MUTATION_TYPES.has(action.type)) {
@@ -194,7 +198,7 @@ export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDe
         continue
       }
       deps.stageAiLedgerDrafts(drafts)
-      deps.setActiveTab('drafts')
+      stagedLedgerDraft = true
     } else if (action.type === 'openAddRecurringDraft') {
       deps.setAiRecurringDraft({ nonce: deps.nextNonce(), fields: capitalizePayloadField(payload, 'name') })
       deps.setActiveTab('recurring')
@@ -291,4 +295,5 @@ export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDe
       })
     }
   }
+  if (stagedLedgerDraft) deps.setActiveTab('drafts')
 }

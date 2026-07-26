@@ -225,7 +225,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
   }
 
   return (
-    <div className="space-y-6 soft-rise">
+    <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden soft-rise">
       <header className="flex items-start gap-3">
         <button type="button" onClick={back} className="mt-0.5 cursor-pointer rounded-xl border border-border/60 p-2 text-muted-foreground hover:text-foreground" aria-label="Back to Today">
           <ArrowLeft className="size-4" />

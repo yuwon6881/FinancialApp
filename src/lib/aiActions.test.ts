@@ -98,6 +98,18 @@ describe('dispatchAiActions — navigation', () => {
     expect(d.setActiveTab).toHaveBeenCalledWith('drafts')
   })
 
+  it('keeps Drafts as the final destination when a reply also contains another navigation action', async () => {
+    const d = makeDeps()
+    await dispatchAiActions([
+      { type: 'openAddLedgerDraft', payload: { description: 'Lunch', amount: 12, txType: 'outflow', category: 'Food', ledgerCategory: 'Essentials', ledgerCategorySpecified: false } },
+      { type: 'openDashboard', payload: {} },
+    ], d)
+
+    expect(d.stageAiLedgerDrafts).toHaveBeenCalledOnce()
+    expect(d.setActiveTab).toHaveBeenNthCalledWith(1, 'dashboard')
+    expect(d.setActiveTab).toHaveBeenLastCalledWith('drafts')
+  })
+
   it('capitalizes each word of an AI-added ledger description', async () => {
     const d = makeDeps()
     await dispatchAiActions([{ type: 'openAddLedgerDraft', payload: {
