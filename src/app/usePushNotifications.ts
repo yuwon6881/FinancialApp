@@ -95,6 +95,7 @@ export function usePushNotifications(
       setGuidance(PUSH_UNSUPPORTED_GUIDANCE)
       return false
     }
+    const previousStatus = status
     setBusy(true)
     setGuidance(null)
     try {
@@ -114,33 +115,49 @@ export function usePushNotifications(
         return false
       }
 
+      // Permission/token acquisition can require browser UI, but once those succeed the switch
+      // should react immediately. Reconcile with the server afterward and roll back on failure.
+      setStatus({ enabled: true, deviceRegistered: true })
       await api.upsertPushSubscription(deviceId, token)
-      await api.updatePushSettings(true)
       await refresh()
       return true
     } catch (err) {
       console.error('Could not enable push notifications.', err)
+      setStatus(previousStatus)
       setGuidance(PUSH_UNSUPPORTED_GUIDANCE)
       return false
     } finally {
       setBusy(false)
     }
-  }, [supported, deviceId, refresh])
+  }, [supported, deviceId, refresh, status])
 
   const disable = useCallback(async () => {
-    if (!supported) return
+    if (!supported || !deviceId) return
+    const previousStatus = status
     setBusy(true)
+    // We know this device is turning off immediately, but we do not yet know whether it is the
+    // account's last device. Preserve the account state until the server returns the authoritative
+    // multi-device result so recurring-payment cards never flash a false "Paused" state.
+    setStatus({
+      enabled: previousStatus?.enabled ?? false,
+      deviceRegistered: false,
+    })
+    setGuidance(null)
     try {
-      // Disabling only flips the global flag -- per-subscription reminder configs on
-      // individual recurring payments are left untouched so re-enabling restores them as-is.
-      await api.updatePushSettings(false)
+      // Push opt-in is per device. Removing this subscription leaves every other device alone;
+      // the server clears the account gate only when this was the last enabled device.
+      await api.deletePushSubscription(deviceId)
       await refresh()
     } catch (err) {
       console.error('Could not disable push notifications.', err)
+      setStatus(previousStatus)
+      setGuidance(previousStatus?.enabled && !previousStatus.deviceRegistered
+        ? PUSH_ENABLED_ELSEWHERE_MESSAGE
+        : null)
     } finally {
       setBusy(false)
     }
-  }, [supported, refresh])
+  }, [supported, deviceId, refresh, status])
 
   return {
     supported,

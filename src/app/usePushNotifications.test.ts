@@ -25,6 +25,7 @@ describe('usePushNotifications', () => {
     supportedMock = true
     vi.spyOn(api, 'fetchPushStatus').mockResolvedValue({ enabled: false, deviceRegistered: false })
     vi.spyOn(api, 'upsertPushSubscription').mockResolvedValue(undefined)
+    vi.spyOn(api, 'deletePushSubscription').mockResolvedValue(undefined)
     vi.spyOn(api, 'updatePushSettings').mockResolvedValue(undefined)
 
     Object.defineProperty(global, 'Notification', {
@@ -68,7 +69,7 @@ describe('usePushNotifications', () => {
     expect(global.Notification.requestPermission).toHaveBeenCalled()
     expect(getFcmToken).toHaveBeenCalled()
     expect(api.upsertPushSubscription).toHaveBeenCalledWith('device-abc', 'fcm-token-123')
-    expect(api.updatePushSettings).toHaveBeenCalledWith(true)
+    expect(api.updatePushSettings).not.toHaveBeenCalled()
     expect(result.current.enabled).toBe(true)
   })
 
@@ -113,10 +114,10 @@ describe('usePushNotifications', () => {
     expect(result.current.guidance).toBe(PUSH_ENABLED_ELSEWHERE_MESSAGE)
   })
 
-  it('disabling flips the global flag off without deleting the device subscription', async () => {
+  it('disabling immediately unregisters only this device and reconciles account status', async () => {
     vi.spyOn(api, 'fetchPushStatus')
       .mockResolvedValueOnce({ enabled: true, deviceRegistered: true })
-      .mockResolvedValueOnce({ enabled: false, deviceRegistered: true })
+      .mockResolvedValueOnce({ enabled: false, deviceRegistered: false })
 
     const { result } = renderHook(() => usePushNotifications())
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -126,7 +127,24 @@ describe('usePushNotifications', () => {
       await result.current.disable()
     })
 
-    expect(api.updatePushSettings).toHaveBeenCalledWith(false)
+    expect(api.deletePushSubscription).toHaveBeenCalledWith('device-abc')
+    expect(api.updatePushSettings).not.toHaveBeenCalled()
     expect(result.current.enabled).toBe(false)
+  })
+
+  it('shows enabled elsewhere after disabling this device when another remains', async () => {
+    vi.spyOn(api, 'fetchPushStatus')
+      .mockResolvedValueOnce({ enabled: true, deviceRegistered: true })
+      .mockResolvedValueOnce({ enabled: true, deviceRegistered: false })
+
+    const { result } = renderHook(() => usePushNotifications())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    await act(async () => {
+      await result.current.disable()
+    })
+
+    expect(result.current.enabled).toBe(false)
+    expect(result.current.guidance).toBe(PUSH_ENABLED_ELSEWHERE_MESSAGE)
   })
 })

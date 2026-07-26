@@ -169,6 +169,7 @@ export interface InvestmentAllocationOverview {
     symbol: string
     name: string
     sleeve?: InvestmentAllocationSleeve
+    order: number
   }>
   sleeves: Array<{
     sleeve: InvestmentAllocationSleeve
@@ -248,7 +249,7 @@ export interface RecurringPayment {
   reminderLeadDays?: number
 }
 
-// Server-side state of the global "Push Payment Reminders" feature for the current device.
+// Account-wide availability plus the registration state of this specific device.
 export interface PushStatus {
   enabled: boolean
   deviceRegistered: boolean

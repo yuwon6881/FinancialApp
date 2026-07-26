@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   Building2,
   ChevronDown,
-  CircleDollarSign,
   CloudOff,
   Info,
   Loader2,
@@ -44,7 +43,7 @@ interface InvestmentsViewProps {
   onNavigate: (tab: AppTab) => void
 }
 
-type Panel = 'account' | 'instrument' | 'activity' | 'price' | 'cash' | null
+type Panel = 'account' | 'instrument' | 'activity' | 'cash' | null
 type AllocationMode = 'asset' | 'account' | 'instrument'
 type AllocationFilter = { mode: AllocationMode; key: string } | null
 
@@ -167,7 +166,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
       isPendingSync: true,
     })), [investmentOps])
   const queueInvestment = async (
-    entity: 'investmentAccount' | 'investmentInstrument' | 'investmentActivity' | 'investmentManualPrice' | 'investmentCashFlow',
+    entity: 'investmentAccount' | 'investmentInstrument' | 'investmentActivity' | 'investmentCashFlow',
     type: 'add' | 'update' | 'delete' | 'restore',
     targetId: string,
     payload: Record<string, unknown> | undefined,
@@ -223,7 +222,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
 
       {!portfolio?.marketDataConfigured && (
         <div className="rounded-xl border border-blue-500/20 bg-blue-500/7 px-4 py-3 text-xs text-muted-foreground">
-          Live prices are not switched on yet. You can still add accounts, investments, activity, and your own prices.
+          Live prices are not switched on yet. You can still add accounts, investments, and activity, but valuations will remain unavailable until market data is configured.
         </div>
       )}
 
@@ -250,12 +249,6 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
             { ...value, id, destinationLegId, undoSnapshot: editingActivity ?? undefined },
           )
         }} onNeedAccount={() => openPanel('account')} onNeedInstrument={() => openPanel('instrument')} />
-      </BottomSheet>
-      <BottomSheet isOpen={panel === 'price'} title="Add manual closing price" onClose={closePanel} maxWidthClassName="max-w-2xl">
-        <ManualPriceForm key={`price-${formKey}`} portfolio={setupPortfolio} busy={busy} onCancel={closePanel} onSave={value => {
-          const id = crypto.randomUUID()
-          return queueInvestment('investmentManualPrice', 'add', id, { ...value, id })
-        }} />
       </BottomSheet>
       <BottomSheet isOpen={panel === 'cash'} title={editingCashFlow ? 'Edit cash movement' : 'Record cash movement'} onClose={closePanel} maxWidthClassName="max-w-lg">
         <CashForm key={`cash-${formKey}`} portfolio={setupPortfolio} initial={editingCashFlow} pendingCashFlows={pendingCashFlows} busy={busy} onCancel={closePanel} onSave={value => {
@@ -285,7 +278,6 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
             onManageCash={() => openPanel('cash')}
             onAddAccount={() => openPanel('account')}
             onAddInvestment={() => openPanel('instrument')}
-            onManualPrice={() => openPanel('price')}
             onUpdatePrices={() => void updatePrices()}
           />
           <InvestmentPlanPanel
@@ -335,20 +327,11 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
                 undoSnapshot: instrument,
               })
             }}
-            onDeleteManualPrice={id => {
-              const mp = portfolio.manualPrices.find(p => p.id === id)
-              confirm({
-                title: 'Delete manual price?',
-                message: 'The cached provider close, if available, will become active again.',
-                confirmText: 'Delete',
-                onConfirm: () => { queueInvestment('investmentManualPrice', 'delete', id, { undoSnapshot: mp }) },
-              })
-            }}
           />
           {portfolio.warnings.length > 0 && (
             <details className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
               <summary id="calculation-warnings" className="cursor-pointer text-sm font-bold text-foreground">Why some figures are missing</summary>
-              <p className="mt-1 text-[10px] text-muted-foreground">Most clear up after "Update prices"; otherwise add the missing price yourself with "Manual price".</p>
+              <p className="mt-1 text-[10px] text-muted-foreground">Most clear up after selecting "Update prices".</p>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-muted-foreground">
                 {portfolio.warnings.map(warning => <li key={warning}>{warning}</li>)}
               </ul>
@@ -390,24 +373,12 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
 }
 
 /**
- * A price you type in only matters where the market-data provider cannot supply one:
- * custom instruments, an instrument the provider has no close for yet, a portfolio
- * with live prices switched off, or prices already entered by hand. For a portfolio
- * of well-tracked tickers the action stays hidden instead of adding noise.
- */
-const needsManualPrices = (portfolio: InvestmentPortfolio) =>
-  portfolio.instruments.some(value => !value.isArchived && value.isCustom) ||
-  portfolio.holdings.some(value => value.latestPriceNative === undefined) ||
-  portfolio.manualPrices.length > 0 ||
-  !portfolio.marketDataConfigured
-
-/**
  * Every page-level action in one place, in the order they are normally used, so
  * nothing looks attached to the plan card above it. The one primary action is the
  * record you add most; the rest share the same ghost pattern, and "Update prices"
  * is separated because it changes market data rather than your records.
  */
-const ActionToolbar = ({ portfolio, isOffline, refreshing, onAddActivity, onManageCash, onAddAccount, onAddInvestment, onManualPrice, onUpdatePrices }: {
+const ActionToolbar = ({ portfolio, isOffline, refreshing, onAddActivity, onManageCash, onAddAccount, onAddInvestment, onUpdatePrices }: {
   portfolio: InvestmentPortfolio
   isOffline: boolean
   refreshing: boolean
@@ -415,18 +386,14 @@ const ActionToolbar = ({ portfolio, isOffline, refreshing, onAddActivity, onMana
   onManageCash: () => void
   onAddAccount: () => void
   onAddInvestment: () => void
-  onManualPrice: () => void
   onUpdatePrices: () => void
 }) => (
   <section aria-label="Investment actions" className="app-panel flex flex-col gap-3 rounded-2xl border border-border/60 bg-card/92 p-4 lg:flex-row lg:items-center lg:justify-between">
     <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-      <Button variant="primary" disabled={portfolio.accounts.length === 0 || portfolio.instruments.length === 0} onClick={onAddActivity}><Plus className="size-4" /> Add activity</Button>
+      <Button variant="ghost" disabled={portfolio.accounts.length === 0 || portfolio.instruments.length === 0} onClick={onAddActivity}><Plus className="size-4" /> Add activity</Button>
       <Button variant="ghost" disabled={portfolio.accounts.length === 0} onClick={onManageCash}><Wallet className="size-4" /> Manage cash</Button>
       <Button variant="ghost" onClick={onAddAccount}><Building2 className="size-4" /> Add account</Button>
       <Button variant="ghost" onClick={onAddInvestment}><Search className="size-4" /> Add investment</Button>
-      {needsManualPrices(portfolio) && (
-        <Button variant="ghost" disabled={portfolio.instruments.length === 0} onClick={onManualPrice}><CircleDollarSign className="size-4" /> Manual price</Button>
-      )}
     </div>
     <Button
       variant="ghost"
@@ -581,7 +548,6 @@ const AccountsAndInstruments = ({
   onDeleteInstrument,
   onArchiveInstrument,
   onUnarchiveInstrument,
-  onDeleteManualPrice,
 }: {
   portfolio: InvestmentPortfolio
   onArchiveAccount: (id: string) => void
@@ -590,12 +556,10 @@ const AccountsAndInstruments = ({
   onDeleteInstrument: (id: string) => void
   onArchiveInstrument: (id: string) => void
   onUnarchiveInstrument: (id: string) => void
-  onDeleteManualPrice: (id: string) => void
 }) => {
   const [open, setOpen] = useState(false)
-  const [tab, setTab] = useState<'accounts' | 'investments' | 'prices'>('accounts')
+  const [tab, setTab] = useState<'accounts' | 'investments'>('accounts')
   const [query, setQuery] = useState('')
-  const instrumentById = new Map(portfolio.instruments.map(value => [value.id, value]))
   const matches = (value: string) => value.toLowerCase().includes(query.trim().toLowerCase())
   return (
     <>
@@ -620,7 +584,6 @@ const AccountsAndInstruments = ({
             {([
               ['accounts', `Accounts (${portfolio.accounts.length})`],
               ['investments', `Investments (${portfolio.instruments.length})`],
-              ['prices', `Manual prices (${portfolio.manualPrices.length})`],
             ] as const).map(([value, label]) => <button key={value} type="button" onClick={() => { setTab(value); setQuery('') }} className={`min-w-0 flex-1 rounded-lg px-2 py-2 text-[10px] font-bold sm:text-xs ${tab === value ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}>{label}</button>)}
           </div>
           <input value={query} onChange={event => setQuery(event.target.value)} placeholder={`Search ${tab}`} className={inputClass} />
@@ -673,7 +636,15 @@ const AccountsAndInstruments = ({
               {portfolio.instruments.filter(value => matches(`${value.symbol} ${value.name} ${value.currency}`)).map(value => (
                 <div key={value.id} className="flex items-center justify-between gap-2 rounded-xl bg-muted/25 p-3">
                   <span className="min-w-0">
-                    <strong className="block truncate text-xs text-foreground">{value.symbol} · {value.name}</strong>
+                    <strong className="flex items-center gap-2 truncate text-xs text-foreground">
+                      {value.symbol} · {value.name}
+                      {!value.canDelete && !value.canArchive && !value.isArchived && (
+                        <span title={value.archiveUnavailableReason} className="flex cursor-help items-center gap-1.5 rounded-md px-1.5 py-0.5 text-amber-500 hover:bg-amber-500/10">
+                          <Info className="size-3.5" />
+                          <span className="text-[10px] font-medium">Cannot archive</span>
+                        </span>
+                      )}
+                    </strong>
                     <span className="text-[10px] text-muted-foreground">{value.type} · {value.currency} · {value.isCustom ? 'Manual' : value.mic ?? value.exchange ?? 'Provider'}</span>
                   </span>
                   <Button
@@ -692,27 +663,7 @@ const AccountsAndInstruments = ({
                 </div>
               ))}
             </div>
-          </div>}
-          {tab === 'prices' && <div>
-            <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Manual prices</h3>
-            <div className="mt-2 space-y-2">
-              {portfolio.manualPrices.filter(value => matches(`${instrumentById.get(value.instrumentId)?.symbol ?? ''} ${value.marketDate}`)).map(value => (
-                <div key={value.id} className="flex items-center justify-between gap-2 rounded-xl bg-muted/25 p-3">
-                  <span>
-                    <strong className="block text-xs text-foreground">{instrumentById.get(value.instrumentId)?.symbol ?? 'Investment'} · {value.marketDate}</strong>
-                    <span className="text-[10px] text-muted-foreground">Manual close recorded</span>
-                  </span>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => onDeleteManualPrice(value.id)}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              ))}
-              {portfolio.manualPrices.length === 0 && <p className="text-xs text-muted-foreground">No manual prices.</p>}
-            </div>
+            <p className="mt-3 text-[10px] text-muted-foreground">Delete is available when an investment has no history. Once it has activity, close all units to archive it while preserving that history.</p>
           </div>}
         </div>
       </BottomSheet>
@@ -774,7 +725,7 @@ const ValueChart = ({ portfolio, masked, range, isFetching, onRangeChange }: { p
       ) : !hasAnyMarketValue ? (
         <div className="flex h-60 flex-col items-center justify-center gap-2 text-center text-xs text-muted-foreground">
           <span className="text-amber-500 font-semibold">Chart unavailable</span>
-          <span className="max-w-xs">Some prices are missing. Try "Update prices", or add them yourself with "Manual price".</span>
+          <span className="max-w-xs">Some prices are missing. Try "Update prices" or check the investment's market-data mapping.</span>
         </div>
       ) : (
         <div className="relative mt-5">
@@ -1041,7 +992,7 @@ const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: InvestmentPor
               <td className="px-4 py-3 text-muted-foreground">{holding.accountName}</td>
               <td className="px-4 py-3 text-right font-medium">{masked ? '••••' : number(holding.units, 8)}</td>
               <td className="px-4 py-3 text-right">{masked ? '••••' : money(holding.averageCostNative, holding.currency)}</td>
-              <td className="px-4 py-3 text-right">{masked ? '••••' : holding.latestPriceNative === undefined ? 'Unavailable' : money(holding.latestPriceNative, holding.currency)}{holding.usesManualPrice && <span className="block text-[9px] text-blue-500">Manual</span>}</td>
+              <td className="px-4 py-3 text-right">{masked ? '••••' : holding.latestPriceNative === undefined ? 'Unavailable' : money(holding.latestPriceNative, holding.currency)}</td>
               <td className="px-4 py-3 text-right">{masked ? '••••' : holding.valueNative === undefined ? '—' : money(holding.valueNative, holding.currency)}</td>
               <td className="px-4 py-3 text-right font-bold">{masked ? '••••' : holding.valueApp === undefined ? 'Incomplete FX' : money(holding.valueApp, portfolio.appCurrency)}</td>
               <td className="px-4 py-3 text-right">{masked ? '••••' : holding.dailyChangeApp === undefined ? '—' : money(holding.dailyChangeApp, portfolio.appCurrency)}</td>
@@ -1443,29 +1394,6 @@ const ActivityForm = ({ portfolio, initial, pendingActivities, busy, onCancel, o
     {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && <p className="text-[10px] text-muted-foreground">Amounts stay in {selectedInstrument.currency} and are reported in {portfolio?.appCurrency} at that date's market rate. Use "Manage cash" to convert cash into {selectedInstrument.currency} before trading.</p>}
     {errors.form && <p className="text-[11px] text-destructive font-medium animate-in fade-in slide-in-from-top-1 duration-150">{errors.form}</p>}
     <FormActions busy={busy} onCancel={onCancel} submitLabel="Save activity" />
-  </form>
-}
-
-const ManualPriceForm = ({ portfolio, busy, onCancel, onSave }: { portfolio: InvestmentPortfolio | null; busy: boolean; onCancel: () => void; onSave: (value: { instrumentId: string; marketDate: string; price: number }) => Promise<boolean> }) => {
-  const instruments = portfolio?.instruments.filter(value => !value.isArchived) ?? []
-  const [instrumentId, setInstrumentId] = useState(instruments[0]?.id ?? '')
-  const [date, setDate] = useState(today())
-  const [price, setPrice] = useState('')
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const instrument = instruments.find(value => value.id === instrumentId)
-  return <form noValidate className="space-y-4" onSubmit={event => {
-    event.preventDefault();
-    if (numberOrUndefined(price) === undefined) { setErrors({ price: 'Close price is required.' }); return; }
-    setErrors({})
-    void onSave({ instrumentId, marketDate: date, price: Number(price) }) 
-  }}>
-    <div className={formGridWideClass}>
-      <Field label="Investment" plain><CustomSelect value={instrumentId} onChange={v => setInstrumentId(v as string)} options={instruments.map(i => ({ value: i.id, label: i.symbol }))} ariaLabel="Investment" className="w-full" /></Field>
-      <Field label="Market date" plain><DatePicker value={date} onChange={setDate} max={today()} className="w-full" /></Field>
-      <Field label={`Close (${instrument?.currency})`} error={errors.price}><input type="number" min="0.0000000001" step="0.0000000001" value={price} onChange={event => { setPrice(event.target.value); setErrors(prev => ({ ...prev, price: '' })) }} className={getInputClass(!!errors.price)} /></Field>
-    </div>
-    <p className="text-[10px] text-muted-foreground">Only needed when the price provider has no close for that date — for a well-tracked ETF, "Update prices" is enough. A price you enter wins over the provider for that date; delete it to go back.</p>
-    <FormActions busy={busy} onCancel={onCancel} submitLabel="Save price" disabled={!instrumentId} />
   </form>
 }
 

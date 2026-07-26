@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertCircle, Info, Loader2, Save, SlidersHorizontal, Lock, Unlock } from 'lucide-react'
+import { Reorder, useDragControls, useReducedMotion } from 'framer-motion'
+import { AlertCircle, GripVertical, Info, Loader2, Save, SlidersHorizontal, Lock, Unlock } from 'lucide-react'
 import type {
   InvestmentAllocationOverview,
   InvestmentAllocationSleeve,
@@ -21,6 +22,57 @@ const defaults: InvestmentPlan = {
   alertDrift: 5,
 }
 
+function ClassificationRow({
+  value,
+  classify,
+  onReorderFinished,
+}: {
+  value: InvestmentAllocationOverview['assignments'][number]
+  classify: (instrumentId: string, sleeve?: InvestmentAllocationSleeve) => void
+  onReorderFinished: () => void
+}) {
+  const controls = useDragControls()
+  const reduceMotion = useReducedMotion()
+
+  return (
+    <Reorder.Item
+      value={value}
+      dragListener={false}
+      dragControls={controls}
+      onDragEnd={onReorderFinished}
+      layout="position"
+      transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 38 }}
+      whileDrag={reduceMotion ? undefined : { scale: 1.015, boxShadow: '0 14px 30px rgb(0 0 0 / 0.16)' }}
+      className="grid touch-pan-y gap-2 rounded-xl border border-border/50 bg-muted/20 p-3 sm:grid-cols-[auto_minmax(0,1fr)_190px] sm:items-center"
+    >
+      <button
+        type="button"
+        aria-label={`Reorder ${value.symbol}`}
+        onPointerDown={event => controls.start(event)}
+        className="row-start-1 inline-flex size-8 touch-none cursor-grab items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground active:cursor-grabbing sm:row-auto"
+      >
+        <GripVertical className="size-4" />
+      </button>
+      <div className="min-w-0">
+        <strong className="block truncate text-xs text-foreground">{value.symbol}</strong>
+        <span className="block truncate text-[10px] text-muted-foreground">{value.name}</span>
+      </div>
+      <CustomSelect
+        ariaLabel={`Classify ${value.symbol}`}
+        value={value.sleeve ?? ''}
+        onChange={next => classify(value.instrumentId, String(next) === '' ? undefined : String(next) as InvestmentAllocationSleeve)}
+        options={[
+          { value: '', label: 'Unassigned' },
+          { value: 'USEquity', label: 'US Equity' },
+          { value: 'InternationalExUS', label: 'International ex-US' },
+          { value: 'Bonds', label: 'Bonds' },
+        ]}
+        className="col-span-2 w-full sm:col-span-1"
+      />
+    </Reorder.Item>
+  )
+}
+
 export function InvestmentPlanSection() {
   const {
     isOffline,
@@ -28,8 +80,39 @@ export function InvestmentPlanSection() {
     queueInvestmentMutation = () => undefined,
   } = useAppContext()
   const cachedOverview = () => api.readCachedInvestmentPortfolio()?.allocation ?? null
-  const [overview, setOverview] = useState<InvestmentAllocationOverview | null>(() => cachedOverview())
-  const [plan, setPlan] = useState<InvestmentPlan>(() => cachedOverview()?.plan ?? defaults)
+  const projectQueuedPlan = (value: InvestmentPlan) => {
+    const queuedPlan = [...investmentOps].reverse().find(operation =>
+      operation.entity === 'investmentPlan' && operation.type === 'update')
+    return queuedPlan?.payload ? { ...value, ...queuedPlan.payload } as InvestmentPlan : value
+  }
+  const projectQueuedChanges = (value: InvestmentAllocationOverview | null) => {
+    if (!value) return null
+    const queuedAssignments = new Map(investmentOps
+      .filter(operation => operation.entity === 'investmentAllocation' && operation.type === 'update')
+      .map(operation => [operation.targetId,
+        typeof operation.payload?.sleeve === 'string'
+          ? operation.payload.sleeve as InvestmentAllocationSleeve
+          : undefined]))
+    const queuedOrder = [...investmentOps].reverse().find(operation =>
+      operation.entity === 'investmentAllocationOrder' && operation.type === 'update')
+    const queuedIds = Array.isArray(queuedOrder?.payload?.instrumentIds)
+      ? queuedOrder.payload.instrumentIds.filter((id): id is string => typeof id === 'string')
+      : []
+    const positions = new Map(queuedIds.map((id, index) => [id, index]))
+    return {
+      ...value,
+      plan: projectQueuedPlan(value.plan),
+      assignments: value.assignments.map(assignment => queuedAssignments.has(assignment.instrumentId)
+        ? { ...assignment, sleeve: queuedAssignments.get(assignment.instrumentId) }
+        : assignment)
+        .sort((left, right) =>
+          (positions.get(left.instrumentId) ?? left.order)
+          - (positions.get(right.instrumentId) ?? right.order)),
+    }
+  }
+  const initialOverview = () => projectQueuedChanges(cachedOverview())
+  const [overview, setOverview] = useState<InvestmentAllocationOverview | null>(initialOverview)
+  const [plan, setPlan] = useState<InvestmentPlan>(() => initialOverview()?.plan ?? defaults)
   const [lockedSleeve, setLockedSleeve] = useState<TargetKey | null>(null)
   const [globalTargetLock, setGlobalTargetLock] = useState(true)
   const [loading, setLoading] = useState(() => !cachedOverview())
@@ -43,8 +126,9 @@ export function InvestmentPlanSection() {
     setLoading(true)
     api.fetchInvestmentAllocation()
       .then(value => {
-        setOverview(value)
-        setPlan(value.plan)
+        const projected = projectQueuedChanges(value)
+        setOverview(projected)
+        setPlan(projected?.plan ?? value.plan)
         setError('')
       })
       .catch(reason => setError(reason instanceof Error ? reason.message : 'Could not load the investment plan.'))
@@ -128,6 +212,23 @@ export function InvestmentPlanSection() {
     queueInvestmentMutation('investmentAllocation', 'update', instrumentId, { sleeve: sleeve ?? null })
   }
 
+  const orderedAssignments = useMemo(
+    () => [...(overview?.assignments ?? [])].sort((left, right) => left.order - right.order),
+    [overview?.assignments],
+  )
+  const reorderAssignments = (assignments: InvestmentAllocationOverview['assignments']) => {
+    setOverview(previous => previous ? {
+      ...previous,
+      assignments: assignments.map((value, order) => ({ ...value, order })),
+    } : previous)
+  }
+  const saveAssignmentOrder = () => {
+    const instrumentIds = [...(overview?.assignments ?? [])]
+      .sort((left, right) => left.order - right.order)
+      .map(value => value.instrumentId)
+    queueInvestmentMutation('investmentAllocationOrder', 'update', 'classification', { instrumentIds })
+  }
+
   if (!overview && (loading || isOffline)) {
     return <div className="flex h-40 items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>
   }
@@ -209,33 +310,21 @@ export function InvestmentPlanSection() {
       <section className="rounded-2xl border border-border/60 bg-card p-5 sm:p-6">
         <h3 className="text-sm font-bold text-foreground">Investment classification</h3>
         <p className="mt-1 text-[11px] text-muted-foreground">Every open holding needs an explicit sleeve. Multiple funds may share one sleeve.</p>
-        <div className="mt-4 space-y-3 max-h-[300px] overflow-y-auto pr-2">
-          {overview?.assignments.map(value => (
-            <div key={value.instrumentId} className="grid gap-2 rounded-xl border border-border/50 bg-muted/20 p-3 sm:grid-cols-[minmax(0,1fr)_190px] sm:items-center">
-              <div className="min-w-0">
-                <strong className="block truncate text-xs text-foreground">{value.symbol}</strong>
-                <span className="block truncate text-[10px] text-muted-foreground">{value.name}</span>
-              </div>
-              <CustomSelect
-                ariaLabel={`Classify ${value.symbol}`}
-                value={value.sleeve ?? ''}
-                onChange={next => classify(value.instrumentId, String(next) === '' ? undefined : String(next) as InvestmentAllocationSleeve)}
-                options={[
-                  { value: '', label: 'Unassigned' },
-                  { value: 'USEquity', label: 'US Equity' },
-                  { value: 'InternationalExUS', label: 'International ex-US' },
-                  { value: 'Bonds', label: 'Bonds' },
-                ]}
-                className="w-full"
-              />
-            </div>
+        <Reorder.Group
+          axis="y"
+          values={orderedAssignments}
+          onReorder={reorderAssignments}
+          className="mt-4 space-y-3 max-h-[300px] overflow-y-auto pr-2"
+        >
+          {orderedAssignments.map(value => (
+            <ClassificationRow key={value.instrumentId} value={value} classify={classify} onReorderFinished={saveAssignmentOrder} />
           ))}
           {!overview?.assignments.length && (
             <p className="rounded-xl border border-dashed border-border/60 p-5 text-center text-xs text-muted-foreground">
               Add investments first, then return here to classify them.
             </p>
           )}
-        </div>
+        </Reorder.Group>
       </section>
     </div>
   )

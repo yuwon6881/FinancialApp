@@ -373,6 +373,14 @@ export function updateInvestmentAllocationSleeve(
   }))
 }
 
+export function updateInvestmentAllocationOrder(instrumentIds: string[]): Promise<void> {
+  return invalidateAfter(requestVoid('/investments/allocation/order', {
+    method: 'PUT',
+    ...jsonBody({ instrumentIds }),
+    errorMessage: 'Could not save the investment classification order',
+  }))
+}
+
 export function refreshInvestmentMarketDataAutomatically(): Promise<MarketRefreshResponse> {
   return invalidateAfter(request('/investments/market-data/refresh?automatic=true', {
     method: 'POST',

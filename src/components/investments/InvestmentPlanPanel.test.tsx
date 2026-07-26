@@ -53,4 +53,20 @@ describe('InvestmentPlanPanel guidance', () => {
     expect(screen.getByText(/Only after investing new money/)).toBeTruthy()
     expect(screen.getByText(/Reinvest/)).toBeTruthy()
   })
+
+  it('omits available-cash guidance and renumbers the useful steps', () => {
+    const watch: InvestmentAllocationOverview = {
+      ...allocation,
+      status: 'Watch',
+      recommendations: [
+        { priority: 1, kind: 'UseCash', amount: 2.12, message: 'invest available cash' },
+        { priority: 2, kind: 'Buy', sleeve: 'Bonds', amount: 100, message: 'buy' },
+      ],
+    }
+    render(<InvestmentPlanPanel allocation={watch} masked={false} onNavigate={vi.fn()} />)
+
+    expect(screen.queryByText(/available cash/i)).toBeNull()
+    expect(screen.getByText('1.')).toBeTruthy()
+    expect(screen.queryByText('2.')).toBeNull()
+  })
 })

@@ -45,8 +45,11 @@ export function InvestmentPlanPanel({
   const StatusIcon = allocation.status === 'OnTrack'
     ? CheckCircle2
     : allocation.status === 'Incomplete' || allocation.status === 'NotStarted' ? CircleHelp : AlertTriangle
+  const actionableRecommendations = allocation.recommendations.filter(
+    recommendation => recommendation.kind !== 'UseCash',
+  )
   const showGuidance = allocation.status !== 'OnTrack' &&
-    (allocation.incompleteReasons.length > 0 || allocation.recommendations.length > 0)
+    (allocation.incompleteReasons.length > 0 || actionableRecommendations.length > 0)
 
   return (
     <motion.section
@@ -176,15 +179,14 @@ export function InvestmentPlanPanel({
             <ul className="mt-3 space-y-2 text-xs text-muted-foreground">
               {allocation.incompleteReasons.map(reason => <li key={reason}>• {reason}</li>)}
             </ul>
-          ) : allocation.recommendations.length > 0 ? (
+          ) : actionableRecommendations.length > 0 ? (
             <ol className="mt-3 space-y-2">
-              {allocation.recommendations.map((recommendation, index) => {
+              {actionableRecommendations.map((recommendation, index) => {
                 const amountStr = money(recommendation.amount)
                 const sleeve = recommendation.sleeve ? allocation.sleeves.find(s => s.sleeve === recommendation.sleeve)?.label : ''
                 let customMessage = masked ? recommendation.message.replace(/[A-Z]{3} [\d,.]+/g, '••••') : recommendation.message
                 switch(recommendation.kind) {
                   case 'TopUp': customMessage = `Use your usual completed-cycle Growth deposit of ${amountStr} before considering any sale.`; break
-                  case 'UseCash': customMessage = `Invest ${amountStr} of available cash before selling any holding.`; break
                   case 'Buy': customMessage = `Buy ${amountStr} of ${sleeve} with new money.`; break
                   case 'Sell': customMessage = `Only after investing new money, sell ${amountStr} of ${sleeve}.`; break
                   case 'TransferBuy': customMessage = `Reinvest ${amountStr} of sale proceeds into ${sleeve}.`; break

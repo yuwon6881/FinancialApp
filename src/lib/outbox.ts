@@ -4,6 +4,7 @@ import type { FinancialSetting, InvestmentAccount, InvestmentActivity, Investmen
 export type EntityKind = 'transaction' | 'recurringPayment' | 'wishlistItem' | 'category' | 'settings'
   | 'investmentAccount' | 'investmentInstrument' | 'investmentActivity' | 'investmentManualPrice' | 'investmentCashFlow'
   | 'investmentPlan' | 'investmentAllocation'
+  | 'investmentAllocationOrder'
 export type OpType = 'add' | 'update' | 'delete' | 'restore' | 'toggle' | 'purchase' | 'unpurchase'
 export interface OutboxPayload {
   [key: string]: unknown
@@ -102,6 +103,7 @@ const ENTITY_LABELS: Record<EntityKind, string> = {
   , investmentCashFlow: 'Cash movement'
   , investmentPlan: 'Investment plan'
   , investmentAllocation: 'Investment classification'
+  , investmentAllocationOrder: 'Investment classification order'
 }
 
 const TYPE_VERBS: Record<OpType, string> = {
@@ -560,6 +562,11 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
     op.targetId,
     typeof op.payload?.sleeve === 'string' ? op.payload.sleeve as InvestmentAllocationSleeve : undefined,
   ),
+  'investmentAllocationOrder:update': (op) => api.updateInvestmentAllocationOrder(
+    Array.isArray(op.payload?.instrumentIds)
+      ? op.payload.instrumentIds.filter((value): value is string => typeof value === 'string')
+      : [],
+  ),
 }
 
 function isWellFormedOp(op: unknown): op is QueuedOp {
@@ -568,7 +575,7 @@ function isWellFormedOp(op: unknown): op is QueuedOp {
   return (
     typeof o.id === 'string' &&
     typeof o.entity === 'string' &&
-    ['transaction', 'recurringPayment', 'wishlistItem', 'category', 'settings', 'investmentAccount', 'investmentInstrument', 'investmentActivity', 'investmentManualPrice', 'investmentCashFlow', 'investmentPlan', 'investmentAllocation'].includes(o.entity as string) &&
+    ['transaction', 'recurringPayment', 'wishlistItem', 'category', 'settings', 'investmentAccount', 'investmentInstrument', 'investmentActivity', 'investmentManualPrice', 'investmentCashFlow', 'investmentPlan', 'investmentAllocation', 'investmentAllocationOrder'].includes(o.entity as string) &&
     typeof o.type === 'string' &&
     ['add', 'update', 'delete', 'restore', 'toggle', 'purchase', 'unpurchase'].includes(o.type as string) &&
     (typeof o.targetId === 'string' || typeof o.targetId === 'number') &&

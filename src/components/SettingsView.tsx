@@ -124,6 +124,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
   // plain category order with no per-row usage figure.
   const categoryRows: Array<{ category: TransactionCategory; count: number | null }> =
     view.categoryUsage ?? view.visibleCategories.map(category => ({ category, count: null }))
+  const isCategoryListLoading = categoryRows.length === 0 && view.isLoadingUsage
 
   return (
     <div className="space-y-6 soft-rise">
@@ -418,7 +419,11 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
               <div className="min-w-0">
                 <h3 className="text-sm font-bold text-foreground">Transaction Categories</h3>
                 <div className="text-[11px] text-muted-foreground mt-0.5">
-                  <div>{view.visibleCategories.length} active categories.</div>
+                  <div>
+                    {isCategoryListLoading
+                      ? 'Loading categories\u2026'
+                      : `${view.visibleCategories.length} active categories.`}
+                  </div>
                   {view.isLoadingUsage && (
                     <div className="flex items-center gap-1">
                       <Loader2 className="size-3 animate-spin" />
@@ -628,8 +633,18 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   <p className="text-[10px] font-medium text-destructive px-0.5">{view.usageError}</p>
                 )}
 
-                <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1 select-none">
-                  {categoryRows.map(({ category: cat, count }) => {
+                <div
+                  className={`max-h-72 overflow-y-auto space-y-1.5 pr-1 select-none ${
+                    isCategoryListLoading ? 'min-h-32 flex items-center justify-center' : ''
+                  }`}
+                  aria-busy={isCategoryListLoading}
+                >
+                  {isCategoryListLoading ? (
+                    <div role="status" className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                      <Loader2 className="size-4 animate-spin text-blue-500" aria-hidden="true" />
+                      <span>Loading transaction categories&hellip;</span>
+                    </div>
+                  ) : categoryRows.map(({ category: cat, count }) => {
                     const isSyncing = view.isCatSyncing(cat.id)
                     const isDeleting = view.isCatDeleting(cat.id)
                     const isUnused = count === 0

@@ -13,4 +13,4 @@ export const PUSH_UNSUPPORTED_GUIDANCE =
 export const PUSH_ENABLED_ELSEWHERE_MESSAGE =
   'Push Payment Reminders is already enabled on another device. Enable it here to also receive reminders on this device.'
 
-export const RECURRING_PAUSED_LABEL = 'Paused\u2014Push Payment Reminders is off'
+export const RECURRING_PAUSED_LABEL = 'Paused\u2014No devices are enabled for Push Payment Reminders'
