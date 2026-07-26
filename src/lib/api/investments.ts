@@ -92,7 +92,6 @@ export interface InstrumentMutation {
 
 export interface InvestmentActivityMutation {
   id?: string
-  destinationLegId?: string
   accountId: string
   instrumentId: string
   type: InvestmentTransactionType
@@ -102,8 +101,6 @@ export interface InvestmentActivityMutation {
   cashAmount?: number
   fees: number
   taxes: number
-  linkedTransferId?: string
-  destinationAccountId?: string
 }
 
 export function readCachedInvestmentPortfolio(): InvestmentPortfolio | null {

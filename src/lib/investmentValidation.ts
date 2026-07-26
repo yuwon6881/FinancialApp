@@ -9,8 +9,8 @@ import type {
  * Client-side mirror of the backend's investment guards
  * (`InvestmentsController.ValidateCashHistoryAsync` and
  * `InvestmentAccountingService.RequireAvailableUnits`): a record may never push an
- * account's cash balance below zero, and units can only be sold or transferred out
- * if they are actually held. The server stays the source of truth; these checks
+ * account's cash balance below zero, and units can only be sold if they are
+ * actually held. The server stays the source of truth; these checks
  * exist so the user is told before the record is queued, not after it is rejected.
  */
 
@@ -109,12 +109,9 @@ export const availableActivityUnits = (
 /** Signed effect of an activity on the units held. */
 const activityUnitsEffect = (draft: ActivityBalanceDraft) => {
   switch (draft.type) {
-    case 'OpeningPosition':
     case 'Buy':
-    case 'TransferIn':
       return draft.units ?? 0
     case 'Sell':
-    case 'TransferOut':
       return -(draft.units ?? 0)
     default:
       return 0

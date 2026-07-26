@@ -90,10 +90,6 @@ describe('validateActivityBalances', () => {
     expect(validateActivityBalances(portfolio, buy(901), initial)?.field).toBe('cashAmount')
   })
 
-  it('ignores activity that never moves cash or units', () => {
-    expect(validateActivityBalances(portfolio, { type: 'Split', accountId: 'a1', instrumentId: 'i1', units: 2 })).toBeNull()
-  })
-
   it('rejects a dividend smaller than its fees and taxes', () => {
     const issue = validateActivityBalances(portfolio, { type: 'Dividend', accountId: 'a1', instrumentId: 'i1', cashAmount: 10, fees: 6, taxes: 6 })
     expect(issue?.field).toBe('cashAmount')

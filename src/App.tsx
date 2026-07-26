@@ -28,6 +28,7 @@ import { CycleSkeleton, Skeleton, type PageSkeletonVariant } from './components/
 import { clearLocalFinancialData, getCachedCycleSnapshot } from './lib/cache'
 import { useVisualViewportVars } from './lib/useVisualViewportVars'
 import { useReceiptScanPolling } from './lib/useReceiptScanPolling'
+import { useInvestmentScanPolling } from './lib/useInvestmentScanPolling'
 import { useNativeAppLifecycle } from './lib/useNativeAppLifecycle'
 const PendingSubscriptionsModal = lazy(() => import('./components/PendingSubscriptionsModal').then(m => ({ default: m.PendingSubscriptionsModal })))
 const FailedSyncModal = lazy(() => import('./components/FailedSyncModal').then(m => ({ default: m.FailedSyncModal })))
@@ -232,6 +233,12 @@ function App() {
   useEffect(() => {
     isLedgerAddOpenRef.current = isLedgerAddOpen
   }, [isLedgerAddOpen])
+  const [isInvestmentAddOpen, setIsInvestmentAddOpen] = useState(false)
+  const isInvestmentAddOpenRef = useRef(isInvestmentAddOpen)
+  const [autoOpenInvestmentAdd, setAutoOpenInvestmentAdd] = useState(false)
+  useEffect(() => {
+    isInvestmentAddOpenRef.current = isInvestmentAddOpen
+  }, [isInvestmentAddOpen])
 
   const activeTabRef = useRef(prefs.activeTab)
   useEffect(() => {
@@ -252,6 +259,21 @@ function App() {
     isMountedRef,
     setActiveTab: prefs.setActiveTab,
     setAutoOpenLedgerAdd: nav.setAutoOpenLedgerAdd,
+    showToast: dialogs.showToast,
+  })
+  const {
+    activeInvestmentScanDraft,
+    failedInvestmentScanJob,
+    investmentScanJobIds,
+    handleInvestmentScanStarted,
+    clearInvestmentScanJob,
+  } = useInvestmentScanPolling({
+    token: session.token,
+    activeTabRef,
+    isInvestmentAddOpenRef,
+    isMountedRef,
+    setActiveTab: prefs.setActiveTab,
+    setAutoOpenInvestmentAdd,
     showToast: dialogs.showToast,
   })
 
@@ -844,7 +866,17 @@ function App() {
                     )}
 
                     {prefs.activeTab === 'investments' && (
-                      <InvestmentsView onNavigate={prefs.setActiveTab} />
+                      <InvestmentsView
+                        onNavigate={prefs.setActiveTab}
+                        autoOpenAddForm={autoOpenInvestmentAdd}
+                        onResetAutoOpen={() => setAutoOpenInvestmentAdd(false)}
+                        onAddFormOpenChange={setIsInvestmentAddOpen}
+                        investmentScanDraft={activeInvestmentScanDraft}
+                        failedScanJob={failedInvestmentScanJob}
+                        activeScanJobIds={investmentScanJobIds}
+                        onInvestmentScanStarted={handleInvestmentScanStarted}
+                        onInvestmentScanCleared={clearInvestmentScanJob}
+                      />
                     )}
                   </motion.div>
                 </LaunchReady>

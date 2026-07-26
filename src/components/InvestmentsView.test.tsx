@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { ComponentProps } from 'react'
 import { AppProvider } from '../contexts/AppProvider'
 import type { AppContextValue } from '../contexts/AppContext'
 import type { InvestmentPortfolio } from '../types'
@@ -82,9 +83,9 @@ const context: AppContextValue = {
   queueInvestmentMutation: vi.fn(),
 }
 
-const renderView = () => render(
+const renderView = (props: Partial<ComponentProps<typeof InvestmentsView>> = {}) => render(
   <AppProvider value={context}>
-    <InvestmentsView onNavigate={vi.fn()} />
+    <InvestmentsView onNavigate={vi.fn()} {...props} />
   </AppProvider>,
 )
 
@@ -208,6 +209,39 @@ describe('InvestmentsView provider call boundaries', () => {
     await waitFor(() => expect(price.value).toBe('12.5'))
     expect(units.value).toBe('20')
     expect(gross.value).toBe('250')
+  })
+
+  it('auto-opens a completed investment scan and applies only supported fields', async () => {
+    vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(tradablePortfolio)
+    const onResetAutoOpen = vi.fn()
+    renderView({
+      autoOpenAddForm: true,
+      onResetAutoOpen,
+      investmentScanDraft: {
+        jobId: 'scan-1',
+        result: {
+          type: 'Sell',
+          accountId: 'a1',
+          instrumentId: 'i1',
+          tradeDate: '2026-07-20',
+          units: 2,
+          unitPrice: 25,
+          cashAmount: null,
+          fees: null,
+          taxes: null,
+          confidence: 0.93,
+        },
+      },
+      activeScanJobIds: ['scan-1'],
+    })
+
+    expect(await screen.findByText(/Investment activity scanned/)).toBeTruthy()
+    expect(screen.getByRole('combobox', { name: 'Activity type' }).textContent).toContain('Sell')
+    await waitFor(() => {
+      const values = screen.getAllByRole('spinbutton').map(input => (input as HTMLInputElement).value)
+      expect(values).toEqual(expect.arrayContaining(['2', '25', '50']))
+    })
+    expect(onResetAutoOpen).toHaveBeenCalled()
   })
 
   const choose = (ariaLabel: string, option: string) => {

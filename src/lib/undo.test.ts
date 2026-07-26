@@ -50,18 +50,17 @@ describe('undo helpers', () => {
       .toBeUndefined()
   })
 
-  it('uses the authoritative server snapshot when undoing linked investment activity deletion', () => {
+  it('uses the authoritative server snapshot when undoing investment activity deletion', () => {
     const enqueue = vi.fn()
-    const persisted = { transactions: [{ id: 'out', type: 'TransferOut' }] }
+    const persisted = { transactions: [{ id: 'buy', type: 'Buy' }] }
     const serverSnapshot = {
       transactions: [
-        { id: 'out', type: 'TransferOut' },
-        { id: 'in', type: 'TransferIn', linkedTransferId: 'out' },
+        { id: 'buy', type: 'Buy' },
       ],
     }
     const action = buildUndoAction(
       new Map(),
-      op('investmentActivity', 'delete', 'out', { undoSnapshot: persisted }),
+      op('investmentActivity', 'delete', 'buy', { undoSnapshot: persisted }),
       serverSnapshot as never,
       enqueue,
     )
@@ -70,7 +69,7 @@ describe('undo helpers', () => {
     expect(enqueue).toHaveBeenCalledWith(
       'investmentActivity',
       'restore',
-      'out',
+      'buy',
       serverSnapshot,
     )
   })

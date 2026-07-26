@@ -6,8 +6,7 @@ export type InvestmentInstrumentType = 'Stock' | 'ETF' | 'MutualFund'
 export type InvestmentAllocationSleeve = 'USEquity' | 'InternationalExUS' | 'Bonds'
 export type InvestmentAllocationStatus = 'NotStarted' | 'Incomplete' | 'OnTrack' | 'Watch' | 'Alert'
 export type InvestmentTransactionType =
-  | 'OpeningPosition' | 'Buy' | 'Sell' | 'Dividend' | 'FeeTax'
-  | 'Split' | 'TransferIn' | 'TransferOut'
+  | 'Buy' | 'Sell' | 'Dividend' | 'FeeTax'
 
 export interface InvestmentAccount {
   id: string
@@ -55,8 +54,6 @@ export interface InvestmentActivity {
   cashAmount?: number
   fees: number
   taxes: number
-  linkedTransferId?: string
-  isPairedTransfer?: boolean
   createdAt: string
   isPendingSync?: boolean
   isPendingDelete?: boolean

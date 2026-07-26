@@ -6,6 +6,7 @@ interface ReceiptScanStatusProps {
   setShowScanBanner: (value: boolean) => void
   scanError: string | null
   setScanError: (err: string | null) => void
+  successMessage?: string
 }
 
 export function ReceiptScanStatus({
@@ -13,6 +14,7 @@ export function ReceiptScanStatus({
   setShowScanBanner,
   scanError,
   setScanError,
+  successMessage = 'Receipt scanned — review fields below and edit as needed',
 }: ReceiptScanStatusProps) {
   return (
     <div className="sm:col-span-2 space-y-2">
@@ -26,7 +28,7 @@ export function ReceiptScanStatus({
           >
             <div className="flex items-center gap-1.5 text-[11px] font-medium">
               <CheckCircle2 className="size-3.5 shrink-0" />
-              Receipt scanned — review fields below and edit as needed
+              {successMessage}
             </div>
             <button
               type="button"

@@ -38,9 +38,22 @@ import { sortActivityNewestFirst, sortCashFlowsNewestFirst } from '../lib/invest
 import { RowSyncStatus } from './ui/RowSyncBadge'
 import { InvestmentPlanPanel } from './investments/InvestmentPlanPanel'
 import { InteractiveDoughnutChart } from './ui/InteractiveDoughnutChart'
+import { ReceiptScanPicker } from './ledger/transaction-form/ReceiptScanPicker'
+import { ReceiptScanStatus } from './ledger/transaction-form/ReceiptScanStatus'
+import { useAutoOpenModal } from '../lib/useAutoOpenModal'
+import { getErrorMessage } from '../lib/errors'
+import type { InvestmentActivityScanResult } from '../lib/api'
 
 interface InvestmentsViewProps {
   onNavigate: (tab: AppTab) => void
+  autoOpenAddForm?: boolean
+  onResetAutoOpen?: () => void
+  onAddFormOpenChange?: (open: boolean) => void
+  investmentScanDraft?: { jobId: string; result: InvestmentActivityScanResult } | null
+  failedScanJob?: { jobId: string; errorMessage: string } | null
+  activeScanJobIds?: string[]
+  onInvestmentScanStarted?: (scanId: string) => void
+  onInvestmentScanCleared?: (scanId: string) => void | Promise<void>
 }
 
 type Panel = 'account' | 'instrument' | 'activity' | 'cash' | null
@@ -56,14 +69,10 @@ const ranges: Array<{ value: InvestmentRange; label: string }> = [
 ]
 
 const activityTypes: Array<{ value: InvestmentTransactionType; label: string }> = [
-  { value: 'OpeningPosition', label: 'Opening position' },
   { value: 'Buy', label: 'Buy' },
   { value: 'Sell', label: 'Sell' },
   { value: 'Dividend', label: 'Dividend' },
   { value: 'FeeTax', label: 'Fee / tax' },
-  { value: 'Split', label: 'Split' },
-  { value: 'TransferIn', label: 'Transfer in' },
-  { value: 'TransferOut', label: 'Transfer out' },
 ]
 
 const today = () => {
@@ -125,7 +134,17 @@ const cashFlowAmount = (flow: InvestmentCashFlow, masked: boolean) => {
   return `${amount} → ${money(flow.toAmount, flow.toCurrency)}`
 }
 
-export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) => {
+export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
+  onNavigate,
+  autoOpenAddForm,
+  onResetAutoOpen,
+  onAddFormOpenChange,
+  investmentScanDraft,
+  failedScanJob,
+  activeScanJobIds,
+  onInvestmentScanStarted,
+  onInvestmentScanCleared,
+}) => {
   const { hideSensitive, isOffline, confirm, activeSyncId, investmentOps = [], queueInvestmentMutation = () => undefined } = useAppContext()
   const {
     activityRevision,
@@ -193,6 +212,10 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
     setEditingActivity(null)
     setEditingCashFlow(null)
   }
+  useAutoOpenModal(autoOpenAddForm, () => openPanel('activity'), onResetAutoOpen)
+  useEffect(() => {
+    onAddFormOpenChange?.(panel === 'activity' && !editingActivity)
+  }, [panel, editingActivity, onAddFormOpenChange])
 
   if (loading && !portfolio) return <CycleSkeleton variant="investments" />
 
@@ -239,14 +262,13 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({ onNavigate }) 
         }} />
       </BottomSheet>
       <BottomSheet isOpen={panel === 'activity'} title={editingActivity ? 'Edit investment activity' : 'Add activity'} onClose={closePanel} maxWidthClassName="max-w-3xl">
-        <ActivityForm key={`activity-${formKey}`} portfolio={setupPortfolio} initial={editingActivity} pendingActivities={pendingActivities} busy={busy} onCancel={closePanel} onSave={value => {
+        <ActivityForm key={`activity-${formKey}`} portfolio={setupPortfolio} initial={editingActivity} pendingActivities={pendingActivities} busy={busy} scanDraft={editingActivity ? null : investmentScanDraft} failedScanJob={failedScanJob} activeScanJobIds={activeScanJobIds} onScanStarted={onInvestmentScanStarted} onScanCleared={onInvestmentScanCleared} onCancel={closePanel} onSave={value => {
           const id = editingActivity?.id ?? crypto.randomUUID()
-          const destinationLegId = value.destinationAccountId ? crypto.randomUUID() : undefined
           return queueInvestment(
             'investmentActivity',
             editingActivity ? 'update' : 'add',
             id,
-            { ...value, id, destinationLegId, undoSnapshot: editingActivity ?? undefined },
+            { ...value, id, undoSnapshot: editingActivity ?? undefined },
           )
         }} onNeedAccount={() => openPanel('account')} onNeedInstrument={() => openPanel('instrument')} />
       </BottomSheet>
@@ -414,7 +436,7 @@ const EmptyState = ({ onAddAccount, onAddInvestment }: { onAddAccount: () => voi
     <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-violet-500/10 text-violet-500"><TrendingUp className="size-7" /></div>
     <h2 className="mt-5 text-xl font-black text-foreground">Build your investment view</h2>
     <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-muted-foreground">
-      Add an account and an opening position to get started.
+      Add an account and record a buy to get started.
     </p>
     <div className="mt-6 flex flex-col justify-center gap-2 sm:flex-row">
       <Button variant="primary" onClick={onAddAccount}><Building2 className="size-4" /> Add account</Button>
@@ -941,7 +963,7 @@ const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: InvestmentPor
     .filter(group => group.holdings.length > 0 || group.cash.length > 0)
   return (
   <section aria-labelledby="holdings-title" className="app-panel overflow-hidden rounded-2xl border border-border/60 bg-card/92">
-    <div className="p-5"><h2 id="holdings-title" className="text-base font-bold text-foreground">Holdings by account</h2><p className="mt-1 text-xs text-muted-foreground">Recording opening, buy, or transfer activity places a reusable investment in an account.{filter ? ` Filtered by ${filter.key}.` : ''}</p></div>
+    <div className="p-5"><h2 id="holdings-title" className="text-base font-bold text-foreground">Holdings by account</h2><p className="mt-1 text-xs text-muted-foreground">Recording a buy places a reusable investment in an account.{filter ? ` Filtered by ${filter.key}.` : ''}</p></div>
     <div className="grid gap-3 px-3 pb-3 sm:grid-cols-2 lg:grid-cols-3">
       {accountGroups.map(({ account, holdings: accountHoldings, cash, total }) => (
         <article key={account.id} className="interactive-card rounded-xl border border-border/50 bg-muted/15 p-4">
@@ -957,7 +979,7 @@ const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: InvestmentPor
           {accountHoldings.length > 0 && <p className="mt-3 truncate text-[10px] text-muted-foreground">{accountHoldings.map(value => value.symbol).join(' · ')}</p>}
         </article>
       ))}
-      {accountGroups.length === 0 && <p className="text-xs text-muted-foreground">Record an opening position, buy, transfer, or cash movement to populate an account.</p>}
+      {accountGroups.length === 0 && <p className="text-xs text-muted-foreground">Record a buy or cash movement to populate an account.</p>}
     </div>
     <div className="space-y-3 px-3 pb-3 sm:hidden">
       {paginatedHoldings.map(holding => (
@@ -1170,9 +1192,7 @@ const PagedActivityTable = ({
                   return <article key={value.id} className="interactive-card min-w-0 rounded-xl border border-border/50 p-3">
                     <div className="flex min-w-0 items-start justify-between gap-2"><div className="min-w-0"><strong className="block truncate text-xs">{activityTypes.find(item => item.value === value.type)?.label} · {instrument?.symbol}</strong><span className="text-[10px] text-muted-foreground">{value.tradeDate} · {accounts.get(value.accountId)}</span><RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></div><span className="shrink-0 text-xs font-bold">{masked || value.cashAmount === undefined ? '—' : money(value.cashAmount, instrument?.currency ?? portfolio.appCurrency)}</span></div>
                     <div className="mt-2 flex items-center justify-end gap-1">
-                      {value.isPairedTransfer || value.linkedTransferId
-                        ? <span className="mr-auto text-[10px] text-muted-foreground">Paired transfer: delete and recreate to change it.</span>
-                        : <Button variant="ghost" size="sm" disabled={isBusy} onClick={() => onEdit(value)}>Edit</Button>}
+                      <Button variant="ghost" size="sm" disabled={isBusy} onClick={() => onEdit(value)}>Edit</Button>
                       <Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDelete(value)}>Delete</Button>
                     </div>
                   </article>
@@ -1194,7 +1214,7 @@ const PagedActivityTable = ({
                     <tbody className="divide-y divide-border/40">{mode === 'investments' ? displayTransactions.map(value => {
                       const isActive = activeSyncId === value.id
                       const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
-                      return <tr key={value.id}><td className="px-4 py-3">{value.tradeDate}</td><td className="px-4 py-3"><span className="flex items-center gap-2 font-bold">{activityTypes.find(item => item.value === value.type)?.label}<RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3">{instruments.get(value.instrumentId)?.symbol}</td><td className="px-4 py-3 text-right">{masked || value.cashAmount === undefined ? '—' : money(value.cashAmount, instruments.get(value.instrumentId)?.currency ?? portfolio.appCurrency)}</td><td className="px-4 py-3"><span className="flex justify-end gap-1">{value.isPairedTransfer || value.linkedTransferId ? <span className="self-center text-[10px] text-muted-foreground" title="Delete and recreate paired transfers to change them.">Paired</span> : <Button variant="ghost" size="sm" disabled={isBusy} onClick={() => onEdit(value)}>Edit</Button>}<Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDelete(value)}>Delete</Button></span></td></tr>
+                      return <tr key={value.id}><td className="px-4 py-3">{value.tradeDate}</td><td className="px-4 py-3"><span className="flex items-center gap-2 font-bold">{activityTypes.find(item => item.value === value.type)?.label}<RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3">{instruments.get(value.instrumentId)?.symbol}</td><td className="px-4 py-3 text-right">{masked || value.cashAmount === undefined ? '—' : money(value.cashAmount, instruments.get(value.instrumentId)?.currency ?? portfolio.appCurrency)}</td><td className="px-4 py-3"><span className="flex justify-end gap-1"><Button variant="ghost" size="sm" disabled={isBusy} onClick={() => onEdit(value)}>Edit</Button><Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDelete(value)}>Delete</Button></span></td></tr>
                     }) : displayCashFlows.map(value => {
                       const isActive = activeSyncId === value.id
                       const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
@@ -1287,10 +1307,24 @@ const InstrumentForm = ({ busy, offline, onCancel, onSave }: { busy: boolean; of
   </div>
 }
 
-const ActivityForm = ({ portfolio, initial, pendingActivities, busy, onCancel, onSave, onNeedAccount, onNeedInstrument }: { portfolio: InvestmentPortfolio | null; initial: InvestmentActivity | null; pendingActivities: InvestmentActivity[]; busy: boolean; onCancel: () => void; onSave: (value: api.InvestmentActivityMutation) => Promise<boolean>; onNeedAccount: () => void; onNeedInstrument: () => void }) => {
+const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scanDraft, failedScanJob, activeScanJobIds = [], onScanStarted, onScanCleared, onCancel, onSave, onNeedAccount, onNeedInstrument }: {
+  portfolio: InvestmentPortfolio | null
+  initial: InvestmentActivity | null
+  pendingActivities: InvestmentActivity[]
+  busy: boolean
+  scanDraft?: { jobId: string; result: InvestmentActivityScanResult } | null
+  failedScanJob?: { jobId: string; errorMessage: string } | null
+  activeScanJobIds?: string[]
+  onScanStarted?: (scanId: string) => void
+  onScanCleared?: (scanId: string) => void | Promise<void>
+  onCancel: () => void
+  onSave: (value: api.InvestmentActivityMutation) => Promise<boolean>
+  onNeedAccount: () => void
+  onNeedInstrument: () => void
+}) => {
   const accounts = portfolio?.accounts.filter(value => !value.isArchived) ?? []
   const instruments = portfolio?.instruments.filter(value => !value.isArchived) ?? []
-  const [type, setType] = useState<InvestmentTransactionType>(initial?.type ?? 'OpeningPosition')
+  const [type, setType] = useState<InvestmentTransactionType>(initial?.type ?? 'Buy')
   const [accountId, setAccountId] = useState(initial?.accountId ?? accounts[0]?.id ?? '')
   const [instrumentId, setInstrumentId] = useState(initial?.instrumentId ?? instruments[0]?.id ?? '')
   const [tradeDate, setTradeDate] = useState(initial?.tradeDate ?? today())
@@ -1299,8 +1333,16 @@ const ActivityForm = ({ portfolio, initial, pendingActivities, busy, onCancel, o
   const [cashAmount, setCashAmount] = useState(initial?.cashAmount ? String(initial.cashAmount) : '')
   const [fees, setFees] = useState(String(initial?.fees ?? 0))
   const [taxes, setTaxes] = useState(String(initial?.taxes ?? 0))
-  const [destination, setDestination] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isScanning, setIsScanning] = useState(false)
+  const [scanError, setScanError] = useState<string | null>(null)
+  const [showScanBanner, setShowScanBanner] = useState(false)
+  const [showScanPicker, setShowScanPicker] = useState(false)
+  const [activeScanJobId, setActiveScanJobId] = useState<string | null>(null)
+  const scanFileInputRef = useRef<HTMLInputElement>(null)
+  const scanGalleryInputRef = useRef<HTMLInputElement>(null)
+  const appliedScanJobRef = useRef<string | null>(null)
+  const trackedScanJobsRef = useRef<Set<string>>(new Set())
   const selectedInstrument = instruments.find(value => value.id === instrumentId)
   // "Enter any two of units, unit price, gross; the third is derived" (gross =
   // units x price). We track the two most recently edited fields and only ever
@@ -1311,8 +1353,76 @@ const ActivityForm = ({ portfolio, initial, pendingActivities, busy, onCancel, o
   const noteEdit = (field: 'units' | 'price' | 'gross') => {
     editOrder.current = [field, ...editOrder.current.filter(value => value !== field)]
   }
+  const clearScan = () => {
+    const jobId = activeScanJobId
+    setActiveScanJobId(null)
+    setIsScanning(false)
+    setScanError(null)
+    setShowScanBanner(false)
+    if (jobId) {
+      trackedScanJobsRef.current.delete(jobId)
+      void onScanCleared?.(jobId)
+    }
+  }
+  const handleScan = async (file: File) => {
+    setIsScanning(true)
+    setScanError(null)
+    setShowScanBanner(false)
+    try {
+      const started = await api.startInvestmentScan(file)
+      setActiveScanJobId(started.scanId)
+      onScanStarted?.(started.scanId)
+    } catch (error) {
+      setScanError(getErrorMessage(error, 'Could not scan this investment image. Please try a clearer image.'))
+      setIsScanning(false)
+    } finally {
+      if (scanFileInputRef.current) scanFileInputRef.current.value = ''
+      if (scanGalleryInputRef.current) scanGalleryInputRef.current.value = ''
+    }
+  }
   useEffect(() => {
-    if (!['OpeningPosition', 'Buy', 'Sell'].includes(type)) return
+    if (!scanDraft || appliedScanJobRef.current === scanDraft.jobId) return
+    appliedScanJobRef.current = scanDraft.jobId
+    setActiveScanJobId(scanDraft.jobId)
+    setIsScanning(false)
+    setShowScanBanner(true)
+    const result = scanDraft.result
+    if (result.type && activityTypes.some(value => value.value === result.type)) setType(result.type)
+    if (result.accountId && accounts.some(value => value.id === result.accountId)) setAccountId(result.accountId)
+    if (result.instrumentId && instruments.some(value => value.id === result.instrumentId)) setInstrumentId(result.instrumentId)
+    if (result.tradeDate) setTradeDate(result.tradeDate)
+    if (result.units != null) setUnits(String(result.units))
+    if (result.unitPrice != null) setUnitPrice(String(result.unitPrice))
+    if (result.cashAmount != null) setCashAmount(String(result.cashAmount))
+    if (result.fees != null) setFees(String(result.fees))
+    if (result.taxes != null) setTaxes(String(result.taxes))
+    const supplied = [
+      result.units != null ? 'units' as const : null,
+      result.unitPrice != null ? 'price' as const : null,
+      result.cashAmount != null ? 'gross' as const : null,
+    ].filter((value): value is 'units' | 'price' | 'gross' => value !== null)
+    editOrder.current = supplied.length === 2 ? supplied : []
+  }, [scanDraft, accounts, instruments])
+  useEffect(() => {
+    if (failedScanJob?.jobId !== activeScanJobId) return
+    setScanError(failedScanJob.errorMessage)
+    setIsScanning(false)
+    trackedScanJobsRef.current.delete(failedScanJob.jobId)
+    setActiveScanJobId(null)
+  }, [failedScanJob, activeScanJobId])
+  useEffect(() => {
+    if (!activeScanJobId) return
+    if (activeScanJobIds.includes(activeScanJobId)) {
+      trackedScanJobsRef.current.add(activeScanJobId)
+      return
+    }
+    if (scanDraft?.jobId === activeScanJobId || !trackedScanJobsRef.current.has(activeScanJobId)) return
+    trackedScanJobsRef.current.delete(activeScanJobId)
+    setIsScanning(false)
+    setActiveScanJobId(null)
+  }, [activeScanJobId, activeScanJobIds, scanDraft])
+  useEffect(() => {
+    if (!['Buy', 'Sell'].includes(type)) return
     const recent = editOrder.current.slice(0, 2)
     if (recent.length < 2) return
     const fmt = (value: number) => value.toFixed(6).replace(/\.?0+$/, '')
@@ -1326,7 +1436,7 @@ const ActivityForm = ({ portfolio, initial, pendingActivities, busy, onCancel, o
   }, [units, unitPrice, cashAmount, type])
   if (!accounts.length || !instruments.length) return <div><p className="text-sm text-muted-foreground">Add both an account and an investment before recording activity.</p><div className="mt-4 flex gap-2">{!accounts.length && <Button onClick={onNeedAccount}>Add account</Button>}{!instruments.length && <Button variant="ghost" onClick={onNeedInstrument}>Add investment</Button>}</div></div>
   const needsUnits = !['Dividend', 'FeeTax'].includes(type)
-  const trade = ['OpeningPosition', 'Buy', 'Sell'].includes(type)
+  const trade = ['Buy', 'Sell'].includes(type)
   const submit = (event: React.FormEvent) => {
     event.preventDefault()
     let numFields = 0
@@ -1337,16 +1447,8 @@ const ActivityForm = ({ portfolio, initial, pendingActivities, busy, onCancel, o
       setErrors({ form: 'Enter any two of units, unit price, and gross amount; the missing value is calculated.' })
       return
     }
-    if ((type === 'Split' || type.includes('Transfer')) && numberOrUndefined(units) === undefined) {
-      setErrors({ units: type === 'Split' ? 'Split ratio is required.' : 'Units are required.' })
-      return
-    }
     if (type === 'Dividend' && numberOrUndefined(cashAmount) === undefined) {
       setErrors({ cashAmount: 'Gross dividend is required.' })
-      return
-    }
-    if (type === 'TransferOut' && !destination) {
-      setErrors({ destination: 'Destination is required.' })
       return
     }
     // Cash and units are checked before queueing, so an impossible record is never
@@ -1369,31 +1471,51 @@ const ActivityForm = ({ portfolio, initial, pendingActivities, busy, onCancel, o
       accountId, instrumentId, type, tradeDate,
       units: numberOrUndefined(units), unitPrice: numberOrUndefined(unitPrice), cashAmount: numberOrUndefined(cashAmount),
       fees: Number(fees || 0), taxes: Number(taxes || 0),
-      destinationAccountId: type === 'TransferOut' && destination ? destination : undefined,
+    }).then(saved => {
+      if (saved) clearScan()
     })
   }
   const feesLabelSuffix = selectedInstrument ? ` (${selectedInstrument.currency})` : ''
   const heldUnits = availableActivityUnits(portfolio, accountId, instrumentId, pendingActivities)
   const heldCash = selectedInstrument ? availableActivityCash(portfolio, accountId, selectedInstrument.currency, pendingActivities) : 0
   return <form noValidate onSubmit={submit} className="space-y-4">
+    {!initial && <>
+      <ReceiptScanPicker
+        isScanning={isScanning}
+        showScanPicker={showScanPicker}
+        setShowScanPicker={setShowScanPicker}
+        scanFileInputRef={scanFileInputRef}
+        scanGalleryInputRef={scanGalleryInputRef}
+        handleScanReceipt={handleScan}
+        setScanError={setScanError}
+        label="Scan investment activity"
+        scanningLabel="Scanning investment activity..."
+      />
+      <ReceiptScanStatus
+        showScanBanner={showScanBanner}
+        setShowScanBanner={setShowScanBanner}
+        scanError={scanError}
+        setScanError={setScanError}
+        successMessage="Investment activity scanned — review fields below and edit as needed"
+      />
+    </>}
     <div className={formGridWideClass}>
     <Field label="Activity type" plain><CustomSelect value={type} onChange={v => setType(v as InvestmentTransactionType)} options={activityTypes.map(t => ({ value: t.value, label: t.label }))} ariaLabel="Activity type" className="w-full" /></Field>
     <Field label="Account" plain><CustomSelect value={accountId} onChange={v => setAccountId(v as string)} options={accounts.map(a => ({ value: a.id, label: a.name }))} ariaLabel="Account" className="w-full" /></Field>
     <Field label="Investment" plain><CustomSelect value={instrumentId} onChange={v => setInstrumentId(v as string)} options={instruments.map(i => ({ value: i.id, label: `${i.symbol} · ${i.name}` }))} ariaLabel="Investment" className="w-full" /></Field>
     <Field label="Trade date" plain><DatePicker value={tradeDate} onChange={setTradeDate} max={today()} className="w-full" /></Field>
-    {needsUnits && <Field label={type === 'Split' ? 'Split ratio' : 'Units'} error={errors.units} hint={['Sell', 'TransferOut'].includes(type) ? `${number(heldUnits, 8)} units held` : undefined}><input type="number" min="0" step="0.0000000001" value={units} onChange={event => { noteEdit('units'); setUnits(event.target.value); setErrors(prev => ({ ...prev, units: '', form: '' })) }} className={getInputClass(!!errors.units)} /></Field>}
+    {needsUnits && <Field label="Units" error={errors.units} hint={type === 'Sell' ? `${number(heldUnits, 8)} units held` : undefined}><input type="number" min="0" step="0.0000000001" value={units} onChange={event => { noteEdit('units'); setUnits(event.target.value); setErrors(prev => ({ ...prev, units: '', form: '' })) }} className={getInputClass(!!errors.units)} /></Field>}
     {trade && <Field label={`Unit price (${selectedInstrument?.currency})`} error={errors.unitPrice}><input type="number" min="0" step="0.0000000001" value={unitPrice} onChange={event => { noteEdit('price'); setUnitPrice(event.target.value); setErrors(prev => ({ ...prev, unitPrice: '', form: '' })) }} className={getInputClass(!!errors.unitPrice)} /></Field>}
-    {type !== 'Split' && type !== 'TransferOut' && <Field label={`${type === 'TransferIn' ? 'Transferred cost' : type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} (${selectedInstrument?.currency})`} error={errors.cashAmount} hint={['Buy', 'FeeTax'].includes(type) && selectedInstrument ? `${money(Math.max(heldCash, 0), selectedInstrument.currency)} cash available` : undefined}><input type="number" min={type === 'Dividend' ? '0.0000000001' : '0'} step="0.0000000001" value={cashAmount} onChange={event => { noteEdit('gross'); setCashAmount(event.target.value); setErrors(prev => ({ ...prev, cashAmount: '', form: '' })) }} className={getInputClass(!!errors.cashAmount)} /></Field>}
-    {!['Split', 'TransferIn', 'TransferOut', 'FeeTax'].includes(type) && <>
+    <Field label={`${type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} (${selectedInstrument?.currency})`} error={errors.cashAmount} hint={['Buy', 'FeeTax'].includes(type) && selectedInstrument ? `${money(Math.max(heldCash, 0), selectedInstrument.currency)} cash available` : undefined}><input type="number" min={type === 'Dividend' ? '0.0000000001' : '0'} step="0.0000000001" value={cashAmount} onChange={event => { noteEdit('gross'); setCashAmount(event.target.value); setErrors(prev => ({ ...prev, cashAmount: '', form: '' })) }} className={getInputClass(!!errors.cashAmount)} /></Field>
+    {type !== 'FeeTax' && <>
       <Field label={`Fees${feesLabelSuffix}`}><input type="number" min="0" step="0.0000000001" value={fees} onChange={event => setFees(event.target.value)} className={inputClass} /></Field>
       <Field label={`Taxes${feesLabelSuffix}`}><input type="number" min="0" step="0.0000000001" value={taxes} onChange={event => setTaxes(event.target.value)} className={inputClass} /></Field>
     </>}
-    {type === 'TransferOut' && <Field label="Destination" error={errors.destination} plain><CustomSelect value={destination} onChange={v => { setDestination(v as string); setErrors(prev => ({ ...prev, destination: '' })) }} options={[{ value: '', label: 'External transfer out' }, ...accounts.filter(a => a.id !== accountId).map(a => ({ value: a.id, label: a.name }))]} ariaLabel="Transfer destination" className={`w-full ${errors.destination ? 'border border-destructive rounded-xl' : ''}`} /></Field>}
     </div>
     {trade && <p className="text-[10px] text-muted-foreground">Fill any two of units, unit price, and gross amount — the third is worked out for you.</p>}
     {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && <p className="text-[10px] text-muted-foreground">Amounts stay in {selectedInstrument.currency} and are reported in {portfolio?.appCurrency} at that date's market rate. Use "Manage cash" to convert cash into {selectedInstrument.currency} before trading.</p>}
     {errors.form && <p className="text-[11px] text-destructive font-medium animate-in fade-in slide-in-from-top-1 duration-150">{errors.form}</p>}
-    <FormActions busy={busy} onCancel={onCancel} submitLabel="Save activity" />
+    <FormActions busy={busy} onCancel={() => { clearScan(); onCancel() }} submitLabel="Save activity" />
   </form>
 }
 

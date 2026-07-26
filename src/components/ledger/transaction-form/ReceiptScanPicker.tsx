@@ -10,6 +10,8 @@ interface ReceiptScanPickerProps {
   scanGalleryInputRef: React.RefObject<HTMLInputElement | null>
   handleScanReceipt: (file: File) => void
   setScanError: (err: string | null) => void
+  label?: string
+  scanningLabel?: string
 }
 
 export function ReceiptScanPicker({
@@ -20,6 +22,8 @@ export function ReceiptScanPicker({
   scanGalleryInputRef,
   handleScanReceipt,
   setScanError,
+  label = 'Scan Receipt',
+  scanningLabel = 'Scanning receipt...',
 }: ReceiptScanPickerProps) {
   return (
     <div className="sm:col-span-2">
@@ -61,9 +65,9 @@ export function ReceiptScanPicker({
         >
           {isScanning && <PerimeterBeam size={40} />}
           {isScanning ? (
-            <><Loader2 className="size-3.5 animate-spin" /> Scanning receipt...</>
+            <><Loader2 className="size-3.5 animate-spin" /> {scanningLabel}</>
           ) : (
-            <><Camera className="size-3.5" /><span>Scan Receipt</span></>
+            <><Camera className="size-3.5" /><span>{label}</span></>
           )}
         </button>
       )}
