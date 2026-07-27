@@ -152,8 +152,11 @@ const TopNav: React.FC<TopNavProps> = ({
         <div className="mx-auto flex h-16 w-full max-w-[1440px] items-center px-4 sm:px-6 lg:px-8">
         
         {/* Left Side (Logo and Brand) */}
-        <div className="flex-1 flex items-center justify-start min-w-max">
-          <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => onTabChange('dashboard')}>
+        {/* min-w-0 (not min-w-max): the status badges below are shrink-0, so a
+            max-content floor here would push the whole header past a phone
+            viewport and make the page scroll sideways. */}
+        <div className="flex min-w-0 flex-1 items-center justify-start overflow-hidden">
+          <div className="flex shrink-0 items-center gap-2 cursor-pointer select-none" onClick={() => onTabChange('dashboard')}>
             <AppLogo className="size-9 rounded-xl transition-transform duration-200 hover:scale-105" />
             <span className="hidden sm:inline text-base sm:text-lg font-extrabold tracking-tight bg-linear-to-r from-foreground via-foreground to-blue-500 bg-clip-text text-transparent truncate">
               FinancialApp
@@ -174,24 +177,26 @@ const TopNav: React.FC<TopNavProps> = ({
             </div>
           )}
           {failedOpsCount > 0 && (
-            <div
+            <button
+              type="button"
               onClick={() => onOpenFailedOps?.()}
               className="ml-2 flex items-center gap-1 px-2 py-0.5 bg-destructive/10 border border-destructive/20 rounded-md text-[10px] font-bold text-destructive cursor-pointer select-none shrink-0 hover:bg-destructive/20 transition duration-150"
               title="Operations that failed to sync and were removed from the active queue — click to view details"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
               <span>{failedOpsCount} failed</span>
-            </div>
+            </button>
           )}
           {draftCount > 0 && (
-            <div 
+            <button
+              type="button"
               onClick={() => onTabChange('drafts')}
               className="ml-2.5 flex items-center gap-1 px-2.5 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-md text-[10px] font-bold text-amber-500 cursor-pointer select-none shrink-0 hover:bg-amber-500/25 transition duration-150 animate-in fade-in zoom-in-95"
               title="Draft transactions waiting to be synced to the server"
             >
               <FileText className="size-3" />
               <span>{draftCount} Draft{draftCount > 1 ? 's' : ''}</span>
-            </div>
+            </button>
           )}
         </div>
 
@@ -221,7 +226,7 @@ const TopNav: React.FC<TopNavProps> = ({
         </div>
 
         {/* Right Side Widgets & Actions */}
-        <div className="flex-1 flex items-center justify-end gap-1.5 sm:gap-3 md:gap-4 min-w-max">
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 sm:gap-3 md:gap-4">
           
           <button
             type="button"
