@@ -12,10 +12,8 @@ vi.mock('../../lib/api', () => ({
 }))
 
 vi.mock('../../contexts/AppContext', () => ({
-  useAppContext: () => ({
-    hideSensitive: false,
-    showToast: vi.fn(),
-  }),
+  useAppPrefs: () => ({ hideSensitive: false }),
+  useAppUi: () => ({ showToast: vi.fn() }),
 }))
 
 describe('ActiveDevicesSection', () => {

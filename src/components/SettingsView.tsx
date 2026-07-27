@@ -1,6 +1,6 @@
 import React from 'react'
 import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Bell, BellRing, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap, Moon, Sun, Eye, EyeOff, HardDrive } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { m } from 'framer-motion'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { CurrencySelect } from './ui/CurrencySelect'
@@ -162,7 +162,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
           >
             {label}
             {activeTab === id && (
-              <motion.div
+              <m.div
                 layoutId="activeSettingsTabLine"
                 className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"
                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}

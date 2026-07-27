@@ -80,7 +80,7 @@ export const SecurityQuestionSetup: React.FC<SecurityQuestionSetupProps> = ({ on
 
   return (
     <div className="app-shell min-h-screen text-foreground flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-card/60 backdrop-blur-xl border border-border/60 rounded-3xl p-8 shadow-2xl relative z-10 space-y-6">
+      <div className="w-full max-w-md bg-card md:bg-card/60 md:backdrop-blur-xl border border-border/60 rounded-3xl p-8 shadow-2xl relative z-10 space-y-6">
 
         {/* Header */}
         <div className="text-center space-y-2 select-none">

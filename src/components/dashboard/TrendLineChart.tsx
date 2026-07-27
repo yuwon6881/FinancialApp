@@ -1,9 +1,9 @@
-import { motion } from 'framer-motion'
+import { m } from 'framer-motion'
 import { TrendingUp } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import type { DashboardData, TrendPoint } from '../../types'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
-import { useAppContext } from '../../contexts/AppContext'
+import { useAppPrefs } from '../../contexts/AppContext'
 
 type TrendRange = '3month' | '6month' | 'yearly'
 
@@ -16,7 +16,7 @@ const chartPosition = (points: TrendPoint[], index: number) => {
 }
 
 export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData: DashboardData | null; growthBalance: number }) {
-  const { hideSensitive, currency, formatSensitive } = useAppContext()
+  const { hideSensitive, currency, formatSensitive } = useAppPrefs()
   const [range, setRange] = useState<TrendRange>('yearly')
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
@@ -80,7 +80,7 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
                     ("Expected number" SVG error). Fading in avoids that entirely. */}
                 {/* Keyed by range so a timeframe switch remounts the fill/line and
                     replays the fade-in with the new shape, rather than snapping. */}
-                <motion.path
+                <m.path
                   key={`fill-${range}`}
                   d={`M 15,105 L ${polyline} L 485,105 Z`}
                   fill="url(#growthGradient)"
@@ -88,7 +88,7 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.4, ease: 'easeInOut' }}
                 />
-                <motion.polyline
+                <m.polyline
                   key={`line-${range}`}
                   points={polyline}
                   fill="none"
@@ -104,7 +104,7 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
               {points.map((point, index) => {
                 const position = chartPosition(points, index)
                 return (
-                  <motion.span
+                  <m.span
                     // Keyed by range and positioned statically via `style`. Previously
                     // `layout` + a spring on left/top made the dots overshoot and bounce
                     // into place on every timeframe switch. Remounting per range and

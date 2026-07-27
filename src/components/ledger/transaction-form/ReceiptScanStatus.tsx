@@ -1,5 +1,5 @@
 import { CheckCircle2, X, AlertCircle } from 'lucide-react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, m } from 'framer-motion'
 
 interface ReceiptScanStatusProps {
   showScanBanner: boolean
@@ -20,7 +20,7 @@ export function ReceiptScanStatus({
     <div className="sm:col-span-2 space-y-2">
       <AnimatePresence>
         {showScanBanner && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
@@ -37,13 +37,13 @@ export function ReceiptScanStatus({
             >
               <X className="size-3" />
             </button>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
 
       <AnimatePresence>
         {scanError && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
@@ -60,7 +60,7 @@ export function ReceiptScanStatus({
             >
               <X className="size-3.5" />
             </button>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>

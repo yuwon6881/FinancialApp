@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { Calendar, CreditCard, Edit, FastForward, Repeat, Trash2 } from 'lucide-react'
 import type { RecurringPayment, RecurringReminderSettings } from '../../types'
 import { listContainerVariants, listItemVariants, listItemExit } from '../../lib/animations'
@@ -74,7 +74,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
   }, [highlightedId, onClearHighlight])
 
   return (
-    <motion.div
+    <m.div
       initial="hidden" animate="show"
       variants={listContainerVariants}
       className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start"
@@ -83,7 +83,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
       {payments.map(rp => {
         const isBusy = isPaymentDeleting(rp.id) || isPaymentSyncing(rp.id) || rp.isPendingSync
         return (
-          <motion.div
+          <m.div
             key={rp.id}
             id={`recur-card-${rp.id}`}
             variants={listItemVariants}
@@ -197,7 +197,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                 </Button>
               </div>
             </div>
-          </motion.div>
+          </m.div>
         )
       })}
       </AnimatePresence>
@@ -210,6 +210,6 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
           }
         </div>
       )}
-    </motion.div>
+    </m.div>
   )
 }

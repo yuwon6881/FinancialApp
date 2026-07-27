@@ -9,9 +9,58 @@ import { useOutbox } from '../lib/useOutbox'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from '../lib/modalDrafts'
 import { createFinalId, createLocalWishlistId, projectHideSensitivePreference, sanitizeQueuedOps, type OutboxPayload } from '../lib/outbox'
 import { triggerHaptic } from '../lib/haptics'
-import { getErrorMessage, getErrorName, isAuthError, isLockError, JUST_LOGGED_IN_WINDOW_MS } from '../lib/errors'
+import { getErrorMessage, getErrorName, hasHttpStatus, isAuthError, isLockError, JUST_LOGGED_IN_WINDOW_MS } from '../lib/errors'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
 import { CategoryReplacementSelect } from '../components/ui/CategoryReplacementSelect'
+
+// Boot payload in the tuple order loadAll's commit path already expects, so switching to
+// /api/bootstrap did not require reshuffling everything downstream of it.
+type LoadAllTuple = readonly [
+  api.BootstrapPayload['dashboard'],
+  Transaction[],
+  RecurringPayment[],
+  TransactionCategory[],
+  WishlistItem[] | null,
+  AutocompleteSuggestion[],
+  number | null,
+  api.BootstrapPayload['insights'],
+]
+
+/**
+ * Attempts the single-request boot path, returning null when the caller should fall back to
+ * the per-endpoint fan-out.
+ *
+ * Only a 404 triggers the fallback: that specifically means "this server has no /api/bootstrap"
+ * (an installed PWA can outlive the API version it shipped against). Any other failure —
+ * auth, lock, offline, 5xx — is a real error that the fan-out would hit too, so it propagates
+ * and keeps loadAll's existing error handling in charge.
+ */
+async function fetchBootstrapPayload(
+  month: string | undefined,
+  year: number | undefined,
+  signal: AbortSignal,
+): Promise<LoadAllTuple | null> {
+  try {
+    const payload = await api.fetchBootstrap(month, year, signal)
+    return [
+      payload.dashboard,
+      payload.transactions,
+      payload.recurringPayments,
+      payload.categories,
+      payload.wishlist,
+      payload.autocomplete,
+      payload.walletBalance,
+      payload.insights,
+    ] as const
+  } catch (bootstrapError: unknown) {
+    // A 404 is the one recoverable case: the server has no such route. Everything else
+    // (401, 423, offline, 5xx) would fail the fan-out too, so let loadAll's existing
+    // handling deal with it rather than retrying eight times over a broken connection.
+    if (!hasHttpStatus(bootstrapError, 404)) throw bootstrapError
+    console.warn('This server has no /api/bootstrap endpoint; loading each slice separately.')
+    return null
+  }
+}
 
 export interface UseFinancialDataOptions {
   token: string | null
@@ -212,7 +261,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   useEffect(() => { activeOpsRef.current = activeOps }, [activeOps])
 
   // Fetch initial ledger and dashboard statistics
-  const loadAll = useCallback(async (
+  const loadAllInner = useCallback(async (
     month?: string,
     year?: number,
     isBackground = false,
@@ -231,28 +280,36 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       setIsBackgroundSyncing(true)
     }
     try {
-      const dashboardPromise = api.fetchDashboard(month, year, ac.signal)
-      const transactionsPromise = (month && year !== undefined)
-        ? api.fetchTransactions(month, year, undefined, ac.signal)
-        : dashboardPromise.then(d => api.fetchTransactions(d.setting.selectedMonth, d.setting.selectedYear, undefined, ac.signal))
-      const insightsPromise = (month && year !== undefined)
-        ? api.fetchDashboardInsights(month, year, ac.signal)
-        : dashboardPromise.then(d => api.fetchDashboardInsights(d.setting.selectedMonth, d.setting.selectedYear, ac.signal))
+      // One request for the whole payload (see api/bootstrap.ts). The fan-out below is the
+      // fallback for a server that predates /api/bootstrap — a deployed PWA can outlive the
+      // API version it shipped against, and an install that only ever gets a 404 here would
+      // otherwise be permanently unable to load.
+      const bootstrapped = await fetchBootstrapPayload(month, year, ac.signal)
 
-      const [dbData, txs, recs, cats, wishes, autoSuggests, wallet, insights] = await Promise.all([
-        dashboardPromise,
-        transactionsPromise,
-        api.fetchRecurringPayments(ac.signal),
-        api.fetchCategories(ac.signal),
-        api.fetchWishlist(ac.signal).catch((wishlistError: unknown) => {
-          if (getErrorName(wishlistError) === 'AbortError' || rethrowOnError) throw wishlistError
-          console.warn('Could not refresh wishlist; keeping the last known local copy.', wishlistError)
-          return null
-        }),
-        api.fetchAutocompleteSuggestions(ac.signal).catch(() => []),
-        api.fetchWalletBalance(ac.signal).catch(() => null),
-        insightsPromise
-      ])
+      const [dbData, txs, recs, cats, wishes, autoSuggests, wallet, insights] = bootstrapped ?? await (async () => {
+        const dashboardPromise = api.fetchDashboard(month, year, ac.signal)
+        const transactionsPromise = (month && year !== undefined)
+          ? api.fetchTransactions(month, year, undefined, ac.signal)
+          : dashboardPromise.then(d => api.fetchTransactions(d.setting.selectedMonth, d.setting.selectedYear, undefined, ac.signal))
+        const insightsPromise = (month && year !== undefined)
+          ? api.fetchDashboardInsights(month, year, ac.signal)
+          : dashboardPromise.then(d => api.fetchDashboardInsights(d.setting.selectedMonth, d.setting.selectedYear, ac.signal))
+
+        return Promise.all([
+          dashboardPromise,
+          transactionsPromise,
+          api.fetchRecurringPayments(ac.signal),
+          api.fetchCategories(ac.signal),
+          api.fetchWishlist(ac.signal).catch((wishlistError: unknown) => {
+            if (getErrorName(wishlistError) === 'AbortError' || rethrowOnError) throw wishlistError
+            console.warn('Could not refresh wishlist; keeping the last known local copy.', wishlistError)
+            return null
+          }),
+          api.fetchAutocompleteSuggestions(ac.signal).catch(() => []),
+          api.fetchWalletBalance(ac.signal).catch(() => null),
+          insightsPromise
+        ] as const)
+      })()
 
       if (isStale() || shouldCommit?.() === false) return
       if (wallet !== null) {
@@ -352,6 +409,45 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       }
     }
   }, [token, lastUnlockedTimeRef, handleLogout, markSessionLocked, setDarkMode, resolveHideSensitive, markSensitivePreferenceUnavailable, notifyOnLogin, hasShownModalThisSession, setShowLoginModal, loadAllAbortRef, setSelectedMonth, setSelectedYear])
+
+  /**
+   * Coalesces concurrent background refreshes of the same cycle onto one request.
+   *
+   * Several mutations landing together each asked for a full reload; because loadAll aborts
+   * the previous request before starting its own, that produced a burst of started-then-
+   * cancelled fetches and only the last one's data. Callers awaiting an aborted reload also
+   * returned before the new data arrived. Now the second caller awaits the first request.
+   *
+   * Only plain background refreshes are shared. A foreground load drives the loading skeleton,
+   * and `rethrowOnError`/`shouldCommit` callers have per-call semantics that a shared promise
+   * cannot honour, so those always get their own request.
+   */
+  const inFlightBackgroundLoadRef = useRef<{ key: string; promise: Promise<void> } | null>(null)
+
+  const loadAll = useCallback(async (
+    month?: string,
+    year?: number,
+    isBackground = false,
+    rethrowOnError = false,
+    shouldCommit?: () => boolean,
+  ) => {
+    const isShareable = isBackground && !rethrowOnError && !shouldCommit
+    if (!isShareable) {
+      return loadAllInner(month, year, isBackground, rethrowOnError, shouldCommit)
+    }
+
+    const key = `${month ?? ''}:${year ?? ''}`
+    const inFlight = inFlightBackgroundLoadRef.current
+    if (inFlight?.key === key) return inFlight.promise
+
+    const promise = loadAllInner(month, year, true).finally(() => {
+      if (inFlightBackgroundLoadRef.current?.promise === promise) {
+        inFlightBackgroundLoadRef.current = null
+      }
+    })
+    inFlightBackgroundLoadRef.current = { key, promise }
+    return promise
+  }, [loadAllInner])
 
   // Backup outbox/drafts on logout
   const handleLogoutCleanup = useCallback(async (currentOwner: string, createBackup = true) => {

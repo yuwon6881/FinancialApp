@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { ChevronsLeft } from 'lucide-react'
-import { motion, useMotionValue, useAnimation, type PanInfo } from 'framer-motion'
+import { m, useMotionValue, useAnimation, type PanInfo } from 'framer-motion'
 import { cn } from '../../lib/utils'
 import { useIsMobile } from '../../lib/useIsMobile'
 import { triggerHaptic } from '../../lib/haptics'
@@ -148,7 +148,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
       </div>
 
       {/* Sliding content surface */}
-      <motion.div
+      <m.div
         data-swipe-content
         drag={disabled ? false : 'x'}
         dragConstraints={{ left: -actionsWidth, right: 0 }}
@@ -172,7 +172,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
             <ChevronsLeft className="size-3.5" />
           </div>
         )}
-      </motion.div>
+      </m.div>
     </div>
   )
 }

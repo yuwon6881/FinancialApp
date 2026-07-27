@@ -1,7 +1,7 @@
 import React from 'react'
 import type { DashboardData, WishlistItem, AppTab, InvestmentAllocationOverview } from '../types'
 import { CycleSkeleton } from './ui/Skeleton'
-import { useAppContext } from '../contexts/AppContext'
+import { useAppPrefs } from '../contexts/AppContext'
 import { DashboardHeader } from './dashboard/DashboardHeader'
 import { TodayFocusCards } from './dashboard/TodayFocusCards'
 import { CategoryLimitPerformance } from './dashboard/CategoryLimitPerformance'
@@ -46,7 +46,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   isSwitchingCycle = false,
   investmentAllocation = null,
 }) => {
-  const { hideSensitive: contextHideSensitive } = useAppContext()
+  const { hideSensitive: contextHideSensitive } = useAppPrefs()
   const hideSensitive = hideSensitiveProp ?? contextHideSensitive
 
   const view = useDashboardView({

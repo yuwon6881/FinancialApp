@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { Bell, Check, Loader2 } from 'lucide-react'
 import type { RecurringPayment, RecurringReminderMode, RecurringReminderSettings } from '../../types'
 import { buildReminderPreview, getEffectiveReminderSettings, REMINDER_LEAD_DAY_OPTIONS } from '../../lib/recurringPayments'
@@ -82,7 +82,7 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
 
       <AnimatePresence initial={false}>
         {draftSettings.enabled && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
@@ -132,13 +132,13 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
 
               <p className="mt-2 text-[10px] text-muted-foreground">{buildReminderPreview(draftSettings.mode, draftSettings.leadDays)}</p>
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
 
       <AnimatePresence>
         {isDirty && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
@@ -174,7 +174,7 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
                 </button>
               </div>
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>

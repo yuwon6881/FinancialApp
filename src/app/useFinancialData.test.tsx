@@ -89,6 +89,20 @@ function renderFinancialData() {
 }
 
 function mockHappyApi(recurring: RecurringPayment[] = [payment]) {
+  // loadAll boots from the composite endpoint; the individual mocks below still cover the
+  // targeted refreshes and the fallback path for a server without /api/bootstrap.
+  vi.spyOn(api, 'fetchBootstrap').mockResolvedValue({
+    month: 'July',
+    year: 2026,
+    dashboard,
+    insights,
+    transactions: [],
+    recurringPayments: recurring,
+    categories: [],
+    wishlist: [],
+    autocomplete: [],
+    walletBalance: 100,
+  } as any)
   vi.spyOn(api, 'fetchDashboard').mockResolvedValue(dashboard)
   vi.spyOn(api, 'fetchTransactions').mockResolvedValue([] as any)
   vi.spyOn(api, 'fetchDashboardInsights').mockResolvedValue(insights)
@@ -132,7 +146,7 @@ describe('useFinancialData', () => {
   it('logs out on a status-coded 401 that has no "401" in its message', async () => {
     mockHappyApi()
     vi.spyOn(api, 'pingServer').mockResolvedValue({ status: 'ok' } as any)
-    vi.spyOn(api, 'fetchDashboard').mockRejectedValue(new ApiErrorLike('Request failed', 401))
+    vi.spyOn(api, 'fetchBootstrap').mockRejectedValue(new ApiErrorLike('Request failed', 401))
 
     renderFinancialData()
 
@@ -143,7 +157,7 @@ describe('useFinancialData', () => {
   it('locks the session on a status-coded 423 that has no "423" in its message', async () => {
     mockHappyApi()
     vi.spyOn(api, 'pingServer').mockResolvedValue({ status: 'ok' } as any)
-    vi.spyOn(api, 'fetchDashboard').mockRejectedValue(new ApiErrorLike('Request failed', 423))
+    vi.spyOn(api, 'fetchBootstrap').mockRejectedValue(new ApiErrorLike('Request failed', 423))
 
     renderFinancialData()
 
@@ -168,8 +182,22 @@ describe('useFinancialData', () => {
     })
     await waitFor(() => expect(result.current.recurringPayments[0].reminderEnabled).toBe(true))
 
-    // A concurrent refresh lands while the request is still in flight.
-    vi.mocked(api.fetchRecurringPayments).mockResolvedValue([{ ...payment, amount: 99, reminderEnabled: true }])
+    // A concurrent refresh lands while the request is still in flight. It is staged on the
+    // boot endpoint because that is the request loadAll makes.
+    const refreshed = [{ ...payment, amount: 99, reminderEnabled: true }]
+    vi.mocked(api.fetchRecurringPayments).mockResolvedValue(refreshed)
+    vi.mocked(api.fetchBootstrap).mockResolvedValue({
+      month: 'July',
+      year: 2026,
+      dashboard,
+      insights,
+      transactions: [],
+      recurringPayments: refreshed,
+      categories: [],
+      wishlist: [],
+      autocomplete: [],
+      walletBalance: 100,
+    } as any)
     await act(async () => { await result.current.loadAll('July', 2026, true) })
     expect(result.current.recurringPayments[0].amount).toBe(99)
 

@@ -1,5 +1,5 @@
 import React from 'react'
-import { motion } from 'framer-motion'
+import { m } from 'framer-motion'
 import { Edit, Plus } from 'lucide-react'
 import type { RecurringFrequency, RecurringPayment, TransactionCategory } from '../../types'
 import { getCurrencySymbol } from '../../lib/utils'
@@ -204,14 +204,14 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
           >
             Cancel
           </button>
-          <motion.button
+          <m.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             type="submit"
             className="px-5 py-2.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition cursor-pointer"
           >
             {editingPayment ? 'Save Changes' : 'Add Subscription'}
-          </motion.button>
+          </m.button>
         </div>
       </form>
     </BottomSheet>

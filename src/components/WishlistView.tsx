@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { listContainerVariants, listItemVariants } from '../lib/animations'
+import { m } from 'framer-motion'
 import type { WishlistItem, Transaction } from '../types'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { BottomSheet } from './ui/BottomSheet'
@@ -355,7 +354,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               <Target className="size-4 text-blue-500" />
               Your focus
             </h3>
-            <motion.button 
+            <m.button 
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleOpenAddModal}
@@ -363,7 +362,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               title="Add Goal"
             >
               <Plus className="size-3.5" />
-            </motion.button>
+            </m.button>
           </div>
 
           {activeItem ? (
@@ -474,7 +473,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
 
                   {/* Actions — matches subscription card footer style */}
                   <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between border-t border-border/30 pt-4 gap-3 sm:gap-2">
-                    <motion.button
+                    <m.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.96 }}
                       onClick={() => handleOpenClaimModal(activeItem)}
@@ -487,7 +486,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                     >
                       <PiggyBank className="size-3.5" />
                       {canAfford ? 'Claim Reward' : <>Need {formatSensitive(activeItem.price - rewardsBalance)} More</>}
-                    </motion.button>
+                    </m.button>
 
                     <div className="flex items-center gap-2 w-full sm:w-auto">
                       <Button
@@ -518,14 +517,14 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               <Flag className="size-10 text-muted-foreground/60 mb-2" />
               <h4 className="font-bold text-foreground text-sm">No Active Focus Item</h4>
               <p className="text-xs text-muted-foreground max-w-xs mt-1">Set a goal from your wishlist queue below or create a new target to track savings progress.</p>
-              <motion.button 
+              <m.button 
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleOpenAddModal}
                 className="mt-4 flex items-center gap-1.5 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs font-bold shadow-md shadow-blue-600/10 transition cursor-pointer"
               >
                 <Plus className="size-3.5" /> Add Goal
-              </motion.button>
+              </m.button>
             </Card>
           )}
         </div>
@@ -537,12 +536,10 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
             Up next <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{queuedItems.length}</span>
           </h3>
 
-          <motion.div 
-            initial="hidden" animate="show"
-            variants={listContainerVariants}
-            className="space-y-3 max-h-[460px] overflow-y-auto pr-1"
-          >
-            <AnimatePresence>
+          {/* Entrance moved to CSS (.list-container-enter / .list-card-enter). Nothing in
+              this list defined an `exit`, so the AnimatePresence was maintaining a
+              presence context for exit animations that never ran. */}
+          <div className="list-container-enter space-y-3 max-h-[460px] overflow-y-auto pr-1">
             {queuedItems.length > 0 ? (
               queuedItems.map((item, idx) => {
                 const pct = Math.max(0, Math.min(100, (rewardsBalance / item.price) * 100))
@@ -550,7 +547,11 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                 const isBusy = isItemDeleting(item.id) || isItemSyncing(item.id) || item.isPendingSync
 
                 return (
-                  <motion.div variants={listItemVariants} key={item.id}>
+                  <div
+                    className="list-card-enter"
+                    style={idx ? { animationDelay: `${Math.min(idx * 50, 400)}ms` } : undefined}
+                    key={item.id}
+                  >
                   <SwipeableRow
                     hint={idx === 0}
                     disabled={isBusy}
@@ -638,16 +639,15 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                       </div>
                     </div>
                   </SwipeableRow>
-                  </motion.div>
+                  </div>
                 )
               })
             ) : (
-              <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-6 rounded-xl bg-muted/20 border border-border/40 text-center text-xs text-muted-foreground">
+              <div className="list-card-enter p-6 rounded-xl bg-muted/20 border border-border/40 text-center text-xs text-muted-foreground">
                 No items in the wishlist queue.
-              </motion.div>
+              </div>
             )}
-            </AnimatePresence>
-          </motion.div>
+          </div>
         </div>
       </div>
 

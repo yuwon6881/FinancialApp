@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { m } from 'framer-motion'
 import type { ChangeEvent, FormEvent } from 'react'
 import { CustomSelect } from '../ui/CustomSelect'
 import { SmartAmountInput } from '../ui/SmartAmountInput'
@@ -87,14 +87,14 @@ export function WishlistItemForm(props: WishlistItemFormProps) {
         <button type="button" onClick={props.onCancel} className="flex-1 py-2.5 bg-muted text-muted-foreground rounded-xl font-bold cursor-pointer">
           Cancel
         </button>
-        <motion.button
+        <m.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           type="submit"
           className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full font-bold shadow-lg shadow-blue-500/25 cursor-pointer"
         >
           {isAdd ? 'Add Goal' : 'Save Changes'}
-        </motion.button>
+        </m.button>
       </div>
     </form>
   )

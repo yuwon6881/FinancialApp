@@ -215,7 +215,11 @@ export function LedgerFilterBar({
   return (
     <div
       style={{ top: 'calc(4rem + env(safe-area-inset-top, 0px))' }}
-      className="sticky z-30 flex flex-row items-center justify-between gap-2 md:gap-4 p-2 md:p-4 bg-card/90 supports-[backdrop-filter]:bg-card/75 backdrop-blur-md border border-border/60 rounded-xl md:rounded-2xl shadow-sm"
+      // The translucency + blur is desktop-only. This bar is sticky over the ledger, so on
+      // a phone its blurred backdrop had to be re-filtered against freshly painted rows for
+      // every frame of every scroll — the single most expensive thing on the screen on
+      // mid-range Android. Phones get an opaque `bg-card` and no filter instead.
+      className="sticky z-30 flex flex-row items-center justify-between gap-2 md:gap-4 p-2 md:p-4 bg-card md:bg-card/90 md:supports-[backdrop-filter]:bg-card/75 md:backdrop-blur-md border border-border/60 rounded-xl md:rounded-2xl shadow-sm"
     >
       {showAllCycles ? (
         /* Server mode: input pill + Search button fused into one focus-aware

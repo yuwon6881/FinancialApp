@@ -1,7 +1,7 @@
 import React from 'react'
 import { BarChart3, ChartNoAxesCombined, ChevronRight, TrendingUp } from 'lucide-react'
 import type { AppTab, DashboardData, Transaction, WishlistItem } from '../types'
-import { useAppContext } from '../contexts/AppContext'
+import { useAppPrefs } from '../contexts/AppContext'
 import { getCycleLabelForDropdown } from '../lib/cycleLabels'
 import { getCycleProgress } from '../lib/cycle'
 import { CustomSelect } from './ui/CustomSelect'
@@ -53,7 +53,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   isSwitchingCycle = false,
   onViewCycleSummary,
 }) => {
-  const { hideSensitive } = useAppContext()
+  const { hideSensitive } = useAppPrefs()
   const view = useDashboardView({
     dashboardData,
     wishlist,

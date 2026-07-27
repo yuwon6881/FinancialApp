@@ -13,7 +13,7 @@ import {
   Zap,
 } from 'lucide-react'
 import type { DashboardData, Transaction, WishlistItem } from '../types'
-import { useAppContext } from '../contexts/AppContext'
+import { useAppPrefs } from '../contexts/AppContext'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { buildCycleSummary, formatRate } from '../lib/cycleSummary'
 import { BottomSheet } from './ui/BottomSheet'
@@ -49,7 +49,7 @@ export function CycleSummaryModal({
   variant,
   onViewLedger,
 }: CycleSummaryModalProps) {
-  const { formatSensitive } = useAppContext()
+  const { formatSensitive } = useAppPrefs()
   const summary = useMemo(
     () => data ? buildCycleSummary(data, previousData, wishlist, year, monthIndex, cycleDay, transactions) : null,
     [data, previousData, wishlist, year, monthIndex, cycleDay, transactions],

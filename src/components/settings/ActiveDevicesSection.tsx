@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import * as api from '../../lib/api'
 import type { SessionSummary } from '../../lib/api'
 import { getErrorMessage } from '../../lib/errors'
-import { useAppContext } from '../../contexts/AppContext'
+import { useAppPrefs, useAppUi } from '../../contexts/AppContext'
 import { CollapsibleBody } from '../ui/CollapsibleBody'
 
 const relativeTime = (iso: string | null): string => {
@@ -16,7 +16,8 @@ const relativeTime = (iso: string | null): string => {
 }
 
 export function ActiveDevicesSection() {
-  const { hideSensitive, showToast } = useAppContext()
+  const { hideSensitive } = useAppPrefs()
+  const { showToast } = useAppUi()
   const [open, setOpen] = useState(false)
   const [sessions, setSessions] = useState<SessionSummary[]>([])
   const [loading, setLoading] = useState(true)

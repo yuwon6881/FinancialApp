@@ -479,7 +479,10 @@
     .perimeter-beam::before,
     .trend-draw,
     .area-fade,
-    .press-scale {
+    .press-scale,
+    .list-container-enter,
+    .list-row-enter,
+    .list-card-enter {
         animation: none !important;
         transition-duration: 0.01ms !important;
     }
@@ -612,21 +615,66 @@ html {
     display: none;
 }
 
-/* Apple-like momentum scrolling container */
+/* Apple-like momentum scrolling container.
+   No `will-change: scroll-position`: held permanently it pins a compositing layer and
+   its memory for the container's whole lifetime, which is a cost on every frame rather
+   than a one-off hint. Browsers already optimise scrolling containers, and the
+   translateZ(0) below is enough to promote this one. */
 .apple-scroll-container {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch; /* Momentum scrolling on iOS */
     overscroll-behavior-y: contain; /* Allows rubber-banding inside the container */
     transform: translateZ(0); /* Force hardware acceleration */
-    will-change: scroll-position;
 }
 
-/* Force GPU acceleration for elements that animate frequently */
+/* Force GPU acceleration for elements that animate frequently.
+   `will-change: transform, opacity` is deliberately absent: this class sits on the
+   long-lived view wrapper, so the hint was standing indefinitely for an animation that
+   only runs on a tab change. Framer Motion sets will-change itself for the duration of
+   each animation, which is what the hint is actually for. */
 .gpu-layer {
     transform: translate3d(0, 0, 0);
     backface-visibility: hidden;
     perspective: 1000px;
-    will-change: transform, opacity;
+}
+
+/* One-shot list entrances, previously driven by Framer Motion variants
+   (listContainerVariants / listItemVariants / rowFadeVariants in lib/animations.ts).
+   These are plain opacity/transform entrances that run once and are never
+   interrupted, interpolated against gestures, or read back — so they need no JS frame
+   loop. Doing them in CSS removes a motion component from every ledger row, so the
+   highest-count animated nodes in the app no longer each carry a subscription, a
+   style-diffing pass and a variant-propagation link to their parent.
+
+   Stagger is an inline `animation-delay` on each item (see LedgerRows). The
+   `both` fill mode is what holds an item invisible until its delay elapses. */
+@keyframes list-container-enter {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+.list-container-enter {
+    animation: list-container-enter 150ms ease-out both;
+}
+
+/* Ledger rows: opacity only, deliberately no `y` offset — matching the old
+   rowFadeVariants, whose comment explains that a transform here would make
+   pagination/cycle switches trigger a position-FLIP cascade across siblings. */
+@keyframes list-row-enter {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+.list-row-enter {
+    animation: list-row-enter 180ms ease-out both;
+}
+
+/* Card-style list items (wishlist): rise + fade, replacing listItemVariants' spring.
+   A spring's exact overshoot is not observable in a 300ms one-shot entrance. */
+@keyframes list-card-enter {
+    from { opacity: 0; transform: translateY(15px); }
+    to   { opacity: 1; transform: none; }
+}
+.list-card-enter {
+    animation: list-card-enter 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* Skip layout/paint for off-screen ledger rows ("show all cycles" renders up to

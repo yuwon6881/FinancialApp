@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { InvestmentPortfolio, InvestmentRange } from '../../types'
 import * as api from '../../lib/api'
-import { useAppContext } from '../../contexts/AppContext'
+import { useAppSync, useAppUi } from '../../contexts/AppContext'
 
 export function useInvestmentPortfolio() {
-  const { isOffline, showToast } = useAppContext()
+  const { isOffline } = useAppSync()
+  const { showToast } = useAppUi()
   const [range, setRange] = useState<InvestmentRange>('3m')
   const [portfolio, setPortfolio] = useState<InvestmentPortfolio | null>(
     () => api.readCachedInvestmentPortfolio(),

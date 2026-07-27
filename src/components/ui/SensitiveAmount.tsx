@@ -1,5 +1,5 @@
 import React from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { AnimatedNumber } from './AnimatedNumber'
 import { SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
 
@@ -40,7 +40,7 @@ export const SensitiveAmount: React.FC<SensitiveAmountProps> = ({
   return (
     <AnimatePresence mode="wait">
       {isMasked ? (
-        <motion.span
+        <m.span
           key="masked"
           initial={{ opacity: 0.4, filter: 'blur(4px)', scale: 0.98 }}
           animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
@@ -52,9 +52,9 @@ export const SensitiveAmount: React.FC<SensitiveAmountProps> = ({
           className={`font-mono font-semibold tracking-wide select-none ${className}`}
         >
           <span aria-hidden="true">{mask}</span>
-        </motion.span>
+        </m.span>
       ) : (
-        <motion.span
+        <m.span
           key="unmasked"
           initial={{ opacity: 0.4, filter: 'blur(4px)', scale: 0.98 }}
           animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
@@ -63,7 +63,7 @@ export const SensitiveAmount: React.FC<SensitiveAmountProps> = ({
           className={className}
         >
           <AnimatedNumber value={value} formatFn={formatFn} />
-        </motion.span>
+        </m.span>
       )}
     </AnimatePresence>
   )

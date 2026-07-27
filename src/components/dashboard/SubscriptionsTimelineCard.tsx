@@ -1,5 +1,5 @@
 import React from 'react'
-import { motion, type Variants } from 'framer-motion'
+import { m, type Variants } from 'framer-motion'
 import { Calendar, ChevronRight, CheckCircle2, Clock, Minus } from 'lucide-react'
 import type { ActiveRecurringPayment } from '../../types'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
@@ -50,7 +50,7 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
           <Calendar className="size-4 text-blue-500 shrink-0" />
         </div>
 
-        <motion.div
+        <m.div
           key={containerKey}
           initial="hidden"
           animate="show"
@@ -58,7 +58,7 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
           className="-mx-1 mt-3 flex-1 min-h-0 space-y-1.5 overflow-x-hidden overflow-y-auto p-1 no-scrollbar"
         >
           {activeRecurring.map((rp: ActiveRecurringPayment) => (
-            <motion.div
+            <m.div
               key={rp.id}
               variants={subItemVariants}
               onClick={() => (onNavigateToRecurring ? onNavigateToRecurring(rp.recurringPaymentId) : onNavigate('recurring'))}
@@ -97,12 +97,12 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
               </div>
               {/* Chevron affordance: fades and slides in on hover */}
               <ChevronRight className="size-4 shrink-0 text-blue-500 opacity-0 -translate-x-1 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0" />
-            </motion.div>
+            </m.div>
           ))}
           {activeRecurring.length === 0 && (
             <div className="text-xs text-muted-foreground py-10 text-center">No subscriptions for this cycle.</div>
           )}
-        </motion.div>
+        </m.div>
       </div>
 
       <button

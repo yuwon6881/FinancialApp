@@ -2,7 +2,7 @@ import type { TransactionCategory } from '../../types'
 import { cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
 import { deobfuscateAmount, obfuscateAmount } from './amounts'
 
-type WireTransactionCategory = Omit<TransactionCategory, 'cycleLimit'> & {
+export type WireTransactionCategory = Omit<TransactionCategory, 'cycleLimit'> & {
   cycleLimit?: string | number | null
 }
 
@@ -93,15 +93,20 @@ export async function applyCategoryCleanup(actions: CategoryCleanupAction[]): Pr
   return { appliedCount: data.appliedCount || 0, undoActions: data.undoActions || [] }
 }
 
+/** Wire -> domain mapping for a category. Shared with the bootstrap decoder. */
+export function mapCategory(category: WireTransactionCategory): TransactionCategory {
+  return {
+    ...category,
+    cycleLimit: category.cycleLimit == null ? null : deobfuscateAmount(category.cycleLimit),
+  }
+}
+
 export function fetchCategories(signal?: AbortSignal): Promise<TransactionCategory[]> {
   return cachedGet('categories', async () => {
     const categories = await request<WireTransactionCategory[]>('/categories', {
       errorMessage: 'Failed to fetch custom categories',
     })
-    return categories.map(category => ({
-      ...category,
-      cycleLimit: category.cycleLimit == null ? null : deobfuscateAmount(category.cycleLimit),
-    }))
+    return categories.map(mapCategory)
   }, { signal, staleTime: 300_000 })
 }
 

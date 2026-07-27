@@ -245,7 +245,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   if (pendingToken) {
     return (
       <div className="app-shell min-h-screen text-foreground flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-card/60 backdrop-blur-xl border border-border/60 rounded-3xl p-8 shadow-2xl relative z-10 space-y-6">
+        <div className="w-full max-w-md bg-card md:bg-card/60 md:backdrop-blur-xl border border-border/60 rounded-3xl p-8 shadow-2xl relative z-10 space-y-6">
           <div className="text-center space-y-2 select-none">
             <div className="mx-auto size-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
               <ShieldCheck className="size-6 text-blue-500" />
@@ -306,7 +306,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
   return (
     <div className="app-shell min-h-screen text-foreground flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-card/60 backdrop-blur-xl border border-border/60 rounded-3xl p-8 shadow-2xl relative z-10 space-y-6">
+      <div className="w-full max-w-md bg-card md:bg-card/60 md:backdrop-blur-xl border border-border/60 rounded-3xl p-8 shadow-2xl relative z-10 space-y-6">
 
         {/* Brand Header */}
         <div className="text-center space-y-2 select-none">

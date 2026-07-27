@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense, type ReactNode } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, m } from 'framer-motion'
 import { Capacitor } from '@capacitor/core'
 import { SplashScreen } from '@capacitor/splash-screen'
 import TopNav from "./TopNav.tsx"
@@ -650,7 +650,7 @@ function App() {
             <ErrorBoundary variant="inline" resetKey={prefs.activeTab}>
               <Suspense fallback={<ContentViewFallback tab={prefs.activeTab} />}>
                 <LaunchReady>
-                  <motion.div
+                  <m.div
                     key={prefs.activeTab}
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -878,7 +878,7 @@ function App() {
                         onInvestmentScanCleared={clearInvestmentScanJob}
                       />
                     )}
-                  </motion.div>
+                  </m.div>
                 </LaunchReady>
               </Suspense>
             </ErrorBoundary>
@@ -989,7 +989,7 @@ function App() {
           <>
             <AnimatePresence>
               {fabMenu.isOpen && prefs.activeTab !== 'drafts' && (
-                <motion.div
+                <m.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
@@ -1003,7 +1003,7 @@ function App() {
 
             <AnimatePresence>
               {fabMenu.isOpen && prefs.activeTab !== 'drafts' && (
-                <motion.div
+                <m.div
                   variants={fabMenuVariants}
                   initial="hidden"
                   animate="visible"
@@ -1017,7 +1017,7 @@ function App() {
                     { key: 'transaction' as const, label: 'Post Transaction', Icon: Wallet, color: 'bg-emerald-500' },
                     { key: 'ai' as const, label: 'Ask AI', Icon: Sparkles, color: 'bg-indigo-500' },
                   ]).map(({ key, label, Icon, color }) => (
-                    <motion.button
+                    <m.button
                       key={key}
                       type="button"
                       variants={fabActionVariants}
@@ -1034,12 +1034,12 @@ function App() {
                     >
                       <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-foreground shadow-xs">{label}</span>
                       <span className={`size-11 rounded-full ${color} text-white flex items-center justify-center shadow-lg`}><Icon className="size-5" /></span>
-                    </motion.button>
+                    </m.button>
                   ))}
-                </motion.div>
+                </m.div>
               )}
             </AnimatePresence>
-            <motion.button
+            <m.button
               whileTap={{ scale: 0.92 }}
               onClick={() => {
                 if (prefs.activeTab === 'drafts') {
@@ -1067,7 +1067,7 @@ function App() {
               ) : (
                 <Zap className="size-6" />
               )}
-            </motion.button>
+            </m.button>
           </>
         )}
       </div>

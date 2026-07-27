@@ -1,8 +1,6 @@
 import React, { type ReactNode } from 'react'
-import { motion } from 'framer-motion'
 import { Edit2, Trash2 } from 'lucide-react'
 import type { Transaction } from '../../types'
-import { rowFadeVariants } from '../../lib/animations'
 import { formatCurrencyVal } from '../../lib/utils'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
@@ -18,9 +16,22 @@ export interface LedgerRowProps {
   isSyncing: boolean
   hideSensitive: boolean
   currency: string
+  /** Position in the rendered page, used only for the CSS entrance stagger. */
+  index?: number
   onStartEdit: (transaction: Transaction) => void
   onDeleteClick: (transaction: Transaction) => void
   onSplitEditBlocked: () => void
+}
+
+// Per-row entrance delay, replacing Framer Motion's `staggerChildren: 0.05`. Capped so
+// that "show all cycles" (up to ~100 rows) does not turn a decorative stagger into a
+// five-second cascade the way the uncapped variant did.
+const STAGGER_STEP_MS = 50
+const STAGGER_MAX_MS = 400
+
+function staggerStyle(index: number | undefined) {
+  if (!index) return undefined
+  return { animationDelay: `${Math.min(index * STAGGER_STEP_MS, STAGGER_MAX_MS)}ms` }
 }
 
 const Amount = ({ value, hidden }: { value: ReactNode; hidden: boolean }) => (
@@ -35,7 +46,11 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
   const transfer = transaction.ledgerCategory.startsWith('Transfer:')
   const money = (value: number) => <Amount value={formatCurrencyVal(value, props.currency)} hidden={props.hideSensitive} />
   return (
-    <motion.tr variants={rowFadeVariants} id={ledgerTransactionRowId(transaction.id, 'desktop')} className="hover:bg-muted/10 transition">
+    <tr
+      id={ledgerTransactionRowId(transaction.id, 'desktop')}
+      className="list-row-enter hover:bg-muted/10 transition"
+      style={staggerStyle(props.index)}
+    >
       <td className="p-4 font-medium text-muted-foreground">{transaction.date}</td>
       <td className="p-4 font-semibold text-foreground">
         <div className="flex items-center gap-2">
@@ -64,7 +79,7 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
         <Button variant="ghost" size="sm" onClick={split ? props.onSplitEditBlocked : () => props.onStartEdit(transaction)} disabled={!split && (props.isDeleting || props.hideSensitive)}>Edit</Button>
         <Button variant="danger" size="sm" onClick={() => props.onDeleteClick(transaction)} disabled={props.isDeleting || props.hideSensitive}>Delete</Button>
       </td>
-    </motion.tr>
+    </tr>
   )
 })
 
@@ -75,7 +90,7 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
   const split = transaction.id.includes('-split-')
   const formatted = formatCurrencyVal(outflow ? Math.abs(transaction.amount) : transaction.amount, props.currency)
   return (
-    <motion.div variants={rowFadeVariants} className="cv-row">
+    <div className="cv-row list-row-enter" style={staggerStyle(props.index)}>
       <SwipeableRow
         id={ledgerTransactionRowId(transaction.id, 'mobile')}
         hint={props.hint}
@@ -91,6 +106,6 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
           <div className="flex items-center justify-between pt-2 border-t border-border/30"><span className="text-[10px] text-muted-foreground flex items-center gap-1.5">Ledger:<LedgerAllocationBadge ledgerCategory={transaction.ledgerCategory} transactionId={transaction.id} compact /></span></div>
         </div>
       </SwipeableRow>
-    </motion.div>
+    </div>
   )
 })

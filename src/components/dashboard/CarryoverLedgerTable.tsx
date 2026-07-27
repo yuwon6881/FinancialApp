@@ -3,6 +3,7 @@ import type { CategorySummary } from '../../types'
 import { SensitiveAmount } from '../ui/SensitiveAmount'
 import { getCategoryDotClass } from '../../lib/categoryColors'
 import { SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
+import { useIsMobile } from '../../lib/useIsMobile'
 
 interface CarryoverLedgerTableProps {
   categories: CategorySummary[]
@@ -21,6 +22,9 @@ export function CarryoverLedgerTable({
   formatCurrency,
   onAdjust,
 }: CarryoverLedgerTableProps) {
+  // Render one layout, not both. Previously the wide grid and the mobile card list
+  // were both built for every category and one was CSS-hidden.
+  const isMobile = useIsMobile()
   const amount = (value: number) => amountsMasked ? SENSITIVE_AMOUNT_MASK : formatCurrency(value)
 
   const adjustButton = (category: CategorySummary) => (
@@ -41,7 +45,8 @@ export function CarryoverLedgerTable({
       <h3 className="text-base font-bold text-foreground mb-1">Carryover Rolling Ledgers</h3>
       <p className="text-xs text-muted-foreground mb-4">Starting budget carries forward from previous month's remaining balance.</p>
 
-      <div className="hidden md:block overflow-x-auto">
+      {!isMobile && (
+      <div className="overflow-x-auto">
         <div className="min-w-[800px] text-xs space-y-1">
           <div className="grid grid-cols-[1.8fr_1fr_1.5fr_2fr_2fr_2fr] items-center gap-4 border-b border-border/50 text-muted-foreground font-semibold pb-2.5 px-4 mb-2">
             <div>Category</div><div>Target Alloc.</div><div className="text-right">Allocated Budget</div>
@@ -76,8 +81,10 @@ export function CarryoverLedgerTable({
           })}
         </div>
       </div>
+      )}
 
-      <div className="block md:hidden space-y-4">
+      {isMobile && (
+      <div className="space-y-4">
         {categories.map(category => {
           const pending = pendingDeductionsByCategory[category.name] ?? 0
           return (
@@ -113,6 +120,7 @@ export function CarryoverLedgerTable({
           )
         })}
       </div>
+      )}
     </div>
   )
 }

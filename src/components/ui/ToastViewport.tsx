@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
 import { AlertCircle, CheckCircle2, Info, Undo2, X } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 
 export type ToastTone = 'info' | 'success' | 'warning' | 'error'
 
@@ -75,7 +75,7 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
         {toasts.map(toast => {
           const tone = toast.tone || 'info'
           return (
-            <motion.div
+            <m.div
               key={toast.id}
               layout
               initial={{ opacity: 0, y: -20, scale: 0.95 }}
@@ -94,7 +94,11 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
                 }
               }}
               role={tone === 'error' || tone === 'warning' ? 'alert' : 'status'}
-              className={`pointer-events-auto flex items-start gap-3 rounded-xl border p-4 shadow-xl backdrop-blur-md cursor-grab active:cursor-grabbing ${toneClass[tone]}`}
+              // No backdrop-blur: every tone above is an opaque `bg-card`, so the filter
+              // had nothing translucent to blur while still forcing a backdrop-filter
+              // layer per toast — and toasts are dragged, so that layer was recomposited
+              // on every pointer move.
+              className={`pointer-events-auto flex items-start gap-3 rounded-xl border p-4 shadow-xl cursor-grab active:cursor-grabbing ${toneClass[tone]}`}
             >
               <div className="mt-0.5 shrink-0">{toneIcon[tone]}</div>
               <div className="min-w-0 flex-1 pointer-events-none">
@@ -126,7 +130,7 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
               >
                 <X className="size-4" />
               </button>
-            </motion.div>
+            </m.div>
           )
         })}
       </AnimatePresence>

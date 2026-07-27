@@ -1,5 +1,5 @@
 import { AlertTriangle, ArrowRight, CheckCircle2, CircleHelp, Settings2 } from 'lucide-react'
-import { motion, useReducedMotion } from 'framer-motion'
+import { m, useReducedMotion } from 'framer-motion'
 import type { AppTab, InvestmentAllocationOverview, InvestmentAllocationStatus } from '../../types'
 import { Button } from '../ui/Button'
 import { InfoHint } from '../ui/InfoHint'
@@ -52,7 +52,7 @@ export function InvestmentPlanPanel({
     (allocation.incompleteReasons.length > 0 || actionableRecommendations.length > 0)
 
   return (
-    <motion.section
+    <m.section
       aria-labelledby="investment-plan-heading"
       initial={reduceMotion ? false : { opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -85,7 +85,7 @@ export function InvestmentPlanPanel({
 
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
         {allocation.sleeves.map((sleeve, index) => (
-          <motion.article
+          <m.article
             key={sleeve.sleeve}
             initial={reduceMotion ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -110,7 +110,7 @@ export function InvestmentPlanPanel({
                 : ''}
             </p>
             <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-background/70">
-              <motion.div
+              <m.div
                 className={`h-full origin-left ${colors[index]}`}
                 initial={reduceMotion ? false : { scaleX: 0 }}
                 animate={{ scaleX: 1 }}
@@ -118,7 +118,7 @@ export function InvestmentPlanPanel({
                 style={{ width: `${Math.min(100, sleeve.currentPercentage ?? 0)}%` }}
               />
             </div>
-          </motion.article>
+          </m.article>
         ))}
       </div>
 
@@ -137,7 +137,7 @@ export function InvestmentPlanPanel({
               <div className="mb-1 flex justify-between text-[10px] text-muted-foreground"><span>Actual</span><span>100%</span></div>
               <div className="flex h-3 overflow-hidden rounded-full bg-muted">
                 {allocation.sleeves.map((sleeve, index) => (
-                  <motion.div key={sleeve.sleeve} className={colors[index]} initial={reduceMotion ? false : { scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.5, delay: index * 0.06 }} style={{ width: `${sleeve.currentPercentage ?? 0}%`, transformOrigin: 'left' }} />
+                  <m.div key={sleeve.sleeve} className={colors[index]} initial={reduceMotion ? false : { scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.5, delay: index * 0.06 }} style={{ width: `${sleeve.currentPercentage ?? 0}%`, transformOrigin: 'left' }} />
                 ))}
               </div>
             </div>
@@ -145,7 +145,7 @@ export function InvestmentPlanPanel({
               <div className="mb-1 flex justify-between text-[10px] text-muted-foreground"><span>Target</span><span>100%</span></div>
               <div className="flex h-3 overflow-hidden rounded-full bg-muted">
                 {allocation.sleeves.map((sleeve, index) => (
-                  <motion.div key={sleeve.sleeve} className={`${colors[index]} opacity-80`} initial={reduceMotion ? false : { scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.5, delay: 0.12 + index * 0.06 }} style={{ width: `${sleeve.targetPercentage}%`, transformOrigin: 'left' }} />
+                  <m.div key={sleeve.sleeve} className={`${colors[index]} opacity-80`} initial={reduceMotion ? false : { scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.5, delay: 0.12 + index * 0.06 }} style={{ width: `${sleeve.targetPercentage}%`, transformOrigin: 'left' }} />
                 ))}
               </div>
             </div>
@@ -192,7 +192,7 @@ export function InvestmentPlanPanel({
                   case 'TransferBuy': customMessage = `Reinvest ${amountStr} of sale proceeds into ${sleeve}.`; break
                 }
                 return (
-                  <motion.li
+                  <m.li
                     key={`${recommendation.kind}-${recommendation.sleeve ?? index}`}
                     initial={reduceMotion ? false : { opacity: 0, x: -6 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -201,7 +201,7 @@ export function InvestmentPlanPanel({
                   >
                     <span className="font-bold text-foreground transition-transform duration-200 group-hover/guidance:translate-x-0.5">{index + 1}.</span>
                     <span>{customMessage}</span>
-                  </motion.li>
+                  </m.li>
                 )
               })}
             </ol>
@@ -217,6 +217,6 @@ export function InvestmentPlanPanel({
           )}
         </div>}
       </div>
-    </motion.section>
+    </m.section>
   )
 }

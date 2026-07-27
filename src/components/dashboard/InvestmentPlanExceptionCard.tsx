@@ -1,4 +1,4 @@
-import { motion, useReducedMotion } from 'framer-motion'
+import { m, useReducedMotion } from 'framer-motion'
 import { AlertTriangle, PieChart } from 'lucide-react'
 import type { AppTab, InvestmentAllocationOverview } from '../../types'
 import { Button } from '../ui/Button'
@@ -31,7 +31,7 @@ export function InvestmentPlanExceptionCard({
   }
 
   return (
-    <motion.section
+    <m.section
       initial={reduceMotion ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       aria-labelledby="investment-plan-exception"
@@ -57,6 +57,6 @@ export function InvestmentPlanExceptionCard({
           {incomplete ? 'Finish setup' : 'Review plan'}
         </Button>
       </div>
-    </motion.section>
+    </m.section>
   )
 }

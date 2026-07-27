@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { DashboardData } from '../../types'
-import { useAppContext } from '../../contexts/AppContext'
+import { useAppPrefs } from '../../contexts/AppContext'
 import { getCategoryChartColor } from '../../lib/categoryColors'
 import { InteractiveDoughnutChart } from '../ui/InteractiveDoughnutChart'
 
@@ -13,7 +13,7 @@ interface DoughnutChartProps {
 }
 
 export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger }: DoughnutChartProps) {
-  const { formatSensitive } = useAppContext()
+  const { formatSensitive } = useAppPrefs()
   const [chartView, setChartView] = useState<ChartRange>('monthly')
 
   const breakdownData = useMemo(() => {

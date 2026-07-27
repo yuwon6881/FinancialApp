@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { motion, AnimatePresence, useDragControls, type PanInfo } from 'framer-motion'
+import { m, AnimatePresence, useDragControls, type PanInfo } from 'framer-motion'
 import { useDialog } from '../../lib/useDialog'
 import { useIsMobile } from '../../lib/useIsMobile'
 import { lockBodyScroll, unlockBodyScroll } from '../../lib/scrollLock'
@@ -224,7 +224,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <motion.div
+        <m.div
           key="backdrop"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -249,7 +249,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
               always plays. The entrance is a plain framer initial -> animate:
               `initial` starts the sheet below the viewport and it animates to
               rest at a height-paced duration, deterministically, on every open. */}
-          <motion.div
+          <m.div
             key="sheet-enter"
             initial={isMobile ? { y: "100%" } : { y: "100%", scale: 0.95, opacity: 0 }}
             animate={isMobile ? { y: 0 } : { y: 0, scale: 1, opacity: 1 }}
@@ -257,7 +257,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             transition={{ type: "tween", ease: [0.22, 1, 0.36, 1], duration: slideDuration }}
             className={`sheet-enter w-full ${maxWidthClassName}`}
           >
-          <motion.div
+          <m.div
             key="sheet"
             ref={panelRef}
             drag="y"
@@ -314,9 +314,9 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             </div>
             {children}
             {footer && <div className="border-t border-border/40 pt-4">{footer}</div>}
-          </motion.div>
-          </motion.div>
-        </motion.div>
+          </m.div>
+          </m.div>
+        </m.div>
       )}
     </AnimatePresence>,
     document.body

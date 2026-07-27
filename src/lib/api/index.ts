@@ -1,6 +1,7 @@
 export { invalidateCache, SESSION_LOCKED_EVENT } from './client'
 export * from './ai'
 export * from './auth'
+export * from './bootstrap'
 export * from './categories'
 export * from './financial'
 export * from './ocr'

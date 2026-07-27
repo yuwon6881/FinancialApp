@@ -196,6 +196,41 @@ interface RequestOptions extends RequestInit {
   errorMessageField?: 'message' | 'reply'
 }
 
+/**
+ * Last seen ETag and decoded body per GET path, for conditional requests.
+ *
+ * The API returns weak ETags with `Cache-Control: private, no-cache` (see the backend's
+ * ConditionalGetMiddleware). Sending `If-None-Match` lets an unchanged payload come back as a
+ * bodyless 304, which saves the download *and* the JSON parse — on a phone the parse is often
+ * the more noticeable half.
+ *
+ * This is intentionally its own in-memory map rather than a hook into `cache.ts`: cache.ts
+ * stores a few named offline snapshots keyed by domain concept, whereas revalidation needs the
+ * exact bytes that produced a specific ETag, keyed by request path. Conflating them would let a
+ * 304 on one path resolve to a snapshot written by another.
+ *
+ * Per-tab and in-memory only, so it is dropped on reload and never outlives a logout (which
+ * calls invalidateCache below).
+ */
+const revalidationStore = new Map<string, { etag: string; payload: unknown }>()
+
+// A bound so a long session cannot accumulate a payload per distinct query string (the ledger's
+// filter combinations are effectively unbounded). Oldest insertion is evicted first; losing an
+// entry only costs one full response.
+const MAX_REVALIDATION_ENTRIES = 32
+
+function rememberRevalidation(key: string, etag: string, payload: unknown) {
+  if (revalidationStore.size >= MAX_REVALIDATION_ENTRIES && !revalidationStore.has(key)) {
+    const oldest = revalidationStore.keys().next()
+    if (!oldest.done) revalidationStore.delete(oldest.value)
+  }
+  revalidationStore.set(key, { etag, payload })
+}
+
+export function clearRevalidationStore() {
+  revalidationStore.clear()
+}
+
 export async function request<T>(path: string, options: RequestOptions): Promise<T> {
   const {
     authenticated = true,
@@ -203,9 +238,30 @@ export async function request<T>(path: string, options: RequestOptions): Promise
     errorMessageField,
     ...init
   } = options
+
+  const method = (init.method ?? 'GET').toUpperCase()
+  const revalidationKey = method === 'GET' && authenticated ? path : null
+  const known = revalidationKey ? revalidationStore.get(revalidationKey) : undefined
+
+  if (known) {
+    const headers = new Headers(init.headers)
+    headers.set('If-None-Match', known.etag)
+    init.headers = headers
+  }
+
   const response = await apiFetch(path, init, authenticated)
+
+  if (response.status === 304 && known) {
+    // Unchanged: reuse the decoded body we already hold. No parse, no transfer.
+    return known.payload as T
+  }
+
   if (!response.ok) await throwApiError(response, errorMessage, errorMessageField)
-  return response.json() as Promise<T>
+
+  const payload = await response.json() as T
+  const etag = revalidationKey ? response.headers.get('ETag') : null
+  if (revalidationKey && etag) rememberRevalidation(revalidationKey, etag, payload)
+  return payload
 }
 
 export async function requestVoid(path: string, options: RequestOptions): Promise<void> {

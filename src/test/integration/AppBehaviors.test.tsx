@@ -15,6 +15,32 @@ vi.mock('@/lib/api', async () => {
       categories: [],
       pendingNotifications: []
     })),
+    // loadAll fetches everything in one request now; the per-endpoint mocks below remain
+    // for the targeted refreshes and for the fallback path when a server has no /api/bootstrap.
+    fetchBootstrap: vi.fn().mockImplementation((month?: string, year?: number) => Promise.resolve({
+      month: month || 'Jun',
+      year: year || 2026,
+      dashboard: {
+        setting: { selectedMonth: month || 'Jun', selectedYear: year || 2026, cycleDay: 28, currency: 'USD', hideSensitive: true, darkMode: false },
+        stats: { pastThreeMonthsRewardsAverage: 120, hasRewardsHistory: true },
+        categories: [],
+        pendingNotifications: []
+      },
+      insights: {
+        last3CategoryBreakdown: {},
+        last6CategoryBreakdown: {},
+        yearlyCategoryBreakdown: {},
+        availableYears: [2026],
+        pastThreeMonthsRewardsAverage: 120,
+        hasRewardsHistory: true
+      },
+      transactions: [],
+      recurringPayments: [],
+      categories: [],
+      wishlist: [],
+      autocomplete: [],
+      walletBalance: 1000,
+    })),
     fetchTransactions: vi.fn().mockResolvedValue([]),
     fetchRecurringPayments: vi.fn().mockResolvedValue([]),
     fetchCategories: vi.fn().mockResolvedValue([]),
@@ -135,12 +161,12 @@ describe('App behaviors', () => {
     await waitFor(() => {
       expect(screen.getByTestId('app-loading-skeleton')).toBeDefined()
     })
-    expect(api.fetchDashboard).not.toHaveBeenCalled()
+    expect(api.fetchBootstrap).not.toHaveBeenCalled()
 
     releasePing({ status: 'healthy' })
 
     await waitFor(() => {
-      expect(api.fetchDashboard).toHaveBeenCalled()
+      expect(api.fetchBootstrap).toHaveBeenCalled()
       expect(screen.getByTestId('dashboard-view')).toBeDefined()
     })
   })
@@ -158,15 +184,29 @@ describe('App behaviors', () => {
     localStorage.setItem('auth_session', '1')
     localStorage.setItem('auth_username', 'alice')
     localStorage.setItem('cached_wishlist', JSON.stringify(cachedWishlist))
-    vi.mocked(api.fetchWishlist).mockRejectedValueOnce(new Error('temporary network failure'))
+    // The boot request carries the wishlist now, so a transient failure is a failure of the
+    // whole refresh rather than of one slice. The guarantee under test is unchanged and is
+    // what the user actually sees: a failed refresh must never blank out cached data.
+    // Rejected for the whole test, not just once: the app retries the load, and a later
+    // success would legitimately replace the cache with the server's (here empty) wishlist.
+    // Restored explicitly afterwards — afterEach's restoreAllMocks does not reinstate an
+    // implementation supplied by the vi.mock factory, so leaving it would break later tests.
+    const originalFetchBootstrap = vi.mocked(api.fetchBootstrap).getMockImplementation()
+    vi.mocked(api.fetchBootstrap).mockRejectedValue(new Error('temporary network failure'))
 
-    render(<App />)
+    try {
+      render(<App />)
 
-    await waitFor(() => {
-      expect(api.fetchWishlist).toHaveBeenCalled()
-      expect(screen.getByTestId('dashboard-wishlist').textContent).toContain('Camera')
-    }, { timeout: 5000 })
-    expect(JSON.parse(localStorage.getItem('cached_wishlist') || '[]')).toEqual(cachedWishlist)
+      await waitFor(() => {
+        expect(api.fetchBootstrap).toHaveBeenCalled()
+        expect(screen.getByTestId('dashboard-wishlist').textContent).toContain('Camera')
+      }, { timeout: 5000 })
+      expect(JSON.parse(localStorage.getItem('cached_wishlist') || '[]')).toEqual(cachedWishlist)
+    } finally {
+      if (originalFetchBootstrap) {
+        vi.mocked(api.fetchBootstrap).mockImplementation(originalFetchBootstrap)
+      }
+    }
   })
 
   it('opens Ask AI from the mobile quick-action menu', async () => {
@@ -210,8 +250,10 @@ describe('App behaviors', () => {
       pendingNotifications: []
     }))
 
+    // Hold the boot request open so the cached dashboard is what renders first.
     let resolveDashboard!: (value: any) => void
-    vi.mocked(api.fetchDashboard).mockReturnValueOnce(new Promise(resolve => { resolveDashboard = resolve }))
+    const bootPromise = new Promise<any>(resolve => { resolveDashboard = resolve })
+    vi.mocked(api.fetchBootstrap).mockReturnValueOnce(bootPromise)
 
     render(<App />)
 
@@ -220,10 +262,28 @@ describe('App behaviors', () => {
     expect(screen.getByRole('main').getAttribute('aria-busy')).toBe('true')
 
     resolveDashboard({
-      setting: { selectedMonth: 'Jun', selectedYear: 2026, cycleDay: 28, currency: 'USD', hideSensitive: false, darkMode: false },
-      stats: { pastThreeMonthsRewardsAverage: 120, hasRewardsHistory: true },
+      month: 'Jun',
+      year: 2026,
+      dashboard: {
+        setting: { selectedMonth: 'Jun', selectedYear: 2026, cycleDay: 28, currency: 'USD', hideSensitive: false, darkMode: false },
+        stats: { pastThreeMonthsRewardsAverage: 120, hasRewardsHistory: true },
+        categories: [],
+        pendingNotifications: []
+      },
+      insights: {
+        last3CategoryBreakdown: {},
+        last6CategoryBreakdown: {},
+        yearlyCategoryBreakdown: {},
+        availableYears: [2026],
+        pastThreeMonthsRewardsAverage: 120,
+        hasRewardsHistory: true
+      },
+      transactions: [],
+      recurringPayments: [],
       categories: [],
-      pendingNotifications: []
+      wishlist: [],
+      autocomplete: [],
+      walletBalance: 1000,
     })
 
     await waitFor(() => {
@@ -271,7 +331,7 @@ describe('App behaviors', () => {
     fireEvent.click(screen.getAllByRole('button', { name: /Reports/ })[0])
     fireEvent.click(await screen.findByRole('button', { name: 'Select historical report' }))
 
-    await waitFor(() => expect(api.fetchDashboard).toHaveBeenCalledWith('Jan', 2025, expect.any(AbortSignal)))
+    await waitFor(() => expect(api.fetchBootstrap).toHaveBeenCalledWith('Jan', 2025, expect.any(AbortSignal)))
     fireEvent.click(screen.getAllByRole('button', { name: /Today/ })[0])
 
     await waitFor(() => expect(screen.getByTestId('today-cycle').textContent).toBe('Jun-2026'))

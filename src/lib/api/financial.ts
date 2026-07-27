@@ -29,7 +29,19 @@ export function fetchDashboard(
     const data = await request<WireDashboardData>(`/financial/dashboard${query}`, {
       errorMessage: 'Failed to fetch dashboard data',
     })
-    return {
+    return mapDashboardCore(data, month, year)
+  }, { signal })
+}
+
+/**
+ * Wire -> domain mapping for the dashboard payload (mostly amount deobfuscation).
+ *
+ * Exported so /api/bootstrap can decode its embedded dashboard slice with exactly this
+ * logic instead of a parallel copy; the bootstrap endpoint returns the same payload the
+ * dashboard endpoint does, and this keeps that true on the client side too.
+ */
+export function mapDashboardCore(data: WireDashboardData, month?: string, year?: number): DashboardCore {
+  return {
       ...data,
       setting: {
         ...data.setting,
@@ -109,8 +121,7 @@ export function fetchDashboard(
           discretionarySpend: deobfuscateAmount(data.cycleSummaryInsights.discretionarySpend),
         }
       })
-    }
-  }, { signal })
+  }
 }
 
 export function fetchDashboardInsights(month?: string, year?: number, signal?: AbortSignal): Promise<DashboardInsights> {
@@ -123,19 +134,24 @@ export function fetchDashboardInsights(month?: string, year?: number, signal?: A
     const data = await request<WireDashboardInsights>(`/financial/dashboard/insights${query}`, {
       errorMessage: 'Failed to fetch dashboard insights',
     })
-    const mapBreakdown = (items: WireCategoryBreakdown[]) => (items || []).map(item => ({
-      ...item,
-      amount: deobfuscateAmount(item.amount),
-    }))
-    return {
-      last3CategoryBreakdown: mapBreakdown(data.last3CategoryBreakdown),
-      last6CategoryBreakdown: mapBreakdown(data.last6CategoryBreakdown),
-      yearlyCategoryBreakdown: mapBreakdown(data.yearlyCategoryBreakdown),
-      pastThreeMonthsRewardsAverage: deobfuscateAmount(data.pastThreeMonthsRewardsAverage),
-      hasRewardsHistory: data.hasRewardsHistory,
-      availableYears: data.availableYears || [new Date().getFullYear()],
-    }
+    return mapDashboardInsights(data)
   }, { signal })
+}
+
+/** Wire -> domain mapping for the insights payload. Shared with the bootstrap decoder. */
+export function mapDashboardInsights(data: WireDashboardInsights): DashboardInsights {
+  const mapBreakdown = (items: WireCategoryBreakdown[]) => (items || []).map(item => ({
+    ...item,
+    amount: deobfuscateAmount(item.amount),
+  }))
+  return {
+    last3CategoryBreakdown: mapBreakdown(data.last3CategoryBreakdown),
+    last6CategoryBreakdown: mapBreakdown(data.last6CategoryBreakdown),
+    yearlyCategoryBreakdown: mapBreakdown(data.yearlyCategoryBreakdown),
+    pastThreeMonthsRewardsAverage: deobfuscateAmount(data.pastThreeMonthsRewardsAverage),
+    hasRewardsHistory: data.hasRewardsHistory,
+    availableYears: data.availableYears || [new Date().getFullYear()],
+  }
 }
 
 export async function fetchWalletBalance(signal?: AbortSignal): Promise<number> {

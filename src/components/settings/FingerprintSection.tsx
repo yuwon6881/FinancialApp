@@ -4,13 +4,14 @@ import * as api from '../../lib/api'
 import type { FingerprintCredentialSummary } from '../../lib/api'
 import { getErrorMessage, getErrorName } from '../../lib/errors'
 import { base64UrlToHex, createFingerprintCredential, getFriendlyDeviceLabel, isPlatformAuthenticatorAvailable } from '../../lib/webauthn'
-import { useAppContext } from '../../contexts/AppContext'
+import { useAppPrefs, useAppUi } from '../../contexts/AppContext'
 import { CollapsibleBody } from '../ui/CollapsibleBody'
 
 const DEVICE_CREDENTIAL_ID_KEY = 'fingerprint_credential_id_on_this_device'
 
 export function FingerprintSection() {
-  const { hideSensitive, showToast } = useAppContext()
+  const { hideSensitive } = useAppPrefs()
+  const { showToast } = useAppUi()
   const [open, setOpen] = useState(false)
   const [credentials, setCredentials] = useState<FingerprintCredentialSummary[]>([])
   const [credentialsLoaded, setCredentialsLoaded] = useState(false)

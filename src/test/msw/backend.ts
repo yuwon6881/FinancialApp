@@ -134,6 +134,42 @@ function atob0(obf: string): string {
   }
 }
 
+// Shared by the /financial/dashboard and /bootstrap handlers so the two cannot disagree —
+// the same property the real server has, where bootstrap reuses the dashboard service.
+function dashboardPayload() {
+  return {
+    setting: state.setting,
+    cycleLabel: `${state.setting.selectedMonth} ${state.setting.selectedYear}`,
+    categories: [],
+    stats: {
+      totalBalance: obfuscateAmount(walletBalance()),
+      monthlyIncome: obfuscateAmount(0),
+      monthlyInflow: obfuscateAmount(0),
+      monthlyExpenses: obfuscateAmount(0),
+      activeRecurringTotal: obfuscateAmount(0),
+      growthPercentAchieved: 0,
+      stabilityPercentReached: 0,
+    },
+    activeRecurringPayments: [],
+    trendPoints: [],
+    last3TrendPoints: [],
+    last6TrendPoints: [],
+    pendingNotifications: [],
+    monthlyCategoryBreakdown: [],
+  }
+}
+
+function insightsPayload() {
+  return {
+    last3CategoryBreakdown: [],
+    last6CategoryBreakdown: [],
+    yearlyCategoryBreakdown: [],
+    pastThreeMonthsRewardsAverage: obfuscateAmount(0),
+    hasRewardsHistory: false,
+    availableYears: [state.setting.selectedYear],
+  }
+}
+
 export const handlers = [
   http.get(`${API}/investments/allocation`, () => HttpResponse.json({
     status: 'NotStarted',
@@ -300,29 +336,23 @@ export const handlers = [
     return HttpResponse.json(item)
   }),
 
-  http.get(`${API}/financial/dashboard`, () => {
-    const balance = obfuscateAmount(walletBalance())
-    return HttpResponse.json({
-      setting: state.setting,
-      cycleLabel: `${state.setting.selectedMonth} ${state.setting.selectedYear}`,
-      categories: [],
-      stats: {
-        totalBalance: balance,
-        monthlyIncome: obfuscateAmount(0),
-        monthlyInflow: obfuscateAmount(0),
-        monthlyExpenses: obfuscateAmount(0),
-        activeRecurringTotal: obfuscateAmount(0),
-        growthPercentAchieved: 0,
-        stabilityPercentReached: 0,
-      },
-      activeRecurringPayments: [],
-      trendPoints: [],
-      last3TrendPoints: [],
-      last6TrendPoints: [],
-      pendingNotifications: [],
-      monthlyCategoryBreakdown: [],
-    })
-  }),
+  http.get(`${API}/financial/dashboard`, () => HttpResponse.json(dashboardPayload())),
+
+  // The app's real boot path: one request for everything (see lib/api/bootstrap.ts). Composed
+  // from the same mock state as the individual handlers, mirroring the server, which composes
+  // the real payload from the same services its individual endpoints use.
+  http.get(`${API}/bootstrap`, () => HttpResponse.json({
+    month: state.setting.selectedMonth,
+    year: state.setting.selectedYear,
+    dashboard: dashboardPayload(),
+    insights: insightsPayload(),
+    transactions: [...state.transactions.values()],
+    recurringPayments: [],
+    categories: [],
+    wishlist: state.wishlist,
+    autocomplete: [],
+    walletBalance: { totalBalance: obfuscateAmount(walletBalance()) },
+  })),
 
   http.post(`${API}/financial/select-period`, async ({ request }) => {
     const body = (await request.json()) as { selectedMonth: string; selectedYear: number }

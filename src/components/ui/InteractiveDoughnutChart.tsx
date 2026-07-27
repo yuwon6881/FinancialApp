@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
+import { m, useReducedMotion } from 'framer-motion'
 
 export interface DoughnutSlice {
   key: string
@@ -72,7 +72,7 @@ export function InteractiveDoughnutChart({
           {chartSlices.map((slice, index) => {
             const highlighted = activeKey === slice.key
             return (
-              <motion.path
+              <m.path
                 key={slice.key}
                 d={getDoughnutPath(
                   100,
@@ -115,7 +115,7 @@ export function InteractiveDoughnutChart({
 
       <div role="list" className={legendClassName}>
         {chartSlices.map(slice => (
-          <motion.button
+          <m.button
             key={slice.key}
             layout
             type="button"
@@ -138,7 +138,7 @@ export function InteractiveDoughnutChart({
             <span className="shrink-0 font-extrabold text-foreground/90">
               {masked ? '••••' : <>{formatValue(slice.value)} ({(slice.percentage * 100).toFixed(1)}%)</>}
             </span>
-          </motion.button>
+          </m.button>
         ))}
       </div>
     </>

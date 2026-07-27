@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
+import { m, useReducedMotion } from 'framer-motion'
 import {
   ArrowLeft,
   Building2,
@@ -532,7 +532,7 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
   return (
     <section aria-label="Investment summary" className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {cards.map(({ label, hint, hero, rows, bg }, index) => (
-        <motion.article
+        <m.article
           key={label}
           className={`interactive-card app-panel flex flex-col rounded-2xl border p-4 ${bg}`}
           initial={reduceMotion ? false : { opacity: 0, y: 8 }}
@@ -556,7 +556,7 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
               </div>
             ))}
           </div>
-        </motion.article>
+        </m.article>
       ))}
     </section>
   )
@@ -774,7 +774,7 @@ const ValueChart = ({ portfolio, masked, range, isFetching, onRangeChange }: { p
                 <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
               </linearGradient>
             </defs>
-            <motion.polygon
+            <m.polygon
               key={`investment-area-${range}`}
               points={`0,${height} ${line('totalValue')} ${width},${height}`}
               fill="url(#investmentValueGradient)"
@@ -782,8 +782,8 @@ const ValueChart = ({ portfolio, masked, range, isFetching, onRangeChange }: { p
               animate={{ opacity: 1 }}
               transition={{ duration: 0.45 }}
             />
-            <motion.polyline key={`investment-total-${range}`} points={line('totalValue')} fill="none" stroke="#8b5cf6" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" vectorEffect="nonScalingStroke" initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.45 }} />
-            <motion.polyline key={`investment-deposits-${range}`} points={line('netDeposits')} fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 6" strokeLinecap="round" strokeLinejoin="round" vectorEffect="nonScalingStroke" initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.45, delay: 0.08 }} />
+            <m.polyline key={`investment-total-${range}`} points={line('totalValue')} fill="none" stroke="#8b5cf6" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" vectorEffect="nonScalingStroke" initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.45 }} />
+            <m.polyline key={`investment-deposits-${range}`} points={line('netDeposits')} fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 6" strokeLinecap="round" strokeLinejoin="round" vectorEffect="nonScalingStroke" initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.45, delay: 0.08 }} />
             {hoveredIndex !== null && portfolio.chart[hoveredIndex]?.totalValue !== undefined && (
               <>
                 <line x1={x(hoveredIndex)} x2={x(hoveredIndex)} y1="0" y2={height} stroke="var(--border)" strokeWidth="1" strokeDasharray="3 4" vectorEffect="nonScalingStroke" />
@@ -916,7 +916,7 @@ const PerformanceBars = ({ portfolio, masked }: { portfolio: InvestmentPortfolio
             <span className="truncate font-bold text-foreground">{holding.symbol}</span>
             <div className="relative h-3 rounded-full bg-muted">
               <div className="absolute left-1/2 top-0 h-full w-px bg-border" />
-              <motion.div
+              <m.div
                 className={`absolute top-0 h-full rounded-full ${(holding.unrealisedPercent ?? 0) >= 0 ? 'bg-emerald-500' : 'bg-orange-500'}`}
                 initial={reduceMotion ? false : { width: 0 }}
                 animate={{ width: `${Math.abs(holding.unrealisedPercent ?? 0) / scale * 50}%` }}

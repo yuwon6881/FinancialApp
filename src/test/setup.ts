@@ -18,12 +18,35 @@ Object.defineProperty(window, 'scrollTo', {
 
 // jsdom does not implement matchMedia. Modal dialogs (BottomSheet -> useDialog /
 // useIsMobile) query it, so provide a desktop-defaulting stub for every test.
+//
+// It evaluates min-width/max-width against window.innerWidth (jsdom defaults to
+// 1024 = desktop) instead of hard-coding `matches: false`. A blanket false is not
+// breakpoint-neutral: it answers "no" to both `(max-width: 767px)` and
+// `(min-width: 768px)`, so which one a hook happens to use silently decides the
+// layout. Everything else (prefers-reduced-motion, prefers-color-scheme: dark)
+// still resolves to false, matching the previous default.
+function evaluateMediaQuery(query: string): boolean {
+  const width = window.innerWidth
+  let matched = false
+  const min = /\(\s*min-width:\s*([\d.]+)px\s*\)/.exec(query)
+  if (min) {
+    if (width < Number(min[1])) return false
+    matched = true
+  }
+  const max = /\(\s*max-width:\s*([\d.]+)px\s*\)/.exec(query)
+  if (max) {
+    if (width > Number(max[1])) return false
+    matched = true
+  }
+  return matched
+}
+
 if (!window.matchMedia) {
   Object.defineProperty(window, 'matchMedia', {
     configurable: true,
     writable: true,
     value: (query: string): MediaQueryList => ({
-      matches: false,
+      matches: evaluateMediaQuery(query),
       media: query,
       onchange: null,
       addListener: () => undefined,

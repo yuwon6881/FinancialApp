@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import { defineConfig, loadEnv, type Plugin } from 'vite'
-import react from '@vitejs/plugin-react'
+import react, { reactCompilerPreset } from '@vitejs/plugin-react'
+import babel from '@rolldown/plugin-babel'
 import tailwindcss from "@tailwindcss/vite"
 import path from "path"
 import { VitePWA } from 'vite-plugin-pwa'
@@ -64,8 +65,19 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   return {
   plugins: [
-    react(), 
-    tailwindcss(), 
+    // The React Compiler auto-memoizes components and hooks at build time. Only
+    // LedgerRows was hand-memoized, so on a phone a single context tick re-rendered
+    // most of the tree; memoizing ~60 components by hand would have been both a large
+    // diff and a thing to keep correct forever. The compiler bails out of anything it
+    // cannot prove safe rather than miscompiling it, so the deliberately-disabled
+    // exhaustive-deps/set-state-in-effect rules in this repo are not a blocker.
+    // plugin-react v6 transforms with oxc, so the compiler is wired in as a rolldown
+    // Babel preset rather than through a `babel` option. The preset carries its own
+    // filter (only files containing a capitalised identifier or `use`) so plain modules
+    // never pay the Babel pass.
+    react(),
+    babel({ presets: [reactCompilerPreset({ target: '19' })] }),
+    tailwindcss(),
     cspMetaPlugin(env.VITE_API_URL),
     VitePWA({
       strategies: 'injectManifest',
@@ -130,6 +142,16 @@ export default defineConfig(({ mode }) => {
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Framer Motion's feature bundle, addressed directly so LazyMotion can actually
+      // code-split it (see src/lib/motionFeatures.ts for the full reasoning). The package's
+      // "exports" map only publishes the barrel, so a bare deep import fails to resolve;
+      // an alias to the real file bypasses that. Fragile across framer-motion upgrades by
+      // nature, which is why motionFeatures.test.ts asserts the module still resolves and
+      // still looks like a feature bundle.
+      "framer-motion-features": path.resolve(
+        __dirname,
+        "./node_modules/framer-motion/dist/es/render/dom/features-max.mjs",
+      ),
     },
   },
   test: {
@@ -178,7 +200,11 @@ export default defineConfig(({ mode }) => {
         manualChunks(id: string) {
           if (id.includes('node_modules')) {
             if (id.includes('react-dom') || id.includes('/react/') || id.includes('\\react\\')) return 'vendor-react'
-            if (id.includes('framer-motion')) return 'vendor-motion'
+            // framer-motion is deliberately NOT pinned to a single chunk. main.tsx
+            // loads its feature bundle through a dynamic import behind LazyMotion;
+            // naming every framer-motion module 'vendor-motion' collapsed that
+            // boundary back into one eagerly-fetched chunk, so the lazy import bought
+            // nothing. Letting Rollup chunk it keeps the split point intact.
             if (id.includes('radix-ui') || id.includes('@radix-ui')) return 'vendor-radix'
           }
           // The offline drain/reconciliation state machine changes less often
@@ -194,6 +220,11 @@ export default defineConfig(({ mode }) => {
           // several lazy views; keep it in its own parallel-loaded chunk instead
           // of pinning it into the main bundle (mirrors CustomSelect/SearchableSelect).
           if (id.includes('components/ui/DatePicker') || id.includes('components\\ui\\DatePicker')) return 'DatePicker'
+          // Note: the two ledger layouts are deliberately NOT split into their own
+          // chunks. They are mutually exclusive at runtime, but measured separately the
+          // mobile list is only ~1.4 kB of unique code while giving the desktop table its
+          // own chunk pulled the rows' shared dependencies in with it (~62 kB). Keeping
+          // both in LedgerView is smaller for every device.
         },
       },
     },
