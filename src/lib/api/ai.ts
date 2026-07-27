@@ -1,4 +1,9 @@
-import { jsonBody, request } from './client'
+import { ApiError, jsonBody, request } from './client'
+
+// The backend can chain several provider calls (classification, answer, then up to a
+// few ledger-draft enrichment calls) with a 30s budget each, so a stuck turn could
+// otherwise spin indefinitely. Cap the whole round trip client side.
+export const AI_CHAT_TIMEOUT_MS = 60_000
 
 export interface AiChatMessage {
   role: 'user' | 'assistant'
@@ -124,13 +129,33 @@ export async function chatWithAi(
   state?: AiConversationState | null,
   signal?: AbortSignal,
 ): Promise<AiChatResponse> {
-  const data = await request<Partial<AiChatResponse>>('/ai/chat', {
-    method: 'POST',
-    ...jsonBody({ message, history: history.slice(-6), state: state ?? null }),
-    signal,
-    errorMessage: 'AI is unavailable. Please try again.',
-    errorMessageField: 'reply',
-  })
+  // Linked controller rather than AbortSignal.any(): the Android WebView we ship
+  // through Capacitor can predate it.
+  const controller = new AbortController()
+  let timedOut = false
+  const timer = setTimeout(() => { timedOut = true; controller.abort() }, AI_CHAT_TIMEOUT_MS)
+  const forwardAbort = () => controller.abort()
+  if (signal?.aborted) forwardAbort()
+  else signal?.addEventListener('abort', forwardAbort, { once: true })
+
+  let data: Partial<AiChatResponse>
+  try {
+    data = await request<Partial<AiChatResponse>>('/ai/chat', {
+      method: 'POST',
+      ...jsonBody({ message, history: history.slice(-6), state: state ?? null }),
+      signal: controller.signal,
+      errorMessage: 'AI is unavailable. Please try again.',
+      errorMessageField: 'reply',
+    })
+  } catch (error) {
+    // The caller's own abort must stay an AbortError so the panel can ignore it;
+    // only our timeout is rewritten into something the user can read.
+    if (timedOut && !signal?.aborted) throw new ApiError('The AI took too long to respond. Please try again.', 504)
+    throw error
+  } finally {
+    clearTimeout(timer)
+    signal?.removeEventListener('abort', forwardAbort)
+  }
   return {
     reply: data.reply || '',
     actions: data.actions || [],

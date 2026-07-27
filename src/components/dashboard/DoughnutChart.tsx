@@ -81,13 +81,13 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
               centerLabel="Total"
               centerValue={formatSensitive(total)}
               formatValue={formatSensitive}
-              chartClassName="mx-auto size-36 sm:mx-0"
+              chartClassName="mx-auto size-52 sm:mx-0 sm:size-44 lg:size-52"
               legendClassName="grid max-h-32 w-full min-w-0 grid-cols-1 content-start gap-x-4 gap-y-0.5 overflow-y-auto pr-0.5 no-scrollbar sm:max-h-40 xl:grid-cols-2"
               onActivate={slice => onNavigateToLedger?.({ category: slice.label, range: chartView })}
             />
           </div>
         ) : (
-          <div className="h-40 flex flex-col items-center justify-center text-center p-4">
+          <div className="h-52 flex flex-col items-center justify-center text-center p-4">
             <span className="text-[10px] text-muted-foreground">No outflows logged.</span>
           </div>
         )}

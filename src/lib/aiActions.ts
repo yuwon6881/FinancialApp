@@ -48,6 +48,13 @@ export const AI_MUTATION_TYPES = new Set<string>([
   'requestPurchaseWishlist', 'requestUnpurchaseWishlist', 'toggleRecurring',
 ])
 
+/** Actions that open the single shared confirm modal before anything is applied. */
+export const AI_CONFIRMATION_TYPES = new Set<string>([
+  'requestDeleteLedger', 'requestDeleteRecurring', 'requestDeleteWishlist',
+  'requestConfirmRecurringBill', 'requestDiscardRecurringBill',
+  'requestPurchaseWishlist', 'requestUnpurchaseWishlist',
+])
+
 interface NonceDraft { nonce: number; fields: Record<string, unknown> }
 interface NonceEditDraft<Id> { nonce: number; id: Id; changes: Record<string, unknown> }
 
@@ -153,6 +160,11 @@ export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDe
   // creating a ledger draft. Treat the staged draft as the final destination so
   // a later action cannot leave the user on another tab with an unseen draft.
   let stagedLedgerDraft = false
+  // Only one confirm modal can be on screen at a time — `setConfirmModalData` is a
+  // plain setState, so a second confirmation-bearing action in the same batch would
+  // silently replace the first. Honour the first and tell the user about the rest.
+  let confirmClaimed = false
+  let skippedConfirmations = 0
   for (const action of selectedActions) {
     const payload = (action.payload || {}) as Record<string, unknown>
     if (deps.hideSensitive && AI_MUTATION_TYPES.has(action.type)) {
@@ -162,6 +174,13 @@ export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDe
     if (deps.hideSensitive && action.type === 'openLedgerExport') {
       deps.showToast('Unhide balances before exporting transactions.', 'Sensitive mode active', 'warning')
       continue
+    }
+    if (AI_CONFIRMATION_TYPES.has(action.type)) {
+      if (confirmClaimed) {
+        skippedConfirmations += 1
+        continue
+      }
+      confirmClaimed = true
     }
     if (action.type === 'openDashboard') {
       deps.setActiveTab('dashboard')
@@ -296,4 +315,11 @@ export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDe
     }
   }
   if (stagedLedgerDraft) deps.setActiveTab('drafts')
+  if (skippedConfirmations > 0) {
+    deps.showToast(
+      `${skippedConfirmations} more ${skippedConfirmations === 1 ? 'change needs' : 'changes need'} confirming. Ask again once you have answered this one.`,
+      'One confirmation at a time',
+      'info',
+    )
+  }
 }

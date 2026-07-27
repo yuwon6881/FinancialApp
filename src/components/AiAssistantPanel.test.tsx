@@ -3,8 +3,18 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import type { AiChatResponse, AiConversationState } from '../lib/api'
 
 // Mock the API module so no network happens and we can assert on call arguments.
+// Declared inside the factory: vi.mock is hoisted, so a module-scope class would
+// still be in its temporal dead zone when the factory first runs.
 vi.mock('../lib/api', () => ({
   chatWithAi: vi.fn(),
+  ApiError: class ApiError extends Error {
+    status: number
+    constructor(message: string, status: number) {
+      super(message)
+      this.name = 'ApiError'
+      this.status = status
+    }
+  },
 }))
 
 // Mock BottomSheet to a transparent passthrough so we test the panel's own markup/logic
@@ -124,8 +134,12 @@ describe('AiAssistantPanel', () => {
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
 
     typeAndSend('hi')
-    // While in flight the send button is disabled, so a second submit cannot fire.
-    expect((screen.getByTitle('Send') as HTMLButtonElement).disabled).toBe(true)
+    // In flight the primary control is Stop, not Send, and sendMessage's own isSending
+    // guard drops a second Enter — so no duplicate request can be issued.
+    expect(screen.queryByTitle('Send')).toBeNull()
+    expect(screen.getByTitle('Stop')).not.toBeNull()
+    typeAndSend('hi again')
+    expect(chatWithAi).toHaveBeenCalledTimes(1)
     resolve(reply())
     await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(1))
   })
@@ -314,7 +328,8 @@ describe('AiAssistantPanel', () => {
   })
 
   it('error bubble rendering correctly displays the error string and retry button', async () => {
-    chatWithAi.mockRejectedValue(new Error('Test AI Error'))
+    // A 503 carries the server's own `reply` copy, so it is safe to render verbatim.
+    chatWithAi.mockRejectedValue(new api.ApiError('Test AI Error', 503))
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
 
     typeAndSend('failing message')
@@ -333,6 +348,46 @@ describe('AiAssistantPanel', () => {
     await waitFor(() => {
       expect(screen.getByText('recovered')).not.toBeNull()
     })
+  })
+
+  it('never renders a raw transport error in a chat bubble', async () => {
+    chatWithAi.mockRejectedValue(new api.ApiError('401 Unauthorized', 401))
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+
+    typeAndSend('failing message')
+
+    await waitFor(() => {
+      expect(screen.getByText(/Your session ended/)).not.toBeNull()
+    })
+    expect(screen.queryByText('401 Unauthorized')).toBeNull()
+  })
+
+  it('falls back to connection copy for a non-API failure', async () => {
+    chatWithAi.mockRejectedValue(new TypeError('Failed to fetch'))
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+
+    typeAndSend('failing message')
+
+    await waitFor(() => {
+      expect(screen.getByText(/check your connection/)).not.toBeNull()
+    })
+    expect(screen.queryByText('Failed to fetch')).toBeNull()
+  })
+
+  it('offers a Stop control while a turn is in flight and leaves it retryable', async () => {
+    chatWithAi.mockImplementation(() => new Promise(() => {}))
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+
+    typeAndSend('a slow question')
+
+    const stop = await screen.findByLabelText('Stop generating')
+    fireEvent.click(stop)
+
+    await waitFor(() => {
+      expect(screen.getByText(/Cancelled before the AI answered/)).not.toBeNull()
+    })
+    expect(screen.getByText('Retry')).not.toBeNull()
+    expect(screen.getByLabelText('Send message')).not.toBeNull()
   })
 
   it('path where requiresPanelClose is true executes onClose before onActions', async () => {

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { Loader2, Send, Sparkles, X, RotateCcw, SquarePen } from 'lucide-react'
+import { Send, Sparkles, X, RotateCcw, SquarePen, Square } from 'lucide-react'
 import { BottomSheet } from './ui/BottomSheet'
 import { PerimeterBeam } from './ui/PerimeterBeam'
 import * as api from '../lib/api'
@@ -14,6 +14,19 @@ interface AiAssistantPanelProps {
 
 type ChatMessage = api.AiChatMessage
 const nextFrame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+
+// Transport-level failures reach us as bare `ApiError('401 Unauthorized')` or a raw
+// `TypeError('Failed to fetch')`; only the statuses the API answers with a `reply`
+// body carry copy that is fit to render in a chat bubble.
+const describeChatError = (error: unknown): string => {
+  if (error instanceof api.ApiError) {
+    if (error.status === 401 || error.status === 423) return 'Your session ended. Sign in again to keep chatting.'
+    if (error.status === 429) return 'Too many requests right now. Please wait a moment and try again.'
+    if (error.status === 0 || error.status >= 500) return error.message || 'AI is unavailable. Please try again.'
+    return error.message || 'AI could not handle that request.'
+  }
+  return 'AI is unavailable. Please check your connection and try again.'
+}
 
 // Keep discovery prompts local: static UI copy does not justify an AI round trip.
 const SUGGESTED_PROMPTS = [
@@ -68,11 +81,21 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
     conversationStateRef.current = null
   }
 
-  const cancelInFlight = () => {
+  // `pendingInput` lets a cancel leave a recoverable turn behind instead of an
+  // orphaned user bubble with no answer and no Retry affordance.
+  const pendingInputRef = useRef<string | null>(null)
+
+  const cancelInFlight = (options: { recoverable?: boolean } = {}) => {
+    const wasSending = activeRequestRef.current !== null
     requestGenerationRef.current += 1
     activeRequestRef.current?.abort()
     activeRequestRef.current = null
     setIsSending(false)
+    const pending = pendingInputRef.current
+    pendingInputRef.current = null
+    if (!wasSending || !options.recoverable || !pending) return
+    setLastFailedInput(pending)
+    setMessages(current => [...current, { role: 'assistant', content: 'Cancelled before the AI answered. Tap Retry to ask again.' }])
   }
 
   const handleNewChat = () => {
@@ -87,7 +110,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
     if (isOpen) {
       if (messages.length === 0) setSuggestedPrompts(pickSuggestedPrompts(sensitiveMode))
     } else {
-      cancelInFlight()
+      cancelInFlight({ recoverable: true })
     }
   }, [isOpen])
 
@@ -96,7 +119,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
   }, [sensitiveMode])
 
   useEffect(() => {
-    if (isOffline) cancelInFlight()
+    if (isOffline) cancelInFlight({ recoverable: true })
   }, [isOffline])
 
   useEffect(() => {
@@ -119,7 +142,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
   }, [input, isOpen])
 
   const handleClose = () => {
-    cancelInFlight()
+    cancelInFlight({ recoverable: true })
     onClose()
   }
 
@@ -144,10 +167,14 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
     const controller = new AbortController()
     activeRequestRef.current?.abort()
     activeRequestRef.current = controller
+    pendingInputRef.current = trimmed
 
     try {
       const result = await api.chatWithAi(trimmed, apiHistory, conversationStateRef.current, controller.signal)
       if (generation !== requestGenerationRef.current) return
+      // The turn landed: the action handlers below may close the panel, and the close
+      // path must not mistake that for a cancellation.
+      pendingInputRef.current = null
       conversationStateRef.current = result.state ?? null
       setMessages([...nextMessages, { role: 'assistant', content: result.reply || 'Done.' }])
       if (result.actions.length > 0) {
@@ -171,12 +198,13 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
     } catch (err) {
       if (controller.signal.aborted || generation !== requestGenerationRef.current) return
       console.warn('Ask AI request failed', err)
-      const content = err instanceof Error ? err.message : 'AI is unavailable. Please try again.'
+      pendingInputRef.current = null
       setLastFailedInput(trimmed)
-      setMessages([...nextMessages, { role: 'assistant', content }])
+      setMessages([...nextMessages, { role: 'assistant', content: describeChatError(err) }])
     } finally {
       if (generation === requestGenerationRef.current) {
         activeRequestRef.current = null
+        pendingInputRef.current = null
         setIsSending(false)
       }
     }
@@ -228,8 +256,12 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
           <div
             role="log"
             aria-live="polite"
+            aria-busy={isSending}
             className={`h-full space-y-3 rounded-xl border border-border/60 bg-muted/10 p-3 ${messages.length > 0 ? 'overflow-y-auto' : 'overflow-y-hidden'}`}
           >
+          {/* The spinner and the perimeter beam are both decorative, so announce
+              progress separately for screen readers. */}
+          <span role="status" className="sr-only">{isSending ? 'Thinking…' : ''}</span>
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center text-center text-xs text-muted-foreground">
               <div className="mb-3 grid size-11 place-items-center rounded-xl border border-border/60 bg-muted/40 shadow-xs">
@@ -274,6 +306,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
                   {message.role === 'assistant' && index === messages.length - 1 && lastFailedInput && (
                     <button
                       type="button"
+                      aria-label="Retry the last question"
                       onClick={() => void sendMessage(undefined, lastFailedInput)}
                       className="flex items-center gap-1.5 px-2 py-1 mt-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                     >
@@ -306,14 +339,17 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
             rows={1}
             className="min-h-11 max-h-40 flex-1 resize-none rounded-lg border border-transparent bg-transparent px-3 py-2.5 text-sm leading-6 outline-hidden placeholder:text-muted-foreground/70"
           />
+          {/* While a turn is in flight the primary control becomes Stop, so a slow
+              answer is never a dead end with a disabled button. */}
           <button
-            type="submit"
-            disabled={!input.trim() || isSending || isOffline}
+            type={isSending ? 'button' : 'submit'}
+            onClick={isSending ? () => cancelInFlight({ recoverable: true }) : undefined}
+            disabled={isSending ? false : (!input.trim() || isOffline)}
             className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs transition hover:bg-primary/95 disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer"
-            title="Send"
-            aria-label="Send message"
+            title={isSending ? 'Stop' : 'Send'}
+            aria-label={isSending ? 'Stop generating' : 'Send message'}
           >
-            {isSending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+            {isSending ? <Square className="size-3.5 fill-current" /> : <Send className="size-4" />}
           </button>
         </form>
       </div>

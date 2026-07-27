@@ -30,7 +30,7 @@ export function InteractiveDoughnutChart({
   masked = false,
   selectedKey,
   onActivate,
-  chartClassName = 'size-36',
+  chartClassName = 'size-48',
   legendClassName = '',
 }: InteractiveDoughnutChartProps) {
   const [hoveredKey, setHoveredKey] = useState<string | null>(null)
@@ -103,11 +103,13 @@ export function InteractiveDoughnutChart({
             )
           })}
         </svg>
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 flex select-none flex-col items-center justify-center p-2 text-center">
-          <span className="max-w-[110px] truncate text-[10px] font-bold uppercase text-muted-foreground">
+        {/* The hole is 62% of the box (rInner 62 / viewBox 100); cap the labels a
+            little under that so long amounts never touch the ring. */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 flex select-none flex-col items-center justify-center px-[19%] text-center">
+          <span className="max-w-full truncate text-[10px] font-bold uppercase text-muted-foreground">
             {active?.label ?? centerLabel}
           </span>
-          <span className="max-w-[110px] truncate text-sm font-black text-foreground">
+          <span className="max-w-full truncate text-base font-black text-foreground">
             {masked ? '••••' : active ? `${(active.percentage * 100).toFixed(1)}%` : centerValue}
           </span>
         </div>

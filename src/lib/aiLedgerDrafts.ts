@@ -1,7 +1,11 @@
 import type { Transaction, TransactionCategory } from '../types'
 import { capitalizeWords } from './utils'
 
+// Transfer legs move between allocation buckets, so Income is never a valid leg.
 const LEDGERS = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const
+// Income only applies to an inflow — it is what triggers the income auto-split, the
+// same shape the manual transaction form produces for a positive amount.
+const INFLOW_LEDGERS = [...LEDGERS, 'Income'] as const
 
 const text = (record: Record<string, unknown>, key: string) =>
   typeof record[key] === 'string' && record[key].trim() ? record[key].trim() : null
@@ -44,9 +48,11 @@ export function buildAiLedgerDraftTransactions(
     const requestedCategory = text(fields, 'category')?.toLowerCase()
     const category = (requestedCategory && categoriesByName.get(requestedCategory)) || fallbackCategory
     const rawLedger = text(fields, 'ledgerCategory')?.toLowerCase().replace(/^reward$/, 'rewards')
+    const allowedLedgers = txType === 'inflow' ? INFLOW_LEDGERS : LEDGERS
+    const defaultLedger = txType === 'inflow' ? 'Income' : 'Essentials'
     const ledger = fields.ledgerCategorySpecified === true
-      ? LEDGERS.find(candidate => candidate.toLowerCase() === rawLedger) ?? 'Essentials'
-      : 'Essentials'
+      ? allowedLedgers.find(candidate => candidate.toLowerCase() === rawLedger) ?? defaultLedger
+      : defaultLedger
     const rawDate = text(fields, 'date')
     const date = rawDate && /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : defaultDate
 

@@ -892,7 +892,7 @@ const AllocationChart = ({ portfolio, masked, selected, onSelect }: { portfolio:
               ? slices.find(slice => slice.label.startsWith(`${selectedKey} ·`))?.key
               : selectedKey}
             onActivate={slice => selectSlice(slice.label)}
-            chartClassName="size-36 shadow-[0_12px_35px_rgba(76,29,149,0.12)] lg:size-44"
+            chartClassName="size-52 shadow-[0_12px_35px_rgba(76,29,149,0.12)] sm:size-48 lg:size-56"
             legendClassName="w-full min-w-0 flex-1 space-y-1 lg:flex-none"
           />
         ) : <p className="text-xs text-muted-foreground">Add prices to see allocation.</p>}
@@ -1292,7 +1292,7 @@ const InstrumentForm = ({ busy, offline, onCancel, onSave }: { busy: boolean; of
         <div className="rounded-xl border border-blue-500 bg-blue-500/5 p-3">
           <div className="flex items-start justify-between gap-3"><span className="min-w-0"><strong className="block text-sm">{selected.symbol} · {selected.name}</strong><span className="mt-1 block text-[10px] text-muted-foreground">{[selected.exchange, selected.mic, selected.currency, selected.country].filter(Boolean).join(' · ')}</span></span><Button type="button" variant="ghost" size="sm" onClick={() => setSelected(null)}>Change</Button></div>
         </div>
-      ) : <div className="grid max-h-64 gap-2 overflow-y-auto overscroll-contain pr-1">
+      ) : <div className="grid max-h-64 gap-2 overflow-y-auto pr-1">
         {results.map(result => <button type="button" key={`${result.symbol}-${result.mic ?? result.exchange}`} onClick={() => setSelected(result)} className="cursor-pointer rounded-xl border border-border/50 p-3 text-left transition-colors hover:bg-muted/30">
           <span className="flex flex-wrap items-center gap-2"><strong className="text-sm text-foreground">{result.symbol}</strong><span className="rounded bg-muted px-1.5 py-0.5 text-[9px] font-bold">{result.type}</span><span className={`rounded px-1.5 py-0.5 text-[9px] font-bold ${result.availableOnBasic ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>{result.availableOnBasic ? 'Basic available' : 'Plan unavailable'}</span></span>
           <span className="mt-1 block text-xs text-muted-foreground">{result.name}</span>

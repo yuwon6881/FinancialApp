@@ -122,7 +122,10 @@ export function useAiActionRouter(options: UseAiActionRouterOptions) {
   }, [])
 
   const handleAiActions = useCallback((actions: api.AiUiAction[]) => {
-    dispatchAiActions(actions, {
+    // dispatchAiActions is async (dynamic imports, period switches). Without this
+    // catch a rejection becomes an unhandled promise and the user is told the
+    // action was applied when nothing happened.
+    return dispatchAiActions(actions, {
       hideSensitive,
       showToast,
       setActiveTab,
@@ -149,6 +152,9 @@ export function useAiActionRouter(options: UseAiActionRouterOptions) {
       handleConfirmSubscription,
       handlePurchaseWishlistItem,
       handleUnpurchaseWishlistItem,
+    }).catch(error => {
+      console.error('AI action dispatch failed', error)
+      showToast('Could not apply the AI action. Please try again.', 'Action failed', 'error')
     })
   }, [
     hideSensitive,
