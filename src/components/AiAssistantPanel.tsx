@@ -178,9 +178,12 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
       conversationStateRef.current = result.state ?? null
       setMessages([...nextMessages, { role: 'assistant', content: result.reply || 'Done.' }])
       if (result.actions.length > 0) {
+        // Anything that changes a record — or asks the user to confirm one — hands the screen
+        // over to the app, so the sheet gets out of the way before the action is dispatched.
         const requiresPanelClose = result.actions.some(action =>
           action.type.startsWith('openAdd') || action.type.startsWith('openEdit') ||
-          action.type.startsWith('request') || action.type === 'openLedgerExport'
+          action.type.startsWith('request') || action.type === 'openLedgerExport' ||
+          action.type === 'toggleRecurring' || action.type === 'updateRecurringReminder'
         )
         if (requiresPanelClose) {
           onClose()

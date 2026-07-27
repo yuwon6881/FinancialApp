@@ -99,6 +99,14 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     category?: string | null
     search?: string | null
     date?: string | null
+    // Explicit range bounds. `date` remains the shorthand for a single exact day and is used
+    // for both ends when startDate/endDate are absent.
+    startDate?: string | null
+    endDate?: string | null
+    minAmount?: string | null
+    maxAmount?: string | null
+    recurringOnly?: boolean
+    wishlistOnly?: boolean
     txType?: 'inflow' | 'outflow' | 'transfer' | null
     range?: 'monthly' | '3month' | '6month' | 'yearly'
     highlightedTxId?: string | null
@@ -118,16 +126,20 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     }
     const filters = navOptions.category ? [navOptions.category] : []
     const search = navOptions.search || ''
-    const startDate = navOptions.date || ''
-    const endDate = navOptions.date || ''
+    const startDate = navOptions.startDate || navOptions.date || ''
+    const endDate = navOptions.endDate || navOptions.date || ''
+    const minAmount = navOptions.minAmount || ''
+    const maxAmount = navOptions.maxAmount || ''
+    const recurringOnly = navOptions.recurringOnly === true
+    const wishlistOnly = navOptions.wishlistOnly === true
     setLedgerIncomingFilters(filters)
     setLedgerIncomingSearch(search)
     setLedgerIncomingStartDate(startDate)
     setLedgerIncomingEndDate(endDate)
-    setLedgerIncomingMinAmount('')
-    setLedgerIncomingMaxAmount('')
-    setLedgerIncomingRecurringOnly(false)
-    setLedgerIncomingWishlistOnly(false)
+    setLedgerIncomingMinAmount(minAmount)
+    setLedgerIncomingMaxAmount(maxAmount)
+    setLedgerIncomingRecurringOnly(recurringOnly)
+    setLedgerIncomingWishlistOnly(wishlistOnly)
     setLedgerIncomingTxType(navOptions.txType || null)
     const range = navOptions.range || 'monthly'
     setLedgerCyclesRange(range)
@@ -140,6 +152,10 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
         search,
         startDate,
         endDate,
+        minAmount,
+        maxAmount,
+        recurringOnly,
+        wishlistOnly,
         txType: navOptions.txType || null,
         showAllCycles: showAll,
         range,
@@ -170,6 +186,12 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
       setAutoOpenWishlistAdd(true)
     }
   }, [setActiveTab])
+
+  // Drops only the ledger highlight, leaving any filters that arrived with it in place.
+  const clearHighlightedTx = useCallback(() => {
+    setHighlightedTxId(null)
+    updateAppSearch({ tx: null })
+  }, [])
 
   const clearIncomingFilters = useCallback(() => {
     // Keep the same array reference when it is already empty so callers (e.g. a
@@ -260,5 +282,6 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     clearHighlightedRecurring,
     handleQuickAction,
     clearIncomingFilters,
+    clearHighlightedTx,
   }
 }

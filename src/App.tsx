@@ -278,10 +278,10 @@ function App() {
   })
 
   // 7. AI action router
+  const rewardsBalanceRef = useRef(0)
   const aiRouter = useAiActionRouter({
     hideSensitive: prefs.hideSensitive,
     showToast: dialogs.showToast,
-    setActiveTab: prefs.setActiveTab,
     handleSelectPeriod: nav.handleSelectPeriod,
     handleNavigateToLedger: nav.handleNavigateToLedger,
     setConfirmModalData: dialogs.setConfirmModalData,
@@ -289,7 +289,11 @@ function App() {
     handleDeleteTransaction: financial.handleDeleteTransaction,
     allRecurringPayments: financial.allRecurringPayments,
     allWishlist: financial.allWishlist,
+    // Read through a ref: the current-cycle dashboard this is derived from is resolved further
+    // down the component, and a claim must be checked against the balance at dispatch time.
+    getRewardsBalance: () => rewardsBalanceRef.current,
     handleToggleActive: financial.handleToggleActive,
+    handleUpdateReminder: financial.handleUpdateReminder,
     optimisticDashboardData: financial.optimisticDashboardData,
     handleDiscardSubscription: financial.handleDiscardSubscription,
     handleConfirmSubscription: financial.handleConfirmSubscription,
@@ -325,12 +329,32 @@ function App() {
   const [isAiOpen, setIsAiOpen] = useState(false)
   const fabMenu = useFabMenu(prefs.activeTab)
 
-  // Redirect from drafts if empty
+  // Apply the destination the AI action router settled on. Keyed on the intent's nonce, so this
+  // fires once per assistant turn even when the turn ends on the tab the user is already looking
+  // at — the previous inline `setActiveTab` calls could be swallowed in that case, which is why a
+  // repeated "add a transaction" stopped opening the Drafts view after the first one. The
+  // record ids feed the views' existing scroll-to-and-highlight behaviour.
+  const aiNavigation = aiRouter.state.aiNavigation
+  useEffect(() => {
+    if (!aiNavigation) return
+    if (aiNavigation.tab === 'recurring' && aiNavigation.recurringId) {
+      nav.handleNavigateToRecurring(aiNavigation.recurringId)
+    } else if (aiNavigation.tab === 'ledger' && aiNavigation.ledgerTxId) {
+      nav.setHighlightedTxId(aiNavigation.ledgerTxId)
+      prefs.setActiveTab('ledger')
+    } else {
+      prefs.setActiveTab(aiNavigation.tab)
+    }
+    aiRouter.dispatch({ type: 'CONSUME_NAVIGATION' })
+  }, [aiNavigation?.nonce])
+
+  // Redirect from drafts if empty. `prefs` itself is deliberately not a dependency — it is a new
+  // object every render, which made this run after every commit.
   useEffect(() => {
     if (prefs.activeTab === 'drafts' && financial.draftTransactions.length === 0) {
       prefs.setActiveTab('ledger')
     }
-  }, [prefs.activeTab, financial.draftTransactions, prefs])
+  }, [prefs.activeTab, financial.draftTransactions, prefs.setActiveTab])
 
   // Depend only on the stable identities (activeTab + the memoized/setter fns),
   // NOT the whole `nav`/`prefs` objects — those are re-created every render, so
@@ -438,6 +462,12 @@ function App() {
       : null
   const currentPendingNotifications = todayDashboardData?.pendingNotifications || []
   const wishlistDashboardData = todayDashboardData || financial.optimisticDashboardData
+  // Same value the Wishlist card gates its Claim button on, mirrored into a ref so the AI action
+  // router (declared above this point) can apply the identical claimability rule.
+  const wishlistRewardsBalance = wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')?.remaining ?? 0
+  useEffect(() => {
+    rewardsBalanceRef.current = wishlistRewardsBalance
+  }, [wishlistRewardsBalance])
 
   // End-of-cycle summary: fires once when a new cycle begins (persisted server-side so it can't
   // re-fire on navigation or on another device), and is re-openable from Reports for any ended
@@ -796,6 +826,7 @@ function App() {
                         incomingTxType={nav.ledgerIncomingTxType}
                         highlightedTxId={nav.highlightedTxId}
                         onClearIncomingFilters={nav.clearIncomingFilters}
+                        onClearHighlightedTx={nav.clearHighlightedTx}
                         showAllCycles={nav.ledgerShowAllCycles}
                         onClearAllCycles={() => { nav.setLedgerShowAllCycles(false) }}
                         cyclesRange={prefs.ledgerCyclesRange}
@@ -831,7 +862,7 @@ function App() {
                       <WishlistView 
                         wishlist={financial.allWishlist}
                         transactions={financial.allTransactions}
-                        rewardsBalance={wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')?.remaining ?? 0}
+                        rewardsBalance={wishlistRewardsBalance}
                         rewardsTarget={wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')?.target ?? 400}
                         pastThreeMonthsRewardsAverage={wishlistDashboardData?.stats?.pastThreeMonthsRewardsAverage ?? 0}
                         hasRewardsHistory={wishlistDashboardData?.stats?.hasRewardsHistory ?? false}

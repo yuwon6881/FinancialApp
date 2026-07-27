@@ -47,6 +47,7 @@ interface LedgerViewProps {
   incomingTxType?: 'inflow' | 'outflow' | 'transfer' | null
   highlightedTxId?: string | null
   onClearIncomingFilters?: () => void
+  onClearHighlightedTx?: () => void
   showAllCycles: boolean
   onClearAllCycles: () => void
   cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly'

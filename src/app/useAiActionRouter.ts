@@ -1,7 +1,7 @@
 import { useReducer, useRef, useCallback } from 'react'
 import * as api from '../lib/api'
-import { dispatchAiActions, requestAiLedgerDelete } from '../lib/aiActions'
-import type { Transaction, TransactionCategory } from '../types'
+import { dispatchAiActions, requestAiLedgerDelete, type AiNavigationTarget } from '../lib/aiActions'
+import type { RecurringReminderSettings, Transaction, TransactionCategory } from '../types'
 
 interface AiActionRouterState {
   aiLedgerEditDraft: { nonce: number; id: string; changes: Record<string, unknown> } | null
@@ -10,6 +10,11 @@ interface AiActionRouterState {
   aiWishlistDraft: { nonce: number; fields: Record<string, unknown> } | null
   aiWishlistEditDraft: { nonce: number; id: number; changes: Record<string, unknown> } | null
   aiLedgerExportRequest: { nonce: number } | null
+  // The batch's final destination. Carried as state with a nonce rather than applied inline so
+  // App performs the navigation in a commit of its own, after the mutations it follows have
+  // landed — and so an identical repeat request (same tab, same record) still re-navigates
+  // instead of being swallowed as "no change".
+  aiNavigation: (AiNavigationTarget & { nonce: number }) | null
 }
 
 type AiActionRouterAction =
@@ -19,6 +24,8 @@ type AiActionRouterAction =
   | { type: 'SET_WISHLIST_DRAFT'; payload: Record<string, unknown>; nonce: number }
   | { type: 'SET_WISHLIST_EDIT_DRAFT'; id: number; changes: Record<string, unknown>; nonce: number }
   | { type: 'SET_EXPORT_REQUEST'; nonce: number }
+  | { type: 'SET_NAVIGATION'; target: AiNavigationTarget; nonce: number }
+  | { type: 'CONSUME_NAVIGATION' }
   | { type: 'CONSUME_LEDGER_EDIT_DRAFT' }
   | { type: 'CONSUME_RECURRING_DRAFT' }
   | { type: 'CONSUME_RECURRING_EDIT_DRAFT' }
@@ -33,6 +40,7 @@ const initialState: AiActionRouterState = {
   aiWishlistDraft: null,
   aiWishlistEditDraft: null,
   aiLedgerExportRequest: null,
+  aiNavigation: null,
 }
 
 function aiActionRouterReducer(state: AiActionRouterState, action: AiActionRouterAction): AiActionRouterState {
@@ -61,6 +69,10 @@ function aiActionRouterReducer(state: AiActionRouterState, action: AiActionRoute
       return { ...state, aiWishlistEditDraft: null }
     case 'CONSUME_EXPORT_REQUEST':
       return { ...state, aiLedgerExportRequest: null }
+    case 'SET_NAVIGATION':
+      return { ...state, aiNavigation: { ...action.target, nonce: action.nonce } }
+    case 'CONSUME_NAVIGATION':
+      return { ...state, aiNavigation: null }
     default:
       return state
   }
@@ -69,7 +81,6 @@ function aiActionRouterReducer(state: AiActionRouterState, action: AiActionRoute
 export interface UseAiActionRouterOptions {
   hideSensitive: boolean
   showToast: (message: string, title?: string, tone?: any, action?: any) => void
-  setActiveTab: (tab: any) => void
   handleSelectPeriod: (month: string, year: number) => Promise<void> | void
   handleNavigateToLedger: (options: any) => void
   setConfirmModalData: (data: any) => void
@@ -77,7 +88,9 @@ export interface UseAiActionRouterOptions {
   handleDeleteTransaction: (id: string) => void
   allRecurringPayments: any[]
   allWishlist: any[]
+  getRewardsBalance: () => number
   handleToggleActive: (id: string) => void
+  handleUpdateReminder: (id: string, settings: RecurringReminderSettings) => void
   optimisticDashboardData: any
   handleDiscardSubscription: (noti: any) => void
   handleConfirmSubscription: (noti: any, paidDate: string) => void
@@ -93,7 +106,6 @@ export function useAiActionRouter(options: UseAiActionRouterOptions) {
   const {
     hideSensitive,
     showToast,
-    setActiveTab,
     handleSelectPeriod,
     handleNavigateToLedger,
     setConfirmModalData,
@@ -101,7 +113,9 @@ export function useAiActionRouter(options: UseAiActionRouterOptions) {
     handleDeleteTransaction,
     allRecurringPayments,
     allWishlist,
+    getRewardsBalance,
     handleToggleActive,
+    handleUpdateReminder,
     optimisticDashboardData,
     handleDiscardSubscription,
     handleConfirmSubscription,
@@ -128,7 +142,7 @@ export function useAiActionRouter(options: UseAiActionRouterOptions) {
     return dispatchAiActions(actions, {
       hideSensitive,
       showToast,
-      setActiveTab,
+      navigate: target => dispatch({ type: 'SET_NAVIGATION', target, nonce: nextAiActionNonce() }),
       handleSelectPeriod,
       handleNavigateToLedger,
       nextNonce: nextAiActionNonce,
@@ -145,7 +159,9 @@ export function useAiActionRouter(options: UseAiActionRouterOptions) {
       requestDeleteWishlistItem,
       allRecurringPayments,
       allWishlist,
+      getRewardsBalance,
       handleToggleActive,
+      handleUpdateReminder,
       getPendingNotifications: () => optimisticDashboardData?.pendingNotifications || [],
       setConfirmModalData,
       handleDiscardSubscription,
@@ -159,7 +175,6 @@ export function useAiActionRouter(options: UseAiActionRouterOptions) {
   }, [
     hideSensitive,
     showToast,
-    setActiveTab,
     handleSelectPeriod,
     handleNavigateToLedger,
     nextAiActionNonce,
@@ -169,7 +184,9 @@ export function useAiActionRouter(options: UseAiActionRouterOptions) {
     requestDeleteWishlistItem,
     allRecurringPayments,
     allWishlist,
+    getRewardsBalance,
     handleToggleActive,
+    handleUpdateReminder,
     optimisticDashboardData,
     handleDiscardSubscription,
     handleConfirmSubscription,

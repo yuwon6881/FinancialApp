@@ -31,7 +31,7 @@ function makeDeps(overrides: Partial<AiActionsDeps> = {}): AiActionsDeps {
   return {
     hideSensitive: false,
     showToast: vi.fn(),
-    setActiveTab: vi.fn(),
+    navigate: vi.fn(),
     handleSelectPeriod: vi.fn(),
     handleNavigateToLedger: vi.fn(),
     nextNonce: () => ++nonce,
@@ -52,7 +52,9 @@ function makeDeps(overrides: Partial<AiActionsDeps> = {}): AiActionsDeps {
     requestDeleteWishlistItem: vi.fn(),
     allRecurringPayments: [],
     allWishlist: [],
+    getRewardsBalance: () => 0,
     handleToggleActive: vi.fn(),
+    handleUpdateReminder: vi.fn(),
     getPendingNotifications: () => [],
     setConfirmModalData: vi.fn(),
     handleDiscardSubscription: vi.fn(),
@@ -64,13 +66,13 @@ function makeDeps(overrides: Partial<AiActionsDeps> = {}): AiActionsDeps {
 }
 
 describe('dispatchAiActions — navigation', () => {
-  it('routes tab-open actions to setActiveTab', async () => {
+  it('routes tab-open actions to a single navigation', async () => {
     const d = makeDeps()
     await dispatchAiActions([{ type: 'openDashboard', payload: {} }], d)
-    expect(d.setActiveTab).toHaveBeenCalledWith('dashboard')
+    expect(d.navigate).toHaveBeenCalledWith({ tab: 'dashboard' })
   })
 
-  it('processes at most the first three actions', async () => {
+  it('processes at most the first three actions and navigates exactly once', async () => {
     const d = makeDeps()
     await dispatchAiActions(
       [
@@ -81,8 +83,9 @@ describe('dispatchAiActions — navigation', () => {
       ],
       d
     )
-    expect(d.setActiveTab).toHaveBeenCalledTimes(3)
-    expect(d.setActiveTab).not.toHaveBeenCalledWith('ledger')
+    expect(d.navigate).toHaveBeenCalledOnce()
+    expect(d.navigate).toHaveBeenCalledWith({ tab: 'wishlist' })
+    expect(d.handleNavigateToLedger).not.toHaveBeenCalled()
   })
 
   it('stages every ledger record and opens the draft transactions tab', async () => {
@@ -95,7 +98,7 @@ describe('dispatchAiActions — navigation', () => {
       expect.objectContaining({ description: 'Nasi Lemak', amount: -12, category: 'Food', ledgerCategory: 'Essentials' }),
       expect.objectContaining({ description: 'Car Fuel', amount: -30, category: 'Transport', ledgerCategory: 'Growth' }),
     ])
-    expect(d.setActiveTab).toHaveBeenCalledWith('drafts')
+    expect(d.navigate).toHaveBeenCalledWith({ tab: 'drafts' })
   })
 
   it('keeps Drafts as the final destination when a reply also contains another navigation action', async () => {
@@ -106,8 +109,8 @@ describe('dispatchAiActions — navigation', () => {
     ], d)
 
     expect(d.stageAiLedgerDrafts).toHaveBeenCalledOnce()
-    expect(d.setActiveTab).toHaveBeenNthCalledWith(1, 'dashboard')
-    expect(d.setActiveTab).toHaveBeenLastCalledWith('drafts')
+    expect(d.navigate).toHaveBeenCalledOnce()
+    expect(d.navigate).toHaveBeenLastCalledWith({ tab: 'drafts' })
   })
 
   it('capitalizes each word of an AI-added ledger description', async () => {
@@ -199,7 +202,7 @@ describe('dispatchAiActions — sensitive mode', () => {
   it('still allows read-only navigation in sensitive mode', async () => {
     const d = makeDeps({ hideSensitive: true })
     await dispatchAiActions([{ type: 'openDashboard', payload: {} }], d)
-    expect(d.setActiveTab).toHaveBeenCalledWith('dashboard')
+    expect(d.navigate).toHaveBeenCalledWith({ tab: 'dashboard' })
     expect(d.showToast).not.toHaveBeenCalled()
   })
 })
@@ -230,10 +233,108 @@ describe('dispatchAiActions — record actions', () => {
     expect(d.showToast).toHaveBeenCalledOnce() // "already on"
   })
 
-  it('toggles a payment when the requested state differs', async () => {
+  it('toggles a payment when the requested state differs and lands on its card', async () => {
     const payment = { id: 'rp1', name: 'Netflix', active: false } as AiActionsDeps['allRecurringPayments'][number]
     const d = makeDeps({ allRecurringPayments: [payment] })
     await dispatchAiActions([{ type: 'toggleRecurring', payload: { id: 'rp1', active: true } }], d)
     expect(d.handleToggleActive).toHaveBeenCalledWith('rp1')
+    expect(d.navigate).toHaveBeenCalledWith({ tab: 'recurring', recurringId: 'rp1' })
+  })
+})
+
+describe('dispatchAiActions — ledger filters', () => {
+  it('passes the advanced filter fields through to the ledger', async () => {
+    const d = makeDeps()
+    await dispatchAiActions([{ type: 'openLedger', payload: {
+      minAmount: 250, maxAmount: 1000, startDate: '2026-07-01', endDate: '2026-07-31',
+      recurringOnly: true, txType: 'outflow',
+    } }], d)
+
+    expect(d.handleNavigateToLedger).toHaveBeenCalledWith(expect.objectContaining({
+      minAmount: '250',
+      maxAmount: '1000',
+      startDate: '2026-07-01',
+      endDate: '2026-07-31',
+      recurringOnly: true,
+      wishlistOnly: false,
+      txType: 'outflow',
+    }))
+    expect(d.navigate).toHaveBeenCalledWith({ tab: 'ledger' })
+  })
+
+  it('leaves amount filters unset when the AI did not ask for them', async () => {
+    const d = makeDeps()
+    await dispatchAiActions([{ type: 'openLedger', payload: { category: 'Food' } }], d)
+    expect(d.handleNavigateToLedger).toHaveBeenCalledWith(expect.objectContaining({
+      minAmount: null, maxAmount: null, recurringOnly: false, wishlistOnly: false,
+    }))
+  })
+})
+
+describe('dispatchAiActions — recurring reminders', () => {
+  const payment = {
+    id: 'rp1', name: 'Netflix', active: true, reminderEnabled: false, reminderMode: 'Once', reminderLeadDays: 3,
+  } as AiActionsDeps['allRecurringPayments'][number]
+
+  it('turns a reminder on with the requested mode and lead time', async () => {
+    const d = makeDeps({ allRecurringPayments: [payment] })
+    await dispatchAiActions([{ type: 'updateRecurringReminder', payload: {
+      id: 'rp1', enabled: true, reminderMode: 'Daily', leadDays: 7,
+    } }], d)
+
+    expect(d.handleUpdateReminder).toHaveBeenCalledWith('rp1', { enabled: true, mode: 'Daily', leadDays: 7 })
+    expect(d.navigate).toHaveBeenCalledWith({ tab: 'recurring', recurringId: 'rp1' })
+  })
+
+  it('keeps the saved mode and lead time when the request names neither', async () => {
+    const d = makeDeps({ allRecurringPayments: [{ ...payment, reminderMode: 'Daily', reminderLeadDays: 7 }] })
+    await dispatchAiActions([{ type: 'updateRecurringReminder', payload: { id: 'rp1', enabled: true } }], d)
+    expect(d.handleUpdateReminder).toHaveBeenCalledWith('rp1', { enabled: true, mode: 'Daily', leadDays: 7 })
+  })
+
+  it('rejects a lead time the reminder controls do not offer', async () => {
+    const d = makeDeps({ allRecurringPayments: [payment] })
+    await dispatchAiActions([{ type: 'updateRecurringReminder', payload: {
+      id: 'rp1', enabled: true, reminderMode: 'Once', leadDays: 5,
+    } }], d)
+    expect(d.handleUpdateReminder).toHaveBeenCalledWith('rp1', { enabled: true, mode: 'Once', leadDays: 3 })
+  })
+
+  it('does nothing when the reminder already matches', async () => {
+    const d = makeDeps({ allRecurringPayments: [{ ...payment, reminderEnabled: false }] })
+    await dispatchAiActions([{ type: 'updateRecurringReminder', payload: { id: 'rp1', enabled: false } }], d)
+    expect(d.handleUpdateReminder).not.toHaveBeenCalled()
+    expect(d.showToast).toHaveBeenCalledOnce()
+  })
+})
+
+describe('dispatchAiActions — wishlist claim', () => {
+  const item = { id: 7, name: 'Headphones', price: 200, isPurchased: false } as AiActionsDeps['allWishlist'][number]
+
+  it('opens the claim confirmation when Rewards covers the price', async () => {
+    const d = makeDeps({ allWishlist: [item], getRewardsBalance: () => 250 })
+    await dispatchAiActions([{ type: 'requestPurchaseWishlist', payload: { id: 7 } }], d)
+    expect(d.setConfirmModalData).toHaveBeenCalledOnce()
+  })
+
+  it('refuses the claim when Rewards is short', async () => {
+    const d = makeDeps({ allWishlist: [item], getRewardsBalance: () => 199.99 })
+    await dispatchAiActions([{ type: 'requestPurchaseWishlist', payload: { id: 7 } }], d)
+    expect(d.setConfirmModalData).not.toHaveBeenCalled()
+    expect(d.showToast).toHaveBeenCalledOnce()
+    expect(d.navigate).toHaveBeenCalledWith({ tab: 'wishlist' })
+  })
+
+  it('refuses a claim for an item that was already claimed', async () => {
+    const d = makeDeps({ allWishlist: [{ ...item, isPurchased: true }], getRewardsBalance: () => 10_000 })
+    await dispatchAiActions([{ type: 'requestPurchaseWishlist', payload: { id: 7 } }], d)
+    expect(d.setConfirmModalData).not.toHaveBeenCalled()
+    expect(d.showToast).toHaveBeenCalledOnce()
+  })
+
+  it('still allows undoing a purchase regardless of the Rewards balance', async () => {
+    const d = makeDeps({ allWishlist: [{ ...item, isPurchased: true }], getRewardsBalance: () => 0 })
+    await dispatchAiActions([{ type: 'requestUnpurchaseWishlist', payload: { id: 7 } }], d)
+    expect(d.setConfirmModalData).toHaveBeenCalledOnce()
   })
 })

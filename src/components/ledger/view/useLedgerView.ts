@@ -29,6 +29,12 @@ export interface UseLedgerViewOptions {
   incomingTxType?: 'inflow' | 'outflow' | 'transfer' | null | undefined
   highlightedTxId?: string | null | undefined
   onClearIncomingFilters?: () => void
+  /**
+   * Drops just the highlight (state + `?tx=`) once it has faded. Separate from
+   * `onClearIncomingFilters` because a highlight arriving alongside filters — an AI
+   * "edit the Netflix charge and show me it" — must not take those filters down with it.
+   */
+  onClearHighlightedTx?: () => void
   showAllCycles: boolean
   onClearAllCycles: () => void
   cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly'
@@ -86,6 +92,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     incomingTxType,
     highlightedTxId,
     onClearIncomingFilters,
+    onClearHighlightedTx,
     showAllCycles,
     onClearAllCycles,
     cyclesRange,
@@ -147,6 +154,50 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   const [appliedRecurringOnly, setAppliedRecurringOnly] = useState(incomingRecurringOnly || false)
   const [appliedWishlistOnly, setAppliedWishlistOnly] = useState(incomingWishlistOnly || false)
   const [appliedTxTypeFilter, setAppliedTxTypeFilter] = useState<LedgerTxType>(incomingTxType || null)
+
+  // Every filter above seeds from its `incoming*` prop only on mount, which is enough when the
+  // ledger is entered from another tab (the view remounts). It is not enough for a request made
+  // while the ledger is already on screen — an Ask AI "filter to purchases over 200" would set the
+  // incoming props and change nothing. Re-seed whenever the incoming set actually changes, so a
+  // navigation-with-filters is applied in place too. The signature guard keeps a user's own
+  // subsequent edits from being reverted by an unrelated re-render.
+  const incomingFilterSignature = JSON.stringify([
+    initialFilters, incomingSearch || '', initialStartDate, initialEndDate,
+    incomingMinAmount || '', incomingMaxAmount || '',
+    incomingRecurringOnly || false, incomingWishlistOnly || false, incomingTxType || null,
+  ])
+  const [appliedIncomingSignature, setAppliedIncomingSignature] = useState(incomingFilterSignature)
+  if (appliedIncomingSignature !== incomingFilterSignature) {
+    setAppliedIncomingSignature(incomingFilterSignature)
+    setSearchTerm(incomingSearch || '')
+    setSelectedFilters(initialFilters)
+    setSelectedStartDate(initialStartDate)
+    setSelectedEndDate(initialEndDate)
+    setSelectedMinAmount(incomingMinAmount || '')
+    setSelectedMaxAmount(incomingMaxAmount || '')
+    setSelectedRecurringOnly(incomingRecurringOnly || false)
+    setSelectedWishlistOnly(incomingWishlistOnly || false)
+    setSelectedTxTypeFilter(incomingTxType || null)
+    setPendingSearchTerm(incomingSearch || '')
+    setPendingFilters(initialFilters)
+    setPendingStartDate(initialStartDate)
+    setPendingEndDate(initialEndDate)
+    setPendingMinAmount(incomingMinAmount || '')
+    setPendingMaxAmount(incomingMaxAmount || '')
+    setPendingRecurringOnly(incomingRecurringOnly || false)
+    setPendingWishlistOnly(incomingWishlistOnly || false)
+    setPendingTxTypeFilter(incomingTxType || null)
+    setAppliedSearch(incomingSearch || '')
+    setAppliedFilters(initialFilters)
+    setAppliedStartDate(initialStartDate)
+    setAppliedEndDate(initialEndDate)
+    setAppliedMinAmount(incomingMinAmount || '')
+    setAppliedMaxAmount(incomingMaxAmount || '')
+    setAppliedRecurringOnly(incomingRecurringOnly || false)
+    setAppliedWishlistOnly(incomingWishlistOnly || false)
+    setAppliedTxTypeFilter(incomingTxType || null)
+    setCurrentPage(1)
+  }
 
   // Delete transaction state
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -662,7 +713,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
             rowEl.classList.add('ledger-transaction-highlight')
             clearTimer = setTimeout(() => {
               rowEl.classList.remove('ledger-transaction-highlight')
-              onClearIncomingFilters?.()
+              onClearHighlightedTx?.()
             }, 3600)
           }
         }, 300)
@@ -674,7 +725,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         }
       }
     }
-  }, [highlightedTxId, filteredTransactions, pageSize, onClearIncomingFilters, isMobile])
+  }, [highlightedTxId, filteredTransactions, pageSize, onClearHighlightedTx, isMobile])
 
   const handleDeleteClickRef = useRef(handleDeleteClick)
   useEffect(() => {
