@@ -1,6 +1,9 @@
 import { useReducer, useRef, useCallback } from 'react'
 import * as api from '../lib/api'
-import { dispatchAiActions, requestAiLedgerDelete, type AiNavigationTarget } from '../lib/aiActions'
+// Value-imported lazily inside handleAiActions: the dispatcher and its payload-coercion helpers
+// are only reachable once the (already lazy) Ask AI panel returns actions, so keeping them off the
+// eager critical path costs nothing at runtime. The type import is erased at build time.
+import type { AiNavigationTarget } from '../lib/aiActions'
 import type { RecurringReminderSettings, Transaction, TransactionCategory } from '../types'
 
 interface AiActionRouterState {
@@ -135,10 +138,11 @@ export function useAiActionRouter(options: UseAiActionRouterOptions) {
     return aiActionNonceRef.current
   }, [])
 
-  const handleAiActions = useCallback((actions: api.AiUiAction[]) => {
+  const handleAiActions = useCallback(async (actions: api.AiUiAction[]) => {
     // dispatchAiActions is async (dynamic imports, period switches). Without this
     // catch a rejection becomes an unhandled promise and the user is told the
     // action was applied when nothing happened.
+    const { dispatchAiActions, requestAiLedgerDelete } = await import('../lib/aiActions')
     return dispatchAiActions(actions, {
       hideSensitive,
       showToast,
