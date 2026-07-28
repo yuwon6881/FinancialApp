@@ -244,6 +244,38 @@ describe('InvestmentsView provider call boundaries', () => {
     expect(onResetAutoOpen).toHaveBeenCalled()
   })
 
+  it('routes a scanned conversion to Cash Movement and prefills it for review', async () => {
+    vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(tradablePortfolio)
+    renderView({
+      autoOpenAddForm: true,
+      investmentScanDraft: {
+        jobId: 'cash-scan-1',
+        result: {
+          type: 'Conversion',
+          accountId: 'a1',
+          instrumentId: null,
+          tradeDate: '2026-07-21',
+          units: null,
+          unitPrice: null,
+          cashAmount: 100,
+          fees: null,
+          taxes: null,
+          currency: 'USD',
+          toCurrency: 'MYR',
+          toAmount: 430,
+          confidence: 0.91,
+        },
+      },
+      activeScanJobIds: ['cash-scan-1'],
+    })
+
+    expect(await screen.findByText(/Cash movement scanned/)).toBeTruthy()
+    expect(screen.getByRole('combobox', { name: 'Cash movement type' }).textContent).toContain('Convert currency')
+    expect(screen.getAllByRole('spinbutton').map(input => (input as HTMLInputElement).value))
+      .toEqual(expect.arrayContaining(['100', '430']))
+    expect(context.queueInvestmentMutation).not.toHaveBeenCalled()
+  })
+
   const choose = (ariaLabel: string, option: string) => {
     fireEvent.click(screen.getByRole('combobox', { name: ariaLabel }))
     fireEvent.click(screen.getByRole('option', { name: option }))

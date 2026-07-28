@@ -80,7 +80,7 @@ export interface ReceiptSplitScanJob {
 }
 
 export interface InvestmentActivityScanResult {
-  type: 'Buy' | 'Sell' | 'Dividend' | 'FeeTax' | null
+  type: 'Buy' | 'Sell' | 'Dividend' | 'FeeTax' | 'Deposit' | 'Withdrawal' | 'Conversion' | null
   accountId: string | null
   instrumentId: string | null
   tradeDate: string | null
@@ -89,6 +89,9 @@ export interface InvestmentActivityScanResult {
   cashAmount: number | null
   fees: number | null
   taxes: number | null
+  currency?: string | null
+  toCurrency?: string | null
+  toAmount?: number | null
   confidence: number
 }
 
@@ -187,12 +190,13 @@ export async function startInvestmentScan(imageFile: File): Promise<{ scanId: st
 }
 
 type WireInvestmentScanJob = Omit<InvestmentScanJob, 'result'> & {
-  result: (Omit<InvestmentActivityScanResult, 'units' | 'unitPrice' | 'cashAmount' | 'fees' | 'taxes'> & {
+  result: (Omit<InvestmentActivityScanResult, 'units' | 'unitPrice' | 'cashAmount' | 'fees' | 'taxes' | 'toAmount'> & {
     units: string | number | null
     unitPrice: string | number | null
     cashAmount: string | number | null
     fees: string | number | null
     taxes: string | number | null
+    toAmount?: string | number | null
   }) | null
 }
 
@@ -210,6 +214,7 @@ export async function fetchInvestmentScanJob(scanId: string): Promise<Investment
       cashAmount: decode(job.result.cashAmount),
       fees: decode(job.result.fees),
       taxes: decode(job.result.taxes),
+      toAmount: decode(job.result.toAmount ?? null),
     } : null,
   }
 }

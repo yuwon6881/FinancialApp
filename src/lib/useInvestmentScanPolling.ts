@@ -128,7 +128,7 @@ export function useInvestmentScanPolling(options: Options) {
               if (!isInModal) {
                 if (!notifiedIds.includes(jobId)) {
                   setNotifiedIds(current => current.includes(jobId) ? current : [...current, jobId])
-                  showToast('Your investment activity has been scanned successfully.', 'Investment Scan Complete', 'success')
+                  showToast('Your investment record has been scanned successfully.', 'Investment Scan Complete', 'success')
                 }
                 window.setTimeout(() => {
                   if (!isMountedRef.current) return

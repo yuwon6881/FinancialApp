@@ -214,8 +214,16 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
   }
   useAutoOpenModal(autoOpenAddForm, () => openPanel('activity'), onResetAutoOpen)
   useEffect(() => {
-    onAddFormOpenChange?.(panel === 'activity' && !editingActivity)
-  }, [panel, editingActivity, onAddFormOpenChange])
+    if (!investmentScanDraft || !['Deposit', 'Withdrawal', 'Conversion'].includes(investmentScanDraft.result.type ?? '')) return
+    if (panel === 'cash' && !editingCashFlow) return
+    setEditingActivity(null)
+    setEditingCashFlow(null)
+    setFormKey(value => value + 1)
+    setPanel('cash')
+  }, [investmentScanDraft, panel, editingCashFlow])
+  useEffect(() => {
+    onAddFormOpenChange?.((panel === 'activity' && !editingActivity) || (panel === 'cash' && !editingCashFlow))
+  }, [panel, editingActivity, editingCashFlow, onAddFormOpenChange])
 
   if (loading && !portfolio) return <CycleSkeleton variant="investments" />
 
@@ -273,7 +281,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
         }} onNeedAccount={() => openPanel('account')} onNeedInstrument={() => openPanel('instrument')} />
       </BottomSheet>
       <BottomSheet isOpen={panel === 'cash'} title={editingCashFlow ? 'Edit cash movement' : 'Record cash movement'} onClose={closePanel} maxWidthClassName="max-w-lg">
-        <CashForm key={`cash-${formKey}`} portfolio={setupPortfolio} initial={editingCashFlow} pendingCashFlows={pendingCashFlows} busy={busy} onCancel={closePanel} onSave={value => {
+        <CashForm key={`cash-${formKey}`} portfolio={setupPortfolio} initial={editingCashFlow} pendingCashFlows={pendingCashFlows} busy={busy} scanDraft={editingCashFlow ? null : investmentScanDraft} failedScanJob={failedScanJob} activeScanJobIds={activeScanJobIds} onScanStarted={onInvestmentScanStarted} onScanCleared={onInvestmentScanCleared} onCancel={closePanel} onSave={value => {
           const id = editingCashFlow?.id ?? crypto.randomUUID()
           return queueInvestment(
             'investmentCashFlow',
@@ -889,7 +897,7 @@ const AllocationChart = ({ portfolio, masked, selected, onSelect }: { portfolio:
           />
         </div>
       </div>
-      <div className="mt-5 flex flex-1 flex-col items-center justify-center gap-6 sm:flex-row lg:flex-col lg:justify-start">
+      <div className="mt-5 flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-6 overflow-hidden sm:flex-row lg:flex-col lg:justify-start">
         {groups.length > 0 ? (
           <InteractiveDoughnutChart
             key={mode}
@@ -903,8 +911,8 @@ const AllocationChart = ({ portfolio, masked, selected, onSelect }: { portfolio:
               ? slices.find(slice => slice.label.startsWith(`${selectedKey} ·`))?.key
               : selectedKey}
             onActivate={slice => selectSlice(slice.label)}
-            chartClassName="size-52 shadow-[0_12px_35px_color-mix(in_srgb,var(--ledger-purple-500)_18%,transparent)] sm:size-48 lg:size-56"
-            legendClassName="w-full min-w-0 flex-1 space-y-1 lg:flex-none"
+            chartClassName="mx-auto aspect-square w-full max-w-52 sm:mx-0 sm:w-48 lg:mx-auto lg:w-56 lg:max-w-56"
+            legendClassName="w-full min-w-0 flex-1 overflow-hidden space-y-1 lg:flex-none"
           />
         ) : <p className="text-xs text-muted-foreground">Add prices to see allocation.</p>}
       </div>
@@ -1398,7 +1406,8 @@ const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scanDraft, 
     setIsScanning(false)
     setShowScanBanner(true)
     const result = scanDraft.result
-    if (result.type && activityTypes.some(value => value.value === result.type)) setType(result.type)
+    const scannedActivityType = activityTypes.find(value => value.value === result.type)?.value
+    if (scannedActivityType) setType(scannedActivityType)
     if (result.accountId && accounts.some(value => value.id === result.accountId)) setAccountId(result.accountId)
     if (result.instrumentId && instruments.some(value => value.id === result.instrumentId)) setInstrumentId(result.instrumentId)
     if (result.tradeDate) setTradeDate(result.tradeDate)
@@ -1530,11 +1539,16 @@ const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scanDraft, 
   </form>
 }
 
-const CashForm = ({ portfolio, initial, pendingCashFlows, busy, onCancel, onSave, onNeedAccount }: {
+const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft, failedScanJob, activeScanJobIds = [], onScanStarted, onScanCleared, onCancel, onSave, onNeedAccount }: {
   portfolio: InvestmentPortfolio | null
   initial?: InvestmentCashFlow | null
   pendingCashFlows?: InvestmentCashFlow[]
   busy: boolean
+  scanDraft?: { jobId: string; result: InvestmentActivityScanResult } | null
+  failedScanJob?: { jobId: string; errorMessage: string } | null
+  activeScanJobIds?: string[]
+  onScanStarted?: (scanId: string) => void
+  onScanCleared?: (scanId: string) => void | Promise<void>
   onCancel: () => void
   onSave: (value: { accountId: string; currency: string; type: 'Deposit' | 'Withdrawal' | 'Conversion'; amount: number; date: string; toCurrency?: string; toAmount?: number }) => Promise<boolean>
   onNeedAccount: () => void
@@ -1548,6 +1562,76 @@ const CashForm = ({ portfolio, initial, pendingCashFlows, busy, onCancel, onSave
   const [toAmount, setToAmount] = useState(initial?.toAmount ? String(initial.toAmount) : '')
   const [date, setDate] = useState(initial?.date ?? today())
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isScanning, setIsScanning] = useState(false)
+  const [scanError, setScanError] = useState<string | null>(null)
+  const [showScanBanner, setShowScanBanner] = useState(false)
+  const [showScanPicker, setShowScanPicker] = useState(false)
+  const [activeScanJobId, setActiveScanJobId] = useState<string | null>(null)
+  const scanFileInputRef = useRef<HTMLInputElement>(null)
+  const scanGalleryInputRef = useRef<HTMLInputElement>(null)
+  const appliedScanJobRef = useRef<string | null>(null)
+  const trackedScanJobsRef = useRef<Set<string>>(new Set())
+  const clearScan = () => {
+    const jobId = activeScanJobId
+    setActiveScanJobId(null)
+    setIsScanning(false)
+    setScanError(null)
+    setShowScanBanner(false)
+    if (jobId) {
+      trackedScanJobsRef.current.delete(jobId)
+      void onScanCleared?.(jobId)
+    }
+  }
+  const handleScan = async (file: File) => {
+    setIsScanning(true)
+    setScanError(null)
+    setShowScanBanner(false)
+    try {
+      const started = await api.startInvestmentScan(file)
+      setActiveScanJobId(started.scanId)
+      onScanStarted?.(started.scanId)
+    } catch (error) {
+      setScanError(getErrorMessage(error, 'Could not scan this cash movement. Please try a clearer image.'))
+      setIsScanning(false)
+    } finally {
+      if (scanFileInputRef.current) scanFileInputRef.current.value = ''
+      if (scanGalleryInputRef.current) scanGalleryInputRef.current.value = ''
+    }
+  }
+  useEffect(() => {
+    if (!scanDraft || appliedScanJobRef.current === scanDraft.jobId) return
+    const result = scanDraft.result
+    if (!result.type || !['Deposit', 'Withdrawal', 'Conversion'].includes(result.type)) return
+    appliedScanJobRef.current = scanDraft.jobId
+    setActiveScanJobId(scanDraft.jobId)
+    setIsScanning(false)
+    setShowScanBanner(true)
+    setType(result.type as 'Deposit' | 'Withdrawal' | 'Conversion')
+    if (result.accountId && accounts.some(value => value.id === result.accountId)) setAccountId(result.accountId)
+    if (result.currency) setCurrency(result.currency)
+    if (result.cashAmount != null) setAmount(String(result.cashAmount))
+    if (result.toCurrency) setToCurrency(result.toCurrency)
+    if (result.toAmount != null) setToAmount(String(result.toAmount))
+    if (result.tradeDate) setDate(result.tradeDate)
+  }, [scanDraft, accounts])
+  useEffect(() => {
+    if (failedScanJob?.jobId !== activeScanJobId) return
+    setScanError(failedScanJob.errorMessage)
+    setIsScanning(false)
+    trackedScanJobsRef.current.delete(failedScanJob.jobId)
+    setActiveScanJobId(null)
+  }, [failedScanJob, activeScanJobId])
+  useEffect(() => {
+    if (!activeScanJobId) return
+    if (activeScanJobIds.includes(activeScanJobId)) {
+      trackedScanJobsRef.current.add(activeScanJobId)
+      return
+    }
+    if (scanDraft?.jobId === activeScanJobId || !trackedScanJobsRef.current.has(activeScanJobId)) return
+    trackedScanJobsRef.current.delete(activeScanJobId)
+    setIsScanning(false)
+    setActiveScanJobId(null)
+  }, [activeScanJobId, activeScanJobIds, scanDraft])
   if (!accounts.length) return <div><p className="text-sm text-muted-foreground">Add an investment account before recording cash.</p><div className="mt-4"><Button onClick={onNeedAccount}>Add account</Button></div></div>
   const heldCash = availableCash(portfolio, accountId, currency) + (pendingCashFlows ?? [])
     .filter(flow => flow.accountId === accountId && flow.currency.toUpperCase() === currency.toUpperCase() && flow.id !== initial?.id)
@@ -1582,9 +1666,31 @@ const CashForm = ({ portfolio, initial, pendingCashFlows, busy, onCancel, onSave
       date, 
       toCurrency: type === 'Conversion' ? toCurrency.toUpperCase() : undefined,
       toAmount: type === 'Conversion' ? Number(toAmount || 0) : undefined,
+    }).then(saved => {
+      if (saved) clearScan()
     })
   }
   return <form noValidate onSubmit={submit} className="space-y-4">
+    {!initial && <>
+      <ReceiptScanPicker
+        isScanning={isScanning}
+        showScanPicker={showScanPicker}
+        setShowScanPicker={setShowScanPicker}
+        scanFileInputRef={scanFileInputRef}
+        scanGalleryInputRef={scanGalleryInputRef}
+        handleScanReceipt={handleScan}
+        setScanError={setScanError}
+        label="Scan cash movement"
+        scanningLabel="Scanning cash movement..."
+      />
+      <ReceiptScanStatus
+        showScanBanner={showScanBanner}
+        setShowScanBanner={setShowScanBanner}
+        scanError={scanError}
+        setScanError={setScanError}
+        successMessage="Cash movement scanned — review fields below and edit as needed"
+      />
+    </>}
     <div className={formGridClass}>
       <Field label="Account" plain><CustomSelect value={accountId} onChange={v => { const id = v as string; setAccountId(id); const next = accounts.find(value => value.id === id); if (next) { setCurrency(next.baseCurrency); if (!initial) setToCurrency(next.baseCurrency) } }} options={accounts.map(a => ({ value: a.id, label: a.name }))} ariaLabel="Account" className="w-full" /></Field>
       <Field label="Type" plain><CustomSelect value={type} onChange={v => setType(v as 'Deposit' | 'Withdrawal' | 'Conversion')} options={[{ value: 'Deposit', label: 'Deposit (cash in)' }, { value: 'Withdrawal', label: 'Withdrawal (cash out)' }, { value: 'Conversion', label: 'Convert currency' }]} ariaLabel="Cash movement type" className="w-full" /></Field>
@@ -1604,7 +1710,7 @@ const CashForm = ({ portfolio, initial, pendingCashFlows, busy, onCancel, onSave
       <Field label="Date" plain><DatePicker value={date} onChange={setDate} max={today()} className="w-full" /></Field>
     </div>
     <p className="text-[10px] text-muted-foreground">For money moved in or out of the broker account itself, and for converting between currencies before a trade or after a sale. Buys, sells, dividends, and fees adjust cash on their own.</p>
-    <FormActions busy={busy} onCancel={onCancel} submitLabel={initial ? 'Save changes' : type === 'Conversion' ? 'Record conversion' : type === 'Withdrawal' ? 'Record withdrawal' : 'Record deposit'} disabled={!accountId} />
+    <FormActions busy={busy} onCancel={() => { clearScan(); onCancel() }} submitLabel={initial ? 'Save changes' : type === 'Conversion' ? 'Record conversion' : type === 'Withdrawal' ? 'Record withdrawal' : 'Record deposit'} disabled={!accountId} />
   </form>
 }
 
