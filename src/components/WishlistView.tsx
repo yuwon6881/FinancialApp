@@ -358,7 +358,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleOpenAddModal}
-              className="w-9 h-9 flex items-center justify-center rounded-lg text-white bg-blue-600 hover:bg-blue-500 hover:shadow-lg hover:shadow-blue-500/10 transition cursor-pointer shrink-0"
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-white bg-blue-600 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/10 transition cursor-pointer shrink-0"
               title="Add Goal"
             >
               <Plus className="size-3.5" />
@@ -565,7 +565,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                         <button
                           onClick={() => handleToggleActive(item)}
                           disabled={isBusy}
-                          className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-500 text-white text-[10px] font-bold active:bg-blue-600 transition disabled:opacity-40 disabled:pointer-events-none"
+                          className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-500 text-primary-foreground text-[10px] font-bold active:bg-blue-400 transition disabled:opacity-40 disabled:pointer-events-none"
                         >
                           <Target className="size-3.5" />
                           Focus

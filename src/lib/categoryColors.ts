@@ -1,6 +1,6 @@
 const CATEGORY_BADGE_FALLBACK = 'bg-slate-500/10 text-slate-500 border-slate-500/20'
 const CATEGORY_DOT_FALLBACK = 'bg-slate-500'
-const CATEGORY_CHART_FALLBACK = 'var(--color-slate-500, #5d6978)'
+const CATEGORY_CHART_FALLBACK = 'var(--color-slate-500)'
 const CATEGORY_FILTER_FALLBACK = 'bg-background/50 border-border hover:bg-muted text-muted-foreground'
 
 function normalizeCategoryName(category: string): string {
@@ -30,23 +30,23 @@ const categoryBadgeClassMap: Record<string, string> = {
 }
 
 const categoryChartColorMap: Record<string, string> = {
-  Salary: 'var(--color-blue-500, #0072b2)',
-  Income: 'var(--color-blue-500, #0072b2)',
-  Transfer: 'var(--color-blue-500, #0072b2)',
-  Essentials: 'var(--color-sky-500, #56b4e9)',
-  Social: 'var(--color-pink-500, #cc79a7)',
-  Food: 'var(--color-amber-500, #e69f00)',
-  Hobbies: 'var(--color-teal-500, #009e73)',
-  Software: 'var(--color-indigo-500, #6366f1)',
-  Growth: 'var(--color-violet-500, #7e6dc9)',
-  Investment: 'var(--color-violet-500, #7e6dc9)',
-  Stability: 'var(--color-emerald-500, #009e73)',
-  Entertainment: 'var(--color-orange-500, #d55e00)',
-  Rewards: 'var(--color-pink-500, #cc79a7)',
+  Salary: 'var(--color-blue-500)',
+  Income: 'var(--color-blue-500)',
+  Transfer: 'var(--color-blue-500)',
+  Essentials: 'var(--color-sky-500)',
+  Social: 'var(--color-pink-500)',
+  Food: 'var(--color-amber-500)',
+  Hobbies: 'var(--color-teal-500)',
+  Software: 'var(--color-indigo-500)',
+  Growth: 'var(--color-violet-500)',
+  Investment: 'var(--color-violet-500)',
+  Stability: 'var(--color-emerald-500)',
+  Entertainment: 'var(--color-orange-500)',
+  Rewards: 'var(--color-pink-500)',
   // Sky, not purple: purple-500 resolves to the same hex as Investment's violet, which made
   // the two indistinguishable in the outflow doughnut. Sky is unused by other spend categories.
-  Transport: 'var(--color-sky-500, #56b4e9)',
-  Adjustment: 'var(--color-amber-500, #e69f00)',
+  Transport: 'var(--color-sky-500)',
+  Adjustment: 'var(--color-amber-500)',
   Discarded: CATEGORY_CHART_FALLBACK,
   Other: CATEGORY_CHART_FALLBACK,
 }
@@ -58,13 +58,17 @@ const categoryChartColorMap: Record<string, string> = {
 // and chart ranges. Validated (light + dark) with the dataviz palette checker: all pass the
 // lightness band, chroma floor, and CVD separation; sub-3:1 contrast is relieved by the chart's
 // always-present legend labels and the 2px card-stroke gaps between slices.
+// Each slot is a theme token (`--chart-custom-N` in index.css) rather than a literal,
+// so the ramp is re-tuned per theme — the light-mode values are too dark to separate
+// from the dark theme's near-black surface. The hue order is identical across themes,
+// so a category keeps a recognisably similar colour when the theme is toggled.
 const CHART_CUSTOM_PALETTE: string[] = [
-  '#d1495b', // red
-  '#66a61e', // olive-green
-  '#b5179e', // magenta
-  '#2f8f6f', // deep teal
-  '#b5651d', // ochre
-  '#984ea3', // plum
+  'var(--chart-custom-1)', // red
+  'var(--chart-custom-2)', // olive-green
+  'var(--chart-custom-3)', // magenta
+  'var(--chart-custom-4)', // deep teal
+  'var(--chart-custom-5)', // ochre
+  'var(--chart-custom-6)', // plum
 ]
 
 // Small deterministic string hash (djb2) so the same category name always maps to the same slot.

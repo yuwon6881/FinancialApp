@@ -331,7 +331,7 @@ function App() {
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', prefs.darkMode)
-    const surface = prefs.darkMode ? '#0a0d14' : '#f6f8fc'
+    const surface = prefs.darkMode ? '#0b0e14' : '#f6f8fc'
     const meta = document.querySelector('meta[name="theme-color"]')
     if (meta) meta.setAttribute('content', surface)
     // Paint the root + body surface to match the active theme. In a standalone

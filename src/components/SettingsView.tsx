@@ -300,7 +300,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             <div className="flex justify-end pt-3">
               <button
                 type="submit"
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-xl shadow-lg shadow-blue-500/10 hover:shadow-blue-500/20 transition cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-500/10 hover:shadow-blue-500/20 transition cursor-pointer"
               >
                 <Save className="size-3.5" /> Save Rules
               </button>
@@ -456,7 +456,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition cursor-pointer ${
                     view.isReviewingCleanup
                       ? 'border-blue-500/35 bg-blue-500/5 text-blue-600 dark:text-blue-400'
-                      : 'text-blue-600 dark:text-blue-400 bg-blue-500/5 border-blue-500/30 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed'
+                      : 'text-blue-600 dark:text-blue-400 bg-blue-500/5 border-blue-500/30 hover:bg-blue-700/10 disabled:opacity-45 disabled:cursor-not-allowed'
                   }`}
                 >
                   {view.isReviewingCleanup ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
@@ -586,7 +586,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                                   onClick={() => void view.handleApplyCleanupSuggestion(suggestion)}
                                   disabled={!props.onApplyCategoryCleanupSuggestion || view.applyingCleanupId !== null || isConsolidateDisabled}
                                   title={!props.onApplyCategoryCleanupSuggestion ? 'Category cleanup is unavailable' : isConsolidateDisabled ? 'Choose a category first' : 'Accept'}
-                                  className="inline-flex h-8 w-20 shrink-0 items-center justify-center rounded-lg border border-blue-500/30 bg-blue-500/5 px-3 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="inline-flex h-8 w-20 shrink-0 items-center justify-center rounded-lg border border-blue-500/30 bg-blue-500/5 px-3 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-700/10 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   {isApplyingThis ? <Loader2 className="size-3 animate-spin" /> : 'Accept'}
                                 </button>
@@ -612,7 +612,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                     type="button"
                     disabled={!view.isCatValid}
                     onClick={view.handleAddCategory}
-                    className="w-9 h-9 flex items-center justify-center rounded-lg text-white bg-blue-600 hover:bg-blue-500 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none hover:shadow-lg hover:shadow-blue-500/10 transition cursor-pointer shrink-0"
+                    className="w-9 h-9 flex items-center justify-center rounded-lg text-white bg-blue-600 hover:bg-blue-700 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none hover:shadow-lg hover:shadow-blue-500/10 transition cursor-pointer shrink-0"
                   >
                     <Plus className="size-3.5" />
                   </button>

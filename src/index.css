@@ -47,50 +47,101 @@
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-chart-line: var(--chart-line);
+    /* Tailwind's stock palette is remapped onto the app's semantic ledger ramps so
+       that a utility like `text-emerald-500` is a *theme* reference, not a literal
+       colour. Every step a component actually uses must be listed here — an
+       unmapped step (e.g. `-300`) silently falls back to stock Tailwind and breaks
+       out of the theme. */
+    --color-blue-300: var(--ledger-blue-300);
     --color-blue-400: var(--ledger-blue-400);
     --color-blue-500: var(--ledger-blue-500);
     --color-blue-600: var(--ledger-blue-600);
     --color-blue-700: var(--ledger-blue-700);
+    --color-blue-800: var(--ledger-blue-800);
+    --color-indigo-300: var(--ledger-blue-300);
     --color-indigo-400: var(--ledger-blue-400);
     --color-indigo-500: var(--ledger-blue-500);
     --color-indigo-600: var(--ledger-blue-600);
+    --color-indigo-700: var(--ledger-blue-700);
+    --color-sky-300: var(--ledger-sky-300);
     --color-sky-400: var(--ledger-sky-400);
     --color-sky-500: var(--ledger-sky-500);
+    --color-sky-600: var(--ledger-sky-600);
+    --color-cyan-300: var(--ledger-sky-300);
+    --color-cyan-400: var(--ledger-sky-400);
+    --color-cyan-500: var(--ledger-sky-500);
+    --color-cyan-600: var(--ledger-sky-600);
+    --color-green-300: var(--ledger-income-300);
     --color-green-400: var(--ledger-income-400);
     --color-green-500: var(--ledger-income-500);
     --color-green-600: var(--ledger-income-600);
+    --color-green-700: var(--ledger-income-700);
+    --color-emerald-300: var(--ledger-income-300);
     --color-emerald-400: var(--ledger-income-400);
     --color-emerald-500: var(--ledger-income-500);
     --color-emerald-600: var(--ledger-income-600);
+    --color-emerald-700: var(--ledger-income-700);
+    --color-teal-300: var(--ledger-income-300);
     --color-teal-400: var(--ledger-income-400);
     --color-teal-500: var(--ledger-income-500);
     --color-teal-600: var(--ledger-income-600);
+    --color-teal-700: var(--ledger-income-700);
+    --color-lime-400: var(--ledger-income-400);
+    --color-lime-500: var(--ledger-income-500);
+    --color-orange-300: var(--ledger-expense-300);
     --color-orange-400: var(--ledger-expense-400);
     --color-orange-500: var(--ledger-expense-500);
     --color-orange-600: var(--ledger-expense-600);
     --color-orange-700: var(--ledger-expense-700);
+    --color-red-300: var(--ledger-expense-300);
     --color-red-400: var(--ledger-expense-400);
     --color-red-500: var(--ledger-expense-500);
     --color-red-600: var(--ledger-expense-600);
     --color-red-700: var(--ledger-expense-700);
+    --color-rose-400: var(--ledger-expense-400);
+    --color-rose-500: var(--ledger-expense-500);
+    --color-rose-600: var(--ledger-expense-600);
+    --color-amber-300: var(--ledger-pending-300);
     --color-amber-400: var(--ledger-pending-400);
     --color-amber-500: var(--ledger-pending-500);
     --color-amber-600: var(--ledger-pending-600);
+    --color-amber-700: var(--ledger-pending-700);
+    --color-yellow-300: var(--ledger-pending-300);
     --color-yellow-400: var(--ledger-pending-400);
     --color-yellow-500: var(--ledger-pending-500);
     --color-yellow-600: var(--ledger-pending-600);
+    --color-yellow-700: var(--ledger-pending-700);
+    --color-violet-300: var(--ledger-transfer-300);
     --color-violet-400: var(--ledger-transfer-400);
     --color-violet-500: var(--ledger-transfer-500);
     --color-violet-600: var(--ledger-transfer-600);
+    --color-purple-300: var(--ledger-purple-300);
     --color-purple-400: var(--ledger-purple-400);
     --color-purple-500: var(--ledger-purple-500);
     --color-purple-600: var(--ledger-purple-600);
+    --color-fuchsia-400: var(--ledger-purple-400);
+    --color-fuchsia-500: var(--ledger-purple-500);
+    --color-pink-300: var(--ledger-wishlist-300);
     --color-pink-400: var(--ledger-wishlist-400);
     --color-pink-500: var(--ledger-wishlist-500);
     --color-pink-600: var(--ledger-wishlist-600);
+    --color-slate-300: var(--ledger-neutral-300);
     --color-slate-400: var(--ledger-neutral-400);
     --color-slate-500: var(--ledger-neutral-500);
     --color-slate-600: var(--ledger-neutral-600);
+    --color-slate-700: var(--ledger-neutral-700);
+    --color-slate-800: var(--ledger-neutral-800);
+    --color-slate-900: var(--ledger-neutral-900);
+    --color-gray-400: var(--ledger-neutral-400);
+    --color-gray-500: var(--ledger-neutral-500);
+    --color-gray-600: var(--ledger-neutral-600);
+    --color-gray-900: var(--ledger-neutral-900);
+    --color-zinc-400: var(--ledger-neutral-400);
+    --color-zinc-500: var(--ledger-neutral-500);
+    --color-zinc-900: var(--ledger-neutral-900);
+    --color-neutral-400: var(--ledger-neutral-400);
+    --color-neutral-500: var(--ledger-neutral-500);
+    --color-neutral-900: var(--ledger-neutral-900);
 }
 
 :root {
@@ -140,117 +191,216 @@
     --sidebar-border: #e5e9f2;
     --sidebar-ring: #4f46e5;
     /* Indigo family — brand / primary / credits-as-actions */
-    /* Light-mode accent text is deliberately at least WCAG AA against white. */
+    /* Light-mode accent text is deliberately at least WCAG AA against white.
+       The -300 steps exist only so `dark:text-*-300` variants have a light-mode
+       counterpart; they are intentionally the AA-safe dark tint, not a pale one. */
+    --ledger-blue-300: #4338ca;
     --ledger-blue-400: #4f46e5;
     --ledger-blue-500: #4f46e5;
     --ledger-blue-600: #4338ca;
     --ledger-blue-700: #3730a3;
+    --ledger-blue-800: #312e81;
+    --ledger-sky-300: #0369a1;
     --ledger-sky-400: #0369a1;
     --ledger-sky-500: #0369a1;
+    --ledger-sky-600: #075985;
     /* Emerald / mint — positive cash flow & credits */
+    --ledger-income-300: #047857;
     --ledger-income-400: #047857;
     --ledger-income-500: #047857;
     --ledger-income-600: #065f46;
+    --ledger-income-700: #064e3b;
     /* Coral / crimson — debits & expenses */
+    --ledger-expense-300: #e11d48;
     --ledger-expense-400: #e11d48;
     --ledger-expense-500: #e11d48;
     --ledger-expense-600: #be123c;
     --ledger-expense-700: #be123c;
+    --ledger-pending-300: #b45309;
     --ledger-pending-400: #b45309;
     --ledger-pending-500: #a16207;
     --ledger-pending-600: #92400e;
+    --ledger-pending-700: #78350f;
+    --ledger-transfer-300: #7c3aed;
     --ledger-transfer-400: #7c3aed;
     --ledger-transfer-500: #6d28d9;
     --ledger-transfer-600: #5b21b6;
+    --ledger-purple-300: #9333ea;
     --ledger-purple-400: #9333ea;
     --ledger-purple-500: #7e22ce;
     --ledger-purple-600: #6b21a8;
+    --ledger-wishlist-300: #db2777;
     --ledger-wishlist-400: #db2777;
     --ledger-wishlist-500: #be185d;
     --ledger-wishlist-600: #9d174d;
+    --ledger-neutral-300: #64748b;
     --ledger-neutral-400: #64748b;
     --ledger-neutral-500: #64748b;
     --ledger-neutral-600: #475569;
+    --ledger-neutral-700: #334155;
+    --ledger-neutral-800: #1e293b;
+    --ledger-neutral-900: #0f172a;
     --app-grid: rgba(67, 56, 202, 0.04);
     --app-surface-a: rgba(99, 102, 241, 0.22);
     --app-surface-b: rgba(16, 185, 129, 0.15);
     --app-surface-c: rgba(236, 72, 153, 0.12);
     --app-shadow: 0 24px 60px -12px rgba(15, 23, 42, 0.08), 0 12px 24px -8px rgba(15, 23, 42, 0.04);
+    /* Elevation ramp. Previously these were literal rgba(0,0,0,0.05)-ish values
+       inline on .app-panel / .glass-nav / the mobile nav, which vanished on a dark
+       surface — shadows must deepen, not lighten, when the background does. */
+    --app-shadow-soft: 0 8px 32px 0 rgba(15, 23, 42, 0.05);
+    --app-shadow-nav: 0 10px 30px rgba(15, 23, 42, 0.06);
+    --app-shadow-nav-up: 0 -12px 30px rgba(15, 23, 42, 0.08);
+    /* Inner top highlight on chips/pills — a white sheen reads as grime on light
+       surfaces and as a bevel on dark ones, so it is a token, not a literal. */
+    --app-inner-highlight: rgba(255, 255, 255, 0.12);
+    /* Deep-link "jump to transaction" cue; follows the focus/brand colour. */
+    --app-highlight: #6366f1;
+    /* Doughnut/pie slots for user-defined categories. Colourblind-aware and
+       distinct from each other in *both* themes; see lib/categoryColors.ts. */
+    --chart-custom-1: #d1495b;
+    --chart-custom-2: #66a61e;
+    --chart-custom-3: #b5179e;
+    --chart-custom-4: #2f8f6f;
+    --chart-custom-5: #b5651d;
+    --chart-custom-6: #984ea3;
 }
 
+/* ── Dark theme: Ayu Dark ───────────────────────────────────────────────────
+   Ported from the Ayu Dark editor palette (surface #0b0e14, ink #bfbdb6,
+   accent #e6b450). Two consequences worth knowing before editing values here:
+
+   1. The accent is *warm gold*, not blue. So `--primary` is gold and every
+      primary surface pairs with the near-black `--primary-foreground` — never
+      white. Anything that hard-codes `text-white` on a primary background will
+      fail contrast; use the token pair.
+   2. Ayu is a low-chroma, low-contrast-by-design palette. The ink (#bfbdb6) is
+      warm off-grey rather than white, and panels step up by only a few points of
+      luminance. Resist "fixing" that by brightening `--foreground` — the
+      per-family ramps below are where saturation is meant to live.
+
+   Semantic anchors taken verbatim from the source theme: diff-added #7fd962
+   (income), diff-removed #ea6c73 (expense), skill #cda1fa (transfer/AI). */
 .dark {
     color-scheme: dark;
-    /* Deep obsidian — rich, never pure black */
-    --background: #0a0d14;
-    --foreground: #eef1f7;
-    --card: #12161f;
-    --card-foreground: #eef1f7;
-    --popover: #12161f;
-    --popover-foreground: #eef1f7;
-    /* Primary = luminous electric indigo, pops on obsidian */
-    --primary: #818cf8;
-    --primary-foreground: #0a0d14;
-    --secondary: #1b212c;
-    --secondary-foreground: #eef1f7;
-    --muted: #1b212c;
-    --muted-foreground: #9aa6b8;
-    --accent: #1e1f45;
-    --accent-foreground: #dcdefe;
-    --destructive: #fb7185;
-    --destructive-foreground: #1a060c;
-    --border: #262e3b;
-    --input: #262e3b;
-    --ring: #818cf8;
-    --chart-line: #818cf8;
-    --chart-1: #818cf8;
-    --chart-2: #34d399;
-    --chart-3: #fbbf24;
-    --chart-4: #f472b6;
-    --chart-5: #fb7185;
-    --sidebar: #12161f;
-    --sidebar-foreground: #eef1f7;
-    --sidebar-primary: #818cf8;
-    --sidebar-primary-foreground: #0a0d14;
-    --sidebar-accent: #1b212c;
-    --sidebar-accent-foreground: #eef1f7;
-    --sidebar-border: #262e3b;
-    --sidebar-ring: #818cf8;
-    /* Indigo family */
-    --ledger-blue-400: #a5b4fc;
-    --ledger-blue-500: #818cf8;
-    --ledger-blue-600: #6366f1;
-    --ledger-blue-700: #4f46e5;
-    --ledger-sky-400: #7dd3fc;
-    --ledger-sky-500: #38bdf8;
-    /* Emerald / mint */
-    --ledger-income-400: #6ee7b7;
-    --ledger-income-500: #34d399;
-    --ledger-income-600: #10b981;
-    /* Coral / crimson */
-    --ledger-expense-400: #fda4af;
-    --ledger-expense-500: #fb7185;
-    --ledger-expense-600: #f43f5e;
-    --ledger-expense-700: #e11d48;
-    --ledger-pending-400: #fcd34d;
-    --ledger-pending-500: #fbbf24;
-    --ledger-pending-600: #f59e0b;
-    --ledger-transfer-400: #c4b5fd;
-    --ledger-transfer-500: #a78bfa;
-    --ledger-transfer-600: #8b5cf6;
-    --ledger-purple-400: #d8b4fe;
-    --ledger-purple-500: #c084fc;
-    --ledger-purple-600: #a855f7;
-    --ledger-wishlist-400: #f9a8d4;
-    --ledger-wishlist-500: #f472b6;
-    --ledger-wishlist-600: #ec4899;
-    --ledger-neutral-400: #9aa6b8;
-    --ledger-neutral-500: #7c8aa0;
-    --ledger-neutral-600: #64748b;
-    --app-grid: rgba(129, 140, 248, 0.09);
-    --app-surface-a: rgba(129, 140, 248, 0.14);
-    --app-surface-b: rgba(52, 211, 153, 0.08);
-    --app-surface-c: rgba(244, 114, 182, 0.07);
-    --app-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.55);
+    --background: #0b0e14;
+    --foreground: #bfbdb6;
+    --card: #0f131a;
+    --card-foreground: #bfbdb6;
+    --popover: #0f131a;
+    --popover-foreground: #bfbdb6;
+    /* Primary = Ayu's gold accent. Foreground is the surface, not white. */
+    --primary: #e6b450;
+    --primary-foreground: #0b0e14;
+    --secondary: #151a23;
+    --secondary-foreground: #bfbdb6;
+    --muted: #151a23;
+    /* Ayu's own comment grey (#565b66) is below AA against #0b0e14; this is the
+       lightest tint that still reads as "secondary" while clearing 4.5:1. */
+    --muted-foreground: #8a9199;
+    --accent: #1b2130;
+    --accent-foreground: #e6b450;
+    --destructive: #ea6c73;
+    --destructive-foreground: #0b0e14;
+    /* Lifted above Ayu's own UI line (~#1b1f27). Ayu is an editor theme, where a
+       panel edge is incidental; here the border is the *only* thing separating a
+       card from the page (card:background is 1.04:1 by design), so it has to be
+       readable as structure. */
+    --border: #242c3a;
+    --input: #242c3a;
+    --ring: #e6b450;
+    --chart-line: #e6b450;
+    --chart-1: #e6b450;
+    --chart-2: #7fd962;
+    --chart-3: #39bae6;
+    --chart-4: #cda1fa;
+    --chart-5: #ea6c73;
+    --sidebar: #0f131a;
+    --sidebar-foreground: #bfbdb6;
+    --sidebar-primary: #e6b450;
+    --sidebar-primary-foreground: #0b0e14;
+    --sidebar-accent: #151a23;
+    --sidebar-accent-foreground: #bfbdb6;
+    --sidebar-border: #242c3a;
+    --sidebar-ring: #e6b450;
+    /* Blue family — Ayu's tag/entity blue. The 600–800 steps are deliberately
+       *darker* than the 500 because they back solid `text-white` CTA buttons; a
+       bright #39bae6 fill would leave white text at ~1.9:1. */
+    --ledger-blue-300: #a3e3ff;
+    --ledger-blue-400: #73d0ff;
+    --ledger-blue-500: #39bae6;
+    --ledger-blue-600: #1f7d9e;
+    --ledger-blue-700: #186580;
+    --ledger-blue-800: #114f65;
+    /* Cyan/teal-leaning accent (Ayu regexp + Mirage cyan) */
+    --ledger-sky-300: #b6f0dd;
+    --ledger-sky-400: #95e6cb;
+    --ledger-sky-500: #5ccfe6;
+    --ledger-sky-600: #2b9cb8;
+    /* Green — Ayu diffAdded / string. Positive cash flow. */
+    --ledger-income-300: #cbeda7;
+    --ledger-income-400: #a8e07d;
+    --ledger-income-500: #7fd962;
+    --ledger-income-600: #3d8129; /* darker than the 500 on purpose: this step is a solid fill under `text-white` (TwoFactorSection CTA), where Ayu's bright green leaves white at 3.3:1 */
+    --ledger-income-700: #3d7d2b;
+    /* Red — Ayu diffRemoved. Debits, expenses, destructive. */
+    --ledger-expense-300: #f7b8bc;
+    --ledger-expense-400: #f2949a;
+    --ledger-expense-500: #ea6c73;
+    --ledger-expense-600: #c94a51;
+    --ledger-expense-700: #a83c42;
+    /* Gold — Ayu accent / func. Pending, warnings, "needs attention". */
+    --ledger-pending-300: #ffe2a3;
+    --ledger-pending-400: #ffcb6b;
+    --ledger-pending-500: #e6b450;
+    --ledger-pending-600: #a87f2c;
+    --ledger-pending-700: #8a6721;
+    /* Violet — Ayu's `skill` colour. Transfers and AI surfaces. */
+    --ledger-transfer-300: #e6d4ff;
+    --ledger-transfer-400: #ddc0ff;
+    --ledger-transfer-500: #cda1fa;
+    --ledger-transfer-600: #9a6ed0;
+    /* Purple — Ayu constant/number. Investments. */
+    --ledger-purple-300: #ecdcff;
+    --ledger-purple-400: #e3ccff;
+    --ledger-purple-500: #d2a6ff;
+    --ledger-purple-600: #9f72d8;
+    /* Rose — no Ayu source colour; derived from `skill` rotated toward red so it
+       stays inside the palette's chroma band. Wishlist. */
+    --ledger-wishlist-300: #f9c4d9;
+    --ledger-wishlist-400: #f5a8c8;
+    --ledger-wishlist-500: #e885ae;
+    --ledger-wishlist-600: #bf5f86;
+    /* Neutral — Ayu UI greys, ending on the panel colour so `dark:bg-slate-900`
+       popovers land on the card surface instead of a foreign navy. */
+    --ledger-neutral-300: #a6acb5;
+    --ledger-neutral-400: #8a9199;
+    --ledger-neutral-500: #868d97; /* above Ayu's grey ramp: `text-slate-500` is used bare, with no dark: override, incl. on a slate-500/10 chip -- the authentic #737a85 lands at 3.9:1 there */
+    --ledger-neutral-600: #565b66;
+    --ledger-neutral-700: #3b414d;
+    --ledger-neutral-800: #151a23;
+    --ledger-neutral-900: #0f131a;
+    /* Ambient wash: gold-led, far dimmer than the indigo original — Ayu's surface
+       is meant to read as flat obsidian with a warm bloom, not a gradient. */
+    --app-grid: rgba(230, 180, 80, 0.06);
+    --app-surface-a: rgba(230, 180, 80, 0.10);
+    --app-surface-b: rgba(127, 217, 98, 0.055);
+    --app-surface-c: rgba(205, 161, 250, 0.06);
+    --app-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.7);
+    --app-shadow-soft: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+    --app-shadow-nav: 0 10px 30px rgba(0, 0, 0, 0.5);
+    --app-shadow-nav-up: 0 -12px 30px rgba(0, 0, 0, 0.5);
+    --app-inner-highlight: rgba(191, 189, 182, 0.1);
+    --app-highlight: #e6b450;
+    /* Re-tuned for the Ayu surface: the light-mode slots are too dark to separate
+       from #0b0e14, so each is lifted into the palette's mid-luminance band while
+       keeping the same hue order (and therefore the same category→colour mapping). */
+    --chart-custom-1: #ef7f8b;
+    --chart-custom-2: #9dcf5f;
+    --chart-custom-3: #e58ac9;
+    --chart-custom-4: #5fc7a4;
+    --chart-custom-5: #dda05c;
+    --chart-custom-6: #b394e6;
 }
 
 .app-shell {
@@ -279,11 +429,11 @@
     background:
         linear-gradient(180deg, color-mix(in srgb, var(--background) 92%, transparent), color-mix(in srgb, var(--background) 78%, transparent)),
         linear-gradient(90deg, var(--app-surface-a), var(--app-surface-c));
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--app-shadow-nav);
 }
 
 .app-panel {
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+    box-shadow: var(--app-shadow-soft);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     background-clip: padding-box;
@@ -325,7 +475,7 @@
 .status-chip {
     border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
     background: color-mix(in srgb, var(--card) 82%, transparent);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 1px 0 var(--app-inner-highlight);
 }
 
 
@@ -780,26 +930,26 @@ button {
    need their cell borders animated; mobile rows carry the uniform border glow on the card container. */
 @keyframes ledger-highlight-mobile-shell {
     0% {
-        border-color: rgba(99, 102, 241, 0.95) !important;
-        box-shadow: 0 0 18px rgba(99, 102, 241, 0.4);
-        outline: 2.5px solid rgba(99, 102, 241, 0.95);
+        border-color: color-mix(in srgb, var(--app-highlight) 95%, transparent) !important;
+        box-shadow: 0 0 18px color-mix(in srgb, var(--app-highlight) 40%, transparent);
+        outline: 2.5px solid color-mix(in srgb, var(--app-highlight) 95%, transparent);
         outline-offset: -2.5px;
     }
     30% {
-        border-color: rgba(99, 102, 241, 0.7) !important;
-        box-shadow: 0 0 12px rgba(99, 102, 241, 0.25);
-        outline: 2.5px solid rgba(99, 102, 241, 0.7);
+        border-color: color-mix(in srgb, var(--app-highlight) 70%, transparent) !important;
+        box-shadow: 0 0 12px color-mix(in srgb, var(--app-highlight) 25%, transparent);
+        outline: 2.5px solid color-mix(in srgb, var(--app-highlight) 70%, transparent);
         outline-offset: -2.5px;
     }
     70% {
-        border-color: rgba(99, 102, 241, 0.3) !important;
-        box-shadow: 0 0 6px rgba(99, 102, 241, 0.1);
-        outline: 1.5px solid rgba(99, 102, 241, 0.3);
+        border-color: color-mix(in srgb, var(--app-highlight) 30%, transparent) !important;
+        box-shadow: 0 0 6px color-mix(in srgb, var(--app-highlight) 10%, transparent);
+        outline: 1.5px solid color-mix(in srgb, var(--app-highlight) 30%, transparent);
         outline-offset: -1.5px;
     }
     100% {
         border-color: var(--border);
-        box-shadow: 0 1px 2px rgb(0 0 0 / 0.03);
+        box-shadow: var(--app-shadow-soft);
         outline: 0 solid transparent;
         outline-offset: 0;
     }
@@ -807,13 +957,13 @@ button {
 
 @keyframes ledger-highlight-border {
     0% {
-        border-color: rgba(99, 102, 241, 0.9);
+        border-color: color-mix(in srgb, var(--app-highlight) 90%, transparent);
     }
     30% {
-        border-color: rgba(99, 102, 241, 0.65);
+        border-color: color-mix(in srgb, var(--app-highlight) 65%, transparent);
     }
     70% {
-        border-color: rgba(99, 102, 241, 0.25);
+        border-color: color-mix(in srgb, var(--app-highlight) 25%, transparent);
     }
     100% {
         border-color: transparent;
@@ -837,19 +987,19 @@ tr.ledger-transaction-highlight {
 
 tr.ledger-transaction-highlight > td {
     animation: ledger-highlight-border 3.6s cubic-bezier(0.16, 1, 0.3, 1) both;
-    border-top: 1.5px solid rgba(99, 102, 241, 0.9);
-    border-bottom: 1.5px solid rgba(99, 102, 241, 0.9);
+    border-top: 1.5px solid color-mix(in srgb, var(--app-highlight) 90%, transparent);
+    border-bottom: 1.5px solid color-mix(in srgb, var(--app-highlight) 90%, transparent);
     background-color: transparent !important;
 }
 
 tr.ledger-transaction-highlight > td:first-child {
-    border-left: 1.5px solid rgba(99, 102, 241, 0.9);
+    border-left: 1.5px solid color-mix(in srgb, var(--app-highlight) 90%, transparent);
     border-top-left-radius: 0.75rem !important;
     border-bottom-left-radius: 0.75rem !important;
 }
 
 tr.ledger-transaction-highlight > td:last-child {
-    border-right: 1.5px solid rgba(99, 102, 241, 0.9);
+    border-right: 1.5px solid color-mix(in srgb, var(--app-highlight) 90%, transparent);
     border-top-right-radius: 0.75rem !important;
     border-bottom-right-radius: 0.75rem !important;
 }
@@ -857,8 +1007,8 @@ tr.ledger-transaction-highlight > td:last-child {
 @media (prefers-reduced-motion: reduce) {
     .ledger-transaction-highlight:not(tr) {
         animation: none;
-        border-color: rgb(59 130 246 / 0.55);
-        box-shadow: 0 6px 18px rgb(59 130 246 / 0.12);
+        border-color: color-mix(in srgb, var(--app-highlight) 55%, transparent);
+        box-shadow: 0 6px 18px color-mix(in srgb, var(--app-highlight) 12%, transparent);
     }
 
     .ledger-transaction-highlight:not(tr) > [data-swipe-content] {
@@ -867,7 +1017,7 @@ tr.ledger-transaction-highlight > td:last-child {
 
     tr.ledger-transaction-highlight > td {
         animation: none;
-        border-color: rgba(99, 102, 241, 0.6);
+        border-color: color-mix(in srgb, var(--app-highlight) 60%, transparent);
         background-color: transparent !important;
     }
 }

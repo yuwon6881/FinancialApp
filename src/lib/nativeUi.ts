@@ -1,8 +1,11 @@
 import { Capacitor } from '@capacitor/core'
 
 // Colors mirror the theme-color meta toggle in App.tsx, keeping native chrome
-// in sync with the web PWA's light/dark surface color.
-const DARK_BG = '#0a0d14'
+// in sync with the web PWA's light/dark surface color. These have to be literals
+// -- the StatusBar plugin takes a hex string and cannot read a CSS variable -- so
+// they are the one place `--background` is duplicated: keep them in step with the
+// `:root` / `.dark` surfaces in index.css (and the launch color in index.html).
+const DARK_BG = '#0b0e14'
 const LIGHT_BG = '#f6f8fc'
 
 // One-time native chrome setup. No-ops on web so the plugins never touch the

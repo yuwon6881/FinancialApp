@@ -71,7 +71,7 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
           {polyline ? (
             <>
               <svg ref={svgRef} role="img" aria-label={chartSummary} className="w-full h-[120px] overflow-visible" viewBox="0 0 500 120" preserveAspectRatio="none">
-                <defs><linearGradient id="growthGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" /><stop offset="100%" stopColor="#3b82f6" stopOpacity="0" /></linearGradient></defs>
+                <defs><linearGradient id="growthGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--chart-line)" stopOpacity="0.25" /><stop offset="100%" stopColor="var(--chart-line)" stopOpacity="0" /></linearGradient></defs>
                 {/* d/points are set as static attributes and only opacity is
                     animated. Animating the path data numerically makes framer-motion
                     interpolate between path strings; when the point count changes
@@ -92,7 +92,7 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
                   key={`line-${range}`}
                   points={polyline}
                   fill="none"
-                  stroke="var(--color-chart-line, #4f46e5)"
+                  stroke="var(--chart-line)"
                   strokeWidth="2.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"

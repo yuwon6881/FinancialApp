@@ -135,7 +135,7 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
           </button>
           <button
             type="submit"
-            className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/10 transition text-xs font-semibold cursor-pointer"
+            className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/10 transition text-xs font-semibold cursor-pointer"
           >
             {form.state.mode === 'edit' ? 'Save Changes' : 'Add Transaction'}
           </button>

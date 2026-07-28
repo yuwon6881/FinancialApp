@@ -99,7 +99,7 @@ export default defineConfig(({ mode }) => {
         // requiring an initial swipe to reveal them from fullscreen mode.
         display: 'standalone',
         // Android uses this fixed value behind its generated install splash.
-        background_color: '#0a0d14',
+        background_color: '#0b0e14',
         // The document updates this pre-paint for the user's saved app theme.
         theme_color: '#f6f8fc',
         orientation: 'portrait-primary',

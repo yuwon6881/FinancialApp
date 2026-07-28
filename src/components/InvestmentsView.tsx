@@ -770,8 +770,8 @@ const ValueChart = ({ portfolio, masked, range, isFetching, onRangeChange }: { p
             <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="h-48 w-full overflow-visible sm:h-60" role="img" aria-label={summary}>
             <defs>
               <linearGradient id="investmentValueGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.24" />
-                <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
+                <stop offset="0%" stopColor="var(--ledger-purple-500)" stopOpacity="0.24" />
+                <stop offset="100%" stopColor="var(--ledger-purple-500)" stopOpacity="0" />
               </linearGradient>
             </defs>
             <m.polygon
@@ -782,12 +782,12 @@ const ValueChart = ({ portfolio, masked, range, isFetching, onRangeChange }: { p
               animate={{ opacity: 1 }}
               transition={{ duration: 0.45 }}
             />
-            <m.polyline key={`investment-total-${range}`} points={line('totalValue')} fill="none" stroke="#8b5cf6" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" vectorEffect="nonScalingStroke" initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.45 }} />
-            <m.polyline key={`investment-deposits-${range}`} points={line('netDeposits')} fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="7 6" strokeLinecap="round" strokeLinejoin="round" vectorEffect="nonScalingStroke" initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.45, delay: 0.08 }} />
+            <m.polyline key={`investment-total-${range}`} points={line('totalValue')} fill="none" stroke="var(--ledger-purple-500)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" vectorEffect="nonScalingStroke" initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.45 }} />
+            <m.polyline key={`investment-deposits-${range}`} points={line('netDeposits')} fill="none" stroke="var(--ledger-pending-500)" strokeWidth="2" strokeDasharray="7 6" strokeLinecap="round" strokeLinejoin="round" vectorEffect="nonScalingStroke" initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.45, delay: 0.08 }} />
             {hoveredIndex !== null && portfolio.chart[hoveredIndex]?.totalValue !== undefined && (
               <>
                 <line x1={x(hoveredIndex)} x2={x(hoveredIndex)} y1="0" y2={height} stroke="var(--border)" strokeWidth="1" strokeDasharray="3 4" vectorEffect="nonScalingStroke" />
-                <circle cx={x(hoveredIndex)} cy={y(portfolio.chart[hoveredIndex].totalValue!)} r="5" fill="#8b5cf6" stroke="var(--card)" strokeWidth="3" vectorEffect="nonScalingStroke" />
+                <circle cx={x(hoveredIndex)} cy={y(portfolio.chart[hoveredIndex].totalValue!)} r="5" fill="var(--ledger-purple-500)" stroke="var(--card)" strokeWidth="3" vectorEffect="nonScalingStroke" />
               </>
             )}
           </svg>
@@ -841,8 +841,19 @@ const AllocationChart = ({ portfolio, masked, selected, onSelect }: { portfolio:
     return [...map].sort((a, b) => b[1] - a[1])
   }, [portfolio.holdings, portfolio.cashBalances, mode])
   const total = groups.reduce((sum, [, value]) => sum + value, 0)
-  // Keep adjacent slices visually distinct in both themes.
-  const colors = ['#7c3aed', '#06b6d4', '#f59e0b', '#e11d48', '#10b981', '#2563eb', '#c2410c', '#64748b']
+  // Keep adjacent slices visually distinct in both themes. These are theme tokens,
+  // not literals, so the ramp follows the active palette; the hue *order* is what
+  // guarantees neighbouring slices separate, so reorder with care.
+  const colors = [
+    'var(--ledger-purple-500)',
+    'var(--ledger-sky-500)',
+    'var(--ledger-pending-500)',
+    'var(--ledger-expense-500)',
+    'var(--ledger-income-500)',
+    'var(--ledger-blue-500)',
+    'var(--ledger-wishlist-500)',
+    'var(--ledger-neutral-500)',
+  ]
   const slices = groups.map(([name, value], index) => ({
     key: name,
     label: name,
@@ -892,7 +903,7 @@ const AllocationChart = ({ portfolio, masked, selected, onSelect }: { portfolio:
               ? slices.find(slice => slice.label.startsWith(`${selectedKey} ·`))?.key
               : selectedKey}
             onActivate={slice => selectSlice(slice.label)}
-            chartClassName="size-52 shadow-[0_12px_35px_rgba(76,29,149,0.12)] sm:size-48 lg:size-56"
+            chartClassName="size-52 shadow-[0_12px_35px_color-mix(in_srgb,var(--ledger-purple-500)_18%,transparent)] sm:size-48 lg:size-56"
             legendClassName="w-full min-w-0 flex-1 space-y-1 lg:flex-none"
           />
         ) : <p className="text-xs text-muted-foreground">Add prices to see allocation.</p>}

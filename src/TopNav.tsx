@@ -303,7 +303,7 @@ const TopNav: React.FC<TopNavProps> = ({
             <Menubar className="border-0 h-9 px-1 bg-transparent">
               <MenubarMenu>
                 <MenubarTrigger className="p-1 rounded-full cursor-pointer hover:bg-muted/50">
-                  <div className="size-7 rounded-full bg-linear-to-tr from-blue-500 to-sky-400 text-white font-extrabold flex items-center justify-center text-xs border border-blue-500/20">
+                  <div className="size-7 rounded-full bg-linear-to-tr from-blue-500 to-sky-400 text-primary-foreground font-extrabold flex items-center justify-center text-xs border border-blue-500/20">
                     {getInitials(username)}
                   </div>
                 </MenubarTrigger>
@@ -415,7 +415,7 @@ const TopNav: React.FC<TopNavProps> = ({
 
     {/* Mobile Navigation bar (Sticky Bottom Nav) */}
     <div
-      className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/88 backdrop-blur-xl select-none shadow-[0_-12px_30px_rgba(0,0,0,0.08)] transform-gpu"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/88 backdrop-blur-xl select-none shadow-[var(--app-shadow-nav-up)] transform-gpu"
       style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))', paddingTop: '10px', willChange: 'transform' }}
     >
       <nav aria-label="Primary" className="grid grid-cols-5 w-full max-w-md mx-auto justify-items-center">

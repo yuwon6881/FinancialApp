@@ -476,7 +476,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                   <button
                     onClick={() => handleStartEdit(draft)}
                     disabled={hideSensitive}
-                    className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-500 text-white text-[11px] font-bold active:bg-blue-600 transition disabled:opacity-50 disabled:pointer-events-none"
+                    className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-500 text-primary-foreground text-[11px] font-bold active:bg-blue-400 transition disabled:opacity-50 disabled:pointer-events-none"
                   >
                     <Edit2 className="size-4" />
                     Edit
@@ -484,7 +484,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                   <button
                     onClick={() => { if (!hideSensitive) onDeleteDraftTransaction(draft.id) }}
                     disabled={hideSensitive}
-                    className="flex-1 flex flex-col items-center justify-center gap-1 bg-red-500 text-white text-[11px] font-bold active:bg-red-600 transition disabled:opacity-50 disabled:pointer-events-none"
+                    className="flex-1 flex flex-col items-center justify-center gap-1 bg-red-500 text-destructive-foreground text-[11px] font-bold active:bg-red-400 transition disabled:opacity-50 disabled:pointer-events-none"
                   >
                     <Trash2 className="size-4" />
                     Delete

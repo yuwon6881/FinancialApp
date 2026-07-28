@@ -163,7 +163,7 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
                   type="button"
                   disabled={disabled || isSyncing}
                   onClick={handleSave}
-                  className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white flex items-center gap-1 transition cursor-pointer shadow-xs disabled:opacity-50"
+                  className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-blue-600 hover:bg-blue-700 active:bg-blue-700 text-white flex items-center gap-1 transition cursor-pointer shadow-xs disabled:opacity-50"
                 >
                   {isSyncing ? (
                     <Loader2 className="size-3 animate-spin" />

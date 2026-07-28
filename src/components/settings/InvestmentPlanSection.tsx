@@ -42,7 +42,7 @@ function ClassificationRow({
       onDragEnd={onReorderFinished}
       layout="position"
       transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 38 }}
-      whileDrag={reduceMotion ? undefined : { scale: 1.015, boxShadow: '0 14px 30px rgb(0 0 0 / 0.16)' }}
+      whileDrag={reduceMotion ? undefined : { scale: 1.015, boxShadow: 'var(--app-shadow)' }}
       className="grid touch-pan-y gap-2 rounded-xl border border-border/50 bg-muted/20 p-3 sm:grid-cols-[auto_minmax(0,1fr)_190px] sm:items-center"
     >
       <button
