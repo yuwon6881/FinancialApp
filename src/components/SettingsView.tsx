@@ -316,16 +316,16 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             </div>
             <div className="grid grid-cols-1 gap-y-3">
               <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
-                <div className="flex items-center gap-2">
-                  {darkMode ? <Moon className="size-4 text-muted-foreground" /> : <Sun className="size-4 text-muted-foreground" />}
-                  <span className="font-medium text-foreground">Dark Mode</span>
+                <div className="flex flex-1 min-w-0 pr-4 items-center gap-2">
+                  {darkMode ? <Moon className="size-4 text-muted-foreground shrink-0" /> : <Sun className="size-4 text-muted-foreground shrink-0" />}
+                  <span className="font-medium text-foreground truncate">Dark Mode</span>
                 </div>
                 <ToggleButton active={darkMode} onClick={props.onToggleDarkMode || (() => {})} label="Dark mode" />
               </div>
               <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
-                <div className="flex items-center gap-2">
-                  {hideSensitive ? <EyeOff className="size-4 text-muted-foreground" /> : <Eye className="size-4 text-muted-foreground" />}
-                  <span className="font-medium text-foreground">Sensitive Mode (Masked)</span>
+                <div className="flex flex-1 min-w-0 pr-4 items-center gap-2">
+                  {hideSensitive ? <EyeOff className="size-4 text-muted-foreground shrink-0" /> : <Eye className="size-4 text-muted-foreground shrink-0" />}
+                  <span className="font-medium text-foreground truncate">Sensitive Mode (Masked)</span>
                 </div>
                 <ToggleButton
                   active={hideSensitive}
@@ -341,10 +341,10 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                 />
               </div>
               <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-1 min-w-0 pr-4 items-center gap-2">
                   <Bell className="size-4 text-muted-foreground shrink-0" />
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-medium text-foreground">Notify Bills</span>
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="font-medium text-foreground truncate">Notify Bills</span>
                     <span className="text-[10px] text-muted-foreground">{NOTIFY_ON_LOGIN_DESCRIPTION}</span>
                   </div>
                 </div>
@@ -352,10 +352,10 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
               </div>
               <div className="py-1 border-b border-border/20 md:border-b-0 space-y-1.5">
                 <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-1 min-w-0 pr-4 items-center gap-2">
                     <BellRing className="size-4 text-muted-foreground shrink-0" />
-                    <div className="flex flex-col gap-0.5">
-                      <span className="font-medium text-foreground">Push Payment Reminders</span>
+                    <div className="flex flex-col gap-0.5 min-w-0">
+                      <span className="font-medium text-foreground truncate">Push Payment Reminders</span>
                       <span className="text-[10px] text-muted-foreground">{PUSH_DESCRIPTION}</span>
                     </div>
                   </div>

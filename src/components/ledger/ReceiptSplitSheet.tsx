@@ -246,7 +246,7 @@ export function ReceiptSplitSheet({
                 <button
                   type="button"
                   onClick={() => removeItem(index)}
-                  className="flex h-full w-full items-center justify-center gap-1 bg-red-500 px-3 text-[11px] font-bold text-destructive-foreground cursor-pointer"
+                  className="flex h-full w-full items-center justify-center gap-1 bg-red-500 px-3 text-[11px] font-bold text-destructive-foreground cursor-pointer rounded-r-2xl"
                   aria-label={`Delete ${item.name || `item ${index + 1}`}`}
                 >
                   <Trash2 className="size-4" /> Delete

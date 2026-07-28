@@ -100,22 +100,20 @@ export function CarryoverLedgerTable({
               <div className="grid grid-cols-2 gap-4 text-xs border-t border-border/30 pt-2.5">
                 <div>
                   <span className="text-muted-foreground text-[10px] block mb-0.5">Net Change</span>
-                  <div className="flex items-center gap-1.5 min-h-[24px]">
-                    <span className={`font-semibold ${category.netChange < 0 ? 'text-orange-500' : category.netChange > 0 ? 'text-blue-500' : 'text-foreground'}`}>
-                      <SensitiveAmount value={category.netChange} isMasked={amountsMasked} formatFn={(v) => (v > 0 ? '+' : '') + formatCurrency(v)} />
-                    </span>
-                  </div>
-                  {pending > 0 && <span className="text-[10px] text-yellow-500 flex items-center gap-1 mt-0.5">Pending: -{amount(pending)}</span>}
+                  <span className={`font-bold block ${category.netChange < 0 ? 'text-orange-500' : category.netChange > 0 ? 'text-blue-500' : 'text-foreground'}`}>
+                    <SensitiveAmount value={category.netChange} isMasked={amountsMasked} formatFn={(v) => (v > 0 ? '+' : '') + formatCurrency(v)} />
+                  </span>
+                  {pending > 0 && <span className="text-[10px] text-yellow-500 block mt-1.5">Pending: -{amount(pending)}</span>}
                 </div>
                 <div>
                   <span className="text-muted-foreground text-[10px] block mb-0.5">Remaining Balance</span>
-                  <div className="flex items-center gap-1.5 min-h-[24px]">
+                  <div className="flex items-center gap-1.5 -my-1 py-1">
                     <span className={`font-bold ${category.remaining < 0 ? 'text-orange-500' : 'text-foreground'}`}>
                       <SensitiveAmount value={category.remaining} isMasked={amountsMasked} formatFn={formatCurrency} />
                     </span>
                     {adjustButton(category)}
                   </div>
-                  {pending > 0 && <span className={`text-[10px] flex items-center gap-1 mt-0.5 font-semibold ${(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>Projected: {amount(category.remaining - pending)}</span>}
+                  {pending > 0 && <span className={`text-[10px] block mt-1.5 font-semibold ${(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>Projected: {amount(category.remaining - pending)}</span>}
                 </div>
               </div>
             </div>

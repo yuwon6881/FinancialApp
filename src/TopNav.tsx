@@ -226,17 +226,17 @@ const TopNav: React.FC<TopNavProps> = ({
         </div>
 
         {/* Right Side Widgets & Actions */}
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 sm:gap-3 md:gap-4">
+        <div className="flex flex-1 shrink-0 items-center justify-end gap-1.5 sm:gap-3 md:gap-4">
           
           <button
             type="button"
             onClick={onAskAI}
-            className="hidden md:flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-500/8 hover:bg-blue-500/14 border border-blue-500/20 hover:border-blue-500/35 text-blue-600 dark:text-blue-400 rounded-xl select-none shrink-0 transition-all duration-150 cursor-pointer"
+            className="hidden md:flex items-center justify-center gap-1.5 px-2.5 lg:px-3 py-1.5 bg-blue-500/8 hover:bg-blue-500/14 border border-blue-500/20 hover:border-blue-500/35 text-blue-600 dark:text-blue-400 rounded-xl select-none shrink-0 transition-all duration-150 cursor-pointer"
             title="ASK AI"
             aria-label="ASK AI"
           >
             <Sparkles className="size-3.5" />
-            <span className="text-xs font-extrabold tracking-wide">ASK AI</span>
+            <span className="hidden lg:inline text-xs font-extrabold tracking-wide">ASK AI</span>
           </button>
 
           {/* One notification entry point; the shared review sheet is owned by App. */}

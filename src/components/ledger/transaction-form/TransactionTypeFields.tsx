@@ -32,7 +32,7 @@ export function TransactionTypeFields({ txType, onChangeTxType, disabled = false
               : `border-border text-muted-foreground ${disabled ? 'opacity-45' : 'hover:bg-muted/50'}`
           }`}
         >
-          <MinusCircle className="size-3.5" /> Outflow (Debit)
+          <MinusCircle className="size-3.5" /> Outflow <span className="hidden sm:inline">(Debit)</span>
         </button>
         <button
           type="button"
@@ -44,7 +44,7 @@ export function TransactionTypeFields({ txType, onChangeTxType, disabled = false
               : `border-border text-muted-foreground ${disabled ? 'opacity-45' : 'hover:bg-muted/50'}`
           }`}
         >
-          <PlusCircle className="size-3.5" /> Inflow (Credit)
+          <PlusCircle className="size-3.5" /> Inflow <span className="hidden sm:inline">(Credit)</span>
         </button>
         <button
           type="button"
