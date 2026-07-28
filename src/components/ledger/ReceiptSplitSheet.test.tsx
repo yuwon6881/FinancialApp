@@ -5,17 +5,36 @@ import type { ReceiptSplitScanResult } from '../../lib/api'
 import { ReceiptSplitSheet } from './ReceiptSplitSheet'
 
 vi.mock('../ui/BottomSheet', () => ({
-  BottomSheet: ({ isOpen, title, children }: { isOpen: boolean; title: React.ReactNode; children: React.ReactNode }) =>
-    isOpen ? <section><h1>{title}</h1>{children}</section> : null,
+  BottomSheet: ({
+    isOpen,
+    title,
+    children,
+    footer,
+  }: {
+    isOpen: boolean
+    title: React.ReactNode
+    children: React.ReactNode
+    footer?: React.ReactNode
+  }) => isOpen ? <section><h1>{title}</h1>{children}{footer}</section> : null,
 }))
 
-function result(total = 23.2): ReceiptSplitScanResult {
+vi.mock('../ui/DatePicker', () => ({
+  DatePicker: ({ value }: { value: string }) => <span>{value}</span>,
+}))
+
+vi.mock('../ui/SwipeableRow', () => ({
+  SwipeableRow: ({ children, desktopActions }: { children: React.ReactNode; desktopActions: React.ReactNode }) => (
+    <div>{children}{desktopActions}</div>
+  ),
+}))
+
+function result(): ReceiptSplitScanResult {
   return {
     description: 'Shared Dinner',
     date: '2026-07-28',
     currency: 'MYR',
     subtotal: 20,
-    total,
+    total: 23.2,
     category: 'Food',
     ledgerCategory: 'Essentials',
     items: [
@@ -33,14 +52,14 @@ function result(total = 23.2): ReceiptSplitScanResult {
   }
 }
 
-function renderSheet(total = 23.2) {
+function renderSheet(scanResult = result()) {
   const onUseResult = vi.fn()
   const onClear = vi.fn()
   render(
     <ReceiptSplitSheet
       isOpen
       currency="MYR"
-      draft={{ jobId: 'split-1', result: result(total) }}
+      draft={{ jobId: 'split-1', result: scanResult }}
       failedJob={null}
       activeJobIds={['split-1']}
       onStarted={vi.fn()}
@@ -53,31 +72,43 @@ function renderSheet(total = 23.2) {
 }
 
 describe('ReceiptSplitSheet', () => {
-  it('calculates selected items and prefills a transaction only after confirmation', () => {
+  it('starts with every scanned item selected and saves only calculated ledger fields', () => {
     const { onUseResult, onClear } = renderSheet()
-    fireEvent.change(screen.getByLabelText('My quantity for item 1'), { target: { value: '1' } })
-    fireEvent.change(screen.getByLabelText('My quantity for item 2'), { target: { value: '1' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Use This Amount' }))
 
-    const useButton = screen.getByRole('button', { name: 'Use This Amount' })
-    expect((useButton as HTMLButtonElement).disabled).toBe(false)
-    fireEvent.click(useButton)
-
-    expect(onUseResult).toHaveBeenCalledWith(expect.objectContaining({
+    expect(onUseResult).toHaveBeenCalledWith({
       description: 'Shared Dinner',
       amount: 23.2,
+      date: '2026-07-28',
+      category: 'Food',
+      ledgerCategory: 'Essentials',
       txType: 'outflow',
-    }))
+    })
     expect(onClear).toHaveBeenCalledWith('split-1')
   })
 
-  it('requires explicit acknowledgment when the receipt does not reconcile', () => {
-    renderSheet(99)
-    fireEvent.change(screen.getByLabelText('My quantity for item 1'), { target: { value: '1' } })
-    fireEvent.change(screen.getByLabelText('My quantity for item 2'), { target: { value: '1' } })
+  it('keeps prices locked until the matching settings-style lock button is used', () => {
+    renderSheet()
+    const price = screen.getByLabelText('Item 1 price') as HTMLInputElement
+    expect(price.disabled).toBe(true)
 
-    const useButton = screen.getByRole('button', { name: 'Use This Amount' })
-    expect((useButton as HTMLButtonElement).disabled).toBe(true)
-    fireEvent.click(screen.getByLabelText('I reviewed this mismatch and want to continue'))
-    expect((useButton as HTMLButtonElement).disabled).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock price for item 1' }))
+    expect(price.disabled).toBe(false)
+    fireEvent.change(price, { target: { value: '20' } })
+
+    expect(screen.getByRole('button', { name: 'Lock price for item 1' })).toBeTruthy()
+    expect(screen.getByText('27.84', { exact: false })).toBeTruthy()
+  })
+
+  it('uses integer quantity controls capped by the scanned receipt quantity', () => {
+    const scanResult = result()
+    scanResult.items[0].quantity = 3
+    scanResult.items[0].lineTotal = 48
+    renderSheet(scanResult)
+
+    expect(screen.getByLabelText('Quantity for item 1').textContent).toBe('3')
+    expect((screen.getByRole('button', { name: 'Increase quantity for item 1' }) as HTMLButtonElement).disabled).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: 'Decrease quantity for item 1' }))
+    expect(screen.getByLabelText('Quantity for item 1').textContent).toBe('2')
   })
 })

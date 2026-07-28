@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import type { PendingNotification } from '../types'
 import { PendingSubscriptionsModal } from './PendingSubscriptionsModal'
 
 vi.mock('./ui/BottomSheet', () => ({
@@ -12,39 +13,66 @@ vi.mock('./ui/DatePicker', () => ({
 }))
 
 describe('PendingSubscriptionsModal', () => {
-  it('shows confirmation progress and prevents duplicate actions', () => {
-    const onConfirmSubscription = vi.fn()
-    render(
-      <PendingSubscriptionsModal
-        isOpen
-        pendingNotifications={[{
-          id: 'household-Jul-2026',
-          recurringPaymentId: 'household',
-          name: 'Household',
-          amount: 870,
-          category: 'HouseHold',
-          ledgerCategory: 'Stability',
-          billingDate: '2026-07-28',
-          year: 2026,
-          month: 7,
-          cycleLabel: 'Jul 28th ~ Aug 27th, 2026',
-        }]}
-        currency="MYR"
-        hideSensitive={false}
-        showOnLoginChecked
-        onToggleShowOnLogin={vi.fn()}
-        onClose={vi.fn()}
-        onConfirmSubscription={onConfirmSubscription}
-        onDiscardSubscription={vi.fn()}
-        onRemoveSubscription={vi.fn()}
-      />,
-    )
+  const notification: PendingNotification = {
+    id: 'household-Jul-2026',
+    recurringPaymentId: 'household',
+    name: 'Household',
+    amount: 870,
+    category: 'HouseHold',
+    ledgerCategory: 'Stability',
+    billingDate: '2026-07-28',
+    year: 2026,
+    month: 7,
+    cycleLabel: 'Jul 28th ~ Aug 27th, 2026',
+  }
 
+  const renderModal = (overrides: Partial<React.ComponentProps<typeof PendingSubscriptionsModal>> = {}) => {
+    const props: React.ComponentProps<typeof PendingSubscriptionsModal> = {
+      isOpen: true,
+      pendingNotifications: [notification],
+      currency: 'MYR',
+      hideSensitive: false,
+      showOnLoginChecked: true,
+      onToggleShowOnLogin: vi.fn(),
+      onClose: vi.fn(),
+      onConfirmSubscription: vi.fn(),
+      onDiscardSubscription: vi.fn(),
+      onRemoveSubscription: vi.fn(),
+      ...overrides,
+    }
+    render(
+      <PendingSubscriptionsModal {...props} />,
+    )
+    return props
+  }
+
+  it('shows confirmation progress and prevents duplicate actions', () => {
+    const { onConfirmSubscription } = renderModal()
     fireEvent.click(screen.getByRole('button', { name: 'Confirm Paid' }))
 
     expect(onConfirmSubscription).toHaveBeenCalledOnce()
     expect(screen.getByRole('button', { name: /Confirming/ }).hasAttribute('disabled')).toBe(true)
     expect(screen.getByRole('button', { name: 'Discard' }).hasAttribute('disabled')).toBe(true)
     expect(screen.getByRole('button', { name: 'Remove' }).hasAttribute('disabled')).toBe(true)
+  })
+
+  it('shows discard progress and prevents duplicate actions', () => {
+    const { onDiscardSubscription } = renderModal()
+    fireEvent.click(screen.getByRole('button', { name: 'Discard' }))
+
+    expect(onDiscardSubscription).toHaveBeenCalledOnce()
+    expect(screen.getByRole('button', { name: /Discarding/ }).hasAttribute('disabled')).toBe(true)
+    expect(screen.getByRole('button', { name: 'Confirm Paid' }).hasAttribute('disabled')).toBe(true)
+    expect(screen.getByRole('button', { name: 'Remove' }).hasAttribute('disabled')).toBe(true)
+  })
+
+  it('shows removal progress and prevents duplicate actions', () => {
+    const { onRemoveSubscription } = renderModal()
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+
+    expect(onRemoveSubscription).toHaveBeenCalledWith('household')
+    expect(screen.getByRole('button', { name: /Removing/ }).hasAttribute('disabled')).toBe(true)
+    expect(screen.getByRole('button', { name: 'Confirm Paid' }).hasAttribute('disabled')).toBe(true)
+    expect(screen.getByRole('button', { name: 'Discard' }).hasAttribute('disabled')).toBe(true)
   })
 })

@@ -34,25 +34,31 @@ export function PendingSubscriptionsModal({
   onRemoveSubscription
 }: PendingSubscriptionsModalProps) {
   const [paidDates, setPaidDates] = useState<Record<string, string>>({})
-  const [confirmingIds, setConfirmingIds] = useState<Set<string>>(new Set())
+  const [pendingActions, setPendingActions] = useState<Record<string, 'confirm' | 'discard' | 'remove'>>({})
 
   useEffect(() => {
     if (!isOpen) {
-      setConfirmingIds(new Set())
+      setPendingActions({})
       return
     }
     const visibleIds = new Set(pendingNotifications.map(notification => notification.id))
-    setConfirmingIds(current => new Set([...current].filter(id => visibleIds.has(id))))
+    setPendingActions(current => Object.fromEntries(
+      Object.entries(current).filter(([id]) => visibleIds.has(id)),
+    ))
   }, [isOpen, pendingNotifications])
 
-  const confirmSubscription = (noti: PendingNotification) => {
-    setConfirmingIds(current => new Set(current).add(noti.id))
-    onConfirmSubscription(noti, paidDates[noti.id] ?? noti.billingDate)
+  const runSubscriptionAction = (
+    noti: PendingNotification,
+    action: 'confirm' | 'discard' | 'remove',
+    callback: () => void,
+  ) => {
+    setPendingActions(current => ({ ...current, [noti.id]: action }))
+    callback()
     window.setTimeout(() => {
-      setConfirmingIds(current => {
-        if (!current.has(noti.id)) return current
-        const next = new Set(current)
-        next.delete(noti.id)
+      setPendingActions(current => {
+        if (!current[noti.id]) return current
+        const next = { ...current }
+        delete next[noti.id]
         return next
       })
     }, 15000)
@@ -104,7 +110,8 @@ export function PendingSubscriptionsModal({
 
         <div key={isOpen ? 'open' : 'closed'} className="space-y-3 overflow-y-auto max-h-80 pr-1 py-1 mt-2">
         {pendingNotifications.map((noti) => {
-          const isConfirming = confirmingIds.has(noti.id)
+          const pendingAction = pendingActions[noti.id]
+          const isPending = pendingAction !== undefined
           return (
           <div key={noti.id} className="p-4 rounded-xl bg-muted/30 border border-border/40 shadow-xs flex flex-col gap-3">
             <div className="flex items-start justify-between gap-4">
@@ -127,7 +134,7 @@ export function PendingSubscriptionsModal({
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 border-t border-border/20 pt-2.5">
               <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:justify-end">
-                <div className={`flex items-center gap-1.5 flex-1 sm:flex-initial min-w-[160px] ${isConfirming ? 'pointer-events-none opacity-70' : ''}`}>
+                <div className={`flex items-center gap-1.5 flex-1 sm:flex-initial min-w-[160px] ${isPending ? 'pointer-events-none opacity-70' : ''}`}>
                   <span className="text-[9px] font-bold text-muted-foreground shrink-0">Paid Date:</span>
                   <DatePicker
                     value={paidDates[noti.id] ?? noti.billingDate}
@@ -138,30 +145,38 @@ export function PendingSubscriptionsModal({
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
                   <button
-                    onClick={() => confirmSubscription(noti)}
-                    disabled={hideSensitive || isConfirming}
+                    onClick={() => runSubscriptionAction(
+                      noti,
+                      'confirm',
+                      () => onConfirmSubscription(noti, paidDates[noti.id] ?? noti.billingDate),
+                    )}
+                    disabled={hideSensitive || isPending}
                     title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
                     className="flex-1 sm:flex-initial px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition shadow-sm whitespace-nowrap text-center disabled:cursor-wait disabled:opacity-70"
                   >
-                    {isConfirming
+                    {pendingAction === 'confirm'
                       ? <span className="flex items-center justify-center gap-1.5"><Loader2 className="size-3 animate-spin" /> Confirming…</span>
                       : 'Confirm Paid'}
                   </button>
                   <button
-                    onClick={() => onDiscardSubscription(noti)}
-                    disabled={hideSensitive || isConfirming}
+                    onClick={() => runSubscriptionAction(noti, 'discard', () => onDiscardSubscription(noti))}
+                    disabled={hideSensitive || isPending}
                     title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
-                    className="flex-1 sm:flex-initial px-3 py-1.5 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-xs rounded-lg transition duration-150 cursor-pointer border border-slate-500/10 whitespace-nowrap text-center"
+                    className="flex-1 sm:flex-initial px-3 py-1.5 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-xs rounded-lg transition duration-150 cursor-pointer border border-slate-500/10 whitespace-nowrap text-center disabled:cursor-wait disabled:opacity-70"
                   >
-                    Discard
+                    {pendingAction === 'discard'
+                      ? <span className="flex items-center justify-center gap-1.5"><Loader2 className="size-3 animate-spin" /> Discarding…</span>
+                      : 'Discard'}
                   </button>
                   <button
-                    onClick={() => onRemoveSubscription(noti.recurringPaymentId)}
-                    disabled={hideSensitive || isConfirming}
+                    onClick={() => runSubscriptionAction(noti, 'remove', () => onRemoveSubscription(noti.recurringPaymentId))}
+                    disabled={hideSensitive || isPending}
                     title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
-                    className="flex-1 sm:flex-initial px-3 py-1.5 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-xs rounded-lg transition duration-150 cursor-pointer border border-orange-500/10 whitespace-nowrap text-center"
+                    className="flex-1 sm:flex-initial px-3 py-1.5 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-xs rounded-lg transition duration-150 cursor-pointer border border-orange-500/10 whitespace-nowrap text-center disabled:cursor-wait disabled:opacity-70"
                   >
-                    Remove
+                    {pendingAction === 'remove'
+                      ? <span className="flex items-center justify-center gap-1.5"><Loader2 className="size-3 animate-spin" /> Removing…</span>
+                      : 'Remove'}
                   </button>
                 </div>
               </div>

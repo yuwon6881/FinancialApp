@@ -3,6 +3,7 @@ import { Search, Filter, X, Loader2, CalendarDays, Banknote, ChevronDown } from 
 import type { TransactionCategory } from '../../types'
 import { BottomSheet } from '../ui/BottomSheet'
 import { AnchoredPopover } from '../ui/AnchoredPopover'
+import { CustomSelect } from '../ui/CustomSelect'
 import { DatePicker } from '../ui/DatePicker'
 import { PillSwitch } from '../ui/PillSwitch'
 import { getCategoryDotClass, getCategoryFilterClass } from '../../lib/categoryColors'
@@ -10,6 +11,12 @@ import { LEDGER_BUCKETS as LEDGER_BUCKET_VALUES } from '../../lib/transactionFil
 import type { TransactionSort } from '../../lib/transactionOrdering'
 
 const LEDGER_BUCKETS: readonly string[] = LEDGER_BUCKET_VALUES
+const SORT_OPTIONS: { value: TransactionSort; label: string }[] = [
+  { value: 'date-desc', label: 'Newest' },
+  { value: 'date-asc', label: 'Oldest' },
+  { value: 'amount-desc', label: 'Amount high' },
+  { value: 'amount-asc', label: 'Amount low' },
+]
 
 interface LedgerFilterBarProps {
   showAllCycles: boolean
@@ -254,7 +261,7 @@ export function LedgerFilterBar({
           <button
             onClick={onServerSearch}
             disabled={serverIsFetching}
-            className="flex min-h-10 shrink-0 items-center justify-center gap-1.5 border-l border-border/50 bg-gradient-to-r from-blue-600 to-blue-500 px-3.5 py-2.5 text-xs font-semibold text-white whitespace-nowrap transition-colors duration-200 hover:from-blue-700 hover:to-blue-600 active:from-blue-800 active:to-blue-700 disabled:cursor-wait cursor-pointer md:px-5"
+            className="flex min-h-10 shrink-0 items-center justify-center gap-1.5 border-l border-border/50 bg-gradient-to-r from-blue-600 to-blue-700 px-3.5 py-2.5 text-xs font-semibold text-white whitespace-nowrap transition-colors duration-200 hover:from-blue-700 hover:to-blue-800 active:from-blue-800 active:to-blue-800 disabled:cursor-wait cursor-pointer md:px-5"
           >
             {serverIsFetching
               ? <Loader2 className="size-3.5 animate-spin" />
@@ -286,21 +293,19 @@ export function LedgerFilterBar({
         </div>
       )}
 
-      <select
-        value={sortOrder}
-        onChange={event => onSortOrderChange(event.target.value as TransactionSort)}
-        aria-label="Sort ledger transactions"
-        className="shrink-0 rounded-xl border border-border/60 bg-background px-2 py-2.5 text-xs font-semibold text-foreground outline-none focus:border-blue-500"
-      >
-        <option value="date-desc">Newest</option>
-        <option value="date-asc">Oldest</option>
-        <option value="amount-desc">Amount high</option>
-        <option value="amount-asc">Amount low</option>
-      </select>
+      <div className="flex shrink-0 items-center gap-2">
+        <CustomSelect
+          ariaLabel="Sort ledger transactions"
+          value={sortOrder}
+          onChange={onSortOrderChange}
+          options={SORT_OPTIONS}
+          align="right"
+          className="w-28 sm:w-40"
+        />
 
-      {/* Dropdown Multi-Select Category Filter */}
-      <div
-        className="relative ledger-filter-dropdown shrink-0 flex justify-end"
+        {/* Dropdown Multi-Select Category Filter */}
+        <div
+          className="relative ledger-filter-dropdown shrink-0 flex justify-end"
         onKeyDown={event => {
           if (!isMobile && isFilterDropdownOpen && event.key === 'Escape') {
             event.preventDefault()
@@ -309,7 +314,7 @@ export function LedgerFilterBar({
             filterButtonRef.current?.focus()
           }
         }}
-      >
+        >
         <button
           ref={filterButtonRef}
           onClick={() => onFilterDropdownOpenChange(!isFilterDropdownOpen)}
@@ -525,6 +530,7 @@ export function LedgerFilterBar({
             </div>
           </BottomSheet>
         )}
+        </div>
       </div>
     </div>
   )
