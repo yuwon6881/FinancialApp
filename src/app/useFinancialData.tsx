@@ -7,7 +7,7 @@ import { useOptimisticList } from '../lib/useOptimisticList'
 import { computeOptimisticDashboard } from '../lib/optimisticDashboard'
 import { useOutbox } from '../lib/useOutbox'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from '../lib/modalDrafts'
-import { createFinalId, createLocalWishlistId, projectHideSensitivePreference, sanitizeQueuedOps, type OutboxPayload } from '../lib/outbox'
+import { createFinalId, createLocalWishlistId, projectSettingPreference, sanitizeQueuedOps, type OutboxPayload } from '../lib/outbox'
 import { triggerHaptic } from '../lib/haptics'
 import { getErrorMessage, getErrorName, hasHttpStatus, isAuthError, isLockError, JUST_LOGGED_IN_WINDOW_MS } from '../lib/errors'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
@@ -316,7 +316,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         setWalletBalance(wallet)
         setCachedJSON(CACHE_KEYS.walletBalance, wallet)
       }
-      const effectiveHideSensitive = projectHideSensitivePreference(
+      const effectiveHideSensitive = projectSettingPreference(
+        'hideSensitive',
         dbData.setting.hideSensitive ?? true,
         activeOpsRef.current,
       )
@@ -362,8 +363,13 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       // so we follow the OS/browser scheme — matching the login screen — and keep the
       // preference unset locally so it keeps tracking the OS.
       const serverDark = dbData.setting.darkMode
-      if (serverDark === true || serverDark === false) {
-        setDarkMode(serverDark)
+      const effectiveDarkMode = projectSettingPreference(
+        'darkMode',
+        serverDark,
+        activeOpsRef.current
+      )
+      if (effectiveDarkMode === true || effectiveDarkMode === false) {
+        setDarkMode(effectiveDarkMode)
       } else {
         const osDark = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
           ? window.matchMedia('(prefers-color-scheme: dark)').matches
