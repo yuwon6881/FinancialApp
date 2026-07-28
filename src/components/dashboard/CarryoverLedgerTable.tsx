@@ -97,26 +97,34 @@ export function CarryoverLedgerTable({
                 <Metric label="Allocated Budget" value={amount(category.target)} />
                 <Metric label="Carried Over" value={amount(category.budget)} />
               </div>
-              <div className="grid grid-cols-2 gap-4 text-xs border-t border-border/30 pt-2.5">
-                <div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs border-t border-border/30 pt-2.5">
+                <div className="col-start-1">
                   <span className="text-muted-foreground text-[10px] block mb-0.5">Net Change</span>
-                  <div className="flex items-center min-h-[24px]">
-                    <span className={`font-bold ${category.netChange < 0 ? 'text-orange-500' : category.netChange > 0 ? 'text-blue-500' : 'text-foreground'}`}>
+                  <div className="flex items-center h-6">
+                    <span className={`font-bold truncate ${category.netChange < 0 ? 'text-orange-500' : category.netChange > 0 ? 'text-blue-500' : 'text-foreground'}`}>
                       <SensitiveAmount value={category.netChange} isMasked={amountsMasked} formatFn={(v) => (v > 0 ? '+' : '') + formatCurrency(v)} />
                     </span>
                   </div>
-                  {pending > 0 && <span className="text-[10px] text-yellow-500 block mt-0.5">Pending: -{amount(pending)}</span>}
                 </div>
-                <div>
+                <div className="col-start-2">
                   <span className="text-muted-foreground text-[10px] block mb-0.5">Remaining Balance</span>
-                  <div className="flex items-center gap-1.5 min-h-[24px]">
-                    <span className={`font-bold ${category.remaining < 0 ? 'text-orange-500' : 'text-foreground'}`}>
+                  <div className="flex items-center gap-1.5 h-6">
+                    <span className={`font-bold truncate ${category.remaining < 0 ? 'text-orange-500' : 'text-foreground'}`}>
                       <SensitiveAmount value={category.remaining} isMasked={amountsMasked} formatFn={formatCurrency} />
                     </span>
                     {adjustButton(category)}
                   </div>
-                  {pending > 0 && <span className={`text-[10px] block mt-0.5 font-semibold ${(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>Projected: {amount(category.remaining - pending)}</span>}
                 </div>
+                {pending > 0 && (
+                  <>
+                    <div className="col-start-1">
+                      <span className="text-[10px] font-semibold text-yellow-500 block truncate">Pending: -{amount(pending)}</span>
+                    </div>
+                    <div className="col-start-2">
+                      <span className={`text-[10px] font-semibold block truncate ${(category.remaining - pending) < 0 ? 'text-orange-500' : 'text-yellow-500'}`}>Projected: {amount(category.remaining - pending)}</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )
