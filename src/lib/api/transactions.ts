@@ -1,4 +1,5 @@
 import type { AutocompleteSuggestion, Transaction } from '../../types'
+import type { TransactionSort } from '../transactionOrdering'
 import type { WirePagedTransactionResult, WireTransaction } from '../apiTypes'
 import { deobfuscateTransaction, obfuscateAmount } from './amounts'
 import { API_BASE_URL, apiFetch, cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
@@ -62,6 +63,7 @@ export interface TransactionQuery {
   maxAmount?: number
   recurringOnly?: boolean
   wishlistOnly?: boolean
+  sort?: TransactionSort
 }
 
 function appendTransactionQuery(params: URLSearchParams, query: TransactionQuery): void {
@@ -75,6 +77,7 @@ function appendTransactionQuery(params: URLSearchParams, query: TransactionQuery
   if (query.maxAmount !== undefined) params.append('maxAmount', query.maxAmount.toString())
   if (query.recurringOnly) params.append('recurringOnly', 'true')
   if (query.wishlistOnly) params.append('wishlistOnly', 'true')
+  if (query.sort) params.append('sort', query.sort)
 }
 
 export async function exportTransactionsCsv(params: TransactionQuery): Promise<{ blob: Blob; filename: string }> {

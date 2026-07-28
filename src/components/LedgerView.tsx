@@ -330,6 +330,11 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         activeAdvancedFilterCount={activeAdvancedFilterCount}
         onClearFilters={ledger.handleClearFilters}
         onApplyFilters={ledger.handleApplyFilters}
+        sortOrder={ledger.sortOrder}
+        onSortOrderChange={value => {
+          ledger.setSortOrder(value)
+          ledger.setCurrentPage(1)
+        }}
       />
 
       <LedgerTransactionList

@@ -6,7 +6,7 @@ import TopNav from "./TopNav.tsx"
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { type AppTab, type DashboardData } from './types'
 import * as api from './lib/api'
-import { Calculator, Loader2, Upload, Wallet, CreditCard, PiggyBank, Sparkles, X, Zap } from 'lucide-react'
+import { Loader2, Upload, Wallet, CreditCard, PiggyBank, Sparkles, X, Zap } from 'lucide-react'
 
 // Every view is code-split so the initial bundle only ships the shell. Each
 // chunk loads on demand behind an instant blank-shell fallback (no flash).
@@ -1078,7 +1078,6 @@ function App() {
                   {([
                     { key: 'wishlist' as const, label: 'Add Wish Goal', Icon: PiggyBank, color: 'bg-pink-500' },
                     { key: 'subscription' as const, label: 'New Subscription', Icon: CreditCard, color: 'bg-violet-500' },
-                    { key: 'receipt-split' as const, label: 'Split Receipt', Icon: Calculator, color: 'bg-teal-500' },
                     { key: 'transaction' as const, label: 'Post Transaction', Icon: Wallet, color: 'bg-emerald-500' },
                     { key: 'ai' as const, label: 'Ask AI', Icon: Sparkles, color: 'bg-indigo-500' },
                   ]).map(({ key, label, Icon, color }) => (

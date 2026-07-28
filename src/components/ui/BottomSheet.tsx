@@ -15,7 +15,11 @@ interface BottomSheetProps {
   footer?: React.ReactNode
   /** Accessible name when `title` is not plain text. */
   ariaLabel?: string
+  layerClassName?: string
 }
+
+const openModalIds: string[] = []
+let suppressModalPopState = false
 
 export const BottomSheet: React.FC<BottomSheetProps> = ({
   isOpen,
@@ -25,7 +29,8 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   onClose,
   maxWidthClassName = 'max-w-md',
   footer,
-  ariaLabel
+  ariaLabel,
+  layerClassName = 'z-[100]'
 }) => {
   const panelRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
@@ -77,15 +82,19 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   // every actual effect invocation instead, so each run gets a genuinely
   // unique id even when produced by the same component instance.
   const instanceCounterRef = useRef(0)
+  const activeModalIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!isOpen) return
 
     const modalId = `modal-${titleId}-${++instanceCounterRef.current}`
+    activeModalIdRef.current = modalId
+    openModalIds.push(modalId)
     // Push a dummy history state so back button pops it instead of exiting the PWA
     window.history.pushState({ modalId }, '')
 
     const handlePopState = () => {
+      if (suppressModalPopState || openModalIds.at(-1) !== modalId) return
       onCloseRef.current()
     }
 
@@ -93,6 +102,9 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 
     return () => {
       window.removeEventListener('popstate', handlePopState)
+      const stackIndex = openModalIds.lastIndexOf(modalId)
+      if (stackIndex >= 0) openModalIds.splice(stackIndex, 1)
+      if (activeModalIdRef.current === modalId) activeModalIdRef.current = null
       // Deferred to the next tick: under StrictMode's synchronous
       // mount->cleanup->remount double-invoke, calling history.back()
       // immediately here would race the *new* instance's pushState
@@ -102,13 +114,22 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       // immediately closing a modal that just opened.
       setTimeout(() => {
         if (window.history.state?.modalId === modalId) {
+          suppressModalPopState = true
+          window.addEventListener('popstate', () => {
+            setTimeout(() => { suppressModalPopState = false }, 0)
+          }, { once: true, capture: true })
           window.history.back()
         }
       }, 0)
     }
   }, [isOpen])
 
-  useDialog({ isOpen, onClose, ref: panelRef })
+  useDialog({
+    isOpen,
+    onClose,
+    ref: panelRef,
+    isActive: () => openModalIds.at(-1) === activeModalIdRef.current,
+  })
 
   const backdropMouseDownRef = useRef(false)
   const dragControls = useDragControls()
@@ -239,7 +260,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             }
             backdropMouseDownRef.current = false
           }}
-          className="sheet-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          className={`sheet-backdrop fixed inset-0 ${layerClassName} flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm`}
         >
           {/* Entrance/exit slide lives on this OUTER wrapper, deliberately kept
               separate from the drag below. framer's drag gesture takes ownership

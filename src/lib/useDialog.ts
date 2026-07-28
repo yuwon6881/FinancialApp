@@ -41,6 +41,8 @@ interface UseDialogOptions {
   canClose?: () => boolean
   /** Skip auto-focusing the first element (when the panel manages its own focus). */
   autoFocus?: boolean
+  /** Ignore keyboard handling while a newer dialog is layered above this one. */
+  isActive?: () => boolean
 }
 
 /**
@@ -52,14 +54,16 @@ interface UseDialogOptions {
  * The keydown listener runs on `document` in the bubble phase, so React's own
  * onKeyDown handlers inside the dialog run first and can pre-empt the Escape.
  */
-export function useDialog({ isOpen, onClose, ref, canClose, autoFocus = true }: UseDialogOptions) {
+export function useDialog({ isOpen, onClose, ref, canClose, autoFocus = true, isActive }: UseDialogOptions) {
   const previouslyFocused = useRef<HTMLElement | null>(null)
   const onCloseRef = useRef(onClose)
   const canCloseRef = useRef(canClose)
+  const isActiveRef = useRef(isActive)
 
   useEffect(() => {
     onCloseRef.current = onClose
     canCloseRef.current = canClose
+    isActiveRef.current = isActive
   })
 
   useEffect(() => {
@@ -68,6 +72,7 @@ export function useDialog({ isOpen, onClose, ref, canClose, autoFocus = true }: 
     previouslyFocused.current = document.activeElement as HTMLElement | null
 
     const focusTimer = window.setTimeout(() => {
+      if (isActiveRef.current && !isActiveRef.current()) return
       const panel = ref.current
       if (!panel || !autoFocus) return
       // Respect an element that already grabbed focus (e.g. autoFocus input).
@@ -84,6 +89,7 @@ export function useDialog({ isOpen, onClose, ref, canClose, autoFocus = true }: 
     }, 40)
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isActiveRef.current && !isActiveRef.current()) return
       const panel = ref.current
       if (!panel) return
 

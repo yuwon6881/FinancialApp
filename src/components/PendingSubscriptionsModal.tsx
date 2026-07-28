@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { PendingNotification } from '../types'
 import { formatCurrencyVal } from '../lib/utils'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
@@ -6,7 +6,7 @@ import { BottomSheet } from './ui/BottomSheet'
 import { ToggleButton } from './ui/ToggleButton'
 import { DatePicker } from './ui/DatePicker'
 import { SensitiveMask } from './ui/SensitiveAmount'
-import { BellRing, CheckCircle2 } from 'lucide-react'
+import { BellRing, CheckCircle2, Loader2 } from 'lucide-react'
 
 interface PendingSubscriptionsModalProps {
   isOpen: boolean
@@ -34,12 +34,36 @@ export function PendingSubscriptionsModal({
   onRemoveSubscription
 }: PendingSubscriptionsModalProps) {
   const [paidDates, setPaidDates] = useState<Record<string, string>>({})
+  const [confirmingIds, setConfirmingIds] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (!isOpen) {
+      setConfirmingIds(new Set())
+      return
+    }
+    const visibleIds = new Set(pendingNotifications.map(notification => notification.id))
+    setConfirmingIds(current => new Set([...current].filter(id => visibleIds.has(id))))
+  }, [isOpen, pendingNotifications])
+
+  const confirmSubscription = (noti: PendingNotification) => {
+    setConfirmingIds(current => new Set(current).add(noti.id))
+    onConfirmSubscription(noti, paidDates[noti.id] ?? noti.billingDate)
+    window.setTimeout(() => {
+      setConfirmingIds(current => {
+        if (!current.has(noti.id)) return current
+        const next = new Set(current)
+        next.delete(noti.id)
+        return next
+      })
+    }, 15000)
+  }
 
   return (
     <BottomSheet
       isOpen={isOpen}
       onClose={onClose}
       maxWidthClassName="max-w-2xl"
+      layerClassName="z-[300]"
       title={
         <div className="flex items-center gap-2">
           <BellRing className="size-4 text-amber-500" />
@@ -79,7 +103,9 @@ export function PendingSubscriptionsModal({
         </div>
 
         <div key={isOpen ? 'open' : 'closed'} className="space-y-3 overflow-y-auto max-h-80 pr-1 py-1 mt-2">
-        {pendingNotifications.map((noti) => (
+        {pendingNotifications.map((noti) => {
+          const isConfirming = confirmingIds.has(noti.id)
+          return (
           <div key={noti.id} className="p-4 rounded-xl bg-muted/30 border border-border/40 shadow-xs flex flex-col gap-3">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -101,7 +127,7 @@ export function PendingSubscriptionsModal({
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 border-t border-border/20 pt-2.5">
               <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:justify-end">
-                <div className="flex items-center gap-1.5 flex-1 sm:flex-initial min-w-[160px]">
+                <div className={`flex items-center gap-1.5 flex-1 sm:flex-initial min-w-[160px] ${isConfirming ? 'pointer-events-none opacity-70' : ''}`}>
                   <span className="text-[9px] font-bold text-muted-foreground shrink-0">Paid Date:</span>
                   <DatePicker
                     value={paidDates[noti.id] ?? noti.billingDate}
@@ -112,19 +138,18 @@ export function PendingSubscriptionsModal({
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
                   <button
-                    onClick={() => {
-                      const dateVal = paidDates[noti.id] ?? noti.billingDate
-                      onConfirmSubscription(noti, dateVal)
-                    }}
-                    disabled={hideSensitive}
+                    onClick={() => confirmSubscription(noti)}
+                    disabled={hideSensitive || isConfirming}
                     title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
-                    className="flex-1 sm:flex-initial px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition shadow-sm whitespace-nowrap text-center"
+                    className="flex-1 sm:flex-initial px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition shadow-sm whitespace-nowrap text-center disabled:cursor-wait disabled:opacity-70"
                   >
-                    Confirm Paid
+                    {isConfirming
+                      ? <span className="flex items-center justify-center gap-1.5"><Loader2 className="size-3 animate-spin" /> Confirming…</span>
+                      : 'Confirm Paid'}
                   </button>
                   <button
                     onClick={() => onDiscardSubscription(noti)}
-                    disabled={hideSensitive}
+                    disabled={hideSensitive || isConfirming}
                     title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
                     className="flex-1 sm:flex-initial px-3 py-1.5 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-xs rounded-lg transition duration-150 cursor-pointer border border-slate-500/10 whitespace-nowrap text-center"
                   >
@@ -132,7 +157,7 @@ export function PendingSubscriptionsModal({
                   </button>
                   <button
                     onClick={() => onRemoveSubscription(noti.recurringPaymentId)}
-                    disabled={hideSensitive}
+                    disabled={hideSensitive || isConfirming}
                     title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
                     className="flex-1 sm:flex-initial px-3 py-1.5 bg-orange-500/5 hover:bg-orange-500/10 text-orange-500 font-semibold text-xs rounded-lg transition duration-150 cursor-pointer border border-orange-500/10 whitespace-nowrap text-center"
                   >
@@ -142,7 +167,8 @@ export function PendingSubscriptionsModal({
               </div>
             </div>
           </div>
-        ))}
+          )
+        })}
         </div>
       </>
       )}

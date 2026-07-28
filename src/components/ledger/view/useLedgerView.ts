@@ -1,11 +1,11 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import type { Transaction } from '../../../types'
 import type { PagedTransactionResult } from '../../../lib/api'
-import { getCycleRangeDates, getStartOfNCyclesAgo, formatDateForApi } from '../../../lib/cycle'
+import { getCycleRangeDates, getStartOfNCyclesAgo, formatDateForApi, MONTH_NAMES } from '../../../lib/cycle'
 import { getCycleLabelForDropdown } from '../../../lib/cycleLabels'
 import { matchesTransactionFilters, splitFilterSelections, LEDGER_BUCKETS as LEDGER_BUCKET_VALUES } from '../../../lib/transactionFilters'
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../../../lib/csvExport'
-import { compareTransactionsNewestFirst, mergeTransactionsNewestFirst } from '../../../lib/transactionOrdering'
+import { compareTransactions, mergeTransactions, type TransactionSort } from '../../../lib/transactionOrdering'
 import { ledgerRouteSearch, updateAppSearch } from '../../../lib/appLocation'
 import { getLedgerTransactionRowElement } from '../../../lib/ledgerTransactionTarget'
 
@@ -126,6 +126,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [sortOrder, setSortOrder] = useState<TransactionSort>('date-desc')
 
   // Server-side state
   const [serverResult, setServerResult] = useState<PagedTransactionResult | null>(null)
@@ -253,6 +254,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     maxAmount: string
     recurringOnly: boolean
     wishlistOnly: boolean
+    sort: TransactionSort
     pSize: number
   }) => {
     if (!onFetchPagedTransactions) return
@@ -277,6 +279,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         maxAmount: parseAmountFilter(opts.maxAmount),
         recurringOnly: opts.recurringOnly,
         wishlistOnly: opts.wishlistOnly,
+        sort: opts.sort,
         signal: controller.signal,
       })
       if (sequence !== fetchSequenceRef.current || controller.signal.aborted) return
@@ -336,6 +339,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         maxAmount: initialMaxAmount,
         recurringOnly: initialRecurringOnly,
         wishlistOnly: initialWishlistOnly,
+        sort: sortOrder,
         pSize: 100,
       })
         .finally(() => {
@@ -345,7 +349,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
       setServerResult(null)
       isInitialFetchDone.current = false
     }
-  }, [showAllCycles, onFetchPagedTransactions, runServerFetch, allCyclesRange, incomingCategory, incomingFilters, incomingTxType, incomingSearch, incomingDate, incomingStartDate, incomingEndDate, incomingMinAmount, incomingMaxAmount, incomingRecurringOnly, incomingWishlistOnly])
+  }, [showAllCycles, onFetchPagedTransactions, runServerFetch, allCyclesRange, incomingCategory, incomingFilters, incomingTxType, incomingSearch, incomingDate, incomingStartDate, incomingEndDate, incomingMinAmount, incomingMaxAmount, incomingRecurringOnly, incomingWishlistOnly, sortOrder])
 
   // Re-fetch when page changes in server mode
   useEffect(() => {
@@ -361,10 +365,11 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         maxAmount: appliedMaxAmount,
         recurringOnly: appliedRecurringOnly,
         wishlistOnly: appliedWishlistOnly,
+        sort: sortOrder,
         pSize: pageSize,
       })
     }
-  }, [currentPage, pageSize, showAllCycles, onFetchPagedTransactions, runServerFetch, appliedSearch, appliedFilters, appliedTxTypeFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringOnly, appliedWishlistOnly, allCyclesRange])
+  }, [currentPage, pageSize, showAllCycles, onFetchPagedTransactions, runServerFetch, appliedSearch, appliedFilters, appliedTxTypeFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringOnly, appliedWishlistOnly, allCyclesRange, sortOrder])
 
   // Re-fetch server result when activeSyncId transitions from non-null to null (sync completed)
   const prevActiveSyncId = useRef<string | null>(null)
@@ -389,11 +394,12 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         maxAmount: appliedMaxAmount,
         recurringOnly: appliedRecurringOnly,
         wishlistOnly: appliedWishlistOnly,
+        sort: sortOrder,
         pSize: pageSize,
       })
     }
     prevActiveSyncId.current = activeSyncId || null
-  }, [activeSyncId, showAllCycles, currentPage, appliedSearch, appliedFilters, appliedTxTypeFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringOnly, appliedWishlistOnly, pageSize, onFetchPagedTransactions, runServerFetch])
+  }, [activeSyncId, showAllCycles, currentPage, appliedSearch, appliedFilters, appliedTxTypeFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringOnly, appliedWishlistOnly, pageSize, onFetchPagedTransactions, runServerFetch, sortOrder])
 
   // Re-fetch server result when deletingTxId transitions from non-null to null (delete completed)
   const prevDeletingTxId = useRef<string | null>(null)
@@ -410,11 +416,12 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         maxAmount: appliedMaxAmount,
         recurringOnly: appliedRecurringOnly,
         wishlistOnly: appliedWishlistOnly,
+        sort: sortOrder,
         pSize: pageSize,
       })
     }
     prevDeletingTxId.current = deletingTxId || null
-  }, [deletingTxId, showAllCycles, currentPage, appliedSearch, appliedFilters, appliedTxTypeFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringOnly, appliedWishlistOnly, pageSize, onFetchPagedTransactions, runServerFetch])
+  }, [deletingTxId, showAllCycles, currentPage, appliedSearch, appliedFilters, appliedTxTypeFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringOnly, appliedWishlistOnly, pageSize, onFetchPagedTransactions, runServerFetch, sortOrder])
 
   // Reset back to page 1 when search inputs or active filters are updated (client-side mode only)
   useEffect(() => {
@@ -646,25 +653,31 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         recurringOnly: appliedRecurringOnly,
         wishlistOnly: appliedWishlistOnly,
       })
-    }).sort(compareTransactionsNewestFirst)
-  }, [pendingTransactions, showAllCycles, appliedSearch, appliedFilters, appliedTxTypeFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringOnly, appliedWishlistOnly, allCyclesRange])
+    }).sort((a, b) => compareTransactions(a, b, sortOrder))
+  }, [pendingTransactions, showAllCycles, appliedSearch, appliedFilters, appliedTxTypeFilter, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringOnly, appliedWishlistOnly, allCyclesRange, sortOrder])
 
   const filteredTransactions = useMemo(() => {
     const { buckets: selectedBuckets, categories: selectedCategories } = splitFilterSelections(selectedFilters)
+    const activeMonthIndex = MONTH_NAMES.indexOf(selectedMonth) + 1
+    const activeCycleRange = activeMonthIndex > 0
+      ? getCycleRangeDates(selectedYear, activeMonthIndex, cycleDay)
+      : null
+    const cycleStartDate = activeCycleRange ? formatDateForApi(activeCycleRange.start) : undefined
+    const cycleEndDate = activeCycleRange ? formatDateForApi(activeCycleRange.end) : undefined
 
     return transactions.filter(t => matchesTransactionFilters(t, {
         search: searchTerm,
         buckets: selectedBuckets,
         categories: selectedCategories,
         txType: selectedTxTypeFilter,
-        startDate: selectedStartDate,
-        endDate: selectedEndDate,
+        startDate: laterDate(cycleStartDate, selectedStartDate),
+        endDate: earlierDate(cycleEndDate, selectedEndDate),
         minAmount: parseAmountFilter(selectedMinAmount),
         maxAmount: parseAmountFilter(selectedMaxAmount),
         recurringOnly: selectedRecurringOnly,
         wishlistOnly: selectedWishlistOnly,
-      })).sort(compareTransactionsNewestFirst)
-  }, [transactions, searchTerm, selectedFilters, selectedStartDate, selectedEndDate, selectedMinAmount, selectedMaxAmount, selectedRecurringOnly, selectedWishlistOnly, selectedTxTypeFilter])
+      })).sort((a, b) => compareTransactions(a, b, sortOrder))
+  }, [transactions, searchTerm, selectedFilters, selectedStartDate, selectedEndDate, selectedMinAmount, selectedMaxAmount, selectedRecurringOnly, selectedWishlistOnly, selectedTxTypeFilter, selectedMonth, selectedYear, cycleDay, sortOrder])
 
   const paginatedTransactions = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize
@@ -673,10 +686,10 @@ export function useLedgerView(options: UseLedgerViewOptions) {
 
   const displayTransactions = useMemo(() => {
     if (showAllCycles && serverResult) {
-      return mergeTransactionsNewestFirst(serverResult.items, filteredPendingTransactions)
+      return mergeTransactions(serverResult.items, filteredPendingTransactions, sortOrder)
     }
     return paginatedTransactions
-  }, [showAllCycles, serverResult, filteredPendingTransactions, paginatedTransactions])
+  }, [showAllCycles, serverResult, filteredPendingTransactions, paginatedTransactions, sortOrder])
 
   const totalPages = Math.ceil(filteredTransactions.length / pageSize) || 1
 
@@ -893,6 +906,8 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     setCurrentPage,
     pageSize,
     setPageSize,
+    sortOrder,
+    setSortOrder,
     serverResult,
     serverIsFetching,
     showExportModal,

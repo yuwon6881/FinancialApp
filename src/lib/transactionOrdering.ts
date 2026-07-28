@@ -1,5 +1,7 @@
 import type { Transaction } from '../types'
 
+export type TransactionSort = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc'
+
 function transactionDay(transaction: Transaction): number {
   const calendarDate = Date.parse(`${transaction.date}T00:00:00.000Z`)
   return Number.isFinite(calendarDate) ? calendarDate : 0
@@ -27,6 +29,17 @@ export function compareTransactionsNewestFirst(a: Transaction, b: Transaction): 
   return String(b.id).localeCompare(String(a.id))
 }
 
+export function compareTransactions(a: Transaction, b: Transaction, sort: TransactionSort): number {
+  if (sort === 'amount-desc' || sort === 'amount-asc') {
+    const amountDiff = Math.abs(a.amount) - Math.abs(b.amount)
+    if (amountDiff !== 0) return sort === 'amount-asc' ? amountDiff : -amountDiff
+    return compareTransactionsNewestFirst(a, b)
+  }
+
+  const newestFirst = compareTransactionsNewestFirst(a, b)
+  return sort === 'date-asc' ? -newestFirst : newestFirst
+}
+
 /**
  * Merge server rows with optimistic rows without pinning the optimistic group above newer data.
  * Optimistic rows win duplicate ids because they carry the latest local sync state.
@@ -40,4 +53,16 @@ export function mergeTransactionsNewestFirst(
     byId.set(String(transaction.id), transaction)
   }
   return [...byId.values()].sort(compareTransactionsNewestFirst)
+}
+
+export function mergeTransactions(
+  serverTransactions: Transaction[],
+  optimisticTransactions: Transaction[],
+  sort: TransactionSort,
+): Transaction[] {
+  const byId = new Map(serverTransactions.map(transaction => [String(transaction.id), transaction]))
+  for (const transaction of optimisticTransactions) {
+    byId.set(String(transaction.id), transaction)
+  }
+  return [...byId.values()].sort((a, b) => compareTransactions(a, b, sort))
 }

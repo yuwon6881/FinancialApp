@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Transaction } from '../types'
-import { compareTransactionsNewestFirst, mergeTransactionsNewestFirst } from './transactionOrdering'
+import { compareTransactions, compareTransactionsNewestFirst, mergeTransactionsNewestFirst } from './transactionOrdering'
 
 function transaction(partial: Partial<Transaction> & Pick<Transaction, 'id' | 'postedAt'>): Transaction {
   return {
@@ -77,5 +77,18 @@ describe('transaction ordering', () => {
 
     expect(originalOrder).toEqual(['z-row', 'a-row'])
     expect(pendingOrder).toEqual(originalOrder)
+  })
+
+  it('sorts amounts by magnitude for both outflows and inflows', () => {
+    const rows = [
+      transaction({ id: 'small', postedAt: undefined, amount: -10 }),
+      transaction({ id: 'refund', postedAt: undefined, amount: 50 }),
+      transaction({ id: 'large', postedAt: undefined, amount: -1000 }),
+    ]
+
+    expect([...rows].sort((a, b) => compareTransactions(a, b, 'amount-desc')).map(item => item.id))
+      .toEqual(['large', 'refund', 'small'])
+    expect([...rows].sort((a, b) => compareTransactions(a, b, 'amount-asc')).map(item => item.id))
+      .toEqual(['small', 'refund', 'large'])
   })
 })

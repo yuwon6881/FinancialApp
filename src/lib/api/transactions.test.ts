@@ -16,10 +16,11 @@ describe('fetchPagedTransactions', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
 
-    await fetchPagedTransactions({ page: 1, pageSize: 10, wishlistOnly: true })
+    await fetchPagedTransactions({ page: 1, pageSize: 10, wishlistOnly: true, sort: 'amount-desc' })
 
     const url = new URL(String(fetchMock.mock.calls[0][0]))
     expect(url.searchParams.get('wishlistOnly')).toBe('true')
+    expect(url.searchParams.get('sort')).toBe('amount-desc')
     expect(url.searchParams.get('all')).toBe('true')
   })
 })

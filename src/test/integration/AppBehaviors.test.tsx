@@ -3,6 +3,7 @@ import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/re
 import App from '@/App'
 import * as api from '@/lib/api'
 import * as auth from '@/lib/auth'
+import { getCurrentCycleYearAndMonth, MONTH_NAMES } from '@/lib/cycle'
 
 // Mock the API calls so we don't depend on a live service or delay
 vi.mock('@/lib/api', async () => {
@@ -325,17 +326,20 @@ describe('App behaviors', () => {
   it('keeps Today on the current cycle after Reports selects a historical cycle', async () => {
     localStorage.setItem('auth_session', '1')
     localStorage.setItem('auth_username', 'alice')
+    const currentCycle = getCurrentCycleYearAndMonth(28)
+    const currentMonth = MONTH_NAMES[currentCycle.monthIndex - 1]
+    const currentCycleLabel = `${currentMonth}-${currentCycle.year}`
     render(<App />)
 
-    await waitFor(() => expect(screen.getByTestId('today-cycle').textContent).toBe('Jun-2026'))
+    await waitFor(() => expect(screen.getByTestId('today-cycle').textContent).toBe(currentCycleLabel))
     fireEvent.click(screen.getAllByRole('button', { name: /Reports/ })[0])
     fireEvent.click(await screen.findByRole('button', { name: 'Select historical report' }))
 
     await waitFor(() => expect(api.fetchBootstrap).toHaveBeenCalledWith('Jan', 2025, expect.any(AbortSignal)))
     fireEvent.click(screen.getAllByRole('button', { name: /Today/ })[0])
 
-    await waitFor(() => expect(screen.getByTestId('today-cycle').textContent).toBe('Jun-2026'))
-    expect(api.fetchDashboard).toHaveBeenCalledWith('Jun', 2026, expect.any(AbortSignal), false)
+    await waitFor(() => expect(screen.getByTestId('today-cycle').textContent).toBe(currentCycleLabel))
+    expect(api.fetchDashboard).toHaveBeenCalledWith(currentMonth, currentCycle.year, expect.any(AbortSignal), false)
   })
 
   it('performs cache preservation and local storage cleanup on logout', async () => {
