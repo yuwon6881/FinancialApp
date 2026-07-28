@@ -366,36 +366,32 @@ const TopNav: React.FC<TopNavProps> = ({
             aria-live="polite"
             aria-atomic="true"
             data-testid="privacy-status"
-            className={`pointer-events-none absolute left-1/2 top-[calc(100%+0.5rem)] z-50 w-max max-w-[calc(100vw_-_1.5rem)] -translate-x-1/2 rounded-2xl border px-3 py-2 text-center text-[11px] font-semibold shadow-lg backdrop-blur-xl transition-[opacity,transform] duration-200 ${
-              sensitivePreferenceStatus === 'pending'
-                ? 'border-amber-300 bg-amber-50 text-amber-900 shadow-amber-500/10 dark:border-amber-500/50 dark:bg-amber-400 dark:text-black'
-                : 'border-amber-500/30 bg-card/96 text-amber-700 shadow-amber-500/10 dark:border-amber-500/40 dark:text-amber-300'
-            }`}
+            className="pointer-events-none absolute left-1/2 top-[calc(100%+0.5rem)] z-50 w-max max-w-[calc(100vw_-_1.5rem)] -translate-x-1/2 rounded-xl border border-amber-500/30 bg-card/96 p-4 shadow-xl backdrop-blur-xl transition-[opacity,transform] duration-200"
           >
-            <span className="pointer-events-auto flex items-center justify-center gap-2">
+            <span className="pointer-events-auto flex items-start gap-3">
               {sensitivePreferenceStatus === 'pending' ? (
                 <>
-                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-amber-500/20 dark:bg-black/10">
-                    <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-                  </span>
-                  <span className="text-left leading-snug">
-                    <strong className="block font-extrabold text-amber-950 dark:text-black">Protecting your amounts</strong>
-                    Checking privacy settings before anything is revealed.
-                  </span>
+                  <div className="mt-0.5 shrink-0 text-amber-500">
+                    <Loader2 className="size-5 animate-spin" aria-hidden="true" />
+                  </div>
+                  <div className="min-w-0 flex-1 text-left">
+                    <div className="text-sm font-bold text-foreground">Protecting your amounts</div>
+                    <div className="text-[13px] leading-relaxed text-muted-foreground mt-0.5">Checking privacy settings before anything is revealed.</div>
+                  </div>
                 </>
               ) : (
                 <>
-                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-amber-500/10">
-                    <ShieldAlert className="size-3.5" aria-hidden="true" />
-                  </span>
-                  <span className="text-left leading-snug">
-                    <strong className="block font-extrabold text-foreground">Amounts remain protected</strong>
-                    Privacy settings couldn't be verified.
-                  </span>
+                  <div className="mt-0.5 shrink-0 text-amber-500">
+                    <ShieldAlert className="size-5" aria-hidden="true" />
+                  </div>
+                  <div className="min-w-0 flex-1 text-left">
+                    <div className="text-sm font-bold text-foreground">Amounts remain protected</div>
+                    <div className="text-[13px] leading-relaxed text-muted-foreground mt-0.5">Privacy settings couldn't be verified.</div>
+                  </div>
                   <button
                     type="button"
                     onClick={onRetrySensitivePreference}
-                    className="ml-1 shrink-0 rounded-lg border border-current/20 px-2 py-1 font-extrabold hover:bg-amber-500/10 cursor-pointer"
+                    className="ml-2 shrink-0 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition cursor-pointer self-center"
                   >
                     Retry
                   </button>
