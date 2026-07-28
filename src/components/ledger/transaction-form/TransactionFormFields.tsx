@@ -165,8 +165,10 @@ export function TransactionFormFields({
             </button>
           )}
         </div>
-        <div ref={descriptionAnchorRef} className={`relative ${suggestions.isSuggestingNote ? 'perimeter-beam-host' : ''}`}>
-          {suggestions.isSuggestingNote && <PerimeterBeam radius={12} size={40} />}
+        {/* rounded-xl matches the input inside: the beam inherits the host's radius,
+            and a square host would corner the trace off the field. */}
+        <div ref={descriptionAnchorRef} className={`relative rounded-xl ${suggestions.isSuggestingNote ? 'perimeter-beam-host' : ''}`}>
+          {suggestions.isSuggestingNote && <PerimeterBeam size={40} />}
           <input
             ref={firstInputRef}
             type="text"
@@ -194,7 +196,7 @@ export function TransactionFormFields({
             className={`w-full px-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
               errors.description
                 ? 'border-destructive focus:ring-destructive'
-                : 'border-border focus:ring-blue-500'
+                : 'border-border focus:ring-ring'
             }`}
           />
         </div>
@@ -329,7 +331,7 @@ export function TransactionFormFields({
             } ${
               errors.amount
                 ? 'border-destructive focus:ring-destructive'
-                : 'border-border focus:ring-blue-500'
+                : 'border-border focus:ring-ring'
             }`}
           />
         </div>

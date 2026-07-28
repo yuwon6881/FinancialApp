@@ -54,7 +54,7 @@ export function LedgerExportModal({
           type="button"
           onClick={onExportAll}
           disabled={exportIsFetching}
-          className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold shadow-md transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {exportIsFetching && <Loader2 className="size-3.5 animate-spin" />}
           Export Entire Result

@@ -86,7 +86,6 @@ interface LedgerViewProps {
   onResetAutoOpenReceiptSplit?: () => void
   receiptSplitDraft?: ReceiptSplitDraft | null
   failedReceiptSplitJob?: ReceiptSplitFailure | null
-  receiptSplitJobIds?: string[]
   onReceiptSplitStarted?: (scanId: string) => void
   onReceiptSplitCleared?: (scanId: string) => void | Promise<void>
   onReceiptSplitOpenChange?: (open: boolean) => void
@@ -112,16 +111,21 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
     props.onReceiptSplitOpenChange?.(open)
   }, [props.onReceiptSplitOpenChange])
 
-  const openReceiptSplit = useCallback(() => {
-    formRef.current?.handleCloseForm()
+  // The split editor is opened by a finished scan, not by a menu entry: the scan
+  // itself is started from the transaction form's picker, and the form stays open
+  // underneath so "Use This Amount" lands straight back in it.
+  useEffect(() => {
+    if (!props.receiptSplitDraft) return
     setReceiptSplitOpen(true)
-  }, [setReceiptSplitOpen])
+  }, [props.receiptSplitDraft, setReceiptSplitOpen])
 
+  // Same open, requested by the poller when a scan finished while the app was
+  // elsewhere (the toast's follow-up).
   useEffect(() => {
     if (!props.autoOpenReceiptSplit) return
-    openReceiptSplit()
+    setReceiptSplitOpen(true)
     props.onResetAutoOpenReceiptSplit?.()
-  }, [props.autoOpenReceiptSplit, openReceiptSplit, props.onResetAutoOpenReceiptSplit])
+  }, [props.autoOpenReceiptSplit, setReceiptSplitOpen, props.onResetAutoOpenReceiptSplit])
 
   const ledger = useLedgerView({
     ...props,
@@ -278,18 +282,17 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         onAiEditDraftConsumed={props.onAiEditDraftConsumed}
         onFetchTransactionById={props.onFetchTransactionById}
         onShowAlert={props.onShowAlert}
-        onOpenReceiptSplit={openReceiptSplit}
+        receiptSplitDraft={props.receiptSplitDraft}
+        failedReceiptSplitJob={props.failedReceiptSplitJob}
+        onReceiptSplitStarted={props.onReceiptSplitStarted}
       />
 
-      {isReceiptSplitOpen && (
+      {isReceiptSplitOpen && props.receiptSplitDraft && (
         <React.Suspense fallback={null}>
           <ReceiptSplitSheet
             isOpen
             currency={currency}
-            draft={props.receiptSplitDraft ?? null}
-            failedJob={props.failedReceiptSplitJob ?? null}
-            activeJobIds={props.receiptSplitJobIds ?? []}
-            onStarted={scanId => props.onReceiptSplitStarted?.(scanId)}
+            draft={props.receiptSplitDraft}
             onClear={scanId => props.onReceiptSplitCleared?.(scanId)}
             onClose={() => setReceiptSplitOpen(false)}
             onUseResult={draft => formRef.current?.openWithDraft(draft)}

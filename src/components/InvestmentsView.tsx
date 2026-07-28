@@ -85,7 +85,7 @@ const today = () => {
 const numberOrUndefined = (value: string) => value.trim() === '' ? undefined : Number(value)
 // Height matches CustomSelect / DatePicker / CurrencySelect (h-10) so every control
 // in a modal row lines up and measures the same, whatever kind of input it is.
-const inputClass = 'h-10 w-full rounded-xl border border-border/60 bg-background px-3 text-sm text-foreground outline-none focus:border-blue-500'
+const inputClass = 'h-10 w-full rounded-xl border border-border/60 bg-background px-3 text-sm text-foreground outline-none focus:border-ring'
 const getInputClass = (hasError?: boolean) => hasError ? 'h-10 w-full rounded-xl border border-destructive bg-background px-3 text-sm text-foreground outline-none focus:border-destructive focus:ring-1 focus:ring-destructive transition duration-200' : inputClass
 const InputError = ({ error }: { error?: string }) => error ? <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">{error}</p> : null
 // One column per control on mobile, aligned rows from `sm` up. `items-start` keeps

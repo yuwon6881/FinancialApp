@@ -358,7 +358,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleOpenAddModal}
-              className="w-9 h-9 flex items-center justify-center rounded-lg text-white bg-blue-600 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/10 transition cursor-pointer shrink-0"
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-primary-foreground bg-primary hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/10 transition cursor-pointer shrink-0"
               title="Add Goal"
             >
               <Plus className="size-3.5" />
@@ -480,7 +480,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                       disabled={!canAfford}
                       className={`flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-xl transition duration-200 cursor-pointer w-full sm:w-auto ${
                         canAfford
-                          ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/10'
+                          ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/10'
                           : 'bg-muted text-muted-foreground cursor-not-allowed'
                       }`}
                     >
@@ -521,7 +521,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleOpenAddModal}
-                className="mt-4 flex items-center gap-1.5 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs font-bold shadow-md shadow-blue-600/10 transition cursor-pointer"
+                className="mt-4 flex items-center gap-1.5 px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full text-xs font-bold shadow-md shadow-primary/10 transition cursor-pointer"
               >
                 <Plus className="size-3.5" /> Add Goal
               </m.button>
@@ -565,7 +565,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                         <button
                           onClick={() => handleToggleActive(item)}
                           disabled={isBusy}
-                          className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-500 text-primary-foreground text-[10px] font-bold active:bg-blue-400 transition disabled:opacity-40 disabled:pointer-events-none"
+                          className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-500 text-white dark:text-background text-[10px] font-bold active:bg-blue-400 transition disabled:opacity-40 disabled:pointer-events-none"
                         >
                           <Target className="size-3.5" />
                           Focus
@@ -573,7 +573,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                         <button
                           onClick={() => handleOpenEditModal(item)}
                           disabled={hideSensitive || isBusy}
-                          className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-600 text-white text-[10px] font-bold active:bg-blue-700 transition disabled:opacity-40 disabled:pointer-events-none"
+                          className="flex-1 flex flex-col items-center justify-center gap-1 bg-primary text-primary-foreground text-[10px] font-bold active:bg-primary/90 transition disabled:opacity-40 disabled:pointer-events-none"
                         >
                           <Edit2 className="size-3.5" />
                           Edit
@@ -769,7 +769,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               <Button variant="ghost" className="flex-1" onClick={() => setPurchasingItem(null)}>
                 Cancel
               </Button>
-              <Button variant="primary" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold" onClick={handleConfirmPurchase}>
+              <Button variant="primary" className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-bold" onClick={handleConfirmPurchase}>
                 Claim & Log to Ledger
               </Button>
             </div>

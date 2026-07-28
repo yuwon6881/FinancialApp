@@ -60,7 +60,7 @@ export const BalanceAdjustmentModals: React.FC<BalanceAdjustmentModalsProps> = (
                 type="button"
                 disabled={isAdjustmentUnchanged}
                 onClick={onReview}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl transition duration-150 cursor-pointer shadow-md"
+                className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground font-bold text-xs rounded-xl transition duration-150 cursor-pointer shadow-md"
               >
                 Review Adjustment
               </button>
@@ -83,7 +83,7 @@ export const BalanceAdjustmentModals: React.FC<BalanceAdjustmentModalsProps> = (
                 className={`w-full px-3 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
                   balanceErrors.balance
                     ? 'border-destructive focus:ring-destructive'
-                    : 'border-border focus:ring-blue-500'
+                    : 'border-border focus:ring-ring'
                 }`}
               />
               {balanceErrors.balance && (
@@ -104,7 +104,7 @@ export const BalanceAdjustmentModals: React.FC<BalanceAdjustmentModalsProps> = (
                 className={`w-full px-3 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
                   balanceErrors.description
                     ? 'border-destructive focus:ring-destructive'
-                    : 'border-border focus:ring-blue-500'
+                    : 'border-border focus:ring-ring'
                 }`}
               />
               {balanceErrors.description && (

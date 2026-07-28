@@ -6,7 +6,7 @@ import { Capacitor } from '@capacitor/core'
 // they are the one place `--background` is duplicated: keep them in step with the
 // `:root` / `.dark` surfaces in index.css (and the launch color in index.html).
 const DARK_BG = '#0b0e14'
-const LIGHT_BG = '#f6f8fc'
+const LIGHT_BG = '#fcfcfc'
 
 // One-time native chrome setup. No-ops on web so the plugins never touch the
 // browser build's behavior.

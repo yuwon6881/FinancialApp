@@ -164,7 +164,7 @@ export function CustomSelect<T extends string | number>({
             onClick={() => selectIndex(index)}
             className={`w-full text-left px-3.5 py-2 text-xs rounded-lg transition duration-100 cursor-pointer ${
               index === activeIndex
-                ? 'bg-blue-600 text-white font-bold shadow-xs'
+                ? 'bg-primary text-primary-foreground font-bold shadow-xs'
                 : 'hover:bg-muted/80 text-foreground font-medium'
             }`}
           >

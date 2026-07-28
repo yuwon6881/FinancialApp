@@ -139,7 +139,7 @@ export function DatePicker({
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         className={`w-full h-10 flex items-center justify-between gap-2 px-2.5 sm:px-3.5 text-xs bg-background border rounded-xl font-semibold shadow-xs hover:bg-muted/30 transition duration-150 cursor-pointer text-left select-none focus:outline-none focus:ring-1 text-foreground ${
-          error ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-blue-500'
+          error ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-ring'
         }`}
       >
         <span className={`truncate ${display ? '' : 'text-muted-foreground font-medium'}`}>
@@ -232,7 +232,7 @@ export function DatePicker({
                     isDisabled
                       ? 'text-muted-foreground/35 cursor-not-allowed'
                       : isSelected
-                      ? 'bg-blue-600 text-white font-bold shadow-xs'
+                      ? 'bg-primary text-primary-foreground font-bold shadow-xs'
                       : isToday
                       ? 'font-bold text-blue-600 dark:text-blue-400 hover:bg-muted/80'
                       : 'font-medium text-foreground hover:bg-muted/80'

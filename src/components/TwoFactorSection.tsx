@@ -181,7 +181,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
               value={disablePassword}
               onChange={e => { setDisablePassword(e.target.value); if (disableErrors.password) setDisableErrors(prev => ({ ...prev, password: '' })) }}
               className={`w-full px-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                disableErrors.password ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-blue-500'
+                disableErrors.password ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-ring'
               }`}
             />
             {disableErrors.password && (
@@ -195,7 +195,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
               value={disableCode}
               onChange={e => { setDisableCode(e.target.value); if (disableErrors.code) setDisableErrors(prev => ({ ...prev, code: '' })) }}
               className={`w-full px-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                disableErrors.code ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-blue-500'
+                disableErrors.code ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-ring'
               }`}
             />
             {disableErrors.code && (
@@ -261,7 +261,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
                 value={setupCode}
                 onChange={e => { setSetupCode(e.target.value); if (setupError) setSetupError(null) }}
                 className={`w-full px-3.5 py-2 text-sm text-center tracking-[0.3em] bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                  setupError ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-blue-500'
+                  setupError ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-ring'
                 }`}
               />
               {setupError && (
@@ -279,7 +279,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
               <button
                 type="submit"
                 disabled={setupBusy}
-                className="press-scale flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition cursor-pointer"
+                className="press-scale flex-1 py-2.5 rounded-xl text-xs font-bold text-primary-foreground bg-primary hover:bg-primary/90 disabled:opacity-50 transition cursor-pointer"
               >
                 {setupBusy ? 'Verifying...' : 'Confirm'}
               </button>

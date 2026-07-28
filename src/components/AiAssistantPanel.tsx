@@ -222,7 +222,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
       maxWidthClassName="max-w-2xl"
       title={
         <span className="flex items-center gap-2">
-          <Sparkles className="size-4 text-primary" />
+          <Sparkles className="size-4 text-accent-ink" />
           ASK AI
         </span>
       }

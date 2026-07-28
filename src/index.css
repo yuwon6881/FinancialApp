@@ -47,6 +47,11 @@
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-chart-line: var(--chart-line);
+    /* Accent *ink*: the accent colour at a weight that can be read as text or an
+       icon on a page/card surface. Not interchangeable with `--primary`, which is
+       a fill: Ayu Light's gold is 2.2:1 on white, so `text-primary` is unreadable
+       there even though it is perfect in dark mode. */
+    --color-accent-ink: var(--accent-ink);
     /* Tailwind's stock palette is remapped onto the app's semantic ledger ramps so
        that a utility like `text-emerald-500` is a *theme* reference, not a literal
        colour. Every step a component actually uses must be listed here — an
@@ -154,116 +159,157 @@
     --app-vvw: 100vw;
     --app-vv-top: 0px;
     --app-vv-left: 0px;
-    /* Crisp, spacious light mode — layered off-whites, slate ink */
-    --background: #f8fafc;
-    --foreground: #0f172a;
-    --card: #ffffff;
-    --card-foreground: #0f172a;
-    --popover: #ffffff;
-    --popover-foreground: #0f172a;
-    /* Primary = deep electric indigo (reserved for actions/highlights) */
-    --primary: #4338ca;
-    --primary-foreground: #ffffff;
-    --secondary: #f1f5f9;
-    --secondary-foreground: #0f172a;
-    --muted: #f1f5f9;
-    --muted-foreground: #64748b;
-    --accent: #e0e7ff;
-    --accent-foreground: #312e81;
-    /* Destructive = sophisticated crimson/coral */
-    --destructive: #e11d48;
-    --destructive-foreground: #ffffff;
-    --border: #e2e8f0;
-    --input: #e2e8f0;
-    --ring: #4f46e5;
-    --chart-line: #4f46e5;
-    --chart-1: #4f46e5;
-    --chart-2: #10b981;
-    --chart-3: #f59e0b;
-    --chart-4: #ec4899;
-    --chart-5: #f43f5e;
-    --sidebar: #ffffff;
-    --sidebar-foreground: #0f1729;
-    --sidebar-primary: #4f46e5;
-    --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #eef1f7;
-    --sidebar-accent-foreground: #0f1729;
-    --sidebar-border: #e5e9f2;
-    --sidebar-ring: #4f46e5;
-    /* Indigo family — brand / primary / credits-as-actions */
-    /* Light-mode accent text is deliberately at least WCAG AA against white.
+    /* ── Light theme: Ayu Light ─────────────────────────────────────────────
+       Ported from the official palette (`ayu` npm package, dist/light.js):
+       bg #fcfcfc, ink #5c6166, accent #f29718, error #e65050, plus the syntax
+       hues (entity #399ee6, string #86b300, regexp #4cbf99, constant #a37acc,
+       func #f2a300, removed #ff7383).
+
+       One thing to understand before editing a value here. Ayu Light is an
+       editor theme on a near-white page, so *none* of its hues survive as small
+       text: measured on #fcfcfc they land at 2.0–3.6:1, and most miss even the
+       3:1 non-text floor. Ayu's own accent pairing (#804b00 on #f29718) is
+       3.15:1. This app puts those colours on amounts, badges and chart legends,
+       where they have to be read.
+
+       So this is a *hue*-faithful port, not a hex-faithful one: every ramp keeps
+       its Ayu hue and is darkened until it clears AA on all three surfaces
+       (page, card and muted). That is the mirror image of the dark theme, whose
+       600–700 steps are darkened for the opposite reason — to back white text.
+       Contrast wins ties; the hue is what carries the theme.
+
        The -300 steps exist only so `dark:text-*-300` variants have a light-mode
        counterpart; they are intentionally the AA-safe dark tint, not a pale one. */
-    --ledger-blue-300: #4338ca;
-    --ledger-blue-400: #4f46e5;
-    --ledger-blue-500: #4f46e5;
-    --ledger-blue-600: #4338ca;
-    --ledger-blue-700: #3730a3;
-    --ledger-blue-800: #312e81;
-    --ledger-sky-300: #0369a1;
-    --ledger-sky-400: #0369a1;
-    --ledger-sky-500: #0369a1;
-    --ledger-sky-600: #075985;
-    /* Emerald / mint — positive cash flow & credits */
-    --ledger-income-300: #047857;
-    --ledger-income-400: #047857;
-    --ledger-income-500: #047857;
-    --ledger-income-600: #065f46;
-    --ledger-income-700: #064e3b;
-    /* Coral / crimson — debits & expenses */
-    --ledger-expense-300: #e11d48;
-    --ledger-expense-400: #e11d48;
-    --ledger-expense-500: #e11d48;
-    --ledger-expense-600: #be123c;
-    --ledger-expense-700: #be123c;
-    --ledger-pending-300: #b45309;
-    --ledger-pending-400: #b45309;
-    --ledger-pending-500: #a16207;
-    --ledger-pending-600: #92400e;
-    --ledger-pending-700: #78350f;
-    --ledger-transfer-300: #7c3aed;
-    --ledger-transfer-400: #7c3aed;
-    --ledger-transfer-500: #6d28d9;
-    --ledger-transfer-600: #5b21b6;
-    --ledger-purple-300: #9333ea;
-    --ledger-purple-400: #9333ea;
-    --ledger-purple-500: #7e22ce;
-    --ledger-purple-600: #6b21a8;
-    --ledger-wishlist-300: #db2777;
-    --ledger-wishlist-400: #db2777;
-    --ledger-wishlist-500: #be185d;
-    --ledger-wishlist-600: #9d174d;
-    --ledger-neutral-300: #64748b;
-    --ledger-neutral-400: #64748b;
-    --ledger-neutral-500: #64748b;
-    --ledger-neutral-600: #475569;
-    --ledger-neutral-700: #334155;
-    --ledger-neutral-800: #1e293b;
-    --ledger-neutral-900: #0f172a;
-    --app-grid: rgba(67, 56, 202, 0.04);
-    --app-surface-a: rgba(99, 102, 241, 0.22);
-    --app-surface-b: rgba(16, 185, 129, 0.15);
-    --app-surface-c: rgba(236, 72, 153, 0.12);
-    --app-shadow: 0 24px 60px -12px rgba(15, 23, 42, 0.08), 0 12px 24px -8px rgba(15, 23, 42, 0.04);
-    /* Elevation ramp. Previously these were literal rgba(0,0,0,0.05)-ish values
+    --background: #fcfcfc;
+    --foreground: #53575c; /* Ayu's ink #5c6166 nudged to 7.09:1 (AAA body text); visually the same warm grey */
+    --card: #ffffff;
+    --card-foreground: #53575c;
+    --popover: #ffffff;
+    --popover-foreground: #53575c;
+    /* Primary = Ayu's warm gold accent. Its foreground is a deep brown, never
+       white (white on #f29718 is 2.28:1); this pairing is 6.59:1. */
+    --primary: #f29718;
+    --primary-foreground: #3a2100;
+    --secondary: #f1f2f4;
+    --secondary-foreground: #53575c;
+    --muted: #f1f2f4;
+    /* Ayu's own UI grey (#828e9f) is 3.24:1 here — the same call the dark theme
+       made about #565b66: keep the hue, take the lightest tint that clears AA. */
+    --muted-foreground: #646f7a;
+    --accent: #fdf0dc;
+    --accent-foreground: #7a4f00;
+    --accent-ink: #7a4f00; /* 7.09:1 on the page — the accent as text/icon */
+    --destructive: #c0392f; /* Ayu error #e65050, darkened so white text clears AA (5.43:1) */
+    --destructive-foreground: #ffffff;
+    /* Ayu ui.line (#6b7d8f at 12%) flattened. Cards are #ffffff on a #fcfcfc
+       page — 1.03:1 — so as in dark mode the border is the only thing carrying
+       structure and has to stay visible. */
+    --border: #e3e6e9;
+    --input: #e3e6e9;
+    --ring: #f29718;
+    /* Chart marks take the darkened text steps, not the raw hues: a 2px trend
+       line or a legend swatch at 2.2:1 is not readable. All ≥3.5:1. */
+    --chart-line: #966200;
+    --chart-1: #b57a00;
+    --chart-2: #517a00;
+    --chart-3: #176fad;
+    --chart-4: #7c4fb2;
+    --chart-5: #c0392f;
+    --sidebar: #ffffff;
+    --sidebar-foreground: #53575c;
+    --sidebar-primary: #f29718;
+    --sidebar-primary-foreground: #3a2100;
+    --sidebar-accent: #f1f2f4;
+    --sidebar-accent-foreground: #53575c;
+    --sidebar-border: #e3e6e9;
+    --sidebar-ring: #f29718;
+    /* Blue — Ayu's entity blue. Brand / links / credits-as-actions. */
+    --ledger-blue-300: #176fad;
+    --ledger-blue-400: #176fad;
+    --ledger-blue-500: #176fad;
+    --ledger-blue-600: #15628f;
+    --ledger-blue-700: #114f73;
+    --ledger-blue-800: #0e4460;
+    /* Teal — Ayu's regexp colour. Deliberately teal rather than a second azure:
+       sky and blue sit next to each other in doughnut slices, and Ayu Light's
+       own tag cyan (#55b4d4) is too close to its entity blue to tell apart once
+       both are darkened to AA. */
+    --ledger-sky-300: #1d7a5e;
+    --ledger-sky-400: #1d7a5e;
+    --ledger-sky-500: #1d7a5e;
+    --ledger-sky-600: #176249;
+    /* Green — Ayu string/vcs-added. Positive cash flow & credits. */
+    --ledger-income-300: #4d7400;
+    --ledger-income-400: #4d7400;
+    --ledger-income-500: #4d7400; /* the lightest step that still clears AA on its own 10% chip (4.69:1) */
+    --ledger-income-600: #446600;
+    --ledger-income-700: #3a5600;
+    /* Red — Ayu error/vcs-removed. Debits, expenses, destructive. */
+    --ledger-expense-300: #c0392f;
+    --ledger-expense-400: #c0392f;
+    --ledger-expense-500: #c0392f;
+    --ledger-expense-600: #a32b2b;
+    --ledger-expense-700: #8f2424;
+    /* Gold — Ayu accent/func. Pending, warnings, "needs attention". Shares the
+       accent hue exactly as the dark theme does. */
+    --ledger-pending-300: #966200;
+    --ledger-pending-400: #966200;
+    --ledger-pending-500: #966200;
+    --ledger-pending-600: #8a5a00;
+    --ledger-pending-700: #744b00;
+    /* Violet — Ayu constant. Transfers and AI surfaces. */
+    --ledger-transfer-300: #8055b5;
+    --ledger-transfer-400: #8055b5;
+    --ledger-transfer-500: #8055b5;
+    --ledger-transfer-600: #6b41a0;
+    /* Purple — same Ayu constant hue, one step deeper. Investments. */
+    --ledger-purple-300: #7c4fb2;
+    --ledger-purple-400: #7c4fb2;
+    --ledger-purple-500: #7c4fb2;
+    --ledger-purple-600: #6a3f9c;
+    /* Rose — no Ayu source colour; derived from markup #f07171 rotated toward
+       magenta, matching how the dark theme derives its wishlist rose. */
+    --ledger-wishlist-300: #c03a6b;
+    --ledger-wishlist-400: #c03a6b;
+    --ledger-wishlist-500: #c03a6b;
+    --ledger-wishlist-600: #a32b57;
+    /* Neutral — Ayu's UI grey, darkened through the ramp. */
+    --ledger-neutral-300: #5f6b75;
+    --ledger-neutral-400: #5f6b75;
+    --ledger-neutral-500: #5f6b75;
+    --ledger-neutral-600: #4a545d;
+    --ledger-neutral-700: #3f4a54;
+    --ledger-neutral-800: #2e363d;
+    --ledger-neutral-900: #1f252a;
+    /* Ambient wash: gold-led, mirroring the dark theme's warm bloom. */
+    --app-grid: rgba(242, 151, 24, 0.05);
+    --app-surface-a: rgba(242, 151, 24, 0.16);
+    --app-surface-b: rgba(108, 191, 67, 0.12);
+    --app-surface-c: rgba(163, 122, 204, 0.10);
+    /* Elevation ramp, tinted with Ayu's own panel-shadow hue (#6b7d8f) rather
+       than slate. Previously these were literal rgba(0,0,0,0.05)-ish values
        inline on .app-panel / .glass-nav / the mobile nav, which vanished on a dark
        surface — shadows must deepen, not lighten, when the background does. */
-    --app-shadow-soft: 0 8px 32px 0 rgba(15, 23, 42, 0.05);
-    --app-shadow-nav: 0 10px 30px rgba(15, 23, 42, 0.06);
-    --app-shadow-nav-up: 0 -12px 30px rgba(15, 23, 42, 0.08);
+    --app-shadow: 0 24px 60px -12px rgba(107, 125, 143, 0.16), 0 12px 24px -8px rgba(107, 125, 143, 0.08);
+    --app-shadow-soft: 0 8px 32px 0 rgba(107, 125, 143, 0.10);
+    --app-shadow-nav: 0 10px 30px rgba(107, 125, 143, 0.12);
+    --app-shadow-nav-up: 0 -12px 30px rgba(107, 125, 143, 0.14);
     /* Inner top highlight on chips/pills — a white sheen reads as grime on light
        surfaces and as a bevel on dark ones, so it is a token, not a literal. */
     --app-inner-highlight: rgba(255, 255, 255, 0.12);
     /* Deep-link "jump to transaction" cue; follows the focus/brand colour. */
-    --app-highlight: #6366f1;
+    --app-highlight: #f29718;
     /* Doughnut/pie slots for user-defined categories. Colourblind-aware and
-       distinct from each other in *both* themes; see lib/categoryColors.ts. */
-    --chart-custom-1: #d1495b;
-    --chart-custom-2: #66a61e;
-    --chart-custom-3: #b5179e;
-    --chart-custom-4: #2f8f6f;
-    --chart-custom-5: #b5651d;
-    --chart-custom-6: #984ea3;
+       distinct from each other in *both* themes; see lib/categoryColors.ts.
+       Re-hued to Ayu Light and kept in the same hue order (red, olive, magenta,
+       teal, ochre, plum) — categoryColors maps categories to slots by index, so
+       reordering would silently recolour every existing chart. */
+    --chart-custom-1: #c9434a;
+    --chart-custom-2: #6f9400;
+    --chart-custom-3: #c03a6b;
+    --chart-custom-4: #2e8f70;
+    --chart-custom-5: #b57a00;
+    --chart-custom-6: #7c4fb2;
 }
 
 /* ── Dark theme: Ayu Dark ───────────────────────────────────────────────────
@@ -300,6 +346,7 @@
     --muted-foreground: #8a9199;
     --accent: #1b2130;
     --accent-foreground: #e6b450;
+    --accent-ink: #e6b450; /* 9.76:1 on a card — the accent reads as text unchanged here */
     --destructive: #ea6c73;
     --destructive-foreground: #0b0e14;
     /* Lifted above Ayu's own UI line (~#1b1f27). Ayu is an editor theme, where a
@@ -549,7 +596,10 @@
 .perimeter-beam {
     display: none;
     position: absolute;
-    inset: -1px;
+    /* Inside the host's padding box, not `-1px` outside it: a host that clips
+       (overflow-hidden) would otherwise cut away the outer ring this element is
+       masked down to, leaving the trace half-drawn or invisible. */
+    inset: 0;
     border-radius: inherit;
     z-index: 1;
     overflow: hidden;
@@ -577,12 +627,14 @@
         left: 0;
         width: var(--perimeter-beam-size, 88px);
         aspect-ratio: 1;
-        opacity: 0.72;
+        opacity: 0.8;
+        /* Accent-led, so the trace reads as the theme's "working" colour rather
+           than a foreign indigo: gold in Ayu dark, indigo in light mode. */
         background: linear-gradient(
             to left,
-            color-mix(in srgb, var(--ledger-purple-500) 82%, transparent) 0%,
-            color-mix(in srgb, var(--ledger-blue-500) 62%, transparent) 45%,
-            color-mix(in srgb, var(--ledger-sky-500) 40%, transparent) 70%,
+            color-mix(in srgb, var(--primary) 92%, transparent) 0%,
+            color-mix(in srgb, var(--ledger-transfer-500) 58%, transparent) 48%,
+            color-mix(in srgb, var(--ledger-blue-500) 32%, transparent) 72%,
             transparent 100%
         );
         offset-anchor: 90% 50%;
@@ -591,6 +643,18 @@
         offset-rotate: auto;
         animation: perimeter-beam-travel var(--perimeter-beam-duration, 5.5s) linear infinite;
         will-change: offset-distance;
+    }
+}
+
+/* The rect() path above needs the corner radius as a literal length, and every
+   host passed the nominal `12px` of a rounded-xl — but --radius scales that
+   utility to 16.8px here. The travel path therefore cornered tighter than the
+   border it was meant to ride, so the trace visibly left the edge (most obvious
+   along the bottom, where it crossed inside the card). A coord-box path uses the
+   host's own *used* radius, so the two can no longer disagree. */
+@supports (offset-path: border-box) {
+    .perimeter-beam::before {
+        offset-path: border-box;
     }
 }
 

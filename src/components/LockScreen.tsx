@@ -9,7 +9,7 @@ import {
   getCachedFingerprintAssertOptions,
   prefetchFingerprintAssertOptions,
 } from '../lib/fingerprintOptionsCache'
-import { getErrorMessage, getErrorName } from '../lib/errors'
+import { getErrorMessage, getErrorName, getStatus } from '../lib/errors'
 
 interface LockScreenProps {
   isOpen: boolean
@@ -84,7 +84,7 @@ export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScre
   return createPortal(
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-background/95 backdrop-blur-md animate-in fade-in duration-300">
       <div className="w-full max-w-sm flex flex-col items-center gap-6">
-        <AppLogo className="size-16 rounded-2xl shadow-xl shadow-blue-500/20" />
+        <AppLogo className="size-16 rounded-2xl shadow-xl shadow-primary/20" />
         <div className="text-center">
           <h2 className="text-xl font-bold text-foreground">Session Locked</h2>
           <p className="text-sm text-muted-foreground mt-1">You were inactive for 5 minutes. Use your device unlock or enter your password to continue.</p>
@@ -106,6 +106,10 @@ export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScre
           noValidate
           onSubmit={async (e) => {
             e.preventDefault()
+            if (!lockPassword) {
+              setLockError('Enter your password to unlock.')
+              return
+            }
             setPasswordVerifying(true)
             setLockError(null)
             try {
@@ -116,8 +120,14 @@ export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScre
               } else {
                 setLockError(res.message || 'Incorrect password.')
               }
-            } catch {
-              setLockError('Could not connect to server (backend waking up?). Please wait a moment and try again.')
+            } catch (err: unknown) {
+              // Only a genuine transport failure means "backend waking up". A
+              // rejected request carries a status and its own message (a wrong
+              // password, a rate limit, a validation error) — reporting all of
+              // those as a connection problem hid what actually happened.
+              setLockError(getStatus(err) === undefined
+                ? 'Could not connect to server (backend waking up?). Please wait a moment and try again.'
+                : getErrorMessage(err, 'Incorrect password.'))
             } finally {
               setPasswordVerifying(false)
             }
@@ -131,15 +141,15 @@ export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScre
             value={lockPassword}
             onChange={e => setLockPassword(e.target.value)}
             autoFocus={!fingerprintAvailable}
-            className="w-full px-4 py-3 text-sm bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+            className="w-full px-4 py-3 text-sm bg-card border border-border rounded-xl focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/40 transition"
           />
           {lockError && (
-            <p className="text-xs text-orange-500 font-semibold">{lockError}</p>
+            <p className="text-xs text-destructive font-semibold">{lockError}</p>
           )}
           <button
             type="submit"
-            disabled={passwordVerifying || fingerprintVerifying}
-            className="press-scale w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-xl shadow-lg shadow-blue-600/20 transition cursor-pointer"
+            disabled={passwordVerifying || fingerprintVerifying || !lockPassword}
+            className="press-scale w-full py-3 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground font-semibold rounded-xl shadow-lg shadow-primary/20 transition cursor-pointer"
           >
             {passwordVerifying ? 'Unlocking...' : 'Unlock with Password'}
           </button>

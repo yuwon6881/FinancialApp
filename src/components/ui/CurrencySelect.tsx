@@ -149,7 +149,7 @@ export function CurrencySelect({
             value={query}
             onChange={event => setQuery(event.target.value)}
             placeholder="Search code, name, or symbol"
-            className="mb-2 w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-xs outline-none focus:border-blue-500"
+            className="mb-2 w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-xs outline-none focus:border-ring"
           />
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">

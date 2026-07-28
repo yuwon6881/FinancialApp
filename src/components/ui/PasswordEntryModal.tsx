@@ -70,7 +70,7 @@ export const PasswordEntryModal: React.FC<PasswordEntryModalProps> = ({
             value={password}
             onChange={e => { setPassword(e.target.value); if (error) setError(null) }}
             className={`w-full px-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-              error ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-blue-500'
+              error ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-ring'
             }`}
           />
           {error && (
@@ -88,7 +88,7 @@ export const PasswordEntryModal: React.FC<PasswordEntryModalProps> = ({
           <button
             type="submit"
             disabled={busy}
-            className="press-scale flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition cursor-pointer"
+            className="press-scale flex-1 py-2.5 rounded-xl text-xs font-bold text-primary-foreground bg-primary hover:bg-primary/90 disabled:opacity-50 transition cursor-pointer"
           >
             {busy ? 'Please wait...' : confirmText}
           </button>

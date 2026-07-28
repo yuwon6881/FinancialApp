@@ -60,9 +60,6 @@ function renderSheet(scanResult = result()) {
       isOpen
       currency="MYR"
       draft={{ jobId: 'split-1', result: scanResult }}
-      failedJob={null}
-      activeJobIds={['split-1']}
-      onStarted={vi.fn()}
       onClear={onClear}
       onClose={vi.fn()}
       onUseResult={onUseResult}

@@ -131,7 +131,7 @@ export const SecurityQuestionSetup: React.FC<SecurityQuestionSetupProps> = ({ on
                   onChange={e => item.setAns(e.target.value)}
                   placeholder="Your answer"
                   autoComplete="off"
-                  className="w-full px-3.5 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
+                  className="w-full px-3.5 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-ring transition duration-200"
                 />
               </div>
             )
@@ -140,10 +140,10 @@ export const SecurityQuestionSetup: React.FC<SecurityQuestionSetupProps> = ({ on
           <button
             type="submit"
             disabled={submitting}
-            className="press-scale w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-muted disabled:text-muted-foreground text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-600/15 hover:shadow-blue-600/25 transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
+            className="press-scale w-full py-3 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground font-bold text-sm rounded-xl shadow-lg shadow-primary/15 hover:shadow-primary/25 transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
           >
             {submitting ? (
-              <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              <div className="w-4 h-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />
             ) : (
               'Save & Continue'
             )}

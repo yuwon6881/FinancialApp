@@ -228,8 +228,10 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                       </button>
                     )}
                   </div>
-                  <div ref={descriptionAnchorRef} className={`relative ${suggestions.isSuggestingNote ? 'perimeter-beam-host' : ''}`}>
-                    {suggestions.isSuggestingNote && <PerimeterBeam radius={12} size={40} />}
+                  {/* rounded-xl matches the input inside: the beam inherits the host's
+                      radius, and a square host would corner the trace off the field. */}
+                  <div ref={descriptionAnchorRef} className={`relative rounded-xl ${suggestions.isSuggestingNote ? 'perimeter-beam-host' : ''}`}>
+                    {suggestions.isSuggestingNote && <PerimeterBeam size={40} />}
                     <input
                       type="text"
                       required
@@ -247,7 +249,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                       className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
                         errors.description
                           ? 'border-destructive focus:ring-destructive'
-                          : 'border-border focus:ring-blue-500'
+                          : 'border-border focus:ring-ring'
                       }`}
                     />
                   </div>
@@ -321,7 +323,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                         } ${
                           errors.amount
                             ? 'border-destructive focus:ring-destructive'
-                            : 'border-border focus:ring-blue-500'
+                            : 'border-border focus:ring-ring'
                         }`}
                       />
                     </div>
@@ -445,7 +447,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                   </button>
                   <button
                     onClick={() => handleSaveEdit(draft)}
-                    className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition duration-150 cursor-pointer shadow-md"
+                    className="px-4 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs rounded-xl transition duration-150 cursor-pointer shadow-md"
                   >
                     Save
                   </button>
@@ -476,7 +478,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                   <button
                     onClick={() => handleStartEdit(draft)}
                     disabled={hideSensitive}
-                    className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-500 text-primary-foreground text-[11px] font-bold active:bg-blue-400 transition disabled:opacity-50 disabled:pointer-events-none"
+                    className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-500 text-white dark:text-background text-[11px] font-bold active:bg-blue-400 transition disabled:opacity-50 disabled:pointer-events-none"
                   >
                     <Edit2 className="size-4" />
                     Edit
@@ -541,7 +543,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
           onClick={onAddAnother}
           className="w-full flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl border-2 border-dashed border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 hover:border-blue-500/60 text-blue-600 dark:text-blue-400 font-bold text-sm cursor-pointer transition select-none active:scale-[0.99]"
         >
-          <span className="flex items-center justify-center size-7 rounded-full bg-blue-600 text-white shadow-md shadow-blue-600/20">
+          <span className="flex items-center justify-center size-7 rounded-full bg-primary text-primary-foreground shadow-md shadow-primary/20">
             <Plus className="size-4" />
           </span>
           Add Another Entry

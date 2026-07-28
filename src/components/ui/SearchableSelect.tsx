@@ -118,7 +118,7 @@ export function SearchableSelect<T extends string | number>({
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 placeholder={placeholder}
-                className="w-full pl-7 pr-3 py-1.5 text-xs bg-muted/50 border border-border/60 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-150 font-medium"
+                className="w-full pl-7 pr-3 py-1.5 text-xs bg-muted/50 border border-border/60 rounded-lg focus:outline-none focus:ring-1 focus:ring-ring transition duration-150 font-medium"
               />
             </div>
           </div>
@@ -138,7 +138,7 @@ export function SearchableSelect<T extends string | number>({
                   }}
                   className={`w-full text-left px-3.5 py-2 text-xs rounded-lg transition duration-100 cursor-pointer ${
                     opt.value === value
-                      ? 'bg-blue-600 text-white font-bold shadow-xs'
+                      ? 'bg-primary text-primary-foreground font-bold shadow-xs'
                       : 'hover:bg-muted/80 text-foreground font-medium'
                   }`}
                 >
@@ -148,7 +148,7 @@ export function SearchableSelect<T extends string | number>({
                       <span
                         className={`shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-normal ${
                           opt.value === value
-                            ? 'border-white/30 bg-white/15 text-white'
+                            ? 'border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground'
                             : 'border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-300'
                         }`}
                       >

@@ -5,8 +5,10 @@ import { ReceiptScanStatus } from './transaction-form/ReceiptScanStatus'
 import { TransactionTypeFields } from './transaction-form/TransactionTypeFields'
 import { TransactionFormFields } from './transaction-form/TransactionFormFields'
 import { useTransactionForm } from './transaction-form/useTransactionForm'
+import { useReceiptSplitScan } from './transaction-form/useReceiptSplitScan'
 import type { TransactionType } from './transaction-form/transactionFormReducer'
 import type { Transaction, TransactionCategory, AutocompleteSuggestion } from '../../types'
+import type { ReceiptSplitDraft, ReceiptSplitFailure } from '../../lib/useReceiptSplitPolling'
 
 export interface TransactionFormSheetProps {
   categories: TransactionCategory[]
@@ -36,7 +38,9 @@ export interface TransactionFormSheetProps {
   onAiEditDraftConsumed?: () => void
   onFetchTransactionById?: (id: string) => Promise<Transaction>
   onShowAlert?: (message: string, title?: string) => void
-  onOpenReceiptSplit?: () => void
+  receiptSplitDraft?: ReceiptSplitDraft | null
+  failedReceiptSplitJob?: ReceiptSplitFailure | null
+  onReceiptSplitStarted?: (scanId: string) => void
 }
 
 export interface TransactionPrefillDraft {
@@ -57,6 +61,12 @@ export interface TransactionFormSheetRef {
 
 export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, TransactionFormSheetProps>((props, ref) => {
   const form = useTransactionForm(props)
+  const splitScan = useReceiptSplitScan({
+    receiptSplitDraft: props.receiptSplitDraft,
+    failedReceiptSplitJob: props.failedReceiptSplitJob,
+    onReceiptSplitStarted: props.onReceiptSplitStarted,
+    onError: form.scanner.setScanError,
+  })
 
   useImperativeHandle(ref, () => ({
     openFresh: form.openFresh,
@@ -83,10 +93,12 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
             scanGalleryInputRef={form.scanner.scanGalleryInputRef}
             handleScanReceipt={form.scanner.handleScanReceipt}
             setScanError={form.scanner.setScanError}
-            onCalculateShare={() => {
-              form.handleCloseForm()
-              props.onOpenReceiptSplit?.()
-            }}
+            handleSplitScan={splitScan.handleScan}
+            isSplitScanning={splitScan.isScanning}
+            showSplitPicker={splitScan.showPicker}
+            setShowSplitPicker={splitScan.setShowPicker}
+            splitCameraInputRef={splitScan.cameraInputRef}
+            splitGalleryInputRef={splitScan.galleryInputRef}
           />
 
           <ReceiptScanStatus
@@ -135,7 +147,7 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
           </button>
           <button
             type="submit"
-            className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/10 transition text-xs font-semibold cursor-pointer"
+            className="flex-1 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/10 transition text-xs font-semibold cursor-pointer"
           >
             {form.state.mode === 'edit' ? 'Save Changes' : 'Add Transaction'}
           </button>

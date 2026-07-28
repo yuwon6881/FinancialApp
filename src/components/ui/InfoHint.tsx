@@ -54,7 +54,7 @@ export const InfoHint: React.FC<InfoHintProps> = ({ text, label, align = 'right'
         onMouseLeave={() => { if (!pinned) setOpen(false) }}
         onFocus={() => setOpen(true)}
         onBlur={() => { if (!pinned) setOpen(false) }}
-        className={`inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 ${className}`}
+        className={`inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${className}`}
       >
         <HelpCircle className="size-3.5" />
       </button>

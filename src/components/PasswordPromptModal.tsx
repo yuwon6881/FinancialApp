@@ -100,7 +100,7 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified, onTryFingerpr
             autoComplete="new-password"
             readOnly
             onFocus={(e) => e.target.removeAttribute('readonly')}
-            className="w-full px-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
+            className="w-full px-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-ring font-medium"
           />
           {promptError && (
             <p className="text-[10px] text-orange-500 font-semibold mt-1">
@@ -119,7 +119,7 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified, onTryFingerpr
           <button
             type="submit"
             disabled={promptVerifying}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl cursor-pointer transition duration-150 shadow-md shadow-blue-600/10"
+            className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-xs font-semibold rounded-xl cursor-pointer transition duration-150 shadow-md shadow-primary/10"
           >
             {promptVerifying ? 'Verifying...' : 'Verify'}
           </button>

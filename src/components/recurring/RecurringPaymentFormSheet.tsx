@@ -90,7 +90,7 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
             className={`w-full px-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
               errors.name
                 ? 'border-destructive focus:ring-destructive'
-                : 'border-border focus:ring-blue-500'
+                : 'border-border focus:ring-ring'
             }`}
           />
           {errors.name && (
@@ -116,7 +116,7 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
               } ${
                 errors.amount
                   ? 'border-destructive focus:ring-destructive'
-                  : 'border-border focus:ring-blue-500'
+                  : 'border-border focus:ring-ring'
               }`}
             />
           </div>
@@ -208,7 +208,7 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             type="submit"
-            className="px-5 py-2.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition cursor-pointer"
+            className="px-5 py-2.5 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition cursor-pointer"
           >
             {editingPayment ? 'Save Changes' : 'Add Subscription'}
           </m.button>

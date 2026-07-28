@@ -19,10 +19,12 @@ const budgets = [
   // the critical-path budget below, which is the number that actually matters — the
   // feature bundle is now fetched after mount rather than before first paint.
   { name: 'vendor-radix-*.js', pattern: /^vendor-radix-.*\.js$/, limitKb: 28.0 },
-  // 33.25: the transfer-volume summary, addressable ledger filters, and shared
-  // sorting controls. This view is interaction-heavy, so its compiler memo caches
-  // are retained; the eager critical-path budget still guards cold-launch cost.
-  { name: 'LedgerView-*.js', pattern: /^LedgerView-.*\.js$/, limitKb: 33.25 },
+  // 33.75: the transfer-volume summary, addressable ledger filters, and shared
+  // sorting controls, plus the shared-receipt scan picker that moved into the
+  // transaction form (the split *editor* is still a lazy chunk of its own). This
+  // view is interaction-heavy, so its compiler memo caches are retained; the eager
+  // critical-path budget still guards cold-launch cost.
+  { name: 'LedgerView-*.js', pattern: /^LedgerView-.*\.js$/, limitKb: 33.75 },
   { name: 'SettingsView-*.js', pattern: /^SettingsView-.*\.js$/, limitKb: 21.5 }
 ]
 

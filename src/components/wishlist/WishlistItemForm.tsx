@@ -35,7 +35,7 @@ export function WishlistItemForm(props: WishlistItemFormProps) {
           }}
           placeholder={isAdd ? 'e.g. Mechanical Keyboard, Weekend Trip' : undefined}
           className={`w-full px-3.5 py-2 bg-background border rounded-xl focus:outline-none focus:ring-1 transition font-medium ${
-            props.errors.name ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-blue-500'
+            props.errors.name ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-ring'
           }`}
         />
         {props.errors.name && <p className="text-[11px] text-destructive font-medium mt-1">{props.errors.name}</p>}
@@ -53,7 +53,7 @@ export function WishlistItemForm(props: WishlistItemFormProps) {
             }}
             placeholder={isAdd ? '0.00' : undefined}
             className={`w-full px-3.5 py-2 bg-background border rounded-xl focus:outline-none focus:ring-1 transition font-medium [appearance:textfield] ${
-              props.errors.price ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-blue-500'
+              props.errors.price ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-ring'
             }`}
           />
           {props.errors.price && <p className="text-[11px] text-destructive font-medium mt-1">{props.errors.price}</p>}
@@ -76,7 +76,7 @@ export function WishlistItemForm(props: WishlistItemFormProps) {
           id={`wishlist-active-${props.mode}`}
           checked={props.isActive}
           onChange={event => props.onActiveChange(event.target.checked)}
-          className="size-3.5 border-border rounded focus:ring-blue-500"
+          className="size-3.5 border-border rounded focus:ring-ring"
         />
         <label htmlFor={`wishlist-active-${props.mode}`} className="text-muted-foreground font-medium cursor-pointer">
           Set as Active Focus Goal
@@ -91,7 +91,7 @@ export function WishlistItemForm(props: WishlistItemFormProps) {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           type="submit"
-          className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full font-bold shadow-lg shadow-blue-500/25 cursor-pointer"
+          className="flex-1 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full font-bold shadow-lg shadow-primary/25 cursor-pointer"
         >
           {isAdd ? 'Add Goal' : 'Save Changes'}
         </m.button>

@@ -166,7 +166,7 @@ export function LedgerFilterBar({
               placeholder="0.00"
               value={minAmount}
               onChange={event => onMinAmountChange(event.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+              className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/20"
             />
           </label>
           <label className="space-y-1 text-[10px] font-semibold text-muted-foreground">
@@ -179,7 +179,7 @@ export function LedgerFilterBar({
               placeholder="Any"
               value={maxAmount}
               onChange={event => onMaxAmountChange(event.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+              className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/20"
             />
           </label>
         </div>
@@ -236,7 +236,7 @@ export function LedgerFilterBar({
       {showAllCycles ? (
         /* Server mode: input pill + Search button fused into one focus-aware
            control so the two read as a single element rather than two boxes. */
-        <div className="group flex min-w-0 flex-1 items-stretch md:w-auto overflow-hidden rounded-xl border border-border bg-card shadow-sm transition duration-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/25 hover:border-blue-500/50">
+        <div className="group flex min-w-0 flex-1 items-stretch md:w-auto overflow-hidden rounded-xl border border-border bg-card shadow-sm transition duration-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-ring/25 hover:border-blue-500/50">
           <div className="flex min-w-0 flex-1 items-center md:w-80">
             <Search className="ml-3 size-4 shrink-0 text-foreground transition-colors group-focus-within:text-blue-500" />
             <input
@@ -261,7 +261,7 @@ export function LedgerFilterBar({
           <button
             onClick={onServerSearch}
             disabled={serverIsFetching}
-            className="flex min-h-10 shrink-0 items-center justify-center gap-1.5 border-l border-border/50 bg-gradient-to-r from-blue-600 to-blue-700 px-3.5 py-2.5 text-xs font-semibold text-white whitespace-nowrap transition-colors duration-200 hover:from-blue-700 hover:to-blue-800 active:from-blue-800 active:to-blue-800 disabled:cursor-wait cursor-pointer md:px-5"
+            className="flex min-h-10 shrink-0 items-center justify-center gap-1.5 border-l border-border/50 bg-primary px-3.5 py-2.5 text-xs font-semibold text-primary-foreground whitespace-nowrap transition-colors duration-200 hover:bg-primary/90 active:bg-primary/80 disabled:cursor-wait cursor-pointer md:px-5"
           >
             {serverIsFetching
               ? <Loader2 className="size-3.5 animate-spin" />
@@ -278,7 +278,7 @@ export function LedgerFilterBar({
             placeholder="Search description, category..."
             value={searchTerm}
             onChange={e => onSearchTermChange(e.target.value)}
-            className="w-full rounded-xl border border-border/70 bg-background py-2.5 pl-9 pr-9 text-xs shadow-sm outline-none transition duration-200 hover:border-border focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/25"
+            className="w-full rounded-xl border border-border/70 bg-background py-2.5 pl-9 pr-9 text-xs shadow-sm outline-none transition duration-200 hover:border-border focus:border-ring/50 focus:ring-2 focus:ring-ring/25"
           />
           {searchTerm && (
             <button
@@ -332,7 +332,7 @@ export function LedgerFilterBar({
           </span>
           <ChevronDown className={`hidden size-3.5 text-muted-foreground transition-transform md:block ${isFilterDropdownOpen ? 'rotate-180' : ''}`} />
           {activeFilterCount > 0 && (
-            <span className="md:hidden absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 flex items-center justify-center rounded-full bg-blue-600 text-white text-[9px] font-bold">
+            <span className="md:hidden absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold">
               {activeFilterCount}
             </span>
           )}
@@ -382,7 +382,7 @@ export function LedgerFilterBar({
                               type="checkbox"
                               checked={isChecked}
                               onChange={() => onToggleFilter(bucket)}
-                              className="rounded border-border text-blue-500 focus:ring-blue-500 size-3"
+                              className="rounded border-border text-blue-500 focus:ring-ring size-3"
                             />
                             <span className={`size-2 shrink-0 rounded-full ${getCategoryDotClass(bucket)}`} />
                             <span className="truncate">{bucket}</span>
@@ -407,7 +407,7 @@ export function LedgerFilterBar({
                               type="checkbox"
                               checked={isChecked}
                               onChange={() => onToggleFilter(c.name)}
-                              className="rounded border-border text-blue-500 focus:ring-blue-500 size-3"
+                              className="rounded border-border text-blue-500 focus:ring-ring size-3"
                             />
                             <span className={`size-2 shrink-0 rounded-full ${getCategoryDotClass(c.name)}`} />
                             <span className="truncate">{c.name}</span>
@@ -428,8 +428,8 @@ export function LedgerFilterBar({
                   onClick={onApplyFilters}
                   disabled={serverIsFetching || hasInvalidRange}
                   className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-xs cursor-pointer transition duration-200 disabled:opacity-50
-                    bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600
-                    text-white shadow-md shadow-blue-600/20 hover:shadow-blue-600/30"
+                    bg-primary hover:bg-primary/90
+                    text-primary-foreground shadow-md shadow-primary/20 hover:shadow-primary/30"
                 >
                   {serverIsFetching
                     ? <Loader2 className="size-3.5 animate-spin" />
@@ -454,8 +454,8 @@ export function LedgerFilterBar({
                 }}
                 disabled={serverIsFetching || hasInvalidRange}
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-xs cursor-pointer transition duration-200 disabled:opacity-50
-                  bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600
-                  text-white shadow-md shadow-blue-600/20 hover:shadow-blue-600/30"
+                  bg-primary hover:bg-primary/90
+                  text-primary-foreground shadow-md shadow-primary/20 hover:shadow-primary/30"
               >
                 {serverIsFetching
                   ? <Loader2 className="size-3.5 animate-spin" />
@@ -491,7 +491,7 @@ export function LedgerFilterBar({
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => onToggleFilter(bucket)}
-                          className="rounded border-border text-blue-500 focus:ring-blue-500 size-3.5"
+                          className="rounded border-border text-blue-500 focus:ring-ring size-3.5"
                         />
                         <span className={`size-2.5 rounded-full ${getCategoryDotClass(bucket)}`} />
                         <span className="font-semibold">{bucket}</span>
@@ -516,7 +516,7 @@ export function LedgerFilterBar({
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => onToggleFilter(c.name)}
-                          className="rounded border-border text-blue-500 focus:ring-blue-500 size-3.5"
+                          className="rounded border-border text-blue-500 focus:ring-ring size-3.5"
                         />
                         <span className={`size-2.5 rounded-full ${getCategoryDotClass(c.name)}`} />
                         <span className="font-semibold truncate">{c.name}</span>

@@ -275,17 +275,17 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 value={twoFactorCode}
                 onChange={e => setTwoFactorCode(e.target.value)}
                 autoComplete="one-time-code"
-                className="w-full px-3.5 py-2 text-sm text-center tracking-[0.3em] bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
+                className="w-full px-3.5 py-2 text-sm text-center tracking-[0.3em] bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-ring transition duration-200"
               />
             </div>
 
             <button
               type="submit"
               disabled={twoFactorLoading}
-              className="press-scale w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-muted disabled:text-muted-foreground text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-600/15 hover:shadow-blue-600/25 transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
+              className="press-scale w-full py-3 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground font-bold text-sm rounded-xl shadow-lg shadow-primary/15 hover:shadow-primary/25 transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
             >
               {twoFactorLoading ? (
-                <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                <div className="w-4 h-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />
               ) : (
                 'Verify'
               )}
@@ -312,7 +312,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         <div className="text-center space-y-2 select-none">
           <AppLogo className="mx-auto size-12 rounded-2xl shadow-xl shadow-blue-500/15" pulse />
           <h1 className="text-2xl font-black tracking-tight text-foreground">
-            FinancialApp <span className="text-blue-500">Ledger</span>
+            FinancialApp <span className="text-accent-ink">Ledger</span>
           </h1>
           <p className="text-xs text-muted-foreground">
             {registering
@@ -354,7 +354,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   className={`w-full pl-10 pr-3.5 py-2.5 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
                     errors.username 
                       ? 'border-destructive focus:ring-destructive' 
-                      : 'border-border focus:ring-blue-500'
+                      : 'border-border focus:ring-ring'
                   }`}
                 />
               </div>
@@ -406,7 +406,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 className={`no-native-reveal w-full pl-10 pr-10 py-2.5 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
                   errors.password
                     ? 'border-destructive focus:ring-destructive'
-                    : 'border-border focus:ring-blue-500'
+                    : 'border-border focus:ring-ring'
                 }`}
               />
               {password.length > 0 && (
@@ -464,7 +464,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   className={`no-native-reveal w-full pl-10 pr-10 py-2.5 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
                     errors.confirmPassword
                       ? 'border-destructive focus:ring-destructive' 
-                      : 'border-border focus:ring-blue-500'
+                      : 'border-border focus:ring-ring'
                   }`}
                 />
               </div>
@@ -479,10 +479,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           <button
             type="submit"
             disabled={loading || (isRegistered === null)}
-            className="press-scale w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-muted disabled:text-muted-foreground text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-600/15 hover:shadow-blue-600/25 transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
+            className="press-scale w-full py-3 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground font-bold text-sm rounded-xl shadow-lg shadow-primary/15 hover:shadow-primary/25 transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
           >
             {loading ? (
-              <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              <div className="w-4 h-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />
             ) : registering ? (
               'Create account'
             ) : loginStep === 1 ? (

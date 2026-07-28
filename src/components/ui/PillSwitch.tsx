@@ -14,9 +14,9 @@ export function PillSwitch({ checked, onChange, ariaLabel, disabled = false }: P
       aria-label={ariaLabel}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-7 w-16 shrink-0 items-center rounded-full border transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-50 ${
+      className={`relative inline-flex h-7 w-16 shrink-0 items-center rounded-full border transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50 ${
         checked
-          ? 'border-blue-500/60 bg-blue-600 text-white'
+          ? 'border-primary/60 bg-primary text-primary-foreground'
           : 'border-border bg-muted/70 text-muted-foreground'
       }`}
     >
@@ -25,7 +25,10 @@ export function PillSwitch({ checked, onChange, ariaLabel, disabled = false }: P
       </span>
       <span
         aria-hidden="true"
-        className={`size-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${checked ? 'translate-x-9' : 'translate-x-1'}`}
+        // The knob reads against the track it sits on: the surface colour on the
+        // accent fill (a white knob on Ayu's gold barely separates), the ink colour
+        // on the muted off state.
+        className={`size-5 rounded-full shadow-sm transition-transform duration-200 ${checked ? 'bg-primary-foreground translate-x-9' : 'bg-foreground/70 translate-x-1'}`}
       />
     </button>
   )

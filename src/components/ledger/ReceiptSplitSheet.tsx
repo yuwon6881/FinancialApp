@@ -1,33 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle, Lock, Minus, Plus, Trash2, Unlock } from 'lucide-react'
-import {
-  startReceiptSplitScan,
-  type ReceiptSplitItem,
-  type ReceiptSplitScanResult,
-} from '../../lib/api'
-import type { ReceiptSplitDraft, ReceiptSplitFailure } from '../../lib/useReceiptSplitPolling'
+import type { ReceiptSplitItem, ReceiptSplitScanResult } from '../../lib/api'
+import type { ReceiptSplitDraft } from '../../lib/useReceiptSplitPolling'
 import { calculateReceiptShare } from '../../lib/receiptSplitCalculator'
-import { getErrorMessage } from '../../lib/errors'
 import { formatCurrencyVal } from '../../lib/utils'
 import { BottomSheet } from '../ui/BottomSheet'
 import { DatePicker } from '../ui/DatePicker'
 import { SwipeableRow } from '../ui/SwipeableRow'
-import { ReceiptScanPicker } from './transaction-form/ReceiptScanPicker'
 import type { TransactionPrefillDraft } from './TransactionFormSheet'
 
 interface Props {
   isOpen: boolean
   currency: string
+  /** The scan is started from the transaction form's picker; this sheet is purely the editor. */
   draft: ReceiptSplitDraft | null
-  failedJob: ReceiptSplitFailure | null
-  activeJobIds: string[]
-  onStarted: (scanId: string) => void
   onClear: (scanId: string) => void | Promise<void>
   onClose: () => void
   onUseResult: (draft: TransactionPrefillDraft) => void
 }
 
-const inputClassName = 'w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground shadow-xs outline-none transition hover:border-border/80 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
+const inputClassName = 'w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground shadow-xs outline-none transition hover:border-border/80 focus:border-ring focus:ring-2 focus:ring-ring/20'
 
 function receiptQuantity(item: ReceiptSplitItem): number {
   return Math.max(1, Math.floor(item.quantity))
@@ -54,9 +46,6 @@ export function ReceiptSplitSheet({
   isOpen,
   currency,
   draft,
-  failedJob,
-  activeJobIds,
-  onStarted,
   onClear,
   onClose,
   onUseResult,
@@ -65,11 +54,6 @@ export function ReceiptSplitSheet({
   const [selectedQuantities, setSelectedQuantities] = useState<number[]>([])
   const [unlockedPriceIndexes, setUnlockedPriceIndexes] = useState<Set<number>>(new Set())
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
-  const [isScanning, setIsScanning] = useState(false)
-  const [scanError, setScanError] = useState<string | null>(null)
-  const [showPicker, setShowPicker] = useState(false)
-  const cameraRef = useRef<HTMLInputElement>(null)
-  const galleryRef = useRef<HTMLInputElement>(null)
   const appliedJobRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -82,22 +66,7 @@ export function ReceiptSplitSheet({
     })
     setSelectedQuantities(draft.result.items.map(receiptQuantity))
     setUnlockedPriceIndexes(new Set())
-    setIsScanning(false)
-    setScanError(null)
   }, [draft])
-
-  useEffect(() => {
-    if (!failedJob || failedJob.jobId !== activeJobId) return
-    setScanError(failedJob.errorMessage)
-    setIsScanning(false)
-    setActiveJobId(null)
-  }, [failedJob, activeJobId])
-
-  useEffect(() => {
-    if (!activeJobId || activeJobIds.includes(activeJobId) || draft?.jobId === activeJobId) return
-    if (!failedJob || failedJob.jobId !== activeJobId) return
-    setIsScanning(false)
-  }, [activeJobId, activeJobIds, draft, failedJob])
 
   const calculation = useMemo(
     () => receipt ? calculateReceiptShare(receipt, selectedQuantities) : null,
@@ -126,8 +95,6 @@ export function ReceiptSplitSheet({
     setSelectedQuantities([])
     setUnlockedPriceIndexes(new Set())
     setActiveJobId(null)
-    setIsScanning(false)
-    setScanError(null)
     appliedJobRef.current = null
     onClose()
   }
@@ -143,23 +110,6 @@ export function ReceiptSplitSheet({
       txType: 'outflow',
     })
     closeAndClear()
-  }
-
-  const handleScan = async (file: File) => {
-    setIsScanning(true)
-    setScanError(null)
-    setReceipt(null)
-    try {
-      const started = await startReceiptSplitScan(file)
-      setActiveJobId(started.scanId)
-      onStarted(started.scanId)
-    } catch (error: unknown) {
-      setScanError(getErrorMessage(error, 'Could not scan this receipt. Please try a clearer photo.'))
-      setIsScanning(false)
-    } finally {
-      if (cameraRef.current) cameraRef.current.value = ''
-      if (galleryRef.current) galleryRef.current.value = ''
-    }
   }
 
   const updateItem = (index: number, update: Partial<ReceiptSplitItem>) => {
@@ -234,37 +184,13 @@ export function ReceiptSplitSheet({
             type="button"
             disabled={!canUse}
             onClick={useResult}
-            className="flex-1 rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer"
+            className="flex-1 rounded-xl bg-primary py-2.5 text-xs font-bold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer"
           >
             Use This Amount
           </button>
         </div>
       ) : undefined}
     >
-      {!receipt && (
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Scan the shared receipt, then adjust the quantities to keep only your items.
-          </p>
-          <ReceiptScanPicker
-            isScanning={isScanning}
-            showScanPicker={showPicker}
-            setShowScanPicker={setShowPicker}
-            scanFileInputRef={cameraRef}
-            scanGalleryInputRef={galleryRef}
-            handleScanReceipt={handleScan}
-            setScanError={setScanError}
-            label="Scan Shared Receipt"
-            scanningLabel="Reading receipt items..."
-          />
-          {scanError && (
-            <div className="rounded-xl border border-destructive/25 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-              {scanError}
-            </div>
-          )}
-        </div>
-      )}
-
       {receipt && calculation && (
         <div className="space-y-5">
           <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(12rem,1fr)]">
@@ -366,7 +292,7 @@ export function ReceiptSplitSheet({
                             value={inputNumber(unitPrice)}
                             onChange={event => updatePrice(index, event.target.value)}
                             disabled={!priceUnlocked}
-                            className="min-w-0 flex-1 rounded-lg border border-border bg-background px-2 py-1.5 text-xs font-bold text-foreground outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="min-w-0 flex-1 rounded-lg border border-border bg-background px-2 py-1.5 text-xs font-bold text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-60"
                           />
                           <button
                             type="button"

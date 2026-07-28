@@ -113,7 +113,7 @@ export function EditDisabledModal({ isOpen, onClose }: EditDisabledModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md transition cursor-pointer"
+            className="px-5 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold shadow-md transition cursor-pointer"
           >
             Close
           </button>

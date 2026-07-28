@@ -270,7 +270,6 @@ function App() {
   const {
     activeReceiptSplitDraft,
     failedReceiptSplitJob,
-    receiptSplitJobIds,
     handleReceiptSplitStarted,
     clearReceiptSplitJob,
   } = useReceiptSplitPolling({
@@ -331,7 +330,7 @@ function App() {
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', prefs.darkMode)
-    const surface = prefs.darkMode ? '#0b0e14' : '#f6f8fc'
+    const surface = prefs.darkMode ? '#0b0e14' : '#fcfcfc'
     const meta = document.querySelector('meta[name="theme-color"]')
     if (meta) meta.setAttribute('content', surface)
     // Paint the root + body surface to match the active theme. In a standalone
@@ -615,7 +614,7 @@ function App() {
     return (
       <LaunchReady>
         <AppProvider value={appContextValue}>
-          <div className="app-shell min-h-screen text-foreground flex flex-col selection:bg-blue-500/20 selection:text-blue-500">
+          <div className="app-shell min-h-screen text-foreground flex flex-col selection:bg-primary/25 selection:text-foreground">
             <ToastViewport toasts={dialogs.toasts} onDismiss={dialogs.dismissToast} />
             <LockScreen
               isOpen
@@ -631,7 +630,7 @@ function App() {
 
   return (
     <AppProvider value={appContextValue}>
-      <div className="app-shell min-h-screen text-foreground flex flex-col selection:bg-blue-500/20 selection:text-blue-500">
+      <div className="app-shell min-h-screen text-foreground flex flex-col selection:bg-primary/25 selection:text-foreground">
         <ToastViewport toasts={dialogs.toasts} onDismiss={dialogs.dismissToast} />
 
         <TopNav
@@ -876,7 +875,6 @@ function App() {
                         onResetAutoOpenReceiptSplit={() => nav.setAutoOpenReceiptSplit(false)}
                         receiptSplitDraft={activeReceiptSplitDraft}
                         failedReceiptSplitJob={failedReceiptSplitJob}
-                        receiptSplitJobIds={receiptSplitJobIds}
                         onReceiptSplitStarted={handleReceiptSplitStarted}
                         onReceiptSplitCleared={clearReceiptSplitJob}
                         onReceiptSplitOpenChange={setIsReceiptSplitOpen}
@@ -1097,7 +1095,10 @@ function App() {
                       className="flex items-center gap-2.5 group cursor-pointer"
                     >
                       <span className="bg-card border border-border px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-foreground shadow-xs">{label}</span>
-                      <span className={`size-11 rounded-full ${color} text-white flex items-center justify-center shadow-lg`}><Icon className="size-5" /></span>
+                      {/* Ayu's 500 steps are bright tints on a near-black surface, so a white
+                          glyph on them is close to invisible; the dark surface colour is the
+                          readable pairing there. Light mode keeps white on its darker fills. */}
+                      <span className={`size-11 rounded-full ${color} text-white dark:text-background flex items-center justify-center shadow-lg`}><Icon className="size-5" /></span>
                     </m.button>
                   ))}
                 </m.div>
@@ -1112,10 +1113,10 @@ function App() {
                   fabMenu.toggle()
                 }
               }}
-              className={`fixed right-6 flex items-center justify-center size-14 rounded-full text-white shadow-xl cursor-pointer ${
+              className={`fixed right-6 flex items-center justify-center size-14 rounded-full shadow-xl cursor-pointer ${
                 prefs.activeTab === 'drafts'
-                  ? 'bg-gradient-to-tr from-emerald-600 to-green-500 shadow-emerald-500/20 z-40'
-                  : 'bg-gradient-to-tr from-blue-600 to-sky-500 shadow-blue-500/10 z-40 md:hidden'
+                  ? 'bg-emerald-600 text-white shadow-emerald-600/25 z-40'
+                  : 'bg-primary text-primary-foreground shadow-primary/25 z-40 md:hidden'
               }`}
               style={{
                 bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))'

@@ -53,7 +53,7 @@ export const ChangePasswordSection: React.FC<ChangePasswordSectionProps> = ({ hi
 
   const fieldClass = (key: string) =>
     `w-full px-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-      errors[key] ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-blue-500'
+      errors[key] ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-ring'
     }`
 
   const clearError = (key: string) => {
@@ -124,7 +124,7 @@ export const ChangePasswordSection: React.FC<ChangePasswordSectionProps> = ({ hi
         <button
           type="submit"
           disabled={busy || hideSensitive}
-          className="press-scale w-full py-2.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition cursor-pointer"
+          className="press-scale w-full py-2.5 rounded-xl text-xs font-bold text-primary-foreground bg-primary hover:bg-primary/90 disabled:opacity-50 transition cursor-pointer"
         >
           {busy ? 'Updating...' : 'Change password'}
         </button>

@@ -152,7 +152,7 @@ export function PendingSubscriptionsModal({
                     )}
                     disabled={hideSensitive || isPending}
                     title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
-                    className="flex-1 sm:flex-initial px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition shadow-sm whitespace-nowrap text-center disabled:cursor-wait disabled:opacity-70"
+                    className="flex-1 sm:flex-initial px-3 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-xs font-bold cursor-pointer transition shadow-sm whitespace-nowrap text-center disabled:cursor-wait disabled:opacity-70"
                   >
                     {pendingAction === 'confirm'
                       ? <span className="flex items-center justify-center gap-1.5"><Loader2 className="size-3 animate-spin" /> Confirming…</span>

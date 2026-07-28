@@ -7,13 +7,13 @@ const F_PATH = 'M30 32h40v8H38v12h28v8H38v16h-8V32z'
 // Keep standard and maskable assets visually identical. Installed browsers may
 // choose either purpose for the launcher icon and generated splash screen.
 const tile = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="1024" height="1024">
-  <rect width="100" height="100" fill="#0a0d14" />
-  <path d="${F_PATH}" fill="#60a5fa" />
+  <rect width="100" height="100" fill="#0b0e14" />
+  <path d="${F_PATH}" fill="#e6b450" />
 </svg>`
 
 const maskable = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="1024" height="1024">
-  <rect width="100" height="100" fill="#0a0d14" />
-  <path d="${F_PATH}" fill="#60a5fa" />
+  <rect width="100" height="100" fill="#0b0e14" />
+  <path d="${F_PATH}" fill="#e6b450" />
 </svg>`
 
 const jobs = [

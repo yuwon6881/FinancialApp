@@ -183,7 +183,7 @@ export function CategoryLimitsCard({
                           } ${
                             errors[category.id]
                               ? 'border-destructive focus:ring-destructive'
-                              : 'border-border focus:ring-blue-500'
+                              : 'border-border focus:ring-ring'
                           }`}
                         />
                       </div>
@@ -205,7 +205,7 @@ export function CategoryLimitsCard({
               type="button"
               onClick={save}
               disabled={hideSensitive || changedCategories.length === 0}
-              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground cursor-pointer"
+              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground cursor-pointer"
             >
               <Save className="size-3.5" /> Save Guides
             </button>

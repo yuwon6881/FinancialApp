@@ -29,9 +29,11 @@ export const CustomConfirmModal: React.FC<CustomConfirmModalProps> = ({
   const Icon = isPrimary ? Info : AlertCircle
   const colorClass = isPrimary ? 'text-blue-500' : 'text-orange-500'
   const bgClass = isPrimary ? 'bg-blue-500/10' : 'bg-orange-500/10'
-  const buttonClass = isPrimary 
-    ? 'bg-blue-600 hover:bg-blue-700 disabled:hover:bg-blue-600' 
-    : 'bg-orange-600 hover:bg-orange-700 disabled:hover:bg-orange-600'
+  // The text colour belongs to each fill: the accent fill is light in dark mode, so
+  // it pairs with the surface colour, never white.
+  const buttonClass = isPrimary
+    ? 'bg-primary text-primary-foreground hover:bg-primary/90 disabled:hover:bg-primary'
+    : 'bg-orange-600 text-white hover:bg-orange-700 disabled:hover:bg-orange-600'
 
   return (
     <BottomSheet
@@ -59,7 +61,7 @@ export const CustomConfirmModal: React.FC<CustomConfirmModalProps> = ({
             type="button"
             onClick={onConfirm}
             disabled={confirmDisabled}
-            className={`px-5 py-2 rounded-xl text-white text-xs font-semibold shadow-md transition cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed ${buttonClass}`}
+            className={`px-5 py-2 rounded-xl text-xs font-semibold shadow-md transition cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed ${buttonClass}`}
           >
             {confirmText}
           </button>

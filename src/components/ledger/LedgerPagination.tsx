@@ -50,7 +50,7 @@ export function LedgerPagination({
           onClick={() => onPageChange(p as number)}
           className={`px-3 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition ${
             currentPage === p
-              ? 'bg-blue-600 border-blue-600 text-white shadow-xs'
+              ? 'bg-primary border-primary text-primary-foreground shadow-xs'
               : 'border-border bg-background hover:bg-muted text-foreground'
           }`}
         >

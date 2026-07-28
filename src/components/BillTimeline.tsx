@@ -512,8 +512,10 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                     title={`${node.bills.length} item(s) due: ${node.dueDate}`}
                   >
                     <span className={`size-4 rounded-full border-2 border-card ${dotColor} group-hover/dot:scale-125 group-focus/dot:scale-125 group-active/dot:scale-95 transition duration-150 shadow-md flex items-center justify-center`}>
+                      {/* The dot fills are bright gold/green tints in dark mode, so the
+                          count reads in the surface colour rather than white. */}
                       {node.bills.length > 1 && (
-                        <span className="text-[8px] text-white font-extrabold leading-none">{node.bills.length}</span>
+                        <span className="text-[8px] text-white dark:text-background font-extrabold leading-none">{node.bills.length}</span>
                       )}
                     </span>
                   </button>

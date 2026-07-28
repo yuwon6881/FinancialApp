@@ -89,7 +89,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
   }
 
   const inputBase =
-    'w-full py-2.5 pl-10 pr-3.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200'
+    'w-full py-2.5 pl-10 pr-3.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-ring transition duration-200'
 
   return (
     <div className="app-shell min-h-screen text-foreground flex items-center justify-center p-4">
@@ -109,7 +109,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
             </div>
             <button
               onClick={onBackToLogin}
-              className="press-scale w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-600/15 hover:shadow-blue-600/25 transition duration-200 cursor-pointer"
+              className="press-scale w-full py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-sm rounded-xl shadow-lg shadow-primary/15 hover:shadow-primary/25 transition duration-200 cursor-pointer"
             >
               Return to login
             </button>
@@ -170,10 +170,10 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
                 <button
                   type="submit"
                   disabled={loading}
-                  className="press-scale w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-muted disabled:text-muted-foreground text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-600/15 hover:shadow-blue-600/25 transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
+                  className="press-scale w-full py-3 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground font-bold text-sm rounded-xl shadow-lg shadow-primary/15 hover:shadow-primary/25 transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {loading ? (
-                    <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                    <div className="w-4 h-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />
                   ) : (
                     'Continue'
                   )}
@@ -194,7 +194,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
                       type="text"
                       value={item.a}
                       onChange={e => item.setA(e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
+                      className="w-full px-3.5 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-ring transition duration-200"
                       placeholder="Your answer"
                       autoComplete="off"
                       autoFocus={idx === 0}
@@ -203,7 +203,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
                 ))}
                 <button
                   type="submit"
-                  className="press-scale w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-600/15 hover:shadow-blue-600/25 transition duration-200 cursor-pointer"
+                  className="press-scale w-full py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-sm rounded-xl shadow-lg shadow-primary/15 hover:shadow-primary/25 transition duration-200 cursor-pointer"
                 >
                   Verify answers
                 </button>
@@ -222,7 +222,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
                       type={showPassword ? 'text' : 'password'}
                       value={newPassword}
                       onChange={e => setNewPassword(e.target.value)}
-                      className="no-native-reveal w-full pl-10 pr-10 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
+                      className="no-native-reveal w-full pl-10 pr-10 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-ring transition duration-200"
                       placeholder="••••••••"
                       autoComplete="new-password"
                       autoFocus
@@ -249,7 +249,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
                       type={showPassword ? 'text' : 'password'}
                       value={confirmPassword}
                       onChange={e => setConfirmPassword(e.target.value)}
-                      className="no-native-reveal w-full pl-10 pr-3.5 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 transition duration-200"
+                      className="no-native-reveal w-full pl-10 pr-3.5 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-ring transition duration-200"
                       placeholder="••••••••"
                       autoComplete="new-password"
                     />
@@ -258,10 +258,10 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
                 <button
                   type="submit"
                   disabled={loading}
-                  className="press-scale w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-muted disabled:text-muted-foreground text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-600/15 hover:shadow-blue-600/25 transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
+                  className="press-scale w-full py-3 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground font-bold text-sm rounded-xl shadow-lg shadow-primary/15 hover:shadow-primary/25 transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {loading ? (
-                    <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                    <div className="w-4 h-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />
                   ) : (
                     'Reset password'
                   )}

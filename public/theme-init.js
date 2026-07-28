@@ -6,7 +6,7 @@
       : stored === 'false'
         ? false
         : !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
-    var surface = isDark ? '#0a0d14' : '#f6f8fc'
+    var surface = isDark ? '#0b0e14' : '#fcfcfc'
     var root = document.documentElement
     if (isDark) root.classList.add('dark')
     root.style.setProperty('--launch-surface', surface)

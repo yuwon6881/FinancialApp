@@ -5,7 +5,7 @@ type ButtonVariant = 'primary' | 'ghost' | 'danger'
 type ButtonSize = 'sm' | 'md' | 'lg'
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  primary: 'text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 border border-transparent',
+  primary: 'text-primary-foreground bg-primary hover:bg-primary/90 active:bg-primary/80 border border-transparent',
   ghost: 'text-blue-500 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/15',
   danger: 'text-orange-500 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/15',
 }
