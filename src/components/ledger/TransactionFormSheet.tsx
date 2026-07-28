@@ -36,10 +36,21 @@ export interface TransactionFormSheetProps {
   onAiEditDraftConsumed?: () => void
   onFetchTransactionById?: (id: string) => Promise<Transaction>
   onShowAlert?: (message: string, title?: string) => void
+  onOpenReceiptSplit?: () => void
+}
+
+export interface TransactionPrefillDraft {
+  description: string
+  amount: number
+  date?: string | null
+  category?: string
+  ledgerCategory?: string
+  txType: 'inflow' | 'outflow'
 }
 
 export interface TransactionFormSheetRef {
   openFresh: () => void
+  openWithDraft: (draft: TransactionPrefillDraft) => void
   handleStartEdit: (t: Transaction) => void
   handleCloseForm: () => void
 }
@@ -49,6 +60,7 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
 
   useImperativeHandle(ref, () => ({
     openFresh: form.openFresh,
+    openWithDraft: form.openWithDraft,
     handleStartEdit: form.handleStartEdit,
     handleCloseForm: form.handleCloseForm,
   }))
@@ -71,6 +83,10 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
             scanGalleryInputRef={form.scanner.scanGalleryInputRef}
             handleScanReceipt={form.scanner.handleScanReceipt}
             setScanError={form.scanner.setScanError}
+            onCalculateShare={() => {
+              form.handleCloseForm()
+              props.onOpenReceiptSplit?.()
+            }}
           />
 
           <ReceiptScanStatus

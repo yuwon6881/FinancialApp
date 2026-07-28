@@ -21,6 +21,64 @@ export interface ReceiptScanJob {
   completedAt?: string | null
 }
 
+export type ReceiptSplitChargeKind = 'tax' | 'service' | 'tip' | 'discount' | 'rounding' | 'other'
+export type ReceiptSplitChargeOperation = 'add' | 'subtract' | 'included'
+export type ReceiptSplitChargeBasis = 'subtotal' | 'runningTotal'
+
+export interface ReceiptSplitItem {
+  name: string
+  quantity: number
+  unitPrice: number | null
+  lineTotal: number | null
+  confidence: number
+}
+
+export interface ReceiptSplitCharge {
+  label: string
+  kind: ReceiptSplitChargeKind
+  operation: ReceiptSplitChargeOperation
+  basis: ReceiptSplitChargeBasis
+  amount: number | null
+  ratePercent: number | null
+  sequence: number
+  eligibleItemIndexes: number[]
+  confidence: number
+}
+
+export interface ReceiptSplitFieldConfidence {
+  description: number
+  date: number
+  currency: number
+  subtotal: number
+  total: number
+}
+
+export interface ReceiptSplitScanResult {
+  description: string
+  date: string | null
+  currency: string | null
+  subtotal: number | null
+  total: number | null
+  category: string
+  ledgerCategory: string
+  items: ReceiptSplitItem[]
+  charges: ReceiptSplitCharge[]
+  fieldConfidence: ReceiptSplitFieldConfidence
+  truncated: boolean
+  warnings: string[]
+  confidence: number
+}
+
+export interface ReceiptSplitScanJob {
+  scanId: string
+  status: ReceiptScanJob['status']
+  result: ReceiptSplitScanResult | null
+  errorMessage?: string | null
+  createdAt: string
+  updatedAt: string
+  completedAt?: string | null
+}
+
 export interface InvestmentActivityScanResult {
   type: 'Buy' | 'Sell' | 'Dividend' | 'FeeTax' | null
   accountId: string | null
@@ -73,6 +131,51 @@ export async function deleteReceiptScanJob(scanId: string): Promise<void> {
     method: 'DELETE',
     errorMessage: 'Could not clear receipt scan job.',
   })
+}
+
+export async function startReceiptSplitScan(imageFile: File): Promise<{ scanId: string; status: string }> {
+  const formData = new FormData()
+  formData.append('image', imageFile)
+  const response = await apiFetch('/ocr/scan-receipt-split/jobs', { method: 'POST', body: formData })
+  if (!response.ok) await throwApiError(response, 'Could not start receipt split scan. Please try again.')
+  return response.json()
+}
+
+type ObfuscatedAmount = string | number | null
+type WireReceiptSplitScanJob = Omit<ReceiptSplitScanJob, 'result'> & {
+  result: (Omit<ReceiptSplitScanResult, 'subtotal' | 'total' | 'items' | 'charges'> & {
+    subtotal: ObfuscatedAmount
+    total: ObfuscatedAmount
+    items: Array<Omit<ReceiptSplitItem, 'unitPrice' | 'lineTotal'> & {
+      unitPrice: ObfuscatedAmount
+      lineTotal: ObfuscatedAmount
+    }>
+    charges: Array<Omit<ReceiptSplitCharge, 'amount'> & { amount: ObfuscatedAmount }>
+  }) | null
+}
+
+export async function fetchReceiptSplitScanJob(scanId: string): Promise<ReceiptSplitScanJob> {
+  const job = await request<WireReceiptSplitScanJob>(`/ocr/scan-receipt/jobs/${scanId}`, {
+    errorMessage: 'Could not fetch receipt split scan status.',
+  })
+  const decode = (value: ObfuscatedAmount) => value == null ? null : deobfuscateAmount(value)
+  return {
+    ...job,
+    result: job.result ? {
+      ...job.result,
+      subtotal: decode(job.result.subtotal),
+      total: decode(job.result.total),
+      items: job.result.items.map(item => ({
+        ...item,
+        unitPrice: decode(item.unitPrice),
+        lineTotal: decode(item.lineTotal),
+      })),
+      charges: job.result.charges.map(charge => ({
+        ...charge,
+        amount: decode(charge.amount),
+      })),
+    } : null,
+  }
 }
 
 export async function startInvestmentScan(imageFile: File): Promise<{ scanId: string; status: string }> {

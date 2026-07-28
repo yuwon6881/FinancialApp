@@ -59,4 +59,28 @@ describe('useTransactionForm receipt cleanup', () => {
     expect(onReceiptScanCleared).toHaveBeenCalledTimes(1)
     expect(onReceiptScanCleared).toHaveBeenCalledWith('scan-pending')
   })
+
+  it('opens a fresh outflow prefilled from a confirmed receipt share', () => {
+    const { result } = renderHook(() => useTransactionForm(createOptions()))
+
+    act(() => {
+      result.current.openWithDraft({
+        description: 'Shared Dinner',
+        amount: 23.2,
+        date: '2026-07-28',
+        category: 'Food',
+        ledgerCategory: 'Essentials',
+        txType: 'outflow',
+      })
+    })
+
+    expect(result.current.state.showAddForm).toBe(true)
+    expect(result.current.state.mode).toBe('create')
+    expect(result.current.state.description).toBe('Shared Dinner')
+    expect(result.current.state.amount).toBe('23.20')
+    expect(result.current.state.date).toBe('2026-07-28')
+    expect(result.current.state.category).toBe('Food')
+    expect(result.current.state.ledgerCategory).toBe('Essentials')
+    expect(result.current.state.transactionType).toBe('outflow')
+  })
 })

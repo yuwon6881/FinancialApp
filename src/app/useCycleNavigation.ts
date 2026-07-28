@@ -46,6 +46,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
   const [ledgerIncomingTxType, setLedgerIncomingTxType] = useState<'inflow' | 'outflow' | 'transfer' | null>(initialLocation.ledger.txType)
   const [ledgerShowAllCycles, setLedgerShowAllCycles] = useState(initialLocation.ledger.showAllCycles)
   const [autoOpenLedgerAdd, setAutoOpenLedgerAdd] = useState(false)
+  const [autoOpenReceiptSplit, setAutoOpenReceiptSplit] = useState(false)
   const [autoOpenSubscriptionAdd, setAutoOpenSubscriptionAdd] = useState(false)
   const [autoOpenWishlistAdd, setAutoOpenWishlistAdd] = useState(false)
   const [highlightedTxId, setHighlightedTxId] = useState<string | null>(initialLocation.ledger.highlightedTxId)
@@ -174,10 +175,13 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     updateAppSearch({ subscription: null })
   }, [])
 
-  const handleQuickAction = useCallback((action: 'transaction' | 'subscription' | 'wishlist') => {
+  const handleQuickAction = useCallback((action: 'transaction' | 'receipt-split' | 'subscription' | 'wishlist') => {
     if (action === 'transaction') {
       setActiveTab('ledger')
       setAutoOpenLedgerAdd(true)
+    } else if (action === 'receipt-split') {
+      setActiveTab('ledger')
+      setAutoOpenReceiptSplit(true)
     } else if (action === 'subscription') {
       setActiveTab('recurring')
       setAutoOpenSubscriptionAdd(true)
@@ -266,6 +270,8 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     setLedgerShowAllCycles,
     autoOpenLedgerAdd,
     setAutoOpenLedgerAdd,
+    autoOpenReceiptSplit,
+    setAutoOpenReceiptSplit,
     autoOpenSubscriptionAdd,
     setAutoOpenSubscriptionAdd,
     autoOpenWishlistAdd,

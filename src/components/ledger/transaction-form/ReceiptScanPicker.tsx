@@ -1,5 +1,5 @@
 import React from 'react'
-import { Camera, Image, X, Loader2 } from 'lucide-react'
+import { Calculator, Camera, Image, X, Loader2 } from 'lucide-react'
 import { PerimeterBeam } from '../../ui/PerimeterBeam'
 
 interface ReceiptScanPickerProps {
@@ -12,6 +12,7 @@ interface ReceiptScanPickerProps {
   setScanError: (err: string | null) => void
   label?: string
   scanningLabel?: string
+  onCalculateShare?: () => void
 }
 
 export function ReceiptScanPicker({
@@ -24,6 +25,7 @@ export function ReceiptScanPicker({
   setScanError,
   label = 'Scan Receipt',
   scanningLabel = 'Scanning receipt...',
+  onCalculateShare,
 }: ReceiptScanPickerProps) {
   return (
     <div className="sm:col-span-2">
@@ -50,26 +52,37 @@ export function ReceiptScanPicker({
       />
 
       {!showScanPicker && (
-        <button
-          type="button"
-          disabled={isScanning}
-          onClick={() => {
-            setScanError(null)
-            if (!isScanning) setShowScanPicker(true)
-          }}
-          className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border transition duration-200 text-xs font-semibold cursor-pointer ${
-            isScanning
-              ? 'perimeter-beam-host border-blue-500/20 bg-blue-500/5 text-blue-600 dark:text-blue-400 cursor-not-allowed relative overflow-hidden'
-              : 'border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400'
-          }`}
-        >
-          {isScanning && <PerimeterBeam size={40} />}
-          {isScanning ? (
-            <><Loader2 className="size-3.5 animate-spin" /> {scanningLabel}</>
-          ) : (
-            <><Camera className="size-3.5" /><span>{label}</span></>
+        <div className={onCalculateShare ? 'grid grid-cols-1 gap-2 sm:grid-cols-2' : ''}>
+          <button
+            type="button"
+            disabled={isScanning}
+            onClick={() => {
+              setScanError(null)
+              if (!isScanning) setShowScanPicker(true)
+            }}
+            className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border transition duration-200 text-xs font-semibold cursor-pointer ${
+              isScanning
+                ? 'perimeter-beam-host border-blue-500/20 bg-blue-500/5 text-blue-600 dark:text-blue-400 cursor-not-allowed relative overflow-hidden'
+                : 'border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 text-blue-600 dark:text-blue-400'
+            }`}
+          >
+            {isScanning && <PerimeterBeam size={40} />}
+            {isScanning ? (
+              <><Loader2 className="size-3.5 animate-spin" /> {scanningLabel}</>
+            ) : (
+              <><Camera className="size-3.5" /><span>{label}</span></>
+            )}
+          </button>
+          {onCalculateShare && !isScanning && (
+            <button
+              type="button"
+              onClick={onCalculateShare}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-teal-500/40 bg-teal-500/5 hover:bg-teal-500/10 text-teal-600 dark:text-teal-400 transition duration-200 text-xs font-semibold cursor-pointer"
+            >
+              <Calculator className="size-3.5" /> Calculate My Share
+            </button>
           )}
-        </button>
+        </div>
       )}
 
       {showScanPicker && !isScanning && (

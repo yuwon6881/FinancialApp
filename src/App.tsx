@@ -6,7 +6,7 @@ import TopNav from "./TopNav.tsx"
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { type AppTab, type DashboardData } from './types'
 import * as api from './lib/api'
-import { Loader2, Upload, Wallet, CreditCard, PiggyBank, Sparkles, X, Zap } from 'lucide-react'
+import { Calculator, Loader2, Upload, Wallet, CreditCard, PiggyBank, Sparkles, X, Zap } from 'lucide-react'
 
 // Every view is code-split so the initial bundle only ships the shell. Each
 // chunk loads on demand behind an instant blank-shell fallback (no flash).
@@ -28,6 +28,7 @@ import { CycleSkeleton, Skeleton, type PageSkeletonVariant } from './components/
 import { clearLocalFinancialData, getCachedCycleSnapshot } from './lib/cache'
 import { useVisualViewportVars } from './lib/useVisualViewportVars'
 import { useReceiptScanPolling } from './lib/useReceiptScanPolling'
+import { useReceiptSplitPolling } from './lib/useReceiptSplitPolling'
 import { useInvestmentScanPolling } from './lib/useInvestmentScanPolling'
 import { useNativeAppLifecycle } from './lib/useNativeAppLifecycle'
 const PendingSubscriptionsModal = lazy(() => import('./components/PendingSubscriptionsModal').then(m => ({ default: m.PendingSubscriptionsModal })))
@@ -233,6 +234,11 @@ function App() {
   useEffect(() => {
     isLedgerAddOpenRef.current = isLedgerAddOpen
   }, [isLedgerAddOpen])
+  const [isReceiptSplitOpen, setIsReceiptSplitOpen] = useState(false)
+  const isReceiptSplitOpenRef = useRef(isReceiptSplitOpen)
+  useEffect(() => {
+    isReceiptSplitOpenRef.current = isReceiptSplitOpen
+  }, [isReceiptSplitOpen])
   const [isInvestmentAddOpen, setIsInvestmentAddOpen] = useState(false)
   const isInvestmentAddOpenRef = useRef(isInvestmentAddOpen)
   const [autoOpenInvestmentAdd, setAutoOpenInvestmentAdd] = useState(false)
@@ -259,6 +265,21 @@ function App() {
     isMountedRef,
     setActiveTab: prefs.setActiveTab,
     setAutoOpenLedgerAdd: nav.setAutoOpenLedgerAdd,
+    showToast: dialogs.showToast,
+  })
+  const {
+    activeReceiptSplitDraft,
+    failedReceiptSplitJob,
+    receiptSplitJobIds,
+    handleReceiptSplitStarted,
+    clearReceiptSplitJob,
+  } = useReceiptSplitPolling({
+    token: session.token,
+    activeTabRef,
+    isReceiptSplitOpenRef,
+    isMountedRef,
+    setActiveTab: prefs.setActiveTab,
+    setAutoOpenReceiptSplit: nav.setAutoOpenReceiptSplit,
     showToast: dialogs.showToast,
   })
   const {
@@ -851,6 +872,14 @@ function App() {
                         onAddFormOpenChange={setIsLedgerAddOpen}
                         activeScanJobIds={receiptScanJobIds}
                         failedScanJob={failedScanJob}
+                        autoOpenReceiptSplit={nav.autoOpenReceiptSplit}
+                        onResetAutoOpenReceiptSplit={() => nav.setAutoOpenReceiptSplit(false)}
+                        receiptSplitDraft={activeReceiptSplitDraft}
+                        failedReceiptSplitJob={failedReceiptSplitJob}
+                        receiptSplitJobIds={receiptSplitJobIds}
+                        onReceiptSplitStarted={handleReceiptSplitStarted}
+                        onReceiptSplitCleared={clearReceiptSplitJob}
+                        onReceiptSplitOpenChange={setIsReceiptSplitOpen}
                         aiEditDraft={aiRouter.state.aiLedgerEditDraft}
                         aiExportRequest={aiRouter.state.aiLedgerExportRequest}
                         onAiEditDraftConsumed={() => aiRouter.dispatch({ type: 'CONSUME_LEDGER_EDIT_DRAFT' })}
@@ -1049,6 +1078,7 @@ function App() {
                   {([
                     { key: 'wishlist' as const, label: 'Add Wish Goal', Icon: PiggyBank, color: 'bg-pink-500' },
                     { key: 'subscription' as const, label: 'New Subscription', Icon: CreditCard, color: 'bg-violet-500' },
+                    { key: 'receipt-split' as const, label: 'Split Receipt', Icon: Calculator, color: 'bg-teal-500' },
                     { key: 'transaction' as const, label: 'Post Transaction', Icon: Wallet, color: 'bg-emerald-500' },
                     { key: 'ai' as const, label: 'Ask AI', Icon: Sparkles, color: 'bg-indigo-500' },
                   ]).map(({ key, label, Icon, color }) => (

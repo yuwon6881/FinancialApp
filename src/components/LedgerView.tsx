@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import type { Transaction, TransactionCategory, AutocompleteSuggestion } from '../types'
 import type { PagedTransactionResult, ReceiptScanResult } from '../lib/api'
 import { CycleSkeleton } from './ui/Skeleton'
@@ -9,6 +9,7 @@ import { LedgerPagination } from './ledger/LedgerPagination'
 import { LedgerFilterBar } from './ledger/LedgerFilterBar'
 import { LedgerTransactionList } from './ledger/LedgerTransactionList'
 import { TransactionFormSheet, type TransactionFormSheetRef } from './ledger/TransactionFormSheet'
+import type { ReceiptSplitDraft, ReceiptSplitFailure } from '../lib/useReceiptSplitPolling'
 import { calculateLedgerTotals } from '../lib/ledgerTotals'
 import { useIsMobile } from '../lib/useIsMobile'
 import { formatCurrencyVal } from '../lib/utils'
@@ -20,6 +21,8 @@ import { useLedgerView } from './ledger/view/useLedgerView'
 import { LedgerToolbar } from './ledger/view/LedgerToolbar'
 
 const LEDGER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
+const ReceiptSplitSheet = React.lazy(() =>
+  import('./ledger/ReceiptSplitSheet').then(module => ({ default: module.ReceiptSplitSheet })))
 
 interface LedgerViewProps {
   transactions: Transaction[]
@@ -79,6 +82,14 @@ interface LedgerViewProps {
   aiExportRequest?: { nonce: number } | null
   onAiEditDraftConsumed?: () => void
   onAiExportRequestConsumed?: () => void
+  autoOpenReceiptSplit?: boolean
+  onResetAutoOpenReceiptSplit?: () => void
+  receiptSplitDraft?: ReceiptSplitDraft | null
+  failedReceiptSplitJob?: ReceiptSplitFailure | null
+  receiptSplitJobIds?: string[]
+  onReceiptSplitStarted?: (scanId: string) => void
+  onReceiptSplitCleared?: (scanId: string) => void | Promise<void>
+  onReceiptSplitOpenChange?: (open: boolean) => void
 }
 
 export const LedgerView: React.FC<LedgerViewProps> = (props) => {
@@ -91,10 +102,26 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
 
   const formRef = useRef<TransactionFormSheetRef>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [isReceiptSplitOpen, setIsReceiptSplitOpen] = useState(false)
   const handleAddFormOpenChange = useCallback((open: boolean) => {
     setIsFormOpen(open)
     props.onAddFormOpenChange?.(open)
   }, [props.onAddFormOpenChange])
+  const setReceiptSplitOpen = useCallback((open: boolean) => {
+    setIsReceiptSplitOpen(open)
+    props.onReceiptSplitOpenChange?.(open)
+  }, [props.onReceiptSplitOpenChange])
+
+  const openReceiptSplit = useCallback(() => {
+    formRef.current?.handleCloseForm()
+    setReceiptSplitOpen(true)
+  }, [setReceiptSplitOpen])
+
+  useEffect(() => {
+    if (!props.autoOpenReceiptSplit) return
+    openReceiptSplit()
+    props.onResetAutoOpenReceiptSplit?.()
+  }, [props.autoOpenReceiptSplit, openReceiptSplit, props.onResetAutoOpenReceiptSplit])
 
   const ledger = useLedgerView({
     ...props,
@@ -251,7 +278,24 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         onAiEditDraftConsumed={props.onAiEditDraftConsumed}
         onFetchTransactionById={props.onFetchTransactionById}
         onShowAlert={props.onShowAlert}
+        onOpenReceiptSplit={openReceiptSplit}
       />
+
+      {isReceiptSplitOpen && (
+        <React.Suspense fallback={null}>
+          <ReceiptSplitSheet
+            isOpen
+            currency={currency}
+            draft={props.receiptSplitDraft ?? null}
+            failedJob={props.failedReceiptSplitJob ?? null}
+            activeJobIds={props.receiptSplitJobIds ?? []}
+            onStarted={scanId => props.onReceiptSplitStarted?.(scanId)}
+            onClear={scanId => props.onReceiptSplitCleared?.(scanId)}
+            onClose={() => setReceiptSplitOpen(false)}
+            onUseResult={draft => formRef.current?.openWithDraft(draft)}
+          />
+        </React.Suspense>
+      )}
 
       <LedgerFilterBar
         showAllCycles={props.showAllCycles}

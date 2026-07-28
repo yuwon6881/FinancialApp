@@ -1,5 +1,5 @@
 import { useReducer, useMemo, useCallback, useEffect, useRef } from 'react'
-import { transactionFormReducer, getInitialState, type TransferBucket } from './transactionFormReducer'
+import { transactionFormReducer, getInitialState, type SelectableLedgerCategory, type TransferBucket } from './transactionFormReducer'
 import { getTodayDateString, mapFormToTransaction } from './transactionFormMapping'
 import { validateTransactionForm } from './transactionFormValidation'
 import { useTransactionSuggestions } from './useTransactionSuggestions'
@@ -7,6 +7,7 @@ import { useReceiptScanDraft } from './useReceiptScanDraft'
 import { useFormDraft } from '../../../lib/useFormDraft'
 import { useAutoOpenModal } from '../../../lib/useAutoOpenModal'
 import type { Transaction, TransactionCategory, AutocompleteSuggestion } from '../../../types'
+import type { TransactionPrefillDraft } from '../TransactionFormSheet'
 
 export interface UseTransactionFormOptions {
   categories: TransactionCategory[]
@@ -294,6 +295,28 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     openTransactionForm()
   }
 
+  const openWithDraft = (draft: TransactionPrefillDraft) => {
+    dispatch({ type: 'OPEN_CREATE', payload: { defaultCategory, todayDate } })
+    dispatch({
+      type: 'APPLY_RECEIPT',
+      payload: {
+        description: draft.description,
+        amount: Math.abs(draft.amount).toFixed(2),
+        date: draft.date ?? todayDate,
+        category: draft.category || defaultCategory,
+        ledgerCategory: draft.ledgerCategory && ['Essentials', 'Growth', 'Stability', 'Rewards'].includes(draft.ledgerCategory)
+          ? draft.ledgerCategory as SelectableLedgerCategory
+          : undefined,
+        txType: draft.txType,
+      },
+      todayDate,
+    })
+    descriptionRef.current = draft.description
+    autocompletedDescriptionRef.current = null
+    suggestions.clearSuggestions()
+    openTransactionForm()
+  }
+
   const changeTransactionType = (type: 'inflow' | 'outflow' | 'transfer') => {
     if (state.mode === 'create') {
       dispatch({ type: 'RESET', todayDate, defaultCategory })
@@ -359,6 +382,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     descriptionRef,
     autocompletedDescriptionRef,
     openFresh,
+    openWithDraft,
     handleCloseForm,
     handleStartEdit,
     handleSubmit,

@@ -26,6 +26,7 @@ import {
   BarChart3,
   Loader2,
   ShieldAlert,
+  Calculator,
 } from 'lucide-react'
 import { triggerHaptic } from './lib/haptics'
 import { AppLogo } from './components/ui/AppLogo'
@@ -35,7 +36,7 @@ import type { SensitivePreferenceStatus } from './app/useAppPreferences'
 interface TopNavProps {
   activeTab: AppTab
   onTabChange: (tab: AppTab) => void
-  onQuickAction?: (action: 'transaction' | 'subscription' | 'wishlist') => void
+  onQuickAction?: (action: 'transaction' | 'receipt-split' | 'subscription' | 'wishlist') => void
   onAskAI?: () => void
   hideSensitive: boolean
   sensitivePreferenceStatus: SensitivePreferenceStatus
@@ -272,6 +273,12 @@ const TopNav: React.FC<TopNavProps> = ({
                       className="flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer"
                     >
                       Post Transaction <Plus className="size-3 text-blue-500" />
+                    </MenubarItem>
+                    <MenubarItem
+                      onClick={() => onQuickAction?.('receipt-split')}
+                      className="flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer"
+                    >
+                      Split Receipt <Calculator className="size-3 text-teal-500" />
                     </MenubarItem>
                     <MenubarItem 
                       onClick={() => onQuickAction?.('subscription')}
