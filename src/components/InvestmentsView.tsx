@@ -729,7 +729,7 @@ const ValueChart = ({ portfolio, masked, range, isFetching, onRangeChange }: { p
     ? `Latest total portfolio value: ${masked || latest.totalValue === undefined ? 'hidden or incomplete' : money(latest.totalValue, portfolio.appCurrency)}; net deposits ${masked || latest.netDeposits === undefined ? 'hidden or incomplete' : money(latest.netDeposits, portfolio.appCurrency)}.`
     : 'No chart data is available.'
   return (
-    <section aria-labelledby="value-chart-title" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
+    <section aria-labelledby="value-chart-title" className="app-panel min-w-0 rounded-2xl border border-border/60 bg-card/92 p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 id="value-chart-title" className="text-base font-bold text-foreground">Portfolio value</h2>
@@ -883,7 +883,7 @@ const AllocationChart = ({ portfolio, masked, selected, onSelect }: { portfolio:
     onSelect(selected?.mode === mode && selected.key === key ? null : { mode, key })
   }
   return (
-    <section aria-labelledby="allocation-title" className="app-panel flex flex-col rounded-2xl border border-border/60 bg-card/92 p-5">
+    <section aria-labelledby="allocation-title" className="app-panel min-w-0 flex flex-col rounded-2xl border border-border/60 bg-card/92 p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0"><h2 id="allocation-title" className="text-base font-bold text-foreground">Allocation</h2><p className="mt-1 text-xs text-muted-foreground">Total assets by segment, including cash. Select a segment to highlight matching holdings.</p></div>
         <div className="w-full shrink-0 sm:w-auto">

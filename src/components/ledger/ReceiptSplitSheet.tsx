@@ -246,7 +246,7 @@ export function ReceiptSplitSheet({
                 <button
                   type="button"
                   onClick={() => removeItem(index)}
-                  className="flex h-full items-center justify-center gap-1 bg-red-500 px-3 text-[11px] font-bold text-destructive-foreground cursor-pointer"
+                  className="flex h-full w-full items-center justify-center gap-1 bg-red-500 px-3 text-[11px] font-bold text-destructive-foreground cursor-pointer"
                   aria-label={`Delete ${item.name || `item ${index + 1}`}`}
                 >
                   <Trash2 className="size-4" /> Delete
@@ -269,9 +269,9 @@ export function ReceiptSplitSheet({
                     </button>
                   )}
                   className={`rounded-2xl border shadow-xs ${item.confidence < 0.65 ? 'border-amber-500/40' : 'border-border'}`}
-                  contentClassName={`rounded-2xl p-3 sm:p-4 ${item.confidence < 0.65 ? 'bg-amber-500/5' : 'bg-card'}`}
+                  contentClassName={`rounded-2xl p-3 sm:p-4 bg-card ${item.confidence < 0.65 ? 'before:absolute before:inset-0 before:bg-amber-500/10 before:rounded-2xl before:pointer-events-none relative' : ''}`}
                 >
-                  <div className="space-y-3">
+                  <div className="relative space-y-3">
                     <input
                       aria-label={`Item ${index + 1} name`}
                       value={item.name}

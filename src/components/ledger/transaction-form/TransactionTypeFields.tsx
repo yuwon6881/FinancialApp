@@ -19,7 +19,7 @@ export function TransactionTypeFields({ txType, onChangeTxType, disabled = false
         Transaction Type
       </label>
       <div
-        className="flex gap-2"
+        className="flex flex-wrap sm:flex-nowrap gap-2"
         title={disabled ? 'Transaction type cannot be changed while editing. Delete and re-add to change it.' : undefined}
       >
         <button

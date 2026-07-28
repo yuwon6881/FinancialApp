@@ -80,7 +80,7 @@ describe('useInvestmentScanPolling', () => {
 
     await waitFor(() => expect(result.current.activeInvestmentScanDraft?.jobId).toBe('investment-1'))
     expect(scanOptions.showToast).toHaveBeenCalledWith(
-      'Your investment activity has been scanned successfully.',
+      'Your investment record has been scanned successfully.',
       'Investment Scan Complete',
       'success',
     )

@@ -175,7 +175,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                   disabled={isBusy || hideSensitive}
                   title={hideSensitive ? 'Unhide balances to pay early' : 'Pay this subscription now'}
                 >
-                  <FastForward className="size-3.5" /> Pay Early
+                  <FastForward className="size-3.5 shrink-0" /> <span className="max-[420px]:hidden">Pay Early</span>
                 </Button>
               ) : <span />}
               <div className="flex items-center gap-2">
@@ -185,7 +185,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                   disabled={isBusy || hideSensitive}
                   title={hideSensitive ? 'Unhide balances to edit' : 'Edit subscription'}
                 >
-                  <Edit className="size-3.5" /> Edit
+                  <Edit className="size-3.5 shrink-0" /> <span className="max-[420px]:hidden">Edit</span>
                 </Button>
                 <Button
                   variant="danger"
@@ -193,7 +193,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                   disabled={isBusy || hideSensitive}
                   title={hideSensitive ? 'Unhide balances to edit' : 'Delete subscription'}
                 >
-                  <Trash2 className="size-3.5" /> Delete
+                  <Trash2 className="size-3.5 shrink-0" /> <span className="max-[420px]:hidden">Delete</span>
                 </Button>
               </div>
             </div>

@@ -368,18 +368,18 @@ const TopNav: React.FC<TopNavProps> = ({
             data-testid="privacy-status"
             className={`pointer-events-none absolute left-1/2 top-[calc(100%+0.5rem)] z-50 w-max max-w-[calc(100vw_-_1.5rem)] -translate-x-1/2 rounded-2xl border px-3 py-2 text-center text-[11px] font-semibold shadow-lg backdrop-blur-xl transition-[opacity,transform] duration-200 ${
               sensitivePreferenceStatus === 'pending'
-                ? 'border-blue-500/25 bg-card/94 text-blue-700 shadow-blue-500/10 dark:border-blue-500/35 dark:text-blue-300'
+                ? 'border-amber-300 bg-amber-50 text-amber-900 shadow-amber-500/10 dark:border-amber-500/50 dark:bg-amber-400 dark:text-black'
                 : 'border-amber-500/30 bg-card/96 text-amber-700 shadow-amber-500/10 dark:border-amber-500/40 dark:text-amber-300'
             }`}
           >
             <span className="pointer-events-auto flex items-center justify-center gap-2">
               {sensitivePreferenceStatus === 'pending' ? (
                 <>
-                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-500/10">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-amber-500/20 dark:bg-black/10">
                     <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
                   </span>
                   <span className="text-left leading-snug">
-                    <strong className="block font-extrabold text-foreground">Protecting your amounts</strong>
+                    <strong className="block font-extrabold text-amber-950 dark:text-black">Protecting your amounts</strong>
                     Checking privacy settings before anything is revealed.
                   </span>
                 </>
