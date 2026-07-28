@@ -7,7 +7,7 @@ vi.mock('./api', () => ({
   addWishlistItem: vi.fn(async () => ({ id: 1 })),
 }))
 
-import { applyOpsToList, enqueue, DISPATCH, projectHideSensitivePreference, type QueuedOp } from './outbox'
+import { applyOpsToList, enqueue, DISPATCH, projectSettingPreference, type QueuedOp } from './outbox'
 import * as api from './api'
 
 interface TestItem {
@@ -64,7 +64,7 @@ describe('DISPATCH idempotency wiring', () => {
   })
 })
 
-describe('projectHideSensitivePreference', () => {
+describe('projectSettingPreference', () => {
   it('keeps the latest queued privacy choice over a stale dashboard response', () => {
     const ops = [
       makeOp({
@@ -85,11 +85,11 @@ describe('projectHideSensitivePreference', () => {
       }),
     ]
 
-    expect(projectHideSensitivePreference(true, ops)).toBe(false)
+    expect(projectSettingPreference('hideSensitive', true, ops)).toBe(false)
   })
 
   it('uses the server preference when no local privacy write is active', () => {
-    expect(projectHideSensitivePreference(false, [
+    expect(projectSettingPreference('hideSensitive', false, [
       makeOp({ entity: 'settings', targetId: 'darkMode', payload: { darkMode: true } }),
     ])).toBe(false)
   })

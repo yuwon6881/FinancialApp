@@ -18,14 +18,10 @@ clientsClaim()
 cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)
 
-// Start the navigation request before this worker has finished booting. Without it, a cold
-// launch pays SW startup (parsing this bundle, including the Firebase messaging import)
-// before the network request for the document is even issued.
-if (self.registration.navigationPreload) {
-  self.addEventListener('activate', event => {
-    event.waitUntil(self.registration.navigationPreload!.enable())
-  })
-}
+// Navigation preload is disabled: since this is an SPA that always serves index.html
+// directly from the Workbox precache, it never consumes the preloaded network response.
+// Enabling it causes Chrome to fire a useless network request and then complain when
+// the SW responds from cache without waiting for the preload to settle.
 
 registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html')))
 
