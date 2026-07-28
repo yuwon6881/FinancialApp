@@ -1013,11 +1013,22 @@ const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: InvestmentPor
             <div><dt className="text-muted-foreground">Native value</dt><dd className="break-words font-semibold">{masked || holding.valueNative === undefined ? '—' : money(holding.valueNative, holding.currency)}</dd></div>
             <div><dt className="text-muted-foreground">FX rate</dt><dd className="break-words font-semibold">{holding.fxRate === undefined ? 'Missing' : number(holding.fxRate, 8)}</dd></div>
           </dl>
-          <p className="mt-3 break-words rounded-lg bg-muted/30 p-2 text-[9px] text-muted-foreground">
-            {holding.latestPriceNative === undefined ? 'Closing price unavailable' : `${number(holding.units, 8)} × ${number(holding.latestPriceNative, 8)} ${holding.currency}`}
-            {holding.currency !== portfolio.appCurrency ? ` × ${holding.fxRate === undefined ? 'missing FX' : number(holding.fxRate, 8)} = ${holding.valueApp === undefined ? 'incomplete' : money(holding.valueApp, portfolio.appCurrency)}` : ''}
-            <span className="mt-1 block">{holding.priceSource ?? 'Price source unavailable'} · {holding.priceDate ?? 'No price date'}{holding.fxSource ? ` · ${holding.fxSource} (${holding.fxDate})` : ''}</span>
-          </p>
+          <details className="mt-3 group rounded-lg border border-border/50 bg-muted/20">
+            <summary className="flex cursor-pointer select-none items-center justify-between p-2.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground outline-none transition-colors hover:bg-muted/30">
+              <span>Valuation Details</span>
+              <ChevronDown className="size-3.5 transition-transform duration-200 group-open:rotate-180" />
+            </summary>
+            <div className="border-t border-border/50 p-2.5 pt-2 text-[10px] text-muted-foreground">
+              <p className="break-words font-medium text-foreground/80">
+                {holding.latestPriceNative === undefined ? 'Closing price unavailable' : `${number(holding.units, 8)} × ${number(holding.latestPriceNative, 8)} ${holding.currency}`}
+                {holding.currency !== portfolio.appCurrency ? ` × ${holding.fxRate === undefined ? 'missing FX' : number(holding.fxRate, 8)} = ${holding.valueApp === undefined ? 'incomplete' : money(holding.valueApp, portfolio.appCurrency)}` : ''}
+              </p>
+              <div className="mt-2 space-y-1 text-[9px]">
+                <div className="flex justify-between gap-2"><span className="opacity-70">Price Source</span><span className="text-right">{holding.priceSource ?? 'Price source unavailable'} · {holding.priceDate ?? 'No date'}</span></div>
+                {holding.fxSource && <div className="flex justify-between gap-2"><span className="opacity-70">FX Source</span><span className="text-right">{holding.fxSource} · {holding.fxDate ?? 'No date'}</span></div>}
+              </div>
+            </div>
+          </details>
         </article>
       ))}
     </div>

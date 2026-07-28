@@ -124,7 +124,7 @@ export function InteractiveDoughnutChart({
             role="listitem"
             aria-label={`${slice.label}: ${masked ? 'hidden' : `${formatValue(slice.value)}, ${(slice.percentage * 100).toFixed(1)}%`}`}
             aria-pressed={selectedKey === slice.key}
-            className={`flex w-full cursor-pointer items-center justify-between rounded-md px-1.5 py-1 text-left text-xs transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${
+            className={`flex w-full min-w-0 cursor-pointer items-center justify-between rounded-md px-1.5 py-1 text-left text-xs transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${
               activeKey === slice.key ? 'bg-muted/50' : 'hover:bg-muted/30'
             }`}
             onMouseEnter={() => setHoveredKey(slice.key)}
