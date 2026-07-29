@@ -74,7 +74,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   const currency = currencyProp ?? app.currency
   const activeSyncId = activeSyncIdProp ?? app.activeSyncId
   const deletingId = deletingIdProp ?? app.deletingId
-  const isMobile = useIsMobile(640)
+  const isMobile = useIsMobile()
 
   const view = useRecurringPaymentsView({
     payments,

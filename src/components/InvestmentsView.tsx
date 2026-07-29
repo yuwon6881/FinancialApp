@@ -1000,7 +1000,7 @@ const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: InvestmentPor
       ))}
       {accountGroups.length === 0 && <p className="text-xs text-muted-foreground">Record a buy or cash movement to populate an account.</p>}
     </div>
-    <div className="space-y-3 px-3 pb-3 sm:hidden">
+    <div className="space-y-3 px-3 pb-3 lg:hidden">
       {paginatedHoldings.map(holding => (
         <article key={`${holding.accountId}-${holding.instrumentId}`} className="interactive-card min-w-0 rounded-xl border border-border/50 p-4">
           <div className="flex min-w-0 items-start justify-between gap-3">
@@ -1032,7 +1032,7 @@ const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: InvestmentPor
         </article>
       ))}
     </div>
-    <div className="hidden overflow-x-auto sm:block">
+    <div className="hidden overflow-x-auto lg:block">
       <table className="w-full min-w-[1050px] text-left text-xs">
         <thead className="border-y border-border/50 bg-muted/25 text-[10px] uppercase tracking-wide text-muted-foreground">
           <tr><th className="px-4 py-3">Investment</th><th className="px-4 py-3">Account</th><th className="px-4 py-3 text-right">Units</th><th className="px-4 py-3 text-right">Avg cost</th><th className="px-4 py-3 text-right">Latest</th><th className="px-4 py-3 text-right">Native value</th><th className="px-4 py-3 text-right">{portfolio.appCurrency} value</th><th className="px-4 py-3 text-right">Daily</th><th className="px-4 py-3 text-right">P/L</th><th className="px-4 py-3">Price date</th></tr>
@@ -1214,7 +1214,7 @@ const PagedActivityTable = ({
               </p>
             ) : (
               <>
-                <div className="space-y-2 p-3 sm:hidden">
+                <div className="space-y-2 p-3 lg:hidden">
                 {mode === 'investments' ? displayTransactions.map(value => {
                   const instrument = instruments.get(value.instrumentId)
                   const isActive = activeSyncId === value.id
@@ -1238,7 +1238,7 @@ const PagedActivityTable = ({
                   </article>
                 })}
                 </div>
-                <div className="hidden overflow-x-auto sm:block">
+                <div className="hidden overflow-x-auto lg:block">
                   <table className="w-full text-left text-xs">
                     <thead className="border-y border-border/50 bg-muted/25 text-[10px] uppercase text-muted-foreground"><tr><th className="px-4 py-3">Date</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Account</th>{mode === 'investments' && <th className="px-4 py-3">Investment</th>}<th className="px-4 py-3 text-right">Amount</th><th className="px-4 py-3" /></tr></thead>
                     <tbody className="divide-y divide-border/40">{mode === 'investments' ? displayTransactions.map(value => {

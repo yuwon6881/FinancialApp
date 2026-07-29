@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
  * Used to enable touch-only affordances (e.g. swipe-to-reveal) on the mobile PWA while
  * keeping the full desktop layout intact.
  */
-export function useIsMobile(breakpoint = 768): boolean {
+export function useIsMobile(breakpoint = 1024): boolean {
   // Phrased as the negation of Tailwind's own `md:` query (`min-width: 768px`) rather
   // than `max-width: 767px`, so the two agree at fractional viewport widths. At 767.5px
   // `max-width: 767px` is false while Tailwind still applies the mobile branch — using

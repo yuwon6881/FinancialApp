@@ -34,7 +34,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 }) => {
   const panelRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
-  const isMobile = useIsMobile(640)
+  const isMobile = useIsMobile()
 
   // Pace the slide by measured height so a tall sheet and a short sheet travel
   // at roughly the same perceived *speed*. A fixed duration makes a near-

@@ -117,7 +117,7 @@ export function LedgerFilterBar({
   const hasInvalidRange = hasInvalidAmountRange || hasInvalidDateRange
 
   const advancedFilterControls = (
-    <div className="space-y-4 border-t border-border/40 pt-4 md:border-t-0 md:pt-0">
+    <div className="space-y-4 border-t border-border/40 pt-4 lg:border-t-0 lg:pt-0">
       <div className="space-y-2">
         <span className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
           <CalendarDays className="size-3" /> Date range
@@ -231,13 +231,13 @@ export function LedgerFilterBar({
       // a phone its blurred backdrop had to be re-filtered against freshly painted rows for
       // every frame of every scroll — the single most expensive thing on the screen on
       // mid-range Android. Phones get an opaque `bg-card` and no filter instead.
-      className="sticky z-30 flex flex-row items-center justify-between gap-2 md:gap-4 p-2 md:p-4 bg-card md:bg-card/90 md:supports-[backdrop-filter]:bg-card/75 md:backdrop-blur-md border border-border/60 rounded-xl md:rounded-2xl shadow-sm"
+      className="sticky z-30 flex flex-row items-center justify-between gap-2 lg:gap-4 p-2 lg:p-4 bg-card lg:bg-card/90 lg:supports-[backdrop-filter]:bg-card/75 lg:backdrop-blur-md border border-border/60 rounded-xl lg:rounded-2xl shadow-sm"
     >
       {showAllCycles ? (
         /* Server mode: input pill + Search button fused into one focus-aware
            control so the two read as a single element rather than two boxes. */
-        <div className="group flex min-w-0 flex-1 items-stretch md:w-auto overflow-hidden rounded-xl border border-border bg-card shadow-sm transition duration-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-ring/25 hover:border-blue-500/50">
-          <div className="flex min-w-0 flex-1 items-center md:w-80">
+        <div className="group flex min-w-0 flex-1 items-stretch lg:w-auto overflow-hidden rounded-xl border border-border bg-card shadow-sm transition duration-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-ring/25 hover:border-blue-500/50">
+          <div className="flex min-w-0 flex-1 items-center lg:w-80">
             <Search className="ml-3 size-4 shrink-0 text-foreground transition-colors group-focus-within:text-blue-500" />
             <input
               type="text"
@@ -261,7 +261,7 @@ export function LedgerFilterBar({
           <button
             onClick={onServerSearch}
             disabled={serverIsFetching}
-            className="flex min-h-10 shrink-0 items-center justify-center gap-1.5 border-l border-border/50 bg-primary px-3.5 py-2.5 text-xs font-semibold text-primary-foreground whitespace-nowrap transition-colors duration-200 hover:bg-primary/90 active:bg-primary/80 disabled:cursor-wait cursor-pointer md:px-5"
+            className="flex min-h-10 shrink-0 items-center justify-center gap-1.5 border-l border-border/50 bg-primary px-3.5 py-2.5 text-xs font-semibold text-primary-foreground whitespace-nowrap transition-colors duration-200 hover:bg-primary/90 active:bg-primary/80 disabled:cursor-wait cursor-pointer lg:px-5"
           >
             {serverIsFetching
               ? <Loader2 className="size-3.5 animate-spin" />
@@ -271,7 +271,7 @@ export function LedgerFilterBar({
         </div>
       ) : (
         /* Client mode: live-filtering search input with a clear affordance. */
-        <div className="group relative flex-1 md:w-72 md:flex-initial">
+        <div className="group relative flex-1 lg:w-72 lg:flex-initial">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-blue-500" />
           <input
             type="text"
@@ -320,19 +320,19 @@ export function LedgerFilterBar({
           onClick={() => onFilterDropdownOpenChange(!isFilterDropdownOpen)}
           aria-haspopup="dialog"
           aria-expanded={isFilterDropdownOpen}
-          className="relative flex items-center justify-center md:justify-between gap-2 shrink-0 px-3 md:px-4 py-2.5 md:w-60 text-xs font-semibold bg-background border border-border/60 rounded-xl hover:bg-muted transition duration-200 cursor-pointer select-none"
+          className="relative flex items-center justify-center lg:justify-between gap-2 shrink-0 px-3 lg:px-4 py-2.5 lg:w-60 text-xs font-semibold bg-background border border-border/60 rounded-xl hover:bg-muted transition duration-200 cursor-pointer select-none"
         >
           <span className="flex items-center gap-2 text-muted-foreground">
-            <Filter className="size-4 md:size-3.5" />
-            <span className="hidden md:inline truncate">
+            <Filter className="size-4 lg:size-3.5" />
+            <span className="hidden lg:inline truncate">
               {showAllCycles
                 ? (appliedFilters.length === 0 ? 'Filters' : `${appliedFilters.length} filter${appliedFilters.length > 1 ? 's' : ''} applied`)
                 : (selectedFilters.length === 0 ? 'Filters' : `${selectedFilters.length} filter${selectedFilters.length > 1 ? 's' : ''} active`)}
             </span>
           </span>
-          <ChevronDown className={`hidden size-3.5 text-muted-foreground transition-transform md:block ${isFilterDropdownOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`hidden size-3.5 text-muted-foreground transition-transform lg:block ${isFilterDropdownOpen ? 'rotate-180' : ''}`} />
           {activeFilterCount > 0 && (
-            <span className="md:hidden absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold">
+            <span className="lg:hidden absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold">
               {activeFilterCount}
             </span>
           )}

@@ -27,7 +27,7 @@ export function MobileLedgerList({
     // AnimatePresence went away with the motion components.
     <div
       key={listKey}
-      className="list-container-enter space-y-3"
+      className="list-container-enter space-y-3 md:max-w-3xl md:mx-auto w-full"
     >
       {transactions.map((t, idx) => (
         <MobileLedgerRow

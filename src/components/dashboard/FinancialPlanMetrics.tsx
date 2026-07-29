@@ -73,8 +73,8 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
           tabIndex={0}
           className="interactive-card space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-violet-500/40 shadow-xs hover:shadow-lg hover:shadow-violet-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
         >
-          <div className="flex justify-between text-xs font-semibold">
-            <span className="text-muted-foreground flex items-center gap-1.5">
+          <div className="flex flex-wrap justify-between gap-x-2 gap-y-1 text-xs font-semibold">
+            <span className="text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
               <span className="w-2 h-2 rounded-full bg-violet-500 inline-block" />
               Growth Achieved
             </span>
@@ -111,8 +111,8 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
           tabIndex={0}
           className="interactive-card space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-sky-500/40 shadow-xs hover:shadow-lg hover:shadow-sky-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
         >
-          <div className="flex justify-between text-xs font-semibold">
-            <span className="text-muted-foreground flex items-center gap-1.5">
+          <div className="flex flex-wrap justify-between gap-x-2 gap-y-1 text-xs font-semibold">
+            <span className="text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
               <span className="w-2 h-2 rounded-full bg-sky-500 inline-block" />
               Essentials Remaining
             </span>
@@ -149,8 +149,8 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
           tabIndex={0}
           className="interactive-card space-y-2 p-4 rounded-xl bg-muted/30 hover:bg-muted/60 border border-border/40 hover:border-emerald-500/40 shadow-xs hover:shadow-lg hover:shadow-emerald-500/5 hover:-translate-y-0.5 cursor-pointer transition-all duration-300"
         >
-          <div className="flex justify-between text-xs font-semibold">
-            <span className="text-muted-foreground flex items-center gap-1.5">
+          <div className="flex flex-wrap justify-between gap-x-2 gap-y-1 text-xs font-semibold">
+            <span className="text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
               <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
               Stability Cap Reached
             </span>

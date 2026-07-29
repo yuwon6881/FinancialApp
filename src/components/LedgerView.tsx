@@ -97,7 +97,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
   const currency = props.currency ?? app.currency
   const activeSyncId = props.activeSyncId ?? app.activeSyncId
   const deletingTxId = props.deletingTxId ?? app.deletingId
-  const isMobile = useIsMobile(768)
+  const isMobile = useIsMobile(1024)
 
   const formRef = useRef<TransactionFormSheetRef>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
