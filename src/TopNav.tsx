@@ -236,7 +236,7 @@ const TopNav: React.FC<TopNavProps> = ({
             aria-label="ASK AI"
           >
             <Sparkles className="size-3.5" />
-            <span className="hidden lg:inline text-xs font-extrabold tracking-wide">ASK AI</span>
+            <span className="hidden xl:inline text-xs font-extrabold tracking-wide">ASK AI</span>
           </button>
 
           {/* One notification entry point; the shared review sheet is owned by App. */}
@@ -407,7 +407,7 @@ const TopNav: React.FC<TopNavProps> = ({
       className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/88 backdrop-blur-xl select-none shadow-[var(--app-shadow-nav-up)] transform-gpu"
       style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))', paddingTop: '10px', willChange: 'transform' }}
     >
-      <nav aria-label="Primary" className="grid grid-cols-5 w-full max-w-md mx-auto justify-items-center">
+      <nav aria-label="Primary" className="grid grid-cols-5 w-full max-w-md md:max-w-none px-2 md:px-8 mx-auto justify-items-center">
         {navItems.map(({ tab, mobileLabel, Icon, activeClass, iconClass, dotClass }) => {
           const isActive = activeTab === tab
           return (

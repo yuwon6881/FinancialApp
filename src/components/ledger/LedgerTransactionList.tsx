@@ -12,8 +12,7 @@ export type { LedgerListProps } from './ledgerListShared'
 // node count on the most render-heavy screen in the app.
 //
 // useIsMobile is the negation of Tailwind's `md:` query, so the branch taken here
-// matches what the old CSS would have displayed at any viewport width.
 export function LedgerTransactionList(props: LedgerListProps) {
-  const isMobile = useIsMobile()
+  const isMobile = useIsMobile(768)
   return isMobile ? <MobileLedgerList {...props} /> : <DesktopLedgerTable {...props} />
 }
