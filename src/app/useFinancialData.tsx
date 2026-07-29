@@ -300,7 +300,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         && (op.type === 'add' || op.type === 'update' || op.type === 'delete')
       )
       if (onlySavingsGoalCrud) {
-        const goals = await api.fetchSavingsGoals()
+        const { fetchSavingsGoals } = await import('../lib/api/savingsGoals')
+        const goals = await fetchSavingsGoals()
         setSavingsGoals(goals)
         setCachedJSON(CACHE_KEYS.savingsGoals, goals)
         setError(null)
@@ -381,7 +382,9 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
           api.fetchAutocompleteSuggestions(ac.signal).catch(() => []),
           api.fetchWalletBalance(ac.signal).catch(() => null),
           insightsPromise,
-          api.fetchSavingsGoals(ac.signal).catch((goalsError: unknown) => {
+          // Dynamic import keeps the savings-goal API module out of the eager bundle; this fan-out
+          // is only the fallback path for a server without /api/bootstrap.
+          import('../lib/api/savingsGoals').then(m => m.fetchSavingsGoals(ac.signal)).catch((goalsError: unknown) => {
             if (getErrorName(goalsError) === 'AbortError' || rethrowOnError) throw goalsError
             console.warn('Could not refresh savings goals; keeping the last known local copy.', goalsError)
             return null
@@ -1392,8 +1395,9 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const handleContributeToSavingsGoal = async (id: number, amount: number) => {
     if (!guardSensitive()) return
     try {
-      await api.contributeToSavingsGoal(id, amount)
-      commitSavingsGoals(await api.fetchSavingsGoals())
+      const { contributeToSavingsGoal, fetchSavingsGoals } = await import('../lib/api/savingsGoals')
+      await contributeToSavingsGoal(id, amount)
+      commitSavingsGoals(await fetchSavingsGoals())
       showToast(
         amount > 0 ? 'Moved into this goal.' : 'Released back to free rewards.',
         'Goal updated',
@@ -1409,7 +1413,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const handleFundSavingsGoalsForCycle = async () => {
     if (!guardSensitive()) return
     try {
-      const result = await api.fundSavingsGoalsForCycle()
+      const { fundSavingsGoalsForCycle } = await import('../lib/api/savingsGoals')
+      const result = await fundSavingsGoalsForCycle()
       commitSavingsGoals(result.goals)
       showToast(
         result.totalGranted > 0
@@ -1426,8 +1431,9 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const handleCompleteSavingsGoal = async (id: number) => {
     if (!guardSensitive()) return
     try {
-      await api.completeSavingsGoal(id)
-      commitSavingsGoals(await api.fetchSavingsGoals())
+      const { completeSavingsGoal, fetchSavingsGoals } = await import('../lib/api/savingsGoals')
+      await completeSavingsGoal(id)
+      commitSavingsGoals(await fetchSavingsGoals())
       showToast('The money set aside is released — log the actual spend in your ledger.', 'Goal completed', 'success')
     } catch (completeError: unknown) {
       showToast(getErrorMessage(completeError), 'Could not complete this goal', 'error')

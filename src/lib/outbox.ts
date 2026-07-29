@@ -588,9 +588,23 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
   // NOT queued: each depends on the authoritative Rewards balance to enforce the
   // SUM(earmarked) <= balance invariant, and a replayed op could apply against a stale pool.
   // Those are online-only calls in lib/api/savingsGoals.ts.
-  'savingsGoal:add': (op) => api.addSavingsGoal(op.payload as Partial<SavingsGoal>, op.id),
-  'savingsGoal:update': (op) => api.updateSavingsGoal(Number(op.targetId), op.payload as unknown as SavingsGoal),
-  'savingsGoal:delete': (op) => api.deleteSavingsGoal(Number(op.targetId)),
+  // Imported on demand (like './api/documents') to keep the savings-goal API module off the eager
+  // critical path — a queued op only ever dispatches after the app is already running.
+  'savingsGoal:add': async (op) => {
+    const { addSavingsGoal } = await import('./api/savingsGoals')
+    return addSavingsGoal(op.payload as Partial<SavingsGoal>, op.id)
+  },
+  'savingsGoal:update': async (op) => {
+    // The undo snapshot is local bookkeeping for the toast's Undo action; strip it so it is never
+    // sent as part of the goal body.
+    const { undoSnapshot: _undoSnapshot, ...payload } = op.payload ?? {}
+    const { updateSavingsGoal } = await import('./api/savingsGoals')
+    return updateSavingsGoal(Number(op.targetId), payload as unknown as SavingsGoal)
+  },
+  'savingsGoal:delete': async (op) => {
+    const { deleteSavingsGoal } = await import('./api/savingsGoals')
+    return deleteSavingsGoal(Number(op.targetId))
+  },
 
   'category:add': (op) => api.addCategory({ ...(op.payload as Partial<TransactionCategory>), id: op.targetId } as Omit<TransactionCategory, 'id'> & { id?: string }),
   'category:update': (op) => api.updateCategoryCycleLimit(

@@ -5,6 +5,11 @@ import { describe, it, expect, vi } from 'vitest'
 vi.mock('./api', () => ({
   toggleRecurringPayment: vi.fn(async () => ({})),
   addWishlistItem: vi.fn(async () => ({ id: 1 })),
+}))
+
+// Savings goals are dispatched through a dynamic import of their own module (it is kept out of the
+// eager api barrel), so the mock has to target that module rather than './api'.
+vi.mock('./api/savingsGoals', () => ({
   addSavingsGoal: vi.fn(async () => ({ id: 1 })),
   updateSavingsGoal: vi.fn(async () => undefined),
   deleteSavingsGoal: vi.fn(async () => undefined),
@@ -12,6 +17,7 @@ vi.mock('./api', () => ({
 
 import { applyOpsToList, enqueue, DISPATCH, getSyncSuccessToast, projectFinancialSetting, projectSettingPreference, type QueuedOp } from './outbox'
 import * as api from './api'
+import * as savingsGoalsApi from './api/savingsGoals'
 
 interface TestItem {
   id: string | number
@@ -70,7 +76,7 @@ describe('DISPATCH idempotency wiring', () => {
     await DISPATCH['savingsGoal:add'](makeOp({
       id: 'op-stable-2', entity: 'savingsGoal', type: 'add', targetId: '-99', payload: { name: 'Car service' },
     }))
-    expect(api.addSavingsGoal).toHaveBeenCalledWith({ name: 'Car service' }, 'op-stable-2')
+    expect(savingsGoalsApi.addSavingsGoal).toHaveBeenCalledWith({ name: 'Car service' }, 'op-stable-2')
   })
 
   it('coerces the savings goal target id to a number for update and delete', async () => {
@@ -80,8 +86,20 @@ describe('DISPATCH idempotency wiring', () => {
     await DISPATCH['savingsGoal:delete'](makeOp({
       entity: 'savingsGoal', type: 'delete', targetId: '7',
     }))
-    expect(api.updateSavingsGoal).toHaveBeenCalledWith(7, { name: 'Car service' })
-    expect(api.deleteSavingsGoal).toHaveBeenCalledWith(7)
+    expect(savingsGoalsApi.updateSavingsGoal).toHaveBeenCalledWith(7, { name: 'Car service' })
+    expect(savingsGoalsApi.deleteSavingsGoal).toHaveBeenCalledWith(7)
+  })
+
+  it('strips the local undo snapshot from a savings goal update body', async () => {
+    await DISPATCH['savingsGoal:update'](makeOp({
+      entity: 'savingsGoal',
+      type: 'update',
+      targetId: '7',
+      payload: { name: 'Car service', undoSnapshot: { id: 7, name: 'Old name' } },
+    }))
+    // undoSnapshot is local bookkeeping for the Undo toast; sending it would put a nested copy of
+    // the goal into the request body.
+    expect(savingsGoalsApi.updateSavingsGoal).toHaveBeenCalledWith(7, { name: 'Car service' })
   })
 
   it('registers a dispatch handler for every savings goal op the UI can queue', () => {
