@@ -1,7 +1,8 @@
 import * as api from './api'
-import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentAllocationSleeve, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, RecurringPayment, Transaction, TransactionCategory, WishlistItem } from '../types'
+import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentAllocationSleeve, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, RecurringPayment, SavingsGoal, Transaction, TransactionCategory, VaultDocumentTypeDefinition, WishlistItem } from '../types'
 
-export type EntityKind = 'transaction' | 'recurringPayment' | 'wishlistItem' | 'category' | 'settings'
+export type EntityKind = 'transaction' | 'recurringPayment' | 'wishlistItem' | 'savingsGoal' | 'category' | 'settings'
+  | 'vaultDocumentType'
   | 'investmentAccount' | 'investmentInstrument' | 'investmentActivity' | 'investmentManualPrice' | 'investmentCashFlow'
   | 'investmentPlan' | 'investmentAllocation'
   | 'investmentAllocationOrder'
@@ -29,7 +30,9 @@ export type DispatchResult =
   | Transaction
   | RecurringPayment
   | WishlistItem
+  | SavingsGoal
   | TransactionCategory
+  | VaultDocumentTypeDefinition
   | InvestmentAccount
   | InvestmentInstrument
   | InvestmentActivity
@@ -116,7 +119,9 @@ const ENTITY_LABELS: Record<EntityKind, string> = {
   transaction: 'Transaction',
   recurringPayment: 'Recurring payment',
   wishlistItem: 'Wishlist item',
+  savingsGoal: 'Savings goal',
   category: 'Category',
+  vaultDocumentType: 'Document type',
   settings: 'Settings'
   , investmentAccount: 'Investment account'
   , investmentInstrument: 'Investment'
@@ -128,20 +133,30 @@ const ENTITY_LABELS: Record<EntityKind, string> = {
   , investmentAllocationOrder: 'Investment classification order'
 }
 
-const TYPE_VERBS: Record<OpType, string> = {
-  add: 'added',
-  update: 'updated',
-  delete: 'deleted',
-  restore: 'restored',
-  toggle: 'toggled',
-  purchase: 'purchased',
-  unpurchase: 'purchase undone'
+const TYPE_COPY: Record<OpType, { title: string; message: string }> = {
+  add: { title: 'Added', message: 'was added' },
+  update: { title: 'Updated', message: 'was updated' },
+  delete: { title: 'Deleted', message: 'was deleted' },
+  restore: { title: 'Restored', message: 'was restored' },
+  toggle: { title: 'Updated', message: 'was updated' },
+  purchase: { title: 'Purchased', message: 'was purchased' },
+  unpurchase: { title: 'Purchase Undone', message: 'purchase was undone' },
 }
 
 function defaultSyncSuccessToast(op: QueuedOp): ToastCopy {
   const entityName = ENTITY_LABELS[op.entity] || 'Item'
-  const typeName = TYPE_VERBS[op.type] || 'processed'
-  return { title: 'Sync successful', message: `${entityName} ${typeName} successfully`, tone: 'success' }
+  const typeCopy = TYPE_COPY[op.type] || { title: 'Processed', message: 'was processed' }
+  const payloadSnapshot = op.payload?.undoSnapshot
+  const snapshot = payloadSnapshot && typeof payloadSnapshot === 'object'
+    ? payloadSnapshot as Record<string, unknown>
+    : undefined
+  const itemName = [op.payload?.description, op.payload?.name, op.payload?.symbol, snapshot?.description, snapshot?.name, snapshot?.symbol]
+    .find(value => typeof value === 'string' && value.trim().length > 0) as string | undefined
+  const title = `${entityName} ${typeCopy.title}`.replace(/\b\w/g, letter => letter.toUpperCase())
+  const message = itemName
+    ? `"${itemName}" ${typeCopy.message}.`
+    : `${entityName} ${typeCopy.message}.`
+  return { title, message, tone: 'success' }
 }
 
 // Override copy per "entity:type" key only where the default "<Entity> <verb> successfully"
@@ -169,7 +184,15 @@ const SUCCESS_TOAST_OVERRIDES: Partial<Record<string, (op: QueuedOp) => ToastCop
 export function getSyncSuccessToast(op: QueuedOp): ToastCopy | null {
   if (op.isUndo) {
     const entityName = ENTITY_LABELS[op.entity] || 'Item'
-    return { title: 'Undo successful', message: `Previous action on ${entityName.toLowerCase()} has been undone`, tone: 'success' }
+    const itemName = [op.payload?.description, op.payload?.name]
+      .find(value => typeof value === 'string' && value.trim().length > 0) as string | undefined
+    return {
+      title: 'Undo successful',
+      message: itemName
+        ? `The change to "${itemName}" was undone.`
+        : `The previous ${entityName.toLowerCase()} change was undone.`,
+      tone: 'success',
+    }
   }
 
   const key = `${op.entity}:${op.type}`
@@ -178,13 +201,24 @@ export function getSyncSuccessToast(op: QueuedOp): ToastCopy | null {
 }
 
 export function createFinalId(entity: EntityKind): string {
-  const prefix = entity === 'transaction' ? 'tx' : entity === 'recurringPayment' ? 'rec' : entity === 'category' ? 'cat' : 'op'
+  const prefix = entity === 'transaction' ? 'tx'
+    : entity === 'recurringPayment' ? 'rec'
+    : entity === 'category' ? 'cat'
+    : entity === 'vaultDocumentType' ? 'doc-type'
+    : 'op'
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
 }
 
-export function createLocalWishlistId(): number {
+/**
+ * Negative placeholder id for a record whose real PK is a server-generated int (wishlist items,
+ * savings goals). Negative so it can never collide with a real row, and numeric so list code can
+ * treat an optimistic row exactly like a persisted one.
+ */
+export function createLocalNumericId(): number {
   return -Math.floor(Date.now() * 1000 + Math.random() * 1000)
 }
+
+export const createLocalWishlistId = createLocalNumericId
 
 function createOpId(): string {
   return `op-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
@@ -368,7 +402,10 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
     const targetStr = String(op.targetId)
 
     if (op.type === 'add') {
-      const parsedId = entity === 'wishlistItem' ? Number(op.targetId) : op.targetId
+      // Wishlist items and savings goals have server-generated int PKs, so an offline add carries
+      // a negative numeric placeholder. Keep it numeric: leaving it a string breaks id comparisons
+      // and the numeric ordering these lists rely on.
+      const parsedId = entity === 'wishlistItem' || entity === 'savingsGoal' ? Number(op.targetId) : op.targetId
       const newItem = {
         ...op.payload,
         ...(entity === 'transaction' && !op.payload?.postedAt
@@ -524,19 +561,36 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
 
 export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>> = {
   'transaction:add': (op) => api.addTransaction({ ...(op.payload as Partial<Transaction>), id: op.targetId } as Omit<Transaction, 'id'> & { id?: string }),
-  'transaction:update': (op) => api.updateTransaction(op.targetId, op.payload as unknown as Omit<Transaction, 'id'>),
+  'transaction:update': (op) => {
+    const { undoSnapshot: _undoSnapshot, ...payload } = op.payload ?? {}
+    return api.updateTransaction(op.targetId, payload as unknown as Omit<Transaction, 'id'>)
+  },
   'transaction:delete': (op) => api.deleteTransaction(op.targetId),
 
   'recurringPayment:add': (op) => api.addRecurringPayment({ ...(op.payload as Partial<RecurringPayment>), id: op.targetId } as Omit<RecurringPayment, 'id'> & { id?: string }),
-  'recurringPayment:update': (op) => api.updateRecurringPayment(op.targetId, op.payload as unknown as RecurringPayment),
+  'recurringPayment:update': (op) => {
+    const { undoSnapshot: _undoSnapshot, ...payload } = op.payload ?? {}
+    return api.updateRecurringPayment(op.targetId, payload as unknown as RecurringPayment)
+  },
   'recurringPayment:delete': (op) => api.deleteRecurringPayment(op.targetId),
   'recurringPayment:toggle': (op) => api.toggleRecurringPayment(op.targetId, typeof op.payload?.active === 'boolean' ? op.payload.active : undefined),
 
   'wishlistItem:add': (op) => api.addWishlistItem(op.payload as Partial<WishlistItem>, op.id),
-  'wishlistItem:update': (op) => api.updateWishlistItem(Number(op.targetId), op.payload as unknown as WishlistItem),
+  'wishlistItem:update': (op) => {
+    const { undoSnapshot: _undoSnapshot, ...payload } = op.payload ?? {}
+    return api.updateWishlistItem(Number(op.targetId), payload as unknown as WishlistItem)
+  },
   'wishlistItem:delete': (op) => api.deleteWishlistItem(Number(op.targetId)),
   'wishlistItem:purchase': (op) => api.purchaseWishlistItem(Number(op.targetId), typeof op.payload?.date === 'string' ? op.payload.date : undefined),
   'wishlistItem:unpurchase': (op) => api.unpurchaseWishlistItem(Number(op.targetId)),
+
+  // Authoring ops only. Money movement (contribute / fund-this-cycle / complete) is deliberately
+  // NOT queued: each depends on the authoritative Rewards balance to enforce the
+  // SUM(earmarked) <= balance invariant, and a replayed op could apply against a stale pool.
+  // Those are online-only calls in lib/api/savingsGoals.ts.
+  'savingsGoal:add': (op) => api.addSavingsGoal(op.payload as Partial<SavingsGoal>, op.id),
+  'savingsGoal:update': (op) => api.updateSavingsGoal(Number(op.targetId), op.payload as unknown as SavingsGoal),
+  'savingsGoal:delete': (op) => api.deleteSavingsGoal(Number(op.targetId)),
 
   'category:add': (op) => api.addCategory({ ...(op.payload as Partial<TransactionCategory>), id: op.targetId } as Omit<TransactionCategory, 'id'> & { id?: string }),
   'category:update': (op) => api.updateCategoryCycleLimit(
@@ -545,11 +599,24 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
   ),
   'category:delete': (op) => api.deleteCategory(op.targetId, typeof op.payload?.replacementCategoryId === 'string' ? op.payload.replacementCategoryId : undefined),
 
+  'vaultDocumentType:add': async (op) => {
+    const { addDocumentType } = await import('./api/documents')
+    return addDocumentType(String(op.payload?.name || ''), op.targetId)
+  },
+  'vaultDocumentType:delete': async (op) => {
+    const { deleteDocumentType } = await import('./api/documents')
+    return deleteDocumentType(
+      op.targetId,
+      typeof op.payload?.replacementCategoryId === 'string' ? op.payload.replacementCategoryId : undefined,
+    )
+  },
+
   'settings:update': (op) => {
     if (op.targetId === 'darkMode') return api.updateDarkMode(op.payload?.darkMode === true)
     if (op.targetId === 'hideSensitive') return api.updateHideSensitive(op.payload?.hideSensitive === true)
     if (op.targetId === 'summarySeen') return api.updateSummarySeen(typeof op.payload?.cycleKey === 'string' ? op.payload.cycleKey : null)
-    return api.updateSettings(op.payload as unknown as Pick<FinancialSetting, 'targetStabilityFund' | 'essentialsAlloc' | 'growthAlloc' | 'stabilityAlloc' | 'rewardsAlloc' | 'cycleDay'> & Partial<FinancialSetting>)
+    const { undoSnapshot: _undoSnapshot, ...payload } = op.payload ?? {}
+    return api.updateSettings(payload as unknown as Pick<FinancialSetting, 'targetStabilityFund' | 'essentialsAlloc' | 'growthAlloc' | 'stabilityAlloc' | 'rewardsAlloc' | 'cycleDay'> & Partial<FinancialSetting>)
   },
 
   'investmentAccount:add': (op) => api.createInvestmentAccount({ ...(op.payload as unknown as api.AccountMutation), id: op.targetId }),
@@ -579,7 +646,10 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
   'investmentCashFlow:delete': (op) => api.deleteInvestmentCashFlow(op.targetId),
   'investmentCashFlow:restore': (op) => api.restoreInvestmentCashFlow(op.payload as unknown as InvestmentCashFlow),
 
-  'investmentPlan:update': (op) => api.updateInvestmentPlan(op.payload as unknown as Parameters<typeof api.updateInvestmentPlan>[0]),
+  'investmentPlan:update': (op) => {
+    const { undoSnapshot: _undoSnapshot, ...payload } = op.payload ?? {}
+    return api.updateInvestmentPlan(payload as unknown as Parameters<typeof api.updateInvestmentPlan>[0])
+  },
   'investmentAllocation:update': (op) => api.updateInvestmentAllocationSleeve(
     op.targetId,
     typeof op.payload?.sleeve === 'string' ? op.payload.sleeve as InvestmentAllocationSleeve : undefined,
@@ -597,7 +667,7 @@ function isWellFormedOp(op: unknown): op is QueuedOp {
   return (
     typeof o.id === 'string' &&
     typeof o.entity === 'string' &&
-    ['transaction', 'recurringPayment', 'wishlistItem', 'category', 'settings', 'investmentAccount', 'investmentInstrument', 'investmentActivity', 'investmentManualPrice', 'investmentCashFlow', 'investmentPlan', 'investmentAllocation', 'investmentAllocationOrder'].includes(o.entity as string) &&
+    ['transaction', 'recurringPayment', 'wishlistItem', 'savingsGoal', 'category', 'settings', 'vaultDocumentType', 'investmentAccount', 'investmentInstrument', 'investmentActivity', 'investmentManualPrice', 'investmentCashFlow', 'investmentPlan', 'investmentAllocation', 'investmentAllocationOrder'].includes(o.entity as string) &&
     typeof o.type === 'string' &&
     ['add', 'update', 'delete', 'restore', 'toggle', 'purchase', 'unpurchase'].includes(o.type as string) &&
     (typeof o.targetId === 'string' || typeof o.targetId === 'number') &&

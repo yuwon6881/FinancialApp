@@ -50,6 +50,20 @@ describe('undo helpers', () => {
       .toBeUndefined()
   })
 
+  it('restores a deleted Vault document type from its queued snapshot', () => {
+    const enqueue = vi.fn()
+    const snapshot = { id: 'invoice', name: 'Invoice', usageCount: 0 }
+    const action = buildUndoAction(
+      new Map(),
+      op('vaultDocumentType', 'delete', 'invoice', { name: 'Invoice', undoSnapshot: snapshot }),
+      undefined,
+      enqueue,
+    )
+
+    action?.onAction()
+    expect(enqueue).toHaveBeenCalledWith('vaultDocumentType', 'add', 'invoice', snapshot)
+  })
+
   it('uses the authoritative server snapshot when undoing investment activity deletion', () => {
     const enqueue = vi.fn()
     const persisted = { transactions: [{ id: 'buy', type: 'Buy' }] }
@@ -100,5 +114,41 @@ describe('undo helpers', () => {
       'flow-1',
       serverSnapshot,
     )
+  })
+
+  it('undoes investment plan updates from the persisted pre-change values', () => {
+    const enqueue = vi.fn()
+    const previous = {
+      usEquityTarget: 60,
+      internationalExUsTarget: 20,
+      bondsTarget: 20,
+      watchDrift: 5,
+      alertDrift: 10,
+    }
+    const action = buildUndoAction(
+      new Map(),
+      op('investmentPlan', 'update', 'three-fund', { undoSnapshot: previous }),
+      undefined,
+      enqueue,
+    )
+
+    action?.onAction()
+    expect(enqueue).toHaveBeenCalledWith('investmentPlan', 'update', 'three-fund', previous)
+  })
+
+  it('undoes a persisted settings preference change', () => {
+    const enqueue = vi.fn()
+    const action = buildUndoAction(
+      new Map(),
+      op('settings', 'update', 'darkMode', {
+        darkMode: true,
+        undoSnapshot: { darkMode: false },
+      }),
+      undefined,
+      enqueue,
+    )
+
+    action?.onAction()
+    expect(enqueue).toHaveBeenCalledWith('settings', 'update', 'darkMode', { darkMode: false })
   })
 })

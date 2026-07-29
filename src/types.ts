@@ -452,6 +452,36 @@ export interface WishlistItem {
   isPendingDelete?: boolean
 }
 
+export type SavingsGoalStatus = 'active' | 'completed'
+
+/**
+ * A dated savings commitment funded out of the SAME Rewards pool the wishlist draws from.
+ *
+ * It is not a fifth budget bucket — the four ledger allocations are untouched. `earmarkedAmount`
+ * is a *claim* on Rewards money that already exists, and the sum of all active claims can never
+ * exceed the Rewards balance. What is left over after every claim is the free-to-spend remainder
+ * that wishlist rewards are measured against (see `lib/savingsGoals.ts`).
+ */
+export interface SavingsGoal {
+  id: number
+  name: string
+  targetAmount: number
+  earmarkedAmount: number
+  /** 'YYYY-MM-DD' — the date the money needs to be ready. Drives the required-per-cycle pace. */
+  targetDate: string
+  priority: string // High, Medium, Low
+  status: SavingsGoalStatus
+  isRecurring: boolean
+  recurrenceMonths: number
+  /** Cycle key ("yyyy-MM") this goal last received automatic funding for; makes funding idempotent. */
+  lastFundedCycleKey?: string | null
+  createdAt: string
+  completedAt?: string | null
+  isPendingSync?: boolean
+  // Set locally while a delete op for this record is still queued/in-flight in the outbox.
+  isPendingDelete?: boolean
+}
+
 export interface QuestionAnswerDto {
   questionId: number
   answer: string
@@ -475,6 +505,12 @@ export interface VaultDocument {
   taxYear: number
   documentType: string
   notes?: string | null
+  reliefCategory?: string | null
+  amount?: number | null
+  amountCurrency: 'MYR' | 'OTHER'
+  amountStatus: 'Pending' | 'NeedsReview' | 'Confirmed' | 'NotFound' | 'Failed' | 'Unavailable'
+  amountConfidence?: number | null
+  amountExtractionMessage?: string | null
   transactionId?: string | null
   uploadedAt: string
   retentionUntil: string
@@ -488,6 +524,43 @@ export interface DocumentVaultUsage {
   // Echoed from the server's DocumentVault:MaxTotalBytesPerUser so the usage meter
   // reports the real quota instead of assuming one.
   quotaBytes: number
+}
+
+export interface DocumentVaultConstraints {
+  maxDocumentBytes: number
+  maxBulkDocuments: number
+  maxTotalBytesPerUser: number
+}
+
+export interface TaxReliefCategoryDefinition {
+  id: string
+  name: string
+  limit: number
+  detail: string
+}
+
+export interface TaxReliefCategorySummary extends TaxReliefCategoryDefinition {
+  confirmedAmount: number
+  pendingReviewAmount: number
+  documentCount: number
+  pendingReviewCount: number
+}
+
+export interface TaxYearReliefSummary {
+  taxYear: number
+  policyYear: number
+  isPolicyProvisional: boolean
+  confirmedAmount: number
+  pendingReviewAmount: number
+  documentCount: number
+  categories: TaxReliefCategorySummary[]
+}
+
+export interface ExpiredTaxYearSummary {
+  taxYear: number
+  documentCount: number
+  totalBytes: number
+  retentionUntil: string
 }
 
 export type VaultDocumentType = string

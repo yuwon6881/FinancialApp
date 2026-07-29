@@ -5,9 +5,12 @@ import { describe, it, expect, vi } from 'vitest'
 vi.mock('./api', () => ({
   toggleRecurringPayment: vi.fn(async () => ({})),
   addWishlistItem: vi.fn(async () => ({ id: 1 })),
+  addSavingsGoal: vi.fn(async () => ({ id: 1 })),
+  updateSavingsGoal: vi.fn(async () => undefined),
+  deleteSavingsGoal: vi.fn(async () => undefined),
 }))
 
-import { applyOpsToList, enqueue, DISPATCH, projectFinancialSetting, projectSettingPreference, type QueuedOp } from './outbox'
+import { applyOpsToList, enqueue, DISPATCH, getSyncSuccessToast, projectFinancialSetting, projectSettingPreference, type QueuedOp } from './outbox'
 import * as api from './api'
 
 interface TestItem {
@@ -61,6 +64,62 @@ describe('DISPATCH idempotency wiring', () => {
       id: 'op-stable-1', entity: 'wishlistItem', type: 'add', targetId: '-42', payload: { name: 'Camera' },
     }))
     expect(api.addWishlistItem).toHaveBeenCalledWith({ name: 'Camera' }, 'op-stable-1')
+  })
+
+  it('passes the stable op id as the savings goal add idempotency key', async () => {
+    await DISPATCH['savingsGoal:add'](makeOp({
+      id: 'op-stable-2', entity: 'savingsGoal', type: 'add', targetId: '-99', payload: { name: 'Car service' },
+    }))
+    expect(api.addSavingsGoal).toHaveBeenCalledWith({ name: 'Car service' }, 'op-stable-2')
+  })
+
+  it('coerces the savings goal target id to a number for update and delete', async () => {
+    await DISPATCH['savingsGoal:update'](makeOp({
+      entity: 'savingsGoal', type: 'update', targetId: '7', payload: { name: 'Car service' },
+    }))
+    await DISPATCH['savingsGoal:delete'](makeOp({
+      entity: 'savingsGoal', type: 'delete', targetId: '7',
+    }))
+    expect(api.updateSavingsGoal).toHaveBeenCalledWith(7, { name: 'Car service' })
+    expect(api.deleteSavingsGoal).toHaveBeenCalledWith(7)
+  })
+
+  it('registers a dispatch handler for every savings goal op the UI can queue', () => {
+    // The three ops the goal UI enqueues. Money movement (contribute/fund/complete) is
+    // deliberately online-only, so it must NOT appear here.
+    for (const key of ['savingsGoal:add', 'savingsGoal:update', 'savingsGoal:delete']) {
+      expect(typeof DISPATCH[key]).toBe('function')
+    }
+    expect(DISPATCH['savingsGoal:contribute']).toBeUndefined()
+  })
+})
+
+describe('sync success toast copy', () => {
+  it.each([
+    ['category', 'add', { name: 'Food' }, 'Category Added', '"Food" was added.'],
+    ['category', 'delete', { name: 'Food' }, 'Category Deleted', '"Food" was deleted.'],
+    ['transaction', 'delete', { description: 'Lunch' }, 'Transaction Deleted', '"Lunch" was deleted.'],
+    ['recurringPayment', 'delete', { name: 'Netflix' }, 'Recurring Payment Deleted', '"Netflix" was deleted.'],
+    ['vaultDocumentType', 'add', { name: 'Invoice' }, 'Document Type Added', '"Invoice" was added.'],
+  ] as const)('includes the item name for %s:%s', (entity, type, payload, title, message) => {
+    expect(getSyncSuccessToast(makeOp({ entity, type, payload }))).toEqual({
+      title,
+      message,
+      tone: 'success',
+    })
+  })
+
+  it('keeps the item name in the undo confirmation', () => {
+    expect(getSyncSuccessToast(makeOp({
+      entity: 'transaction',
+      type: 'add',
+      payload: { description: 'Lunch' },
+      isUndo: true,
+    }))).toEqual({
+      title: 'Undo successful',
+      message: 'The change to "Lunch" was undone.',
+      tone: 'success',
+    })
   })
 })
 
@@ -144,6 +203,70 @@ describe('projectFinancialSetting', () => {
       darkMode: true,
       hideSensitive: true,
       lastSummaryCycleSeen: '2026-07',
+    })
+  })
+})
+
+describe('applyOpsToList — savings goals', () => {
+  it('gives an optimistically added goal a numeric id so pace math still works offline', () => {
+    // The server generates the int PK, so an offline add carries a negative placeholder. Leaving
+    // it a string would break every id comparison and the numeric sort in orderForFunding.
+    const ops = [makeOp({
+      entity: 'savingsGoal', type: 'add', targetId: '-42', payload: { name: 'Car service' },
+    })]
+
+    const result = applyOpsToList([] as TestItem[], ops, 'savingsGoal')
+
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe(-42)
+    expect(result[0]).toMatchObject({ name: 'Car service', isPendingSync: true })
+  })
+
+  it('merges an update into the matching goal', () => {
+    const base: TestItem[] = [{ id: 7, name: 'Car service' }]
+    const ops = [makeOp({
+      entity: 'savingsGoal', type: 'update', targetId: '7', payload: { name: 'Car service (major)' },
+    })]
+
+    const result = applyOpsToList(base, ops, 'savingsGoal')
+
+    expect(result[0]).toMatchObject({ id: 7, name: 'Car service (major)', isPendingSync: true })
+  })
+
+  it('marks a deleted goal pending so its earmark stops counting against the pool immediately', () => {
+    const base: TestItem[] = [{ id: 7, name: 'Car service' }]
+    const ops = [makeOp({ entity: 'savingsGoal', type: 'delete', targetId: '7' })]
+
+    const result = applyOpsToList(base, ops, 'savingsGoal')
+
+    expect(result[0]).toMatchObject({ id: 7, isPendingDelete: true, isPendingSync: true })
+  })
+
+  it('collapses an update into an unsent add rather than queuing a second op', () => {
+    const addOp = makeOp({
+      id: 'op-add', entity: 'savingsGoal', type: 'add', targetId: '-42', payload: { name: 'Car service' },
+    })
+
+    const next = enqueue([addOp], 'savingsGoal', 'update', '-42', { name: 'Car service (major)' })
+
+    expect(next).toHaveLength(1)
+    expect(next[0]).toMatchObject({ type: 'add', payload: { name: 'Car service (major)' } })
+  })
+
+  it('drops an unsent add entirely when the goal is deleted before it syncs', () => {
+    const addOp = makeOp({
+      id: 'op-add', entity: 'savingsGoal', type: 'add', targetId: '-42', payload: { name: 'Car service' },
+    })
+
+    expect(enqueue([addOp], 'savingsGoal', 'delete', '-42')).toEqual([])
+  })
+
+  it('labels a savings goal sync toast with the goal name', () => {
+    expect(getSyncSuccessToast(makeOp({
+      entity: 'savingsGoal', type: 'add', payload: { name: 'Car service' },
+    }))).toMatchObject({
+      title: 'Savings Goal Added',
+      message: '"Car service" was added.',
     })
   })
 })

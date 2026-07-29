@@ -76,9 +76,13 @@ function ClassificationRow({
 export function InvestmentPlanSection() {
   const {
     isOffline,
-    investmentOps = [],
-    queueInvestmentMutation = () => undefined,
+    operations = [],
+    queueMutation = () => undefined,
   } = useAppContext()
+  const investmentOps = useMemo(
+    () => operations.filter(operation => operation.entity.startsWith('investment')),
+    [operations],
+  )
   const cachedOverview = () => api.readCachedInvestmentPortfolio()?.allocation ?? null
   const projectQueuedPlan = (value: InvestmentPlan) => {
     const queuedPlan = [...investmentOps].reverse().find(operation =>
@@ -200,7 +204,10 @@ export function InvestmentPlanSection() {
       alertDrift: plan.alertDrift,
     }
     setOverview(previous => previous ? { ...previous, plan: { ...previous.plan, ...payload } } : previous)
-    queueInvestmentMutation('investmentPlan', 'update', 'three-fund', payload)
+    queueMutation('investmentPlan', 'update', 'three-fund', {
+      ...payload,
+      undoSnapshot: overview?.plan,
+    })
   }
 
   const classify = (instrumentId: string, sleeve?: InvestmentAllocationSleeve) => {
@@ -209,7 +216,11 @@ export function InvestmentPlanSection() {
       assignments: previous.assignments.map(value =>
         value.instrumentId === instrumentId ? { ...value, sleeve } : value),
     } : previous)
-    queueInvestmentMutation('investmentAllocation', 'update', instrumentId, { sleeve: sleeve ?? null })
+    const previousSleeve = overview?.assignments.find(value => value.instrumentId === instrumentId)?.sleeve
+    queueMutation('investmentAllocation', 'update', instrumentId, {
+      sleeve: sleeve ?? null,
+      undoSnapshot: { sleeve: previousSleeve ?? null },
+    })
   }
 
   const orderedAssignments = useMemo(
@@ -226,7 +237,17 @@ export function InvestmentPlanSection() {
     const instrumentIds = [...(overview?.assignments ?? [])]
       .sort((left, right) => left.order - right.order)
       .map(value => value.instrumentId)
-    queueInvestmentMutation('investmentAllocationOrder', 'update', 'classification', { instrumentIds })
+    const queuedOrder = [...investmentOps].reverse().find(operation =>
+      operation.entity === 'investmentAllocationOrder' && operation.type === 'update')
+    const previousInstrumentIds = Array.isArray(queuedOrder?.payload?.instrumentIds)
+      ? queuedOrder.payload.instrumentIds.filter((id): id is string => typeof id === 'string')
+      : [...(cachedOverview()?.assignments ?? [])]
+          .sort((left, right) => left.order - right.order)
+          .map(value => value.instrumentId)
+    queueMutation('investmentAllocationOrder', 'update', 'classification', {
+      instrumentIds,
+      undoSnapshot: { instrumentIds: previousInstrumentIds },
+    })
   }
 
   if (!overview && (loading || isOffline)) {

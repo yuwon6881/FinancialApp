@@ -1,8 +1,8 @@
 import type { ToastAction } from '../components/ui/ToastViewport'
-import type { InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, RecurringPayment, Transaction, TransactionCategory, WishlistItem } from '../types'
-import { createLocalWishlistId, type DispatchResult, type EntityKind, type OutboxPayload, type QueuedOp } from './outbox'
+import type { InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, RecurringPayment, SavingsGoal, Transaction, TransactionCategory, VaultDocumentTypeDefinition, WishlistItem } from '../types'
+import { createLocalNumericId, createLocalWishlistId, type DispatchResult, type EntityKind, type OutboxPayload, type QueuedOp } from './outbox'
 
-export type UndoSnapshot = (Transaction | RecurringPayment | TransactionCategory | WishlistItem | InvestmentAccount | InvestmentInstrument | InvestmentActivity | InvestmentCashFlow) & {
+export type UndoSnapshot = (Transaction | RecurringPayment | TransactionCategory | VaultDocumentTypeDefinition | WishlistItem | SavingsGoal | InvestmentAccount | InvestmentInstrument | InvestmentActivity | InvestmentCashFlow) & {
   isPendingSync?: boolean
   isPendingDelete?: boolean
 }
@@ -51,24 +51,32 @@ export function buildUndoAction(
 
   switch (`${op.entity}:${op.type}`) {
     case 'transaction:add':
-      return action('transaction', 'delete', String(op.targetId))
+      return action('transaction', 'delete', String(op.targetId), op.payload)
     case 'recurringPayment:add':
-      return action('recurringPayment', 'delete', String(op.targetId))
+      return action('recurringPayment', 'delete', String(op.targetId), op.payload)
     case 'category:add':
-      return action('category', 'delete', String(op.targetId))
+      return action('category', 'delete', String(op.targetId), op.payload)
+    case 'vaultDocumentType:add':
+      return action('vaultDocumentType', 'delete', String(op.targetId), op.payload)
     case 'investmentAccount:add':
-      return action('investmentAccount', 'delete', String(op.targetId))
+      return action('investmentAccount', 'delete', String(op.targetId), op.payload)
     case 'investmentInstrument:add':
-      return action('investmentInstrument', 'delete', String(op.targetId))
+      return action('investmentInstrument', 'delete', String(op.targetId), op.payload)
     case 'investmentActivity:add':
-      return action('investmentActivity', 'delete', String(op.targetId))
+      return action('investmentActivity', 'delete', String(op.targetId), op.payload)
     case 'investmentManualPrice:add':
-      return action('investmentManualPrice', 'delete', String(op.targetId))
+      return action('investmentManualPrice', 'delete', String(op.targetId), op.payload)
     case 'investmentCashFlow:add':
-      return action('investmentCashFlow', 'delete', String(op.targetId))
+      return action('investmentCashFlow', 'delete', String(op.targetId), op.payload)
     case 'wishlistItem:add': {
       const id = result && 'id' in result && result.id != null ? String(result.id) : String(op.targetId)
-      return action('wishlistItem', 'delete', id)
+      return action('wishlistItem', 'delete', id, op.payload)
+    }
+    case 'savingsGoal:add': {
+      // Undo has to target the server-generated int PK, not the negative local placeholder the
+      // add was queued under, or the DELETE would 404.
+      const id = result && 'id' in result && result.id != null ? String(result.id) : String(op.targetId)
+      return action('savingsGoal', 'delete', id, op.payload)
     }
     case 'transaction:delete':
       return before ? action('transaction', 'add', String(before.id), toPayload(before)) : undefined
@@ -78,11 +86,22 @@ export function buildUndoAction(
       return !op.payload?.replacementCategoryId && before
         ? action('category', 'add', String(before.id), toPayload(before))
         : undefined
+    case 'vaultDocumentType:delete':
+      return !op.payload?.replacementCategoryId && before
+        ? action('vaultDocumentType', 'add', String(before.id), toPayload(before))
+        : undefined
     case 'wishlistItem:delete': {
       if (!before) return undefined
       const payload = toPayload(before)
       delete payload.id
       return action('wishlistItem', 'add', String(createLocalWishlistId()), payload)
+    }
+    case 'savingsGoal:delete': {
+      // Re-created under a fresh local id: the original row is gone, so the restore is an add.
+      if (!before) return undefined
+      const payload = toPayload(before)
+      delete payload.id
+      return action('savingsGoal', 'add', String(createLocalNumericId()), payload)
     }
     case 'investmentAccount:delete':
       return before ? action('investmentAccount', 'add', String(before.id), toPayload(before)) : undefined
@@ -108,24 +127,55 @@ export function buildUndoAction(
       return before ? action('transaction', 'update', String(op.targetId), toPayload(before)) : undefined
     case 'recurringPayment:update':
       return before ? action('recurringPayment', 'update', String(op.targetId), toPayload(before)) : undefined
+    case 'category:update':
+      return before ? action('category', 'update', String(op.targetId), toPayload(before)) : undefined
     case 'wishlistItem:update':
       return before ? action('wishlistItem', 'update', String(op.targetId), toPayload(before)) : undefined
+    case 'savingsGoal:update':
+      return before ? action('savingsGoal', 'update', String(op.targetId), toPayload(before)) : undefined
     case 'investmentAccount:update':
       return before ? action('investmentAccount', 'update', String(op.targetId), toPayload(before)) : undefined
     case 'investmentInstrument:update':
       return before ? action('investmentInstrument', 'update', String(op.targetId), toPayload(before)) : undefined
     case 'investmentActivity:update':
       return before ? action('investmentActivity', 'update', String(op.targetId), toPayload(before)) : undefined
+    case 'investmentCashFlow:update':
+      return before ? action('investmentCashFlow', 'update', String(op.targetId), toPayload(before)) : undefined
+    case 'investmentPlan:update':
+      return persisted && typeof persisted === 'object'
+        ? action('investmentPlan', 'update', String(op.targetId), { ...(persisted as object) })
+        : undefined
+    case 'investmentAllocation:update':
+      return persisted && typeof persisted === 'object'
+        ? action('investmentAllocation', 'update', String(op.targetId), { ...(persisted as object) })
+        : undefined
+    case 'investmentAllocationOrder:update':
+      return persisted && typeof persisted === 'object'
+        ? action('investmentAllocationOrder', 'update', String(op.targetId), { ...(persisted as object) })
+        : undefined
     case 'wishlistItem:purchase': {
       const purchase = result && 'item' in result ? result : undefined
       const id = purchase?.item?.id != null ? String(purchase.item.id) : String(op.targetId)
       const purchaseTransactionId = purchase?.item?.purchaseTransactionId || purchase?.transaction?.id
-      return action('wishlistItem', 'unpurchase', id, { purchaseTransactionId })
+      return action('wishlistItem', 'unpurchase', id, { purchaseTransactionId, name: op.payload?.name })
     }
+    case 'wishlistItem:unpurchase':
+      return action('wishlistItem', 'purchase', String(op.targetId), {
+        name: op.payload?.name,
+        price: op.payload?.price,
+        date: op.payload?.date,
+      })
     case 'recurringPayment:toggle': {
       if (!op.payload || typeof op.payload.active !== 'boolean') return undefined
-      return action('recurringPayment', 'toggle', String(op.targetId), { active: !op.payload.active })
+      return action('recurringPayment', 'toggle', String(op.targetId), {
+        active: !op.payload.active,
+        name: op.payload.name,
+      })
     }
+    case 'settings:update':
+      return op.targetId !== 'summarySeen' && persisted && typeof persisted === 'object'
+        ? action('settings', 'update', String(op.targetId), { ...(persisted as object) })
+        : undefined
     default:
       return undefined
   }

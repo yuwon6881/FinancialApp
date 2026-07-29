@@ -13,6 +13,7 @@ import type {
   TodayPlanInsights,
   CategoryLimitProgress,
   WishlistItem,
+  SavingsGoal,
 } from '../types'
 
 type WireAmount = string | number
@@ -49,6 +50,25 @@ export type WireRecurringPayment = Omit<RecurringPayment, 'amount'> & {
 
 export type WireWishlistItem = Omit<WishlistItem, 'price'> & {
   price: WireAmount
+}
+
+export type WireSavingsGoal = Omit<SavingsGoal, 'targetAmount' | 'earmarkedAmount'> & {
+  targetAmount: WireAmount
+  earmarkedAmount: WireAmount
+}
+
+export interface WireSavingsGoalPool {
+  rewardsBalance: WireAmount
+  totalEarmarked: WireAmount
+  unassigned: WireAmount
+  requiredPerCycleTotal: WireAmount
+  currentCycleKey?: string
+}
+
+export interface WireSavingsGoalFundingResult {
+  goals?: WireSavingsGoal[]
+  totalGranted: WireAmount
+  freeToSpend: WireAmount
 }
 
 type WireDashboardSetting = Omit<FinancialSetting, 'targetStabilityFund'> & {

@@ -6,6 +6,10 @@ const api = vi.hoisted(() => ({
   listDocuments: vi.fn(),
   getDocumentUsage: vi.fn(),
   getAvailableDocumentYears: vi.fn(),
+  getExpiredTaxYears: vi.fn(),
+  getTaxYearReliefSummary: vi.fn(),
+  getTaxReliefCategories: vi.fn(),
+  bulkDeleteDocuments: vi.fn(),
   deleteDocument: vi.fn(),
   updateDocument: vi.fn(),
 }))
@@ -23,6 +27,12 @@ const document = {
   transactionId: null,
   uploadedAt: '2026-07-29T00:00:00Z',
   retentionUntil: '2033-12-31',
+  reliefCategory: null,
+  amount: null,
+  amountCurrency: 'MYR',
+  amountStatus: 'Unavailable',
+  amountConfidence: null,
+  amountExtractionMessage: null,
 }
 
 describe('useDocumentsView', () => {
@@ -31,6 +41,18 @@ describe('useDocumentsView', () => {
     api.listDocuments.mockResolvedValue({ items: [document], totalCount: 1 })
     api.getDocumentUsage.mockResolvedValue({ totalBytes: 12, documentCount: 1 })
     api.getAvailableDocumentYears.mockResolvedValue([2026, 2025])
+    api.getExpiredTaxYears.mockResolvedValue([])
+    api.getTaxYearReliefSummary.mockResolvedValue({
+      taxYear: 2026,
+      policyYear: 2025,
+      isPolicyProvisional: true,
+      confirmedAmount: 0,
+      pendingReviewAmount: 0,
+      documentCount: 1,
+      categories: [],
+    })
+    api.getTaxReliefCategories.mockResolvedValue([])
+    api.bulkDeleteDocuments.mockResolvedValue([])
     api.deleteDocument.mockResolvedValue(undefined)
   })
 

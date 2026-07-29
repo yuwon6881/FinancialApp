@@ -10,6 +10,8 @@ import { AlertCircle, BarChart3, CheckCircle2, ShieldCheck } from 'lucide-react'
 import { Button } from './ui/Button'
 import { getCycleProgress, MONTH_NAMES } from '../lib/cycle'
 import { InvestmentPlanExceptionCard } from './dashboard/InvestmentPlanExceptionCard'
+import { getExpiredTaxYears } from '../lib/api/documents'
+import type { ExpiredTaxYearSummary } from '../types'
 
 interface DashboardViewProps {
   dashboardData: DashboardData | null
@@ -46,6 +48,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   isSwitchingCycle = false,
   investmentAllocation = null,
 }) => {
+  const [expiredTaxYears, setExpiredTaxYears] = React.useState<ExpiredTaxYearSummary[]>([])
+  React.useEffect(() => {
+    void getExpiredTaxYears().then(setExpiredTaxYears).catch(() => setExpiredTaxYears([]))
+  }, [])
   const { hideSensitive: contextHideSensitive } = useAppPrefs()
   const hideSensitive = hideSensitiveProp ?? contextHideSensitive
 
@@ -111,6 +117,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           )}
         </div>
       </section>
+
+      {expiredTaxYears.length > 0 && (
+        <section className="rounded-2xl border border-amber-500/30 bg-amber-500/8 p-5" aria-labelledby="vault-retention-heading">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+              <div>
+                <h3 id="vault-retention-heading" className="text-sm font-bold text-amber-700 dark:text-amber-300">
+                  Old tax records need your review
+                </h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {expiredTaxYears.map(year => `${year.taxYear} (${year.documentCount} document${year.documentCount === 1 ? '' : 's'})`).join(', ')} passed the seven-year retention date. They will not be deleted automatically.
+                </p>
+              </div>
+            </div>
+            <Button variant="ghost" onClick={() => onNavigate('documents')} className="w-full justify-center sm:w-auto">
+              Review Vault
+            </Button>
+          </div>
+        </section>
+      )}
 
       <InvestmentPlanExceptionCard allocation={investmentAllocation} onNavigate={onNavigate} />
 

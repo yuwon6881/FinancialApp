@@ -541,8 +541,8 @@ function App() {
     showToast: dialogs.showToast,
     guardSensitive: guardSensitive,
     confirm: dialogs.setConfirmModalData,
-    investmentOps: financial.activeOps.filter(op => op.entity.startsWith('investment')),
-    queueInvestmentMutation: (entity, type, targetId, payload, isUndo) => {
+    operations: financial.activeOps,
+    queueMutation: (entity, type, targetId, payload, isUndo) => {
       financial.mutateQueue(previous => financial.enqueue(previous, entity, type, targetId, payload, isUndo))
     },
   }), [
@@ -553,7 +553,7 @@ function App() {
     financial.deletingTxId,
     financial.isBackgroundSyncing,
     financial.pendingOps.length,
-    financial.pendingOps,
+    financial.activeOps,
     financial.mutateQueue,
     financial.enqueue,
     financial.isOffline,
@@ -762,8 +762,20 @@ function App() {
                         onApplyCategoryCleanupSuggestion={financial.handleApplyCategoryCleanupSuggestion}
                         notifyOnLoginEnabled={prefs.notifyOnLogin}
                         onToggleNotifyOnLogin={(checked) => {
+                          const previous = prefs.notifyOnLogin
                           prefs.setNotifyOnLogin(checked)
-                          dialogs.showToast('Notification preference updated.', 'Settings Saved', 'success')
+                          dialogs.showToast(
+                            `Login notifications were ${checked ? 'enabled' : 'disabled'}.`,
+                            'Settings Saved',
+                            'success',
+                            {
+                              label: 'Undo',
+                              onAction: () => {
+                                prefs.setNotifyOnLogin(previous)
+                                dialogs.showToast('Notification preference change was undone.', 'Undo successful', 'success')
+                              },
+                            },
+                          )
                         }}
                         pushEnabled={push.enabled}
                         pushSupported={push.supported}
@@ -887,8 +899,9 @@ function App() {
                     )}
 
                     {prefs.activeTab === 'wishlist' && (
-                      <WishlistView 
+                      <WishlistView
                         wishlist={financial.allWishlist}
+                        savingsGoals={financial.allSavingsGoals}
                         transactions={financial.allTransactions}
                         rewardsBalance={wishlistRewardsBalance}
                         rewardsTarget={wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')?.target ?? 400}
@@ -898,6 +911,13 @@ function App() {
                         onUpdateItem={financial.handleUpdateWishlistItem}
                         onDeleteItem={financial.requestDeleteWishlistItem}
                         onPurchaseItem={financial.handlePurchaseWishlistItem}
+                        onAddGoal={financial.handleAddSavingsGoal}
+                        onUpdateGoal={financial.handleUpdateSavingsGoal}
+                        onDeleteGoal={financial.requestDeleteSavingsGoal}
+                        onCompleteGoal={financial.requestCompleteSavingsGoal}
+                        onContributeToGoal={financial.handleContributeToSavingsGoal}
+                        onFundGoalsForCycle={financial.handleFundSavingsGoalsForCycle}
+                        isOffline={financial.isOffline}
                         autoOpenAddModal={nav.autoOpenWishlistAdd}
                         onResetAutoOpen={() => nav.setAutoOpenWishlistAdd(false)}
                         onNavigateToLedger={nav.handleNavigateToLedger}

@@ -4,6 +4,10 @@ import type {
   DocumentVaultUsage,
   VaultDocumentTypeDefinition,
   VaultTypeCleanupSuggestion,
+  DocumentVaultConstraints,
+  TaxReliefCategoryDefinition,
+  TaxYearReliefSummary,
+  ExpiredTaxYearSummary,
 } from '../../types'
 import { request, requestVoid, invalidateCache, apiFetch, throwApiError } from './client'
 import { downloadCsvBlob } from '../csvExport'
@@ -14,7 +18,8 @@ export async function uploadDocument(
   documentType: VaultDocumentType,
   notes?: string,
   transactionId?: string,
-  clientKey?: string
+  clientKey?: string,
+  reliefCategory?: string
 ): Promise<{ id: number }> {
   const formData = new FormData()
   formData.append('file', file)
@@ -23,6 +28,7 @@ export async function uploadDocument(
   if (notes) formData.append('notes', notes)
   if (transactionId) formData.append('transactionId', transactionId)
   if (clientKey) formData.append('clientKey', clientKey)
+  if (reliefCategory) formData.append('reliefCategory', reliefCategory)
 
   const response = await apiFetch('/documents', {
     method: 'POST',
@@ -32,6 +38,33 @@ export async function uploadDocument(
   const data = await response.json() as { id: number }
   invalidateCache()
   return data
+}
+
+export interface BulkDocumentResult {
+  fileName: string
+  uploaded: boolean
+  id?: number | null
+  message?: string | null
+}
+
+export async function uploadDocuments(
+  files: File[],
+  taxYear: number,
+  documentType: VaultDocumentType,
+  notes?: string,
+  reliefCategory?: string,
+): Promise<BulkDocumentResult[]> {
+  const formData = new FormData()
+  files.forEach(file => formData.append('files', file))
+  formData.append('taxYear', taxYear.toString())
+  formData.append('documentType', documentType)
+  if (notes) formData.append('notes', notes)
+  if (reliefCategory) formData.append('reliefCategory', reliefCategory)
+  const response = await apiFetch('/documents/bulk', { method: 'POST', body: formData })
+  if (!response.ok) await throwApiError(response, 'Failed to upload documents')
+  const data = await response.json() as { results: BulkDocumentResult[] }
+  invalidateCache()
+  return data.results
 }
 
 export async function listDocuments(
@@ -78,16 +111,57 @@ export async function updateDocument(
     documentType?: string
     notes?: string | null
     transactionId?: string | null
+    reliefCategory?: string | null
+    amount?: number | null
+    amountCurrency?: 'MYR' | 'OTHER'
+    amountStatus?: 'Confirmed' | 'NeedsReview'
   }
 ): Promise<VaultDocument> {
+  const body: Record<string, unknown> = { ...updates }
+  if ('reliefCategory' in updates) body.reliefCategorySpecified = true
+  if ('amount' in updates) body.amountSpecified = true
   const data = await request<VaultDocument>(`/documents/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(updates),
+    body: JSON.stringify(body),
     errorMessage: 'Failed to update document',
   })
   invalidateCache()
   return data
+}
+
+export function getDocumentConstraints(): Promise<DocumentVaultConstraints> {
+  return request<DocumentVaultConstraints>('/documents/constraints', { method: 'GET', errorMessage: 'Failed to load upload limits' })
+}
+
+export function getTaxReliefCategories(taxYear: number): Promise<TaxReliefCategoryDefinition[]> {
+  return request<TaxReliefCategoryDefinition[]>(`/documents/relief-categories?taxYear=${taxYear}`, { method: 'GET', errorMessage: 'Failed to load tax relief categories' })
+}
+
+export function getTaxYearReliefSummary(taxYear: number): Promise<TaxYearReliefSummary> {
+  return request<TaxYearReliefSummary>(`/documents/summary/${taxYear}`, { method: 'GET', errorMessage: 'Failed to load tax relief summary' })
+}
+
+export function getExpiredTaxYears(): Promise<ExpiredTaxYearSummary[]> {
+  return request<ExpiredTaxYearSummary[]>('/documents/expired', { method: 'GET', errorMessage: 'Failed to load retention alerts' })
+}
+
+export async function bulkDeleteDocuments(ids: number[]): Promise<{ id: number; deleted: boolean; message?: string | null }[]> {
+  const result = await request<{ results: { id: number; deleted: boolean; message?: string | null }[] }>('/documents/bulk-delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+    errorMessage: 'Failed to delete documents',
+  })
+  invalidateCache()
+  return result.results
+}
+
+export async function downloadDocumentArchive(taxYear?: number): Promise<void> {
+  const query = taxYear === undefined ? '' : `?taxYear=${taxYear}`
+  const response = await apiFetch(`/documents/export${query}`)
+  if (!response.ok) await throwApiError(response, 'Failed to export documents')
+  downloadCsvBlob(await response.blob(), taxYear === undefined ? 'tax-vault-all-tax-years.zip' : `tax-vault-${taxYear}.zip`)
 }
 
 export async function deleteDocument(id: number): Promise<void> {

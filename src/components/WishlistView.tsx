@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import { m } from 'framer-motion'
-import type { WishlistItem, Transaction } from '../types'
+import type { WishlistItem, Transaction, SavingsGoal } from '../types'
 import { SwipeableRow } from './ui/SwipeableRow'
 import { BottomSheet } from './ui/BottomSheet'
 import { DatePicker } from './ui/DatePicker'
@@ -15,14 +15,18 @@ import { Button } from './ui/Button'
 import { useAppContext } from '../contexts/AppContext'
 import { useWishlistForm } from './wishlist/useWishlistForm'
 import { WishlistItemForm } from './wishlist/WishlistItemForm'
+import { useSavingsGoalForm } from './wishlist/useSavingsGoalForm'
+import { SavingsGoalForm } from './wishlist/SavingsGoalForm'
+import { SavingsGoalCard } from './wishlist/SavingsGoalCard'
+import { RewardsPoolBar } from './wishlist/RewardsPoolBar'
+import { SavingsGoalContributeSheet, type ContributeMode } from './wishlist/SavingsGoalContributeSheet'
+import { distribute, getPaceStatus, summarizePool } from '../lib/savingsGoals'
 import {
-  Wallet,
   PiggyBank,
-  Plus, 
-  Trash2, 
+  Plus,
+  Trash2,
   Clock,
   CheckCircle2,
-  Coins,
   Flag,
   Target,
   Edit2,
@@ -36,13 +40,6 @@ import type { PagedWishlistResult } from '../lib/api'
 
 const CLAIMED_PAGE_SIZE = 5
 
-const activateOnKeyboard = (event: React.KeyboardEvent, action: () => void) => {
-  if (event.key === 'Enter' || event.key === ' ') {
-    event.preventDefault()
-    action()
-  }
-}
-
 // Parse a transaction/purchase date into a *local* calendar Date. Both the ledger
 // 'YYYY-MM-DD' date and an ISO purchasedAt begin with the date part, so read that
 // directly and avoid the UTC-midnight timezone shift `new Date('YYYY-MM-DD')` causes.
@@ -55,6 +52,7 @@ const parseClaimDate = (value: string): Date | null => {
 
 interface WishlistViewProps {
   wishlist: WishlistItem[]
+  savingsGoals: SavingsGoal[]
   transactions?: Transaction[]
   rewardsBalance: number
   rewardsTarget: number
@@ -66,6 +64,13 @@ interface WishlistViewProps {
   onUpdateItem: (id: number, item: WishlistItem) => Promise<void> | void
   onDeleteItem: (id: number) => Promise<void> | void
   onPurchaseItem: (id: number, customDate?: string) => Promise<void> | void
+  onAddGoal: (goal: Partial<SavingsGoal>) => Promise<void> | void
+  onUpdateGoal: (id: number, goal: SavingsGoal) => Promise<void> | void
+  onDeleteGoal: (id: number) => Promise<void> | void
+  onCompleteGoal: (id: number) => Promise<void> | void
+  onContributeToGoal: (id: number, amount: number) => Promise<void> | void
+  onFundGoalsForCycle: () => Promise<void> | void
+  isOffline?: boolean
   formatSensitive?: (val: number) => React.ReactNode
   autoOpenAddModal?: boolean
   onResetAutoOpen?: () => void
@@ -95,6 +100,7 @@ interface WishlistViewProps {
 
 export const WishlistView: React.FC<WishlistViewProps> = ({
   wishlist,
+  savingsGoals,
   transactions,
   rewardsBalance,
   rewardsTarget,
@@ -106,6 +112,13 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   onUpdateItem,
   onDeleteItem,
   onPurchaseItem,
+  onAddGoal,
+  onUpdateGoal,
+  onDeleteGoal,
+  onCompleteGoal,
+  onContributeToGoal,
+  onFundGoalsForCycle,
+  isOffline = false,
   formatSensitive: formatSensitiveProp,
   autoOpenAddModal,
   onResetAutoOpen,
@@ -197,6 +210,59 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     onAiEditDraftConsumed,
   })
 
+  const goalForm = useSavingsGoalForm({
+    goals: savingsGoals,
+    hideSensitive,
+    onAddGoal,
+    onUpdateGoal,
+    onStartEditPending,
+  })
+
+  const { isSyncing: isGoalSyncing, isDeleting: isGoalDeleting } = useSyncStatus(savingsGoals, activeSyncId, deletingId)
+  const [contributeTarget, setContributeTarget] = React.useState<{ goal: SavingsGoal; mode: ContributeMode } | null>(null)
+
+  // --- The shared pool ------------------------------------------------------------------------
+  // One Rewards balance, two kinds of claim on it. Everything below is derived from this single
+  // summary so the pool bar, the goal cards and the wishlist progress cannot disagree about how
+  // the same money is divided.
+  const today = React.useMemo(() => new Date(), [])
+  const pool = useMemo(
+    () => summarizePool(savingsGoals, rewardsBalance, rewardsTarget, today, cycleDay),
+    [savingsGoals, rewardsBalance, rewardsTarget, today, cycleDay],
+  )
+
+  // What each goal would receive if the cycle were funded right now. Shown per card as "next
+  // funding" so the tradeoff between goals is visible before the user commits to it.
+  const projectedGrants = useMemo(() => {
+    const waterfall = distribute(pool.activeGoals, pool.unassigned, today, cycleDay)
+    return new Map(waterfall.grants.map(grant => [grant.goalId, grant.amount]))
+  }, [pool.activeGoals, pool.unassigned, today, cycleDay])
+
+  // Funding is once per cycle. Hiding the action once every goal is stamped keeps the header from
+  // offering a button that would do nothing.
+  const canFundThisCycle = useMemo(() => {
+    if (pool.activeGoals.length === 0) return false
+    const { year, monthIndex } = getCycleYearAndMonthForDate(today, cycleDay)
+    const cycleKey = `${year}-${String(monthIndex).padStart(2, '0')}`
+    return pool.activeGoals.some(goal => goal.lastFundedCycleKey !== cycleKey)
+  }, [pool.activeGoals, today, cycleDay])
+
+  const completedGoals = useMemo(
+    () => savingsGoals.filter(goal => goal.status === 'completed'),
+    [savingsGoals],
+  )
+
+  // Rewards are claimed against the FREE remainder, never the whole balance. This is the fix for
+  // the page's central inaccuracy: measuring every wishlist item against `rewardsBalance` reported
+  // several items as simultaneously affordable out of money that could only cover one.
+  const claimableBalance = pool.unassigned
+
+  // Rewards inflow net of what the commitments take first. This is what makes the projections
+  // honest — and it is the moment the tradeoff becomes legible ("headphones are 4 months out
+  // because the car fund takes 267 a cycle").
+  const freeInflowPerCycle = Math.max(0, rewardsTarget - pool.requiredPerCycleTotal)
+  const realisticFreeInflow = Math.max(0, pastThreeMonthsRewardsAverage - pool.requiredPerCycleTotal)
+
   // Separate active (hero) item and queued items
   const activeItem = useMemo(() => getActiveWishlistItem(wishlist), [wishlist])
 
@@ -257,18 +323,15 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
 
   const claimPageItems = selectedClaims.items
 
-  // Stats
-  const totalCost = useMemo(() => {
-    return wishlist.filter(w => !w.isPurchased).reduce((sum, item) => sum + item.price, 0)
-  }, [wishlist])
-
+  // How many queued rewards the FREE remainder can actually cover. Measuring against the whole
+  // Rewards balance is what let this count include items the committed money could not pay for.
   const affordableCount = useMemo(() => {
-    return wishlist.filter(w => !w.isPurchased && rewardsBalance >= w.price).length
-  }, [wishlist, rewardsBalance])
+    return wishlist.filter(w => !w.isPurchased && claimableBalance >= w.price).length
+  }, [wishlist, claimableBalance])
 
   // Calculation for timeline prediction
   const getTimelineString = (itemPrice: number, rate: number) => {
-    const remaining = itemPrice - rewardsBalance
+    const remaining = itemPrice - claimableBalance
     if (remaining <= 0) return 'Available Now! 🎉'
     if (rate <= 0) return 'N/A'
     
@@ -296,64 +359,144 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
 
   return (
     <div className="space-y-6 soft-rise">
-      {/* Top Banner Ribbon — rewardsBalance/rewardsTarget are cycle-scoped, so
-          show a skeleton while a new cycle's dashboard data is loading rather
-          than briefly flashing the previous cycle's numbers. */}
+      {/* One stacked bar over one balance. rewardsBalance/rewardsTarget are cycle-scoped, so show a
+          skeleton while a new cycle's dashboard data loads rather than briefly flashing the
+          previous cycle's numbers. */}
       {isSwitchingCycle ? (
         <CycleSkeleton variant="wishlist" />
       ) : (
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Card
-          onClick={() => onNavigateToLedger?.({ category: 'Rewards', showAllCycles: true })}
-          onKeyDown={(event) => activateOnKeyboard(event, () => onNavigateToLedger?.({ category: 'Rewards', showAllCycles: true }))}
-          role="button"
-          tabIndex={0}
-          className="group flex cursor-pointer items-center justify-between overflow-hidden p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-500/30 hover:shadow-md"
-        >
-          <div>
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Rewards Balance</span>
-            <span className="text-xl font-black text-foreground mt-1 block">{formatSensitive(rewardsBalance)}</span>
-            <span className="mt-1 flex items-center gap-0.5 text-[9px] font-semibold text-blue-500">
-              View reward history <ArrowUpRight className="size-2.5" />
-            </span>
-          </div>
-          <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform duration-300">
-            <Wallet className="size-5" />
-          </div>
-        </Card>
-
-        <Card className="flex items-center justify-between p-5 transition-transform duration-300 hover:-translate-y-0.5">
-          <div>
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Total Goals Cost</span>
-            <span className="text-xl font-black text-foreground mt-1 block">{formatSensitive(totalCost)}</span>
-          </div>
-          <div className="p-2.5 rounded-xl bg-slate-500/10 text-slate-500">
-            <Coins className="size-5" />
-          </div>
-        </Card>
-
-        <div className="flex items-center justify-between rounded-2xl border border-emerald-500/20 bg-linear-to-br from-emerald-500/8 to-card p-5 shadow-xs transition-transform duration-300 hover:-translate-y-0.5">
-          <div>
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Claimable Goals</span>
-            <span className="text-xl font-black text-foreground mt-1 block">{affordableCount} Items</span>
-          </div>
-          <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500">
-            <Trophy className="size-5" />
-          </div>
-        </div>
-      </div>
+        <RewardsPoolBar
+          summary={pool}
+          expectedInflow={rewardsTarget}
+          formatSensitive={formatSensitive}
+          hideSensitive={hideSensitive}
+          isOffline={isOffline}
+          onFundCycle={canFundThisCycle ? () => { void onFundGoalsForCycle() } : null}
+          onViewRewardsHistory={onNavigateToLedger
+            ? () => onNavigateToLedger({ category: 'Rewards', showAllCycles: true })
+            : undefined}
+        />
       )}
 
-      {/* Hero Card & Queue Grid */}
+      {/* Commitments vs rewards. Both columns spend the same pool, which is why they live on one
+          page — separating them is how the double-counting crept in originally. */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
-        {/* Active Focus Item (Hero Card) */}
+
+        {/* Commitments — dated obligations, all running in parallel. */}
+        <div className="lg:col-span-5 space-y-4">
+          <div className="flex justify-between items-center px-1">
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                <Flag className="size-4 text-violet-500" />
+                Commitments
+                <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                  {pool.activeGoals.length}
+                </span>
+              </h3>
+              <p className="mt-0.5 text-[10px] font-medium text-muted-foreground">Things you must fund by a date</p>
+            </div>
+            <m.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={goalForm.handleOpenAddModal}
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-primary-foreground bg-primary hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/10 transition cursor-pointer shrink-0"
+              title="Add commitment"
+            >
+              <Plus className="size-3.5" />
+            </m.button>
+          </div>
+
+          <div className="list-container-enter space-y-3">
+            {pool.activeGoals.length > 0 ? (
+              pool.activeGoals.map((goal, idx) => {
+                const pace = pool.paces.get(goal.id)
+                if (!pace) return null
+                const projectedGrant = projectedGrants.get(goal.id) ?? 0
+                return (
+                  <div
+                    key={goal.id}
+                    className="list-card-enter"
+                    style={idx ? { animationDelay: `${Math.min(idx * 50, 400)}ms` } : undefined}
+                  >
+                    <SavingsGoalCard
+                      goal={goal}
+                      pace={pace}
+                      status={getPaceStatus(pace, projectedGrant)}
+                      projectedGrant={projectedGrant}
+                      currency={currency}
+                      formatSensitive={formatSensitive}
+                      hideSensitive={hideSensitive}
+                      isSyncing={isGoalSyncing(goal.id)}
+                      isDeleting={isGoalDeleting(goal.id)}
+                      onEdit={goalForm.handleOpenEditModal}
+                      onDelete={onDeleteGoal}
+                      onComplete={onCompleteGoal}
+                      onTopUp={g => setContributeTarget({ goal: g, mode: 'topUp' })}
+                      onRelease={g => setContributeTarget({ goal: g, mode: 'release' })}
+                    />
+                  </div>
+                )
+              })
+            ) : (
+              <Card className="p-6 border-dashed text-center">
+                <Flag className="size-8 text-muted-foreground/60 mb-2 mx-auto" />
+                <h4 className="font-bold text-foreground text-sm">No commitments yet</h4>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Add something you need money ready for by a date — a car service in three months, a
+                  house deposit in six years. We work out what to set aside each cycle.
+                </p>
+                <m.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={goalForm.handleOpenAddModal}
+                  className="mt-4 inline-flex items-center gap-1.5 px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full text-xs font-bold shadow-md shadow-primary/10 transition cursor-pointer"
+                >
+                  <Plus className="size-3.5" /> Add commitment
+                </m.button>
+              </Card>
+            )}
+          </div>
+
+          {completedGoals.length > 0 && (
+            <Card className="p-4">
+              <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5 mb-3">
+                <CheckCircle2 className="size-3.5 text-emerald-500" />
+                Completed
+                <span className="ml-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
+                  {completedGoals.length}
+                </span>
+              </h4>
+              <div className="space-y-1.5">
+                {completedGoals.slice(0, 5).map(goal => (
+                  <div key={goal.id} className="flex items-center justify-between gap-3 text-[11px]">
+                    <span className="font-bold text-foreground truncate">{goal.name}</span>
+                    <span className="font-semibold text-muted-foreground shrink-0">
+                      {formatSensitive(goal.targetAmount)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>
+
+        {/* Rewards — serial, spontaneous, and funded only from what commitments leave behind. */}
         <div className="lg:col-span-7 space-y-4">
           <div className="flex justify-between items-center px-1">
-            <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-              <Target className="size-4 text-blue-500" />
-              Your focus
-            </h3>
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                <Target className="size-4 text-blue-500" />
+                Your focus
+                {affordableCount > 0 && (
+                  <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
+                    <Trophy className="size-2.5" /> {affordableCount} claimable
+                  </span>
+                )}
+              </h3>
+              <p className="mt-0.5 text-[10px] font-medium text-muted-foreground">
+                Funded from your {formatSensitive(claimableBalance)} free rewards
+              </p>
+            </div>
             <m.button 
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -367,8 +510,8 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
 
           {activeItem ? (
             (() => {
-              const pct = Math.max(0, Math.min(100, (rewardsBalance / activeItem.price) * 100))
-              const canAfford = rewardsBalance >= activeItem.price
+              const pct = Math.max(0, Math.min(100, (claimableBalance / activeItem.price) * 100))
+              const canAfford = claimableBalance >= activeItem.price
 
               return (
                 <div 
@@ -428,38 +571,54 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                         />
                       </div>
                       <div className="flex justify-between text-[10px] text-muted-foreground font-semibold">
-                        <span>{formatSensitive(rewardsBalance)} saved</span>
+                        <span>{formatSensitive(claimableBalance)} free</span>
                         <span>{formatSensitive(activeItem.price)} target</span>
                       </div>
                     </div>
 
-                    {/* Predictor Ribbon */}
+                    {/* Predictor ribbon. Both rates are net of commitments: a reward is funded from
+                        what the goals leave behind, so projecting off the whole Rewards budget
+                        would promise a date the goals make impossible. */}
                     {!canAfford && (
                       <div className="mt-4 grid grid-cols-2 gap-3 p-3 bg-muted/40 rounded-xl border border-border/30">
                         <div className="space-y-1">
                           <span className="text-[10px] uppercase tracking-wider font-extrabold text-blue-500">Optimistic Projection</span>
                           <span className="text-[11px] font-bold text-foreground block">
-                            {getTimelineString(activeItem.price, rewardsTarget > 0 ? rewardsTarget : 100)}
+                            {freeInflowPerCycle > 0
+                              ? getTimelineString(activeItem.price, freeInflowPerCycle)
+                              : 'Not at this rate'}
                           </span>
                           <span className="text-[9px] text-muted-foreground block font-medium">
-                            Based on target budget (
-                            {formatSensitive(rewardsTarget)}
-                            /mo)
+                            {pool.requiredPerCycleTotal > 0 ? (
+                              <>
+                                Budget minus commitments (
+                                {formatSensitive(freeInflowPerCycle)}
+                                /mo)
+                              </>
+                            ) : (
+                              <>
+                                Based on target budget (
+                                {formatSensitive(rewardsTarget)}
+                                /mo)
+                              </>
+                            )}
                           </span>
                         </div>
                         <div className="space-y-1 border-l border-border/30 pl-3">
                           <span className="text-[10px] uppercase tracking-wider font-extrabold text-violet-500">Realistic Projection</span>
                           <span className="text-[11px] font-bold text-foreground block">
-                            {hasRewardsHistory 
-                              ? getTimelineString(activeItem.price, pastThreeMonthsRewardsAverage)
+                            {hasRewardsHistory
+                              ? (realisticFreeInflow > 0
+                                  ? getTimelineString(activeItem.price, realisticFreeInflow)
+                                  : 'Not at this rate')
                               : 'N/A'
                             }
                           </span>
                           <span className="text-[9px] text-muted-foreground block font-medium">
                             {hasRewardsHistory ? (
                               <>
-                                Based on past 3-mo savings (
-                                {formatSensitive(pastThreeMonthsRewardsAverage)}
+                                Past 3-mo savings minus commitments (
+                                {formatSensitive(realisticFreeInflow)}
                                 /mo)
                               </>
                             ) : (
@@ -485,7 +644,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                       }`}
                     >
                       <PiggyBank className="size-3.5" />
-                      {canAfford ? 'Claim Reward' : <>Need {formatSensitive(activeItem.price - rewardsBalance)} More</>}
+                      {canAfford ? 'Claim Reward' : <>Need {formatSensitive(activeItem.price - claimableBalance)} More</>}
                     </m.button>
 
                     <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -542,8 +701,8 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
           <div className="list-container-enter space-y-3 max-h-[460px] overflow-y-auto pr-1">
             {queuedItems.length > 0 ? (
               queuedItems.map((item, idx) => {
-                const pct = Math.max(0, Math.min(100, (rewardsBalance / item.price) * 100))
-                const canAfford = rewardsBalance >= item.price
+                const pct = Math.max(0, Math.min(100, (claimableBalance / item.price) * 100))
+                const canAfford = claimableBalance >= item.price
                 const isBusy = isItemDeleting(item.id) || isItemSyncing(item.id) || item.isPendingSync
 
                 return (
@@ -802,6 +961,85 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
             onSubmit={handleSaveAdd}
           />
         </BottomSheet>
+      )}
+
+      {/* Add / Edit Commitment */}
+      {goalForm.showAddModal && (
+        <BottomSheet
+          isOpen={goalForm.showAddModal}
+          title="Add a Commitment"
+          onClose={goalForm.closeAddModal}
+          maxWidthClassName="max-w-md"
+        >
+          <SavingsGoalForm
+            mode="add"
+            currency={currency}
+            name={goalForm.nameInput}
+            target={goalForm.targetInput}
+            date={goalForm.dateInput}
+            priority={goalForm.priorityInput}
+            isRecurring={goalForm.isRecurringInput}
+            recurrenceMonths={goalForm.recurrenceMonthsInput}
+            errors={goalForm.errors}
+            onNameChange={goalForm.setNameInput}
+            onTargetChange={goalForm.handleTargetChange}
+            onDateChange={goalForm.setDateInput}
+            onPriorityChange={goalForm.setPriorityInput}
+            onRecurringChange={goalForm.setIsRecurringInput}
+            onRecurrenceMonthsChange={goalForm.setRecurrenceMonthsInput}
+            onClearError={field => goalForm.setErrors(previous => ({ ...previous, [field]: '' }))}
+            onCancel={goalForm.closeAddModal}
+            onSubmit={goalForm.handleSaveAdd}
+          />
+        </BottomSheet>
+      )}
+
+      {goalForm.showEditModal && goalForm.editingGoal && (
+        <BottomSheet
+          isOpen={goalForm.showEditModal}
+          title="Edit Commitment"
+          onClose={goalForm.closeEditModal}
+          maxWidthClassName="max-w-md"
+        >
+          <SavingsGoalForm
+            mode="edit"
+            currency={currency}
+            name={goalForm.nameInput}
+            target={goalForm.targetInput}
+            date={goalForm.dateInput}
+            priority={goalForm.priorityInput}
+            isRecurring={goalForm.isRecurringInput}
+            recurrenceMonths={goalForm.recurrenceMonthsInput}
+            errors={goalForm.errors}
+            onNameChange={goalForm.setNameInput}
+            onTargetChange={goalForm.handleTargetChange}
+            onDateChange={goalForm.setDateInput}
+            onPriorityChange={goalForm.setPriorityInput}
+            onRecurringChange={goalForm.setIsRecurringInput}
+            onRecurrenceMonthsChange={goalForm.setRecurrenceMonthsInput}
+            onClearError={field => goalForm.setErrors(previous => ({ ...previous, [field]: '' }))}
+            onCancel={goalForm.closeEditModal}
+            onSubmit={goalForm.handleSaveEdit}
+          />
+        </BottomSheet>
+      )}
+
+      {/* Manual top-up / release for a single commitment */}
+      {contributeTarget && (
+        <SavingsGoalContributeSheet
+          goal={contributeTarget.goal}
+          mode={contributeTarget.mode}
+          currency={currency}
+          available={claimableBalance}
+          suggested={pool.paces.get(contributeTarget.goal.id)?.requiredPerCycle ?? 0}
+          formatSensitive={formatSensitive}
+          onClose={() => setContributeTarget(null)}
+          onConfirm={amount => {
+            const goalId = contributeTarget.goal.id
+            setContributeTarget(null)
+            void onContributeToGoal(goalId, amount)
+          }}
+        />
       )}
 
       {/* Edit Item Modal */}

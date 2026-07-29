@@ -40,8 +40,8 @@ const context: AppContextValue = {
   formatSensitive: value => `$${value}`,
   showToast: vi.fn(),
   guardSensitive: () => true,
-  investmentOps: [],
-  queueInvestmentMutation: vi.fn(),
+  operations: [],
+  queueMutation: vi.fn(),
 }
 
 describe('InvestmentPlanSection sliders', () => {

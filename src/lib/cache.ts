@@ -9,10 +9,12 @@ export const CACHE_KEYS = {
   recurringPayments: 'cached_recurring_payments',
   categories: 'cached_categories',
   wishlist: 'cached_wishlist',
+  savingsGoals: 'cached_savings_goals',
   pendingTransactions: 'pending_transactions',
   pendingOperations: 'pending_operations',
   walletBalance: 'cached_wallet_balance',
   investmentPortfolio: 'cached_investment_portfolio',
+  vaultDocumentTypes: 'cached_vault_document_types',
 } as const
 
 // Local amount masking only discourages casual inspection. It is deliberately
@@ -26,8 +28,10 @@ const DISPOSABLE_CACHE_KEYS = new Set<string>([
   CACHE_KEYS.recurringPayments,
   CACHE_KEYS.categories,
   CACHE_KEYS.wishlist,
+  CACHE_KEYS.savingsGoals,
   CACHE_KEYS.walletBalance,
   CACHE_KEYS.investmentPortfolio,
+  CACHE_KEYS.vaultDocumentTypes,
   CYCLE_SNAPSHOTS_KEY,
 ])
 const EXPIRING_CACHE_KEYS = DISPOSABLE_CACHE_KEYS

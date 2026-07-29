@@ -6,6 +6,7 @@ import {
   listDocuments,
   updateDocument,
   uploadDocument,
+  uploadDocuments,
 } from './documents'
 
 const okJson = (payload: unknown) => ({
@@ -19,6 +20,28 @@ describe('documents API', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
+  })
+
+  it('uploads multiple files in one multipart request and returns per-file results', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okJson({
+      results: [
+        { fileName: 'one.pdf', uploaded: true, id: 1 },
+        { fileName: 'too-large.pdf', uploaded: false, message: 'The document exceeds the maximum allowed size.' },
+      ],
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    const files = [
+      new File(['one'], 'one.pdf', { type: 'application/pdf' }),
+      new File(['two'], 'too-large.pdf', { type: 'application/pdf' }),
+    ]
+
+    const results = await uploadDocuments(files, 2025, 'Receipt', undefined, 'lifestyle')
+
+    expect(results).toHaveLength(2)
+    expect(results[1].uploaded).toBe(false)
+    const form = fetchMock.mock.calls[0][1].body as FormData
+    expect(form.getAll('files')).toHaveLength(2)
+    expect(form.get('reliefCategory')).toBe('lifestyle')
   })
 
   it('uploads multipart data without setting a content-type header', async () => {

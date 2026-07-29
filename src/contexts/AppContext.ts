@@ -14,7 +14,7 @@ interface ConfirmRequest {
  * App-wide state, split into three contexts by how often each part changes.
  *
  * This used to be a single context object. The sync fields (`activeSyncId`, `deletingId`,
- * `isSyncing`, `investmentOps`) change on every outbox tick, so one tick re-rendered every
+ * `isSyncing`, `operations`) change on every outbox tick, so one tick re-rendered every
  * consumer of the near-static fields too — including the dashboard charts and report
  * tables, which only ever read `hideSensitive`/`currency`/`formatSensitive`. Splitting the
  * value is what lets a component subscribe to just the part it uses: the React Compiler can
@@ -42,8 +42,8 @@ export interface AppSyncValue {
   deletingId: string | null
   isSyncing: boolean
   isOffline: boolean
-  investmentOps?: QueuedOp[]
-  queueInvestmentMutation?: (entity: EntityKind, type: OpType, targetId: string, payload?: OutboxPayload, isUndo?: boolean) => void
+  operations?: QueuedOp[]
+  queueMutation?: (entity: EntityKind, type: OpType, targetId: string, payload?: OutboxPayload, isUndo?: boolean) => void
 }
 
 /** The flat shape callers pass to AppProvider, which splits it into the three above. */
@@ -67,8 +67,8 @@ const defaultSync: AppSyncValue = {
   deletingId: null,
   isSyncing: false,
   isOffline: false,
-  investmentOps: [],
-  queueInvestmentMutation: () => undefined,
+  operations: [],
+  queueMutation: () => undefined,
 }
 
 export const AppPrefsContext = createContext<AppPrefsValue>(defaultPrefs)

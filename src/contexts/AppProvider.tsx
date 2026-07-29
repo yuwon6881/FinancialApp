@@ -34,15 +34,15 @@ export function AppProvider({ value, children }: { value: AppContextValue; child
     deletingId: value.deletingId,
     isSyncing: value.isSyncing,
     isOffline: value.isOffline,
-    investmentOps: value.investmentOps,
-    queueInvestmentMutation: value.queueInvestmentMutation,
+    operations: value.operations,
+    queueMutation: value.queueMutation,
   }), [
     value.activeSyncId,
     value.deletingId,
     value.isSyncing,
     value.isOffline,
-    value.investmentOps,
-    value.queueInvestmentMutation,
+    value.operations,
+    value.queueMutation,
   ])
 
   return (

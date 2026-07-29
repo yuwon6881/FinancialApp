@@ -145,7 +145,11 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
   onInvestmentScanStarted,
   onInvestmentScanCleared,
 }) => {
-  const { hideSensitive, isOffline, confirm, activeSyncId, investmentOps = [], queueInvestmentMutation = () => undefined } = useAppContext()
+  const { hideSensitive, isOffline, confirm, activeSyncId, operations = [], queueMutation = () => undefined } = useAppContext()
+  const investmentOps = useMemo(
+    () => operations.filter(operation => operation.entity.startsWith('investment')),
+    [operations],
+  )
   const {
     activityRevision,
     loadError,
@@ -190,7 +194,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
     targetId: string,
     payload: Record<string, unknown> | undefined,
   ) => {
-    queueInvestmentMutation(entity, type, targetId, payload)
+    queueMutation(entity, type, targetId, payload)
     closePanel()
     return true
   }
@@ -322,7 +326,15 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
               const account = portfolio.accounts.find(a => a.id === id)
               if (account) queueInvestment('investmentAccount', 'update', id, { name: account.name, baseCurrency: account.baseCurrency, isArchived: true, undoSnapshot: account })
             }}
-            onUnarchiveAccount={(id, name, currency) => queueInvestment('investmentAccount', 'update', id, { name, baseCurrency: currency, isArchived: false })}
+            onUnarchiveAccount={(id, name, currency) => {
+              const account = setupPortfolio?.accounts.find(value => value.id === id)
+              return queueInvestment('investmentAccount', 'update', id, {
+                name,
+                baseCurrency: currency,
+                isArchived: false,
+                undoSnapshot: account,
+              })
+            }}
             onDeleteAccount={id => {
               const account = portfolio.accounts.find(a => a.id === id)
               confirm({

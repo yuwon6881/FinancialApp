@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight, ShieldCheck, UploadCloud } from 'lucide-react'
+import { AlertTriangle, ChevronLeft, ChevronRight, Download, ShieldCheck, Trash2, UploadCloud } from 'lucide-react'
 import { DocumentUploadSheet } from './documents/DocumentUploadSheet'
 import { useDocumentsView } from './documents/view/useDocumentsView'
 import { CustomConfirmModal } from './ui/CustomConfirmModal'
@@ -7,12 +7,17 @@ import { DocumentFilterBar } from './documents/view/DocumentFilterBar'
 import { StorageUsageMeter } from './documents/view/StorageUsageMeter'
 import { DocumentList } from './documents/view/DocumentList'
 import { useAppUi } from '../contexts/AppContext'
+import { TaxReliefOverview } from './documents/view/TaxReliefOverview'
+import * as documentsApi from '../lib/api/documents'
 
 export function DocumentsView() {
   const {
     documents,
     usage,
     availableYears,
+    summary,
+    expiredYears,
+    reliefCategories,
     isLoading,
     taxYear,
     setTaxYear,
@@ -25,12 +30,18 @@ export function DocumentsView() {
     loadDocuments,
     loadUsage,
     loadAvailableYears,
+    loadTaxInsights,
     deleteDocument,
+    updateDocumentMetadata,
+    bulkDelete,
   } = useDocumentsView()
 
   const { showToast } = useAppUi()
   const [isUploadSheetOpen, setIsUploadSheetOpen] = useState(false)
   const [docToDelete, setDocToDelete] = useState<number | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
 
@@ -50,15 +61,54 @@ export function DocumentsView() {
             reference only — nothing is ever deleted automatically.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setIsUploadSheetOpen(true)}
-          className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-md transition hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/10"
-        >
-          <UploadCloud className="size-4" aria-hidden="true" />
-          Upload Document
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={isDownloading || availableYears.length === 0}
+            onClick={() => {
+              setIsDownloading(true)
+              void documentsApi.downloadDocumentArchive(taxYear).catch(() =>
+                showToast('The ZIP archive could not be prepared.', 'Download Failed', 'error'))
+                .finally(() => setIsDownloading(false))
+            }}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5 text-xs font-bold disabled:opacity-50"
+          >
+            <Download className="size-4" /> {isDownloading ? 'Preparing ZIP…' : taxYear ? `Download ${taxYear}` : 'Download all'}
+          </button>
+          {taxYear !== undefined && availableYears.length > 1 && (
+            <button type="button" onClick={() => {
+              setIsDownloading(true)
+              void documentsApi.downloadDocumentArchive()
+                .catch(() => showToast('The ZIP archive could not be prepared.', 'Download Failed', 'error'))
+                .finally(() => setIsDownloading(false))
+            }} className="rounded-xl border border-border bg-card px-3 py-2.5 text-xs font-bold">
+              All tax years
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setIsUploadSheetOpen(true)}
+            className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-md transition hover:bg-primary/90"
+          >
+            <UploadCloud className="size-4" />
+            Upload
+          </button>
+        </div>
       </div>
+
+      {expiredYears.length > 0 && (
+        <section className="rounded-2xl border border-amber-500/30 bg-amber-500/8 p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div>
+              <h3 className="text-sm font-bold text-amber-700 dark:text-amber-300">Tax records past their seven-year retention date</h3>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                {expiredYears.map(year => `${year.taxYear} (${year.documentCount})`).join(', ')}. Nothing will be deleted automatically—review and remove them when you decide they are no longer needed.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Panel */}
       <div className="rounded-2xl border border-border/60 bg-card p-3 shadow-xs sm:p-5">
@@ -72,7 +122,34 @@ export function DocumentsView() {
 
         <StorageUsageMeter usage={usage} />
 
-        <DocumentList documents={documents} isLoading={isLoading} setDocToDelete={setDocToDelete} />
+        <TaxReliefOverview summary={summary} />
+
+        {selectedIds.size > 0 && (
+          <div className="mb-3 flex items-center justify-between rounded-xl border border-destructive/25 bg-destructive/5 p-3">
+            <span className="text-xs font-bold">{selectedIds.size} selected</span>
+            <button type="button" onClick={() => setIsBulkDeleteOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-destructive px-3 py-2 text-xs font-bold text-destructive-foreground">
+              <Trash2 className="size-3.5" /> Delete selected
+            </button>
+          </div>
+        )}
+
+        <DocumentList
+          documents={documents}
+          isLoading={isLoading}
+          setDocToDelete={setDocToDelete}
+          selectedIds={selectedIds}
+          toggleSelected={id => setSelectedIds(current => {
+            const next = new Set(current)
+            if (next.has(id)) next.delete(id)
+            else next.add(id)
+            return next
+          })}
+          updateDocument={async (id, updates) => {
+            await updateDocumentMetadata(id, updates)
+            void loadTaxInsights()
+          }}
+          reliefCategories={reliefCategories}
+        />
 
         {totalCount > pageSize && (
           <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/60 pt-3">
@@ -110,6 +187,7 @@ export function DocumentsView() {
           void loadDocuments(true)
           void loadUsage()
           void loadAvailableYears()
+          void loadTaxInsights()
         }}
       />
 
@@ -134,6 +212,32 @@ export function DocumentsView() {
           }
         }}
         onCancel={() => setDocToDelete(null)}
+      />
+
+      <CustomConfirmModal
+        isOpen={isBulkDeleteOpen}
+        title={`Delete ${selectedIds.size} documents?`}
+        message="This permanently removes every selected original file. Successful deletions cannot be undone; any storage failure will be reported and left in the Vault."
+        confirmText="Delete selected"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={async () => {
+          try {
+            const results = await bulkDelete([...selectedIds])
+            const failed = results.filter(result => !result.deleted)
+            setSelectedIds(new Set(failed.map(result => result.id)))
+            showToast(
+              failed.length ? `${results.length - failed.length} deleted; ${failed.length} failed and remain selected.` : `${results.length} documents deleted.`,
+              failed.length ? 'Partially Deleted' : 'Deleted',
+              failed.length ? 'error' : 'success',
+            )
+          } catch {
+            showToast('The selected documents could not be deleted.', 'Delete Failed', 'error')
+          } finally {
+            setIsBulkDeleteOpen(false)
+          }
+        }}
+        onCancel={() => setIsBulkDeleteOpen(false)}
       />
     </div>
   )

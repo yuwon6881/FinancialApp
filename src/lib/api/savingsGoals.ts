@@ -1,0 +1,121 @@
+import type { SavingsGoal } from '../../types'
+import type { WireSavingsGoal, WireSavingsGoalFundingResult, WireSavingsGoalPool } from '../apiTypes'
+import { deobfuscateAmount, deobfuscateSavingsGoal, obfuscateAmount } from './amounts'
+import { cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
+
+export function fetchSavingsGoals(signal?: AbortSignal): Promise<SavingsGoal[]> {
+  return cachedGet('savings-goals', async () => {
+    const data = await request<WireSavingsGoal[] | null>('/savings-goals', {
+      errorMessage: 'Failed to fetch savings goals',
+    })
+    return (data || []).map(deobfuscateSavingsGoal)
+  }, { signal, staleTime: 120_000 })
+}
+
+export interface SavingsGoalPool {
+  rewardsBalance: number
+  totalEarmarked: number
+  unassigned: number
+  requiredPerCycleTotal: number
+  currentCycleKey: string
+}
+
+/**
+ * The server's own view of how the Rewards pool divides. The page derives the same numbers locally
+ * (so they stay correct while offline and reflect queued ops), but this is the authority the
+ * earmark invariant is actually enforced against.
+ */
+export async function fetchSavingsGoalPool(signal?: AbortSignal): Promise<SavingsGoalPool> {
+  const data = await request<WireSavingsGoalPool>('/savings-goals/pool', {
+    signal,
+    errorMessage: 'Failed to fetch the rewards pool summary',
+  })
+  return {
+    rewardsBalance: deobfuscateAmount(data.rewardsBalance),
+    totalEarmarked: deobfuscateAmount(data.totalEarmarked),
+    unassigned: deobfuscateAmount(data.unassigned),
+    requiredPerCycleTotal: deobfuscateAmount(data.requiredPerCycleTotal),
+    currentCycleKey: data.currentCycleKey ?? '',
+  }
+}
+
+function toMutationBody(goal: Partial<SavingsGoal>) {
+  return {
+    ...goal,
+    targetAmount: obfuscateAmount(goal.targetAmount ?? 0),
+    earmarkedAmount: obfuscateAmount(goal.earmarkedAmount ?? 0),
+  }
+}
+
+export async function addSavingsGoal(goal: Partial<SavingsGoal>, clientKey?: string): Promise<SavingsGoal> {
+  const data = await request<WireSavingsGoal>('/savings-goals', {
+    method: 'POST',
+    // clientKey is the stable outbox op id: sending it lets the server dedupe a lost-response
+    // retry to the already-created row instead of inserting a duplicate goal.
+    ...jsonBody({ ...toMutationBody(goal), ...(clientKey ? { clientKey } : {}) }),
+    errorMessage: 'Failed to create savings goal',
+  })
+  invalidateCache()
+  return deobfuscateSavingsGoal(data)
+}
+
+export async function updateSavingsGoal(id: number, goal: SavingsGoal): Promise<void> {
+  await requestVoid(`/savings-goals/${id}`, {
+    method: 'PUT',
+    ...jsonBody(toMutationBody(goal)),
+    errorMessage: 'Failed to update savings goal',
+  })
+  invalidateCache()
+}
+
+export async function deleteSavingsGoal(id: number): Promise<void> {
+  await requestVoid(`/savings-goals/${id}`, {
+    method: 'DELETE',
+    errorMessage: 'Failed to delete savings goal',
+  })
+  invalidateCache()
+}
+
+/** Positive tops the goal up from the free remainder; negative releases back to it. */
+export async function contributeToSavingsGoal(id: number, amount: number): Promise<SavingsGoal> {
+  const data = await request<WireSavingsGoal>(`/savings-goals/${id}/contribute`, {
+    method: 'POST',
+    ...jsonBody({ amount: obfuscateAmount(amount) }),
+    errorMessage: 'Failed to move money for this savings goal',
+  })
+  invalidateCache()
+  return deobfuscateSavingsGoal(data)
+}
+
+export interface SavingsGoalFundingResult {
+  goals: SavingsGoal[]
+  totalGranted: number
+  freeToSpend: number
+}
+
+/**
+ * Runs the per-cycle waterfall server-side. Deliberately NOT routed through the outbox: the
+ * distribution depends on the authoritative Rewards balance, which only the server knows, so this
+ * is an online-only action rather than an op that could replay against a stale balance.
+ */
+export async function fundSavingsGoalsForCycle(): Promise<SavingsGoalFundingResult> {
+  const data = await request<WireSavingsGoalFundingResult>('/savings-goals/fund', {
+    method: 'POST',
+    errorMessage: 'Failed to fund your goals for this cycle',
+  })
+  invalidateCache()
+  return {
+    goals: (data.goals || []).map(deobfuscateSavingsGoal),
+    totalGranted: deobfuscateAmount(data.totalGranted),
+    freeToSpend: deobfuscateAmount(data.freeToSpend),
+  }
+}
+
+export async function completeSavingsGoal(id: number): Promise<SavingsGoal> {
+  const data = await request<WireSavingsGoal>(`/savings-goals/${id}/complete`, {
+    method: 'POST',
+    errorMessage: 'Failed to complete savings goal',
+  })
+  invalidateCache()
+  return deobfuscateSavingsGoal(data)
+}

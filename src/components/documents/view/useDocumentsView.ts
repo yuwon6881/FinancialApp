@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import type { VaultDocument, DocumentVaultUsage } from '../../../types'
+import type { VaultDocument, DocumentVaultUsage, TaxYearReliefSummary, ExpiredTaxYearSummary, TaxReliefCategoryDefinition } from '../../../types'
 import * as api from '../../../lib/api/documents'
 
 export function useDocumentsView() {
@@ -7,6 +7,9 @@ export function useDocumentsView() {
   const [totalCount, setTotalCount] = useState(0)
   const [usage, setUsage] = useState<DocumentVaultUsage | null>(null)
   const [availableYears, setAvailableYears] = useState<number[]>([])
+  const [summary, setSummary] = useState<TaxYearReliefSummary | null>(null)
+  const [expiredYears, setExpiredYears] = useState<ExpiredTaxYearSummary[]>([])
+  const [reliefCategories, setReliefCategories] = useState<TaxReliefCategoryDefinition[]>([])
   
   const [taxYear, setTaxYear] = useState<number | undefined>(undefined)
   const [search, setSearch] = useState<string>('')
@@ -48,11 +51,27 @@ export function useDocumentsView() {
     try {
       const years = await api.getAvailableDocumentYears()
       setAvailableYears(years)
-      setTaxYear(current => current !== undefined && !years.includes(current) ? undefined : current)
+      setTaxYear(current => current === undefined ? years[0] : !years.includes(current) ? years[0] : current)
     } catch (err) {
       console.error('Failed to load document years:', err)
     }
   }, [])
+
+  const loadTaxInsights = useCallback(async () => {
+    const selectedYear = taxYear ?? availableYears[0]
+    try {
+      const [expired, yearSummary, categories] = await Promise.all([
+        api.getExpiredTaxYears(),
+        selectedYear ? api.getTaxYearReliefSummary(selectedYear).catch(() => null) : Promise.resolve(null),
+        selectedYear ? api.getTaxReliefCategories(selectedYear) : Promise.resolve([]),
+      ])
+      setExpiredYears(expired)
+      setSummary(yearSummary)
+      setReliefCategories(categories)
+    } catch (err) {
+      console.error('Failed to load tax insights:', err)
+    }
+  }, [taxYear, availableYears])
 
   useEffect(() => {
     loadDocuments(true)
@@ -69,6 +88,10 @@ export function useDocumentsView() {
     loadAvailableYears()
   }, [loadUsage, loadAvailableYears])
 
+  useEffect(() => {
+    void loadTaxInsights()
+  }, [loadTaxInsights])
+
   const deleteDocument = async (id: number) => {
     try {
       await api.deleteDocument(id)
@@ -82,7 +105,12 @@ export function useDocumentsView() {
     }
   }
 
-  const updateDocumentMetadata = async (id: number, updates: Partial<VaultDocument>) => {
+  const updateDocumentMetadata = async (
+    id: number,
+    updates: Pick<Partial<VaultDocument>, 'taxYear' | 'documentType' | 'notes' | 'transactionId' | 'reliefCategory' | 'amount' | 'amountCurrency'> & {
+      amountStatus?: 'Confirmed' | 'NeedsReview'
+    },
+  ) => {
     try {
       const updated = await api.updateDocument(id, updates)
       setDocuments(docs => docs.map(d => d.id === id ? updated : d))
@@ -92,11 +120,23 @@ export function useDocumentsView() {
     }
   }
 
+  const bulkDelete = async (ids: number[]) => {
+    const results = await api.bulkDeleteDocuments(ids)
+    const deletedIds = new Set(results.filter(result => result.deleted).map(result => result.id))
+    setDocuments(current => current.filter(document => !deletedIds.has(document.id)))
+    setTotalCount(current => Math.max(0, current - deletedIds.size))
+    await Promise.all([loadUsage(), loadAvailableYears(), loadTaxInsights()])
+    return results
+  }
+
   return {
     documents,
     totalCount,
     usage,
     availableYears,
+    summary,
+    expiredYears,
+    reliefCategories,
     isLoading,
     page,
     setPage,
@@ -108,7 +148,9 @@ export function useDocumentsView() {
     loadDocuments,
     loadUsage,
     loadAvailableYears,
+    loadTaxInsights,
     deleteDocument,
-    updateDocumentMetadata
+    updateDocumentMetadata,
+    bulkDelete,
   }
 }

@@ -79,8 +79,8 @@ const context: AppContextValue = {
   showToast: vi.fn(),
   guardSensitive: () => true,
   confirm: vi.fn(),
-  investmentOps: [],
-  queueInvestmentMutation: vi.fn(),
+  operations: [],
+  queueMutation: vi.fn(),
 }
 
 const renderView = (props: Partial<ComponentProps<typeof InvestmentsView>> = {}) => render(
@@ -98,7 +98,7 @@ describe('InvestmentsView provider call boundaries', () => {
     vi.mocked(api.fetchCurrencyCatalog).mockResolvedValue([])
     vi.mocked(api.searchInvestmentInstruments).mockReset()
     vi.mocked(api.createInvestmentInstrument).mockReset()
-    vi.mocked(context.queueInvestmentMutation!).mockReset()
+    vi.mocked(context.queueMutation!).mockReset()
     vi.mocked(context.showToast).mockReset()
     vi.mocked(api.refreshInvestmentMarketData).mockReset()
   })
@@ -175,7 +175,7 @@ describe('InvestmentsView provider call boundaries', () => {
     fireEvent.click(await screen.findByRole('button', { name: /VOO/ }, { timeout: 1500 }))
     fireEvent.click(screen.getByRole('button', { name: 'Save investment' }))
 
-    await waitFor(() => expect(context.queueInvestmentMutation).toHaveBeenCalledWith(
+    await waitFor(() => expect(context.queueMutation).toHaveBeenCalledWith(
       'investmentInstrument',
       'add',
       expect.any(String),
@@ -273,7 +273,7 @@ describe('InvestmentsView provider call boundaries', () => {
     expect(screen.getByRole('combobox', { name: 'Cash movement type' }).textContent).toContain('Convert currency')
     expect(screen.getAllByRole('spinbutton').map(input => (input as HTMLInputElement).value))
       .toEqual(expect.arrayContaining(['100', '430']))
-    expect(context.queueInvestmentMutation).not.toHaveBeenCalled()
+    expect(context.queueMutation).not.toHaveBeenCalled()
   })
 
   const choose = (ariaLabel: string, option: string) => {
@@ -293,7 +293,7 @@ describe('InvestmentsView provider call boundaries', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save activity' }))
 
     expect(await screen.findByText(/is available in Broker/)).toBeTruthy()
-    expect(context.queueInvestmentMutation).not.toHaveBeenCalled()
+    expect(context.queueMutation).not.toHaveBeenCalled()
   })
 
   it('refuses a withdrawal the account has no cash for', async () => {
@@ -306,6 +306,6 @@ describe('InvestmentsView provider call boundaries', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Record withdrawal' }))
 
     expect(await screen.findByText(/before withdrawing/)).toBeTruthy()
-    expect(context.queueInvestmentMutation).not.toHaveBeenCalled()
+    expect(context.queueMutation).not.toHaveBeenCalled()
   })
 })

@@ -1,5 +1,5 @@
-import type { RecurringPayment, Transaction, WishlistItem } from '../../types'
-import type { WireRecurringPayment, WireTransaction, WireWishlistItem } from '../apiTypes'
+import type { RecurringPayment, SavingsGoal, Transaction, WishlistItem } from '../../types'
+import type { WireRecurringPayment, WireSavingsGoal, WireTransaction, WireWishlistItem } from '../apiTypes'
 
 const OBFUSCATION_KEY = 'FinancialAppObfuscationKey'
 
@@ -43,4 +43,15 @@ export function deobfuscateRecurringPayment(payment: WireRecurringPayment): Recu
 
 export function deobfuscateWishlistItem(item: WireWishlistItem): WishlistItem {
   return { ...item, price: deobfuscateAmount(item.price) }
+}
+
+export function deobfuscateSavingsGoal(goal: WireSavingsGoal): SavingsGoal {
+  return {
+    ...goal,
+    targetAmount: deobfuscateAmount(goal.targetAmount),
+    earmarkedAmount: deobfuscateAmount(goal.earmarkedAmount),
+    // The API returns a full timestamp for the date-typed column; the UI and all pacing math
+    // work on the 'YYYY-MM-DD' calendar date, so normalise once here at the boundary.
+    targetDate: (goal.targetDate || '').slice(0, 10),
+  }
 }

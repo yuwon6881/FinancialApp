@@ -2,39 +2,69 @@ import { AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Loader2, Sparkles } 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { VaultDocumentTypeDefinition, VaultTypeCleanupSuggestion } from '../../types'
 import * as api from '../../lib/api/documents'
+import { CACHE_KEYS, getCachedJSON, hasCachedKey, setCachedJSON } from '../../lib/cache'
 import { getErrorMessage } from '../../lib/errors'
-import { useAppUi } from '../../contexts/AppContext'
+import { createFinalId } from '../../lib/outbox'
+import { useOptimisticList, useSyncStatus } from '../../lib/useOptimisticList'
+import { useAppSync, useAppUi } from '../../contexts/AppContext'
 import { CollapsibleBody } from '../ui/CollapsibleBody'
 import { CustomSelect } from '../ui/CustomSelect'
 import { PerimeterBeam } from '../ui/PerimeterBeam'
+import { RowSyncStatus } from '../ui/RowSyncBadge'
 import { ManageableNameList } from './ManageableNameList'
+
+type SyncVaultDocumentType = VaultDocumentTypeDefinition & {
+  isPendingSync?: boolean
+  isPendingDelete?: boolean
+}
 
 export function VaultDocumentTypesPanel() {
   const { confirm, showToast } = useAppUi()
-  const [types, setTypes] = useState<VaultDocumentTypeDefinition[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const { activeSyncId, deletingId, operations = [], queueMutation = () => undefined } = useAppSync()
+  const [types, setTypes] = useState<VaultDocumentTypeDefinition[]>(
+    () => getCachedJSON(CACHE_KEYS.vaultDocumentTypes, []),
+  )
+  const [isLoading, setIsLoading] = useState(() => !hasCachedKey(CACHE_KEYS.vaultDocumentTypes))
   const [isOpen, setIsOpen] = useState(() => typeof window === 'undefined' || window.innerWidth >= 768)
   const [suggestions, setSuggestions] = useState<VaultTypeCleanupSuggestion[]>([])
   const [isReviewOpen, setIsReviewOpen] = useState(false)
   const [isReviewing, setIsReviewing] = useState(false)
   const [reviewError, setReviewError] = useState<string | null>(null)
   const [applyId, setApplyId] = useState<string | null>(null)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [targets, setTargets] = useState<Record<string, string>>({})
   const replacementIdRef = useRef('')
+  const previousVaultOpIdsRef = useRef<Set<string>>(new Set())
+  const visibleTypes = useOptimisticList<SyncVaultDocumentType>(types, operations, 'vaultDocumentType')
+  const { isSyncing: isTypeSyncing, isDeleting: isTypeDeleting } = useSyncStatus(
+    visibleTypes,
+    activeSyncId,
+    deletingId,
+  )
 
   const load = useCallback(async () => {
     setIsLoading(true)
     try {
-      setTypes(await api.listDocumentTypes())
+      const loaded = await api.listDocumentTypes()
+      setTypes(loaded)
+      setCachedJSON(CACHE_KEYS.vaultDocumentTypes, loaded)
     } catch (error) {
-      showToast(getErrorMessage(error, 'Could not load document types.'), 'Document Types', 'error')
+      if (typeof navigator === 'undefined' || navigator.onLine) {
+        showToast(getErrorMessage(error, 'Could not load document types.'), 'Document Types', 'error')
+      }
     } finally {
       setIsLoading(false)
     }
   }, [showToast])
 
   useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    const currentIds = new Set(
+      operations.filter(operation => operation.entity === 'vaultDocumentType').map(operation => operation.id),
+    )
+    const completedOrDiscarded = [...previousVaultOpIdsRef.current].some(id => !currentIds.has(id))
+    previousVaultOpIdsRef.current = currentIds
+    if (completedOrDiscarded) void load()
+  }, [load, operations])
 
   const review = async () => {
     setIsOpen(true)
@@ -72,42 +102,18 @@ export function VaultDocumentTypesPanel() {
     }
   }
 
-  const deleteType = async (item: VaultDocumentTypeDefinition, replacementId?: string) => {
-    setDeletingId(item.id)
-    try {
-      await api.deleteDocumentType(item.id, replacementId)
-      setTypes(current => current.filter(type => type.id !== item.id))
-      showToast(
-        `${item.name} was deleted.`,
-        'Document Type Deleted',
-        'success',
-        replacementId
-          ? undefined
-          : {
-              label: 'Undo',
-              onAction: () => {
-                void (async () => {
-                  try {
-                    const restored = await api.addDocumentType(item.name, item.id)
-                    setTypes(current => [...current, restored].sort((a, b) => a.name.localeCompare(b.name)))
-                    showToast(`${item.name} was restored.`, 'Undo successful', 'success')
-                  } catch (error) {
-                    showToast(getErrorMessage(error, 'Could not restore the document type.'), 'Undo failed', 'error')
-                  }
-                })()
-              },
-            },
-      )
-    } catch (error) {
-      showToast(getErrorMessage(error, 'Could not delete the document type.'), 'Delete Failed', 'error')
-    } finally {
-      setDeletingId(null)
-    }
+  const deleteType = (item: VaultDocumentTypeDefinition, replacementId?: string) => {
+    queueMutation('vaultDocumentType', 'delete', item.id, {
+      name: item.name,
+      usageCount: item.usageCount,
+      replacementCategoryId: replacementId,
+      undoSnapshot: item,
+    })
   }
 
   const requestDelete = (item: VaultDocumentTypeDefinition) => {
     replacementIdRef.current = ''
-    const replacementOptions = types.filter(type => type.id !== item.id)
+    const replacementOptions = visibleTypes.filter(type => type.id !== item.id && !type.isPendingDelete)
     const requiresReplacement = item.usageCount > 0
 
     const openConfirmation = () => {
@@ -157,7 +163,7 @@ export function VaultDocumentTypesPanel() {
     openConfirmation()
   }
 
-  const unusedCount = types.filter(type => type.usageCount === 0).length
+  const unusedCount = visibleTypes.filter(type => type.usageCount === 0 && !type.isPendingDelete).length
 
   return (
     <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-xs sm:p-6">
@@ -177,11 +183,11 @@ export function VaultDocumentTypesPanel() {
         <div className="min-w-0">
           <h3 className="text-sm font-bold text-foreground">Vault Document Types</h3>
           <div className="mt-0.5 text-[11px] text-muted-foreground">
-            <div>{isLoading ? 'Loading document types…' : `${types.length} active document types.`}</div>
+            <div>{isLoading ? 'Loading document types…' : `${visibleTypes.filter(type => !type.isPendingDelete).length} active document types.`}</div>
             {!isLoading && unusedCount > 0 && (
               <div className="mt-0.5 font-semibold text-orange-500">{unusedCount} unused</div>
             )}
-            {!isLoading && types.length > 0 && unusedCount === 0 && (
+            {!isLoading && visibleTypes.some(type => !type.isPendingDelete) && unusedCount === 0 && (
               <div className="mt-0.5 font-semibold text-emerald-500">all types in use</div>
             )}
           </div>
@@ -190,7 +196,7 @@ export function VaultDocumentTypesPanel() {
           <button
             type="button"
             onClick={event => { event.stopPropagation(); void review() }}
-            disabled={isReviewing || types.length === 0}
+            disabled={isReviewing || visibleTypes.length === 0}
             title="AI document type review"
             className={`inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold text-blue-600 transition dark:text-blue-400 ${
               isReviewing
@@ -231,7 +237,7 @@ export function VaultDocumentTypesPanel() {
               {!isReviewing && suggestions.length > 0 && (
                 <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
                   {suggestions.map(suggestion => {
-                    const options = types
+                    const options = visibleTypes
                       .filter(type => !suggestion.categories.some(name => name.toLowerCase() === type.name.toLowerCase()))
                       .map(type => ({ value: type.name, label: type.name }))
                     const target = targets[suggestion.id] || suggestion.targetCategory || ''
@@ -283,15 +289,13 @@ export function VaultDocumentTypesPanel() {
           )}
 
           <ManageableNameList
-            items={types}
+            items={visibleTypes}
             itemLabel="Document type"
             addPlaceholder="New Document Type"
             isLoading={isLoading}
-            disabled={deletingId !== null}
-            onAdd={async name => {
-              const created = await api.addDocumentType(name)
-              setTypes(current => [...current, created].sort((a, b) => a.name.localeCompare(b.name)))
-              showToast(`${created.name} was added.`, 'Document Type Added', 'success')
+            onAdd={name => {
+              const id = createFinalId('vaultDocumentType')
+              queueMutation('vaultDocumentType', 'add', id, { id, name, usageCount: 0 })
             }}
             onDelete={requestDelete}
             renderMeta={item => (
@@ -299,7 +303,14 @@ export function VaultDocumentTypesPanel() {
                 {item.usageCount === 0 ? 'Unused' : `${item.usageCount} document${item.usageCount === 1 ? '' : 's'}`}
               </span>
             )}
-            renderStatus={item => deletingId === item.id ? <Loader2 className="size-3 animate-spin text-muted-foreground" /> : null}
+            renderStatus={item => (
+              <RowSyncStatus
+                isDeleting={isTypeDeleting(item.id)}
+                isSyncing={isTypeSyncing(item.id)}
+                isPending={item.isPendingSync}
+                entityLabel="document type"
+              />
+            )}
           />
         </div>
       </CollapsibleBody>

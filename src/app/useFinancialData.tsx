@@ -6,6 +6,7 @@ import type {
   RecurringReminderSettings,
   TransactionCategory,
   WishlistItem,
+  SavingsGoal,
   DashboardData,
   AutocompleteSuggestion,
   PendingNotification,
@@ -17,7 +18,7 @@ import { useOptimisticList } from '../lib/useOptimisticList'
 import { computeOptimisticDashboard } from '../lib/optimisticDashboard'
 import { useOutbox } from '../lib/useOutbox'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from '../lib/modalDrafts'
-import { createFinalId, createLocalWishlistId, projectFinancialSetting, sanitizeQueuedOps, type OutboxPayload } from '../lib/outbox'
+import { createFinalId, createLocalNumericId, createLocalWishlistId, projectFinancialSetting, sanitizeQueuedOps, type OutboxPayload } from '../lib/outbox'
 import { triggerHaptic } from '../lib/haptics'
 import { getErrorMessage, getErrorName, hasHttpStatus, isAuthError, isLockError, JUST_LOGGED_IN_WINDOW_MS } from '../lib/errors'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
@@ -34,6 +35,7 @@ type LoadAllTuple = readonly [
   AutocompleteSuggestion[],
   number | null,
   api.BootstrapPayload['insights'],
+  SavingsGoal[] | null,
 ]
 
 /**
@@ -61,6 +63,7 @@ async function fetchBootstrapPayload(
       payload.autocomplete,
       payload.walletBalance,
       payload.insights,
+      Array.isArray(payload.savingsGoals) ? payload.savingsGoals : null,
     ] as const
   } catch (bootstrapError: unknown) {
     // A 404 is the one recoverable case: the server has no such route. Everything else
@@ -142,6 +145,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const [currentCycleDashboardData, setCurrentCycleDashboardData] = useState<DashboardData | null>(null)
   const [walletBalance, setWalletBalance] = useState<number | null>(() => getCachedJSON<number | null>(CACHE_KEYS.walletBalance, null))
   const [wishlist, setWishlist] = useState<WishlistItem[]>(() => getCachedWishlist(CACHE_KEYS.wishlist))
+  const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>(() => getCachedJSON(CACHE_KEYS.savingsGoals, []))
   const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<AutocompleteSuggestion[]>([])
 
   const [error, setError] = useState<string | null>(null)
@@ -287,6 +291,23 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         return
       }
 
+      // Savings goal authoring is ledger-neutral: an earmark is a claim on Rewards money that
+      // already exists, so no transaction, dashboard figure or cycle balance can shift. Unlike the
+      // wishlist fast path above, `delete` is safe to include here for the same reason — deleting a
+      // goal only releases its claim.
+      const onlySavingsGoalCrud = ops.length > 0 && ops.every(op =>
+        op.entity === 'savingsGoal'
+        && (op.type === 'add' || op.type === 'update' || op.type === 'delete')
+      )
+      if (onlySavingsGoalCrud) {
+        const goals = await api.fetchSavingsGoals()
+        setSavingsGoals(goals)
+        setCachedJSON(CACHE_KEYS.savingsGoals, goals)
+        setError(null)
+        isServerAwakeRef.current = true
+        return
+      }
+
       const onlyCategoryAdds = ops.length > 0 && ops.every(op =>
         op.entity === 'category' && op.type === 'add'
       )
@@ -338,7 +359,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       // otherwise be permanently unable to load.
       const bootstrapped = await fetchBootstrapPayload(month, year, ac.signal)
 
-      const [dbData, txs, recs, cats, wishes, autoSuggests, wallet, insights] = bootstrapped ?? await (async () => {
+      const [dbData, txs, recs, cats, wishes, autoSuggests, wallet, insights, goals] = bootstrapped ?? await (async () => {
         const dashboardPromise = api.fetchDashboard(month, year, ac.signal)
         const transactionsPromise = (month && year !== undefined)
           ? api.fetchTransactions(month, year, undefined, ac.signal)
@@ -359,7 +380,12 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
           }),
           api.fetchAutocompleteSuggestions(ac.signal).catch(() => []),
           api.fetchWalletBalance(ac.signal).catch(() => null),
-          insightsPromise
+          insightsPromise,
+          api.fetchSavingsGoals(ac.signal).catch((goalsError: unknown) => {
+            if (getErrorName(goalsError) === 'AbortError' || rethrowOnError) throw goalsError
+            console.warn('Could not refresh savings goals; keeping the last known local copy.', goalsError)
+            return null
+          }),
         ] as const)
       })()
 
@@ -403,6 +429,9 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       if (wishes !== null) {
         setWishlist(wishes)
       }
+      if (Array.isArray(goals)) {
+        setSavingsGoals(goals)
+      }
       setAutocompleteSuggestions(autoSuggests)
       setError(null)
       isServerAwakeRef.current = true
@@ -413,6 +442,9 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       setCachedJSON(CACHE_KEYS.categories, cats)
       if (wishes !== null) {
         setCachedJSON(CACHE_KEYS.wishlist, wishes)
+      }
+      if (Array.isArray(goals)) {
+        setCachedJSON(CACHE_KEYS.savingsGoals, goals)
       }
       setCachedCycleSnapshot(effectiveSetting.selectedMonth, effectiveSetting.selectedYear, mergedDashboard, txs)
 
@@ -567,6 +599,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     pendingTransactionDocumentsRef.current.clear()
     setCategoriesList([])
     setWishlist([])
+    setSavingsGoals([])
     setSelectedMonth('')
     setSelectedYear(0)
     setLoading(true)
@@ -578,6 +611,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       CACHE_KEYS.recurringPayments,
       CACHE_KEYS.categories,
       CACHE_KEYS.wishlist,
+      CACHE_KEYS.savingsGoals,
       CACHE_KEYS.walletBalance,
       CACHE_KEYS.pendingTransactions,
       CACHE_KEYS.pendingOperations,
@@ -747,6 +781,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const allTransactions = useOptimisticList(transactions, activeOps, 'transaction')
   const allRecurringPayments = useOptimisticList(recurringPayments, activeOps, 'recurringPayment')
   const allWishlist = useOptimisticList(wishlist, activeOps, 'wishlistItem')
+  const allSavingsGoals = useOptimisticList(savingsGoals, activeOps, 'savingsGoal')
   const allCategories = useOptimisticList(categoriesList, activeOps, 'category')
 
   const optimisticDashboardData = useMemo(
@@ -781,15 +816,22 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     for (const [key, value] of Object.entries(payload)) {
       if (value !== undefined) unconfirmedSettingWritesRef.current.set(key, value)
     }
-    mutateQueue(prev => enqueue(prev, 'settings', 'update', 'settings', payload))
+    mutateQueue(prev => enqueue(prev, 'settings', 'update', 'settings', {
+      ...payload,
+      undoSnapshot: dashboardData?.setting,
+    }))
   }
 
   const handleUpdateDarkModePreference = (value: boolean) => {
     unconfirmedSettingWritesRef.current.set('darkMode', value)
-    mutateQueue(prev => enqueue(prev, 'settings', 'update', 'darkMode', { darkMode: value }))
+    mutateQueue(prev => enqueue(prev, 'settings', 'update', 'darkMode', {
+      darkMode: value,
+      undoSnapshot: { darkMode },
+    }))
   }
 
   const handleUpdateHideSensitivePreference = (value: boolean) => {
+    const previousValue = dashboardData?.setting.hideSensitive ?? !value
     unconfirmedSettingWritesRef.current.set('hideSensitive', value)
     setDashboardData(previous => {
       if (!previous) return previous
@@ -803,7 +845,10 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       setCachedJSON(CACHE_KEYS.dashboardData, next)
       return next
     })
-    mutateQueue(prev => enqueue(prev, 'settings', 'update', 'hideSensitive', { hideSensitive: value }))
+    mutateQueue(prev => enqueue(prev, 'settings', 'update', 'hideSensitive', {
+      hideSensitive: value,
+      undoSnapshot: { hideSensitive: previousValue },
+    }))
   }
 
   // Acknowledge (or silently adopt) the end-of-cycle summary for a given cycle key. Patches the
@@ -829,12 +874,23 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
   const handleUpdateCategoryCycleLimit = (id: string, cycleLimit: number | null) => {
     if (!guardSensitive()) return
-    mutateQueue(prev => enqueue(prev, 'category', 'update', id, { cycleLimit }))
+    const category = allCategories.find(cat => String(cat.id) === String(id))
+    snapshotForUndo('category', String(id), category)
+    mutateQueue(prev => enqueue(prev, 'category', 'update', id, {
+      cycleLimit,
+      name: category?.name,
+      undoSnapshot: category,
+    }))
   }
 
   const handleDeleteCategory = (id: string, replacementCategoryId?: string) => {
-    snapshotForUndo('category', String(id), allCategories.find(cat => String(cat.id) === String(id)))
-    mutateQueue(prev => enqueue(prev, 'category', 'delete', id, replacementCategoryId ? { replacementCategoryId } : undefined))
+    const category = allCategories.find(cat => String(cat.id) === String(id))
+    snapshotForUndo('category', String(id), category)
+    mutateQueue(prev => enqueue(prev, 'category', 'delete', id, {
+      name: category?.name,
+      replacementCategoryId,
+      undoSnapshot: category,
+    }))
   }
 
   const requestDeleteCategory = async (id: string) => {
@@ -1029,8 +1085,12 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       deleteId = id.split('-split-')[0]
     }
     setDeletingTxId(deleteId)
-    snapshotForUndo('transaction', deleteId, allTransactions.find(t => String(t.id) === deleteId))
-    mutateQueue(prev => enqueue(prev, 'transaction', 'delete', deleteId))
+    const transaction = allTransactions.find(t => String(t.id) === deleteId)
+    snapshotForUndo('transaction', deleteId, transaction)
+    mutateQueue(prev => enqueue(prev, 'transaction', 'delete', deleteId, {
+      description: transaction?.description,
+      undoSnapshot: transaction,
+    }))
     if (deleteId === editingPendingId) setEditingPendingId(null)
   }
 
@@ -1041,11 +1101,15 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   ) => {
     if (!guardSensitive()) return
     void triggerHaptic(15)
-    snapshotForUndo('transaction', String(id), allTransactions.find(t => String(t.id) === String(id)))
+    const previousTransaction = allTransactions.find(t => String(t.id) === String(id))
+    snapshotForUndo('transaction', String(id), previousTransaction)
     if (documentChanges && (documentChanges.pending.length > 0 || documentChanges.unlinkIds.length > 0)) {
       pendingTransactionDocumentsRef.current.set(id, documentChanges)
     }
-    mutateQueue(prev => enqueue(prev, 'transaction', 'update', id, updatedTx))
+    mutateQueue(prev => enqueue(prev, 'transaction', 'update', id, {
+      ...updatedTx,
+      undoSnapshot: previousTransaction,
+    }))
     if (id === editingPendingId) setEditingPendingId(null)
   }
 
@@ -1087,20 +1151,28 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const handleToggleActive = (id: string) => {
     if (!guardSensitive()) return
     const current = allRecurringPayments.find(p => String(p.id) === String(id))
-    const payload = current ? { active: !current.active } : undefined
+    const payload = current ? { active: !current.active, name: current.name } : undefined
     mutateQueue(prev => enqueue(prev, 'recurringPayment', 'toggle', id, payload))
   }
 
   const handleUpdatePayment = (id: string, payment: RecurringPayment) => {
     if (!guardSensitive()) return
-    snapshotForUndo('recurringPayment', String(id), allRecurringPayments.find(p => String(p.id) === String(id)))
-    mutateQueue(prev => enqueue(prev, 'recurringPayment', 'update', id, toOutboxPayload(payment)))
+    const previousPayment = allRecurringPayments.find(p => String(p.id) === String(id))
+    snapshotForUndo('recurringPayment', String(id), previousPayment)
+    mutateQueue(prev => enqueue(prev, 'recurringPayment', 'update', id, {
+      ...toOutboxPayload(payment),
+      undoSnapshot: previousPayment,
+    }))
   }
 
   const handleDeletePayment = (id: string) => {
     void triggerHaptic(30)
-    snapshotForUndo('recurringPayment', String(id), allRecurringPayments.find(p => String(p.id) === String(id)))
-    mutateQueue(prev => enqueue(prev, 'recurringPayment', 'delete', id))
+    const payment = allRecurringPayments.find(p => String(p.id) === String(id))
+    snapshotForUndo('recurringPayment', String(id), payment)
+    mutateQueue(prev => enqueue(prev, 'recurringPayment', 'delete', id, {
+      name: payment?.name,
+      undoSnapshot: payment,
+    }))
   }
 
   const requestDeletePayment = (id: string) => {
@@ -1207,15 +1279,23 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
   const handleUpdateWishlistItem = (id: number, updatedWish: WishlistItem) => {
     if (!guardSensitive()) return
-    snapshotForUndo('wishlistItem', String(id), allWishlist.find(w => String(w.id) === String(id)))
-    mutateQueue(prev => enqueue(prev, 'wishlistItem', 'update', String(id), toOutboxPayload(updatedWish)))
+    const previousItem = allWishlist.find(w => String(w.id) === String(id))
+    snapshotForUndo('wishlistItem', String(id), previousItem)
+    mutateQueue(prev => enqueue(prev, 'wishlistItem', 'update', String(id), {
+      ...toOutboxPayload(updatedWish),
+      undoSnapshot: previousItem,
+    }))
     if (String(id) === editingPendingId) setEditingPendingId(null)
   }
 
   const handleDeleteWishlistItem = (id: number) => {
     void triggerHaptic(30)
-    snapshotForUndo('wishlistItem', String(id), allWishlist.find(w => String(w.id) === String(id)))
-    mutateQueue(prev => enqueue(prev, 'wishlistItem', 'delete', String(id)))
+    const item = allWishlist.find(w => String(w.id) === String(id))
+    snapshotForUndo('wishlistItem', String(id), item)
+    mutateQueue(prev => enqueue(prev, 'wishlistItem', 'delete', String(id), {
+      name: item?.name,
+      undoSnapshot: item,
+    }))
   }
 
   const requestDeleteWishlistItem = (id: number) => {
@@ -1247,8 +1327,124 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     if (!guardSensitive()) return
     const item = allWishlist.find(w => String(w.id) === String(id))
     mutateQueue(prev => enqueue(prev, 'wishlistItem', 'unpurchase', String(id), item ? {
-      purchaseTransactionId: item.purchaseTransactionId
+      purchaseTransactionId: item.purchaseTransactionId,
+      name: item.name,
+      price: item.price,
+      date: item.purchasedAt?.slice(0, 10),
     } : undefined))
+  }
+
+  // --- Savings goals -------------------------------------------------------------------------
+  // Authoring (add/update/delete) goes through the outbox like every other record, so it works
+  // offline. Money movement (contribute / fund / complete) is online-only on purpose: the server
+  // enforces SUM(earmarked) <= rewards balance against the authoritative balance, which a queued
+  // op could not have known at the time it was recorded.
+
+  const commitSavingsGoals = (goals: SavingsGoal[]) => {
+    setSavingsGoals(goals)
+    setCachedJSON(CACHE_KEYS.savingsGoals, goals)
+  }
+
+  const handleAddSavingsGoal = (goal: Partial<SavingsGoal>) => {
+    const placeholderId = String(createLocalNumericId())
+    const payload = {
+      name: goal.name || '',
+      targetAmount: goal.targetAmount || 0,
+      earmarkedAmount: 0,
+      targetDate: goal.targetDate || '',
+      priority: goal.priority || 'Medium',
+      status: 'active',
+      isRecurring: goal.isRecurring ?? false,
+      recurrenceMonths: goal.recurrenceMonths ?? 12,
+      createdAt: new Date().toISOString(),
+    }
+    mutateQueue(prev => enqueue(prev, 'savingsGoal', 'add', placeholderId, payload))
+  }
+
+  const handleUpdateSavingsGoal = (id: number, updatedGoal: SavingsGoal) => {
+    if (!guardSensitive()) return
+    snapshotForUndo('savingsGoal', String(id), allSavingsGoals.find(g => String(g.id) === String(id)))
+    mutateQueue(prev => enqueue(prev, 'savingsGoal', 'update', String(id), toOutboxPayload(updatedGoal)))
+    if (String(id) === editingPendingId) setEditingPendingId(null)
+  }
+
+  const handleDeleteSavingsGoal = (id: number) => {
+    void triggerHaptic(30)
+    const goal = allSavingsGoals.find(g => String(g.id) === String(id))
+    snapshotForUndo('savingsGoal', String(id), goal)
+    mutateQueue(prev => enqueue(prev, 'savingsGoal', 'delete', String(id), { name: goal?.name }))
+  }
+
+  const requestDeleteSavingsGoal = (id: number) => {
+    if (!guardSensitive()) return
+    const goal = savingsGoals.find(g => g.id === id)
+    setConfirmModalData({
+      title: 'Delete Savings Goal',
+      message: goal && goal.earmarkedAmount > 0
+        ? `Delete "${goal.name}"? The ${formatCurrencyVal(goal.earmarkedAmount, optimisticDashboardData?.setting?.currency || 'USD')} set aside for it goes back to your free rewards — no money leaves your ledger.`
+        : `Delete "${goal?.name || 'this savings goal'}"? This removes the commitment from your rewards pool.`,
+      confirmText: 'Delete',
+      onConfirm: () => { handleDeleteSavingsGoal(id) }
+    })
+  }
+
+  /** Positive tops the goal up from the free remainder; negative releases back to it. */
+  const handleContributeToSavingsGoal = async (id: number, amount: number) => {
+    if (!guardSensitive()) return
+    try {
+      await api.contributeToSavingsGoal(id, amount)
+      commitSavingsGoals(await api.fetchSavingsGoals())
+      showToast(
+        amount > 0 ? 'Moved into this goal.' : 'Released back to free rewards.',
+        'Goal updated',
+        'success',
+      )
+    } catch (contributeError: unknown) {
+      // The most likely failure is the server rejecting an over-commit against a balance the
+      // client thought was larger. Surface its message rather than a generic one.
+      showToast(getErrorMessage(contributeError), 'Could not move that money', 'error')
+    }
+  }
+
+  const handleFundSavingsGoalsForCycle = async () => {
+    if (!guardSensitive()) return
+    try {
+      const result = await api.fundSavingsGoalsForCycle()
+      commitSavingsGoals(result.goals)
+      showToast(
+        result.totalGranted > 0
+          ? `${formatCurrencyVal(result.totalGranted, optimisticDashboardData?.setting?.currency || 'USD')} set aside across your goals.`
+          : 'Your goals are already funded for this cycle.',
+        result.totalGranted > 0 ? 'Goals funded' : 'Nothing to fund',
+        result.totalGranted > 0 ? 'success' : 'info',
+      )
+    } catch (fundError: unknown) {
+      showToast(getErrorMessage(fundError), 'Could not fund your goals', 'error')
+    }
+  }
+
+  const handleCompleteSavingsGoal = async (id: number) => {
+    if (!guardSensitive()) return
+    try {
+      await api.completeSavingsGoal(id)
+      commitSavingsGoals(await api.fetchSavingsGoals())
+      showToast('The money set aside is released — log the actual spend in your ledger.', 'Goal completed', 'success')
+    } catch (completeError: unknown) {
+      showToast(getErrorMessage(completeError), 'Could not complete this goal', 'error')
+    }
+  }
+
+  const requestCompleteSavingsGoal = (id: number) => {
+    if (!guardSensitive()) return
+    const goal = savingsGoals.find(g => g.id === id)
+    setConfirmModalData({
+      title: goal?.isRecurring ? 'Complete This Round' : 'Complete Savings Goal',
+      message: goal?.isRecurring
+        ? `Mark "${goal.name}" done for this round? Its deadline rolls forward by ${goal.recurrenceMonths} month(s) and saving starts again from zero.`
+        : `Mark "${goal?.name || 'this goal'}" done? The money set aside is released back to your rewards pool — then log the actual spend in your ledger as usual.`,
+      confirmText: goal?.isRecurring ? 'Roll Forward' : 'Complete',
+      onConfirm: () => { void handleCompleteSavingsGoal(id) }
+    })
   }
 
   return {
@@ -1260,6 +1456,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     allCategories,
     wishlist,
     allWishlist,
+    savingsGoals,
+    allSavingsGoals,
     dashboardData,
     optimisticDashboardData,
     currentCycleDashboardData,
@@ -1332,5 +1530,12 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     requestDeleteWishlistItem,
     handlePurchaseWishlistItem,
     handleUnpurchaseWishlistItem,
+    handleAddSavingsGoal,
+    handleUpdateSavingsGoal,
+    handleDeleteSavingsGoal,
+    requestDeleteSavingsGoal,
+    handleContributeToSavingsGoal,
+    handleFundSavingsGoalsForCycle,
+    requestCompleteSavingsGoal,
   }
 }
