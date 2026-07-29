@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Search, X } from 'lucide-react'
+import { CustomSelect } from '../../ui/CustomSelect'
 
 interface DocumentFilterBarProps {
   search: string
@@ -55,19 +56,19 @@ export function DocumentFilterBar({ search, setSearch, taxYear, setTaxYear }: Do
         )}
       </form>
 
-      <select
+      <CustomSelect
         value={taxYear ?? ''}
-        aria-label="Filter by tax year"
-        onChange={e => setTaxYear(e.target.value ? parseInt(e.target.value, 10) : undefined)}
-        className={`${FIELD_CLASS} cursor-pointer py-2.5 px-3 font-semibold sm:w-40 sm:shrink-0`}
-      >
-        <option value="">All tax years</option>
-        {Array.from({ length: 15 }, (_, i) => new Date().getFullYear() - i).map(year => (
-          <option key={year} value={year}>
-            {year}
-          </option>
-        ))}
-      </select>
+        onChange={value => setTaxYear(value === '' ? undefined : Number(value))}
+        options={[
+          { value: '', label: 'All tax years' },
+          ...Array.from({ length: 15 }, (_, i) => {
+            const year = new Date().getFullYear() - i
+            return { value: year, label: String(year) }
+          }),
+        ]}
+        ariaLabel="Filter by tax year"
+        className="w-full sm:w-40 sm:shrink-0"
+      />
     </div>
   )
 }

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import TopNav from './TopNav'
 
 describe('TopNav mobile primary navigation', () => {
-  it('keeps exactly the five primary items when Growth Investments is routed separately', () => {
+  it('keeps four workspace items in the bottom nav and routes Wishlist from the header', () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 })
     render(
       <TopNav
@@ -23,13 +23,14 @@ describe('TopNav mobile primary navigation', () => {
     )
 
     const primary = screen.getByRole('navigation', { name: 'Primary' })
-    expect(within(primary).getAllByRole('button')).toHaveLength(5)
+    expect(within(primary).getAllByRole('button')).toHaveLength(4)
     expect(within(primary).getByRole('button', { name: 'Today' })).toBeTruthy()
     expect(within(primary).getByRole('button', { name: 'Reports' })).toBeTruthy()
     expect(within(primary).getByRole('button', { name: 'Ledger' })).toBeTruthy()
     expect(within(primary).getByRole('button', { name: 'Recurring' })).toBeTruthy()
-    expect(within(primary).getByRole('button', { name: 'Wishlist' })).toBeTruthy()
+    expect(within(primary).queryByRole('button', { name: 'Wishlist' })).toBeNull()
     expect(within(primary).queryByRole('button', { name: /Investments/ })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Wishlist' })).toBeTruthy()
   })
 
   it('shows global synchronization feedback in the top-left brand area', () => {

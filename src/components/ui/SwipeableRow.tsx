@@ -139,7 +139,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
       <div
         className="absolute inset-y-0 right-0 flex items-stretch [&_button]:min-w-[44px] [&_button]:min-h-[44px] [&_a]:min-w-[44px] [&_a]:min-h-[44px]"
         style={{ width: actionsWidth }}
-        aria-hidden={!open}
+        inert={!open}
         onClickCapture={closeForAction}
         onPointerDown={handleActionPointerDown}
         onPointerUp={handleActionPointerUp}

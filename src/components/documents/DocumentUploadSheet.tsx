@@ -6,6 +6,7 @@ import * as api from '../../lib/api/documents'
 import { FileText, UploadCloud, X } from 'lucide-react'
 import { useAppUi } from '../../contexts/AppContext'
 import { VAULT_DOCUMENT_TYPES, type VaultDocumentType } from '../../types'
+import { CustomSelect } from '../ui/CustomSelect'
 
 interface DocumentUploadSheetProps {
   isOpen: boolean
@@ -252,20 +253,16 @@ export function DocumentUploadSheet({
               className={FIELD_CLASS}
             />
           </label>
-          <label className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5">
             <span className={LABEL_CLASS}>Type</span>
-            <select
+            <CustomSelect
               value={documentType}
-              onChange={e => setDocumentType(e.target.value as VaultDocumentType)}
-              className={`${FIELD_CLASS} cursor-pointer`}
-            >
-              {VAULT_DOCUMENT_TYPES.map(t => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </label>
+              onChange={value => setDocumentType(value as VaultDocumentType)}
+              options={VAULT_DOCUMENT_TYPES.map(type => ({ value: type, label: type }))}
+              ariaLabel="Document type"
+              className="w-full"
+            />
+          </div>
         </div>
 
         <label className="flex flex-col gap-1.5">

@@ -132,15 +132,6 @@ const TopNav: React.FC<TopNavProps> = ({
       dotClass: 'bg-violet-500'
     },
     {
-      tab: 'wishlist',
-      label: 'Wishlist',
-      mobileLabel: 'Wishlist',
-      Icon: PiggyBank,
-      activeClass: 'bg-pink-500/12 text-pink-600 dark:text-pink-400 border-pink-500/25 shadow-pink-500/10',
-      iconClass: 'text-pink-500',
-      dotClass: 'bg-pink-500'
-    },
-    {
       tab: 'documents',
       label: 'Vault',
       mobileLabel: 'Vault',
@@ -246,6 +237,21 @@ const TopNav: React.FC<TopNavProps> = ({
           >
             <Sparkles className="size-3.5" />
             <span className="hidden xl:inline text-xs font-extrabold tracking-wide">ASK AI</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onTabChange('wishlist')}
+            aria-label="Wishlist"
+            aria-current={activeTab === 'wishlist' ? 'page' : undefined}
+            title="Wishlist"
+            className={`flex items-center justify-center rounded-xl border p-1.5 transition duration-150 cursor-pointer ${
+              activeTab === 'wishlist'
+                ? 'border-pink-500/30 bg-pink-500/12 text-pink-600 dark:text-pink-400'
+                : 'border-pink-500/10 bg-pink-500/5 text-pink-500/80 hover:border-pink-500/20 hover:bg-pink-500/10 hover:text-pink-500'
+            }`}
+          >
+            <PiggyBank className="size-4" />
           </button>
 
           {/* One notification entry point; the shared review sheet is owned by App. */}
@@ -424,7 +430,7 @@ const TopNav: React.FC<TopNavProps> = ({
       className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/88 backdrop-blur-xl select-none shadow-[var(--app-shadow-nav-up)] transform-gpu"
       style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))', paddingTop: '10px', willChange: 'transform' }}
     >
-      <nav aria-label="Primary" className="grid grid-cols-5 w-full max-w-md md:max-w-none px-2 md:px-8 mx-auto justify-items-center">
+      <nav aria-label="Primary" className="grid grid-cols-4 w-full max-w-md md:max-w-none px-2 md:px-8 mx-auto justify-items-center">
         {navItems.filter(item => item.tab !== 'documents').map(({ tab, mobileLabel, Icon, activeClass, iconClass, dotClass }) => {
           const isActive = activeTab === tab
           return (
