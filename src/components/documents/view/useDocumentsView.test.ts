@@ -9,7 +9,7 @@ const api = vi.hoisted(() => ({
   updateDocument: vi.fn(),
 }))
 
-vi.mock('../../../lib/api', () => api)
+vi.mock('../../../lib/api/documents', () => api)
 
 const document = {
   id: 1,

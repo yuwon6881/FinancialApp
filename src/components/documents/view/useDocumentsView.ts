@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import type { VaultDocument, DocumentVaultUsage } from '../../../types'
-import * as api from '../../../lib/api'
+import * as api from '../../../lib/api/documents'
 
 export function useDocumentsView() {
   const [documents, setDocuments] = useState<VaultDocument[]>([])

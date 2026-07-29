@@ -212,22 +212,25 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         if (!documentChanges) continue
 
         try {
+          // Both imported lazily: this hook sits on the eager critical path, while the
+          // vault API and the canvas compression helper are only needed once a queued
+          // document change actually drains.
+          const { updateDocument, uploadDocument } = await import('../lib/api/documents')
+
           for (const documentId of documentChanges.unlinkIds) {
-            await api.updateDocument(documentId, { transactionId: null })
+            await updateDocument(documentId, { transactionId: null })
           }
           if (documentChanges.pending.length > 0) {
-            // Imported lazily: this hook sits on the eager critical path, and the canvas
-            // compression helper is only needed once a queued upload actually drains.
             const { compressImageFile } = await import('../lib/imageCompression')
 
             for (const pending of documentChanges.pending) {
               const uploadFile = await compressImageFile(pending.file)
-              const uploaded = await api.uploadDocument(
+              const uploaded = await uploadDocument(
                 uploadFile,
                 pending.taxYear,
                 pending.documentType,
               )
-              await api.updateDocument(uploaded.id, { transactionId: op.targetId })
+              await updateDocument(uploaded.id, { transactionId: op.targetId })
             }
           }
         } catch (error) {
