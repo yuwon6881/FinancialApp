@@ -201,7 +201,7 @@ const TopNav: React.FC<TopNavProps> = ({
         </div>
 
         {/* Navigation Tabs - Centered mathematically on desktop, flex-safe on medium screens */}
-        <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center justify-center shrink-0 z-10 w-max">
+        <div className="hidden lg:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center justify-center shrink-0 z-20 w-max">
           <nav className="flex items-center gap-1 bg-card/72 p-1.5 rounded-xl border border-border/50 shadow-sm select-none">
             {navItems.map(({ tab, label, Icon, activeClass, iconClass, dotClass }) => {
               const isActive = activeTab === tab
@@ -231,7 +231,7 @@ const TopNav: React.FC<TopNavProps> = ({
           <button
             type="button"
             onClick={onAskAI}
-            className="hidden md:flex items-center justify-center gap-1.5 px-2.5 lg:px-3 py-1.5 bg-blue-500/8 hover:bg-blue-500/14 border border-blue-500/20 hover:border-blue-500/35 text-blue-600 dark:text-blue-400 rounded-xl select-none shrink-0 transition-all duration-150 cursor-pointer"
+            className="hidden lg:flex items-center justify-center gap-1.5 px-2.5 lg:px-3 py-1.5 bg-blue-500/8 hover:bg-blue-500/14 border border-blue-500/20 hover:border-blue-500/35 text-blue-600 dark:text-blue-400 rounded-xl select-none shrink-0 transition-all duration-150 cursor-pointer"
             title="ASK AI"
             aria-label="ASK AI"
           >
@@ -256,7 +256,7 @@ const TopNav: React.FC<TopNavProps> = ({
           </div>
 
           {/* Quick Actions Menubar (Shadcn UI) */}
-          <div className="hidden sm:block border border-border/60 rounded-xl bg-background shrink-0">
+          <div className="hidden lg:block border border-border/60 rounded-xl bg-background shrink-0">
             <Menubar className="border-0 h-9 px-1 bg-transparent">
               
               {/* Add menu */}
@@ -404,7 +404,7 @@ const TopNav: React.FC<TopNavProps> = ({
 
     {/* Mobile Navigation bar (Sticky Bottom Nav) */}
     <div
-      className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/88 backdrop-blur-xl select-none shadow-[var(--app-shadow-nav-up)] transform-gpu"
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40 bg-background/88 backdrop-blur-xl select-none shadow-[var(--app-shadow-nav-up)] transform-gpu"
       style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))', paddingTop: '10px', willChange: 'transform' }}
     >
       <nav aria-label="Primary" className="grid grid-cols-5 w-full max-w-md mx-auto justify-items-center">
