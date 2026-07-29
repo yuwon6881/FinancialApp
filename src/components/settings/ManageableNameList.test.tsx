@@ -25,6 +25,6 @@ describe('ManageableNameList', () => {
 
     fireEvent.change(screen.getByPlaceholderText('New Document Type'), { target: { value: 'invoice' } })
     expect(screen.getByText('Document type already exists.')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Add Document type' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Add Document type' }).hasAttribute('disabled')).toBe(true)
   })
 })
