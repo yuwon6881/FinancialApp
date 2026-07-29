@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   deleteDocument,
   downloadDocument,
+  listDocumentTypes,
   listDocuments,
   updateDocument,
   uploadDocument,
@@ -87,5 +88,15 @@ describe('documents API', () => {
     expect(String(fetchMock.mock.calls[0][0])).toContain('/api/documents/9/content')
     expect(createObjectUrl).toHaveBeenCalledOnce()
     expect(revokeObjectUrl).toHaveBeenCalledWith('blob:test')
+  })
+
+  it('treats an empty successful document type response as an empty list', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 204,
+      headers: { get: () => null },
+    }))
+
+    await expect(listDocumentTypes()).resolves.toEqual([])
   })
 })

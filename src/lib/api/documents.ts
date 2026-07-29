@@ -112,11 +112,12 @@ export function getAvailableDocumentYears(): Promise<number[]> {
   })
 }
 
-export function listDocumentTypes(): Promise<VaultDocumentTypeDefinition[]> {
-  return request<VaultDocumentTypeDefinition[]>('/document-types', {
+export async function listDocumentTypes(): Promise<VaultDocumentTypeDefinition[]> {
+  const types = await request<VaultDocumentTypeDefinition[] | null>('/document-types', {
     method: 'GET',
     errorMessage: 'Failed to load document types',
   })
+  return Array.isArray(types) ? types : []
 }
 
 export async function addDocumentType(name: string): Promise<VaultDocumentTypeDefinition> {

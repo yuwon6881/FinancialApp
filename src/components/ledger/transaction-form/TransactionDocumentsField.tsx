@@ -77,13 +77,13 @@ export const TransactionDocumentsField = React.forwardRef<
   }, [])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return
+    if (!e.target.files || documentTypes.length === 0) return
 
     const newDocs: PendingDocument[] = Array.from(e.target.files).map(file => ({
       file,
       previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
       taxYear: Math.max(new Date().getFullYear() - 7, Math.min(new Date().getFullYear(), defaultTaxYear)),
-      documentType: (documentTypes[0]?.name ?? 'Receipt') as VaultDocumentType,
+      documentType: documentTypes[0].name as VaultDocumentType,
     }))
 
     setPendingDocs(prev => [...prev, ...newDocs])
@@ -224,7 +224,7 @@ export const TransactionDocumentsField = React.forwardRef<
 
       <button
         type="button"
-        disabled={disabled}
+        disabled={disabled || documentTypes.length === 0}
         onClick={() => fileInputRef.current?.click()}
         className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border px-3 py-2.5 text-xs font-semibold text-muted-foreground transition hover:border-ring/60 hover:bg-muted/40 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
       >
@@ -242,6 +242,11 @@ export const TransactionDocumentsField = React.forwardRef<
       {disabled && (
         <p className="text-center text-[10px] text-muted-foreground">
           Attachments are unavailable while offline.
+        </p>
+      )}
+      {!disabled && documentTypes.length === 0 && (
+        <p className="text-center text-[10px] text-muted-foreground">
+          Add a document type in Settings before attaching documents.
         </p>
       )}
     </div>

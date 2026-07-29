@@ -258,6 +258,10 @@ export async function request<T>(path: string, options: RequestOptions): Promise
 
   if (!response.ok) await throwApiError(response, errorMessage, errorMessageField)
 
+  // A successful response may intentionally have no representation. Collection
+  // callers normalize this to an empty list instead of treating it as a load error.
+  if (response.status === 204) return undefined as T
+
   const payload = await response.json() as T
   const etag = revalidationKey ? response.headers.get('ETag') : null
   if (revalidationKey && etag) rememberRevalidation(revalidationKey, etag, payload)

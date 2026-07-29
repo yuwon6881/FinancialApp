@@ -40,7 +40,7 @@ export function DocumentUploadSheet({
   const [preparedFile, setPreparedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [taxYear, setTaxYear] = useState<string>(String(normalizedInitialTaxYear))
-  const [documentType, setDocumentType] = useState<VaultDocumentType>('Receipt')
+  const [documentType, setDocumentType] = useState<VaultDocumentType>('')
   const [documentTypes, setDocumentTypes] = useState<VaultDocumentTypeDefinition[]>([])
   const [isLoadingTypes, setIsLoadingTypes] = useState(false)
   const [notes, setNotes] = useState('')
@@ -63,7 +63,7 @@ export function DocumentUploadSheet({
       setPreparedFile(null)
       setPreviewUrl(null)
       setTaxYear(String(normalizedInitialTaxYear))
-      setDocumentType('Receipt')
+      setDocumentType('')
       setNotes('')
       setIsUploading(false)
       setCompressionInfo(null)
@@ -72,9 +72,7 @@ export function DocumentUploadSheet({
       api.listDocumentTypes()
         .then(types => {
           setDocumentTypes(types)
-          setDocumentType(current =>
-            types.some(type => type.name === current) ? current : types[0]?.name ?? '',
-          )
+          setDocumentType(types[0]?.name ?? '')
         })
         .catch(() => {
           setDocumentTypes([])

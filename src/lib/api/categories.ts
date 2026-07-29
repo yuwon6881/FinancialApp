@@ -103,10 +103,10 @@ export function mapCategory(category: WireTransactionCategory): TransactionCateg
 
 export function fetchCategories(signal?: AbortSignal): Promise<TransactionCategory[]> {
   return cachedGet('categories', async () => {
-    const categories = await request<WireTransactionCategory[]>('/categories', {
+    const categories = await request<WireTransactionCategory[] | null>('/categories', {
       errorMessage: 'Failed to fetch custom categories',
     })
-    return categories.map(mapCategory)
+    return Array.isArray(categories) ? categories.map(mapCategory) : []
   }, { signal, staleTime: 300_000 })
 }
 
