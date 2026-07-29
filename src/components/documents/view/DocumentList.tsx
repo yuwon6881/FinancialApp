@@ -30,14 +30,122 @@ function EmptyState() {
   )
 }
 
+function DocumentActions({
+  document,
+  setDocToDelete,
+  downloadFailed,
+}: {
+  document: VaultDocument
+  setDocToDelete: (id: number) => void
+  downloadFailed: () => void
+}) {
+  return (
+    <div className="flex items-center justify-end gap-1.5">
+      <button
+        type="button"
+        onClick={() => void downloadDocument(document.id, document.originalFileName).catch(downloadFailed)}
+        className="cursor-pointer rounded-lg border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+        aria-label={`Download ${document.originalFileName}`}
+      >
+        <Download className="size-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => setDocToDelete(document.id)}
+        className="cursor-pointer rounded-lg border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+        aria-label={`Delete ${document.originalFileName}`}
+      >
+        <Trash2 className="size-3.5" />
+      </button>
+    </div>
+  )
+}
+
 export function DocumentList({ documents, isLoading, setDocToDelete }: DocumentListProps) {
   const { showToast } = useAppUi()
   const downloadFailed = () =>
     showToast('The document could not be downloaded.', 'Download Failed', 'error')
 
   return (
-    <div className="w-full overflow-x-auto">
-      <table className="w-full min-w-[720px] text-left text-xs">
+    <>
+      <div className="space-y-2 lg:hidden">
+        {isLoading && documents.length === 0 ? (
+          Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="rounded-xl border border-border/50 bg-muted/20 p-3">
+              <div className="flex items-center gap-2.5">
+                <Skeleton className="size-9 shrink-0 rounded-lg" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              </div>
+              <Skeleton className="mt-3 h-12 w-full" />
+            </div>
+          ))
+        ) : documents.length === 0 ? (
+          <div className="rounded-xl border border-border/40">
+            <EmptyState />
+          </div>
+        ) : documents.map(document => {
+          const Icon = iconFor(document.contentType)
+          return (
+            <article key={document.id} className="rounded-xl border border-border/50 bg-muted/20 p-3">
+              <div className="flex min-w-0 items-start gap-2.5">
+                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent text-accent-ink">
+                  <Icon className="size-4" aria-hidden="true" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <p className="truncate text-xs font-bold text-foreground" title={document.originalFileName}>
+                      {document.originalFileName}
+                    </p>
+                    {document.transactionId && (
+                      <Link2 className="size-3 shrink-0 text-accent-ink" aria-label="Attached to a ledger record" />
+                    )}
+                  </div>
+                  {document.notes && (
+                    <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">
+                      {document.notes}
+                    </p>
+                  )}
+                </div>
+                <DocumentActions
+                  document={document}
+                  setDocToDelete={setDocToDelete}
+                  downloadFailed={downloadFailed}
+                />
+              </div>
+
+              <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border/40 pt-2.5 text-[10px]">
+                <div className="min-w-0">
+                  <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Type</dt>
+                  <dd className="mt-0.5 truncate font-bold text-foreground" title={document.documentType}>
+                    {document.documentType}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Tax year</dt>
+                  <dd className="mt-0.5 font-bold text-foreground tabular-nums">{document.taxYear}</dd>
+                </div>
+                <div>
+                  <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Size</dt>
+                  <dd className="mt-0.5 font-semibold text-foreground tabular-nums">{formatBytes(document.sizeBytes)}</dd>
+                </div>
+                <div>
+                  <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Uploaded</dt>
+                  <dd className="mt-0.5 font-semibold text-foreground">{formatDate(document.uploadedAt)}</dd>
+                </div>
+              </dl>
+              <p className="mt-2 text-[10px] text-muted-foreground">
+                Keep until {formatDate(document.retentionUntil)}
+              </p>
+            </article>
+          )
+        })}
+      </div>
+
+      <div className="hidden w-full lg:block">
+        <table className="w-full text-left text-xs">
         <thead>
           <tr className="border-b border-border/60 text-[10px] uppercase tracking-wider text-muted-foreground">
             <th scope="col" className="px-3 py-2.5 font-bold">Document</th>
@@ -100,30 +208,18 @@ export function DocumentList({ documents, isLoading, setDocToDelete }: DocumentL
                   <div className="whitespace-nowrap text-[10px]">Keep until {formatDate(document.retentionUntil)}</div>
                 </td>
                 <td className="px-3 py-2.5">
-                  <div className="flex items-center justify-end gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => void downloadDocument(document.id, document.originalFileName).catch(downloadFailed)}
-                      className="cursor-pointer rounded-lg border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                      aria-label={`Download ${document.originalFileName}`}
-                    >
-                      <Download className="size-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDocToDelete(document.id)}
-                      className="cursor-pointer rounded-lg border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
-                      aria-label={`Delete ${document.originalFileName}`}
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
-                  </div>
+                  <DocumentActions
+                    document={document}
+                    setDocToDelete={setDocToDelete}
+                    downloadFailed={downloadFailed}
+                  />
                 </td>
               </tr>
             )
           })}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   )
 }

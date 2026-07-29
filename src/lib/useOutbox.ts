@@ -54,6 +54,7 @@ export interface UseOutboxResult {
   discardAllFailedOps: () => void
   mutateFailedOps: (updater: (previous: QueuedOp[]) => QueuedOp[]) => void
   getPendingOps: () => QueuedOp[]
+  getActiveOps: () => QueuedOp[]
   getFailedOps: () => QueuedOp[]
   reset: () => void
 }
@@ -270,6 +271,10 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
     setFailedOps(updater)
   }, [])
   const getPendingOps = useCallback(() => pendingOpsRef.current, [])
+  const getActiveOps = useCallback(
+    () => [...pendingOpsRef.current, ...recentlyCompletedOpsRef.current],
+    [],
+  )
   const getFailedOps = useCallback(() => failedOpsRef.current, [])
   const reset = useCallback(() => {
     mutateQueue(() => [])
@@ -304,6 +309,7 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
     discardAllFailedOps,
     mutateFailedOps,
     getPendingOps,
+    getActiveOps,
     getFailedOps,
     reset,
   }

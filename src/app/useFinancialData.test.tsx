@@ -57,6 +57,7 @@ const insights = {
 const handleLogout = vi.fn(async () => undefined)
 const markSessionLocked = vi.fn()
 const markSensitivePreferenceUnavailable = vi.fn()
+const setDarkMode = vi.fn()
 
 function renderFinancialData() {
   // Every option must be stable across renders -- an inline literal or `vi.fn()` here
@@ -74,7 +75,7 @@ function renderFinancialData() {
     setConfirmModalData: vi.fn(),
     resolveHideSensitive: vi.fn(),
     markSensitivePreferenceUnavailable,
-    setDarkMode: vi.fn(),
+    setDarkMode,
     notifyOnLogin: false,
     loadAllAbortRef: { current: null as AbortController | null },
     selectedMonth: 'July',
@@ -141,6 +142,41 @@ describe('useFinancialData', () => {
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)) })
 
     expect(ping).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not let a late startup response roll back a newly selected theme', async () => {
+    let resolveBootstrap: (value: unknown) => void = () => undefined
+    vi.spyOn(api, 'fetchBootstrap').mockReturnValue(new Promise(resolve => {
+      resolveBootstrap = resolve
+    }) as any)
+    vi.spyOn(api, 'pingServer').mockResolvedValue({ status: 'ok' } as any)
+    vi.spyOn(api, 'updateDarkMode').mockReturnValue(new Promise(() => undefined) as any)
+
+    const { result } = renderFinancialData()
+    await waitFor(() => expect(api.fetchBootstrap).toHaveBeenCalled())
+
+    act(() => {
+      result.current.handleUpdateDarkModePreference(true)
+    })
+
+    await act(async () => {
+      resolveBootstrap({
+        month: 'July',
+        year: 2026,
+        dashboard,
+        insights,
+        transactions: [],
+        recurringPayments: [],
+        categories: [],
+        wishlist: [],
+        autocomplete: [],
+        walletBalance: 100,
+      })
+    })
+
+    await waitFor(() => expect(result.current.dashboardData?.setting.darkMode).toBe(true))
+    expect(setDarkMode).toHaveBeenLastCalledWith(true)
+    expect(JSON.parse(localStorage.getItem('cached_dashboard_data') ?? '{}').setting.darkMode).toBe(true)
   })
 
   it('logs out on a status-coded 401 that has no "401" in its message', async () => {

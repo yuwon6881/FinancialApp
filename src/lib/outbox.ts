@@ -81,6 +81,29 @@ export function projectSettingPreference<T>(key: keyof OutboxPayload, serverValu
     : serverValue
 }
 
+/**
+ * Reconciles a server settings snapshot with setting writes that were queued
+ * after that request began. This prevents a late startup response from
+ * restoring stale preferences in React state or the local cache.
+ */
+export function projectFinancialSetting(
+  serverSetting: FinancialSetting,
+  ops: ReadonlyArray<QueuedOp>,
+): FinancialSetting {
+  return [...ops]
+    .filter(op => op.entity === 'settings' && op.type === 'update' && op.payload)
+    .sort((left, right) => left.createdAt - right.createdAt)
+    .reduce<FinancialSetting>((setting, op) => {
+      if (op.targetId === 'summarySeen') {
+        return typeof op.payload?.cycleKey === 'string'
+          ? { ...setting, lastSummaryCycleSeen: op.payload.cycleKey }
+          : setting
+      }
+
+      return { ...setting, ...op.payload } as FinancialSetting
+    }, { ...serverSetting })
+}
+
 type ToastTone = 'info' | 'success' | 'warning' | 'error'
 
 export interface ToastCopy {

@@ -7,7 +7,7 @@ vi.mock('./api', () => ({
   addWishlistItem: vi.fn(async () => ({ id: 1 })),
 }))
 
-import { applyOpsToList, enqueue, DISPATCH, projectSettingPreference, type QueuedOp } from './outbox'
+import { applyOpsToList, enqueue, DISPATCH, projectFinancialSetting, projectSettingPreference, type QueuedOp } from './outbox'
 import * as api from './api'
 
 interface TestItem {
@@ -92,6 +92,59 @@ describe('projectSettingPreference', () => {
     expect(projectSettingPreference('hideSensitive', false, [
       makeOp({ entity: 'settings', targetId: 'darkMode', payload: { darkMode: true } }),
     ])).toBe(false)
+  })
+})
+
+describe('projectFinancialSetting', () => {
+  it('projects all queued settings in order over a stale server snapshot', () => {
+    const server = {
+      targetStabilityFund: 1000,
+      selectedMonth: 'July',
+      selectedYear: 2026,
+      essentialsAlloc: 50,
+      growthAlloc: 20,
+      stabilityAlloc: 20,
+      rewardsAlloc: 10,
+      cycleDay: 1,
+      darkMode: false,
+      hideSensitive: true,
+      currency: 'MYR',
+      lastSummaryCycleSeen: null,
+    }
+    const ops = [
+      makeOp({
+        id: 'settings',
+        entity: 'settings',
+        type: 'update',
+        targetId: 'settings',
+        payload: { currency: 'USD', cycleDay: 15 },
+        createdAt: 10,
+      }),
+      makeOp({
+        id: 'theme',
+        entity: 'settings',
+        type: 'update',
+        targetId: 'darkMode',
+        payload: { darkMode: true },
+        createdAt: 20,
+      }),
+      makeOp({
+        id: 'summary',
+        entity: 'settings',
+        type: 'update',
+        targetId: 'summarySeen',
+        payload: { cycleKey: '2026-07' },
+        createdAt: 30,
+      }),
+    ]
+
+    expect(projectFinancialSetting(server, ops)).toMatchObject({
+      currency: 'USD',
+      cycleDay: 15,
+      darkMode: true,
+      hideSensitive: true,
+      lastSummaryCycleSeen: '2026-07',
+    })
   })
 })
 

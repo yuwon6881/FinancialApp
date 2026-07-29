@@ -211,7 +211,7 @@ export function TransactionFormFields({
           anchorRef={descriptionAnchorRef}
           matchAnchorWidth
           side="bottom"
-          className="z-[210] overflow-y-auto overscroll-contain bg-card border border-blue-500/25 rounded-xl shadow-xl animate-in fade-in slide-in-from-top-2 duration-150"
+          className="z-[190] overflow-y-auto overscroll-contain bg-card border border-blue-500/25 rounded-xl shadow-xl animate-in fade-in slide-in-from-top-2 duration-150"
         >
             {suggestions.isSuggestingNote ? (
               <div className="flex items-center gap-2 px-3.5 py-3 text-xs font-semibold text-muted-foreground">

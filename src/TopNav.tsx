@@ -332,14 +332,6 @@ const TopNav: React.FC<TopNavProps> = ({
                   </MenubarItem>
 
                   <MenubarItem
-                    onClick={() => onTabChange('documents')}
-                    className="flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground lg:hidden"
-                  >
-                    <FileText className="size-3.5 text-amber-500" />
-                    <span>Document Vault</span>
-                  </MenubarItem>
-
-                  <MenubarItem
                     onClick={sensitivePreferenceStatus === 'resolved' ? onToggleHideSensitive : undefined}
                     disabled={sensitivePreferenceStatus !== 'resolved'}
                     className="flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground disabled:cursor-not-allowed"

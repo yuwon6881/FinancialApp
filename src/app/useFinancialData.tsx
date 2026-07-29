@@ -17,7 +17,7 @@ import { useOptimisticList } from '../lib/useOptimisticList'
 import { computeOptimisticDashboard } from '../lib/optimisticDashboard'
 import { useOutbox } from '../lib/useOutbox'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from '../lib/modalDrafts'
-import { createFinalId, createLocalWishlistId, projectSettingPreference, sanitizeQueuedOps, type OutboxPayload } from '../lib/outbox'
+import { createFinalId, createLocalWishlistId, projectFinancialSetting, sanitizeQueuedOps, type OutboxPayload } from '../lib/outbox'
 import { triggerHaptic } from '../lib/haptics'
 import { getErrorMessage, getErrorName, hasHttpStatus, isAuthError, isLockError, JUST_LOGGED_IN_WINDOW_MS } from '../lib/errors'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
@@ -195,6 +195,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     discardFailedOp,
     discardAllFailedOps,
     getPendingOps,
+    getActiveOps,
     getFailedOps,
     reset: resetOutbox,
   } = useOutbox({
@@ -303,12 +304,6 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
   const activeSyncId = outboxActiveSyncId || directSyncId
 
-  // `loadAll` reads the queue only to project the hide-sensitive preference. Routing
-  // it through a ref keeps the queue out of `loadAll`'s identity -- otherwise every
-  // enqueue/dequeue tears down and restarts the wake-up ping effect downstream.
-  const activeOpsRef = useRef(activeOps)
-  useEffect(() => { activeOpsRef.current = activeOps }, [activeOps])
-
   // Fetch initial ledger and dashboard statistics
   const loadAllInner = useCallback(async (
     month?: string,
@@ -365,17 +360,14 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         setWalletBalance(wallet)
         setCachedJSON(CACHE_KEYS.walletBalance, wallet)
       }
-      const effectiveHideSensitive = projectSettingPreference(
-        'hideSensitive',
-        dbData.setting.hideSensitive ?? true,
-        activeOpsRef.current,
-      )
+      // Read directly from the outbox refs at commit time. React's activeOps state
+      // can still be one render behind when a user changes a preference while this
+      // request is in flight.
+      const effectiveSetting = projectFinancialSetting(dbData.setting, getActiveOps())
+      const effectiveHideSensitive = effectiveSetting.hideSensitive ?? true
       const mergedDashboard: DashboardData = {
         ...dbData,
-        setting: {
-          ...dbData.setting,
-          hideSensitive: effectiveHideSensitive,
-        },
+        setting: effectiveSetting,
         last3CategoryBreakdown: insights.last3CategoryBreakdown,
         last6CategoryBreakdown: insights.last6CategoryBreakdown,
         yearlyCategoryBreakdown: insights.yearlyCategoryBreakdown,
@@ -386,8 +378,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
           hasRewardsHistory: insights.hasRewardsHistory
         }
       }
-      setSelectedMonth(dbData.setting.selectedMonth)
-      setSelectedYear(dbData.setting.selectedYear)
+      setSelectedMonth(effectiveSetting.selectedMonth)
+      setSelectedYear(effectiveSetting.selectedYear)
       setDashboardData(mergedDashboard)
       setTransactions(txs)
       setRecurringPayments(recs)
@@ -406,17 +398,12 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       if (wishes !== null) {
         setCachedJSON(CACHE_KEYS.wishlist, wishes)
       }
-      setCachedCycleSnapshot(dbData.setting.selectedMonth, dbData.setting.selectedYear, mergedDashboard, txs)
+      setCachedCycleSnapshot(effectiveSetting.selectedMonth, effectiveSetting.selectedYear, mergedDashboard, txs)
 
       // A concrete server value is an explicit user choice; null means "never chosen",
       // so we follow the OS/browser scheme — matching the login screen — and keep the
       // preference unset locally so it keeps tracking the OS.
-      const serverDark = dbData.setting.darkMode
-      const effectiveDarkMode = projectSettingPreference(
-        'darkMode',
-        serverDark,
-        activeOpsRef.current
-      )
+      const effectiveDarkMode = effectiveSetting.darkMode
       if (effectiveDarkMode === true || effectiveDarkMode === false) {
         setDarkMode(effectiveDarkMode)
       } else {
@@ -463,7 +450,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         setIsBackgroundSyncing(false)
       }
     }
-  }, [token, lastUnlockedTimeRef, handleLogout, markSessionLocked, setDarkMode, resolveHideSensitive, markSensitivePreferenceUnavailable, notifyOnLogin, hasShownModalThisSession, setShowLoginModal, loadAllAbortRef, setSelectedMonth, setSelectedYear])
+  }, [token, lastUnlockedTimeRef, handleLogout, markSessionLocked, setDarkMode, resolveHideSensitive, markSensitivePreferenceUnavailable, notifyOnLogin, hasShownModalThisSession, setShowLoginModal, loadAllAbortRef, setSelectedMonth, setSelectedYear, getActiveOps])
 
   /**
    * Coalesces concurrent background refreshes of the same cycle onto one request.
