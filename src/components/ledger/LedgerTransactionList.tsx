@@ -13,6 +13,6 @@ export type { LedgerListProps } from './ledgerListShared'
 //
 // useIsMobile is the negation of Tailwind's `md:` query, so the branch taken here
 export function LedgerTransactionList(props: LedgerListProps) {
-  const isMobile = useIsMobile(768)
+  const isMobile = useIsMobile(1024)
   return isMobile ? <MobileLedgerList {...props} /> : <DesktopLedgerTable {...props} />
 }

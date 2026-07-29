@@ -1056,7 +1056,7 @@ function App() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.25 }}
-                  className="md:hidden fixed inset-0 z-30 bg-background/45 backdrop-blur-sm cursor-pointer"
+                  className="lg:hidden fixed inset-0 z-30 bg-background/45 backdrop-blur-sm cursor-pointer"
                   onClick={fabMenu.close}
                   aria-hidden="true"
                 />
@@ -1070,8 +1070,8 @@ function App() {
                   initial="hidden"
                   animate="visible"
                   exit="hidden"
-                  className="md:hidden fixed right-8 z-40 flex flex-col gap-3.5 items-end pointer-events-auto"
-                  style={{ bottom: 'calc(148px + env(safe-area-inset-bottom, 0px))' }}
+                  className="lg:hidden fixed right-8 z-40 flex flex-col gap-3.5 items-end pointer-events-auto"
+                  style={{ bottom: 'calc(164px + env(safe-area-inset-bottom, 0px))' }}
                 >
                   {([
                     { key: 'wishlist' as const, label: 'Add Wish Goal', Icon: PiggyBank, color: 'bg-pink-500' },
@@ -1116,10 +1116,10 @@ function App() {
               className={`fixed right-6 flex items-center justify-center size-14 rounded-full shadow-xl cursor-pointer ${
                 prefs.activeTab === 'drafts'
                   ? 'bg-emerald-600 text-white shadow-emerald-600/25 z-40'
-                  : 'bg-primary text-primary-foreground shadow-primary/25 z-40 md:hidden'
+                  : 'bg-primary text-primary-foreground shadow-primary/25 z-40 lg:hidden'
               }`}
               style={{
-                bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))'
+                bottom: 'calc(96px + env(safe-area-inset-bottom, 0px))'
               }}
               title={prefs.activeTab === 'drafts' ? 'Sync Batch to Server' : fabMenu.isOpen ? 'Close Menu' : 'Open Menu'}
               aria-label={prefs.activeTab === 'drafts' ? 'Sync Batch to Server' : fabMenu.isOpen ? 'Close Menu' : 'Open Menu'}
