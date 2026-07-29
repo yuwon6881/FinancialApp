@@ -1,12 +1,14 @@
 import React, { useRef, useImperativeHandle, useState, useEffect } from 'react'
 import { FileText, X, UploadCloud, Link2Off } from 'lucide-react'
 import {
-  VAULT_DOCUMENT_TYPES,
   type PendingVaultDocument,
   type TransactionDocumentChanges,
   type VaultDocument,
+  type VaultDocumentTypeDefinition,
   type VaultDocumentType,
 } from '../../../types'
+import { CustomSelect } from '../../ui/CustomSelect'
+import { listDocumentTypes } from '../../../lib/api/documents'
 
 interface PendingDocument extends PendingVaultDocument {
   previewUrl: string | null
@@ -25,15 +27,13 @@ interface TransactionDocumentsFieldProps {
 
 const LABEL_CLASS = 'text-[10px] font-bold uppercase tracking-wider text-muted-foreground'
 
-const SELECT_CLASS =
-  'w-full cursor-pointer rounded-lg border border-border bg-background px-2 py-1.5 text-[11px] text-foreground focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/40 transition'
-
 export const TransactionDocumentsField = React.forwardRef<
   TransactionDocumentsFieldRef,
   TransactionDocumentsFieldProps
 >(({ existingDocuments = [], disabled = false, defaultTaxYear }, ref) => {
   const [pendingDocs, setPendingDocs] = useState<PendingDocument[]>([])
   const [unlinkIds, setUnlinkIds] = useState<number[]>([])
+  const [documentTypes, setDocumentTypes] = useState<VaultDocumentTypeDefinition[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const pendingDocsRef = useRef<PendingDocument[]>([])
 
@@ -70,14 +70,20 @@ export const TransactionDocumentsField = React.forwardRef<
     }
   }, [])
 
+  useEffect(() => {
+    void listDocumentTypes()
+      .then(setDocumentTypes)
+      .catch(() => setDocumentTypes([]))
+  }, [])
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return
 
     const newDocs: PendingDocument[] = Array.from(e.target.files).map(file => ({
       file,
       previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
-      taxYear: defaultTaxYear,
-      documentType: 'Receipt' as VaultDocumentType,
+      taxYear: Math.max(new Date().getFullYear() - 7, Math.min(new Date().getFullYear(), defaultTaxYear)),
+      documentType: (documentTypes[0]?.name ?? 'Receipt') as VaultDocumentType,
     }))
 
     setPendingDocs(prev => [...prev, ...newDocs])
@@ -195,30 +201,23 @@ export const TransactionDocumentsField = React.forwardRef<
             </button>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <select
+            <CustomSelect
               value={doc.taxYear}
-              aria-label={`Tax year for ${doc.file.name}`}
-              onChange={e => updatePending(i, { taxYear: parseInt(e.target.value, 10) })}
-              className={SELECT_CLASS}
-            >
-              {Array.from({ length: 8 }, (_, idx) => new Date().getFullYear() - idx).map(year => (
-                <option key={year} value={year}>
-                  YA {year}
-                </option>
-              ))}
-            </select>
-            <select
+              ariaLabel={`Tax year for ${doc.file.name}`}
+              onChange={value => updatePending(i, { taxYear: Number(value) })}
+              options={Array.from({ length: 8 }, (_, index) => {
+                const year = new Date().getFullYear() - index
+                return { value: year, label: `YA ${year}` }
+              })}
+              className="w-full"
+            />
+            <CustomSelect
               value={doc.documentType}
-              aria-label={`Document type for ${doc.file.name}`}
-              onChange={e => updatePending(i, { documentType: e.target.value as VaultDocumentType })}
-              className={SELECT_CLASS}
-            >
-              {VAULT_DOCUMENT_TYPES.map(t => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+              ariaLabel={`Document type for ${doc.file.name}`}
+              onChange={value => updatePending(i, { documentType: String(value) })}
+              options={documentTypes.map(type => ({ value: type.name, label: type.name }))}
+              className="w-full"
+            />
           </div>
         </div>
       ))}

@@ -12,6 +12,7 @@ export function DocumentsView() {
   const {
     documents,
     usage,
+    availableYears,
     isLoading,
     taxYear,
     setTaxYear,
@@ -23,6 +24,7 @@ export function DocumentsView() {
     totalCount,
     loadDocuments,
     loadUsage,
+    loadAvailableYears,
     deleteDocument,
   } = useDocumentsView()
 
@@ -60,7 +62,13 @@ export function DocumentsView() {
 
       {/* Panel */}
       <div className="rounded-2xl border border-border/60 bg-card p-3 shadow-xs sm:p-5">
-        <DocumentFilterBar search={search} setSearch={setSearch} taxYear={taxYear} setTaxYear={setTaxYear} />
+        <DocumentFilterBar
+          search={search}
+          setSearch={setSearch}
+          taxYear={taxYear}
+          setTaxYear={setTaxYear}
+          availableYears={availableYears}
+        />
 
         <StorageUsageMeter usage={usage} />
 
@@ -101,6 +109,7 @@ export function DocumentsView() {
         onSuccess={() => {
           void loadDocuments(true)
           void loadUsage()
+          void loadAvailableYears()
         }}
       />
 

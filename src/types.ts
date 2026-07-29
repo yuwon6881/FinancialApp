@@ -490,18 +490,25 @@ export interface DocumentVaultUsage {
   quotaBytes: number
 }
 
-export const VAULT_DOCUMENT_TYPES = [
-  'Receipt',
-  'Invoice',
-  'Tax Return',
-  'Bank Statement',
-  'Donation Certificate',
-  'Medical Bill',
-  'Insurance Policy',
-  'Other',
-] as const
+export type VaultDocumentType = string
 
-export type VaultDocumentType = typeof VAULT_DOCUMENT_TYPES[number]
+export interface VaultDocumentTypeDefinition {
+  id: string
+  name: string
+  usageCount: number
+}
+
+export interface VaultTypeCleanupSuggestion {
+  id: string
+  type: 'delete' | 'merge' | 'add' | 'consolidate'
+  title: string
+  summary: string
+  categories: string[]
+  targetCategory?: string | null
+  newCategoryName?: string | null
+  affectedTransactionCount: number
+  confidence: number
+}
 
 export interface PendingVaultDocument {
   file: File

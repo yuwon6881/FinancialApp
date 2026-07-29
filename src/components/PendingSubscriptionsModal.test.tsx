@@ -4,8 +4,20 @@ import type { PendingNotification } from '../types'
 import { PendingSubscriptionsModal } from './PendingSubscriptionsModal'
 
 vi.mock('./ui/BottomSheet', () => ({
-  BottomSheet: ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) =>
-    isOpen ? <div>{children}</div> : null,
+  BottomSheet: ({
+    isOpen,
+    children,
+    backdropClassName,
+    panelClassName,
+  }: {
+    isOpen: boolean
+    children: React.ReactNode
+    backdropClassName?: string
+    panelClassName?: string
+  }) =>
+    isOpen
+      ? <div data-testid="sheet" data-backdrop-class={backdropClassName} data-panel-class={panelClassName}>{children}</div>
+      : null,
 }))
 
 vi.mock('./ui/DatePicker', () => ({
@@ -54,6 +66,17 @@ describe('PendingSubscriptionsModal', () => {
     expect(screen.getByRole('button', { name: /Confirming/ }).hasAttribute('disabled')).toBe(true)
     expect(screen.getByRole('button', { name: 'Discard' }).hasAttribute('disabled')).toBe(true)
     expect(screen.getByRole('button', { name: 'Remove' }).hasAttribute('disabled')).toBe(true)
+  })
+
+  it('uses a wider mobile sheet and a centered full-row confirm action', () => {
+    renderModal()
+
+    const sheet = screen.getByTestId('sheet')
+    expect(sheet.getAttribute('data-backdrop-class')).toContain('max-sm:p-2')
+    expect(sheet.getAttribute('data-panel-class')).toContain('max-sm:p-4')
+    const confirm = screen.getByRole('button', { name: 'Confirm Paid' })
+    expect(confirm.className).toContain('col-span-2')
+    expect(confirm.className).toContain('justify-center')
   })
 
   it('shows discard progress and prevents duplicate actions', () => {

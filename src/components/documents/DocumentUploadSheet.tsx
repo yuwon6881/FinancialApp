@@ -5,7 +5,7 @@ import { getErrorMessage } from '../../lib/errors'
 import * as api from '../../lib/api/documents'
 import { FileText, UploadCloud, X } from 'lucide-react'
 import { useAppUi } from '../../contexts/AppContext'
-import { VAULT_DOCUMENT_TYPES, type VaultDocumentType } from '../../types'
+import type { VaultDocumentType, VaultDocumentTypeDefinition } from '../../types'
 import { CustomSelect } from '../ui/CustomSelect'
 
 interface DocumentUploadSheetProps {
@@ -30,11 +30,19 @@ export function DocumentUploadSheet({
   initialTaxYear,
   defaultTransactionId,
 }: DocumentUploadSheetProps) {
+  const currentYear = new Date().getFullYear()
+  const normalizedInitialTaxYear = initialTaxYear != null &&
+    initialTaxYear >= currentYear - 7 &&
+    initialTaxYear <= currentYear
+    ? initialTaxYear
+    : currentYear
   const [file, setFile] = useState<File | null>(null)
   const [preparedFile, setPreparedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [taxYear, setTaxYear] = useState<string>(initialTaxYear?.toString() || new Date().getFullYear().toString())
+  const [taxYear, setTaxYear] = useState<string>(String(normalizedInitialTaxYear))
   const [documentType, setDocumentType] = useState<VaultDocumentType>('Receipt')
+  const [documentTypes, setDocumentTypes] = useState<VaultDocumentTypeDefinition[]>([])
+  const [isLoadingTypes, setIsLoadingTypes] = useState(false)
   const [notes, setNotes] = useState('')
   const [isUploading, setIsUploading] = useState(false)
   const [compressionInfo, setCompressionInfo] = useState<
@@ -54,14 +62,27 @@ export function DocumentUploadSheet({
       setFile(null)
       setPreparedFile(null)
       setPreviewUrl(null)
-      setTaxYear(initialTaxYear?.toString() || new Date().getFullYear().toString())
+      setTaxYear(String(normalizedInitialTaxYear))
       setDocumentType('Receipt')
       setNotes('')
       setIsUploading(false)
       setCompressionInfo(null)
       setIsPreparing(false)
+      setIsLoadingTypes(true)
+      api.listDocumentTypes()
+        .then(types => {
+          setDocumentTypes(types)
+          setDocumentType(current =>
+            types.some(type => type.name === current) ? current : types[0]?.name ?? '',
+          )
+        })
+        .catch(() => {
+          setDocumentTypes([])
+          showToast('Document types could not be loaded.', 'Upload Unavailable', 'error')
+        })
+        .finally(() => setIsLoadingTypes(false))
     }
-  }, [isOpen, initialTaxYear])
+  }, [isOpen, initialTaxYear, showToast])
 
   // Cleanup preview URL
   useEffect(() => {
@@ -132,6 +153,10 @@ export function DocumentUploadSheet({
   }
 
   const isBusy = isPreparing || isUploading
+  const taxYearOptions = Array.from({ length: 8 }, (_, index) => {
+    const year = currentYear - index
+    return { value: String(year), label: String(year) }
+  })
 
   return (
     <BottomSheet
@@ -159,7 +184,7 @@ export function DocumentUploadSheet({
           <button
             type="button"
             onClick={handleUpload}
-            disabled={!preparedFile || isBusy}
+            disabled={!preparedFile || !documentType || isBusy}
             className="cursor-pointer rounded-xl bg-primary px-5 py-2 text-xs font-bold text-primary-foreground shadow-md transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isPreparing ? 'Preparing…' : isUploading ? 'Uploading…' : 'Upload'}
@@ -243,14 +268,12 @@ export function DocumentUploadSheet({
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1.5">
             <span className={LABEL_CLASS}>Tax Year</span>
-            <input
-              type="number"
-              inputMode="numeric"
-              min={1900}
-              max={9999}
+            <CustomSelect
               value={taxYear}
-              onChange={e => setTaxYear(e.target.value)}
-              className={FIELD_CLASS}
+              onChange={value => setTaxYear(String(value))}
+              options={taxYearOptions}
+              ariaLabel="Tax year"
+              className="w-full"
             />
           </label>
           <div className="flex flex-col gap-1.5">
@@ -258,10 +281,11 @@ export function DocumentUploadSheet({
             <CustomSelect
               value={documentType}
               onChange={value => setDocumentType(value as VaultDocumentType)}
-              options={VAULT_DOCUMENT_TYPES.map(type => ({ value: type, label: type }))}
+              options={documentTypes.map(type => ({ value: type.name, label: type.name }))}
               ariaLabel="Document type"
               className="w-full"
             />
+            {isLoadingTypes && <span className="text-[10px] text-muted-foreground">Loading types…</span>}
           </div>
         </div>
 
@@ -275,6 +299,12 @@ export function DocumentUploadSheet({
             className={`${FIELD_CLASS} min-h-20 resize-y`}
           />
         </label>
+
+        {documentTypes.length === 0 && !isLoadingTypes && (
+          <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-2.5 py-2 text-[10px] text-destructive">
+            Add a document type in Settings before uploading.
+          </p>
+        )}
 
         {defaultTransactionId && (
           <p className="rounded-lg border border-border/40 bg-muted/40 px-2.5 py-2 text-[10px] text-muted-foreground">

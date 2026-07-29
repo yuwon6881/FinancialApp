@@ -16,6 +16,8 @@ interface BottomSheetProps {
   /** Accessible name when `title` is not plain text. */
   ariaLabel?: string
   layerClassName?: string
+  backdropClassName?: string
+  panelClassName?: string
 }
 
 const openModalIds: string[] = []
@@ -30,7 +32,9 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   maxWidthClassName = 'max-w-md',
   footer,
   ariaLabel,
-  layerClassName = 'z-[100]'
+  layerClassName = 'z-[100]',
+  backdropClassName = '',
+  panelClassName = '',
 }) => {
   const panelRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
@@ -260,7 +264,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             }
             backdropMouseDownRef.current = false
           }}
-          className={`sheet-backdrop fixed inset-0 ${layerClassName} flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm`}
+          className={`sheet-backdrop fixed inset-0 ${layerClassName} flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm ${backdropClassName}`}
         >
           {/* Entrance/exit slide lives on this OUTER wrapper, deliberately kept
               separate from the drag below. framer's drag gesture takes ownership
@@ -321,7 +325,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             // touchmove listener above preventDefaults only the dismiss gesture,
             // so the drag still engages reliably over scrollable content.
             style={{ touchAction: 'pan-y' }}
-            className={`sheet-panel no-scrollbar w-full bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 max-h-[90vh] overflow-x-hidden overflow-y-auto focus:outline-none`}
+            className={`sheet-panel no-scrollbar w-full bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 max-h-[90vh] overflow-x-hidden overflow-y-auto focus:outline-none ${panelClassName}`}
           >
             <div
               style={{ touchAction: 'none' }}

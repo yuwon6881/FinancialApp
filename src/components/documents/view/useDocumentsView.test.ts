@@ -5,6 +5,7 @@ import { useDocumentsView } from './useDocumentsView'
 const api = vi.hoisted(() => ({
   listDocuments: vi.fn(),
   getDocumentUsage: vi.fn(),
+  getAvailableDocumentYears: vi.fn(),
   deleteDocument: vi.fn(),
   updateDocument: vi.fn(),
 }))
@@ -29,6 +30,7 @@ describe('useDocumentsView', () => {
     vi.clearAllMocks()
     api.listDocuments.mockResolvedValue({ items: [document], totalCount: 1 })
     api.getDocumentUsage.mockResolvedValue({ totalBytes: 12, documentCount: 1 })
+    api.getAvailableDocumentYears.mockResolvedValue([2026, 2025])
     api.deleteDocument.mockResolvedValue(undefined)
   })
 

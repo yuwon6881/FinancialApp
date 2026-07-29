@@ -1,5 +1,5 @@
 import React from 'react'
-import { Plus, Save, Settings, Trash2, AlertCircle, CheckCircle2, Bell, BellRing, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap, Moon, Sun, Eye, EyeOff, HardDrive } from 'lucide-react'
+import { Save, Settings, AlertCircle, CheckCircle2, Bell, BellRing, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap, Moon, Sun, Eye, EyeOff, HardDrive } from 'lucide-react'
 import { m } from 'framer-motion'
 import type { DashboardData, TransactionCategory } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
@@ -18,9 +18,11 @@ import { useAppContext } from '../contexts/AppContext'
 const ActiveDevicesSection = React.lazy(() => import('./settings/ActiveDevicesSection').then(m => ({ default: m.ActiveDevicesSection })))
 const FingerprintSection = React.lazy(() => import('./settings/FingerprintSection').then(m => ({ default: m.FingerprintSection })))
 const InvestmentPlanSection = React.lazy(() => import('./settings/InvestmentPlanSection').then(m => ({ default: m.InvestmentPlanSection })))
+const VaultDocumentTypesPanel = React.lazy(() => import('./settings/VaultDocumentTypesPanel').then(m => ({ default: m.VaultDocumentTypesPanel })))
 
 import { useSettingsView } from './settings/view/useSettingsView'
 import { CategoryLimitsCard } from './settings/CategoryLimitsCard'
+import { ManageableNameList } from './settings/ManageableNameList'
 import type { SensitivePreferenceStatus } from '../app/useAppPreferences'
 
 interface SettingsViewProps {
@@ -84,11 +86,12 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
     onToast,
   })
 
-  const [activeTab, setActiveTab] = React.useState<'financial-model' | 'investment-plan' | 'categories-preferences' | 'security'>(() => {
+  const [activeTab, setActiveTab] = React.useState<'financial-model' | 'investment-plan' | 'categories-preferences' | 'vault-types' | 'security'>(() => {
     if (typeof window !== 'undefined') {
       const search = window.location.search
       const hash = window.location.hash
       if (search.includes('investment-plan') || hash.includes('investment-plan')) return 'investment-plan'
+      if (search.includes('vault-types') || hash.includes('vault-types')) return 'vault-types'
       if (search.includes('category') || search.includes('limits') || hash.includes('category') || hash.includes('limits')) {
         return 'categories-preferences'
       }
@@ -102,6 +105,10 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       const hash = window.location.hash
       if (search.includes('investment-plan') || hash.includes('investment-plan')) {
         setActiveTab('investment-plan')
+        return
+      }
+      if (search.includes('vault-types') || hash.includes('vault-types')) {
+        setActiveTab('vault-types')
         return
       }
       if (search.includes('category') || search.includes('limits') || hash.includes('category') || hash.includes('limits')) {
@@ -144,6 +151,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
           ['financial-model', 'Plan & Preferences'],
           ['investment-plan', 'Investment Plan'],
           ['categories-preferences', 'Categories & Limits'],
+          ['vault-types', 'Vault Types'],
           ['security', 'Security & Devices']
         ] as const).map(([id, label]) => (
           <button
@@ -599,30 +607,34 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   </div>
                 )}
 
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="New Category Name"
-                    disabled={hideSensitive}
-                    value={view.newCatName}
-                    onChange={e => view.setNewCatName(e.target.value)}
-                    className="flex-1 min-w-0 h-9 px-3 text-xs bg-background border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
-                  />
-                  <button
-                    type="button"
-                    disabled={!view.isCatValid}
-                    onClick={view.handleAddCategory}
-                    className="w-9 h-9 flex items-center justify-center rounded-lg text-primary-foreground bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none hover:shadow-lg hover:shadow-primary/10 transition cursor-pointer shrink-0"
-                  >
-                    <Plus className="size-3.5" />
-                  </button>
-                </div>
-                {view.isCatDuplicate && (
-                  <p className="text-[10px] text-destructive font-semibold mt-0.5">Category name already exists.</p>
-                )}
-                {view.isCatReserved && (
-                  <p className="text-[10px] text-destructive font-semibold mt-0.5">Name is a reserved word.</p>
-                )}
+                <ManageableNameList
+                  items={categoryRows.map(({ category, count }) => ({ ...category, count }))}
+                  itemLabel="Category"
+                  addPlaceholder="New Category Name"
+                  disabled={hideSensitive}
+                  isLoading={isCategoryListLoading}
+                  validateName={name => ['transfer', 'adjustment'].includes(name.toLowerCase()) ? 'Name is a reserved word.' : null}
+                  onAdd={name => props.onAddCategory({ name })}
+                  onDelete={item => view.handleDeleteCategory(item.id)}
+                  renderName={item => (
+                    <span className={`inline-flex shrink-0 items-center rounded border px-2 py-0.5 font-semibold ${getCategoryBadgeClass(item.name)}`}>
+                      {item.name}
+                    </span>
+                  )}
+                  renderMeta={item => item.count === 0
+                    ? <span className="truncate text-[10px] font-semibold text-orange-500">Unused</span>
+                    : item.count != null && item.count <= view.RARELY_USED_MAX_COUNT
+                      ? <span className="truncate text-[10px] font-semibold text-amber-600 dark:text-amber-500">Rarely used · {item.count}×</span>
+                      : null}
+                  renderStatus={item => (
+                    <RowSyncStatus
+                      isDeleting={view.isCatDeleting(item.id)}
+                      isSyncing={view.isCatSyncing(item.id)}
+                      isPending={item.isPendingSync}
+                      entityLabel="category"
+                    />
+                  )}
+                />
 
                 {view.categoryUsage && view.visibleCategories.length > 0 && (
                   <p className="text-[10px] text-muted-foreground px-0.5">
@@ -633,58 +645,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   <p className="text-[10px] font-medium text-destructive px-0.5">{view.usageError}</p>
                 )}
 
-                <div
-                  className={`max-h-72 overflow-y-auto space-y-1.5 pr-1 select-none ${
-                    isCategoryListLoading ? 'min-h-32 flex items-center justify-center' : ''
-                  }`}
-                  aria-busy={isCategoryListLoading}
-                >
-                  {isCategoryListLoading ? (
-                    <div role="status" className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                      <Loader2 className="size-4 animate-spin text-blue-500" aria-hidden="true" />
-                      <span>Loading transaction categories&hellip;</span>
-                    </div>
-                  ) : categoryRows.map(({ category: cat, count }) => {
-                    const isSyncing = view.isCatSyncing(cat.id)
-                    const isDeleting = view.isCatDeleting(cat.id)
-                    const isUnused = count === 0
-                    const isRarelyUsed = count !== null && count > 0 && count <= view.RARELY_USED_MAX_COUNT
-                    return (
-                      <div
-                        key={cat.id}
-                        className={`flex items-center justify-between gap-2 border px-2.5 py-2 rounded-lg text-xs transition-colors ${
-                          isUnused
-                            ? 'bg-orange-500/5 border-orange-500/25'
-                            : isRarelyUsed
-                              ? 'bg-amber-500/5 border-amber-500/20'
-                              : 'bg-background border-border/50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded border font-semibold shrink-0 ${getCategoryBadgeClass(cat.name)}`}>{cat.name}</span>
-                          {isUnused && (
-                            <span className="text-[10px] font-semibold text-orange-500 truncate">Unused</span>
-                          )}
-                          {isRarelyUsed && (
-                            <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-500 truncate">Rarely used &middot; {count}&times;</span>
-                          )}
-                        </div>
-                        <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isPending={cat.isPendingSync} entityLabel="category" />
-                        {!isSyncing && !isDeleting && (
-                          <button
-                            type="button"
-                            disabled={view.checkingDeleteId !== null}
-                            onClick={() => view.handleDeleteCategory(cat.id)}
-                            title={view.checkingDeleteId === cat.id ? 'Checking usage…' : 'Delete category'}
-                            className="shrink-0 text-muted-foreground hover:text-destructive transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {view.checkingDeleteId === cat.id ? <Loader2 className="size-3 animate-spin text-destructive" /> : <Trash2 className="size-3" />}
-                          </button>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
+
               </div>
             </CollapsibleBody>
           </div>
@@ -699,6 +660,14 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             />
           </div>
         </div>
+      )}
+
+      {activeTab === 'vault-types' && (
+        <React.Suspense fallback={<div className="flex h-40 items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>}>
+          <div id="settings-panel-vault-types" role="tabpanel" aria-labelledby="settings-tab-vault-types" className="animate-in fade-in duration-200">
+            <VaultDocumentTypesPanel />
+          </div>
+        </React.Suspense>
       )}
 
       {activeTab === 'security' && (

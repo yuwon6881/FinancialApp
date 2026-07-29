@@ -7,12 +7,19 @@ interface DocumentFilterBarProps {
   setSearch: (search: string) => void
   taxYear: number | undefined
   setTaxYear: (year: number | undefined) => void
+  availableYears: number[]
 }
 
 const FIELD_CLASS =
   'w-full bg-card border border-border rounded-xl text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/40 transition'
 
-export function DocumentFilterBar({ search, setSearch, taxYear, setTaxYear }: DocumentFilterBarProps) {
+export function DocumentFilterBar({
+  search,
+  setSearch,
+  taxYear,
+  setTaxYear,
+  availableYears,
+}: DocumentFilterBarProps) {
   const [searchInput, setSearchInput] = useState(search)
 
   useEffect(() => {
@@ -61,10 +68,7 @@ export function DocumentFilterBar({ search, setSearch, taxYear, setTaxYear }: Do
         onChange={value => setTaxYear(value === '' ? undefined : Number(value))}
         options={[
           { value: '', label: 'All tax years' },
-          ...Array.from({ length: 15 }, (_, i) => {
-            const year = new Date().getFullYear() - i
-            return { value: year, label: String(year) }
-          }),
+          ...availableYears.map(year => ({ value: year, label: String(year) })),
         ]}
         ariaLabel="Filter by tax year"
         className="w-full sm:w-40 sm:shrink-0"

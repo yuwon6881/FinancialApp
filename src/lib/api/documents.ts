@@ -1,4 +1,10 @@
-import type { VaultDocument, VaultDocumentType, DocumentVaultUsage } from '../../types'
+import type {
+  VaultDocument,
+  VaultDocumentType,
+  DocumentVaultUsage,
+  VaultDocumentTypeDefinition,
+  VaultTypeCleanupSuggestion,
+} from '../../types'
 import { request, requestVoid, invalidateCache, apiFetch, throwApiError } from './client'
 import { downloadCsvBlob } from '../csvExport'
 
@@ -97,6 +103,65 @@ export async function getDocumentUsage(): Promise<DocumentVaultUsage> {
     method: 'GET',
     errorMessage: 'Failed to get document usage',
   })
+}
+
+export function getAvailableDocumentYears(): Promise<number[]> {
+  return request<number[]>('/documents/years', {
+    method: 'GET',
+    errorMessage: 'Failed to load document years',
+  })
+}
+
+export function listDocumentTypes(): Promise<VaultDocumentTypeDefinition[]> {
+  return request<VaultDocumentTypeDefinition[]>('/document-types', {
+    method: 'GET',
+    errorMessage: 'Failed to load document types',
+  })
+}
+
+export async function addDocumentType(name: string): Promise<VaultDocumentTypeDefinition> {
+  const result = await request<VaultDocumentTypeDefinition>('/document-types', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+    errorMessage: 'Failed to add document type',
+  })
+  invalidateCache()
+  return result
+}
+
+export async function deleteDocumentType(id: string, replacementId?: string): Promise<void> {
+  const query = replacementId ? `?replacementId=${encodeURIComponent(replacementId)}` : ''
+  await requestVoid(`/document-types/${encodeURIComponent(id)}${query}`, {
+    method: 'DELETE',
+    errorMessage: 'Failed to delete document type',
+  })
+  invalidateCache()
+}
+
+export function reviewDocumentTypeCleanup(): Promise<{ suggestions: VaultTypeCleanupSuggestion[] }> {
+  return request<{ suggestions: VaultTypeCleanupSuggestion[] }>('/document-types/cleanup/review', {
+    method: 'POST',
+    errorMessage: 'Failed to review document types',
+  })
+}
+
+export async function applyDocumentTypeCleanup(
+  suggestion: VaultTypeCleanupSuggestion,
+  targetCategory?: string,
+): Promise<void> {
+  await request('/document-types/cleanup/apply', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type: suggestion.type,
+      categories: suggestion.categories,
+      targetCategory: targetCategory || suggestion.targetCategory,
+      newCategoryName: suggestion.newCategoryName,
+    }),
+    errorMessage: 'Failed to apply document type cleanup',
+  })
+  invalidateCache()
 }
 
 export async function downloadDocument(id: number, fileName: string): Promise<void> {
