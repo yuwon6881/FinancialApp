@@ -419,7 +419,7 @@ const ActionToolbar = ({ portfolio, isOffline, refreshing, onAddActivity, onMana
   onUpdatePrices: () => void
 }) => (
   <section aria-label="Investment actions" className="app-panel flex flex-col gap-3 rounded-2xl border border-border/60 bg-card/92 p-4 lg:flex-row lg:items-center lg:justify-between">
-    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+    <div className="grid grid-cols-2 gap-2 md:grid-cols-4 lg:flex lg:flex-wrap">
       <Button variant="ghost" disabled={portfolio.accounts.length === 0 || portfolio.instruments.length === 0} onClick={onAddActivity}><Plus className="size-4" /> Add activity</Button>
       <Button variant="ghost" disabled={portfolio.accounts.length === 0} onClick={onManageCash}><Wallet className="size-4" /> Manage cash</Button>
       <Button variant="ghost" onClick={onAddAccount}><Building2 className="size-4" /> Add account</Button>

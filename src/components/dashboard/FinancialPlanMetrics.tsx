@@ -136,7 +136,7 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
             )}
           </div>
           <span className="text-[10px] text-muted-foreground block leading-relaxed">
-            Based on total available budget ({formatSensitive(essentialsMetric.totalAvailable)}), including cycle income and leftover balance. Decreases with each spend.
+            Available budget: <strong>{formatSensitive(essentialsMetric.totalAvailable)}</strong>.
             {essentialsMetric.pending > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(essentialsMetric.projectedRemaining)}</span>}
           </span>
         </div>

@@ -149,16 +149,16 @@ const TopNav: React.FC<TopNavProps> = ({
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
         <div className="h-[2.5px] w-full bg-gradient-to-r from-blue-500 via-teal-500 via-amber-500 to-pink-500" />
-        <div className="mx-auto flex h-16 w-full max-w-[1440px] items-center px-4 sm:px-6 lg:px-8">
+        <div className="relative mx-auto flex h-16 w-full max-w-[1440px] items-center px-4 sm:px-6 lg:px-8">
         
         {/* Left Side (Logo and Brand) */}
         {/* min-w-0 (not min-w-max): the status badges below are shrink-0, so a
             max-content floor here would push the whole header past a phone
             viewport and make the page scroll sideways. */}
-        <div className="flex min-w-0 flex-1 items-center justify-start overflow-hidden">
+        <div className="flex min-w-0 flex-1 items-center justify-start overflow-hidden z-10">
           <div className="flex shrink-0 items-center gap-2 cursor-pointer select-none" onClick={() => onTabChange('dashboard')}>
             <AppLogo className="size-9 rounded-xl transition-transform duration-200 hover:scale-105" />
-            <span className="hidden sm:inline text-base sm:text-lg font-extrabold tracking-tight bg-linear-to-r from-foreground via-foreground to-blue-500 bg-clip-text text-transparent truncate">
+            <span className="hidden sm:inline md:hidden lg:inline text-base lg:text-lg font-extrabold tracking-tight bg-linear-to-r from-foreground via-foreground to-blue-500 bg-clip-text text-transparent truncate">
               FinancialApp
             </span>
           </div>
@@ -201,7 +201,7 @@ const TopNav: React.FC<TopNavProps> = ({
         </div>
 
         {/* Navigation Tabs - Centered mathematically on desktop, flex-safe on medium screens */}
-        <div className="hidden md:flex items-center justify-center shrink-0 mx-4">
+        <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center justify-center shrink-0 z-10 w-max">
           <nav className="flex items-center gap-1 bg-card/72 p-1.5 rounded-xl border border-border/50 shadow-sm select-none">
             {navItems.map(({ tab, label, Icon, activeClass, iconClass, dotClass }) => {
               const isActive = activeTab === tab
@@ -210,7 +210,7 @@ const TopNav: React.FC<TopNavProps> = ({
                   key={tab}
                   onClick={() => onTabChange(tab)}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all duration-200 cursor-pointer ${
+                  className={`relative flex items-center gap-1 md:gap-1.5 px-2 lg:px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all duration-200 cursor-pointer ${
                     isActive
                       ? `${activeClass} font-bold shadow-sm scale-[1.02]`
                       : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/45'
@@ -226,7 +226,7 @@ const TopNav: React.FC<TopNavProps> = ({
         </div>
 
         {/* Right Side Widgets & Actions */}
-        <div className="flex flex-1 shrink-0 items-center justify-end gap-1.5 sm:gap-3 md:gap-4">
+        <div className="flex flex-1 shrink-0 items-center justify-end gap-1.5 sm:gap-3 lg:gap-4 z-10">
           
           <button
             type="button"
