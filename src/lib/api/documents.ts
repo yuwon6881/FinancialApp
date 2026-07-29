@@ -120,11 +120,11 @@ export async function listDocumentTypes(): Promise<VaultDocumentTypeDefinition[]
   return Array.isArray(types) ? types : []
 }
 
-export async function addDocumentType(name: string): Promise<VaultDocumentTypeDefinition> {
+export async function addDocumentType(name: string, id?: string): Promise<VaultDocumentTypeDefinition> {
   const result = await request<VaultDocumentTypeDefinition>('/document-types', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, id }),
     errorMessage: 'Failed to add document type',
   })
   invalidateCache()

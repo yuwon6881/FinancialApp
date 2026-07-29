@@ -179,6 +179,87 @@ describe('useFinancialData', () => {
     expect(JSON.parse(localStorage.getItem('cached_dashboard_data') ?? '{}').setting.darkMode).toBe(true)
   })
 
+  it('preserves a theme choice when its fast save completes before the stale startup response', async () => {
+    let resolveBootstrap: (value: unknown) => void = () => undefined
+    vi.spyOn(api, 'fetchBootstrap').mockReturnValue(new Promise(resolve => {
+      resolveBootstrap = resolve
+    }) as any)
+    vi.spyOn(api, 'pingServer').mockResolvedValue({ status: 'ok' } as any)
+    vi.spyOn(api, 'updateDarkMode').mockResolvedValue(undefined as any)
+
+    const { result } = renderFinancialData()
+    await waitFor(() => expect(api.fetchBootstrap).toHaveBeenCalled())
+
+    act(() => {
+      result.current.handleUpdateDarkModePreference(true)
+    })
+    await waitFor(() => expect(api.updateDarkMode).toHaveBeenCalledWith(true))
+    await waitFor(() => expect(result.current.pendingOps).toHaveLength(0))
+
+    await act(async () => {
+      resolveBootstrap({
+        month: 'July',
+        year: 2026,
+        dashboard,
+        insights,
+        transactions: [],
+        recurringPayments: [],
+        categories: [],
+        wishlist: [],
+        autocomplete: [],
+        walletBalance: 100,
+      })
+    })
+
+    await waitFor(() => expect(result.current.dashboardData?.setting.darkMode).toBe(true))
+    expect(setDarkMode).toHaveBeenLastCalledWith(true)
+    expect(JSON.parse(localStorage.getItem('cached_dashboard_data') ?? '{}').setting.darkMode).toBe(true)
+  })
+
+  it('applies the same stale-bootstrap protection to the other financial settings', async () => {
+    let resolveBootstrap: (value: unknown) => void = () => undefined
+    vi.spyOn(api, 'fetchBootstrap').mockReturnValue(new Promise(resolve => {
+      resolveBootstrap = resolve
+    }) as any)
+    vi.spyOn(api, 'pingServer').mockResolvedValue({ status: 'ok' } as any)
+    vi.spyOn(api, 'updateSettings').mockResolvedValue(dashboard.setting as any)
+
+    const { result } = renderFinancialData()
+    await waitFor(() => expect(api.fetchBootstrap).toHaveBeenCalled())
+
+    act(() => {
+      result.current.handleUpdateSettings({
+        targetStabilityFund: 20000,
+        essentialsAlloc: 0.4,
+        growthAlloc: 0.3,
+        stabilityAlloc: 0.2,
+        rewardsAlloc: 0.1,
+        cycleDay: 25,
+        currency: 'MYR',
+      })
+    })
+    await waitFor(() => expect(api.updateSettings).toHaveBeenCalled())
+    await waitFor(() => expect(result.current.pendingOps).toHaveLength(0))
+
+    await act(async () => {
+      resolveBootstrap({
+        month: 'July',
+        year: 2026,
+        dashboard,
+        insights,
+        transactions: [],
+        recurringPayments: [],
+        categories: [],
+        wishlist: [],
+        autocomplete: [],
+        walletBalance: 100,
+      })
+    })
+
+    await waitFor(() => expect(result.current.dashboardData?.setting.currency).toBe('MYR'))
+    expect(result.current.dashboardData?.setting.cycleDay).toBe(25)
+  })
+
   it('logs out on a status-coded 401 that has no "401" in its message', async () => {
     mockHappyApi()
     vi.spyOn(api, 'pingServer').mockResolvedValue({ status: 'ok' } as any)

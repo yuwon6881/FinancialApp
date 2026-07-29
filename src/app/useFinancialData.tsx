@@ -150,6 +150,10 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
   const isServerAwakeRef = useRef<boolean>(false)
   const loadAllSeqRef = useRef(0)
+  // Keep each locally chosen setting until a server snapshot explicitly confirms the
+  // same value. Queue state alone is insufficient here: a fast settings write can leave
+  // the outbox before an older, slower bootstrap response commits.
+  const unconfirmedSettingWritesRef = useRef(new Map<string, unknown>())
   const wakeUpCancelledRef = useRef(false)
   const wakeUpTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -162,6 +166,10 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     }
   })
   const pendingTransactionDocumentsRef = useRef(new Map<string, TransactionDocumentChanges>())
+
+  useEffect(() => {
+    unconfirmedSettingWritesRef.current.clear()
+  }, [token])
 
   // Persist draft transactions to localStorage
   useEffect(() => {
@@ -363,7 +371,15 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       // Read directly from the outbox refs at commit time. React's activeOps state
       // can still be one render behind when a user changes a preference while this
       // request is in flight.
-      const effectiveSetting = projectFinancialSetting(dbData.setting, getActiveOps())
+      let effectiveSetting = projectFinancialSetting(dbData.setting, getActiveOps())
+      for (const [key, localValue] of unconfirmedSettingWritesRef.current) {
+        const serverValue = dbData.setting[key as keyof typeof dbData.setting]
+        if (Object.is(serverValue, localValue)) {
+          unconfirmedSettingWritesRef.current.delete(key)
+        } else {
+          effectiveSetting = { ...effectiveSetting, [key]: localValue }
+        }
+      }
       const effectiveHideSensitive = effectiveSetting.hideSensitive ?? true
       const mergedDashboard: DashboardData = {
         ...dbData,
@@ -762,14 +778,19 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       darkMode: settings.darkMode ?? darkMode,
       hideSensitive: settings.hideSensitive ?? hideSensitive,
     }
+    for (const [key, value] of Object.entries(payload)) {
+      if (value !== undefined) unconfirmedSettingWritesRef.current.set(key, value)
+    }
     mutateQueue(prev => enqueue(prev, 'settings', 'update', 'settings', payload))
   }
 
   const handleUpdateDarkModePreference = (value: boolean) => {
+    unconfirmedSettingWritesRef.current.set('darkMode', value)
     mutateQueue(prev => enqueue(prev, 'settings', 'update', 'darkMode', { darkMode: value }))
   }
 
   const handleUpdateHideSensitivePreference = (value: boolean) => {
+    unconfirmedSettingWritesRef.current.set('hideSensitive', value)
     setDashboardData(previous => {
       if (!previous) return previous
       const next = {
@@ -789,6 +810,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   // marker into local dashboard state + cache immediately so the once-per-cycle trigger won't
   // re-fire before the server write round-trips, then queues the durable server update.
   const handleMarkSummarySeen = (cycleKey: string) => {
+    unconfirmedSettingWritesRef.current.set('lastSummaryCycleSeen', cycleKey)
     const patchSetting = (data: DashboardData | null) =>
       data ? { ...data, setting: { ...data.setting, lastSummaryCycleSeen: cycleKey } } : data
     setDashboardData(prev => {

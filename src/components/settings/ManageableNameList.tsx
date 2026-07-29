@@ -1,4 +1,4 @@
-import { Loader2, Plus, Search, Trash2 } from 'lucide-react'
+import { Loader2, Plus, Search, Trash2, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 
@@ -38,6 +38,10 @@ export function ManageableNameList<T extends ManageableNameItem>({
   const [newName, setNewName] = useState('')
   const [search, setSearch] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
+  const lowerItemLabel = itemLabel.toLowerCase()
+  const pluralItemLabel = /[^aeiou]y$/i.test(lowerItemLabel)
+    ? `${lowerItemLabel.slice(0, -1)}ies`
+    : `${lowerItemLabel}s`
   const trimmedName = newName.trim()
   const duplicate = items.some(item => item.name.trim().toLowerCase() === trimmedName.toLowerCase())
   const validationError = trimmedName && !duplicate ? validateName?.(trimmedName) ?? null : null
@@ -83,16 +87,27 @@ export function ManageableNameList<T extends ManageableNameItem>({
       {duplicate && <p className="text-[10px] font-semibold text-destructive">{itemLabel} already exists.</p>}
       {validationError && <p className="text-[10px] font-semibold text-destructive">{validationError}</p>}
 
-      <label className="relative block">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+      <label className="group relative block">
+        <Search className="pointer-events-none absolute left-3.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-foreground" />
         <input
-          type="search"
+          type="text"
+          role="searchbox"
           value={search}
           onChange={event => setSearch(event.target.value)}
-          placeholder={`Search ${itemLabel.toLowerCase()}s`}
-          aria-label={`Search ${itemLabel.toLowerCase()}s`}
-          className="h-9 w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+          placeholder={`Search ${pluralItemLabel}`}
+          aria-label={`Search ${pluralItemLabel}`}
+          className="h-10 w-full rounded-xl border border-border/70 bg-muted/20 py-2 pl-10 pr-10 text-xs shadow-inner shadow-black/[0.025] transition placeholder:text-muted-foreground/75 hover:border-border focus:border-ring/70 focus:bg-background focus:outline-none focus:ring-2 focus:ring-ring/15"
         />
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch('')}
+            aria-label={`Clear ${lowerItemLabel} search`}
+            className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          >
+            <X className="size-3.5" />
+          </button>
+        )}
       </label>
 
       <div className="max-h-72 space-y-1.5 overflow-y-auto pr-1" aria-busy={isLoading}>
@@ -103,7 +118,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
           </div>
         ) : filtered.length === 0 ? (
           <p className="py-6 text-center text-[11px] text-muted-foreground">
-            {search ? `No ${itemLabel.toLowerCase()}s match your search.` : `No ${itemLabel.toLowerCase()}s yet.`}
+            {search ? `No ${pluralItemLabel} match your search.` : `No ${pluralItemLabel} yet.`}
           </p>
         ) : filtered.map(item => (
           <div key={item.id} className="flex items-center justify-between gap-2 rounded-lg border border-border/50 bg-background px-2.5 py-2 text-xs">
