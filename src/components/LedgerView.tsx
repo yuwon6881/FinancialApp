@@ -1,5 +1,10 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react'
-import type { Transaction, TransactionCategory, AutocompleteSuggestion } from '../types'
+import type {
+  Transaction,
+  TransactionCategory,
+  AutocompleteSuggestion,
+  TransactionDocumentChanges,
+} from '../types'
 import type { PagedTransactionResult, ReceiptScanResult } from '../lib/api'
 import { CycleSkeleton } from './ui/Skeleton'
 import { useAppContext } from '../contexts/AppContext'
@@ -27,9 +32,16 @@ const ReceiptSplitSheet = React.lazy(() =>
 interface LedgerViewProps {
   transactions: Transaction[]
   autocompleteSuggestions?: AutocompleteSuggestion[]
-  onAddTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void> | void
+  onAddTransaction: (
+    transaction: Omit<Transaction, 'id'>,
+    documentChanges?: TransactionDocumentChanges,
+  ) => Promise<string | void> | string | void
   onDeleteTransaction: (id: string) => Promise<void> | void
-  onUpdateTransaction?: (id: string, transaction: Omit<Transaction, 'id'>) => Promise<void> | void
+  onUpdateTransaction?: (
+    id: string,
+    transaction: Omit<Transaction, 'id'>,
+    documentChanges?: TransactionDocumentChanges,
+  ) => Promise<void> | void
   hideSensitive?: boolean
   categories: TransactionCategory[]
   selectedMonth: string
@@ -382,6 +394,11 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         onCancel={ledger.handleCancelDelete}
         onConfirm={ledger.handleConfirmDelete}
         formatSensitive={formatSensitive}
+        attachedDocumentCount={ledger.attachedDocumentCount}
+        alsoDeleteDocuments={ledger.alsoDeleteDocuments}
+        onAlsoDeleteDocumentsChange={ledger.setAlsoDeleteDocuments}
+        isOnline={!app.isOffline && navigator.onLine}
+        areAttachedDocumentsLoading={ledger.areAttachedDocumentsLoading}
       />
 
       <EditDisabledModal

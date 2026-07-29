@@ -1,4 +1,4 @@
-import { useReducer, useMemo, useCallback, useEffect, useRef } from 'react'
+import { useReducer, useMemo, useCallback, useEffect, useRef, useState } from 'react'
 import { transactionFormReducer, getInitialState, type SelectableLedgerCategory, type TransferBucket } from './transactionFormReducer'
 import { getTodayDateString, mapFormToTransaction } from './transactionFormMapping'
 import { validateTransactionForm } from './transactionFormValidation'
@@ -6,9 +6,15 @@ import { useTransactionSuggestions } from './useTransactionSuggestions'
 import { useReceiptScanDraft } from './useReceiptScanDraft'
 import { useFormDraft } from '../../../lib/useFormDraft'
 import { useAutoOpenModal } from '../../../lib/useAutoOpenModal'
-import type { Transaction, TransactionCategory, AutocompleteSuggestion } from '../../../types'
+import type {
+  Transaction,
+  TransactionCategory,
+  AutocompleteSuggestion,
+  TransactionDocumentChanges,
+  VaultDocument,
+} from '../../../types'
 import type { TransactionPrefillDraft } from '../TransactionFormSheet'
-
+import type { TransactionDocumentsFieldRef } from './TransactionDocumentsField'
 export interface UseTransactionFormOptions {
   categories: TransactionCategory[]
   currency: string
@@ -22,8 +28,15 @@ export interface UseTransactionFormOptions {
   stabilityBalance: number
   stabilityTarget: number
   stabilityOverflowRedirect: string
-  onAddTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void> | void
-  onUpdateTransaction?: (id: string, transaction: Omit<Transaction, 'id'>) => Promise<void> | void
+  onAddTransaction: (
+    transaction: Omit<Transaction, 'id'>,
+    documentChanges?: TransactionDocumentChanges,
+  ) => Promise<string | void> | string | void
+  onUpdateTransaction?: (
+    id: string,
+    transaction: Omit<Transaction, 'id'>,
+    documentChanges?: TransactionDocumentChanges,
+  ) => Promise<void> | void
   onStartEditPending?: (id: string | null) => void
   onAddFormOpenChange?: (open: boolean) => void
   autoOpenAddForm?: boolean
@@ -33,6 +46,7 @@ export interface UseTransactionFormOptions {
   onReceiptScanCleared?: (scanId: string) => void | Promise<void>
   activeScanJobIds?: string[]
   failedScanJob?: any
+
   aiEditDraft?: any
   onAiEditDraftConsumed?: () => void
   onFetchTransactionById?: (id: string) => Promise<Transaction>
@@ -77,6 +91,8 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   const firstInputRef = useRef<HTMLInputElement>(null)
   const descriptionRef = useRef('')
   const autocompletedDescriptionRef = useRef<string | null>(null)
+  const documentsFieldRef = useRef<TransactionDocumentsFieldRef>(null)
+  const [existingDocuments, setExistingDocuments] = useState<VaultDocument[]>([])
 
   useEffect(() => {
     descriptionRef.current = state.description
@@ -223,8 +239,13 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     if (onStartEditPending) {
       onStartEditPending(t.id)
     }
+    setExistingDocuments([])
+    void import('../../../lib/api/documents')
+      .then(({ listAllDocumentsForTransaction }) => listAllDocumentsForTransaction(t.id))
+      .then(setExistingDocuments)
+      .catch(() => onShowAlert?.('Attached documents could not be loaded.', 'Document Vault'))
     openTransactionForm()
-  }, [hideSensitive, dispatch, descriptionRef, autocompletedDescriptionRef, suggestions, onStartEditPending, openTransactionForm])
+  }, [hideSensitive, suggestions, onStartEditPending, onShowAlert, openTransactionForm])
 
   useEffect(() => {
     if (!aiEditDraft) return
@@ -288,6 +309,8 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   useAutoOpenModal(autoOpenAddForm, openTransactionForm, onResetAutoOpen)
 
   const openFresh = () => {
+    setExistingDocuments([])
+    documentsFieldRef.current?.reset()
     dispatch({ type: 'OPEN_CREATE', payload: { defaultCategory, todayDate } })
     descriptionRef.current = ''
     autocompletedDescriptionRef.current = null
@@ -296,6 +319,8 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   }
 
   const openWithDraft = (draft: TransactionPrefillDraft) => {
+    setExistingDocuments([])
+    documentsFieldRef.current?.reset()
     dispatch({ type: 'OPEN_CREATE', payload: { defaultCategory, todayDate } })
     dispatch({
       type: 'APPLY_RECEIPT',
@@ -326,6 +351,8 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   }
 
   const handleCloseForm = () => {
+    documentsFieldRef.current?.reset()
+    setExistingDocuments([])
     dispatch({ type: 'CLOSE' })
     clearFormDraft()
     suggestions.clearSuggestions()
@@ -361,18 +388,22 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       stabilityOverflowRedirect,
     })
 
+    const documentChanges = documentsFieldRef.current?.getChanges()
+
     if (state.mode === 'edit' && state.editingId) {
       const targetId = state.editingId
       dispatch({ type: 'RESET', todayDate, defaultCategory })
       clearFormDraft()
       scanner.clearScan()
-      await onUpdateTransaction?.(targetId, mapped)
+      await onUpdateTransaction?.(targetId, mapped, documentChanges)
     } else {
-      await onAddTransaction(mapped)
+      await onAddTransaction(mapped, documentChanges)
       dispatch({ type: 'RESET', todayDate, defaultCategory })
       clearFormDraft()
       scanner.clearScan()
     }
+
+    documentsFieldRef.current?.reset()
   }
 
   return {
@@ -392,5 +423,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     filteredSuggestions,
     quickSuggestionEntries,
     handleSelectSuggestion,
+    documentsFieldRef,
+    existingDocuments,
   }
 }

@@ -9,6 +9,11 @@ interface DeleteTransactionModalProps {
   onCancel: () => void
   onConfirm: () => void
   formatSensitive: (val: number) => ReactNode
+  attachedDocumentCount?: number
+  alsoDeleteDocuments?: boolean
+  onAlsoDeleteDocumentsChange?: (val: boolean) => void
+  isOnline?: boolean
+  areAttachedDocumentsLoading?: boolean
 }
 
 // Confirm-deletion bottom sheet. Explains the cascade for Income Auto-Split
@@ -19,6 +24,11 @@ export function DeleteTransactionModal({
   onCancel,
   onConfirm,
   formatSensitive,
+  attachedDocumentCount = 0,
+  alsoDeleteDocuments = false,
+  onAlsoDeleteDocumentsChange,
+  isOnline = true,
+  areAttachedDocumentsLoading = false,
 }: DeleteTransactionModalProps) {
   if (!isOpen || !transaction) return null
   const isSplitSubRecord = transaction.id.includes('-split-')
@@ -48,7 +58,8 @@ export function DeleteTransactionModal({
           <button
             type="button"
             onClick={onConfirm}
-            className="px-5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-md transition cursor-pointer"
+            disabled={areAttachedDocumentsLoading}
+            className="px-5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-md transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Confirm Delete
           </button>
@@ -77,6 +88,40 @@ export function DeleteTransactionModal({
                 <span className="font-bold text-foreground whitespace-nowrap">{formatSensitive(transaction.amount)}</span>
               </div>
             </div>
+          </div>
+        )}
+        {areAttachedDocumentsLoading && (
+          <p className="rounded-lg border border-border/60 bg-muted/20 p-3 text-muted-foreground">
+            Checking for attached vault documents...
+          </p>
+        )}
+        {!areAttachedDocumentsLoading && attachedDocumentCount > 0 && (
+          <div className="space-y-3 p-3 rounded-lg border border-border/60 bg-muted/20">
+            <p className="font-medium text-foreground">
+              {attachedDocumentCount} document{attachedDocumentCount === 1 ? '' : 's'} {attachedDocumentCount === 1 ? 'is' : 'are'} attached — {attachedDocumentCount === 1 ? 'it' : 'they'} will be kept in your Document Vault
+            </p>
+            <label className={`flex items-start gap-2.5 cursor-pointer ${!isOnline ? 'opacity-50' : ''}`}>
+              <div className="pt-0.5 shrink-0">
+                <input
+                  type="checkbox"
+                  className="rounded border-border bg-background/50 accent-orange-600 focus:ring-offset-background/50 focus:ring-2 focus:ring-orange-500/20"
+                  checked={alsoDeleteDocuments}
+                  onChange={e => onAlsoDeleteDocumentsChange?.(e.target.checked)}
+                  disabled={!isOnline}
+                />
+              </div>
+              <div className="space-y-1 select-none">
+                <span className="font-medium text-foreground block">Also delete attached documents</span>
+                {!isOnline && (
+                  <span className="text-xs text-muted-foreground block">Cannot delete vault documents while offline.</span>
+                )}
+                {isOnline && alsoDeleteDocuments && (
+                  <span className="text-xs text-orange-500/90 font-medium block">
+                    This will permanently delete the attached documents from your vault.
+                  </span>
+                )}
+              </div>
+            </label>
           </div>
         )}
         <p className="text-[10px] text-orange-500/90 font-medium bg-orange-500/5 p-2 rounded-lg border border-orange-500/10">

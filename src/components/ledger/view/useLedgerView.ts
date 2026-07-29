@@ -203,6 +203,10 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   // Delete transaction state
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [txToDelete, setTxToDelete] = useState<Transaction | null>(null)
+  const [attachedDocumentIds, setAttachedDocumentIds] = useState<number[]>([])
+  const [alsoDeleteDocuments, setAlsoDeleteDocuments] = useState(false)
+  const [areAttachedDocumentsLoading, setAreAttachedDocumentsLoading] = useState(false)
+  const deleteDocumentLookupRef = useRef(0)
   const [showEditDisabledModal, setShowEditDisabledModal] = useState(false)
 
   // Synchronize AI export requests
@@ -589,8 +593,33 @@ export function useLedgerView(options: UseLedgerViewOptions) {
 
   const handleDeleteClick = (t: Transaction) => {
     if (hideSensitive) return
+    const transactionId = t.id.includes('-split-') ? t.id.split('-split-')[0] : t.id
+    const lookupId = ++deleteDocumentLookupRef.current
     setTxToDelete(t)
+    setAttachedDocumentIds([])
+    setAlsoDeleteDocuments(false)
+    setAreAttachedDocumentsLoading(true)
     setShowDeleteModal(true)
+    void import('../../../lib/api/documents')
+      .then(({ listAllDocumentsForTransaction }) => listAllDocumentsForTransaction(transactionId))
+      .then(documents => {
+        if (deleteDocumentLookupRef.current === lookupId) {
+          setAttachedDocumentIds(documents.map(document => document.id))
+        }
+      })
+      .catch(() => {
+        if (deleteDocumentLookupRef.current === lookupId) {
+          onShowAlert?.(
+            'Attached documents could not be checked. Deleting the transaction will still keep every vault document.',
+            'Document Vault',
+          )
+        }
+      })
+      .finally(() => {
+        if (deleteDocumentLookupRef.current === lookupId) {
+          setAreAttachedDocumentsLoading(false)
+        }
+      })
   }
 
   const handleConfirmDelete = async () => {
@@ -601,15 +630,35 @@ export function useLedgerView(options: UseLedgerViewOptions) {
       deleteId = txToDelete.id.split('-split-')[0]
     }
 
-    setShowDeleteModal(false)
-    setTxToDelete(null)
+    if (alsoDeleteDocuments) {
+      try {
+        const { deleteDocument } = await import('../../../lib/api/documents')
+        for (const documentId of attachedDocumentIds) {
+          await deleteDocument(documentId)
+        }
+      } catch {
+        onShowAlert?.(
+          'The transaction was not deleted because an attached vault document could not be deleted.',
+          'Delete Failed',
+        )
+        return
+      }
+    }
 
     await onDeleteTransaction(deleteId)
+    setShowDeleteModal(false)
+    setTxToDelete(null)
+    setAttachedDocumentIds([])
+    setAlsoDeleteDocuments(false)
   }
 
   const handleCancelDelete = () => {
+    deleteDocumentLookupRef.current += 1
     setShowDeleteModal(false)
     setTxToDelete(null)
+    setAttachedDocumentIds([])
+    setAlsoDeleteDocuments(false)
+    setAreAttachedDocumentsLoading(false)
   }
 
   const isTxDeleting = useCallback((txId: string) => {
@@ -942,6 +991,10 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     appliedTxTypeFilter,
     showDeleteModal,
     txToDelete,
+    attachedDocumentCount: attachedDocumentIds.length,
+    alsoDeleteDocuments,
+    setAlsoDeleteDocuments,
+    areAttachedDocumentsLoading,
     showEditDisabledModal,
     setShowEditDisabledModal,
     displayTransactions,

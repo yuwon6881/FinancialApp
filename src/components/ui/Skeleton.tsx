@@ -72,7 +72,7 @@ const ListRowSkeleton: React.FC = () => (
  * and cycle refreshes. Keeping them here prevents placeholders from drifting
  * away from the current page structures.
  */
-export type PageSkeletonVariant = 'dashboard' | 'reports' | 'ledger' | 'recurring' | 'wishlist' | 'drafts' | 'settings' | 'investments'
+export type PageSkeletonVariant = 'dashboard' | 'reports' | 'ledger' | 'recurring' | 'wishlist' | 'drafts' | 'settings' | 'investments' | 'documents'
 
 const PanelSkeleton = ({ height = 'h-40' }: { height?: string }) => (
   <div className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
@@ -202,6 +202,32 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
           <PanelSkeleton height="h-64" />
         </div>
         <PanelSkeleton height="h-72" />
+      </div>
+    )
+  }
+
+  if (variant === 'documents') {
+    return (
+      <div data-testid="documents-skeleton" className="space-y-5 soft-rise">
+        {/* Mirrors DocumentsView: plain title block + action button, then one panel
+            holding the filter row, the usage meter and the document rows. */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-3 w-72 max-w-full" />
+          </div>
+          <Skeleton className="h-10 w-full rounded-xl sm:w-40" />
+        </div>
+        <div className="app-panel space-y-4 rounded-2xl border border-border/60 bg-card/92 p-3 sm:p-5">
+          <div className="flex flex-col gap-2.5 sm:flex-row">
+            <Skeleton className="h-10 flex-1 rounded-xl" />
+            <Skeleton className="h-10 w-full rounded-xl sm:w-40" />
+          </div>
+          <Skeleton className="h-14 w-full rounded-xl" />
+          <div className="space-y-3">
+            {[1, 2, 3, 4, 5].map(i => <ListRowSkeleton key={i} />)}
+          </div>
+        </div>
       </div>
     )
   }

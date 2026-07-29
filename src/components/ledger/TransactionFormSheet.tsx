@@ -1,13 +1,20 @@
 import { forwardRef, useImperativeHandle } from 'react'
+import { useAppContext } from '../../contexts/AppContext'
 import { BottomSheet } from '../ui/BottomSheet'
 import { ReceiptScanPicker } from './transaction-form/ReceiptScanPicker'
 import { ReceiptScanStatus } from './transaction-form/ReceiptScanStatus'
 import { TransactionTypeFields } from './transaction-form/TransactionTypeFields'
 import { TransactionFormFields } from './transaction-form/TransactionFormFields'
 import { useTransactionForm } from './transaction-form/useTransactionForm'
+import { TransactionDocumentsField } from './transaction-form/TransactionDocumentsField'
 import { useReceiptSplitScan } from './transaction-form/useReceiptSplitScan'
 import type { TransactionType } from './transaction-form/transactionFormReducer'
-import type { Transaction, TransactionCategory, AutocompleteSuggestion } from '../../types'
+import type {
+  Transaction,
+  TransactionCategory,
+  AutocompleteSuggestion,
+  TransactionDocumentChanges,
+} from '../../types'
 import type { ReceiptSplitDraft, ReceiptSplitFailure } from '../../lib/useReceiptSplitPolling'
 
 export interface TransactionFormSheetProps {
@@ -23,8 +30,15 @@ export interface TransactionFormSheetProps {
   stabilityBalance: number
   stabilityTarget: number
   stabilityOverflowRedirect: string
-  onAddTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void> | void
-  onUpdateTransaction?: (id: string, transaction: Omit<Transaction, 'id'>) => Promise<void> | void
+  onAddTransaction: (
+    transaction: Omit<Transaction, 'id'>,
+    documentChanges?: TransactionDocumentChanges,
+  ) => Promise<string | void> | string | void
+  onUpdateTransaction?: (
+    id: string,
+    transaction: Omit<Transaction, 'id'>,
+    documentChanges?: TransactionDocumentChanges,
+  ) => Promise<void> | void
   onStartEditPending?: (id: string | null) => void
   onAddFormOpenChange?: (open: boolean) => void
   autoOpenAddForm?: boolean
@@ -60,6 +74,7 @@ export interface TransactionFormSheetRef {
 }
 
 export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, TransactionFormSheetProps>((props, ref) => {
+  const app = useAppContext()
   const form = useTransactionForm(props)
   const splitScan = useReceiptSplitScan({
     receiptSplitDraft: props.receiptSplitDraft,
@@ -135,6 +150,15 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
             quickSuggestionEntries={form.quickSuggestionEntries}
             suggestions={form.suggestions}
           />
+
+          <div className="sm:col-span-2">
+            <TransactionDocumentsField
+              ref={form.documentsFieldRef}
+              existingDocuments={form.existingDocuments}
+              defaultTaxYear={Number(form.state.date.slice(0, 4)) || new Date().getFullYear()}
+              disabled={app?.isOffline || !navigator.onLine}
+            />
+          </div>
         </div>
 
         <div className="flex gap-3 pt-2">

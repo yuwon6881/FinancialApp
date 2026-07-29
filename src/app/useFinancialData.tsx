@@ -1,6 +1,16 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import * as api from '../lib/api'
-import type { Transaction, RecurringPayment, RecurringReminderSettings, TransactionCategory, WishlistItem, DashboardData, AutocompleteSuggestion, PendingNotification } from '../types'
+import type {
+  Transaction,
+  RecurringPayment,
+  RecurringReminderSettings,
+  TransactionCategory,
+  WishlistItem,
+  DashboardData,
+  AutocompleteSuggestion,
+  PendingNotification,
+  TransactionDocumentChanges,
+} from '../types'
 import { CACHE_KEYS, getCachedJSON, getCachedTransactions, getCachedWishlist, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod, setCachedCycleSnapshot } from '../lib/cache'
 import { computeNextOccurrenceDate } from '../lib/recurringPayments'
 import { useOptimisticList } from '../lib/useOptimisticList'
@@ -151,6 +161,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       return []
     }
   })
+  const pendingTransactionDocumentsRef = useRef(new Map<string, TransactionDocumentChanges>())
 
   // Persist draft transactions to localStorage
   useEffect(() => {
@@ -195,6 +206,41 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     onLockError: markSessionLocked,
     refresh: async successfulOps => {
       const ops = successfulOps.map(({ op }) => op)
+      for (const op of ops) {
+        if (op.entity !== 'transaction' || (op.type !== 'add' && op.type !== 'update')) continue
+        const documentChanges = pendingTransactionDocumentsRef.current.get(op.targetId)
+        if (!documentChanges) continue
+
+        try {
+          for (const documentId of documentChanges.unlinkIds) {
+            await api.updateDocument(documentId, { transactionId: null })
+          }
+          if (documentChanges.pending.length > 0) {
+            // Imported lazily: this hook sits on the eager critical path, and the canvas
+            // compression helper is only needed once a queued upload actually drains.
+            const { compressImageFile } = await import('../lib/imageCompression')
+
+            for (const pending of documentChanges.pending) {
+              const uploadFile = await compressImageFile(pending.file)
+              const uploaded = await api.uploadDocument(
+                uploadFile,
+                pending.taxYear,
+                pending.documentType,
+              )
+              await api.updateDocument(uploaded.id, { transactionId: op.targetId })
+            }
+          }
+        } catch (error) {
+          showToast(
+            getErrorMessage(error, 'The transaction was saved, but one or more document changes failed. Any uploaded document remains safe in the Document Vault.'),
+            'Document Vault',
+            'error',
+          )
+        } finally {
+          pendingTransactionDocumentsRef.current.delete(op.targetId)
+        }
+      }
+
       const onlyInvestments = ops.length > 0 && ops.every(op => op.entity.startsWith('investment'))
       if (onlyInvestments) {
         const reconciliations: Promise<void>[] = []
@@ -512,6 +558,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     setRecurringPayments([])
     resetOutbox()
     setDraftTransactions([])
+    pendingTransactionDocumentsRef.current.clear()
     setCategoriesList([])
     setWishlist([])
     setSelectedMonth('')
@@ -886,13 +933,21 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     }
   }
 
-  const handleAddTransaction = (newTx: Omit<Transaction, 'id'>, setActiveTab: any) => {
-    handleStageDraftTransactions([newTx])
+  const handleAddTransaction = (
+    newTx: Omit<Transaction, 'id'>,
+    setActiveTab: any,
+    documentChanges?: TransactionDocumentChanges,
+  ) => {
+    const drafts = handleStageDraftTransactions([newTx])
+    if (documentChanges && (documentChanges.pending.length > 0 || documentChanges.unlinkIds.length > 0)) {
+      pendingTransactionDocumentsRef.current.set(drafts[0].id, documentChanges)
+    }
     setActiveTab('drafts')
+    return drafts[0].id
   }
 
   const handleStageDraftTransactions = (newTransactions: Omit<Transaction, 'id'>[]) => {
-    if (newTransactions.length === 0) return
+    if (newTransactions.length === 0) return []
     const drafts = newTransactions.map(transaction => ({
       ...transaction,
       id: createLocalId('draft'),
@@ -900,6 +955,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     }))
     setDraftTransactions(prev => [...prev, ...drafts])
     void triggerHaptic(15)
+    return drafts
   }
 
   const handleAddBalanceAdjustment = (newTx: Omit<Transaction, 'id'>) => {
@@ -915,6 +971,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   }
 
   const handleDeleteDraftTransaction = (id: string) => {
+    pendingTransactionDocumentsRef.current.delete(id)
     setDraftTransactions(prev => prev.filter(t => t.id !== id))
     void triggerHaptic(30)
   }
@@ -939,6 +996,11 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       let nextQueue = prev
       drafts.forEach(d => {
         const finalId = createFinalId('transaction')
+        const documentChanges = pendingTransactionDocumentsRef.current.get(d.id)
+        if (documentChanges) {
+          pendingTransactionDocumentsRef.current.delete(d.id)
+          pendingTransactionDocumentsRef.current.set(finalId, documentChanges)
+        }
         const payload = { ...d, id: finalId }
         delete payload.isPendingSync
         nextQueue = enqueue(nextQueue, 'transaction', 'add', finalId, payload)
@@ -960,10 +1022,17 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     if (deleteId === editingPendingId) setEditingPendingId(null)
   }
 
-  const handleUpdateTransaction = (id: string, updatedTx: Omit<Transaction, 'id'>) => {
+  const handleUpdateTransaction = (
+    id: string,
+    updatedTx: Omit<Transaction, 'id'>,
+    documentChanges?: TransactionDocumentChanges,
+  ) => {
     if (!guardSensitive()) return
     void triggerHaptic(15)
     snapshotForUndo('transaction', String(id), allTransactions.find(t => String(t.id) === String(id)))
+    if (documentChanges && (documentChanges.pending.length > 0 || documentChanges.unlinkIds.length > 0)) {
+      pendingTransactionDocumentsRef.current.set(id, documentChanges)
+    }
     mutateQueue(prev => enqueue(prev, 'transaction', 'update', id, updatedTx))
     if (id === editingPendingId) setEditingPendingId(null)
   }

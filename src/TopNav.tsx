@@ -139,6 +139,15 @@ const TopNav: React.FC<TopNavProps> = ({
       activeClass: 'bg-pink-500/12 text-pink-600 dark:text-pink-400 border-pink-500/25 shadow-pink-500/10',
       iconClass: 'text-pink-500',
       dotClass: 'bg-pink-500'
+    },
+    {
+      tab: 'documents',
+      label: 'Vault',
+      mobileLabel: 'Vault',
+      Icon: FileText,
+      activeClass: 'bg-amber-500/12 text-amber-600 dark:text-amber-400 border-amber-500/25 shadow-amber-500/10',
+      iconClass: 'text-amber-500',
+      dotClass: 'bg-amber-500'
     }
   ]
 
@@ -317,6 +326,14 @@ const TopNav: React.FC<TopNavProps> = ({
                   </MenubarItem>
 
                   <MenubarItem
+                    onClick={() => onTabChange('documents')}
+                    className="flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground lg:hidden"
+                  >
+                    <FileText className="size-3.5 text-amber-500" />
+                    <span>Document Vault</span>
+                  </MenubarItem>
+
+                  <MenubarItem
                     onClick={sensitivePreferenceStatus === 'resolved' ? onToggleHideSensitive : undefined}
                     disabled={sensitivePreferenceStatus !== 'resolved'}
                     className="flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground disabled:cursor-not-allowed"
@@ -408,7 +425,7 @@ const TopNav: React.FC<TopNavProps> = ({
       style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))', paddingTop: '10px', willChange: 'transform' }}
     >
       <nav aria-label="Primary" className="grid grid-cols-5 w-full max-w-md md:max-w-none px-2 md:px-8 mx-auto justify-items-center">
-        {navItems.map(({ tab, mobileLabel, Icon, activeClass, iconClass, dotClass }) => {
+        {navItems.filter(item => item.tab !== 'documents').map(({ tab, mobileLabel, Icon, activeClass, iconClass, dotClass }) => {
           const isActive = activeTab === tab
           return (
             <button

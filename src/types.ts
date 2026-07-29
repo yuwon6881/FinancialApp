@@ -1,4 +1,4 @@
-export const APP_TABS = ['dashboard', 'reports', 'recurring', 'ledger', 'wishlist', 'drafts', 'settings', 'investments'] as const
+export const APP_TABS = ['dashboard', 'reports', 'recurring', 'ledger', 'wishlist', 'drafts', 'settings', 'investments', 'documents'] as const
 export type AppTab = typeof APP_TABS[number]
 
 export type InvestmentRange = '1m' | '3m' | '6m' | '1y' | 'all'
@@ -465,4 +465,51 @@ export interface SecurityQuestion {
 export interface SecurityQuestionsRecoveryStartResponse {
   username: string
   questions: SecurityQuestion[]
+}
+
+export interface VaultDocument {
+  id: number
+  originalFileName: string
+  contentType: string
+  sizeBytes: number
+  taxYear: number
+  documentType: string
+  notes?: string | null
+  transactionId?: string | null
+  uploadedAt: string
+  retentionUntil: string
+  isPendingSync?: boolean
+  isPendingDelete?: boolean
+}
+
+export interface DocumentVaultUsage {
+  totalBytes: number
+  documentCount: number
+  // Echoed from the server's DocumentVault:MaxTotalBytesPerUser so the usage meter
+  // reports the real quota instead of assuming one.
+  quotaBytes: number
+}
+
+export const VAULT_DOCUMENT_TYPES = [
+  'Receipt',
+  'Invoice',
+  'Tax Return',
+  'Bank Statement',
+  'Donation Certificate',
+  'Medical Bill',
+  'Insurance Policy',
+  'Other',
+] as const
+
+export type VaultDocumentType = typeof VAULT_DOCUMENT_TYPES[number]
+
+export interface PendingVaultDocument {
+  file: File
+  taxYear: number
+  documentType: VaultDocumentType
+}
+
+export interface TransactionDocumentChanges {
+  pending: PendingVaultDocument[]
+  unlinkIds: number[]
 }

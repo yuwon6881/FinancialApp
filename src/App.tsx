@@ -19,6 +19,7 @@ const WishlistView = lazy(() => import('./components/WishlistView').then(m => ({
 const SettingsView = lazy(() => import('./components/SettingsView').then(m => ({ default: m.SettingsView })))
 const DraftStagingView = lazy(() => import('./components/DraftStagingView').then(m => ({ default: m.DraftStagingView })))
 const InvestmentsView = lazy(() => import('./components/InvestmentsView').then(m => ({ default: m.InvestmentsView })))
+const DocumentsView = lazy(() => import('./components/DocumentsView').then(m => ({ default: m.DocumentsView })))
 
 import { CustomAlertModal } from './components/ui/CustomAlertModal'
 import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
@@ -825,7 +826,7 @@ function App() {
                       <LedgerView 
                         transactions={financial.allTransactions}
                         autocompleteSuggestions={financial.autocompleteSuggestions}
-                        onAddTransaction={(tx) => financial.handleAddTransaction(tx, prefs.setActiveTab)}
+                        onAddTransaction={(tx, documents) => financial.handleAddTransaction(tx, prefs.setActiveTab, documents)}
                         onDeleteTransaction={financial.handleDeleteTransaction}
                         onUpdateTransaction={financial.handleUpdateTransaction}
                         categories={financial.allCategories}
@@ -939,6 +940,10 @@ function App() {
                         onInvestmentScanStarted={handleInvestmentScanStarted}
                         onInvestmentScanCleared={clearInvestmentScanJob}
                       />
+                    )}
+
+                    {prefs.activeTab === 'documents' && (
+                      <DocumentsView />
                     )}
                   </m.div>
                 </LaunchReady>
