@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cachedGet, invalidateCache } from './client'
+import { cachedGet, invalidateCache, request } from './client'
 
 describe('cachedGet', () => {
   beforeEach(() => {
@@ -77,5 +77,29 @@ describe('cachedGet', () => {
     vi.advanceTimersByTime(1001)
     await cachedGet('key', load, { staleTime: 1000 })
     expect(load).toHaveBeenCalledTimes(2)
+  })
+
+  it('clears conditional GET payloads during full cache invalidation', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: { get: (name: string) => name === 'ETag' ? 'W/"first"' : null },
+        json: async () => ({ value: 'first' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: { get: () => null },
+        json: async () => ({ value: 'second' }),
+      })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await request('/documents/usage', { method: 'GET', errorMessage: 'failed' })
+    invalidateCache()
+    await request('/documents/usage', { method: 'GET', errorMessage: 'failed' })
+
+    const secondHeaders = new Headers(fetchMock.mock.calls[1][1].headers)
+    expect(secondHeaders.has('If-None-Match')).toBe(false)
   })
 })

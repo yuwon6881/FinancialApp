@@ -188,7 +188,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             <button
               type="button"
-              onClick={onOpenNotifications}
+              onClick={() => onNavigate('recurring')}
               disabled={view.todayPlanInsights.unpaidRecurringCount === 0}
               className="interactive-card rounded-xl border border-border/50 bg-muted/25 p-4 text-left cursor-pointer disabled:cursor-default"
             >
@@ -199,7 +199,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <span className="mt-1 block text-xs text-muted-foreground">
                 {view.todayPlanInsights.unpaidRecurringCount === 0
                   ? 'No bills are awaiting payment.'
-                  : `${view.todayPlanInsights.unpaidRecurringCount} bill${view.todayPlanInsights.unpaidRecurringCount === 1 ? '' : 's'} still to review.`}
+                  : `${view.todayPlanInsights.unpaidRecurringCount} bill${view.todayPlanInsights.unpaidRecurringCount === 1 ? '' : 's'} pending.`}
               </span>
             </button>
 

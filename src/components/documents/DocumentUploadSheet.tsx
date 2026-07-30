@@ -150,14 +150,14 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
           </div>}
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="space-y-1.5"><span className={LABEL_CLASS}>Tax year</span>
-              <CustomSelect value={taxYear} onChange={value => setTaxYear(String(value))} options={taxYearOptions} ariaLabel="Tax year" /></label>
+              <CustomSelect value={taxYear} onChange={value => setTaxYear(String(value))} options={taxYearOptions} ariaLabel="Tax year" className="w-full" /></label>
             <label className="space-y-1.5"><span className={LABEL_CLASS}>Document type</span>
-              <CustomSelect value={documentType} onChange={value => setDocumentType(String(value))} options={documentTypes.map(type => ({ value: type.name, label: type.name }))} ariaLabel="Document type" /></label>
+              <CustomSelect value={documentType} onChange={value => setDocumentType(String(value))} options={documentTypes.map(type => ({ value: type.name, label: type.name }))} ariaLabel="Document type" className="w-full" /></label>
           </div>
           <label className="space-y-1.5"><span className={LABEL_CLASS}>Tax relief category (optional)</span>
             <CustomSelect value={reliefCategory} onChange={value => setReliefCategory(String(value))}
               options={[{ value: '', label: 'Uncategorised' }, ...reliefCategories.map(category => ({ value: category.id, label: `${category.name} · RM${category.limit.toLocaleString()}` }))]}
-              ariaLabel="Tax relief category" /></label>
+              ariaLabel="Tax relief category" className="w-full" /></label>
           <label className="space-y-1.5"><span className={LABEL_CLASS}>Notes (optional)</span>
             <Textarea value={notes} onChange={event => setNotes(event.target.value)} maxLength={500} className={`${FIELD_CLASS} min-h-20`} /></label>
           {documentTypes.length === 0 && <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-2.5 py-2 text-[10px] text-destructive">Add a document type in Settings before uploading.</p>}

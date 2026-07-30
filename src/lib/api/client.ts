@@ -36,9 +36,11 @@ interface CacheEntry {
 }
 
 const cacheStore = new Map<string, CacheEntry>()
+const revalidationStore = new Map<string, { etag: string; payload: unknown }>()
 
 export function invalidateCache(): void {
   cacheStore.clear()
+  revalidationStore.clear()
 }
 
 // The cached promise is shared between callers, so `load` must NOT be tied to any
@@ -212,8 +214,6 @@ interface RequestOptions extends RequestInit {
  * Per-tab and in-memory only, so it is dropped on reload and never outlives a logout (which
  * calls invalidateCache below).
  */
-const revalidationStore = new Map<string, { etag: string; payload: unknown }>()
-
 // A bound so a long session cannot accumulate a payload per distinct query string (the ledger's
 // filter combinations are effectively unbounded). Oldest insertion is evicted first; losing an
 // entry only costs one full response.
@@ -229,6 +229,22 @@ function rememberRevalidation(key: string, etag: string, payload: unknown) {
 
 export function clearRevalidationStore() {
   revalidationStore.clear()
+}
+
+export function invalidateCacheKey(key: string): void {
+  cacheStore.delete(key)
+}
+
+export function invalidateCachePrefix(prefix: string): void {
+  for (const key of cacheStore.keys()) {
+    if (key.startsWith(prefix)) cacheStore.delete(key)
+  }
+}
+
+export function invalidateRevalidationPrefix(prefix: string): void {
+  for (const key of revalidationStore.keys()) {
+    if (key.startsWith(prefix)) revalidationStore.delete(key)
+  }
 }
 
 export async function request<T>(path: string, options: RequestOptions): Promise<T> {

@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { invalidateAllDocumentCaches } from './documentsCache'
 import {
   deleteDocument,
   downloadDocument,
@@ -18,8 +19,10 @@ const okJson = (payload: unknown) => ({
 
 describe('documents API', () => {
   afterEach(() => {
+    invalidateAllDocumentCaches()
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
+    vi.useRealTimers()
   })
 
   it('uploads multiple files in one multipart request and returns per-file results', async () => {
@@ -121,5 +124,75 @@ describe('documents API', () => {
     }))
 
     await expect(listDocumentTypes()).resolves.toEqual([])
+  })
+
+  describe('caching behavior', () => {
+    beforeEach(() => {
+      invalidateAllDocumentCaches()
+      vi.useFakeTimers()
+    })
+
+    it('deduplicates identical document list requests', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(okJson({ items: [], totalCount: 0 }))
+      vi.stubGlobal('fetch', fetchMock)
+
+      const first = listDocuments(2026, undefined, 'receipt', 0, 50)
+      const second = listDocuments(2026, undefined, 'receipt', 0, 50)
+
+      await Promise.all([first, second])
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
+
+    it('reuses document types within their freshness window', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(okJson([
+        { id: 'receipt', name: 'Receipt', usageCount: 0 },
+      ]))
+      vi.stubGlobal('fetch', fetchMock)
+
+      await listDocumentTypes()
+      await listDocumentTypes()
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
+
+    it('different tax years, searches, and pages do not collide', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(okJson({ items: [], totalCount: 0 }))
+      vi.stubGlobal('fetch', fetchMock)
+
+      await listDocuments(2025, undefined, 'receipt', 0, 50)
+      await listDocuments(2026, undefined, 'receipt', 0, 50)
+      await listDocuments(2025, undefined, 'invoice', 0, 50)
+      await listDocuments(2025, undefined, 'receipt', 50, 50)
+
+      expect(fetchMock).toHaveBeenCalledTimes(4)
+    })
+
+    it('upload/update/delete invalidates the correct keys', async () => {
+      const fetchMock = vi.fn()
+        .mockResolvedValueOnce(okJson({ items: [], totalCount: 0 }))
+        .mockResolvedValueOnce(okJson({ id: 1 }))
+        .mockResolvedValueOnce(okJson({ items: [], totalCount: 0 }))
+        .mockResolvedValueOnce(okJson({ id: 1 }))
+        .mockResolvedValueOnce(okJson({ items: [], totalCount: 0 }))
+        .mockResolvedValueOnce({ ...okJson(undefined), status: 204 })
+        .mockResolvedValueOnce(okJson({ items: [], totalCount: 0 }))
+
+      vi.stubGlobal('fetch', fetchMock)
+
+      await listDocuments(2026)
+      await listDocuments(2026)
+
+      await uploadDocument(new File([''], 'test.pdf'), 2026, 'Receipt')
+      await listDocuments(2026)
+      await listDocuments(2026)
+
+      await updateDocument(1, { notes: 'test' })
+      await listDocuments(2026)
+
+      await deleteDocument(1)
+      await listDocuments(2026)
+
+      expect(fetchMock).toHaveBeenCalledTimes(7)
+    })
   })
 })

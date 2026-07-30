@@ -452,33 +452,54 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         // server-side (see WishlistService.DeleteWishlistItemAsync). Mirror that here so
         // the ledger row disappears immediately instead of lingering until the next
         // refresh -- the linked transaction keys off wishlistItemId, not the op targetId.
-        result = result.map(item => {
-          const wishlistItemId = (item as T & { wishlistItemId?: number | null }).wishlistItemId
-          return wishlistItemId != null && String(wishlistItemId) === targetStr
-            ? { ...item, isPendingDelete: true, isPendingSync: !op.isCompleted }
-            : item
-        })
+        if (op.isCompleted) {
+          result = result.filter(item => {
+            const wishlistItemId = (item as T & { wishlistItemId?: number | null }).wishlistItemId
+            return !(wishlistItemId != null && String(wishlistItemId) === targetStr)
+          })
+        } else {
+          result = result.map(item => {
+            const wishlistItemId = (item as T & { wishlistItemId?: number | null }).wishlistItemId
+            return wishlistItemId != null && String(wishlistItemId) === targetStr
+              ? { ...item, isPendingDelete: true, isPendingSync: true }
+              : item
+          })
+        }
       } else if (entity === 'transaction' && op.entity === 'recurringPayment') {
         // Deleting or undoing a recurring payment subscription marks any ledger transaction
         // created from it as pending delete in optimistic FE state.
-        result = result.map(item => {
-          const recurringPaymentId = (item as T & { recurringPaymentId?: string | null }).recurringPaymentId
-          return recurringPaymentId != null && String(recurringPaymentId) === targetStr
-            ? { ...item, isPendingDelete: true, isPendingSync: !op.isCompleted }
-            : item
-        })
+        if (op.isCompleted) {
+          result = result.filter(item => {
+            const recurringPaymentId = (item as T & { recurringPaymentId?: string | null }).recurringPaymentId
+            return !(recurringPaymentId != null && String(recurringPaymentId) === targetStr)
+          })
+        } else {
+          result = result.map(item => {
+            const recurringPaymentId = (item as T & { recurringPaymentId?: string | null }).recurringPaymentId
+            return recurringPaymentId != null && String(recurringPaymentId) === targetStr
+              ? { ...item, isPendingDelete: true, isPendingSync: true }
+              : item
+          })
+        }
       } else {
-        result = result.map(item => {
-          const itemStr = String(item.id)
-          if (itemStr === targetStr || itemStr.startsWith(`${targetStr}-split-`) || (itemStr.includes('-split-') && itemStr.split('-split-')[0] === targetStr)) {
-            return {
-              ...item,
-              isPendingDelete: true,
-              isPendingSync: !op.isCompleted
+        if (op.isCompleted) {
+          result = result.filter(item => {
+            const itemStr = String(item.id)
+            return !(itemStr === targetStr || itemStr.startsWith(`${targetStr}-split-`) || (itemStr.includes('-split-') && itemStr.split('-split-')[0] === targetStr))
+          })
+        } else {
+          result = result.map(item => {
+            const itemStr = String(item.id)
+            if (itemStr === targetStr || itemStr.startsWith(`${targetStr}-split-`) || (itemStr.includes('-split-') && itemStr.split('-split-')[0] === targetStr)) {
+              return {
+                ...item,
+                isPendingDelete: true,
+                isPendingSync: true
+              }
             }
-          }
-          return item
-        })
+            return item
+          })
+        }
       }
     } else if (op.type === 'toggle') {
       const existingIndex = result.findIndex(item => String(item.id) === targetStr)
@@ -521,13 +542,17 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
     } else if (entity === 'transaction' && op.entity === 'wishlistItem' && op.type === 'unpurchase') {
       const purchaseTransactionId = op.payload?.purchaseTransactionId
       if (purchaseTransactionId) {
-        result = result.map(item => String(item.id) === String(purchaseTransactionId)
-          ? {
-              ...item,
-              isPendingDelete: true,
-              isPendingSync: !op.isCompleted
-            }
-          : item)
+        if (op.isCompleted) {
+          result = result.filter(item => String(item.id) !== String(purchaseTransactionId))
+        } else {
+          result = result.map(item => String(item.id) === String(purchaseTransactionId)
+            ? {
+                ...item,
+                isPendingDelete: true,
+                isPendingSync: true
+              }
+            : item)
+        }
       }
     } else if (op.type === 'purchase') {
       const existingIndex = result.findIndex(item => String(item.id) === targetStr)

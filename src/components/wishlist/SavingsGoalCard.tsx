@@ -110,24 +110,29 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
       </p>
 
       <div className="mt-auto flex items-center gap-1 border-t border-border/30 pt-3">
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => onTopUp(goal)}
-          disabled={isBusy || hideSensitive || pace.isFunded}
-          title={pace.isFunded ? 'This goal already has everything it needs' : 'Move free rewards into this goal'}
-        >
-          <Plus className="size-3" /> Top up
-        </Button>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => onRelease(goal)}
-          disabled={isBusy || hideSensitive || goal.earmarkedAmount <= 0}
-          title="Release money back to your free rewards"
-        >
-          <Minus className="size-3" />
-        </Button>
+        <div className="flex items-center gap-px rounded-lg overflow-hidden shrink-0 shadow-xs ring-1 ring-border/50">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="rounded-none border-none shadow-none hover:shadow-none pr-3"
+            onClick={() => onTopUp(goal)}
+            disabled={isBusy || hideSensitive || pace.isFunded}
+            title={pace.isFunded ? 'This goal already has everything it needs' : 'Move free rewards into this goal'}
+          >
+            <Plus className="size-3" /> Top up
+          </Button>
+          <div className="w-px h-5 bg-border/40" aria-hidden />
+          <Button
+            variant="secondary"
+            size="sm"
+            className="rounded-none border-none shadow-none hover:shadow-none px-2.5"
+            onClick={() => onRelease(goal)}
+            disabled={isBusy || hideSensitive || goal.earmarkedAmount <= 0}
+            title="Release money back to your free rewards"
+          >
+            <Minus className="size-3" />
+          </Button>
+        </div>
         <Button
           variant="successGhost"
           size="sm"

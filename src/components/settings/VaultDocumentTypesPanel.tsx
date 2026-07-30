@@ -4,7 +4,7 @@ import type { VaultDocumentTypeDefinition, VaultTypeCleanupSuggestion } from '..
 import * as api from '../../lib/api/documents'
 import { CACHE_KEYS, getCachedJSON, hasCachedKey, setCachedJSON } from '../../lib/cache'
 import { getErrorMessage } from '../../lib/errors'
-import { createFinalId } from '../../lib/outbox'
+import { createFinalId, applyOpsToList, type QueuedOp } from '../../lib/outbox'
 import { useOptimisticList, useSyncStatus } from '../../lib/useOptimisticList'
 import { useAppSync, useAppUi } from '../../contexts/AppContext'
 import { CollapsibleBody } from '../ui/CollapsibleBody'
@@ -33,7 +33,7 @@ export function VaultDocumentTypesPanel() {
   const [applyId, setApplyId] = useState<string | null>(null)
   const [targets, setTargets] = useState<Record<string, string>>({})
   const replacementIdRef = useRef('')
-  const previousVaultOpIdsRef = useRef<Set<string>>(new Set())
+  const previousVaultOpsRef = useRef<QueuedOp[]>([])
   const visibleTypes = useOptimisticList<SyncVaultDocumentType>(types, operations, 'vaultDocumentType')
   const { isSyncing: isTypeSyncing, isDeleting: isTypeDeleting } = useSyncStatus(
     visibleTypes,
@@ -58,12 +58,18 @@ export function VaultDocumentTypesPanel() {
 
   useEffect(() => { void load() }, [load])
   useEffect(() => {
-    const currentIds = new Set(
-      operations.filter(operation => operation.entity === 'vaultDocumentType').map(operation => operation.id),
-    )
-    const completedOrDiscarded = [...previousVaultOpIdsRef.current].some(id => !currentIds.has(id))
-    previousVaultOpIdsRef.current = currentIds
-    if (completedOrDiscarded) void load()
+    const currentOps = operations.filter(operation => operation.entity === 'vaultDocumentType')
+    const currentIds = new Set(currentOps.map(op => op.id))
+    const completedOps = previousVaultOpsRef.current.filter(op => !currentIds.has(op.id) && op.isCompleted)
+    const discardedAny = previousVaultOpsRef.current.some(op => !currentIds.has(op.id))
+
+    previousVaultOpsRef.current = currentOps
+
+    if (completedOps.length > 0) {
+      setTypes(prev => applyOpsToList(prev, completedOps, 'vaultDocumentType'))
+    }
+
+    if (discardedAny) void load()
   }, [load, operations])
 
   const review = async () => {

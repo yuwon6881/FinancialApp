@@ -230,7 +230,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
             }}
             placeholder={isOffline ? 'Ask AI is offline' : isHydrating ? 'Loading conversation…' : 'Ask about your finances…'}
             rows={1}
-            className="min-h-11 max-h-40 flex-1 resize-none rounded-lg border border-transparent bg-transparent px-3 py-2.5 text-sm leading-6 outline-hidden placeholder:text-muted-foreground/70"
+            className="min-h-11 max-h-40 flex-1 resize-none rounded-lg border border-transparent bg-transparent px-3 py-2.5 text-sm leading-6 outline-hidden focus:border-transparent focus:ring-0 focus:outline-hidden placeholder:text-muted-foreground/70"
           />
           {/* While a turn is in flight the primary control becomes Stop, so a slow
               answer is never a dead end with a disabled button. */}

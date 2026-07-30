@@ -9,7 +9,14 @@ import type {
   TaxYearReliefSummary,
   ExpiredTaxYearSummary,
 } from '../../types'
-import { request, requestVoid, invalidateCache, apiFetch, throwApiError } from './client'
+import { request, requestVoid, cachedGet, apiFetch, throwApiError } from './client'
+import {
+  DOCUMENT_CACHE_KEYS,
+  DOCUMENT_CACHE_TTL,
+  documentListCacheKey,
+  invalidateDocumentDerivedData,
+  invalidateDocumentTypes,
+} from './documentsCache'
 import { downloadCsvBlob } from '../csvExport'
 
 export async function uploadDocument(
@@ -36,7 +43,7 @@ export async function uploadDocument(
   })
   if (!response.ok) await throwApiError(response, 'Failed to upload document')
   const data = await response.json() as { id: number }
-  invalidateCache()
+  invalidateDocumentDerivedData()
   return data
 }
 
@@ -63,7 +70,7 @@ export async function uploadDocuments(
   const response = await apiFetch('/documents/bulk', { method: 'POST', body: formData })
   if (!response.ok) await throwApiError(response, 'Failed to upload documents')
   const data = await response.json() as { results: BulkDocumentResult[] }
-  invalidateCache()
+  invalidateDocumentDerivedData()
   return data.results
 }
 
@@ -81,10 +88,11 @@ export async function listDocuments(
   params.append('skip', skip.toString())
   params.append('take', take.toString())
 
-  return request<{ items: VaultDocument[]; totalCount: number }>(`/documents?${params.toString()}`, {
+  const cacheKey = documentListCacheKey(taxYear, transactionId, search, skip, take)
+  return cachedGet(cacheKey, () => request<{ items: VaultDocument[]; totalCount: number }>(`/documents?${params.toString()}`, {
     method: 'GET',
     errorMessage: 'Failed to load documents',
-  })
+  }), { staleTime: DOCUMENT_CACHE_TTL.list })
 }
 
 export async function listAllDocumentsForTransaction(transactionId: string): Promise<VaultDocument[]> {
@@ -126,24 +134,36 @@ export async function updateDocument(
     body: JSON.stringify(body),
     errorMessage: 'Failed to update document',
   })
-  invalidateCache()
+  invalidateDocumentDerivedData()
   return data
 }
 
 export function getDocumentConstraints(): Promise<DocumentVaultConstraints> {
-  return request<DocumentVaultConstraints>('/documents/constraints', { method: 'GET', errorMessage: 'Failed to load upload limits' })
+  return cachedGet(DOCUMENT_CACHE_KEYS.constraints, () => request<DocumentVaultConstraints>('/documents/constraints', {
+    method: 'GET',
+    errorMessage: 'Failed to load upload limits',
+  }), { staleTime: DOCUMENT_CACHE_TTL.constraints })
 }
 
 export function getTaxReliefCategories(taxYear: number): Promise<TaxReliefCategoryDefinition[]> {
-  return request<TaxReliefCategoryDefinition[]>(`/documents/relief-categories?taxYear=${taxYear}`, { method: 'GET', errorMessage: 'Failed to load tax relief categories' })
+  return cachedGet(DOCUMENT_CACHE_KEYS.reliefCategories(taxYear), () => request<TaxReliefCategoryDefinition[]>(`/documents/relief-categories?taxYear=${taxYear}`, {
+    method: 'GET',
+    errorMessage: 'Failed to load tax relief categories',
+  }), { staleTime: DOCUMENT_CACHE_TTL.reference })
 }
 
 export function getTaxYearReliefSummary(taxYear: number): Promise<TaxYearReliefSummary> {
-  return request<TaxYearReliefSummary>(`/documents/summary/${taxYear}`, { method: 'GET', errorMessage: 'Failed to load tax relief summary' })
+  return cachedGet(DOCUMENT_CACHE_KEYS.summary(taxYear), () => request<TaxYearReliefSummary>(`/documents/summary/${taxYear}`, {
+    method: 'GET',
+    errorMessage: 'Failed to load tax relief summary',
+  }), { staleTime: DOCUMENT_CACHE_TTL.derived })
 }
 
 export function getExpiredTaxYears(): Promise<ExpiredTaxYearSummary[]> {
-  return request<ExpiredTaxYearSummary[]>('/documents/expired', { method: 'GET', errorMessage: 'Failed to load retention alerts' })
+  return cachedGet(DOCUMENT_CACHE_KEYS.expired, () => request<ExpiredTaxYearSummary[]>('/documents/expired', {
+    method: 'GET',
+    errorMessage: 'Failed to load retention alerts',
+  }), { staleTime: DOCUMENT_CACHE_TTL.derived })
 }
 
 export async function bulkDeleteDocuments(ids: number[]): Promise<{ id: number; deleted: boolean; message?: string | null }[]> {
@@ -153,7 +173,7 @@ export async function bulkDeleteDocuments(ids: number[]): Promise<{ id: number; 
     body: JSON.stringify({ ids }),
     errorMessage: 'Failed to delete documents',
   })
-  invalidateCache()
+  invalidateDocumentDerivedData()
   return result.results
 }
 
@@ -169,29 +189,31 @@ export async function deleteDocument(id: number): Promise<void> {
     method: 'DELETE',
     errorMessage: 'Failed to delete document',
   })
-  invalidateCache()
+  invalidateDocumentDerivedData()
 }
 
 export async function getDocumentUsage(): Promise<DocumentVaultUsage> {
-  return request<DocumentVaultUsage>('/documents/usage', {
+  return cachedGet(DOCUMENT_CACHE_KEYS.usage, () => request<DocumentVaultUsage>('/documents/usage', {
     method: 'GET',
     errorMessage: 'Failed to get document usage',
-  })
+  }), { staleTime: DOCUMENT_CACHE_TTL.derived })
 }
 
 export function getAvailableDocumentYears(): Promise<number[]> {
-  return request<number[]>('/documents/years', {
+  return cachedGet(DOCUMENT_CACHE_KEYS.years, () => request<number[]>('/documents/years', {
     method: 'GET',
     errorMessage: 'Failed to load document years',
-  })
+  }), { staleTime: DOCUMENT_CACHE_TTL.derived })
 }
 
 export async function listDocumentTypes(): Promise<VaultDocumentTypeDefinition[]> {
-  const types = await request<VaultDocumentTypeDefinition[] | null>('/document-types', {
-    method: 'GET',
-    errorMessage: 'Failed to load document types',
-  })
-  return Array.isArray(types) ? types : []
+  return cachedGet(DOCUMENT_CACHE_KEYS.types, async () => {
+    const types = await request<VaultDocumentTypeDefinition[] | null>('/document-types', {
+      method: 'GET',
+      errorMessage: 'Failed to load document types',
+    })
+    return Array.isArray(types) ? types : []
+  }, { staleTime: DOCUMENT_CACHE_TTL.types })
 }
 
 export async function addDocumentType(name: string, id?: string): Promise<VaultDocumentTypeDefinition> {
@@ -201,7 +223,8 @@ export async function addDocumentType(name: string, id?: string): Promise<VaultD
     body: JSON.stringify({ name, id }),
     errorMessage: 'Failed to add document type',
   })
-  invalidateCache()
+  invalidateDocumentTypes()
+  invalidateDocumentDerivedData()
   return result
 }
 
@@ -211,7 +234,8 @@ export async function deleteDocumentType(id: string, replacementId?: string): Pr
     method: 'DELETE',
     errorMessage: 'Failed to delete document type',
   })
-  invalidateCache()
+  invalidateDocumentTypes()
+  invalidateDocumentDerivedData()
 }
 
 export function reviewDocumentTypeCleanup(): Promise<{ suggestions: VaultTypeCleanupSuggestion[] }> {
@@ -236,7 +260,8 @@ export async function applyDocumentTypeCleanup(
     }),
     errorMessage: 'Failed to apply document type cleanup',
   })
-  invalidateCache()
+  invalidateDocumentTypes()
+  invalidateDocumentDerivedData()
 }
 
 export async function downloadDocument(id: number, fileName: string): Promise<void> {
