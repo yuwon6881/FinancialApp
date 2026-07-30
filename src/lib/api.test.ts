@@ -113,7 +113,7 @@ describe('chatWithAi state contract', () => {
     vi.stubGlobal('fetch', fetchMock)
     Object.defineProperty(window, 'fetch', { value: fetchMock, configurable: true })
 
-    const api = await import('./api')
+    const api = await import('./api/ai')
     const result = await api.chatWithAi('how much did I spend', [], state)
 
     const body = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, { body: string }])[1].body)
@@ -130,7 +130,7 @@ describe('chatWithAi state contract', () => {
     vi.stubGlobal('fetch', fetchMock)
     Object.defineProperty(window, 'fetch', { value: fetchMock, configurable: true })
 
-    const api = await import('./api')
+    const api = await import('./api/ai')
     const result = await api.chatWithAi('hello', [])
 
     const body = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, { body: string }])[1].body)
@@ -154,7 +154,7 @@ describe('chatWithAi state contract', () => {
     vi.stubGlobal('fetch', fetchMock)
     Object.defineProperty(window, 'fetch', { value: fetchMock, configurable: true })
 
-    const api = await import('./api')
+    const api = await import('./api/ai')
     const result = await api.chatWithAi('follow up', [])
 
     expect(result.state?.lastSearchText).toBe('coffee')

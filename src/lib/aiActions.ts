@@ -6,12 +6,16 @@
 // injected via `AiActionsDeps`. The payload coercion helpers are pure and
 // exported for direct testing.
 
-import type { ReactNode } from 'react'
-import type { AiUiAction } from './api'
-import * as api from './api'
+import type { Dispatch, ReactNode } from 'react'
+import type { AiUiAction } from './api/ai'
+import { fetchTransactionById } from './api/transactions'
 import { capitalizeWords } from './utils'
 import { REMINDER_LEAD_DAY_OPTIONS } from './recurringPayments'
 import type { PendingNotification, RecurringPayment, Transaction, TransactionCategory, WishlistItem } from '../types'
+import type {
+  AiActionRouterPatch,
+  UseAiActionRouterOptions,
+} from '../app/useAiActionRouter'
 
 /** Trim-and-return a string payload field, or null if absent/blank. */
 export function getPayloadString(payload: Record<string, unknown>, key: string): string | null {
@@ -62,6 +66,53 @@ export interface AiNavigationTarget {
   recurringId?: string | null
   /** Transaction to scroll to and highlight in the ledger list. */
   ledgerTxId?: string | null
+}
+
+/**
+ * Lazy App adapter. Keeping this dependency assembly in the action chunk prevents Ask AI-only
+ * routing branches from joining the eager application path.
+ */
+export function dispatchAiActionsForApp(
+  actions: AiUiAction[],
+  options: UseAiActionRouterOptions,
+  dispatch: Dispatch<AiActionRouterPatch>,
+  nextNonce: () => number,
+): Promise<void> {
+  return dispatchAiActions(actions, {
+    hideSensitive: options.hideSensitive,
+    showToast: options.showToast,
+    navigate: target => dispatch({ aiNavigation: { ...target, nonce: nextNonce() } }),
+    handleSelectPeriod: options.handleSelectPeriod,
+    handleNavigateToLedger: options.handleNavigateToLedger,
+    nextNonce,
+    transactionCategories: options.allCategories,
+    stageAiLedgerDrafts: options.handleStageDraftTransactions,
+    setAiRecurringDraft: value => dispatch({ aiRecurringDraft: value }),
+    setAiWishlistDraft: value => dispatch({ aiWishlistDraft: value }),
+    setAiLedgerEditDraft: value => dispatch({ aiLedgerEditDraft: value }),
+    setAiRecurringEditDraft: value => dispatch({ aiRecurringEditDraft: value }),
+    setAiWishlistEditDraft: value => dispatch({ aiWishlistEditDraft: value }),
+    setAiLedgerExportRequest: value => dispatch({ aiLedgerExportRequest: value }),
+    requestDeleteLedger: id => requestAiLedgerDelete(id, {
+      showToast: options.showToast,
+      setConfirmModalData: options.setConfirmModalData,
+      allTransactions: options.allTransactions,
+      handleDeleteTransaction: options.handleDeleteTransaction,
+    }),
+    requestDeletePayment: options.requestDeletePayment,
+    requestDeleteWishlistItem: options.requestDeleteWishlistItem,
+    allRecurringPayments: options.allRecurringPayments,
+    allWishlist: options.allWishlist,
+    getRewardsBalance: options.getRewardsBalance,
+    handleToggleActive: options.handleToggleActive,
+    handleUpdateReminder: options.handleUpdateReminder,
+    getPendingNotifications: () => options.optimisticDashboardData?.pendingNotifications || [],
+    setConfirmModalData: options.setConfirmModalData,
+    handleDiscardSubscription: options.handleDiscardSubscription,
+    handleConfirmSubscription: options.handleConfirmSubscription,
+    handlePurchaseWishlistItem: options.handlePurchaseWishlistItem,
+    handleUnpurchaseWishlistItem: options.handleUnpurchaseWishlistItem,
+  })
 }
 
 /** Actions that open the single shared confirm modal before anything is applied. */
@@ -140,7 +191,7 @@ export async function requestAiLedgerDelete(
   let transaction: { id: string; description: string } | undefined =
     deps.allTransactions.find(t => String(t.id) === String(id))
   if (!transaction) {
-    transaction = await api.fetchTransactionById(id).catch(() => undefined) as typeof transaction
+    transaction = await fetchTransactionById(id).catch(() => undefined) as typeof transaction
   }
   if (!transaction) {
     deps.showToast('The transaction could not be found.', 'Delete unavailable', 'warning')

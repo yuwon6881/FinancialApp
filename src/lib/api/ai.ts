@@ -1,4 +1,4 @@
-import { ApiError, jsonBody, request } from './client'
+import { ApiError, jsonBody, request, requestVoid } from './client'
 
 // The backend can chain several provider calls (classification, answer, then up to a
 // few ledger-draft enrichment calls) with a 30s budget each, so a stuck turn could
@@ -53,6 +53,21 @@ export interface AiChatResponse {
   actions: AiUiAction[]
   closeChat: boolean
   state?: AiConversationState | null
+  conversationId?: string | null
+  conversationVersion?: number
+}
+
+export interface AiConversationSnapshot {
+  conversationId: string | null
+  conversationVersion: number
+  messages: AiChatMessage[]
+  state: AiConversationState | null
+}
+
+export interface AiConversationRequest {
+  conversationId: string | null
+  conversationVersion: number
+  clientTurnId: string
 }
 
 function normalizeAiConversationState(value: unknown): AiConversationState | null {
@@ -128,6 +143,7 @@ export async function chatWithAi(
   history: AiChatMessage[],
   state?: AiConversationState | null,
   signal?: AbortSignal,
+  conversation?: AiConversationRequest,
 ): Promise<AiChatResponse> {
   // Linked controller rather than AbortSignal.any(): the Android WebView we ship
   // through Capacitor can predate it.
@@ -142,7 +158,14 @@ export async function chatWithAi(
   try {
     data = await request<Partial<AiChatResponse>>('/ai/chat', {
       method: 'POST',
-      ...jsonBody({ message, history: history.slice(-6), state: state ?? null }),
+      ...jsonBody({
+        message,
+        history: history.slice(-6),
+        state: state ?? null,
+        conversationId: conversation?.conversationId ?? null,
+        conversationVersion: conversation?.conversationVersion,
+        clientTurnId: conversation?.clientTurnId,
+      }),
       signal: controller.signal,
       errorMessage: 'AI is unavailable. Please try again.',
       errorMessageField: 'reply',
@@ -161,5 +184,35 @@ export async function chatWithAi(
     actions: data.actions || [],
     closeChat: data.closeChat === true,
     state: normalizeAiConversationState(data.state),
+    conversationId: typeof data.conversationId === 'string' ? data.conversationId : null,
+    conversationVersion: typeof data.conversationVersion === 'number' ? data.conversationVersion : 0,
   }
+}
+
+export async function fetchAiConversation(signal?: AbortSignal): Promise<AiConversationSnapshot> {
+  const data = await request<Partial<AiConversationSnapshot>>('/ai/conversation', {
+    method: 'GET',
+    signal,
+    errorMessage: 'The Ask AI conversation could not be loaded.',
+  })
+  const messages = Array.isArray(data.messages)
+    ? data.messages.filter((message): message is AiChatMessage =>
+      !!message
+      && (message.role === 'user' || message.role === 'assistant')
+      && typeof message.content === 'string')
+    : []
+  return {
+    conversationId: typeof data.conversationId === 'string' ? data.conversationId : null,
+    conversationVersion: typeof data.conversationVersion === 'number' ? data.conversationVersion : 0,
+    messages,
+    state: normalizeAiConversationState(data.state),
+  }
+}
+
+export async function deleteAiConversation(signal?: AbortSignal): Promise<void> {
+  await requestVoid('/ai/conversation', {
+    method: 'DELETE',
+    signal,
+    errorMessage: 'The current conversation could not be deleted.',
+  })
 }

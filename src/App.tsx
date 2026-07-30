@@ -21,8 +21,6 @@ const DraftStagingView = lazy(() => import('./components/DraftStagingView').then
 const InvestmentsView = lazy(() => import('./components/InvestmentsView').then(m => ({ default: m.InvestmentsView })))
 const DocumentsView = lazy(() => import('./components/DocumentsView').then(m => ({ default: m.DocumentsView })))
 
-import { CustomAlertModal } from './components/ui/CustomAlertModal'
-import { CustomConfirmModal } from './components/ui/CustomConfirmModal'
 import { PullToRefresh } from './components/ui/PullToRefresh'
 import { ToastViewport } from './components/ui/ToastViewport'
 import { CycleSkeleton, Skeleton, type PageSkeletonVariant } from './components/ui/Skeleton'
@@ -38,6 +36,8 @@ const PasswordPromptModal = lazy(() => import('./components/PasswordPromptModal'
 const LockScreen = lazy(() => import('./components/LockScreen').then(m => ({ default: m.LockScreen })))
 const AiAssistantPanel = lazy(() => import('./components/AiAssistantPanel').then(m => ({ default: m.AiAssistantPanel })))
 const CycleSummaryModal = lazy(() => import('./components/CycleSummaryModal').then(m => ({ default: m.CycleSummaryModal })))
+const CustomAlertModal = lazy(() => import('./components/ui/CustomAlertModal').then(m => ({ default: m.CustomAlertModal })))
+const CustomConfirmModal = lazy(() => import('./components/ui/CustomConfirmModal').then(m => ({ default: m.CustomConfirmModal })))
 import { AppLogo } from './components/ui/AppLogo'
 import { syncStatusBarTheme } from './lib/nativeUi'
 import { getCurrentCycleYearAndMonth, MONTH_NAMES } from './lib/cycle'
@@ -366,7 +366,7 @@ function App() {
     } else {
       prefs.setActiveTab(aiNavigation.tab)
     }
-    aiRouter.dispatch({ type: 'CONSUME_NAVIGATION' })
+    aiRouter.dispatch({ aiNavigation: null })
   }, [aiNavigation?.nonce])
 
   // Redirect from drafts if empty. `prefs` itself is deliberately not a dependency — it is a new
@@ -829,8 +829,8 @@ function App() {
                         onRequestPayEarly={financial.requestPayEarly}
                         aiDraft={aiRouter.state.aiRecurringDraft}
                         aiEditDraft={aiRouter.state.aiRecurringEditDraft}
-                        onAiDraftConsumed={() => aiRouter.dispatch({ type: 'CONSUME_RECURRING_DRAFT' })}
-                        onAiEditDraftConsumed={() => aiRouter.dispatch({ type: 'CONSUME_RECURRING_EDIT_DRAFT' })}
+                        onAiDraftConsumed={() => aiRouter.dispatch({ aiRecurringDraft: null })}
+                        onAiEditDraftConsumed={() => aiRouter.dispatch({ aiRecurringEditDraft: null })}
                       />
                     )}
 
@@ -893,8 +893,8 @@ function App() {
                         onReceiptSplitOpenChange={setIsReceiptSplitOpen}
                         aiEditDraft={aiRouter.state.aiLedgerEditDraft}
                         aiExportRequest={aiRouter.state.aiLedgerExportRequest}
-                        onAiEditDraftConsumed={() => aiRouter.dispatch({ type: 'CONSUME_LEDGER_EDIT_DRAFT' })}
-                        onAiExportRequestConsumed={() => aiRouter.dispatch({ type: 'CONSUME_EXPORT_REQUEST' })}
+                        onAiEditDraftConsumed={() => aiRouter.dispatch({ aiLedgerEditDraft: null })}
+                        onAiExportRequestConsumed={() => aiRouter.dispatch({ aiLedgerExportRequest: null })}
                       />
                     )}
 
@@ -927,8 +927,8 @@ function App() {
                         onStartEditPending={financial.setEditingPendingId}
                         aiDraft={aiRouter.state.aiWishlistDraft}
                         aiEditDraft={aiRouter.state.aiWishlistEditDraft}
-                        onAiDraftConsumed={() => aiRouter.dispatch({ type: 'CONSUME_WISHLIST_DRAFT' })}
-                        onAiEditDraftConsumed={() => aiRouter.dispatch({ type: 'CONSUME_WISHLIST_EDIT_DRAFT' })}
+                        onAiDraftConsumed={() => aiRouter.dispatch({ aiWishlistDraft: null })}
+                        onAiEditDraftConsumed={() => aiRouter.dispatch({ aiWishlistEditDraft: null })}
                       />
                     )}
 
@@ -1048,29 +1048,37 @@ function App() {
           </div>
         </footer>
 
-        <CustomAlertModal
-          isOpen={!!dialogs.customAlert}
-          title={dialogs.customAlert?.title || 'Notification'}
-          message={dialogs.customAlert?.message || ''}
-          onClose={() => dialogs.setCustomAlert(null)}
-        />
+        {dialogs.customAlert && (
+          <Suspense fallback={null}>
+            <CustomAlertModal
+              isOpen
+              title={dialogs.customAlert.title || 'Notification'}
+              message={dialogs.customAlert.message || ''}
+              onClose={() => dialogs.setCustomAlert(null)}
+            />
+          </Suspense>
+        )}
 
-        <CustomConfirmModal
-          isOpen={!!dialogs.confirmModalData}
-          title={dialogs.confirmModalData?.title || 'Confirmation'}
-          message={dialogs.confirmModalData?.message || ''}
-          confirmText={dialogs.confirmModalData?.confirmText || 'Confirm'}
-          cancelText="Cancel"
-          variant={dialogs.confirmModalData?.variant || 'danger'}
-          confirmDisabled={dialogs.confirmModalData?.confirmDisabled || false}
-          onConfirm={() => {
-            if (dialogs.confirmModalData) {
-              dialogs.confirmModalData.onConfirm()
-              dialogs.setConfirmModalData(null)
-            }
-          }}
-          onCancel={() => dialogs.setConfirmModalData(null)}
-        />
+        {dialogs.confirmModalData && (
+          <Suspense fallback={null}>
+            <CustomConfirmModal
+              isOpen
+              title={dialogs.confirmModalData.title || 'Confirmation'}
+              message={dialogs.confirmModalData.message || ''}
+              confirmText={dialogs.confirmModalData.confirmText || 'Confirm'}
+              cancelText="Cancel"
+              variant={dialogs.confirmModalData.variant || 'danger'}
+              confirmDisabled={dialogs.confirmModalData.confirmDisabled || false}
+              onConfirm={() => {
+                if (dialogs.confirmModalData) {
+                  dialogs.confirmModalData.onConfirm()
+                  dialogs.setConfirmModalData(null)
+                }
+              }}
+              onCancel={() => dialogs.setConfirmModalData(null)}
+            />
+          </Suspense>
+        )}
 
         {session.token && (
           <>

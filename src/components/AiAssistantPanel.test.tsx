@@ -1,12 +1,17 @@
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import type { AiChatResponse, AiConversationState } from '../lib/api'
+import type { AiChatResponse, AiConversationState } from '../lib/api/ai'
 
 // Mock the API module so no network happens and we can assert on call arguments.
 // Declared inside the factory: vi.mock is hoisted, so a module-scope class would
 // still be in its temporal dead zone when the factory first runs.
-vi.mock('../lib/api', () => ({
+vi.mock('../lib/api/ai', () => ({
   chatWithAi: vi.fn(),
+  fetchAiConversation: vi.fn(),
+  deleteAiConversation: vi.fn(),
+}))
+
+vi.mock('../lib/api/client', () => ({
   ApiError: class ApiError extends Error {
     status: number
     constructor(message: string, status: number) {
@@ -24,21 +29,27 @@ vi.mock('./ui/BottomSheet', () => ({
     isOpen ? <div data-testid="sheet"><header>{title}{headerActions}</header>{children}</div> : null,
 }))
 
-import * as api from '../lib/api'
+import * as aiApi from '../lib/api/ai'
+import { ApiError } from '../lib/api/client'
 import { AiAssistantPanel } from './AiAssistantPanel'
 
-const chatWithAi = api.chatWithAi as unknown as ReturnType<typeof vi.fn>
+const chatWithAi = aiApi.chatWithAi as unknown as ReturnType<typeof vi.fn>
+const fetchAiConversation = aiApi.fetchAiConversation as unknown as ReturnType<typeof vi.fn>
+const deleteAiConversation = aiApi.deleteAiConversation as unknown as ReturnType<typeof vi.fn>
 
 const reply = (over: Partial<AiChatResponse> = {}): AiChatResponse => ({
   reply: 'ok',
   actions: [],
   closeChat: false,
   state: null,
+  conversationId: 'conversation-1',
+  conversationVersion: 1,
   ...over,
 })
 
-const typeAndSend = (text: string) => {
-  const textarea = screen.getByLabelText('Ask AI')
+const typeAndSend = async (text: string) => {
+  const textarea = screen.getByLabelText('Ask AI') as HTMLTextAreaElement
+  await waitFor(() => expect(textarea.disabled).toBe(false))
   fireEvent.change(textarea, { target: { value: text } })
   fireEvent.keyDown(textarea, { key: 'Enter' })
 }
@@ -48,15 +59,45 @@ beforeAll(() => {
   Element.prototype.scrollIntoView = vi.fn()
 })
 
+beforeEach(() => {
+  fetchAiConversation.mockResolvedValue({
+    conversationId: null,
+    conversationVersion: 0,
+    messages: [],
+    state: null,
+  })
+  deleteAiConversation.mockResolvedValue(undefined)
+})
+
 afterEach(() => {
   cleanup()
   chatWithAi.mockReset()
+  fetchAiConversation.mockReset()
+  deleteAiConversation.mockReset()
 })
 
 describe('AiAssistantPanel', () => {
   it('shows exactly three prompt suggestions from the curated pool', () => {
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
     expect(screen.getAllByRole('button').filter(button => !button.getAttribute('title'))).toHaveLength(3)
+  })
+
+  it('hydrates the active server conversation on first open', async () => {
+    fetchAiConversation.mockResolvedValueOnce({
+      conversationId: 'saved-conversation',
+      conversationVersion: 4,
+      messages: [
+        { role: 'user', content: 'Saved question' },
+        { role: 'assistant', content: 'Saved answer' },
+      ],
+      state: { lastIntent: 'ledger.spending_total' },
+    })
+
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+
+    expect(await screen.findByText('Saved question')).not.toBeNull()
+    expect(screen.getByText('Saved answer')).not.toBeNull()
+    expect(fetchAiConversation).toHaveBeenCalledTimes(1)
   })
 
   it('uses hidden overflow when empty and scrollable overflow once messages exist', async () => {
@@ -66,22 +107,24 @@ describe('AiAssistantPanel', () => {
     expect(container.querySelector('.overflow-y-hidden')).not.toBeNull()
     expect(container.querySelector('.overflow-y-auto')).toBeNull()
 
-    typeAndSend('hi')
+    await typeAndSend('hi')
     await waitFor(() => expect(container.querySelector('.overflow-y-auto')).not.toBeNull())
     expect(container.querySelector('.overflow-y-hidden')).toBeNull()
   })
 
-  it('disables the send button for empty input', () => {
+  it('disables the send button for empty input', async () => {
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
     expect((screen.getByTitle('Send') as HTMLButtonElement).disabled).toBe(true)
+    await waitFor(() => expect((screen.getByLabelText('Ask AI') as HTMLTextAreaElement).disabled).toBe(false))
     fireEvent.change(screen.getByLabelText('Ask AI'), { target: { value: 'hello' } })
     expect((screen.getByTitle('Send') as HTMLButtonElement).disabled).toBe(false)
   })
 
-  it('sends on Enter but inserts a newline on Shift+Enter', () => {
+  it('sends on Enter but inserts a newline on Shift+Enter', async () => {
     chatWithAi.mockResolvedValue(reply())
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
-    const textarea = screen.getByLabelText('Ask AI')
+    const textarea = screen.getByLabelText('Ask AI') as HTMLTextAreaElement
+    await waitFor(() => expect(textarea.disabled).toBe(false))
 
     fireEvent.change(textarea, { target: { value: 'draft' } })
     fireEvent.keyDown(textarea, { key: 'Enter', shiftKey: true })
@@ -133,12 +176,12 @@ describe('AiAssistantPanel', () => {
     chatWithAi.mockReturnValue(new Promise<AiChatResponse>(r => { resolve = r }))
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
 
-    typeAndSend('hi')
+    await typeAndSend('hi')
     // In flight the primary control is Stop, not Send, and sendMessage's own isSending
     // guard drops a second Enter — so no duplicate request can be issued.
     expect(screen.queryByTitle('Send')).toBeNull()
     expect(screen.getByTitle('Stop')).not.toBeNull()
-    typeAndSend('hi again')
+    await typeAndSend('hi again')
     expect(chatWithAi).toHaveBeenCalledTimes(1)
     resolve(reply())
     await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(1))
@@ -151,11 +194,11 @@ describe('AiAssistantPanel', () => {
       .mockResolvedValueOnce(reply({ reply: 'second' }))
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
 
-    typeAndSend('how much did I spend')
+    await typeAndSend('how much did I spend')
     await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(1))
     expect(chatWithAi.mock.calls[0][2]).toBeNull()
 
-    typeAndSend('what about last cycle')
+    await typeAndSend('what about last cycle')
     await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(2))
     expect(chatWithAi.mock.calls[1][2]).toEqual(state)
   })
@@ -166,14 +209,14 @@ describe('AiAssistantPanel', () => {
     const onClose = vi.fn()
     const { rerender } = render(<AiAssistantPanel isOpen onClose={onClose} onActions={vi.fn()} />)
 
-    typeAndSend('hi')
+    await typeAndSend('hi')
     await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(1))
 
     // Close then reopen -> history is preserved, so the next send still carries the state.
     rerender(<AiAssistantPanel isOpen={false} onClose={onClose} onActions={vi.fn()} />)
     rerender(<AiAssistantPanel isOpen onClose={onClose} onActions={vi.fn()} />)
 
-    typeAndSend('follow up question')
+    await typeAndSend('follow up question')
     await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(2))
     expect(chatWithAi.mock.calls[1][2]).toEqual(state)
   })
@@ -183,16 +226,38 @@ describe('AiAssistantPanel', () => {
     chatWithAi.mockResolvedValue(reply({ state }))
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
 
-    typeAndSend('hi')
+    await typeAndSend('hi')
     await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(1))
 
     // New chat resets history, so the next send starts fresh with null state.
     const newChatButton = await screen.findByRole('button', { name: /new chat/i })
     expect(newChatButton.closest('header')).not.toBeNull()
     fireEvent.click(newChatButton)
-    typeAndSend('fresh question')
+    await waitFor(() => expect(deleteAiConversation).toHaveBeenCalledTimes(1))
+    await typeAndSend('fresh question')
     await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(2))
     expect(chatWithAi.mock.calls[1][2]).toBeNull()
+  })
+
+  it('keeps the current conversation when New chat deletion fails', async () => {
+    fetchAiConversation.mockResolvedValueOnce({
+      conversationId: 'saved-conversation',
+      conversationVersion: 2,
+      messages: [
+        { role: 'user', content: 'Keep this question' },
+        { role: 'assistant', content: 'Keep this answer' },
+      ],
+      state: null,
+    })
+    deleteAiConversation.mockRejectedValueOnce(new TypeError('offline'))
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+    expect(await screen.findByText('Keep this answer')).not.toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: /new chat/i }))
+
+    expect(await screen.findByText(/current conversation was kept/i)).not.toBeNull()
+    expect(screen.getByText('Keep this question')).not.toBeNull()
+    expect(screen.getByText('Keep this answer')).not.toBeNull()
   })
 
   it('runs a navigation action without closing the chat', async () => {
@@ -201,7 +266,7 @@ describe('AiAssistantPanel', () => {
     const onActions = vi.fn()
     render(<AiAssistantPanel isOpen onClose={onClose} onActions={onActions} />)
 
-    typeAndSend('open the dashboard')
+    await typeAndSend('open the dashboard')
     await waitFor(() => expect(onActions).toHaveBeenCalledTimes(1))
     expect(onClose).not.toHaveBeenCalled()
   })
@@ -211,7 +276,7 @@ describe('AiAssistantPanel', () => {
     const onClose = vi.fn()
     render(<AiAssistantPanel isOpen onClose={onClose} onActions={vi.fn()} />)
 
-    typeAndSend('open dashboard and close')
+    await typeAndSend('open dashboard and close')
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
   })
 
@@ -223,11 +288,11 @@ describe('AiAssistantPanel', () => {
       .mockResolvedValueOnce(reply())
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
 
-    typeAndSend('first')
+    await typeAndSend('first')
     await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(1))
-    typeAndSend('failed follow up')
+    await typeAndSend('failed follow up')
     await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(2))
-    typeAndSend('retry')
+    await typeAndSend('retry')
     await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(3))
     expect(chatWithAi.mock.calls[2][2]).toEqual(state)
   })
@@ -238,9 +303,25 @@ describe('AiAssistantPanel', () => {
     const onActions = vi.fn()
     render(<AiAssistantPanel isOpen onClose={onClose} onActions={onActions} />)
 
-    typeAndSend('add a lunch transaction')
+    await typeAndSend('add a lunch transaction')
     await waitFor(() => expect(onActions).toHaveBeenCalledTimes(1))
     expect(onClose).toHaveBeenCalled()
+  })
+
+  it('retains an action reply when the panel closes and reopens', async () => {
+    chatWithAi.mockResolvedValue(reply({
+      reply: 'Draft staged for review.',
+      actions: [{ type: 'openAddLedgerDraft', payload: { description: 'Badminton', amount: 10 } }],
+    }))
+    const props = { onClose: vi.fn(), onActions: vi.fn() }
+    const { rerender } = render(<AiAssistantPanel isOpen {...props} />)
+
+    await typeAndSend('Badminton 10')
+    await waitFor(() => expect(props.onClose).toHaveBeenCalled())
+    rerender(<AiAssistantPanel isOpen={false} {...props} />)
+    rerender(<AiAssistantPanel isOpen {...props} />)
+
+    expect(screen.getByText('Draft staged for review.')).not.toBeNull()
   })
 
   it('ignores a stale response after the user closes the chat', async () => {
@@ -249,7 +330,7 @@ describe('AiAssistantPanel', () => {
     const onActions = vi.fn()
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={onActions} />)
 
-    typeAndSend('delete coffee')
+    await typeAndSend('delete coffee')
     fireEvent.click(screen.getByTitle('Close'))
     resolve(reply({ actions: [{ type: 'requestDeleteLedger', payload: { id: 'coffee' } }] }))
 
@@ -289,7 +370,7 @@ describe('AiAssistantPanel', () => {
     const onClose = vi.fn()
     const { rerender } = render(<AiAssistantPanel isOpen onClose={onClose} onActions={vi.fn()} />)
 
-    typeAndSend('hello')
+    await typeAndSend('hello')
 
     expect(chatWithAi).toHaveBeenCalledTimes(1)
     const abortSignal = chatWithAi.mock.calls[0][3] as AbortSignal
@@ -323,16 +404,16 @@ describe('AiAssistantPanel', () => {
     const onActions = vi.fn()
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={onActions} />)
 
-    typeAndSend('do two things')
+    await typeAndSend('do two things')
     await waitFor(() => expect(onActions).toHaveBeenCalledWith(actions))
   })
 
   it('error bubble rendering correctly displays the error string and retry button', async () => {
     // A 503 carries the server's own `reply` copy, so it is safe to render verbatim.
-    chatWithAi.mockRejectedValue(new api.ApiError('Test AI Error', 503))
+    chatWithAi.mockRejectedValue(new ApiError('Test AI Error', 503))
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
 
-    typeAndSend('failing message')
+    await typeAndSend('failing message')
 
     await waitFor(() => {
       expect(screen.getByText('Test AI Error')).not.toBeNull()
@@ -348,13 +429,42 @@ describe('AiAssistantPanel', () => {
     await waitFor(() => {
       expect(screen.getByText('recovered')).not.toBeNull()
     })
+    expect(chatWithAi.mock.calls[1][4].clientTurnId).toBe(chatWithAi.mock.calls[0][4].clientTurnId)
+  })
+
+  it('reloads the active conversation on a version conflict and keeps the unsent turn retryable', async () => {
+    fetchAiConversation
+      .mockResolvedValueOnce({
+        conversationId: 'conversation-1',
+        conversationVersion: 1,
+        messages: [],
+        state: null,
+      })
+      .mockResolvedValueOnce({
+        conversationId: 'conversation-1',
+        conversationVersion: 2,
+        messages: [
+          { role: 'user', content: 'Question from another device' },
+          { role: 'assistant', content: 'Answer from another device' },
+        ],
+        state: { lastIntent: 'ledger.spending_total' },
+      })
+    chatWithAi.mockRejectedValueOnce(new ApiError('changed', 409))
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+
+    await typeAndSend('My unsent follow up')
+
+    expect(await screen.findByText('Question from another device')).not.toBeNull()
+    expect(screen.getByText('My unsent follow up')).not.toBeNull()
+    expect(screen.getByText(/changed on another device/i)).not.toBeNull()
+    expect(screen.getByText('Retry')).not.toBeNull()
   })
 
   it('never renders a raw transport error in a chat bubble', async () => {
-    chatWithAi.mockRejectedValue(new api.ApiError('401 Unauthorized', 401))
+    chatWithAi.mockRejectedValue(new ApiError('401 Unauthorized', 401))
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
 
-    typeAndSend('failing message')
+    await typeAndSend('failing message')
 
     await waitFor(() => {
       expect(screen.getByText(/Your session ended/)).not.toBeNull()
@@ -366,7 +476,7 @@ describe('AiAssistantPanel', () => {
     chatWithAi.mockRejectedValue(new TypeError('Failed to fetch'))
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
 
-    typeAndSend('failing message')
+    await typeAndSend('failing message')
 
     await waitFor(() => {
       expect(screen.getByText(/check your connection/)).not.toBeNull()
@@ -378,7 +488,7 @@ describe('AiAssistantPanel', () => {
     chatWithAi.mockImplementation(() => new Promise(() => {}))
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
 
-    typeAndSend('a slow question')
+    await typeAndSend('a slow question')
 
     const stop = await screen.findByLabelText('Stop generating')
     fireEvent.click(stop)
@@ -399,7 +509,7 @@ describe('AiAssistantPanel', () => {
 
     render(<AiAssistantPanel isOpen onClose={onClose} onActions={onActions} />)
 
-    typeAndSend('add something')
+    await typeAndSend('add something')
 
     await waitFor(() => {
       expect(onClose).toHaveBeenCalled()
