@@ -86,6 +86,7 @@ describe('ReceiptSplitSheet', () => {
 
   it('keeps prices locked until the matching settings-style lock button is used', () => {
     renderSheet()
+    fireEvent.click(screen.getAllByText('Price and charge breakdown')[0])
     const price = screen.getByLabelText('Item 1 price') as HTMLInputElement
     expect(price.disabled).toBe(true)
 
@@ -94,7 +95,17 @@ describe('ReceiptSplitSheet', () => {
     fireEvent.change(price, { target: { value: '20' } })
 
     expect(screen.getByRole('button', { name: 'Lock price for item 1' })).toBeTruthy()
-    expect(screen.getByText('27.84', { exact: false })).toBeTruthy()
+    expect(screen.getAllByText('27.84', { exact: false }).length).toBeGreaterThan(0)
+  })
+
+  it('shows the result first and keeps secondary AI details collapsed initially', () => {
+    renderSheet()
+
+    expect(screen.getByText('Your share')).toBeTruthy()
+    expect(screen.getAllByText('23.20', { exact: false }).length).toBeGreaterThan(0)
+    expect((screen.getByText('Receipt details').closest('details') as HTMLDetailsElement).open).toBe(false)
+    expect((screen.getAllByText('Price and charge breakdown')[0].closest('details') as HTMLDetailsElement).open).toBe(false)
+    expect((screen.getByText('How your total was calculated').closest('details') as HTMLDetailsElement).open).toBe(false)
   })
 
   it('uses integer quantity controls capped by the scanned receipt quantity', () => {

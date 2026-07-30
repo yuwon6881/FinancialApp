@@ -5,6 +5,7 @@ import { getStartOfNCyclesAgo, getCycleRangeDates, formatDateForApi, getCurrentC
 import * as api from '../../../lib/api'
 import type { CategoryCleanupSuggestion } from '../../../lib/api'
 import { getErrorMessage } from '../../../lib/errors'
+import { focusFirstInvalidField } from '../../ui/formValidation'
 
 export interface UseSettingsViewOptions {
   dashboardData: DashboardData | null
@@ -14,7 +15,7 @@ export interface UseSettingsViewOptions {
   onUpdateSettings: (settings: any) => void
   onAddCategory: (category: any) => void
   onDeleteCategory: (id: string) => void | Promise<void>
-  onApplyCategoryCleanupSuggestion?: (suggestion: any, targetCategoryOverride?: string) => Promise<void> | void
+  onApplyCategoryCleanupSuggestion?: (suggestion: CategoryCleanupSuggestion, targetCategoryOverride?: string) => Promise<void> | void
   onToast: (message: string, title?: string, tone?: any) => void
   activeSyncId?: string | null
   deletingId?: string | null
@@ -171,7 +172,7 @@ export function useSettingsView(options: UseSettingsViewOptions) {
     setRewardsAllocInput(newAlloc.rewards.toString())
   }
 
-  const handleSaveSettings = (e: React.FormEvent) => {
+  const handleSaveSettings = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const newErrors: Record<string, string> = {}
 
@@ -193,6 +194,7 @@ export function useSettingsView(options: UseSettingsViewOptions) {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
+      focusFirstInvalidField(e.currentTarget)
       return
     }
     setErrors({})

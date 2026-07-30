@@ -1,5 +1,5 @@
+import { Input } from '../ui/Input'
 import React from 'react'
-import { m } from 'framer-motion'
 import { Edit, Plus } from 'lucide-react'
 import type { RecurringFrequency, RecurringPayment, TransactionCategory } from '../../types'
 import { getCurrencySymbol } from '../../lib/utils'
@@ -8,6 +8,9 @@ import { DatePicker } from '../ui/DatePicker'
 import { BottomSheet } from '../ui/BottomSheet'
 import { SmartAmountInput } from '../ui/SmartAmountInput'
 import type { RecurringLedgerCategory } from './useRecurringPaymentsView'
+import { FormField } from '../ui/FormField'
+import { Button } from '../ui/Button'
+import { ModalActions } from '../ui/ModalActions'
 
 interface RecurringPaymentFormSheetProps {
   isOpen: boolean
@@ -30,7 +33,7 @@ interface RecurringPaymentFormSheetProps {
   onFrequencyChange: (value: RecurringFrequency) => void
   onStartDateChange: (value: string) => void
   onEndDateChange: (value: string) => void
-  onSubmit: (e: React.FormEvent) => void
+  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void
   onCancel: () => void
 }
 
@@ -79,29 +82,17 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
             Changes apply to unpaid and future bills. Paid bills keep the details recorded in the ledger.
           </p>
         )}
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-muted-foreground">Subscription Name</label>
-          <input
+        <FormField label="Subscription name" required error={errors.name}>
+          <Input
             ref={firstInputRef}
             type="text"
             placeholder="e.g. Netflix, Spotify"
             value={name}
             onChange={onNameChange}
-            className={`w-full px-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-              errors.name
-                ? 'border-destructive focus:ring-destructive'
-                : 'border-border focus:ring-ring'
-            }`}
           />
-          {errors.name && (
-            <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-              {errors.name}
-            </p>
-          )}
-        </div>
+        </FormField>
 
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-muted-foreground">Billing Amount ({getCurrencySymbol(currency)})</label>
+        <FormField label={`Billing amount (${getCurrencySymbol(currency)})`} required error={errors.amount}>
           <div className="relative flex items-center">
             <span className="absolute left-3.5 z-10 text-xs font-semibold text-muted-foreground pointer-events-none select-none">
               {getCurrencySymbol(currency)}
@@ -111,24 +102,14 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
               placeholder="0.00"
               value={amount}
               onChange={onAmountChange}
-              className={`w-full pr-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+              className={`w-full pr-3.5 ${
                 getCurrencySymbol(currency).length > 2 ? 'pl-12' : getCurrencySymbol(currency).length > 1 ? 'pl-10' : 'pl-8'
-              } ${
-                errors.amount
-                  ? 'border-destructive focus:ring-destructive'
-                  : 'border-border focus:ring-ring'
               }`}
             />
           </div>
-          {errors.amount && (
-            <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-              {errors.amount}
-            </p>
-          )}
-        </div>
+        </FormField>
 
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-muted-foreground">Budget Category</label>
+        <FormField label="Budget category">
           <CustomSelect
             ariaLabel="Budget category"
             value={category || (categories[0]?.name || '')}
@@ -136,10 +117,9 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
             options={categories.map(c => ({ value: c.name, label: c.name }))}
             className="w-full"
           />
-        </div>
+        </FormField>
 
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-muted-foreground">Frequency</label>
+        <FormField label="Payment frequency">
           <CustomSelect
             ariaLabel="Payment frequency"
             value={frequency}
@@ -150,28 +130,20 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
             ]}
             className="w-full"
           />
-        </div>
+        </FormField>
 
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-muted-foreground">Recurring Start Date</label>
+        <FormField label="Recurring start date" required error={errors.startDate}>
           <DatePicker
             value={startDateInput}
             onChange={onStartDateChange}
-            error={!!errors.startDate}
             className="w-full"
           />
-          {errors.startDate && (
-            <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-              {errors.startDate}
-            </p>
-          )}
           <p className="text-[10px] leading-relaxed text-muted-foreground">
             Your start date sets the recurring payment date — monthly bills recur on this day each cycle; annual bills recur on this date each year.
           </p>
-        </div>
+        </FormField>
 
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-muted-foreground">Ledger Category</label>
+        <FormField label="Ledger category">
           <CustomSelect
             ariaLabel="Ledger category"
             value={ledgerCategory}
@@ -184,35 +156,33 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
             ]}
             className="w-full"
           />
-        </div>
+        </FormField>
 
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-muted-foreground">End Billing Date (Optional)</label>
+        <FormField label="End billing date" hint="Optional">
           <DatePicker
             value={endDateInput}
             onChange={onEndDateChange}
             placeholder="No end date"
             className="w-full"
           />
-        </div>
+        </FormField>
 
-        <div className="sm:col-span-2 flex gap-2 justify-end border-t border-border/30 pt-4 mt-1">
-          <button
+        <ModalActions className="sm:col-span-2 border-t border-border/30 pt-4 mt-1">
+          <Button
+            variant="outline"
             type="button"
             onClick={onCancel}
-            className="px-4 py-2.5 rounded-xl border border-border text-xs font-semibold hover:bg-muted text-foreground transition cursor-pointer"
+            className="rounded-xl px-4 py-2.5"
           >
             Cancel
-          </button>
-          <m.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+          </Button>
+          <Button
             type="submit"
-            className="px-5 py-2.5 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition cursor-pointer"
+            className="rounded-xl px-5 py-2.5 shadow-lg shadow-primary/25 hover:shadow-primary/40"
           >
             {editingPayment ? 'Save Changes' : 'Add Subscription'}
-          </m.button>
-        </div>
+          </Button>
+        </ModalActions>
       </form>
     </BottomSheet>
   )

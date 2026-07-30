@@ -1,4 +1,3 @@
-/// <reference types="vitest/config" />
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
@@ -6,6 +5,7 @@ import tailwindcss from "@tailwindcss/vite"
 import path from "path"
 import { VitePWA } from 'vite-plugin-pwa'
 import { visualizer } from 'rollup-plugin-visualizer'
+import { configDefaults } from 'vitest/config'
 
 // Inject a Content-Security-Policy <meta> at build time. This is defense-in-depth for both
 // cookie-authenticated web clients and native clients using a secure-storage bearer token:
@@ -155,6 +155,7 @@ export default defineConfig(({ mode }) => {
     },
   },
   test: {
+    exclude: [...configDefaults.exclude, 'tests/visual/**'],
     // Custom environment loading a pre-bundled jsdom (single file): endpoint-
     // security file scanning makes jsdom's multi-thousand-file import exceed
     // vitest's 60s worker-start timeout. See scripts/bundle-test-dom.mjs.
@@ -185,6 +186,9 @@ export default defineConfig(({ mode }) => {
     // some dev machines; the default 5s test timeout produces flaky timeouts there.
     testTimeout: 20_000,
     hookTimeout: 20_000,
+    // Avoid starving integration tests when every worker imports the app shell
+    // and its optimized dependency graph at the same time.
+    maxWorkers: 4,
     // Pin the API base URL so MSW handlers can match a stable absolute origin
     // (otherwise client.ts falls back to the relative '/api').
     env: {

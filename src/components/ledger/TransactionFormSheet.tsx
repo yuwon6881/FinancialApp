@@ -16,6 +16,8 @@ import type {
   TransactionDocumentChanges,
 } from '../../types'
 import type { ReceiptSplitDraft, ReceiptSplitFailure } from '../../lib/useReceiptSplitPolling'
+import { Button } from '../ui/Button'
+import { ModalActions } from '../ui/ModalActions'
 
 export interface TransactionFormSheetProps {
   categories: TransactionCategory[]
@@ -161,21 +163,22 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
           </div>
         </div>
 
-        <div className="flex gap-3 pt-2">
-          <button
+        <ModalActions className="pt-2">
+          <Button
+            variant="outline"
             type="button"
             onClick={form.handleCloseForm}
-            className="flex-1 py-2.5 rounded-xl border border-border bg-muted/30 hover:bg-muted text-muted-foreground transition text-xs font-semibold cursor-pointer"
+            className="rounded-xl py-2.5"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
-            className="flex-1 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/10 transition text-xs font-semibold cursor-pointer"
+            className="rounded-xl py-2.5 shadow-lg shadow-primary/10"
           >
             {form.state.mode === 'edit' ? 'Save Changes' : 'Add Transaction'}
-          </button>
-        </div>
+          </Button>
+        </ModalActions>
       </form>
     </BottomSheet>
   )

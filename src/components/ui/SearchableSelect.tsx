@@ -1,20 +1,31 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useId } from 'react'
 import { ChevronDown, Search } from 'lucide-react'
 import { AnchoredPopover } from './AnchoredPopover'
+import { controlTriggerClassName, type ControlSize } from './controlStyles'
+import { useFormFieldControlProps } from './formFieldControl'
+import { Input } from './Input'
 
 interface SelectOption<T extends string | number = string | number> {
   value: T
   label: string
   badge?: string
+  disabled?: boolean
 }
 
-interface SearchableSelectProps<T extends string | number = string | number> {
+export interface SearchableSelectProps<T extends string | number = string | number> {
   value: T
   onChange: (value: T) => void
   options: SelectOption<T>[]
   className?: string
   align?: 'left' | 'right'
   placeholder?: string
+  ariaLabel?: string
+  id?: string
+  disabled?: boolean
+  invalid?: boolean
+  required?: boolean
+  controlSize?: ControlSize
+  'aria-describedby'?: string
 }
 
 export function SearchableSelect<T extends string | number>({
@@ -24,13 +35,30 @@ export function SearchableSelect<T extends string | number>({
   className = '',
   align = 'left',
   placeholder = 'Search…',
+  ariaLabel = 'Choose an option',
+  id,
+  disabled = false,
+  invalid = false,
+  required = false,
+  controlSize = 'md',
+  'aria-describedby': ariaDescribedBy,
 }: SearchableSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const [activeIndex, setActiveIndex] = useState(-1)
   const containerRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+  const listboxId = useId()
+  const accessibleProps = useFormFieldControlProps({
+    id,
+    'aria-describedby': ariaDescribedBy,
+    'aria-invalid': invalid || undefined,
+    'aria-required': required || undefined,
+  })
+  const isInvalid = accessibleProps['aria-invalid'] === true
+    || accessibleProps['aria-invalid'] === 'true'
 
   const selectedOption = options.find(opt => opt.value === value)
 
@@ -40,6 +68,40 @@ export function SearchableSelect<T extends string | number>({
       )
     : options
 
+  const open = () => {
+    if (disabled) return
+    const selectedIndex = filtered.findIndex(option => option.value === value && !option.disabled)
+    const enabledIndex = filtered.findIndex(option => !option.disabled)
+    setActiveIndex(selectedIndex >= 0 ? selectedIndex : enabledIndex)
+    setIsOpen(true)
+  }
+
+  const close = (restoreFocus = false) => {
+    setIsOpen(false)
+    setQuery('')
+    setActiveIndex(-1)
+    if (restoreFocus) triggerRef.current?.focus()
+  }
+
+  const moveActive = (delta: number) => {
+    if (filtered.length === 0) return
+    setActiveIndex(current => {
+      let next = current < 0 ? (delta > 0 ? -1 : 0) : current
+      for (let index = 0; index < filtered.length; index += 1) {
+        next = (next + delta + filtered.length) % filtered.length
+        if (!filtered[next]?.disabled) return next
+      }
+      return current
+    })
+  }
+
+  const selectActive = () => {
+    const option = filtered[activeIndex]
+    if (!option || option.disabled) return
+    onChange(option.value)
+    close(true)
+  }
+
   // Close on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -48,8 +110,7 @@ export function SearchableSelect<T extends string | number>({
         containerRef.current && !containerRef.current.contains(target) &&
         panelRef.current && !panelRef.current.contains(target)
       ) {
-        setIsOpen(false)
-        setQuery('')
+        close()
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -67,6 +128,18 @@ export function SearchableSelect<T extends string | number>({
     }
   }, [isOpen])
 
+  useEffect(() => {
+    if (disabled) close()
+  }, [disabled])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const enabledIndex = filtered.findIndex(option => !option.disabled)
+    if (activeIndex >= filtered.length || filtered[activeIndex]?.disabled) {
+      setActiveIndex(enabledIndex)
+    }
+  }, [query, isOpen])
+
   return (
     <div
       className={`relative inline-block ${isOpen ? 'z-[120]' : 'z-0'} ${className}`}
@@ -75,19 +148,36 @@ export function SearchableSelect<T extends string | number>({
         if (isOpen && event.key === 'Escape') {
           event.preventDefault()
           event.stopPropagation()
-          setIsOpen(false)
-          triggerRef.current?.focus()
+          close(true)
         }
       }}
     >
       {/* Trigger button */}
       <button
         type="button"
+        id={accessibleProps.id}
         ref={triggerRef}
-        onClick={() => setIsOpen(prev => !prev)}
-        aria-haspopup="dialog"
+        onClick={() => isOpen ? close() : open()}
+        onKeyDown={event => {
+          if ((event.key === 'ArrowDown' || event.key === 'ArrowUp') && !isOpen) {
+            event.preventDefault()
+            open()
+          }
+        }}
+        disabled={disabled}
+        aria-label={ariaLabel}
+        aria-labelledby={accessibleProps['aria-labelledby']}
+        aria-haspopup="listbox"
         aria-expanded={isOpen}
-        className="w-full h-10 flex items-center justify-between gap-1.5 sm:gap-2.5 px-2.5 sm:px-3.5 text-xs bg-background border border-border rounded-xl text-foreground font-semibold shadow-xs hover:bg-muted/30 transition duration-150 cursor-pointer text-left select-none"
+        aria-controls={listboxId}
+        aria-describedby={accessibleProps['aria-describedby']}
+        aria-invalid={accessibleProps['aria-invalid']}
+        aria-required={accessibleProps['aria-required']}
+        className={controlTriggerClassName({
+          size: controlSize,
+          invalid: isInvalid,
+          className: 'cursor-pointer disabled:cursor-not-allowed',
+        })}
       >
         <span className="truncate">{selectedOption?.label ?? value}</span>
         <ChevronDown
@@ -104,42 +194,87 @@ export function SearchableSelect<T extends string | number>({
         side="bottom"
         matchAnchorWidth
         minWidth={180}
-        role="dialog"
-        aria-label="Choose an option"
-        className="bg-card dark:bg-slate-900 border border-border rounded-xl shadow-xl z-[200] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-100 flex min-h-0 flex-col"
+        role="presentation"
+        aria-label={ariaLabel ?? 'Choose an option'}
+        className="bg-popover text-popover-foreground border border-border rounded-xl shadow-xl z-[200] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-100 flex min-h-0 flex-col"
       >
           {/* Search row */}
           <div className="p-2 border-b border-border/40">
             <div className="relative flex items-center">
               <Search className="absolute left-2.5 size-3 text-muted-foreground pointer-events-none" />
-              <input
+              <Input
                 ref={searchRef}
                 type="text"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 placeholder={placeholder}
-                className="w-full pl-7 pr-3 py-1.5 text-xs bg-muted/50 border border-border/60 rounded-lg focus:outline-none focus:ring-1 focus:ring-ring transition duration-150 font-medium"
+                role="combobox"
+                aria-label={`Search ${(ariaLabel ?? 'options').toLowerCase()}`}
+                aria-expanded={isOpen}
+                aria-controls={listboxId}
+                aria-activedescendant={activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined}
+                autoComplete="off"
+                controlSize="sm"
+                className="pl-7 pr-3 font-medium"
+                onKeyDown={event => {
+                  if (event.key === 'ArrowDown') {
+                    event.preventDefault()
+                    moveActive(1)
+                  } else if (event.key === 'ArrowUp') {
+                    event.preventDefault()
+                    moveActive(-1)
+                  } else if (event.key === 'Home') {
+                    event.preventDefault()
+                    setActiveIndex(filtered.findIndex(option => !option.disabled))
+                  } else if (event.key === 'End') {
+                    event.preventDefault()
+                    let lastEnabled = -1
+                    filtered.forEach((option, index) => {
+                      if (!option.disabled) lastEnabled = index
+                    })
+                    setActiveIndex(lastEnabled)
+                  } else if (event.key === 'Enter') {
+                    event.preventDefault()
+                    selectActive()
+                  } else if (event.key === 'Escape') {
+                    event.preventDefault()
+                    close(true)
+                  }
+                }}
               />
             </div>
           </div>
 
           {/* Options list */}
-          <div className="min-h-0 flex-1 p-1 overflow-y-auto overscroll-contain flex flex-col gap-0.5">
+          <div
+            id={listboxId}
+            role="listbox"
+            aria-label={ariaLabel ?? 'Choose an option'}
+            className="min-h-0 flex-1 p-1 overflow-y-auto overscroll-contain flex flex-col gap-0.5"
+          >
             {filtered.length > 0 ? (
-              filtered.map(opt => (
+              filtered.map((opt, index) => (
                 <button
                   key={opt.value}
+                  id={`${listboxId}-option-${index}`}
                   type="button"
-                  aria-pressed={opt.value === value}
+                  role="option"
+                  aria-selected={opt.value === value}
+                  aria-disabled={opt.disabled || undefined}
+                  disabled={opt.disabled}
+                  tabIndex={-1}
+                  onMouseEnter={() => {
+                    if (!opt.disabled) setActiveIndex(index)
+                  }}
                   onClick={() => {
+                    if (opt.disabled) return
                     onChange(opt.value)
-                    setIsOpen(false)
-                    setQuery('')
+                    close(true)
                   }}
                   className={`w-full text-left px-3.5 py-2 text-xs rounded-lg transition duration-100 cursor-pointer ${
-                    opt.value === value
+                    index === activeIndex
                       ? 'bg-primary text-primary-foreground font-bold shadow-xs'
-                      : 'hover:bg-muted/80 text-foreground font-medium'
+                      : 'hover:bg-muted/80 text-foreground font-medium disabled:cursor-not-allowed disabled:opacity-45'
                   }`}
                 >
                   <span className="flex min-w-0 items-center justify-between gap-2">

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import * as api from '../lib/api'
 import type {
+  AppTab,
   Transaction,
   RecurringPayment,
   RecurringReminderSettings,
@@ -12,71 +13,25 @@ import type {
   PendingNotification,
   TransactionDocumentChanges,
 } from '../types'
+import type { CategoryCleanupSuggestion } from '../lib/api'
 import { CACHE_KEYS, getCachedJSON, getCachedTransactions, getCachedWishlist, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod, setCachedCycleSnapshot } from '../lib/cache'
 import { computeNextOccurrenceDate } from '../lib/recurringPayments'
 import { useOptimisticList } from '../lib/useOptimisticList'
 import { computeOptimisticDashboard } from '../lib/optimisticDashboard'
 import { useOutbox } from '../lib/useOutbox'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from '../lib/modalDrafts'
-import { createFinalId, createLocalNumericId, createLocalWishlistId, projectFinancialSetting, sanitizeQueuedOps, type OutboxPayload } from '../lib/outbox'
+import { createFinalId, projectFinancialSetting, sanitizeQueuedOps, type OutboxPayload } from '../lib/outbox'
 import { triggerHaptic } from '../lib/haptics'
-import { getErrorMessage, getErrorName, hasHttpStatus, isAuthError, isLockError, JUST_LOGGED_IN_WINDOW_MS } from '../lib/errors'
+import { getErrorMessage, getErrorName, isAuthError, isLockError, JUST_LOGGED_IN_WINDOW_MS } from '../lib/errors'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
+import type { ToastAction, ToastTone } from '../components/ui/ToastViewport'
+import type { ConfirmModalData } from './useAppDialogs'
+import { fetchBootstrapPayload } from './financialData/bootstrap'
+import { createWishlistSavingsActions } from './financialData/wishlistSavingsActions'
 // Deliberately the deferred wrapper, not the picker itself: importing CategoryReplacementSelect
 // directly here pulled its CustomSelect -> AnchoredPopover chain onto the eager critical path. See
 // the comment in CategoryReplacementSelectLazy for the measurement.
 import { CategoryReplacementSelectLazy } from '../components/ui/CategoryReplacementSelectLazy'
-
-// Boot payload in the tuple order loadAll's commit path already expects, so switching to
-// /api/bootstrap did not require reshuffling everything downstream of it.
-type LoadAllTuple = readonly [
-  api.BootstrapPayload['dashboard'],
-  Transaction[],
-  RecurringPayment[],
-  TransactionCategory[],
-  WishlistItem[] | null,
-  AutocompleteSuggestion[],
-  number | null,
-  api.BootstrapPayload['insights'],
-  SavingsGoal[] | null,
-]
-
-/**
- * Attempts the single-request boot path, returning null when the caller should fall back to
- * the per-endpoint fan-out.
- *
- * Only a 404 triggers the fallback: that specifically means "this server has no /api/bootstrap"
- * (an installed PWA can outlive the API version it shipped against). Any other failure —
- * auth, lock, offline, 5xx — is a real error that the fan-out would hit too, so it propagates
- * and keeps loadAll's existing error handling in charge.
- */
-async function fetchBootstrapPayload(
-  month: string | undefined,
-  year: number | undefined,
-  signal: AbortSignal,
-): Promise<LoadAllTuple | null> {
-  try {
-    const payload = await api.fetchBootstrap(month, year, signal)
-    return [
-      payload.dashboard,
-      payload.transactions,
-      payload.recurringPayments,
-      payload.categories,
-      payload.wishlist,
-      payload.autocomplete,
-      payload.walletBalance,
-      payload.insights,
-      Array.isArray(payload.savingsGoals) ? payload.savingsGoals : null,
-    ] as const
-  } catch (bootstrapError: unknown) {
-    // A 404 is the one recoverable case: the server has no such route. Everything else
-    // (401, 423, offline, 5xx) would fail the fan-out too, so let loadAll's existing
-    // handling deal with it rather than retrying eight times over a broken connection.
-    if (!hasHttpStatus(bootstrapError, 404)) throw bootstrapError
-    console.warn('This server has no /api/bootstrap endpoint; loading each slice separately.')
-    return null
-  }
-}
 
 export interface UseFinancialDataOptions {
   token: string | null
@@ -88,9 +43,9 @@ export interface UseFinancialDataOptions {
   handleLogout: () => Promise<void>
   hideSensitive: boolean
   darkMode: boolean
-  showToast: (message: string, title?: string, tone?: any, action?: any) => void
+  showToast: (message: string, title?: string, tone?: ToastTone, action?: ToastAction) => void
   guardSensitive: () => boolean
-  setConfirmModalData: (data: any) => void
+  setConfirmModalData: React.Dispatch<React.SetStateAction<ConfirmModalData | null>>
   resolveHideSensitive: (value: boolean) => void
   markSensitivePreferenceUnavailable: () => void
   setDarkMode: (value: boolean) => void
@@ -348,6 +303,10 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     if (!token) return
     const requestSeq = ++loadAllSeqRef.current
     const isStale = () => requestSeq !== loadAllSeqRef.current
+    // A preference can finish syncing while this request is in flight. Preserve
+    // the request-start snapshot so an older bootstrap response cannot overwrite
+    // that user choice after the outbox removes its completed operation.
+    const activeOpsAtRequestStart = getActiveOps()
     loadAllAbortRef.current?.abort()
     const ac = new AbortController()
     loadAllAbortRef.current = ac
@@ -403,7 +362,12 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       // Read directly from the outbox refs at commit time. React's activeOps state
       // can still be one render behind when a user changes a preference while this
       // request is in flight.
-      let effectiveSetting = projectFinancialSetting(dbData.setting, getActiveOps())
+      const failedOpIds = new Set(getFailedOps().map(op => op.id))
+      const requestSettingOps = activeOpsAtRequestStart.filter(op => !failedOpIds.has(op.id))
+      let effectiveSetting = projectFinancialSetting(dbData.setting, [
+        ...requestSettingOps,
+        ...getActiveOps(),
+      ])
       for (const [key, localValue] of unconfirmedSettingWritesRef.current) {
         const serverValue = dbData.setting[key as keyof typeof dbData.setting]
         if (Object.is(serverValue, localValue)) {
@@ -937,7 +901,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
                 options={replacementOptions}
                 onChange={selected => {
                   selectedReplacementId = selected
-                  setConfirmModalData((prev: any) => prev ? { ...prev, confirmDisabled: selectedReplacementId.length === 0 } : prev)
+                  setConfirmModalData(previous => previous ? { ...previous, confirmDisabled: selectedReplacementId.length === 0 } : previous)
                 }}
               />
               {replacementOptions.length === 0 && (
@@ -959,7 +923,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     })
   }
 
-  const handleApplyCategoryCleanupSuggestion = async (suggestion: any, targetCategoryOverride?: string) => {
+  const handleApplyCategoryCleanupSuggestion = async (suggestion: CategoryCleanupSuggestion, targetCategoryOverride?: string) => {
     if (!guardSensitive()) return
     if (suggestion.type === 'consolidate' && !targetCategoryOverride) {
       showToast('Choose a category to move these entries to first.', 'AI Cleanup', 'warning')
@@ -1009,7 +973,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
   const handleAddTransaction = (
     newTx: Omit<Transaction, 'id'>,
-    setActiveTab: any,
+    setActiveTab: (tab: AppTab) => void,
     documentChanges?: TransactionDocumentChanges,
   ) => {
     const drafts = handleStageDraftTransactions([newTx])
@@ -1270,164 +1234,22 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     })
   }
 
-  const handleAddWishlistItem = (newWish: Partial<WishlistItem>) => {
-    const placeholderId = String(createLocalWishlistId())
-    const payload = {
-      name: newWish.name || '',
-      price: newWish.price || 0,
-      priority: newWish.priority || 'Medium',
-      isPurchased: false,
-      createdAt: new Date().toISOString(),
-      isActive: newWish.isActive ?? false
-    }
-    mutateQueue(prev => enqueue(prev, 'wishlistItem', 'add', placeholderId, payload))
-  }
-
-  const handleUpdateWishlistItem = (id: number, updatedWish: WishlistItem) => {
-    if (!guardSensitive()) return
-    const previousItem = allWishlist.find(w => String(w.id) === String(id))
-    snapshotForUndo('wishlistItem', String(id), previousItem)
-    mutateQueue(prev => enqueue(prev, 'wishlistItem', 'update', String(id), {
-      ...toOutboxPayload(updatedWish),
-      undoSnapshot: previousItem,
-    }))
-    if (String(id) === editingPendingId) setEditingPendingId(null)
-  }
-
-  const handleDeleteWishlistItem = (id: number) => {
-    void triggerHaptic(30)
-    const item = allWishlist.find(w => String(w.id) === String(id))
-    snapshotForUndo('wishlistItem', String(id), item)
-    mutateQueue(prev => enqueue(prev, 'wishlistItem', 'delete', String(id), {
-      name: item?.name,
-      undoSnapshot: item,
-    }))
-  }
-
-  const requestDeleteWishlistItem = (id: number) => {
-    if (!guardSensitive()) return
-    const item = wishlist.find(w => w.id === id)
-    setConfirmModalData({
-      title: 'Delete Wishlist Item',
-      message: `Delete "${item?.name || 'this wishlist item'}"? This removes the savings goal from your wishlist.`,
-      confirmText: 'Delete',
-      onConfirm: () => { handleDeleteWishlistItem(id) }
-    })
-  }
-
-  const handlePurchaseWishlistItem = (id: number, customDate?: string) => {
-    if (!guardSensitive()) return
-    const item = allWishlist.find(w => String(w.id) === String(id))
-    const now = new Date()
-    const date = customDate || now.toLocaleDateString('en-CA')
-    const postedAt = customDate ? `${customDate}T12:00:00.000Z` : now.toISOString()
-    mutateQueue(prev => enqueue(prev, 'wishlistItem', 'purchase', String(id), item ? {
-      name: item.name,
-      price: item.price,
-      date,
-      postedAt
-    } : undefined))
-  }
-
-  const handleUnpurchaseWishlistItem = (id: number) => {
-    if (!guardSensitive()) return
-    const item = allWishlist.find(w => String(w.id) === String(id))
-    mutateQueue(prev => enqueue(prev, 'wishlistItem', 'unpurchase', String(id), item ? {
-      purchaseTransactionId: item.purchaseTransactionId,
-      name: item.name,
-      price: item.price,
-      date: item.purchasedAt?.slice(0, 10),
-    } : undefined))
-  }
-
-  // --- Savings goals -------------------------------------------------------------------------
-  // Authoring (add/update/delete) goes through the outbox like every other record, so it works
-  // offline. Money movement (contribute / fund / complete) is online-only on purpose: the server
-  // enforces SUM(earmarked) <= rewards balance against the authoritative balance, which a queued
-  // op could not have known at the time it was recorded.
-
-  const commitSavingsGoals = (goals: SavingsGoal[]) => {
-    setSavingsGoals(goals)
-    setCachedJSON(CACHE_KEYS.savingsGoals, goals)
-  }
-
-  const handleAddSavingsGoal = (goal: Partial<SavingsGoal>) => {
-    const placeholderId = String(createLocalNumericId())
-    const payload = {
-      name: goal.name || '',
-      targetAmount: goal.targetAmount || 0,
-      earmarkedAmount: 0,
-      targetDate: goal.targetDate || '',
-      priority: goal.priority || 'Medium',
-      status: 'active',
-      isRecurring: goal.isRecurring ?? false,
-      recurrenceMonths: goal.recurrenceMonths ?? 12,
-      createdAt: new Date().toISOString(),
-    }
-    mutateQueue(prev => enqueue(prev, 'savingsGoal', 'add', placeholderId, payload))
-  }
-
-  const handleUpdateSavingsGoal = (id: number, updatedGoal: SavingsGoal) => {
-    if (!guardSensitive()) return
-    snapshotForUndo('savingsGoal', String(id), allSavingsGoals.find(g => String(g.id) === String(id)))
-    mutateQueue(prev => enqueue(prev, 'savingsGoal', 'update', String(id), toOutboxPayload(updatedGoal)))
-    if (String(id) === editingPendingId) setEditingPendingId(null)
-  }
-
-  const handleDeleteSavingsGoal = (id: number) => {
-    void triggerHaptic(30)
-    const goal = allSavingsGoals.find(g => String(g.id) === String(id))
-    snapshotForUndo('savingsGoal', String(id), goal)
-    mutateQueue(prev => enqueue(prev, 'savingsGoal', 'delete', String(id), { name: goal?.name }))
-  }
-
-  const requestDeleteSavingsGoal = async (id: number) => {
-    if (!guardSensitive()) return
-    const { describeDeleteGoal } = await import('./savingsGoalActions')
-    setConfirmModalData({
-      ...describeDeleteGoal(
-        savingsGoals.find(g => g.id === id),
-        optimisticDashboardData?.setting?.currency || 'USD',
-      ),
-      onConfirm: () => { handleDeleteSavingsGoal(id) }
-    })
-  }
-
-  // The bodies of the money-moving actions live in ./savingsGoalActions, imported on demand: they
-  // are unreachable until the lazy Rewards view is open, so they do not belong in the entry chunk.
-  const savingsGoalDeps = () => ({
+  const wishlistSavingsActions = createWishlistSavingsActions({
+    wishlist,
+    savingsGoals,
+    allWishlist,
+    allSavingsGoals,
     currency: optimisticDashboardData?.setting?.currency || 'USD',
-    commitGoals: commitSavingsGoals,
+    editingPendingId,
+    guardSensitive,
     showToast,
+    setConfirmModalData,
+    setEditingPendingId,
+    enqueue,
+    mutateQueue,
+    snapshotForUndo,
+    setSavingsGoals,
   })
-
-  /** Positive tops the goal up from the free remainder; negative releases back to it. */
-  const handleContributeToSavingsGoal = async (id: number, amount: number) => {
-    if (!guardSensitive()) return
-    const { contributeToGoal } = await import('./savingsGoalActions')
-    await contributeToGoal(savingsGoalDeps(), id, amount)
-  }
-
-  const handleFundSavingsGoalsForCycle = async () => {
-    if (!guardSensitive()) return
-    const { fundGoalsForCycle } = await import('./savingsGoalActions')
-    await fundGoalsForCycle(savingsGoalDeps())
-  }
-
-  const handleCompleteSavingsGoal = async (id: number) => {
-    if (!guardSensitive()) return
-    const { completeGoal } = await import('./savingsGoalActions')
-    await completeGoal(savingsGoalDeps(), id)
-  }
-
-  const requestCompleteSavingsGoal = async (id: number) => {
-    if (!guardSensitive()) return
-    const { describeCompleteGoal } = await import('./savingsGoalActions')
-    setConfirmModalData({
-      ...describeCompleteGoal(savingsGoals.find(g => g.id === id)),
-      onConfirm: () => { void handleCompleteSavingsGoal(id) }
-    })
-  }
 
   return {
     transactions,
@@ -1506,18 +1328,6 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     handleUpdateReminder,
     handlePayEarly,
     requestPayEarly,
-    handleAddWishlistItem,
-    handleUpdateWishlistItem,
-    handleDeleteWishlistItem,
-    requestDeleteWishlistItem,
-    handlePurchaseWishlistItem,
-    handleUnpurchaseWishlistItem,
-    handleAddSavingsGoal,
-    handleUpdateSavingsGoal,
-    handleDeleteSavingsGoal,
-    requestDeleteSavingsGoal,
-    handleContributeToSavingsGoal,
-    handleFundSavingsGoalsForCycle,
-    requestCompleteSavingsGoal,
+    ...wishlistSavingsActions,
   }
 }

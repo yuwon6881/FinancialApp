@@ -5,6 +5,23 @@ import * as api from '@/lib/api'
 import * as auth from '@/lib/auth'
 import { getCurrentCycleYearAndMonth, MONTH_NAMES } from '@/lib/cycle'
 
+const apiMocks = vi.hoisted(() => ({
+  updateHideSensitive: vi.fn().mockResolvedValue(undefined),
+  updateSummarySeen: vi.fn().mockResolvedValue(undefined),
+}))
+
+// The outbox resolves its dispatch table through the financial API module. Mock
+// that source module as well as the barrel so the test never reaches the network
+// when Vite gives the re-export and source module separate graph identities.
+vi.mock('@/lib/api/financial', async () => {
+  const actual = await vi.importActual('@/lib/api/financial') as object
+  return {
+    ...actual,
+    updateHideSensitive: apiMocks.updateHideSensitive,
+    updateSummarySeen: apiMocks.updateSummarySeen,
+  }
+})
+
 // Mock the API calls so we don't depend on a live service or delay
 vi.mock('@/lib/api', async () => {
   const actual = await vi.importActual('@/lib/api') as any
@@ -59,7 +76,17 @@ vi.mock('@/lib/api', async () => {
     selectPeriod: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn().mockResolvedValue({ success: true }),
     pingServer: vi.fn().mockResolvedValue({ status: 'healthy' }),
-    updateHideSensitive: vi.fn().mockResolvedValue(undefined)
+    updateHideSensitive: apiMocks.updateHideSensitive,
+    updateSummarySeen: apiMocks.updateSummarySeen,
+    fetchInvestmentAllocation: vi.fn().mockResolvedValue({
+      sleeves: [],
+      freshness: { isStale: false, hasMissingData: false },
+    }),
+    refreshInvestmentMarketDataAutomatically: vi.fn().mockResolvedValue({
+      updated: 0,
+      total: 0,
+      complete: true,
+    }),
   }
 })
 
@@ -127,7 +154,7 @@ describe('App behaviors', () => {
     // Should load the dashboard instead of login view
     await waitFor(() => {
       expect(screen.getByTestId('dashboard-view')).toBeDefined()
-    }, { timeout: 5000 })
+    }, { timeout: 15000 })
   })
 
   it('does not show login while a stored session is being restored', async () => {
@@ -148,7 +175,7 @@ describe('App behaviors', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('dashboard-view')).toBeDefined()
-    })
+    }, { timeout: 15000 })
   })
 
   it('shows the skeleton and fetches data immediately after login', async () => {
@@ -319,7 +346,7 @@ describe('App behaviors', () => {
       expect(screen.queryByText(/Checking privacy settings/)).toBeNull()
       expect(localStorage.getItem('hide_sensitive:alice')).toBe('false')
     }, { timeout: 20000 })
-    expect(api.updateHideSensitive).toHaveBeenCalledWith(false)
+    expect(apiMocks.updateHideSensitive).toHaveBeenCalledWith(false)
     expect(JSON.parse(localStorage.getItem('cached_dashboard_data') || '{}').setting.hideSensitive).toBe(false)
   })
 

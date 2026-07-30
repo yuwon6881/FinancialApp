@@ -1,3 +1,4 @@
+import { Input } from '../../ui/Input'
 import React from 'react'
 import { Calculator, Camera, Image, X, Loader2 } from 'lucide-react'
 import { PerimeterBeam } from '../../ui/PerimeterBeam'
@@ -58,7 +59,7 @@ export function ReceiptScanPicker({
 
   return (
     <div className="sm:col-span-2">
-      <input
+      <Input
         ref={scanFileInputRef}
         type="file"
         accept="image/*"
@@ -69,7 +70,7 @@ export function ReceiptScanPicker({
           if (file) { setShowScanPicker(false); handleScanReceipt(file) }
         }}
       />
-      <input
+      <Input
         ref={scanGalleryInputRef}
         type="file"
         accept="image/*"
@@ -81,7 +82,7 @@ export function ReceiptScanPicker({
       />
       {splitEnabled && (
         <>
-          <input
+          <Input
             ref={splitCameraInputRef}
             type="file"
             accept="image/*"
@@ -92,7 +93,7 @@ export function ReceiptScanPicker({
               if (file) { setShowSplitPicker?.(false); handleSplitScan?.(file) }
             }}
           />
-          <input
+          <Input
             ref={splitGalleryInputRef}
             type="file"
             accept="image/*"

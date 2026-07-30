@@ -6,6 +6,7 @@ import { getErrorMessage, getErrorName } from '../../lib/errors'
 import { base64UrlToHex, createFingerprintCredential, getFriendlyDeviceLabel, isPlatformAuthenticatorAvailable } from '../../lib/webauthn'
 import { useAppPrefs, useAppUi } from '../../contexts/AppContext'
 import { CollapsibleBody } from '../ui/CollapsibleBody'
+import { Button } from '../ui/Button'
 
 const DEVICE_CREDENTIAL_ID_KEY = 'fingerprint_credential_id_on_this_device'
 
@@ -112,9 +113,9 @@ export function FingerprintSection() {
                 <KeyRound className="size-4 text-emerald-500" />
                 {credential.deviceLabel || 'Registered device'}
               </span>
-              <button type="button" onClick={() => void remove(credential.id)} disabled={hideSensitive} className="p-1.5 text-muted-foreground hover:text-orange-500 disabled:opacity-40">
+              <Button variant="ghost" size="icon" type="button" onClick={() => void remove(credential.id)} disabled={hideSensitive} className="size-8 text-muted-foreground hover:text-orange-500">
                 <Trash2 className="size-3.5" />
-              </button>
+              </Button>
             </div>
           ))}
           {enrolledHere ? (
@@ -122,10 +123,10 @@ export function FingerprintSection() {
               <CheckCircle2 className="size-3.5" /> Enabled on this device
             </div>
           ) : (
-            <button type="button" onClick={() => void enroll()} disabled={busy || hideSensitive} className="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 disabled:opacity-50 text-white">
+            <Button variant="success" type="button" onClick={() => void enroll()} disabled={busy || hideSensitive} aria-busy={busy} className="w-full rounded-xl py-2.5">
               {busy ? <span className="size-3.5 rounded-full border-2 border-t-transparent animate-spin" /> : <KeyRound className="size-3.5" />}
               {enabledOnAccount ? 'Set up this device' : 'Enable on this device'}
-            </button>
+            </Button>
           )}
         </div>
       </CollapsibleBody>

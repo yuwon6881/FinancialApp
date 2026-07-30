@@ -1,16 +1,14 @@
 import React, { useMemo } from 'react'
-import { m } from 'framer-motion'
 import type { WishlistItem, Transaction, SavingsGoal } from '../types'
-import { SwipeableRow } from './ui/SwipeableRow'
 import { BottomSheet } from './ui/BottomSheet'
 import { DatePicker } from './ui/DatePicker'
 import { CycleSkeleton } from './ui/Skeleton'
 import { Card } from './ui/Card'
-import { RowSyncStatus } from './ui/RowSyncBadge'
+import { HorizontalRail } from './ui/HorizontalRail'
 import { MONTH_NAMES, getCycleYearAndMonthForDate } from '../lib/cycle'
 import { claimedWishlistChangeSignal, selectClaimedWishlistPage } from '../lib/claimedWishlist'
 import { useSyncStatus } from '../lib/useOptimisticList'
-import { getActiveWishlistItem } from '../lib/wishlist'
+import { getActiveWishlistItem, orderRewardsForRail } from '../lib/wishlist'
 import { Button } from './ui/Button'
 import { useAppContext } from '../contexts/AppContext'
 import { useWishlistForm } from './wishlist/useWishlistForm'
@@ -18,18 +16,15 @@ import { WishlistItemForm } from './wishlist/WishlistItemForm'
 import { useSavingsGoalForm } from './wishlist/useSavingsGoalForm'
 import { SavingsGoalForm } from './wishlist/SavingsGoalForm'
 import { SavingsGoalCard } from './wishlist/SavingsGoalCard'
+import { RewardCard } from './wishlist/RewardCard'
 import { RewardsPoolBar } from './wishlist/RewardsPoolBar'
 import { SavingsGoalContributeSheet, type ContributeMode } from './wishlist/SavingsGoalContributeSheet'
-import { distribute, getPaceStatus, summarizePool } from '../lib/savingsGoals'
+import { getPaceStatus, summarizePool } from '../lib/savingsGoals'
 import {
-  PiggyBank,
   Plus,
-  Trash2,
   Clock,
   CheckCircle2,
   Flag,
-  Target,
-  Edit2,
   Trophy,
   ArrowUpRight,
   ChevronLeft,
@@ -231,22 +226,6 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     [savingsGoals, rewardsBalance, rewardsTarget, today, cycleDay],
   )
 
-  // What each goal would receive if the cycle were funded right now. Shown per card as "next
-  // funding" so the tradeoff between goals is visible before the user commits to it.
-  const projectedGrants = useMemo(() => {
-    const waterfall = distribute(pool.activeGoals, pool.unassigned, today, cycleDay)
-    return new Map(waterfall.grants.map(grant => [grant.goalId, grant.amount]))
-  }, [pool.activeGoals, pool.unassigned, today, cycleDay])
-
-  // Funding is once per cycle. Hiding the action once every goal is stamped keeps the header from
-  // offering a button that would do nothing.
-  const canFundThisCycle = useMemo(() => {
-    if (pool.activeGoals.length === 0) return false
-    const { year, monthIndex } = getCycleYearAndMonthForDate(today, cycleDay)
-    const cycleKey = `${year}-${String(monthIndex).padStart(2, '0')}`
-    return pool.activeGoals.some(goal => goal.lastFundedCycleKey !== cycleKey)
-  }, [pool.activeGoals, today, cycleDay])
-
   const completedGoals = useMemo(
     () => savingsGoals.filter(goal => goal.status === 'completed'),
     [savingsGoals],
@@ -260,16 +239,19 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   // Rewards inflow net of what the commitments take first. This is what makes the projections
   // honest — and it is the moment the tradeoff becomes legible ("headphones are 4 months out
   // because the car fund takes 267 a cycle").
-  const freeInflowPerCycle = Math.max(0, rewardsTarget - pool.requiredPerCycleTotal)
-  const realisticFreeInflow = Math.max(0, pastThreeMonthsRewardsAverage - pool.requiredPerCycleTotal)
+  // Prefer what actually landed over the last three cycles when there is history to go on; fall back
+  // to the budgeted figure for a new user.
+  const freeInflowPerCycle = useMemo(() => {
+    const budgeted = Math.max(0, rewardsTarget - pool.requiredPerCycleTotal)
+    if (!hasRewardsHistory) return budgeted
+    return Math.max(0, pastThreeMonthsRewardsAverage - pool.requiredPerCycleTotal)
+  }, [rewardsTarget, pastThreeMonthsRewardsAverage, hasRewardsHistory, pool.requiredPerCycleTotal])
 
-  // Separate active (hero) item and queued items
   const activeItem = useMemo(() => getActiveWishlistItem(wishlist), [wishlist])
 
-  const queuedItems = useMemo(() => {
-    if (!activeItem) return wishlist.filter(w => !w.isPurchased)
-    return wishlist.filter(w => !w.isPurchased && w.id !== activeItem.id)
-  }, [wishlist, activeItem])
+  // One ordered strip replaces the old hero-plus-queue split, which rendered the same item in two
+  // different shapes. See orderRewardsForRail for the ordering rule.
+  const rewardItems = useMemo(() => orderRewardsForRail(wishlist, activeItem), [wishlist, activeItem])
 
   const purchasedItems = useMemo(() => {
     return wishlist.filter(w => w.isPurchased).sort((a,b) => {
@@ -371,444 +353,132 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
           formatSensitive={formatSensitive}
           hideSensitive={hideSensitive}
           isOffline={isOffline}
-          onFundCycle={canFundThisCycle ? () => { void onFundGoalsForCycle() } : null}
+          onFundCycle={() => { void onFundGoalsForCycle() }}
           onViewRewardsHistory={onNavigateToLedger
             ? () => onNavigateToLedger({ category: 'Rewards', showAllCycles: true })
             : undefined}
         />
       )}
 
-      {/* Commitments vs rewards. Both columns spend the same pool, which is why they live on one
-          page — separating them is how the double-counting crept in originally. */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-
-        {/* Commitments — dated obligations, all running in parallel. */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="flex justify-between items-center px-1">
-            <div className="min-w-0">
-              <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                <Flag className="size-4 text-violet-500" />
-                Commitments
-                <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-                  {pool.activeGoals.length}
-                </span>
-              </h3>
-              <p className="mt-0.5 text-[10px] font-medium text-muted-foreground">Things you must fund by a date</p>
-            </div>
-            <m.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={goalForm.handleOpenAddModal}
-              className="w-9 h-9 flex items-center justify-center rounded-lg text-primary-foreground bg-primary hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/10 transition cursor-pointer shrink-0"
-              title="Add commitment"
-            >
-              <Plus className="size-3.5" />
-            </m.button>
-          </div>
-
-          <div className="list-container-enter space-y-3">
-            {pool.activeGoals.length > 0 ? (
-              pool.activeGoals.map((goal, idx) => {
-                const pace = pool.paces.get(goal.id)
-                if (!pace) return null
-                const projectedGrant = projectedGrants.get(goal.id) ?? 0
-                return (
-                  <div
-                    key={goal.id}
-                    className="list-card-enter"
-                    style={idx ? { animationDelay: `${Math.min(idx * 50, 400)}ms` } : undefined}
-                  >
-                    <SavingsGoalCard
-                      goal={goal}
-                      pace={pace}
-                      status={getPaceStatus(pace, projectedGrant)}
-                      projectedGrant={projectedGrant}
-                      currency={currency}
-                      formatSensitive={formatSensitive}
-                      hideSensitive={hideSensitive}
-                      isSyncing={isGoalSyncing(goal.id)}
-                      isDeleting={isGoalDeleting(goal.id)}
-                      onEdit={goalForm.handleOpenEditModal}
-                      onDelete={onDeleteGoal}
-                      onComplete={onCompleteGoal}
-                      onTopUp={g => setContributeTarget({ goal: g, mode: 'topUp' })}
-                      onRelease={g => setContributeTarget({ goal: g, mode: 'release' })}
-                    />
-                  </div>
-                )
-              })
-            ) : (
-              <Card className="p-6 border-dashed text-center">
-                <Flag className="size-8 text-muted-foreground/60 mb-2 mx-auto" />
-                <h4 className="font-bold text-foreground text-sm">No commitments yet</h4>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Add something you need money ready for by a date — a car service in three months, a
-                  house deposit in six years. We work out what to set aside each cycle.
-                </p>
-                <m.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={goalForm.handleOpenAddModal}
-                  className="mt-4 inline-flex items-center gap-1.5 px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full text-xs font-bold shadow-md shadow-primary/10 transition cursor-pointer"
-                >
-                  <Plus className="size-3.5" /> Add commitment
-                </m.button>
-              </Card>
+      {/* Two rows over one pool. Each grows sideways rather than pushing the page down, so however
+          many items exist the whole picture stays on one screen. */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-3 px-1">
+          <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+            <Flag className="size-4 text-violet-500" />
+            Commitments
+            {pool.activeGoals.length > 0 && (
+              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                {pool.activeGoals.length}
+              </span>
             )}
-          </div>
-
-          {completedGoals.length > 0 && (
-            <Card className="p-4">
-              <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5 mb-3">
-                <CheckCircle2 className="size-3.5 text-emerald-500" />
-                Completed
-                <span className="ml-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
-                  {completedGoals.length}
-                </span>
-              </h4>
-              <div className="space-y-1.5">
-                {completedGoals.slice(0, 5).map(goal => (
-                  <div key={goal.id} className="flex items-center justify-between gap-3 text-[11px]">
-                    <span className="font-bold text-foreground truncate">{goal.name}</span>
-                    <span className="font-semibold text-muted-foreground shrink-0">
-                      {formatSensitive(goal.targetAmount)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
-        </div>
-
-        {/* Rewards — serial, spontaneous, and funded only from what commitments leave behind. */}
-        <div className="lg:col-span-7 space-y-4">
-          <div className="flex justify-between items-center px-1">
-            <div className="min-w-0">
-              <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                <Target className="size-4 text-blue-500" />
-                Your focus
-                {affordableCount > 0 && (
-                  <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
-                    <Trophy className="size-2.5" /> {affordableCount} claimable
-                  </span>
-                )}
-              </h3>
-              <p className="mt-0.5 text-[10px] font-medium text-muted-foreground">
-                Funded from your {formatSensitive(claimableBalance)} free rewards
-              </p>
-            </div>
-            <m.button 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleOpenAddModal}
-              className="w-9 h-9 flex items-center justify-center rounded-lg text-primary-foreground bg-primary hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/10 transition cursor-pointer shrink-0"
-              title="Add Goal"
-            >
-              <Plus className="size-3.5" />
-            </m.button>
-          </div>
-
-          {activeItem ? (
-            (() => {
-              const pct = Math.max(0, Math.min(100, (claimableBalance / activeItem.price) * 100))
-              const canAfford = claimableBalance >= activeItem.price
-
-              return (
-                <div 
-                  className={`p-6 rounded-2xl bg-card border transition-all duration-300 flex flex-col justify-between ${
-                    canAfford 
-                      ? 'border-blue-500/50 shadow-md shadow-blue-500/5 ring-1 ring-blue-500/10' 
-                      : 'border-border/60 shadow-xs'
-                  }`}
-                >
-                  <div>
-                    {/* Header — name + status badge, mirrors subscription card top */}
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h2 className="text-base font-bold text-foreground flex items-center gap-1.5 flex-wrap">
-                          {activeItem.name}
-                          <RowSyncStatus isDeleting={isItemDeleting(activeItem.id)} isSyncing={isItemSyncing(activeItem.id)} isPending={activeItem.isPendingSync} entityLabel="item" />
-                        </h2>
-                        <span className={`inline-block mt-1 text-[9px] px-1.5 py-0.5 rounded border font-semibold ${
-                          activeItem.priority === 'High' 
-                            ? 'bg-red-500/10 text-red-500 border-red-500/20' 
-                            : activeItem.priority === 'Medium'
-                            ? 'bg-orange-500/10 text-orange-500 border-orange-500/20'
-                            : 'bg-slate-500/10 text-slate-500 border-slate-500/20'
-                        }`}>
-                          {activeItem.priority} Priority
-                        </span>
-                      </div>
-                      {canAfford ? (
-                        <span className="text-[10px] font-bold text-blue-500 flex items-center gap-1 shrink-0">
-                          <PiggyBank className="size-3.5" /> Ready to Claim
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-semibold text-muted-foreground flex items-center gap-1 shrink-0">
-                          <Clock className="size-3.5" /> Saving In Progress
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Price — large figure, mirrors subscription card amount */}
-                    <div className="mt-4 flex items-baseline gap-1">
-                      <span className="text-2xl font-extrabold text-foreground">{formatSensitive(activeItem.price)}</span>
-                      <span className="text-xs text-muted-foreground">goal</span>
-                    </div>
-
-                    {/* Progress details */}
-                    <div className="mt-6 space-y-2 border-t border-border/30 pt-4 text-xs">
-                      <div className="flex justify-between text-xs font-bold text-muted-foreground">
-                        <span>Funded</span>
-                        <span className={canAfford ? 'text-blue-500' : 'text-foreground'}>
-                          {pct.toFixed(0)}%
-                        </span>
-                      </div>
-                      <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
-                        <div 
-                          className="h-full bg-blue-500 transition-all duration-500 rounded-full"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-[10px] text-muted-foreground font-semibold">
-                        <span>{formatSensitive(claimableBalance)} free</span>
-                        <span>{formatSensitive(activeItem.price)} target</span>
-                      </div>
-                    </div>
-
-                    {/* Predictor ribbon. Both rates are net of commitments: a reward is funded from
-                        what the goals leave behind, so projecting off the whole Rewards budget
-                        would promise a date the goals make impossible. */}
-                    {!canAfford && (
-                      <div className="mt-4 grid grid-cols-2 gap-3 p-3 bg-muted/40 rounded-xl border border-border/30">
-                        <div className="space-y-1">
-                          <span className="text-[10px] uppercase tracking-wider font-extrabold text-blue-500">Optimistic Projection</span>
-                          <span className="text-[11px] font-bold text-foreground block">
-                            {freeInflowPerCycle > 0
-                              ? getTimelineString(activeItem.price, freeInflowPerCycle)
-                              : 'Not at this rate'}
-                          </span>
-                          <span className="text-[9px] text-muted-foreground block font-medium">
-                            {pool.requiredPerCycleTotal > 0 ? (
-                              <>
-                                Budget minus commitments (
-                                {formatSensitive(freeInflowPerCycle)}
-                                /mo)
-                              </>
-                            ) : (
-                              <>
-                                Based on target budget (
-                                {formatSensitive(rewardsTarget)}
-                                /mo)
-                              </>
-                            )}
-                          </span>
-                        </div>
-                        <div className="space-y-1 border-l border-border/30 pl-3">
-                          <span className="text-[10px] uppercase tracking-wider font-extrabold text-violet-500">Realistic Projection</span>
-                          <span className="text-[11px] font-bold text-foreground block">
-                            {hasRewardsHistory
-                              ? (realisticFreeInflow > 0
-                                  ? getTimelineString(activeItem.price, realisticFreeInflow)
-                                  : 'Not at this rate')
-                              : 'N/A'
-                            }
-                          </span>
-                          <span className="text-[9px] text-muted-foreground block font-medium">
-                            {hasRewardsHistory ? (
-                              <>
-                                Past 3-mo savings minus commitments (
-                                {formatSensitive(realisticFreeInflow)}
-                                /mo)
-                              </>
-                            ) : (
-                              'No past savings history'
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Actions — matches subscription card footer style */}
-                  <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between border-t border-border/30 pt-4 gap-3 sm:gap-2">
-                    <m.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.96 }}
-                      onClick={() => handleOpenClaimModal(activeItem)}
-                      disabled={!canAfford}
-                      className={`flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-xl transition duration-200 cursor-pointer w-full sm:w-auto ${
-                        canAfford
-                          ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/10'
-                          : 'bg-muted text-muted-foreground cursor-not-allowed'
-                      }`}
-                    >
-                      <PiggyBank className="size-3.5" />
-                      {canAfford ? 'Claim Reward' : <>Need {formatSensitive(activeItem.price - claimableBalance)} More</>}
-                    </m.button>
-
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                      <Button
-                        variant="ghost"
-                        onClick={() => handleOpenEditModal(activeItem)}
-                        disabled={hideSensitive}
-                        title={hideSensitive ? 'Unhide balances to edit' : 'Edit goal'}
-                        className="flex-1 sm:flex-none justify-center py-2.5"
-                      >
-                        <Edit2 className="size-3.5" /> Edit
-                      </Button>
-                      <Button
-                        variant="danger"
-                        onClick={() => onDeleteItem(activeItem.id)}
-                        disabled={hideSensitive}
-                        title={hideSensitive ? 'Unhide balances to delete' : 'Delete goal'}
-                        className="flex-1 sm:flex-none justify-center py-2.5"
-                      >
-                        <Trash2 className="size-3.5" /> Delete
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )
-            })()
-          ) : (
-            <Card className="p-8 border-dashed text-center flex flex-col items-center justify-center min-h-[300px]">
-              <Flag className="size-10 text-muted-foreground/60 mb-2" />
-              <h4 className="font-bold text-foreground text-sm">No Active Focus Item</h4>
-              <p className="text-xs text-muted-foreground max-w-xs mt-1">Set a goal from your wishlist queue below or create a new target to track savings progress.</p>
-              <m.button 
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleOpenAddModal}
-                className="mt-4 flex items-center gap-1.5 px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full text-xs font-bold shadow-md shadow-primary/10 transition cursor-pointer"
-              >
-                <Plus className="size-3.5" /> Add Goal
-              </m.button>
-            </Card>
-          )}
-        </div>
-
-        {/* Queued & Wishlist Items List */}
-        <div className="lg:col-span-5 space-y-4">
-          <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5 px-1">
-            <Clock className="size-4 text-blue-500" />
-            Up next <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{queuedItems.length}</span>
           </h3>
-
-          {/* Entrance moved to CSS (.list-container-enter / .list-card-enter). Nothing in
-              this list defined an `exit`, so the AnimatePresence was maintaining a
-              presence context for exit animations that never ran. */}
-          <div className="list-container-enter space-y-3 max-h-[460px] overflow-y-auto pr-1">
-            {queuedItems.length > 0 ? (
-              queuedItems.map((item, idx) => {
-                const pct = Math.max(0, Math.min(100, (claimableBalance / item.price) * 100))
-                const canAfford = claimableBalance >= item.price
-                const isBusy = isItemDeleting(item.id) || isItemSyncing(item.id) || item.isPendingSync
-
-                return (
-                  <div
-                    className="list-card-enter"
-                    style={idx ? { animationDelay: `${Math.min(idx * 50, 400)}ms` } : undefined}
-                    key={item.id}
-                  >
-                  <SwipeableRow
-                    hint={idx === 0}
-                    disabled={isBusy}
-                    className={`rounded-xl border shadow-xs transition duration-200 group ${
-                      canAfford ? 'border-blue-500/30' : 'border-border/60 hover:border-blue-500/20'
-                    }`}
-                    contentClassName="p-4"
-                    actionsWidth={174}
-                    actions={
-                      <>
-                        <button
-                          onClick={() => handleToggleActive(item)}
-                          disabled={isBusy}
-                          className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-500 text-white dark:text-background text-[10px] font-bold active:bg-blue-400 transition disabled:opacity-40 disabled:pointer-events-none"
-                        >
-                          <Target className="size-3.5" />
-                          Focus
-                        </button>
-                        <button
-                          onClick={() => handleOpenEditModal(item)}
-                          disabled={hideSensitive || isBusy}
-                          className="flex-1 flex flex-col items-center justify-center gap-1 bg-primary text-primary-foreground text-[10px] font-bold active:bg-primary/90 transition disabled:opacity-40 disabled:pointer-events-none"
-                        >
-                          <Edit2 className="size-3.5" />
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => onDeleteItem(item.id)}
-                          disabled={isBusy || hideSensitive}
-                          className="flex-1 flex flex-col items-center justify-center gap-1 bg-orange-600 text-white text-[10px] font-bold active:bg-orange-700 transition disabled:opacity-40 disabled:pointer-events-none"
-                        >
-                          <Trash2 className="size-3.5" />
-                          Delete
-                        </button>
-                      </>
-                    }
-                    desktopActions={
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleToggleActive(item)}
-                          disabled={isBusy || hideSensitive}
-                          title={hideSensitive ? 'Unhide balances to edit' : undefined}
-                        >
-                          Focus
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleOpenEditModal(item)}
-                          disabled={hideSensitive || isBusy}
-                          title={hideSensitive ? 'Unhide balances to edit' : undefined}
-                        >
-                          <Edit2 className="size-3" /> Edit
-                        </Button>
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          onClick={() => onDeleteItem(item.id)}
-                          disabled={isBusy || hideSensitive}
-                          title={hideSensitive ? 'Unhide balances to edit' : undefined}
-                        >
-                          <Trash2 className="size-3" /> Delete
-                        </Button>
-                      </>
-                    }
-                  >
-                    <div className="space-y-1.5 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-foreground text-xs truncate flex items-center gap-1.5">
-                          <span>{item.name}</span>
-                          <RowSyncStatus isDeleting={isItemDeleting(item.id)} isSyncing={isItemSyncing(item.id)} isPending={item.isPendingSync} entityLabel="item" />
-                        </h4>
-                        {canAfford && (
-                          <span className="size-1.5 rounded-full bg-blue-500 shrink-0" title="Ready to claim" />
-                        )}
-                      </div>
-                      <div className="text-sm font-extrabold text-foreground">{formatSensitive(item.price)}</div>
-                      <div className="w-full bg-muted rounded-full h-1 overflow-hidden">
-                        <div
-                          className="h-full bg-blue-500"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </div>
-                  </SwipeableRow>
-                  </div>
-                )
-              })
-            ) : (
-              <div className="list-card-enter p-6 rounded-xl bg-muted/20 border border-border/40 text-center text-xs text-muted-foreground">
-                No items in the wishlist queue.
-              </div>
-            )}
-          </div>
+          <Button variant="secondary" size="sm" onClick={goalForm.handleOpenAddModal}>
+            <Plus className="size-3" /> Add
+          </Button>
         </div>
-      </div>
+
+        {pool.activeGoals.length > 0 ? (
+          <HorizontalRail label="Commitments">
+            {pool.activeGoals.map(goal => {
+              const pace = pool.paces.get(goal.id)
+              if (!pace) return null
+              return (
+                <SavingsGoalCard
+                  key={goal.id}
+                  goal={goal}
+                  pace={pace}
+                  status={getPaceStatus(pace)}
+                  formatSensitive={formatSensitive}
+                  hideSensitive={hideSensitive}
+                  isSyncing={isGoalSyncing(goal.id)}
+                  isDeleting={isGoalDeleting(goal.id)}
+                  onEdit={goalForm.handleOpenEditModal}
+                  onDelete={onDeleteGoal}
+                  onComplete={onCompleteGoal}
+                  onTopUp={target => setContributeTarget({ goal: target, mode: 'topUp' })}
+                  onRelease={target => setContributeTarget({ goal: target, mode: 'release' })}
+                />
+              )
+            })}
+            {/* Completed goals ride along as compact chips rather than a second card below: they are
+                history, but throwing them away entirely would lose the record. */}
+            {completedGoals.map(goal => (
+              <div
+                key={goal.id}
+                className="snap-start shrink-0 w-40 flex flex-col justify-center gap-1 rounded-2xl border border-dashed border-border/60 bg-muted/20 p-4"
+              >
+                <span className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-500">
+                  <CheckCircle2 className="size-3 shrink-0" /> Done
+                </span>
+                <span className="text-xs font-bold text-foreground truncate">{goal.name}</span>
+                <span className="text-[10px] font-semibold text-muted-foreground">
+                  {formatSensitive(goal.targetAmount)}
+                </span>
+              </div>
+            ))}
+          </HorizontalRail>
+        ) : (
+          <Card className="p-5 border-dashed text-center">
+            <p className="text-xs text-muted-foreground">
+              Nothing you need money ready for yet — a car service in three months, a house deposit in
+              six years. Add one and we work out what to set aside each cycle.
+            </p>
+          </Card>
+        )}
+      </section>
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-3 px-1">
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+              <Trophy className="size-4 text-blue-500" />
+              Rewards
+              {affordableCount > 0 && (
+                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
+                  {affordableCount} claimable
+                </span>
+              )}
+            </h3>
+            <p className="mt-0.5 text-[10px] font-medium text-muted-foreground">
+              From your {formatSensitive(claimableBalance)} free rewards
+              {!activeItem || claimableBalance >= activeItem.price ? null : (
+                <> · {activeItem.name} in {getTimelineString(activeItem.price, freeInflowPerCycle)}</>
+              )}
+            </p>
+          </div>
+          <Button variant="secondary" size="sm" onClick={handleOpenAddModal}>
+            <Plus className="size-3" /> Add
+          </Button>
+        </div>
+
+        {rewardItems.length > 0 ? (
+          <HorizontalRail label="Rewards">
+            {rewardItems.map(item => (
+              <RewardCard
+                key={item.id}
+                item={item}
+                isFocused={activeItem?.id === item.id}
+                claimableBalance={claimableBalance}
+                formatSensitive={formatSensitive}
+                hideSensitive={hideSensitive}
+                isSyncing={isItemSyncing(item.id)}
+                isDeleting={isItemDeleting(item.id)}
+                onClaim={handleOpenClaimModal}
+                onFocus={target => { void handleToggleActive(target) }}
+                onEdit={handleOpenEditModal}
+                onDelete={onDeleteItem}
+              />
+            ))}
+          </HorizontalRail>
+        ) : (
+          <Card className="p-5 border-dashed text-center">
+            <p className="text-xs text-muted-foreground">
+              No rewards yet. Add something to save your spare rewards toward.
+            </p>
+          </Card>
+        )}
+      </section>
 
       {/* History Log / Purchased Items */}
       {totalClaimed > 0 && (

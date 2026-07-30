@@ -13,8 +13,10 @@ interface BottomSheetProps {
   onClose: () => void
   maxWidthClassName?: string
   footer?: React.ReactNode
+  description?: React.ReactNode
   /** Accessible name when `title` is not plain text. */
   ariaLabel?: string
+  ariaDescribedBy?: string
   layerClassName?: string
   backdropClassName?: string
   panelClassName?: string
@@ -31,13 +33,16 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   onClose,
   maxWidthClassName = 'max-w-md',
   footer,
+  description,
   ariaLabel,
+  ariaDescribedBy,
   layerClassName = 'z-[100]',
   backdropClassName = '',
   panelClassName = '',
 }) => {
   const panelRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
+  const descriptionId = useId()
   const isMobile = useIsMobile()
 
   // Pace the slide by measured height so a tall sheet and a short sheet travel
@@ -319,6 +324,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             aria-modal="true"
             aria-labelledby={titleId}
             aria-label={ariaLabel}
+            aria-describedby={ariaDescribedBy ?? (description ? descriptionId : undefined)}
             tabIndex={-1}
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
             // pan-y lets inner content scroll natively; the non-passive
@@ -333,7 +339,14 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             >
               {isMobile && <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto mb-2 shrink-0" />}
               <div className="flex min-h-9 items-center justify-between gap-3 border-b border-border/40 pb-3">
-                <div id={titleId} className="min-w-0 text-base font-bold text-foreground">{title}</div>
+                <div className="min-w-0">
+                  <div id={titleId} className="text-base font-bold text-foreground">{title}</div>
+                  {description && (
+                    <div id={descriptionId} className="mt-1 text-xs font-normal leading-relaxed text-muted-foreground">
+                      {description}
+                    </div>
+                  )}
+                </div>
                 {headerActions && <div className="flex shrink-0 items-center gap-1.5">{headerActions}</div>}
               </div>
             </div>

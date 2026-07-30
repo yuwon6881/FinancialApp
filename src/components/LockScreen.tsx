@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { Input } from './ui/Input'
+import { useState, useEffect, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { ShieldCheck } from 'lucide-react'
 import * as api from '../lib/api'
@@ -10,6 +11,11 @@ import {
   prefetchFingerprintAssertOptions,
 } from '../lib/fingerprintOptionsCache'
 import { getErrorMessage, getErrorName, getStatus } from '../lib/errors'
+import { AlertBanner } from './ui/AlertBanner'
+import { Button } from './ui/Button'
+import { FormField } from './ui/FormField'
+import { focusFirstInvalidField } from './ui/formValidation'
+import { useDialog } from '../lib/useDialog'
 
 interface LockScreenProps {
   isOpen: boolean
@@ -21,9 +27,20 @@ interface LockScreenProps {
 export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScreenProps) {
   const [lockPassword, setLockPassword] = useState('')
   const [lockError, setLockError] = useState<string | null>(null)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
   const [passwordVerifying, setPasswordVerifying] = useState(false)
   const [fingerprintVerifying, setFingerprintVerifying] = useState(false)
   const [fingerprintAvailable, setFingerprintAvailable] = useState(false)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
+  const descriptionId = useId()
+
+  useDialog({
+    isOpen,
+    onClose: () => undefined,
+    ref: panelRef,
+    canClose: () => false,
+  })
 
   useEffect(() => {
     if (!isOpen) {
@@ -57,6 +74,7 @@ export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScre
   const handleFingerprintUnlock = async () => {
     setFingerprintVerifying(true)
     setLockError(null)
+    setPasswordError(null)
     try {
       const { challengeId, options } = await getCachedFingerprintAssertOptions()
       const credential = await getFingerprintAssertion(options)
@@ -82,24 +100,36 @@ export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScre
   // the sheet portals (z-[100]) painted over it; at body level the higher z-index wins,
   // so the lock screen always covers any open modal without having to close it first.
   return createPortal(
-    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-background/95 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="w-full max-w-sm flex flex-col items-center gap-6">
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-background/95 p-4 backdrop-blur-md animate-in fade-in duration-300">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        tabIndex={-1}
+        className="flex w-full max-w-sm flex-col items-center gap-6 outline-none"
+      >
         <AppLogo className="size-16 rounded-2xl shadow-xl shadow-primary/20" />
         <div className="text-center">
-          <h2 className="text-xl font-bold text-foreground">Session Locked</h2>
-          <p className="text-sm text-muted-foreground mt-1">You were inactive for 5 minutes. Use your device unlock or enter your password to continue.</p>
+          <h2 id={titleId} className="text-xl font-bold text-foreground">Session locked</h2>
+          <p id={descriptionId} className="mt-1 text-sm text-muted-foreground">You were inactive for 5 minutes. Use your device unlock or enter your password to continue.</p>
         </div>
 
+        {lockError && <AlertBanner variant="error" className="w-full">{lockError}</AlertBanner>}
+
         {fingerprintAvailable && (
-          <button
+          <Button
             type="button"
+            variant="successGhost"
+            size="lg"
             onClick={handleFingerprintUnlock}
             disabled={fingerprintVerifying || passwordVerifying}
-            className="press-scale w-full py-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold text-sm rounded-xl transition duration-200 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/10"
+            className="w-full rounded-xl py-3 shadow-lg shadow-emerald-500/10"
           >
             <ShieldCheck className="size-5 text-emerald-400 animate-pulse" />
             {fingerprintVerifying ? 'Verifying device...' : 'Unlock with device'}
-          </button>
+          </Button>
         )}
 
         <form
@@ -107,18 +137,20 @@ export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScre
           onSubmit={async (e) => {
             e.preventDefault()
             if (!lockPassword) {
-              setLockError('Enter your password to unlock.')
+              setPasswordError('Password is required.')
+              focusFirstInvalidField(e.currentTarget)
               return
             }
             setPasswordVerifying(true)
             setLockError(null)
+            setPasswordError(null)
             try {
               const res = await api.verifyPassword(lockPassword)
               if (res.verified) {
                 setLockPassword('')
                 onUnlocked()
               } else {
-                setLockError(res.message || 'Incorrect password.')
+                setPasswordError(res.message || 'Incorrect password.')
               }
             } catch (err: unknown) {
               // Only a genuine transport failure means "backend waking up". A
@@ -134,32 +166,37 @@ export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScre
           }}
           className="w-full space-y-3"
         >
-          <input
-            type="password"
-            required
-            placeholder="Enter your password"
-            value={lockPassword}
-            onChange={e => setLockPassword(e.target.value)}
-            autoFocus={!fingerprintAvailable}
-            className="w-full px-4 py-3 text-sm bg-card border border-border rounded-xl focus:outline-none focus:border-ring focus:ring-2 focus:ring-ring/40 transition"
-          />
-          {lockError && (
-            <p className="text-xs text-destructive font-semibold">{lockError}</p>
-          )}
-          <button
+          <FormField label="Password" required error={passwordError} labelClassName="sr-only">
+            <Input
+              type="password"
+              required
+              placeholder="Enter your password"
+              value={lockPassword}
+              onChange={e => {
+                setLockPassword(e.target.value)
+                if (passwordError) setPasswordError(null)
+              }}
+              autoFocus={!fingerprintAvailable}
+              controlSize="lg"
+              className="bg-card"
+            />
+          </FormField>
+          <Button
             type="submit"
+            size="lg"
             disabled={passwordVerifying || fingerprintVerifying || !lockPassword}
-            className="press-scale w-full py-3 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground font-semibold rounded-xl shadow-lg shadow-primary/20 transition cursor-pointer"
+            className="w-full rounded-xl py-3 shadow-lg shadow-primary/20"
           >
             {passwordVerifying ? 'Unlocking...' : 'Unlock with Password'}
-          </button>
+          </Button>
         </form>
-        <button
+        <Button
+          variant="unstyled"
           onClick={onSignOut}
           className="text-xs text-muted-foreground hover:text-foreground transition cursor-pointer underline"
         >
           Sign out instead
-        </button>
+        </Button>
       </div>
     </div>,
     document.body

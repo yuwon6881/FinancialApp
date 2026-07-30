@@ -15,6 +15,7 @@ import type {
 } from '../../../types'
 import type { TransactionPrefillDraft } from '../TransactionFormSheet'
 import type { TransactionDocumentsFieldRef } from './TransactionDocumentsField'
+import { focusFirstInvalidField } from '../../ui/formValidation'
 export interface UseTransactionFormOptions {
   categories: TransactionCategory[]
   currency: string
@@ -362,7 +363,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const validationErrors = validateTransactionForm({
       description: state.description,
@@ -375,6 +376,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
 
     if (Object.keys(validationErrors).length > 0) {
       dispatch({ type: 'SET_ERRORS', errors: validationErrors })
+      focusFirstInvalidField(e.currentTarget)
       return
     }
 

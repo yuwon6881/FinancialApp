@@ -1,6 +1,8 @@
+import { Input } from '../../ui/Input'
 import React, { useEffect, useState } from 'react'
 import { Search, X } from 'lucide-react'
 import { CustomSelect } from '../../ui/CustomSelect'
+import { Button } from '../../ui/Button'
 
 interface DocumentFilterBarProps {
   search: string
@@ -38,12 +40,12 @@ export function DocumentFilterBar({
 
   return (
     <div className="mb-4 flex flex-col gap-2.5 sm:flex-row sm:items-center">
-      <form onSubmit={handleSearchSubmit} className="relative flex-1 min-w-0">
+      <form noValidate onSubmit={handleSearchSubmit} className="relative flex-1 min-w-0">
         <Search
           className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
           aria-hidden="true"
         />
-        <input
+        <Input
           type="search"
           placeholder="Search by file name or notes..."
           aria-label="Search documents"
@@ -52,14 +54,15 @@ export function DocumentFilterBar({
           className={`${FIELD_CLASS} py-2.5 pl-9 ${searchInput ? 'pr-9' : 'pr-3'}`}
         />
         {searchInput && (
-          <button
+          <Button
+            variant="unstyled"
             type="button"
             onClick={handleClear}
             aria-label="Clear search"
             className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer rounded-full p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
           >
             <X className="size-3.5" />
-          </button>
+          </Button>
         )}
       </form>
 

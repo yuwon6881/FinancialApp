@@ -473,8 +473,14 @@ export interface SavingsGoal {
   status: SavingsGoalStatus
   isRecurring: boolean
   recurrenceMonths: number
-  /** Cycle key ("yyyy-MM") this goal last received automatic funding for; makes funding idempotent. */
-  lastFundedCycleKey?: string | null
+  /** Cycle key ("yyyy-MM") that `cycleFundedAmount` is measured against. */
+  cycleFundedKey?: string | null
+  /**
+   * Net amount credited to this goal during `cycleFundedKey`, from automatic funding and manual
+   * top-ups alike, less releases. Drives "what does this goal still need *this* cycle", which is
+   * what the funding action operates on.
+   */
+  cycleFundedAmount: number
   createdAt: string
   completedAt?: string | null
   isPendingSync?: boolean

@@ -1,3 +1,4 @@
+import { Input } from '../../ui/Input'
 import React, { useRef, useImperativeHandle, useState, useEffect } from 'react'
 import { FileText, X, UploadCloud, Link2Off } from 'lucide-react'
 import {
@@ -231,7 +232,7 @@ export const TransactionDocumentsField = React.forwardRef<
         <UploadCloud className="size-4" aria-hidden="true" />
         Attach Document
       </button>
-      <input
+      <Input
         type="file"
         multiple
         ref={fileInputRef}

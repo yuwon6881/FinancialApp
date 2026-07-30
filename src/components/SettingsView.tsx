@@ -1,3 +1,5 @@
+import { Input } from './ui/Input'
+import { RangeInput } from './ui/RangeInput'
 import React from 'react'
 import { Save, Settings, AlertCircle, CheckCircle2, Bell, BellRing, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap, Moon, Sun, Eye, EyeOff, HardDrive } from 'lucide-react'
 import { m } from 'framer-motion'
@@ -24,6 +26,8 @@ import { useSettingsView } from './settings/view/useSettingsView'
 import { CategoryLimitsCard } from './settings/CategoryLimitsCard'
 import { ManageableNameList } from './settings/ManageableNameList'
 import type { SensitivePreferenceStatus } from '../app/useAppPreferences'
+import { FormField } from './ui/FormField'
+import { Button } from './ui/Button'
 
 interface SettingsViewProps {
   dashboardData: DashboardData | null
@@ -146,7 +150,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       </div>
 
       {/* Tabs Control */}
-      <div role="tablist" aria-label="Settings sections" className="flex border-b border-border/30 gap-x-7 sm:gap-6 select-none overflow-x-auto no-scrollbar pb-1">
+      <div role="tablist" aria-label="Settings sections" className="grid grid-cols-2 gap-x-3 border-b border-border/30 select-none sm:flex sm:flex-wrap sm:gap-x-6">
         {([
           ['financial-model', 'Plan & Preferences'],
           ['investment-plan', 'Investment Plan'],
@@ -162,7 +166,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             aria-selected={activeTab === id}
             aria-controls={`settings-panel-${id}`}
             onClick={() => setActiveTab(id)}
-            className={`shrink-0 pb-3 text-xs font-bold transition relative cursor-pointer whitespace-nowrap px-1.5 sm:px-1 ${
+            className={`relative min-w-0 px-1.5 pb-3 text-left text-xs font-bold transition cursor-pointer sm:shrink-0 sm:px-1 sm:text-center ${
               activeTab === id
                 ? 'text-blue-500 font-extrabold'
                 : 'text-muted-foreground hover:text-foreground'
@@ -191,9 +195,8 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <label className="space-y-1 block">
-                <span className="text-xs font-semibold text-muted-foreground block">Target Stability Fund Limit</span>
-                <input
+              <FormField label="Target stability fund limit" required error={view.errors.target}>
+                <Input
                   type="text"
                   inputMode="decimal"
                   disabled={hideSensitive}
@@ -210,21 +213,11 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                       })
                     }
                   }}
-                  className={`w-full px-3 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                    hideSensitive 
-                      ? 'border-transparent text-transparent blur-sm select-none pointer-events-none' 
-                      : view.errors.target 
-                        ? 'border-destructive focus:ring-destructive' 
-                        : 'border-border focus:ring-ring'
-                  }`}
+                  className={hideSensitive ? 'border-transparent text-transparent blur-sm select-none pointer-events-none' : undefined}
                 />
-                {view.errors.target && (
-                  <p className="text-[10px] text-destructive font-medium mt-1">{view.errors.target}</p>
-                )}
-              </label>
+              </FormField>
 
-              <label className="space-y-1 block">
-                <span className="text-xs font-semibold text-muted-foreground block">Ledger Cycle Day</span>
+              <FormField label="Ledger cycle day">
                 <CustomSelect
                   ariaLabel="Ledger cycle day"
                   value={view.cycleDayInput}
@@ -235,20 +228,18 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   }))}
                   className="w-full"
                 />
-              </label>
+              </FormField>
 
-              <label className="space-y-1 block">
-                <span className="text-xs font-semibold text-muted-foreground block">Default Account Currency</span>
+              <FormField label="Default account currency">
                 <CurrencySelect
                   ariaLabel="Default account currency"
                   value={view.currencyInput}
                   onChange={view.setCurrencyInput}
                   className="w-full"
                 />
-              </label>
+              </FormField>
 
-              <label className="space-y-1 block">
-                <span className="text-xs font-semibold text-muted-foreground block">Stability Fund Overflow Redirect</span>
+              <FormField label="Stability fund overflow redirect">
                 <CustomSelect
                   ariaLabel="Stability fund overflow redirect"
                   value={view.stabilityOverflowRedirectInput}
@@ -263,7 +254,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   ]}
                   className="w-full"
                 />
-              </label>
+              </FormField>
             </div>
 
             <div className="space-y-4 border-t border-border/30 pt-4">
@@ -274,14 +265,16 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                     {view.allocSum}%
                   </span>
                 </div>
-                <button
+                <Button
+                  variant="secondary"
+                  size="sm"
                   type="button"
                   onClick={() => view.setGlobalAllocLock(!view.globalAllocLock)}
                   className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/60 bg-secondary/60 text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer"
                 >
                   {view.globalAllocLock ? <Lock className="size-3" /> : <Unlock className="size-3" />}
                   {view.globalAllocLock ? 'Locked' : 'Unlocked'}
-                </button>
+                </Button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
@@ -296,7 +289,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                       <span className="text-muted-foreground flex items-center gap-1.5"><span className="uppercase tracking-wider">{label}</span><button type="button" onClick={() => view.toggleLock(key)} className="p-1 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer" title={view.lockedAllocations.includes(key) ? 'Unlock' : 'Lock'}>{view.lockedAllocations.includes(key) ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</button></span>
                       <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md">{Number(value).toFixed(0)}%</span>
                     </div>
-                    <input type="range" min="0" max="100" step="5" disabled={view.globalAllocLock || view.lockedAllocations.includes(key)} value={value} onChange={e => view.handleAllocationChange(key, parseFloat(e.target.value))} className={`w-full h-2 rounded-full cursor-pointer ${accentClass} bg-border disabled:opacity-50 disabled:cursor-not-allowed`} />
+                    <RangeInput  min="0" max="100" step="5" disabled={view.globalAllocLock || view.lockedAllocations.includes(key)} value={value} onChange={e => view.handleAllocationChange(key, parseFloat(e.target.value))} className={`w-full h-2 rounded-full cursor-pointer ${accentClass} bg-border disabled:opacity-50 disabled:cursor-not-allowed`} />
                   </label>
                 ))}
               </div>
@@ -306,12 +299,12 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             </div>
 
             <div className="flex justify-end pt-3">
-              <button
+              <Button
                 type="submit"
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/10 hover:shadow-primary/20 transition cursor-pointer"
+                className="rounded-xl px-4 py-2 shadow-lg shadow-primary/10 hover:shadow-primary/20"
               >
                 <Save className="size-3.5" /> Save Rules
-              </button>
+              </Button>
             </div>
           </form>
 

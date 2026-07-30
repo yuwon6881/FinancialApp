@@ -1,3 +1,4 @@
+import { Input } from '../ui/Input'
 import { Loader2, Plus, Search, Trash2, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
@@ -64,7 +65,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
   return (
     <div className="space-y-3">
       <div className="flex gap-2">
-        <input
+        <Input
           type="text"
           value={newName}
           onChange={event => setNewName(event.target.value)}
@@ -89,7 +90,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
 
       <label className="group relative block">
         <Search className="pointer-events-none absolute left-3.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-foreground" />
-        <input
+        <Input
           type="text"
           role="searchbox"
           value={search}

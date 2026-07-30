@@ -1,3 +1,4 @@
+import { Checkbox } from '../ui/Checkbox'
 import React from 'react'
 import { CustomSelect } from '../ui/CustomSelect'
 import { BottomSheet } from '../ui/BottomSheet'
@@ -88,8 +89,7 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
                     key={bucket}
                     className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition ${getCategoryFilterClass(bucket, isChecked)}`}
                   >
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={isChecked}
                       onChange={() => onToggleCategoryFilter(bucket)}
                       className="rounded border-border text-blue-500 focus:ring-ring size-3"
@@ -128,8 +128,7 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
                       key={bucket}
                       className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-xs cursor-pointer select-none transition ${getCategoryFilterClass(bucket, isChecked)}`}
                     >
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={isChecked}
                         onChange={() => onToggleCategoryFilter(bucket)}
                         className="rounded border-border text-blue-500 focus:ring-ring size-3.5"

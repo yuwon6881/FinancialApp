@@ -50,6 +50,7 @@ export function deobfuscateSavingsGoal(goal: WireSavingsGoal): SavingsGoal {
     ...goal,
     targetAmount: deobfuscateAmount(goal.targetAmount),
     earmarkedAmount: deobfuscateAmount(goal.earmarkedAmount),
+    cycleFundedAmount: deobfuscateAmount(goal.cycleFundedAmount),
     // The API returns a full timestamp for the date-typed column; the UI and all pacing math
     // work on the 'YYYY-MM-DD' calendar date, so normalise once here at the boundary.
     targetDate: (goal.targetDate || '').slice(0, 10),

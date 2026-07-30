@@ -2,6 +2,7 @@ import { useCallback, useState, type ChangeEvent, type FormEvent } from 'react'
 import type { SavingsGoal } from '../../types'
 import { maskCurrencyInput } from '../../lib/utils'
 import { useFormDraft } from '../../lib/useFormDraft'
+import { focusFirstInvalidField } from '../ui/formValidation'
 
 interface UseSavingsGoalFormOptions {
   goals: SavingsGoal[]
@@ -157,10 +158,13 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
       : null
   }
 
-  const saveAdd = async (event: FormEvent) => {
+  const saveAdd = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const valid = validate()
-    if (!valid) return
+    if (!valid) {
+      focusFirstInvalidField(event.currentTarget)
+      return
+    }
     const goal: Partial<SavingsGoal> = {
       name: nameInput.trim(),
       targetAmount: valid.target,
@@ -173,11 +177,14 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
     await options.onAddGoal(goal)
   }
 
-  const saveEdit = async (event: FormEvent) => {
+  const saveEdit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!editingGoal) return
     const valid = validate()
-    if (!valid) return
+    if (!valid) {
+      focusFirstInvalidField(event.currentTarget)
+      return
+    }
     const goal: SavingsGoal = {
       ...editingGoal,
       name: nameInput.trim(),

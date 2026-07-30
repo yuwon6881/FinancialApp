@@ -15,6 +15,7 @@ import {
 // numbers below deliberately match SavingsGoalPacingTests.cs case for case — if one side changes,
 // the other has to change with it or the UI will show a pace the server does not fund.
 const CYCLE_DAY = 1
+const CYCLE_KEY = '2026-07'
 const TODAY = new Date(2026, 6, 15) // 15 Jul 2026, local
 
 function newGoal(overrides: Partial<SavingsGoal> = {}): SavingsGoal {
@@ -29,6 +30,7 @@ function newGoal(overrides: Partial<SavingsGoal> = {}): SavingsGoal {
     isRecurring: false,
     recurrenceMonths: 12,
     createdAt: '2026-01-01T00:00:00.000Z',
+    cycleFundedAmount: 0,
     ...overrides,
   }
 }
@@ -53,6 +55,7 @@ describe('computePace', () => {
       newGoal({ targetAmount: 1200, earmarkedAmount: 400, targetDate: '2026-09-20' }),
       TODAY,
       CYCLE_DAY,
+      CYCLE_KEY,
     )
 
     expect(pace.remaining).toBe(800)
@@ -69,6 +72,7 @@ describe('computePace', () => {
       newGoal({ targetAmount: 1000, earmarkedAmount: 250, targetDate: '2026-07-30' }),
       TODAY,
       CYCLE_DAY,
+      CYCLE_KEY,
     )
 
     expect(pace.cyclesRemaining).toBe(1)
@@ -80,6 +84,7 @@ describe('computePace', () => {
       newGoal({ targetAmount: 500, earmarkedAmount: 100, targetDate: '2026-05-10' }),
       TODAY,
       CYCLE_DAY,
+      CYCLE_KEY,
     )
 
     expect(pace.isOverdue).toBe(true)
@@ -87,7 +92,7 @@ describe('computePace', () => {
   })
 
   it('reports a fully funded goal as needing nothing', () => {
-    const pace = computePace(newGoal({ targetAmount: 500, earmarkedAmount: 500 }), TODAY, CYCLE_DAY)
+    const pace = computePace(newGoal({ targetAmount: 500, earmarkedAmount: 500 }), TODAY, CYCLE_DAY, CYCLE_KEY)
 
     expect(pace.isFunded).toBe(true)
     expect(pace.remaining).toBe(0)
@@ -95,7 +100,7 @@ describe('computePace', () => {
   })
 
   it('treats an overshot earmark as funded rather than negative', () => {
-    const pace = computePace(newGoal({ targetAmount: 300, earmarkedAmount: 500 }), TODAY, CYCLE_DAY)
+    const pace = computePace(newGoal({ targetAmount: 300, earmarkedAmount: 500 }), TODAY, CYCLE_DAY, CYCLE_KEY)
 
     expect(pace.remaining).toBe(0)
     expect(pace.requiredPerCycle).toBe(0)
@@ -129,7 +134,7 @@ describe('distribute', () => {
     const car = newGoal({ id: 1, targetAmount: 1200, earmarkedAmount: 400, targetDate: '2026-09-20' })
     const house = newGoal({ id: 2, targetAmount: 60000, earmarkedAmount: 2000, targetDate: '2032-07-01' })
 
-    const result = distribute([car, house], 1200, TODAY, CYCLE_DAY)
+    const result = distribute([car, house], 1200, TODAY, CYCLE_DAY, CYCLE_KEY)
 
     // 800 over 3 cycles, and 58000 over 73 cycles.
     expect(result.grants.find(grant => grant.goalId === 1)?.amount).toBe(266.67)
@@ -143,7 +148,7 @@ describe('distribute', () => {
     const car = newGoal({ id: 1, targetAmount: 1200, earmarkedAmount: 400, targetDate: '2026-09-20' })
     const house = newGoal({ id: 2, targetAmount: 60000, earmarkedAmount: 2000, targetDate: '2032-07-01' })
 
-    const result = distribute([car, house], 800, TODAY, CYCLE_DAY)
+    const result = distribute([car, house], 800, TODAY, CYCLE_DAY, CYCLE_KEY)
 
     expect(result.totalGranted).toBe(800)
     expect(result.freeToSpend).toBe(0)
@@ -157,18 +162,18 @@ describe('distribute', () => {
     // Due this cycle and 50 short, with far more available than it needs.
     const goal = newGoal({ id: 1, targetAmount: 500, earmarkedAmount: 450, targetDate: '2026-07-30' })
 
-    const result = distribute([goal], 5000, TODAY, CYCLE_DAY)
+    const result = distribute([goal], 5000, TODAY, CYCLE_DAY, CYCLE_KEY)
 
     expect(result.totalGranted).toBe(50)
     expect(result.freeToSpend).toBe(4950)
   })
 
   it('handles an empty pool and no goals', () => {
-    const broke = distribute([newGoal({ targetAmount: 500 })], 0, TODAY, CYCLE_DAY)
+    const broke = distribute([newGoal({ targetAmount: 500 })], 0, TODAY, CYCLE_DAY, CYCLE_KEY)
     expect(broke.totalGranted).toBe(0)
     expect(broke.shortfall).toBeGreaterThan(0)
 
-    const noGoals = distribute([], 250, TODAY, CYCLE_DAY)
+    const noGoals = distribute([], 250, TODAY, CYCLE_DAY, CYCLE_KEY)
     expect(noGoals.grants).toEqual([])
     expect(noGoals.freeToSpend).toBe(250)
     expect(noGoals.shortfall).toBe(0)
@@ -176,10 +181,77 @@ describe('distribute', () => {
 
   it('clamps a negative available amount to zero', () => {
     // A Rewards balance below the outstanding earmarks must not read as money available.
-    const result = distribute([newGoal({ targetAmount: 500 })], -300, TODAY, CYCLE_DAY)
+    const result = distribute([newGoal({ targetAmount: 500 })], -300, TODAY, CYCLE_DAY, CYCLE_KEY)
 
     expect(result.totalGranted).toBe(0)
     expect(result.freeToSpend).toBe(0)
+  })
+})
+
+describe('outstanding this cycle', () => {
+  const paced = (overrides: Partial<SavingsGoal>) =>
+    computePace(
+      newGoal({ targetAmount: 1200, targetDate: '2026-09-20', ...overrides }),
+      TODAY,
+      CYCLE_DAY,
+      CYCLE_KEY,
+    )
+
+  it('ignores a tally left over from an earlier cycle', () => {
+    const pace = paced({ earmarkedAmount: 400, cycleFundedKey: '2026-06', cycleFundedAmount: 266.67 })
+
+    expect(pace.fundedThisCycle).toBe(0)
+    expect(pace.outstandingThisCycle).toBe(266.67)
+  })
+
+  it('is zero once this cycle has been paced, and the pace itself holds still', () => {
+    const pace = paced({ earmarkedAmount: 666.67, cycleFundedKey: CYCLE_KEY, cycleFundedAmount: 266.67 })
+
+    expect(pace.outstandingThisCycle).toBe(0)
+    // Measured from the cycle's starting position, so funding does not shrink the goal's own
+    // requirement out from under it.
+    expect(pace.requiredPerCycle).toBe(266.67)
+  })
+
+  it('reopens exactly the released amount, not a whole new cycle of pace', () => {
+    // Funded 266.67 then released 100, leaving the net 166.67 credited this cycle.
+    const pace = paced({ earmarkedAmount: 566.67, cycleFundedKey: CYCLE_KEY, cycleFundedAmount: 166.67 })
+
+    expect(pace.outstandingThisCycle).toBe(100)
+  })
+
+  it('counts a manual top-up toward the cycle so funding skips the goal', () => {
+    const manual = paced({ earmarkedAmount: 666.67, cycleFundedKey: CYCLE_KEY, cycleFundedAmount: 266.67 })
+    const untouched = newGoal({ id: 2, targetAmount: 1200, earmarkedAmount: 400, targetDate: '2026-09-20' })
+
+    const result = distribute(
+      [
+        newGoal({
+          id: 1,
+          targetAmount: 1200,
+          earmarkedAmount: 666.67,
+          targetDate: '2026-09-20',
+          cycleFundedKey: CYCLE_KEY,
+          cycleFundedAmount: 266.67,
+        }),
+        untouched,
+      ],
+      5000,
+      TODAY,
+      CYCLE_DAY,
+      CYCLE_KEY,
+    )
+
+    expect(manual.outstandingThisCycle).toBe(0)
+    expect(result.grants.find(grant => grant.goalId === 1)?.amount).toBe(0)
+    expect(result.grants.find(grant => grant.goalId === 2)?.amount).toBe(266.67)
+    expect(result.totalGranted).toBe(266.67)
+  })
+
+  it('never asks for more than the goal still needs', () => {
+    const pace = paced({ targetAmount: 500, earmarkedAmount: 450, targetDate: '2026-07-30' })
+
+    expect(pace.outstandingThisCycle).toBe(50)
   })
 })
 
@@ -204,10 +276,42 @@ describe('summarizePool', () => {
     // This — not the 3000 — is what a wishlist reward can actually be claimed against.
     expect(summary.unassigned).toBe(600)
     expect(summary.requiredPerCycleTotal).toBe(1061.2)
+    // Nothing set aside this cycle yet, so the whole requirement is still outstanding.
+    expect(summary.outstandingThisCycleTotal).toBe(1061.2)
+    expect(summary.hasUnfinishedGoals).toBe(true)
     // 800/cycle cannot cover 1061.20 of commitments, so at least one deadline is unreachable.
     expect(summary.paceShortfall).toBe(261.2)
     expect(summary.activeGoals.map(goal => goal.id)).toEqual([1, 2])
     expect(summary.paces.get(1)?.requiredPerCycle).toBe(266.67)
+  })
+
+  it('reports nothing outstanding once every goal has had its share this cycle', () => {
+    const goals = [
+      newGoal({
+        id: 1,
+        targetAmount: 1200,
+        earmarkedAmount: 666.67,
+        targetDate: '2026-09-20',
+        cycleFundedKey: CYCLE_KEY,
+        cycleFundedAmount: 266.67,
+      }),
+    ]
+
+    const summary = summarizePool(goals, 3000, 800, TODAY, CYCLE_DAY)
+
+    expect(summary.outstandingThisCycleTotal).toBe(0)
+    // Still an unfinished goal overall — it just does not need anything more this cycle.
+    expect(summary.hasUnfinishedGoals).toBe(true)
+    expect(summary.requiredPerCycleTotal).toBe(266.67)
+  })
+
+  it('reports no unfinished goals once everything is fully funded', () => {
+    const goals = [newGoal({ id: 1, targetAmount: 500, earmarkedAmount: 500 })]
+
+    const summary = summarizePool(goals, 3000, 800, TODAY, CYCLE_DAY)
+
+    expect(summary.hasUnfinishedGoals).toBe(false)
+    expect(summary.outstandingThisCycleTotal).toBe(0)
   })
 
   it('reports no shortfall when the inflow covers every commitment', () => {
@@ -248,18 +352,35 @@ describe('summarizePool', () => {
 
 describe('getPaceStatus', () => {
   it('distinguishes funded, overdue, behind and on-pace', () => {
-    const funded = computePace(newGoal({ targetAmount: 500, earmarkedAmount: 500 }), TODAY, CYCLE_DAY)
-    const overdue = computePace(newGoal({ targetAmount: 500, targetDate: '2026-05-01' }), TODAY, CYCLE_DAY)
+    const funded = computePace(newGoal({ targetAmount: 500, earmarkedAmount: 500 }), TODAY, CYCLE_DAY, CYCLE_KEY)
+    const overdue = computePace(newGoal({ targetAmount: 500, targetDate: '2026-05-01' }), TODAY, CYCLE_DAY, CYCLE_KEY)
     const paced = computePace(
       newGoal({ targetAmount: 1200, earmarkedAmount: 400, targetDate: '2026-09-20' }),
       TODAY,
       CYCLE_DAY,
+      CYCLE_KEY,
     )
 
-    expect(getPaceStatus(funded, 0)).toBe('funded')
-    expect(getPaceStatus(overdue, 0)).toBe('overdue')
-    expect(getPaceStatus(paced, 100)).toBe('behind')
-    expect(getPaceStatus(paced, 266.67)).toBe('onPace')
+    expect(getPaceStatus(funded)).toBe('funded')
+    expect(getPaceStatus(overdue)).toBe('overdue')
+    // Nothing set aside this cycle yet.
+    expect(getPaceStatus(paced)).toBe('needsFunding')
+
+    // Once this cycle's share is in, the goal reads as on pace — and only then. Previously this was
+    // inferred from the budget, so a goal at 0% could claim to be on pace.
+    const settled = computePace(
+      newGoal({
+        targetAmount: 1200,
+        earmarkedAmount: 666.67,
+        targetDate: '2026-09-20',
+        cycleFundedKey: CYCLE_KEY,
+        cycleFundedAmount: 266.67,
+      }),
+      TODAY,
+      CYCLE_DAY,
+      CYCLE_KEY,
+    )
+    expect(getPaceStatus(settled)).toBe('onPace')
   })
 })
 
@@ -269,13 +390,14 @@ describe('cyclesToFund', () => {
       newGoal({ targetAmount: 1200, earmarkedAmount: 400, targetDate: '2026-09-20' }),
       TODAY,
       CYCLE_DAY,
+      CYCLE_KEY,
     )
 
     expect(cyclesToFund(pace, 400)).toBe(2)
     expect(cyclesToFund(pace, 0)).toBeNull()
     expect(cyclesToFund(pace, -10)).toBeNull()
 
-    const funded = computePace(newGoal({ targetAmount: 500, earmarkedAmount: 500 }), TODAY, CYCLE_DAY)
+    const funded = computePace(newGoal({ targetAmount: 500, earmarkedAmount: 500 }), TODAY, CYCLE_DAY, CYCLE_KEY)
     expect(cyclesToFund(funded, 0)).toBe(0)
   })
 })

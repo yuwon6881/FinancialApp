@@ -1,3 +1,5 @@
+import { Input } from '../ui/Input'
+import { Checkbox } from '../ui/Checkbox'
 import { useRef } from 'react'
 import { Search, Filter, X, Loader2, CalendarDays, Banknote, ChevronDown } from 'lucide-react'
 import type { TransactionCategory } from '../../types'
@@ -158,7 +160,7 @@ export function LedgerFilterBar({
         <div className="grid grid-cols-2 gap-2">
           <label className="space-y-1 text-[10px] font-semibold text-muted-foreground">
             Minimum
-            <input
+            <Input
               type="number"
               min="0"
               step="0.01"
@@ -171,7 +173,7 @@ export function LedgerFilterBar({
           </label>
           <label className="space-y-1 text-[10px] font-semibold text-muted-foreground">
             Maximum
-            <input
+            <Input
               type="number"
               min="0"
               step="0.01"
@@ -239,7 +241,7 @@ export function LedgerFilterBar({
         <div className="group flex min-w-0 flex-1 items-stretch lg:w-auto overflow-hidden rounded-xl border border-border bg-card shadow-sm transition duration-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-ring/25 hover:border-blue-500/50">
           <div className="flex min-w-0 flex-1 items-center lg:w-80">
             <Search className="ml-3 size-4 shrink-0 text-foreground transition-colors group-focus-within:text-blue-500" />
-            <input
+            <Input
               type="text"
               placeholder="Search all transactions..."
               value={pendingSearchTerm}
@@ -273,7 +275,7 @@ export function LedgerFilterBar({
         /* Client mode: live-filtering search input with a clear affordance. */
         <div className="group relative flex-1 lg:w-72 lg:flex-initial">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-blue-500" />
-          <input
+          <Input
             type="text"
             placeholder="Search description, category..."
             value={searchTerm}
@@ -378,8 +380,7 @@ export function LedgerFilterBar({
                             key={bucket}
                             className={`flex min-w-0 items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition ${getCategoryFilterClass(bucket, isChecked)}`}
                           >
-                            <input
-                              type="checkbox"
+                            <Checkbox
                               checked={isChecked}
                               onChange={() => onToggleFilter(bucket)}
                               className="rounded border-border text-blue-500 focus:ring-ring size-3"
@@ -403,8 +404,7 @@ export function LedgerFilterBar({
                             key={c.id}
                             className={`flex min-w-0 items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition ${getCategoryFilterClass(c.name, isChecked)}`}
                           >
-                            <input
-                              type="checkbox"
+                            <Checkbox
                               checked={isChecked}
                               onChange={() => onToggleFilter(c.name)}
                               className="rounded border-border text-blue-500 focus:ring-ring size-3"
@@ -487,8 +487,7 @@ export function LedgerFilterBar({
                         key={bucket}
                         className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs cursor-pointer select-none transition ${getCategoryFilterClass(bucket, isChecked)}`}
                       >
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={isChecked}
                           onChange={() => onToggleFilter(bucket)}
                           className="rounded border-border text-blue-500 focus:ring-ring size-3.5"
@@ -512,8 +511,7 @@ export function LedgerFilterBar({
                         key={c.id}
                         className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs cursor-pointer select-none transition ${getCategoryFilterClass(c.name, isChecked)}`}
                       >
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={isChecked}
                           onChange={() => onToggleFilter(c.name)}
                           className="rounded border-border text-blue-500 focus:ring-ring size-3.5"

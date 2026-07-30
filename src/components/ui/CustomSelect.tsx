@@ -1,13 +1,16 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState, type FocusEventHandler } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { AnchoredPopover } from './AnchoredPopover'
+import { controlTriggerClassName, type ControlSize } from './controlStyles'
+import { useFormFieldControlProps } from './formFieldControl'
 
-interface SelectOption<T extends string | number = string | number> {
+export interface SelectOption<T extends string | number = string | number> {
   value: T
   label: string
+  disabled?: boolean
 }
 
-interface CustomSelectProps<T extends string | number = string | number> {
+export interface CustomSelectProps<T extends string | number = string | number> {
   value: T
   onChange: (value: T) => void
   options: SelectOption<T>[]
@@ -15,6 +18,13 @@ interface CustomSelectProps<T extends string | number = string | number> {
   align?: 'left' | 'right'
   direction?: 'up' | 'down'
   ariaLabel?: string
+  id?: string
+  disabled?: boolean
+  invalid?: boolean
+  required?: boolean
+  controlSize?: ControlSize
+  'aria-describedby'?: string
+  onBlur?: FocusEventHandler<HTMLButtonElement>
 }
 
 export function CustomSelect<T extends string | number>({
@@ -25,6 +35,13 @@ export function CustomSelect<T extends string | number>({
   align = 'left',
   direction = 'down',
   ariaLabel = 'Select an option',
+  id,
+  disabled = false,
+  invalid = false,
+  required = false,
+  controlSize = 'md',
+  'aria-describedby': ariaDescribedBy,
+  onBlur,
 }: CustomSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
@@ -34,23 +51,42 @@ export function CustomSelect<T extends string | number>({
   const listboxId = useId()
   const typeaheadRef = useRef('')
   const typeaheadTimerRef = useRef<number | null>(null)
+  const accessibleProps = useFormFieldControlProps({
+    id,
+    'aria-describedby': ariaDescribedBy,
+    'aria-invalid': invalid || undefined,
+    'aria-required': required || undefined,
+  })
+  const isInvalid = accessibleProps['aria-invalid'] === true
+    || accessibleProps['aria-invalid'] === 'true'
 
   const selectedOption = options.find(option => option.value === value)
   const selectedIndex = options.findIndex(option => option.value === value)
 
   const openWithIndex = (index = selectedIndex >= 0 ? selectedIndex : 0) => {
-    setActiveIndex(Math.max(0, Math.min(options.length - 1, index)))
+    if (disabled || options.length === 0) return
+    let nextIndex = Math.max(0, Math.min(options.length - 1, index))
+    if (options[nextIndex]?.disabled) {
+      const enabledIndex = options.findIndex(option => !option.disabled)
+      if (enabledIndex < 0) return
+      nextIndex = enabledIndex
+    }
+    setActiveIndex(nextIndex)
     setIsOpen(true)
   }
 
   const selectIndex = (index: number) => {
     const option = options[index]
-    if (!option) return
+    if (!option || option.disabled) return
     onChange(option.value)
     setActiveIndex(index)
     setIsOpen(false)
     triggerRef.current?.focus()
   }
+
+  useEffect(() => {
+    if (disabled) setIsOpen(false)
+  }, [disabled])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -83,11 +119,19 @@ export function CustomSelect<T extends string | number>({
         }
         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
           event.preventDefault()
+          if (disabled || options.length === 0) return
           const delta = event.key === 'ArrowDown' ? 1 : -1
           if (!isOpen) {
             openWithIndex(selectedIndex >= 0 ? selectedIndex : (delta > 0 ? 0 : options.length - 1))
           } else {
-            setActiveIndex(current => (current + delta + options.length) % options.length)
+            setActiveIndex(current => {
+              let next = current
+              for (let i = 0; i < options.length; i += 1) {
+                next = (next + delta + options.length) % options.length
+                if (!options[next]?.disabled) return next
+              }
+              return current
+            })
           }
           return
         }
@@ -114,7 +158,8 @@ export function CustomSelect<T extends string | number>({
           typeaheadRef.current += event.key.toLowerCase()
           if (typeaheadTimerRef.current !== null) window.clearTimeout(typeaheadTimerRef.current)
           typeaheadTimerRef.current = window.setTimeout(() => { typeaheadRef.current = '' }, 500)
-          const matchIndex = options.findIndex(option => option.label.toLowerCase().startsWith(typeaheadRef.current))
+          const matchIndex = options.findIndex(option =>
+            !option.disabled && option.label.toLowerCase().startsWith(typeaheadRef.current))
           if (matchIndex >= 0) {
             event.preventDefault()
             if (!isOpen) openWithIndex(matchIndex)
@@ -125,15 +170,26 @@ export function CustomSelect<T extends string | number>({
     >
       <button
         type="button"
+        id={accessibleProps.id}
         ref={triggerRef}
         onClick={() => isOpen ? setIsOpen(false) : openWithIndex()}
+        onBlur={onBlur}
+        disabled={disabled}
         role="combobox"
         aria-label={ariaLabel}
+        aria-labelledby={accessibleProps['aria-labelledby']}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-controls={listboxId}
         aria-activedescendant={isOpen && activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined}
-        className="w-full h-10 flex items-center justify-between gap-1.5 sm:gap-2.5 px-2.5 sm:px-3.5 text-xs bg-background border border-border rounded-xl text-foreground font-semibold shadow-xs hover:bg-muted/30 transition duration-150 cursor-pointer text-left select-none"
+        aria-describedby={accessibleProps['aria-describedby']}
+        aria-invalid={accessibleProps['aria-invalid']}
+        aria-required={accessibleProps['aria-required']}
+        className={controlTriggerClassName({
+          size: controlSize,
+          invalid: isInvalid,
+          className: 'cursor-pointer disabled:cursor-not-allowed',
+        })}
       >
         <span className="truncate">{selectedOption?.label || value}</span>
         <ChevronDown className={`size-3.5 text-muted-foreground/80 transition duration-200 ${isOpen ? 'rotate-180' : ''}`} />
@@ -149,8 +205,8 @@ export function CustomSelect<T extends string | number>({
         matchAnchorWidth
         minWidth={180}
         role="listbox"
-        aria-label={ariaLabel}
-        className={`bg-card dark:bg-slate-900 border border-border rounded-xl shadow-xl p-1 z-[200] overflow-y-auto overscroll-contain animate-in fade-in ${direction === 'up' ? 'slide-in-from-bottom-1' : 'slide-in-from-top-1'} duration-100 flex flex-col gap-0.5`}
+        aria-label={ariaLabel ?? 'Select an option'}
+        className={`bg-popover text-popover-foreground border border-border rounded-xl shadow-xl p-1 z-[200] overflow-y-auto overscroll-contain animate-in fade-in ${direction === 'up' ? 'slide-in-from-bottom-1' : 'slide-in-from-top-1'} duration-100 space-y-0.5`}
       >
         {options.map((option, index) => (
           <button
@@ -159,13 +215,15 @@ export function CustomSelect<T extends string | number>({
             type="button"
             role="option"
             aria-selected={option.value === value}
+            aria-disabled={option.disabled || undefined}
+            disabled={option.disabled}
             tabIndex={-1}
             onMouseEnter={() => setActiveIndex(index)}
             onClick={() => selectIndex(index)}
-            className={`w-full text-left px-3.5 py-2 text-xs rounded-lg transition duration-100 cursor-pointer ${
+            className={`block h-auto min-h-9 w-full shrink-0 whitespace-normal break-words px-3.5 py-2 text-left text-xs leading-4 rounded-lg transition duration-100 cursor-pointer ${
               index === activeIndex
                 ? 'bg-primary text-primary-foreground font-bold shadow-xs'
-                : 'hover:bg-muted/80 text-foreground font-medium'
+                : 'hover:bg-muted/80 text-foreground font-medium disabled:cursor-not-allowed disabled:opacity-45'
             }`}
           >
             {option.label}

@@ -36,10 +36,10 @@ describe('DraftStagingView', () => {
 
     // Category is a SearchableSelect: open its trigger (shows the current value)
     // then pick the desired option from the panel.
-    fireEvent.click(screen.getByRole('button', { name: 'Other' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Transport' }))
+    fireEvent.click(screen.getByRole('button', { name: /^Category/ }))
+    fireEvent.click(screen.getByRole('option', { name: 'Transport' }))
 
-    fireEvent.click(screen.getByRole('combobox', { name: 'Ledger category' }))
+    fireEvent.click(screen.getByRole('combobox', { name: /^Ledger category/ }))
     fireEvent.click(screen.getByRole('option', { name: 'Growth' }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))

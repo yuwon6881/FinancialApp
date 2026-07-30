@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getActiveWishlistItem } from './wishlist'
+import { getActiveWishlistItem, orderRewardsForRail } from './wishlist'
 import type { WishlistItem } from '../types'
 
 function item(partial: Partial<WishlistItem>): WishlistItem {
@@ -36,5 +36,52 @@ describe('getActiveWishlistItem', () => {
     const older = item({ id: 1, createdAt: '2026-01-01T00:00:00Z' })
     const newer = item({ id: 2, createdAt: '2026-05-01T00:00:00Z' })
     expect(getActiveWishlistItem([older, newer])!.id).toBe(2)
+  })
+})
+
+describe('orderRewardsForRail', () => {
+  it('pins the focused item leftmost regardless of priority or age', () => {
+    const focused = item({ id: 3, priority: 'Low', createdAt: '2026-06-01T00:00:00Z', isActive: true })
+    const items = [
+      item({ id: 1, priority: 'High', createdAt: '2026-02-01T00:00:00Z' }),
+      item({ id: 2, priority: 'Medium', createdAt: '2026-01-05T00:00:00Z' }),
+      focused,
+    ]
+
+    expect(orderRewardsForRail(items, focused).map(entry => entry.id)).toEqual([3, 1, 2])
+  })
+
+  it('ranks the rest by priority, then oldest first', () => {
+    const items = [
+      item({ id: 1, priority: 'Low', createdAt: '2026-01-01T00:00:00Z' }),
+      item({ id: 2, priority: 'High', createdAt: '2026-05-01T00:00:00Z' }),
+      item({ id: 3, priority: 'Medium', createdAt: '2026-04-01T00:00:00Z' }),
+      item({ id: 4, priority: 'Medium', createdAt: '2026-02-01T00:00:00Z' }),
+    ]
+
+    // High first; inside the Medium band the earlier creation date sits further left.
+    expect(orderRewardsForRail(items, undefined).map(entry => entry.id)).toEqual([2, 4, 3, 1])
+  })
+
+  it('excludes claimed items and leaves the input array untouched', () => {
+    const items = [
+      item({ id: 1, isPurchased: true }),
+      item({ id: 2, priority: 'Low' }),
+      item({ id: 3, priority: 'High' }),
+    ]
+
+    expect(orderRewardsForRail(items, undefined).map(entry => entry.id)).toEqual([3, 2])
+    expect(items.map(entry => entry.id)).toEqual([1, 2, 3])
+  })
+
+  it('drops a focused item that has since been claimed', () => {
+    const claimed = item({ id: 1, isPurchased: true, isActive: true })
+    const items = [claimed, item({ id: 2, priority: 'Medium' })]
+
+    expect(orderRewardsForRail(items, claimed).map(entry => entry.id)).toEqual([2])
+  })
+
+  it('returns an empty row when everything is claimed', () => {
+    expect(orderRewardsForRail([item({ id: 1, isPurchased: true })], undefined)).toEqual([])
   })
 })

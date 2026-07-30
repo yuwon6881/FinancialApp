@@ -1,7 +1,10 @@
+import { Checkbox } from '../ui/Checkbox'
 import type { ReactNode } from 'react'
 import { AlertCircle } from 'lucide-react'
 import type { Transaction } from '../../types'
 import { BottomSheet } from '../ui/BottomSheet'
+import { Button } from '../ui/Button'
+import { ModalActions } from '../ui/ModalActions'
 
 interface DeleteTransactionModalProps {
   isOpen: boolean
@@ -47,23 +50,18 @@ export function DeleteTransactionModal({
         </div>
       }
       footer={
-        <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-muted text-foreground transition cursor-pointer"
-          >
+        <ModalActions>
+          <Button variant="outline" onClick={onCancel}>
             Cancel
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="destructive"
             onClick={onConfirm}
             disabled={areAttachedDocumentsLoading}
-            className="px-5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-md transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Confirm Delete
-          </button>
-        </div>
+          </Button>
+        </ModalActions>
       }
     >
       <div className="space-y-3 text-xs leading-relaxed text-muted-foreground">
@@ -102,8 +100,7 @@ export function DeleteTransactionModal({
             </p>
             <label className={`flex items-start gap-2.5 cursor-pointer ${!isOnline ? 'opacity-50' : ''}`}>
               <div className="pt-0.5 shrink-0">
-                <input
-                  type="checkbox"
+                <Checkbox
                   className="rounded border-border bg-background/50 accent-orange-600 focus:ring-offset-background/50 focus:ring-2 focus:ring-orange-500/20"
                   checked={alsoDeleteDocuments}
                   onChange={e => onAlsoDeleteDocumentsChange?.(e.target.checked)}
@@ -154,15 +151,11 @@ export function EditDisabledModal({ isOpen, onClose }: EditDisabledModalProps) {
         </div>
       }
       footer={
-        <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold shadow-md transition cursor-pointer"
-          >
+        <ModalActions>
+          <Button onClick={onClose}>
             Close
-          </button>
-        </div>
+          </Button>
+        </ModalActions>
       }
     >
       <div className="space-y-3 text-xs leading-relaxed text-muted-foreground">

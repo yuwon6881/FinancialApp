@@ -1,3 +1,5 @@
+import { Input } from '../../ui/Input'
+import { Checkbox } from '../../ui/Checkbox'
 import { useEffect, useState } from 'react'
 import { Check, Download, FileArchive, FileCode, FileImage, FileText, Link2, Pencil, Trash2 } from 'lucide-react'
 import type { TaxReliefCategoryDefinition, VaultDocument } from '../../../types'
@@ -40,7 +42,7 @@ function AmountReview({ document, updateDocument }: { document: VaultDocument; u
     {document.amount != null ? `RM${document.amount.toFixed(2)}` : 'Add amount'}<Pencil className="size-3" />
   </button>
   return <div className="flex items-center gap-1"><span className="text-[10px] font-bold">RM</span>
-    <input value={value} onChange={event => setValue(event.target.value)} inputMode="decimal" aria-label={`Amount for ${document.originalFileName}`} className="w-20 rounded-md border border-border bg-background px-1.5 py-1 text-[10px]" />
+    <Input value={value} onChange={event => setValue(event.target.value)} inputMode="decimal" aria-label={`Amount for ${document.originalFileName}`} className="w-20 rounded-md border border-border bg-background px-1.5 py-1 text-[10px]" />
     <button type="button" onClick={() => void save()} disabled={saving} aria-label={`Confirm amount for ${document.originalFileName}`} className="rounded-md bg-emerald-500/10 p-1 text-emerald-600"><Check className="size-3.5" /></button>
   </div>
 }
@@ -125,7 +127,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
           return (
             <article key={document.id} className="rounded-xl border border-border/50 bg-muted/20 p-3">
               <div className="flex min-w-0 items-start gap-2.5">
-                <input type="checkbox" checked={selectedIds.has(document.id)} onChange={() => toggleSelected(document.id)} aria-label={`Select ${document.originalFileName}`} className="mt-2 size-4 accent-primary" />
+                <Checkbox  checked={selectedIds.has(document.id)} onChange={() => toggleSelected(document.id)} aria-label={`Select ${document.originalFileName}`} className="mt-2 size-4 accent-primary" />
                 <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent text-accent-ink">
                   <Icon className="size-4" aria-hidden="true" />
                 </span>
@@ -219,7 +221,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
             const Icon = iconFor(document.contentType)
             return (
               <tr key={document.id} className="transition-colors hover:bg-muted/40">
-                <td className="px-3 py-2.5"><input type="checkbox" checked={selectedIds.has(document.id)} onChange={() => toggleSelected(document.id)} aria-label={`Select ${document.originalFileName}`} className="size-4 accent-primary" /></td>
+                <td className="px-3 py-2.5"><Checkbox  checked={selectedIds.has(document.id)} onChange={() => toggleSelected(document.id)} aria-label={`Select ${document.originalFileName}`} className="size-4 accent-primary" /></td>
                 <td className="px-3 py-2.5">
                   <div className="flex items-center gap-2.5">
                     <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent text-accent-ink">

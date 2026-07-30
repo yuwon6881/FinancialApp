@@ -1,7 +1,11 @@
-import { m } from 'framer-motion'
+import { Input } from '../ui/Input'
+import { Checkbox } from '../ui/Checkbox'
 import type { ChangeEvent, FormEvent } from 'react'
 import { CustomSelect } from '../ui/CustomSelect'
 import { SmartAmountInput } from '../ui/SmartAmountInput'
+import { FormField } from '../ui/FormField'
+import { Button } from '../ui/Button'
+import { ModalActions } from '../ui/ModalActions'
 
 interface WishlistItemFormProps {
   mode: 'add' | 'edit'
@@ -17,16 +21,15 @@ interface WishlistItemFormProps {
   onActiveChange: (value: boolean) => void
   onClearError: (field: string) => void
   onCancel: () => void
-  onSubmit: (event: FormEvent) => void
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void
 }
 
 export function WishlistItemForm(props: WishlistItemFormProps) {
   const isAdd = props.mode === 'add'
   return (
     <form noValidate onSubmit={props.onSubmit} className="space-y-4 text-xs font-semibold">
-      <div>
-        <label className="text-muted-foreground block mb-1">Goal Name *</label>
-        <input
+      <FormField label="Goal name" required error={props.errors.name}>
+        <Input
           type="text"
           value={props.name}
           onChange={event => {
@@ -34,16 +37,12 @@ export function WishlistItemForm(props: WishlistItemFormProps) {
             props.onClearError('name')
           }}
           placeholder={isAdd ? 'e.g. Mechanical Keyboard, Weekend Trip' : undefined}
-          className={`w-full px-3.5 py-2 bg-background border rounded-xl focus:outline-none focus:ring-1 transition font-medium ${
-            props.errors.name ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-ring'
-          }`}
+          className="font-medium"
         />
-        {props.errors.name && <p className="text-[11px] text-destructive font-medium mt-1">{props.errors.name}</p>}
-      </div>
+      </FormField>
 
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="text-muted-foreground block mb-1">Price ({props.currency}) *</label>
+        <FormField label={`Price (${props.currency})`} required error={props.errors.price}>
           <SmartAmountInput
             type="text"
             value={props.price}
@@ -52,14 +51,10 @@ export function WishlistItemForm(props: WishlistItemFormProps) {
               props.onClearError('price')
             }}
             placeholder={isAdd ? '0.00' : undefined}
-            className={`w-full px-3.5 py-2 bg-background border rounded-xl focus:outline-none focus:ring-1 transition font-medium [appearance:textfield] ${
-              props.errors.price ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-ring'
-            }`}
+            className="font-medium [appearance:textfield]"
           />
-          {props.errors.price && <p className="text-[11px] text-destructive font-medium mt-1">{props.errors.price}</p>}
-        </div>
-        <div>
-          <label className="text-muted-foreground block mb-1">Priority</label>
+        </FormField>
+        <FormField label="Priority">
           <CustomSelect
             ariaLabel="Goal priority"
             value={props.priority}
@@ -67,12 +62,11 @@ export function WishlistItemForm(props: WishlistItemFormProps) {
             options={['High', 'Medium', 'Low'].map(value => ({ value, label: value }))}
             className="w-full"
           />
-        </div>
+        </FormField>
       </div>
 
       <div className="flex items-center gap-2 py-1 select-none">
-        <input
-          type="checkbox"
+        <Checkbox
           id={`wishlist-active-${props.mode}`}
           checked={props.isActive}
           onChange={event => props.onActiveChange(event.target.checked)}
@@ -83,19 +77,17 @@ export function WishlistItemForm(props: WishlistItemFormProps) {
         </label>
       </div>
 
-      <div className="flex items-center gap-3 border-t border-border/30 pt-4 mt-6">
-        <button type="button" onClick={props.onCancel} className="flex-1 py-2.5 bg-muted text-muted-foreground rounded-xl font-bold cursor-pointer">
+      <ModalActions className="border-t border-border/30 pt-4 mt-6">
+        <Button variant="outline" type="button" onClick={props.onCancel} className="rounded-xl py-2.5">
           Cancel
-        </button>
-        <m.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+        </Button>
+        <Button
           type="submit"
-          className="flex-1 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full font-bold shadow-lg shadow-primary/25 cursor-pointer"
+          className="rounded-xl py-2.5 shadow-lg shadow-primary/25"
         >
           {isAdd ? 'Add Goal' : 'Save Changes'}
-        </m.button>
-      </div>
+        </Button>
+      </ModalActions>
     </form>
   )
 }

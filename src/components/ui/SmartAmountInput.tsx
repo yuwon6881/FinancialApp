@@ -1,5 +1,6 @@
 import React, { type InputHTMLAttributes, useEffect, useRef, useState } from 'react'
 import { evaluateMathString } from '../../lib/math'
+import { Input } from './Input'
 
 export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>((props, forwardedRef) => {
   const { className, onChange, onKeyDown, onFocus, onBlur, value, ...inputProps } = props
@@ -73,7 +74,7 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
 
   return (
     <div className="relative w-full">
-      <input
+      <Input
         {...inputProps}
         ref={setRef}
         value={value}

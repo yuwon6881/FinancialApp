@@ -1,7 +1,13 @@
+import { Input } from './ui/Input'
 import React, { useState } from 'react'
-import { ShieldAlert, User, Lock, Eye, EyeOff, KeyRound, ArrowLeft, CheckCircle2 } from 'lucide-react'
+import { User, Lock, Eye, EyeOff, KeyRound, ArrowLeft, CheckCircle2 } from 'lucide-react'
 import * as api from '../lib/api'
 import type { SecurityQuestion } from '../types'
+import { AlertBanner } from './ui/AlertBanner'
+import { AuthCard, AuthHeader, AuthShell } from './ui/AuthLayout'
+import { Button } from './ui/Button'
+import { FormField } from './ui/FormField'
+import { focusFirstInvalidField } from './ui/formValidation'
 
 interface ForgotPasswordProps {
   onBackToLogin: () => void
@@ -22,15 +28,18 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [success, setSuccess] = useState(false)
 
-  const handleStart = async (e: React.FormEvent) => {
+  const handleStart = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
     if (!username.trim()) {
-      setError('Username is required.')
+      setFieldErrors({ username: 'Username is required.' })
+      focusFirstInvalidField(e.currentTarget)
       return
     }
+    setFieldErrors({})
 
     setLoading(true)
     try {
@@ -48,28 +57,37 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
     }
   }
 
-  const handleVerify = (e: React.FormEvent) => {
+  const handleVerify = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
-    if (!a1.trim() || !a2.trim() || !a3.trim()) {
-      setError('Please answer all questions.')
+    const nextErrors: Record<string, string> = {}
+    if (!a1.trim()) nextErrors.answer1 = 'Answer 1 is required.'
+    if (!a2.trim()) nextErrors.answer2 = 'Answer 2 is required.'
+    if (!a3.trim()) nextErrors.answer3 = 'Answer 3 is required.'
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors)
+      focusFirstInvalidField(e.currentTarget)
       return
     }
+    setFieldErrors({})
     setStep(3)
   }
 
-  const handleReset = async (e: React.FormEvent) => {
+  const handleReset = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
 
-    if (!newPassword || newPassword.length < 6) {
-      setError('Password must be at least 6 characters.')
+    const nextErrors: Record<string, string> = {}
+    if (!newPassword) nextErrors.newPassword = 'New password is required.'
+    else if (newPassword.length < 6) nextErrors.newPassword = 'Password must be at least 6 characters.'
+    if (!confirmPassword) nextErrors.confirmPassword = 'Confirm password is required.'
+    else if (newPassword !== confirmPassword) nextErrors.confirmPassword = 'Passwords do not match.'
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors)
+      focusFirstInvalidField(e.currentTarget)
       return
     }
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match.')
-      return
-    }
+    setFieldErrors({})
 
     setLoading(true)
     try {
@@ -88,16 +106,13 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
     }
   }
 
-  const inputBase =
-    'w-full py-2.5 pl-10 pr-3.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-ring transition duration-200'
-
   return (
-    <div className="app-shell min-h-screen text-foreground flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-card md:bg-card/60 md:backdrop-blur-xl border border-border/60 rounded-3xl p-8 shadow-2xl relative z-10 space-y-6">
+    <AuthShell>
+      <AuthCard>
 
         {success ? (
           <div className="flex flex-col items-center text-center space-y-4 select-none">
-            <div className="mx-auto size-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-emerald-500/10">
               <CheckCircle2 className="size-6 text-emerald-500" />
             </div>
             <div className="space-y-1.5">
@@ -107,27 +122,26 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
                 in with your new password.
               </p>
             </div>
-            <button
+            <Button
               onClick={onBackToLogin}
-              className="press-scale w-full py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-sm rounded-xl shadow-lg shadow-primary/15 hover:shadow-primary/25 transition duration-200 cursor-pointer"
+              size="lg"
+              className="w-full rounded-xl py-3 shadow-lg shadow-primary/15"
             >
               Return to login
-            </button>
+            </Button>
           </div>
         ) : (
           <>
             {/* Header */}
-            <div className="text-center space-y-2 select-none">
-              <div className="mx-auto size-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
-                <KeyRound className="size-6 text-blue-500" />
-              </div>
-              <h1 className="text-2xl font-black tracking-tight text-foreground">Account recovery</h1>
-              <p className="text-xs text-muted-foreground">
-                {step === 1 && 'Enter your username to begin.'}
-                {step === 2 && 'Answer your security questions to verify it’s you.'}
-                {step === 3 && 'Create a new password for your account.'}
-              </p>
-            </div>
+            <AuthHeader
+              icon={<span className="flex size-12 items-center justify-center rounded-2xl bg-blue-500/10"><KeyRound className="size-6 text-blue-500" /></span>}
+              title="Account recovery"
+              description={
+                step === 1 ? 'Enter your username to begin.'
+                  : step === 2 ? 'Answer your security questions to verify it’s you.'
+                    : 'Create a new password for your account.'
+              }
+            />
 
             {/* Step indicator */}
             <div className="flex items-center justify-center gap-2 select-none">
@@ -142,42 +156,47 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
             </div>
 
             {error && (
-              <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-xl flex items-center gap-2.5 animate-in slide-in-from-top-2 duration-200">
-                <ShieldAlert className="size-4 shrink-0" />
-                <span>{error}</span>
-              </div>
+              <AlertBanner variant="error">{error}</AlertBanner>
             )}
 
             {step === 1 && (
               <form noValidate onSubmit={handleStart} className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Username</label>
+                <FormField
+                  label="Username"
+                  required
+                  error={fieldErrors.username}
+                  labelClassName="uppercase tracking-wider"
+                >
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 flex w-10 items-center justify-center pointer-events-none">
                       <User className="size-4 text-muted-foreground/70" />
                     </span>
-                    <input
+                    <Input
                       type="text"
                       value={username}
-                      onChange={e => setUsername(e.target.value)}
-                      className={inputBase}
+                      onChange={e => {
+                        setUsername(e.target.value)
+                        if (fieldErrors.username) setFieldErrors(previous => ({ ...previous, username: '' }))
+                      }}
+                      className="pl-10"
                       placeholder="Enter your username"
                       autoComplete="username"
                       autoFocus
                     />
                   </div>
-                </div>
-                <button
+                </FormField>
+                <Button
                   type="submit"
+                  size="lg"
                   disabled={loading}
-                  className="press-scale w-full py-3 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground font-bold text-sm rounded-xl shadow-lg shadow-primary/15 hover:shadow-primary/25 transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full rounded-xl py-3 shadow-lg shadow-primary/15"
                 >
                   {loading ? (
                     <div className="w-4 h-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />
                   ) : (
                     'Continue'
                   )}
-                </button>
+                </Button>
               </form>
             )}
 
@@ -188,98 +207,125 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin })
                   { q: questions[1]?.question, a: a2, setA: setA2 },
                   { q: questions[2]?.question, a: a3, setA: setA3 },
                 ].map((item, idx) => (
-                  <div key={idx} className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground block leading-snug">{item.q}</label>
-                    <input
+                  <FormField
+                    key={idx}
+                    label={item.q}
+                    required
+                    error={fieldErrors[`answer${idx + 1}`]}
+                    labelClassName="leading-snug text-foreground"
+                  >
+                    <Input
                       type="text"
                       value={item.a}
-                      onChange={e => item.setA(e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-ring transition duration-200"
+                      onChange={e => {
+                        item.setA(e.target.value)
+                        const key = `answer${idx + 1}`
+                        if (fieldErrors[key]) setFieldErrors(previous => ({ ...previous, [key]: '' }))
+                      }}
                       placeholder="Your answer"
                       autoComplete="off"
                       autoFocus={idx === 0}
                     />
-                  </div>
+                  </FormField>
                 ))}
-                <button
+                <Button
                   type="submit"
-                  className="press-scale w-full py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-sm rounded-xl shadow-lg shadow-primary/15 hover:shadow-primary/25 transition duration-200 cursor-pointer"
+                  size="lg"
+                  className="w-full rounded-xl py-3 shadow-lg shadow-primary/15"
                 >
                   Verify answers
-                </button>
+                </Button>
               </form>
             )}
 
             {step === 3 && (
               <form noValidate onSubmit={handleReset} className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">New password</label>
+                <FormField
+                  label="New password"
+                  required
+                  error={fieldErrors.newPassword}
+                  labelClassName="uppercase tracking-wider"
+                >
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 flex w-10 items-center justify-center pointer-events-none">
                       <Lock className="size-4 text-muted-foreground/70" />
                     </span>
-                    <input
+                    <Input
                       type={showPassword ? 'text' : 'password'}
                       value={newPassword}
-                      onChange={e => setNewPassword(e.target.value)}
-                      className="no-native-reveal w-full pl-10 pr-10 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-ring transition duration-200"
+                      onChange={e => {
+                        setNewPassword(e.target.value)
+                        if (fieldErrors.newPassword) setFieldErrors(previous => ({ ...previous, newPassword: '' }))
+                      }}
+                      className="no-native-reveal pl-10 pr-10"
                       placeholder="••••••••"
                       autoComplete="new-password"
                       autoFocus
                     />
                     {newPassword.length > 0 && (
-                      <button
+                      <Button
                         type="button"
+                        variant="unstyled"
+                        size="icon"
                         onClick={() => setShowPassword(p => !p)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center size-7 text-muted-foreground hover:text-foreground transition cursor-pointer"
+                        className="absolute right-1 top-1/2 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                         aria-label={showPassword ? 'Hide password' : 'Show password'}
                       >
                         {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                      </button>
+                      </Button>
                     )}
                   </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Confirm password</label>
+                </FormField>
+                <FormField
+                  label="Confirm password"
+                  required
+                  error={fieldErrors.confirmPassword}
+                  labelClassName="uppercase tracking-wider"
+                >
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 flex w-10 items-center justify-center pointer-events-none">
                       <Lock className="size-4 text-muted-foreground/70" />
                     </span>
-                    <input
+                    <Input
                       type={showPassword ? 'text' : 'password'}
                       value={confirmPassword}
-                      onChange={e => setConfirmPassword(e.target.value)}
-                      className="no-native-reveal w-full pl-10 pr-3.5 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-ring transition duration-200"
+                      onChange={e => {
+                        setConfirmPassword(e.target.value)
+                        if (fieldErrors.confirmPassword) setFieldErrors(previous => ({ ...previous, confirmPassword: '' }))
+                      }}
+                      className="no-native-reveal pl-10"
                       placeholder="••••••••"
                       autoComplete="new-password"
                     />
                   </div>
-                </div>
-                <button
+                </FormField>
+                <Button
                   type="submit"
+                  size="lg"
                   disabled={loading}
-                  className="press-scale w-full py-3 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground font-bold text-sm rounded-xl shadow-lg shadow-primary/15 hover:shadow-primary/25 transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full rounded-xl py-3 shadow-lg shadow-primary/15"
                 >
                   {loading ? (
                     <div className="w-4 h-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />
                   ) : (
                     'Reset password'
                   )}
-                </button>
+                </Button>
               </form>
             )}
 
-            <button
+            <Button
               type="button"
+              variant="unstyled"
               onClick={onBackToLogin}
               className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer"
             >
               <ArrowLeft className="size-3.5" />
               Back to login
-            </button>
+            </Button>
           </>
         )}
-      </div>
-    </div>
+      </AuthCard>
+    </AuthShell>
   )
 }

@@ -52,9 +52,10 @@ export type WireWishlistItem = Omit<WishlistItem, 'price'> & {
   price: WireAmount
 }
 
-export type WireSavingsGoal = Omit<SavingsGoal, 'targetAmount' | 'earmarkedAmount'> & {
+export type WireSavingsGoal = Omit<SavingsGoal, 'targetAmount' | 'earmarkedAmount' | 'cycleFundedAmount'> & {
   targetAmount: WireAmount
   earmarkedAmount: WireAmount
+  cycleFundedAmount: WireAmount
 }
 
 export interface WireSavingsGoalPool {
@@ -62,6 +63,7 @@ export interface WireSavingsGoalPool {
   totalEarmarked: WireAmount
   unassigned: WireAmount
   requiredPerCycleTotal: WireAmount
+  outstandingThisCycleTotal: WireAmount
   currentCycleKey?: string
 }
 

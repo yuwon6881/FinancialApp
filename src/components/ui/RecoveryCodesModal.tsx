@@ -1,3 +1,4 @@
+import { Checkbox } from './Checkbox'
 import React, { useState } from 'react'
 import { KeyRound, Copy, CheckCircle2 } from 'lucide-react'
 import { BottomSheet } from './BottomSheet'
@@ -42,8 +43,7 @@ export const RecoveryCodesModal: React.FC<RecoveryCodesModalProps> = ({ isOpen, 
       footer={
         <div className="space-y-3">
           <label className="flex items-start gap-2 text-[11px] text-muted-foreground cursor-pointer">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={acknowledged}
               onChange={e => setAcknowledged(e.target.checked)}
               className="mt-0.5 size-3.5 accent-blue-600 cursor-pointer"

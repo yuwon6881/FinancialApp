@@ -18,10 +18,11 @@ export interface UseCycleNavigationOptions {
   setTransactions: (txs: any) => void
   setActiveTab: (tab: AppTab, navigationOptions?: AppNavigationOptions) => void
   setLedgerCyclesRange: (range: LedgerRouteRange) => void
+  showAlert?: (message: string, title?: string) => void
 }
 
 export function useCycleNavigation(options: UseCycleNavigationOptions) {
-  const { loadAll, handleLogout, markSessionLocked, setDashboardData, setTransactions, setActiveTab, setLedgerCyclesRange } = options
+  const { loadAll, handleLogout, markSessionLocked, setDashboardData, setTransactions, setActiveTab, setLedgerCyclesRange, showAlert } = options
 
   const [initialLocation] = useState(readAppLocation)
   const cachedPeriod = getCachedDashboardPeriod()
@@ -87,14 +88,14 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
       } else if (msg.includes('423')) {
         markSessionLocked()
       } else {
-        alert('Error updating active month.')
+        showAlert?.('The active month could not be updated. Please try again.', 'Cycle update failed')
       }
     } finally {
       if (requestSeq === selectPeriodSeqRef.current) {
         setIsSwitchingCycle(false)
       }
     }
-  }, [loadAll, handleLogout, markSessionLocked, setDashboardData, setTransactions])
+  }, [loadAll, handleLogout, markSessionLocked, setDashboardData, setTransactions, showAlert])
 
   const handleNavigateToLedger = useCallback((navOptions: {
     category?: string | null

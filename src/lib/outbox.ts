@@ -559,27 +559,33 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
   return result
 }
 
+const withoutUndoSnapshot = (payload: OutboxPayload | undefined): OutboxPayload => {
+  const requestPayload = { ...(payload ?? {}) }
+  delete requestPayload.undoSnapshot
+  return requestPayload
+}
+
 export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>> = {
   'transaction:add': (op) => api.addTransaction({ ...(op.payload as Partial<Transaction>), id: op.targetId } as Omit<Transaction, 'id'> & { id?: string }),
-  'transaction:update': (op) => {
-    const { undoSnapshot: _undoSnapshot, ...payload } = op.payload ?? {}
-    return api.updateTransaction(op.targetId, payload as unknown as Omit<Transaction, 'id'>)
-  },
+  'transaction:update': (op) => api.updateTransaction(
+    op.targetId,
+    withoutUndoSnapshot(op.payload) as unknown as Omit<Transaction, 'id'>,
+  ),
   'transaction:delete': (op) => api.deleteTransaction(op.targetId),
 
   'recurringPayment:add': (op) => api.addRecurringPayment({ ...(op.payload as Partial<RecurringPayment>), id: op.targetId } as Omit<RecurringPayment, 'id'> & { id?: string }),
-  'recurringPayment:update': (op) => {
-    const { undoSnapshot: _undoSnapshot, ...payload } = op.payload ?? {}
-    return api.updateRecurringPayment(op.targetId, payload as unknown as RecurringPayment)
-  },
+  'recurringPayment:update': (op) => api.updateRecurringPayment(
+    op.targetId,
+    withoutUndoSnapshot(op.payload) as unknown as RecurringPayment,
+  ),
   'recurringPayment:delete': (op) => api.deleteRecurringPayment(op.targetId),
   'recurringPayment:toggle': (op) => api.toggleRecurringPayment(op.targetId, typeof op.payload?.active === 'boolean' ? op.payload.active : undefined),
 
   'wishlistItem:add': (op) => api.addWishlistItem(op.payload as Partial<WishlistItem>, op.id),
-  'wishlistItem:update': (op) => {
-    const { undoSnapshot: _undoSnapshot, ...payload } = op.payload ?? {}
-    return api.updateWishlistItem(Number(op.targetId), payload as unknown as WishlistItem)
-  },
+  'wishlistItem:update': (op) => api.updateWishlistItem(
+    Number(op.targetId),
+    withoutUndoSnapshot(op.payload) as unknown as WishlistItem,
+  ),
   'wishlistItem:delete': (op) => api.deleteWishlistItem(Number(op.targetId)),
   'wishlistItem:purchase': (op) => api.purchaseWishlistItem(Number(op.targetId), typeof op.payload?.date === 'string' ? op.payload.date : undefined),
   'wishlistItem:unpurchase': (op) => api.unpurchaseWishlistItem(Number(op.targetId)),
@@ -597,9 +603,8 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
   'savingsGoal:update': async (op) => {
     // The undo snapshot is local bookkeeping for the toast's Undo action; strip it so it is never
     // sent as part of the goal body.
-    const { undoSnapshot: _undoSnapshot, ...payload } = op.payload ?? {}
     const { updateSavingsGoal } = await import('./api/savingsGoals')
-    return updateSavingsGoal(Number(op.targetId), payload as unknown as SavingsGoal)
+    return updateSavingsGoal(Number(op.targetId), withoutUndoSnapshot(op.payload) as unknown as SavingsGoal)
   },
   'savingsGoal:delete': async (op) => {
     const { deleteSavingsGoal } = await import('./api/savingsGoals')
@@ -629,8 +634,7 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
     if (op.targetId === 'darkMode') return api.updateDarkMode(op.payload?.darkMode === true)
     if (op.targetId === 'hideSensitive') return api.updateHideSensitive(op.payload?.hideSensitive === true)
     if (op.targetId === 'summarySeen') return api.updateSummarySeen(typeof op.payload?.cycleKey === 'string' ? op.payload.cycleKey : null)
-    const { undoSnapshot: _undoSnapshot, ...payload } = op.payload ?? {}
-    return api.updateSettings(payload as unknown as Pick<FinancialSetting, 'targetStabilityFund' | 'essentialsAlloc' | 'growthAlloc' | 'stabilityAlloc' | 'rewardsAlloc' | 'cycleDay'> & Partial<FinancialSetting>)
+    return api.updateSettings(withoutUndoSnapshot(op.payload) as unknown as Pick<FinancialSetting, 'targetStabilityFund' | 'essentialsAlloc' | 'growthAlloc' | 'stabilityAlloc' | 'rewardsAlloc' | 'cycleDay'> & Partial<FinancialSetting>)
   },
 
   'investmentAccount:add': (op) => api.createInvestmentAccount({ ...(op.payload as unknown as api.AccountMutation), id: op.targetId }),
@@ -660,10 +664,9 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
   'investmentCashFlow:delete': (op) => api.deleteInvestmentCashFlow(op.targetId),
   'investmentCashFlow:restore': (op) => api.restoreInvestmentCashFlow(op.payload as unknown as InvestmentCashFlow),
 
-  'investmentPlan:update': (op) => {
-    const { undoSnapshot: _undoSnapshot, ...payload } = op.payload ?? {}
-    return api.updateInvestmentPlan(payload as unknown as Parameters<typeof api.updateInvestmentPlan>[0])
-  },
+  'investmentPlan:update': (op) => api.updateInvestmentPlan(
+    withoutUndoSnapshot(op.payload) as unknown as Parameters<typeof api.updateInvestmentPlan>[0],
+  ),
   'investmentAllocation:update': (op) => api.updateInvestmentAllocationSleeve(
     op.targetId,
     typeof op.payload?.sleeve === 'string' ? op.payload.sleeve as InvestmentAllocationSleeve : undefined,

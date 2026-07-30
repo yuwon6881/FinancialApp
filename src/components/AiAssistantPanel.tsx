@@ -1,3 +1,4 @@
+import { Textarea } from './ui/Textarea'
 import { useEffect, useState, useRef } from 'react'
 import { Send, Sparkles, X, RotateCcw, SquarePen, Square } from 'lucide-react'
 import { BottomSheet } from './ui/BottomSheet'
@@ -215,7 +216,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
         </div>
 
         <form noValidate onSubmit={event => { event.preventDefault(); void sendMessage() }} className="flex items-end gap-2 rounded-xl border border-border bg-card p-1.5 shadow-xs transition-[border-color,box-shadow] focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10">
-          <textarea
+          <Textarea
             ref={textareaRef}
             aria-label="Ask AI"
             disabled={isOffline || isHydrating || isResetting}

@@ -1,8 +1,12 @@
-import { m } from 'framer-motion'
+import { Input } from '../ui/Input'
+import { Checkbox } from '../ui/Checkbox'
 import type { ChangeEvent, FormEvent } from 'react'
 import { CustomSelect } from '../ui/CustomSelect'
 import { DatePicker } from '../ui/DatePicker'
 import { SmartAmountInput } from '../ui/SmartAmountInput'
+import { FormField } from '../ui/FormField'
+import { Button } from '../ui/Button'
+import { ModalActions } from '../ui/ModalActions'
 
 interface SavingsGoalFormProps {
   mode: 'add' | 'edit'
@@ -22,21 +26,15 @@ interface SavingsGoalFormProps {
   onRecurrenceMonthsChange: (value: string) => void
   onClearError: (field: string) => void
   onCancel: () => void
-  onSubmit: (event: FormEvent) => void
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void
 }
-
-const inputClass = (hasError: boolean) =>
-  `w-full px-3.5 py-2 bg-background border rounded-xl focus:outline-none focus:ring-1 transition font-medium ${
-    hasError ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-ring'
-  }`
 
 export function SavingsGoalForm(props: SavingsGoalFormProps) {
   const isAdd = props.mode === 'add'
   return (
     <form noValidate onSubmit={props.onSubmit} className="space-y-4 text-xs font-semibold">
-      <div>
-        <label className="text-muted-foreground block mb-1">What are you saving for? *</label>
-        <input
+      <FormField label="What are you saving for?" required error={props.errors.name}>
+        <Input
           type="text"
           value={props.name}
           onChange={event => {
@@ -44,14 +42,12 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
             props.onClearError('name')
           }}
           placeholder={isAdd ? 'e.g. Car maintenance, House deposit' : undefined}
-          className={inputClass(!!props.errors.name)}
+          className="font-medium"
         />
-        {props.errors.name && <p className="text-[11px] text-destructive font-medium mt-1">{props.errors.name}</p>}
-      </div>
+      </FormField>
 
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="text-muted-foreground block mb-1">Amount needed ({props.currency}) *</label>
+        <FormField label={`Amount needed (${props.currency})`} required error={props.errors.target}>
           <SmartAmountInput
             type="text"
             value={props.target}
@@ -60,12 +56,10 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
               props.onClearError('target')
             }}
             placeholder={isAdd ? '0.00' : undefined}
-            className={`${inputClass(!!props.errors.target)} [appearance:textfield]`}
+            className="font-medium [appearance:textfield]"
           />
-          {props.errors.target && <p className="text-[11px] text-destructive font-medium mt-1">{props.errors.target}</p>}
-        </div>
-        <div>
-          <label className="text-muted-foreground block mb-1">Priority</label>
+        </FormField>
+        <FormField label="Priority">
           <CustomSelect
             ariaLabel="Goal priority"
             value={props.priority}
@@ -74,11 +68,10 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
             className="w-full"
           />
           <p className="text-[10px] text-muted-foreground/80 font-medium mt-1">Funded first when money is short.</p>
-        </div>
+        </FormField>
       </div>
 
-      <div>
-        <label className="text-muted-foreground block mb-1">Needed by *</label>
+      <FormField label="Needed by" required error={props.errors.date}>
         <DatePicker
           value={props.date}
           onChange={value => {
@@ -87,19 +80,16 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
           }}
           className="w-full"
         />
-        {props.errors.date
-          ? <p className="text-[11px] text-destructive font-medium mt-1">{props.errors.date}</p>
-          : (
+        {!props.errors.date && (
             <p className="text-[11px] text-muted-foreground mt-1 font-medium">
               The deadline sets the pace — we work out what to set aside each cycle so you land on it.
             </p>
-          )}
-      </div>
+        )}
+      </FormField>
 
       <div className="rounded-xl border border-border/50 bg-muted/20 p-3 space-y-3">
         <div className="flex items-center gap-2 select-none">
-          <input
-            type="checkbox"
+          <Checkbox
             id={`goal-recurring-${props.mode}`}
             checked={props.isRecurring}
             onChange={event => props.onRecurringChange(event.target.checked)}
@@ -110,9 +100,8 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
           </label>
         </div>
         {props.isRecurring ? (
-          <div>
-            <label className="text-muted-foreground block mb-1">Repeat every (months)</label>
-            <input
+          <FormField label="Repeat every (months)" error={props.errors.recurrence}>
+            <Input
               type="number"
               min={1}
               max={120}
@@ -122,16 +111,14 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
                 props.onRecurrenceMonthsChange(event.target.value)
                 props.onClearError('recurrence')
               }}
-              className={`${inputClass(!!props.errors.recurrence)} [appearance:textfield]`}
+              className="font-medium [appearance:textfield]"
             />
-            {props.errors.recurrence
-              ? <p className="text-[11px] text-destructive font-medium mt-1">{props.errors.recurrence}</p>
-              : (
+            {!props.errors.recurrence && (
                 <p className="text-[10px] text-muted-foreground/80 font-medium mt-1">
                   When you mark it done, the deadline rolls forward and saving restarts from zero.
                 </p>
-              )}
-          </div>
+            )}
+          </FormField>
         ) : (
           <p className="text-[10px] text-muted-foreground/80 font-medium">
             For things like a quarterly car service or annual insurance.
@@ -139,19 +126,17 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
         )}
       </div>
 
-      <div className="flex items-center gap-3 border-t border-border/30 pt-4 mt-6">
-        <button type="button" onClick={props.onCancel} className="flex-1 py-2.5 bg-muted text-muted-foreground rounded-xl font-bold cursor-pointer">
+      <ModalActions className="border-t border-border/30 pt-4 mt-6">
+        <Button variant="outline" type="button" onClick={props.onCancel} className="rounded-xl py-2.5">
           Cancel
-        </button>
-        <m.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+        </Button>
+        <Button
           type="submit"
-          className="flex-1 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full font-bold shadow-lg shadow-primary/25 cursor-pointer"
+          className="rounded-xl py-2.5 shadow-lg shadow-primary/25"
         >
           {isAdd ? 'Add Goal' : 'Save Changes'}
-        </m.button>
-      </div>
+        </Button>
+      </ModalActions>
     </form>
   )
 }

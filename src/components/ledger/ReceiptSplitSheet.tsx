@@ -1,5 +1,6 @@
+import { Input } from '../ui/Input'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, Lock, Minus, Plus, Trash2, Unlock } from 'lucide-react'
+import { AlertTriangle, ChevronDown, Lock, Minus, Plus, Trash2, Unlock } from 'lucide-react'
 import type { ReceiptSplitItem, ReceiptSplitScanResult } from '../../lib/api'
 import type { ReceiptSplitDraft } from '../../lib/useReceiptSplitPolling'
 import { calculateReceiptShare } from '../../lib/receiptSplitCalculator'
@@ -193,26 +194,44 @@ export function ReceiptSplitSheet({
     >
       {receipt && calculation && (
         <div className="space-y-5">
-          <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(12rem,1fr)]">
-            <label className={`min-w-0 text-xs font-semibold text-muted-foreground ${receipt.fieldConfidence.description < 0.65 ? 'text-amber-600 dark:text-amber-400' : ''}`}>
-              Description
-              <input
-                aria-label="Description"
-                value={receipt.description}
-                onChange={event => setReceipt({ ...receipt, description: event.target.value })}
-                className={`mt-1 ${inputClassName}`}
-              />
-            </label>
-            <label className={`min-w-0 text-xs font-semibold text-muted-foreground ${receipt.fieldConfidence.date < 0.65 ? 'text-amber-600 dark:text-amber-400' : ''}`}>
-              Date
-              <DatePicker
-                value={receipt.date ?? ''}
-                onChange={value => setReceipt({ ...receipt, date: value || null })}
-                className="mt-1 w-full"
-                align="right"
-              />
-            </label>
-          </div>
+          <section className="rounded-2xl border border-blue-500/25 bg-blue-500/8 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-300">Your share</p>
+            <div className="mt-1 flex items-end justify-between gap-4">
+              <strong className="text-2xl font-black tracking-tight text-foreground">
+                {formatCurrencyVal(calculation.total, currency)}
+              </strong>
+              <span className="pb-0.5 text-right text-[11px] text-muted-foreground">
+                {calculation.selectedItemCount} selected item{calculation.selectedItemCount === 1 ? '' : 's'}
+              </span>
+            </div>
+          </section>
+
+          <details className="group rounded-2xl border border-border/60 bg-muted/15">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3.5 py-3 text-xs font-bold text-foreground">
+              Receipt details
+              <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="grid gap-3 border-t border-border/50 p-3.5 sm:grid-cols-[minmax(0,2fr)_minmax(12rem,1fr)]">
+              <label className={`min-w-0 text-xs font-semibold text-muted-foreground ${receipt.fieldConfidence.description < 0.65 ? 'text-amber-600 dark:text-amber-400' : ''}`}>
+                Description
+                <Input
+                  aria-label="Description"
+                  value={receipt.description}
+                  onChange={event => setReceipt({ ...receipt, description: event.target.value })}
+                  className={`mt-1 ${inputClassName}`}
+                />
+              </label>
+              <label className={`min-w-0 text-xs font-semibold text-muted-foreground ${receipt.fieldConfidence.date < 0.65 ? 'text-amber-600 dark:text-amber-400' : ''}`}>
+                Date
+                <DatePicker
+                  value={receipt.date ?? ''}
+                  onChange={value => setReceipt({ ...receipt, date: value || null })}
+                  className="mt-1 w-full"
+                  align="right"
+                />
+              </label>
+            </div>
+          </details>
 
           {(receipt.truncated || receipt.warnings.length > 0 || receipt.confidence < 0.7) && (
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
@@ -272,7 +291,7 @@ export function ReceiptSplitSheet({
                   contentClassName={`rounded-2xl p-3 sm:p-4 bg-card ${item.confidence < 0.65 ? 'before:absolute before:inset-0 before:bg-amber-500/10 before:rounded-2xl before:pointer-events-none relative' : ''}`}
                 >
                   <div className="relative space-y-3">
-                    <input
+                    <Input
                       aria-label={`Item ${index + 1} name`}
                       value={item.name}
                       onChange={event => updateItem(index, { name: event.target.value })}
@@ -280,11 +299,26 @@ export function ReceiptSplitSheet({
                       className={inputClassName}
                     />
 
-                    <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3">
+                    <div className="flex items-center justify-between gap-3 rounded-xl bg-blue-500/6 px-3 py-2.5">
+                      <div className="min-w-0">
+                        <span className="block text-[9px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-300">Your share for this item</span>
+                        <strong className="mt-0.5 block truncate text-sm font-extrabold text-foreground">
+                          {formatCurrencyVal(itemCalculation?.total ?? 0, currency)}
+                        </strong>
+                      </div>
+                      <span className="shrink-0 text-[10px] text-muted-foreground">{selected} of {maximum}</span>
+                    </div>
+
+                    <details className="group rounded-xl border border-border/50 bg-muted/15">
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-[11px] font-bold text-muted-foreground">
+                        Price and charge breakdown
+                        <ChevronDown className="size-3.5 shrink-0 transition-transform group-open:rotate-180" />
+                      </summary>
+                      <div className="grid min-w-0 grid-cols-2 gap-2 border-t border-border/40 p-2.5 sm:grid-cols-3">
                       <div className="min-w-0 rounded-xl border border-border/60 bg-muted/25 p-2.5">
                         <span className="block text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Price</span>
                         <div className="mt-1 flex min-w-0 items-center gap-1">
-                          <input
+                          <Input
                             aria-label={`Item ${index + 1} price`}
                             type="number"
                             min="0"
@@ -321,7 +355,8 @@ export function ReceiptSplitSheet({
                           {formatCurrencyVal(itemCalculation?.total ?? 0, currency)}
                         </span>
                       </div>
-                    </div>
+                      </div>
+                    </details>
 
                     <div className="flex items-center justify-between gap-3 border-t border-border/40 pt-3">
                       <div>
@@ -358,9 +393,12 @@ export function ReceiptSplitSheet({
             })}
           </section>
 
-          <section className="rounded-2xl border border-blue-500/25 bg-blue-500/5 p-4">
-            <h3 className="text-sm font-bold">Your total</h3>
-            <div className="mt-3 space-y-2 text-xs">
+          <details className="group rounded-2xl border border-blue-500/20 bg-blue-500/5">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-xs font-bold text-foreground">
+              How your total was calculated
+              <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="space-y-2 border-t border-blue-500/20 p-4 text-xs">
               <div className="flex justify-between gap-4 text-muted-foreground">
                 <span>Selected subtotal</span>
                 <span className="font-semibold text-foreground">{formatCurrencyVal(calculation.itemSubtotal, currency)}</span>
@@ -376,7 +414,7 @@ export function ReceiptSplitSheet({
                 <span>{formatCurrencyVal(calculation.total, currency)}</span>
               </div>
             </div>
-          </section>
+          </details>
 
           {calculation.invalidSelectedItemIndexes.length > 0 && (
             <div className="rounded-xl border border-destructive/25 bg-destructive/10 px-3 py-2 text-xs text-destructive">

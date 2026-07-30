@@ -1,19 +1,21 @@
 import { useState, useCallback } from 'react'
 import type { ToastMessage, ToastTone, ToastAction } from '../components/ui/ToastViewport'
 
+export interface ConfirmModalData {
+  title: string
+  message: React.ReactNode
+  confirmText?: string
+  confirmDisabled?: boolean
+  variant?: 'danger' | 'primary'
+  onConfirm: () => void
+}
+
 export interface AppDialogs {
   customAlert: { message: string; title: string } | null
   setCustomAlert: (alert: { message: string; title: string } | null) => void
   showAlert: (message: string, title?: string) => void
-  confirmModalData: {
-    title: string
-    message: React.ReactNode
-    confirmText?: string
-    confirmDisabled?: boolean
-    variant?: 'danger' | 'primary'
-    onConfirm: () => void
-  } | null
-  setConfirmModalData: (data: any) => void
+  confirmModalData: ConfirmModalData | null
+  setConfirmModalData: React.Dispatch<React.SetStateAction<ConfirmModalData | null>>
   toasts: ToastMessage[]
   setToasts: React.Dispatch<React.SetStateAction<ToastMessage[]>>
   showToast: (message: string, title?: string, tone?: ToastTone, action?: ToastAction) => void
@@ -26,14 +28,7 @@ export interface AppDialogs {
 
 export function useAppDialogs(): AppDialogs {
   const [customAlert, setCustomAlert] = useState<{ message: string; title: string } | null>(null)
-  const [confirmModalData, setConfirmModalData] = useState<{
-    title: string
-    message: React.ReactNode
-    confirmText?: string
-    confirmDisabled?: boolean
-    variant?: 'danger' | 'primary'
-    onConfirm: () => void
-  } | null>(null)
+  const [confirmModalData, setConfirmModalData] = useState<ConfirmModalData | null>(null)
   const [toasts, setToasts] = useState<ToastMessage[]>([])
 
   const [showFailedOpsModal, setShowFailedOpsModal] = useState<boolean>(false)

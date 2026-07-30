@@ -1,6 +1,8 @@
 import React from 'react'
 import { AlertCircle, Info } from 'lucide-react'
 import { BottomSheet } from './BottomSheet'
+import { Button } from './Button'
+import { ModalActions } from './ModalActions'
 
 interface CustomConfirmModalProps {
   isOpen: boolean
@@ -29,12 +31,6 @@ export const CustomConfirmModal: React.FC<CustomConfirmModalProps> = ({
   const Icon = isPrimary ? Info : AlertCircle
   const colorClass = isPrimary ? 'text-blue-500' : 'text-orange-500'
   const bgClass = isPrimary ? 'bg-blue-500/10' : 'bg-orange-500/10'
-  // The text colour belongs to each fill: the accent fill is light in dark mode, so
-  // it pairs with the surface colour, never white.
-  const buttonClass = isPrimary
-    ? 'bg-primary text-primary-foreground hover:bg-primary/90 disabled:hover:bg-primary'
-    : 'bg-orange-600 text-white hover:bg-orange-700 disabled:hover:bg-orange-600'
-
   return (
     <BottomSheet
       isOpen={isOpen}
@@ -49,23 +45,19 @@ export const CustomConfirmModal: React.FC<CustomConfirmModalProps> = ({
         </div>
       }
       footer={
-        <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-muted text-foreground transition cursor-pointer"
-          >
+        <ModalActions>
+          <Button variant="outline" onClick={onCancel} className="rounded-xl px-4">
             {cancelText}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant={isPrimary ? 'primary' : 'destructive'}
             onClick={onConfirm}
             disabled={confirmDisabled}
-            className={`px-5 py-2 rounded-xl text-xs font-semibold shadow-md transition cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed ${buttonClass}`}
+            className="rounded-xl px-5 shadow-md"
           >
             {confirmText}
-          </button>
-        </div>
+          </Button>
+        </ModalActions>
       }
     >
       <div className="text-xs leading-relaxed text-muted-foreground">

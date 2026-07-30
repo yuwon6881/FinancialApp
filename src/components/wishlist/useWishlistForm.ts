@@ -3,6 +3,7 @@ import type { WishlistItem } from '../../types'
 import { maskCurrencyInput } from '../../lib/utils'
 import { useAutoOpenModal } from '../../lib/useAutoOpenModal'
 import { useFormDraft } from '../../lib/useFormDraft'
+import { focusFirstInvalidField } from '../ui/formValidation'
 
 interface UseWishlistFormOptions {
   wishlist: WishlistItem[]
@@ -129,20 +130,26 @@ export function useWishlistForm(options: UseWishlistFormOptions) {
     return Object.keys(nextErrors).length === 0 ? price : null
   }
 
-  const saveAdd = async (event: FormEvent) => {
+  const saveAdd = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const price = validate()
-    if (price == null) return
+    if (price == null) {
+      focusFirstInvalidField(event.currentTarget)
+      return
+    }
     const item = { name: nameInput, price, priority: priorityInput, isActive: isActiveInput }
     closeAdd()
     await options.onAddItem(item)
   }
 
-  const saveEdit = async (event: FormEvent) => {
+  const saveEdit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!editingItem) return
     const price = validate()
-    if (price == null) return
+    if (price == null) {
+      focusFirstInvalidField(event.currentTarget)
+      return
+    }
     const item = { ...editingItem, name: nameInput, price, priority: priorityInput, isActive: isActiveInput }
     delete item.isPendingSync
     const id = editingItem.id

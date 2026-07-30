@@ -94,7 +94,10 @@ export function useDialog({ isOpen, onClose, ref, canClose, autoFocus = true, is
       if (!panel) return
 
       if (e.key === 'Escape') {
-        if (canCloseRef.current && !canCloseRef.current()) return
+        if (canCloseRef.current && !canCloseRef.current()) {
+          e.preventDefault()
+          return
+        }
         e.preventDefault()
         onCloseRef.current()
         return

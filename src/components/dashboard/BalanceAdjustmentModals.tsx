@@ -1,9 +1,14 @@
+import { Input } from '../ui/Input'
 import React from 'react'
 import type { CategorySummary } from '../../types'
 import { BottomSheet } from '../ui/BottomSheet'
 import { CustomConfirmModal } from '../ui/CustomConfirmModal'
 import { SmartAmountInput } from '../ui/SmartAmountInput'
 import type { PendingBalanceAdjustment } from './useDashboardView'
+import { FormField } from '../ui/FormField'
+import { focusFirstInvalidField } from '../ui/formValidation'
+import { Button } from '../ui/Button'
+import { ModalActions } from '../ui/ModalActions'
 
 interface BalanceAdjustmentModalsProps {
   adjustingCategory: CategorySummary | null
@@ -48,71 +53,59 @@ export const BalanceAdjustmentModals: React.FC<BalanceAdjustmentModalsProps> = (
           onClose={onClose}
           maxWidthClassName="max-w-sm"
           footer={
-            <div className="flex gap-2.5 justify-end">
-              <button
+            <ModalActions>
+              <Button
+                variant="outline"
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-xs rounded-xl transition duration-150 cursor-pointer"
+                className="rounded-xl px-4 py-2"
               >
                 Cancel
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                type="submit"
+                form="balance-adjustment-form"
                 disabled={isAdjustmentUnchanged}
-                onClick={onReview}
-                className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground font-bold text-xs rounded-xl transition duration-150 cursor-pointer shadow-md"
+                className="rounded-xl px-4 py-2 shadow-md"
               >
                 Review Adjustment
-              </button>
-            </div>
+              </Button>
+            </ModalActions>
           }
         >
-          <div className="text-xs space-y-3">
+          <form
+            id="balance-adjustment-form"
+            noValidate
+            className="text-xs space-y-3"
+            onSubmit={event => {
+              event.preventDefault()
+              onReview()
+              focusFirstInvalidField(event.currentTarget)
+            }}
+          >
             <div>
               <span className="text-muted-foreground block mb-0.5">Current Remaining Balance:</span>
               <span className="font-bold text-foreground">{formatSensitive(adjustingCategory.remaining)}</span>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-[11px] font-bold text-muted-foreground block">Target Remaining Balance</label>
+            <FormField label="Target remaining balance" required error={balanceErrors.balance}>
               <SmartAmountInput
                 type="text"
                 placeholder="0.00"
                 value={newBalanceInput}
                 onChange={e => onBalanceInputChange(e.target.value)}
-                className={`w-full px-3 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                  balanceErrors.balance
-                    ? 'border-destructive focus:ring-destructive'
-                    : 'border-border focus:ring-ring'
-                }`}
               />
-              {balanceErrors.balance && (
-                <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                  {balanceErrors.balance}
-                </p>
-              )}
-            </div>
+            </FormField>
 
-            <div className="space-y-1">
-              <label className="text-[11px] font-bold text-muted-foreground block">Adjustment Description</label>
-              <input
+            <FormField label="Adjustment description" required error={balanceErrors.description}>
+              <Input
                 type="text"
                 required
                 placeholder="e.g. Ledger alignment"
                 value={adjustmentDescription}
                 onChange={e => onDescriptionChange(e.target.value)}
-                className={`w-full px-3 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                  balanceErrors.description
-                    ? 'border-destructive focus:ring-destructive'
-                    : 'border-border focus:ring-ring'
-                }`}
               />
-              {balanceErrors.description && (
-                <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                  {balanceErrors.description}
-                </p>
-              )}
-            </div>
+            </FormField>
 
             {adjustmentPreviewDiff !== null && (
               <div className="p-3 bg-muted/40 border border-border/50 rounded-xl text-[10px] text-muted-foreground select-none">
@@ -121,7 +114,7 @@ export const BalanceAdjustmentModals: React.FC<BalanceAdjustmentModalsProps> = (
                 </span>
               </div>
             )}
-          </div>
+          </form>
         </BottomSheet>
       )}
 

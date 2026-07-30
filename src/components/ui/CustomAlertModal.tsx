@@ -1,6 +1,8 @@
 import React from 'react'
 import { Info } from 'lucide-react'
 import { BottomSheet } from './BottomSheet'
+import { Button } from './Button'
+import { ModalActions } from './ModalActions'
 
 interface CustomAlertModalProps {
   isOpen: boolean
@@ -31,15 +33,11 @@ export const CustomAlertModal: React.FC<CustomAlertModalProps> = ({
         </div>
       }
       footer={
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold shadow-md transition cursor-pointer"
-          >
+        <ModalActions>
+          <Button onClick={onClose} className="rounded-xl px-5 shadow-md">
             {buttonText}
-          </button>
-        </div>
+          </Button>
+        </ModalActions>
       }
     >
       <div className="text-xs leading-relaxed text-muted-foreground">

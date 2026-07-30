@@ -1,7 +1,12 @@
+import { Input } from './ui/Input'
 import { useState } from 'react'
 import { ShieldCheck } from 'lucide-react'
 import * as api from '../lib/api'
 import { BottomSheet } from './ui/BottomSheet'
+import { Button } from './ui/Button'
+import { FormField } from './ui/FormField'
+import { focusFirstInvalidField } from './ui/formValidation'
+import { ModalActions } from './ui/ModalActions'
 
 interface PasswordPromptModalProps {
   isOpen: boolean
@@ -45,18 +50,16 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified, onTryFingerpr
       isOpen={isOpen}
       onClose={handleClose}
       maxWidthClassName="max-w-sm"
-      title="Verify Identity"
+      title="Verify identity"
+      description="Confirm that you are the account owner before revealing sensitive financial figures."
     >
-      <p className="text-xs text-muted-foreground">
-        Please enter your password to confirm you are the owner before revealing sensitive financial figures.
-      </p>
-
       {onTryFingerprint && (
-        <button
+        <Button
           type="button"
+          variant="successGhost"
           onClick={handleTryFingerprint}
           disabled={fingerprintBusy}
-          className="press-scale w-full py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 disabled:opacity-50 text-emerald-500 border border-emerald-500/30 font-bold text-xs rounded-xl transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
+          className="w-full rounded-xl py-2.5"
         >
           {fingerprintBusy ? (
             <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
@@ -64,13 +67,18 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified, onTryFingerpr
             <ShieldCheck className="size-3.5" />
           )}
           {fingerprintBusy ? 'Verifying...' : 'Unlock with device'}
-        </button>
+        </Button>
       )}
 
       <form
         noValidate
         onSubmit={async (e) => {
           e.preventDefault()
+          if (!confirmPassword.trim()) {
+            setPromptError('Password is required.')
+            focusFirstInvalidField(e.currentTarget)
+            return
+          }
           setPromptVerifying(true)
           setPromptError(null)
           try {
@@ -90,40 +98,34 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified, onTryFingerpr
         }}
         className="space-y-4 font-semibold text-xs text-foreground"
       >
-        <div className="space-y-1">
-          <input
+        <FormField label="Password" required error={promptError}>
+          <Input
             type="password"
             required
             placeholder="Enter password"
             value={confirmPassword}
             onChange={e => setConfirmPassword(e.target.value)}
-            autoComplete="new-password"
-            readOnly
-            onFocus={(e) => e.target.removeAttribute('readonly')}
-            className="w-full px-3 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-ring font-medium"
+            autoComplete="current-password"
+            className="font-medium"
           />
-          {promptError && (
-            <p className="text-[10px] text-orange-500 font-semibold mt-1">
-              {promptError}
-            </p>
-          )}
-        </div>
-        <div className="flex gap-2 justify-end">
-          <button
+        </FormField>
+        <ModalActions>
+          <Button
             type="button"
+            variant="outline"
             onClick={handleClose}
-            className="px-4 py-2 border border-border hover:bg-muted text-foreground text-xs font-semibold rounded-xl cursor-pointer transition duration-150"
+            className="rounded-xl px-4"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             disabled={promptVerifying}
-            className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-xs font-semibold rounded-xl cursor-pointer transition duration-150 shadow-md shadow-primary/10"
+            className="rounded-xl px-4 shadow-md shadow-primary/10"
           >
             {promptVerifying ? 'Verifying...' : 'Verify'}
-          </button>
-        </div>
+          </Button>
+        </ModalActions>
       </form>
     </BottomSheet>
   )

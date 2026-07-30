@@ -23,7 +23,7 @@ describe('CategoryLimitsCard', () => {
     )
 
     fireEvent.click(screen.getByRole('switch', { name: 'Track Transport cycle spending' }))
-    fireEvent.change(screen.getByRole('textbox', { name: 'Transport cycle spending guide' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: /^Transport cycle spending guide/ }), {
       target: { value: '400' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Save Guides' }))

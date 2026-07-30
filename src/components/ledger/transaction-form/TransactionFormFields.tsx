@@ -1,3 +1,4 @@
+import { Input } from '../../ui/Input'
 import React, { useRef, useEffect } from 'react'
 import { Sparkles, Loader2 } from 'lucide-react'
 import { PerimeterBeam } from '../../ui/PerimeterBeam'
@@ -8,6 +9,8 @@ import { AnchoredPopover } from '../../ui/AnchoredPopover'
 import { SmartAmountInput } from '../../ui/SmartAmountInput'
 import { maskCurrencyInput } from '../../../lib/utils'
 import type { TransactionFormState, TransferBucket, SelectableLedgerCategory } from './transactionFormReducer'
+import { FormField } from '../../ui/FormField'
+import { Button } from '../../ui/Button'
 
 interface TransactionFormFieldsProps {
   state: TransactionFormState
@@ -150,9 +153,11 @@ export function TransactionFormFields({
         }}
       >
         <div className="flex items-center justify-between gap-2">
-          <label className="text-xs font-semibold text-muted-foreground">Description</label>
+          <span className="text-xs font-semibold text-muted-foreground">Description</span>
           {state.transactionType !== 'transfer' && (
-            <button
+            <Button
+              variant="ghost"
+              size="xs"
               type="button"
               onMouseDown={e => e.preventDefault()}
               onClick={onSuggestNotes}
@@ -162,49 +167,41 @@ export function TransactionFormFields({
             >
               {suggestions.isSuggestingNote ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
               AI
-            </button>
+            </Button>
           )}
         </div>
         {/* rounded-xl matches the input inside: the beam inherits the host's radius,
             and a square host would corner the trace off the field. */}
-        <div ref={descriptionAnchorRef} className={`relative rounded-xl ${suggestions.isSuggestingNote ? 'perimeter-beam-host' : ''}`}>
-          {suggestions.isSuggestingNote && <PerimeterBeam size={40} />}
-          <input
-            ref={firstInputRef}
-            type="text"
-            placeholder="e.g. Grocery Store, Paycheck"
-            value={state.description}
-            onBlur={handleDescriptionBlur}
-            onChange={e => {
-              const nextVal = e.target.value
-              descriptionRef.current = nextVal
-              onSetField('description', nextVal)
-              if (autocompletedDescriptionRef.current && autocompletedDescriptionRef.current !== nextVal.trim()) {
-                autocompletedDescriptionRef.current = null
-              }
-              suggestions.setShowNoteSuggestions(false)
-              suggestions.setNoteSuggestions([])
-              suggestions.setIsSuggestingNote(false)
-              setShowSuggestions(true)
-              setSelectedSuggestionIndex(-1)
-            }}
-            onFocus={() => {
-              if (!suggestions.showNoteSuggestions && state.description.trim().length >= 1) setShowSuggestions(true)
-            }}
-            onKeyDown={handleDescriptionKeyDown}
-            autoComplete="off"
-            className={`w-full px-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-              errors.description
-                ? 'border-destructive focus:ring-destructive'
-                : 'border-border focus:ring-ring'
-            }`}
-          />
-        </div>
-        {errors.description && (
-          <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-            {errors.description}
-          </p>
-        )}
+        <FormField label="Transaction description" labelClassName="sr-only" required error={errors.description}>
+          <div ref={descriptionAnchorRef} className={`relative rounded-xl ${suggestions.isSuggestingNote ? 'perimeter-beam-host' : ''}`}>
+            {suggestions.isSuggestingNote && <PerimeterBeam size={40} />}
+            <Input
+              ref={firstInputRef}
+              type="text"
+              placeholder="e.g. Grocery Store, Paycheck"
+              value={state.description}
+              onBlur={handleDescriptionBlur}
+              onChange={e => {
+                const nextVal = e.target.value
+                descriptionRef.current = nextVal
+                onSetField('description', nextVal)
+                if (autocompletedDescriptionRef.current && autocompletedDescriptionRef.current !== nextVal.trim()) {
+                  autocompletedDescriptionRef.current = null
+                }
+                suggestions.setShowNoteSuggestions(false)
+                suggestions.setNoteSuggestions([])
+                suggestions.setIsSuggestingNote(false)
+                setShowSuggestions(true)
+                setSelectedSuggestionIndex(-1)
+              }}
+              onFocus={() => {
+                if (!suggestions.showNoteSuggestions && state.description.trim().length >= 1) setShowSuggestions(true)
+              }}
+              onKeyDown={handleDescriptionKeyDown}
+              autoComplete="off"
+            />
+          </div>
+        </FormField>
 
         <AnchoredPopover
           open={suggestions.showNoteSuggestions}
@@ -294,7 +291,7 @@ export function TransactionFormFields({
         {!suggestions.showNoteSuggestions && !state.description.trim() && quickSuggestionEntries.length > 0 && (
           <div
             onWheel={handleQuickSuggestionsWheel}
-            className="no-scrollbar flex gap-1.5 overflow-x-auto overscroll-x-contain pt-1 pb-0.5"
+            className="flex flex-wrap gap-1.5 pt-1 pb-0.5"
           >
             {quickSuggestionEntries.map(s => (
               <button
@@ -313,8 +310,12 @@ export function TransactionFormFields({
         )}
       </div>
 
-      <div className="space-y-1 sm:col-span-2">
-        <label className="flex items-center h-5 text-xs font-semibold text-muted-foreground">Amount ({getCurrencySymbol(currency)})</label>
+      <FormField
+        className="sm:col-span-2"
+        label={`Amount (${getCurrencySymbol(currency)})`}
+        required
+        error={errors.amount}
+      >
         <div className="relative flex items-center">
           <span className="absolute left-3.5 top-1/2 -translate-y-1/2 z-10 text-sm font-semibold text-muted-foreground pointer-events-none select-none leading-none">
             {getCurrencySymbol(currency)}
@@ -326,21 +327,12 @@ export function TransactionFormFields({
             onChange={e => {
               onSetField('amount', maskCurrencyInput(e.target.value, state.amount))
             }}
-            className={`w-full h-10 pr-3.5 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+            className={`w-full h-10 pr-3.5 ${
               getCurrencySymbol(currency).length > 2 ? 'pl-12' : getCurrencySymbol(currency).length > 1 ? 'pl-10' : 'pl-8'
-            } ${
-              errors.amount
-                ? 'border-destructive focus:ring-destructive'
-                : 'border-border focus:ring-ring'
             }`}
           />
         </div>
-        {errors.amount && (
-          <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-            {errors.amount}
-          </p>
-        )}
-      </div>
+      </FormField>
 
       {state.transactionType === 'transfer' ? (
         <>
@@ -360,8 +352,7 @@ export function TransactionFormFields({
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="flex items-center h-5 text-xs font-semibold text-muted-foreground">Target Category (To)</label>
+          <FormField label="Target category (to)" required error={errors.transferTarget}>
             <CustomSelect
               ariaLabel="Transfer target category"
               value={state.transferTarget}
@@ -374,10 +365,7 @@ export function TransactionFormFields({
               ].filter(option => option.value !== state.transferSource)}
               className="w-full"
             />
-            {errors.transferTarget && (
-              <p className="text-[11px] text-destructive font-medium mt-1">{errors.transferTarget}</p>
-            )}
-          </div>
+          </FormField>
         </>
       ) : (
         <>
@@ -421,22 +409,15 @@ export function TransactionFormFields({
         </>
       )}
 
-      <div className="space-y-1">
-        <label className="flex items-center h-5 text-xs font-semibold text-muted-foreground">Posting Date</label>
+      <FormField label="Posting date" required error={errors.date}>
         <DatePicker
           value={state.date}
           onChange={value => {
             onSetField('date', value)
           }}
-          error={!!errors.date}
           className="w-full"
         />
-        {errors.date && (
-          <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-            {errors.date}
-          </p>
-        )}
-      </div>
+      </FormField>
     </>
   )
 }

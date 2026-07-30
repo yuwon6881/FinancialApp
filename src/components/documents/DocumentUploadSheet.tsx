@@ -1,3 +1,5 @@
+import { Input } from '../ui/Input'
+import { Textarea } from '../ui/Textarea'
 import { useEffect, useRef, useState } from 'react'
 import { CheckCircle2, FileText, UploadCloud, X, XCircle } from 'lucide-react'
 import { BottomSheet } from '../ui/BottomSheet'
@@ -131,7 +133,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
               <UploadCloud className="mb-2 size-8 text-muted-foreground/60" /><span className="text-xs font-bold">Choose one or multiple files</span>
               <span className="mt-1 text-[10px] text-muted-foreground">Up to {constraints.maxBulkDocuments} files · {formatMb(constraints.maxDocumentBytes)} each</span>
             </button>
-            <input ref={inputRef} type="file" multiple={!defaultTransactionId} className="hidden"
+            <Input ref={inputRef} type="file" multiple={!defaultTransactionId} className="hidden"
               accept="image/*,.pdf,application/pdf,.xml,application/xml,.json,application/json"
               onChange={event => void chooseFiles(Array.from(event.target.files ?? []))} />
           </div>
@@ -157,7 +159,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
               options={[{ value: '', label: 'Uncategorised' }, ...reliefCategories.map(category => ({ value: category.id, label: `${category.name} · RM${category.limit.toLocaleString()}` }))]}
               ariaLabel="Tax relief category" /></label>
           <label className="space-y-1.5"><span className={LABEL_CLASS}>Notes (optional)</span>
-            <textarea value={notes} onChange={event => setNotes(event.target.value)} maxLength={500} className={`${FIELD_CLASS} min-h-20`} /></label>
+            <Textarea value={notes} onChange={event => setNotes(event.target.value)} maxLength={500} className={`${FIELD_CLASS} min-h-20`} /></label>
           {documentTypes.length === 0 && <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-2.5 py-2 text-[10px] text-destructive">Add a document type in Settings before uploading.</p>}
         </>}
       </div>

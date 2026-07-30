@@ -1,5 +1,5 @@
 import React from 'react'
-import { AlertTriangle, Sparkles, Target, Wallet } from 'lucide-react'
+import { AlertTriangle, Coins, History } from 'lucide-react'
 import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import type { GoalPoolSummary } from '../../lib/savingsGoals'
@@ -11,18 +11,16 @@ interface RewardsPoolBarProps {
   formatSensitive: (value: number) => React.ReactNode
   hideSensitive: boolean
   isOffline: boolean
-  /** Null when the current cycle has already been funded, so the action can be hidden. */
-  onFundCycle: (() => void) | null
+  onFundCycle: () => void
   onViewRewardsHistory?: () => void
 }
 
 /**
  * One stacked bar over one balance.
  *
- * This replaces the old three-stat ribbon because the split *is* the explanation: commitments and
- * rewards are not two pots, they are two claims on the same Rewards money. Showing them as
- * separate totals is what let the old page report a laptop and a watch as simultaneously
- * affordable out of a balance that could only cover one.
+ * The split *is* the explanation: commitments and rewards are not two pots, they are two claims on
+ * the same Rewards money. Showing them as separate totals is what let the old page report a laptop
+ * and a watch as simultaneously affordable out of a balance that could only cover one.
  */
 export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
   summary,
@@ -33,13 +31,25 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
   onFundCycle,
   onViewRewardsHistory,
 }) => {
-  const { rewardsBalance, totalEarmarked, unassigned, requiredPerCycleTotal, paceShortfall } = summary
+  const { rewardsBalance, totalEarmarked, unassigned, outstandingThisCycleTotal, paceShortfall } = summary
 
-  // Percentages drive only the bar widths. A zero or negative balance collapses to an empty track
-  // rather than dividing by zero.
+  // Percentages drive only the bar widths; a zero or negative balance collapses to an empty track.
   const committedPct = rewardsBalance > 0 ? Math.min(100, (totalEarmarked / rewardsBalance) * 100) : 0
-  const freePct = rewardsBalance > 0 ? Math.max(0, 100 - committedPct) : 0
-  const hasCommitments = summary.activeGoals.length > 0
+  const hasGoals = summary.activeGoals.length > 0
+
+  // Shown while anything is still unfinished, so it does not vanish the moment a cycle is paced --
+  // but disabled when there is genuinely nothing to do, with the reason in the tooltip.
+  const showFundAction = hasGoals && summary.hasUnfinishedGoals
+  const canFund = outstandingThisCycleTotal > 0 && unassigned > 0
+  const fundTitle = isOffline
+    ? 'Funding needs a connection — it splits your real rewards balance'
+    : hideSensitive
+      ? 'Unhide balances to fund your goals'
+      : outstandingThisCycleTotal <= 0
+        ? 'Every goal already has its share for this cycle'
+        : unassigned <= 0
+          ? 'No free rewards left to set aside'
+          : 'Set aside what your goals still need this cycle'
 
   return (
     <Card className="p-5 space-y-4">
@@ -60,98 +70,66 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
         <div className="flex items-center gap-2">
           {onViewRewardsHistory && (
             <Button variant="ghost" size="sm" onClick={onViewRewardsHistory}>
-              <Wallet className="size-3" /> History
+              <History className="size-3" /> History
             </Button>
           )}
-          {onFundCycle && (
+          {showFundAction && (
             <Button
-              variant="primary"
               size="sm"
               onClick={onFundCycle}
-              disabled={hideSensitive || isOffline}
-              title={
-                isOffline
-                  ? 'Funding needs a connection — it splits your real rewards balance'
-                  : hideSensitive
-                    ? 'Unhide balances to fund your goals'
-                    : 'Set aside this cycle’s share for each goal'
-              }
+              disabled={hideSensitive || isOffline || !canFund}
+              title={fundTitle}
             >
-              <Sparkles className="size-3" /> Fund this cycle
+              <Coins className="size-3" />
+              {outstandingThisCycleTotal > 0
+                ? <>Set aside {formatSensitive(outstandingThisCycleTotal)}</>
+                : 'Funded this cycle'}
             </Button>
           )}
         </div>
       </div>
 
-      {/* The stacked track. Committed sits left so the free remainder always reads as "what's
-          left over", which is how the money actually behaves. */}
+      {/* The stacked track. Committed sits left so the free remainder reads as "what's left over",
+          which is how the money actually behaves. */}
       <div
-        className="w-full h-3 rounded-full bg-muted overflow-hidden flex"
+        className="w-full h-2.5 rounded-full bg-blue-500/25 overflow-hidden"
         role="img"
-        aria-label={
-          hasCommitments
-            ? `Rewards pool: ${committedPct.toFixed(0)}% committed to goals, ${freePct.toFixed(0)}% free to spend`
-            : 'Rewards pool: nothing committed to goals yet'
-        }
+        aria-label={hasGoals
+          ? `${committedPct.toFixed(0)}% of your rewards is committed to goals`
+          : 'No rewards committed to goals yet'}
       >
-        <div
-          className="h-full bg-violet-500 transition-all duration-500"
-          style={{ width: `${committedPct}%` }}
-        />
-        <div
-          className="h-full bg-blue-500 transition-all duration-500"
-          style={{ width: `${freePct}%` }}
-        />
+        <div className="h-full bg-violet-500 transition-all duration-500" style={{ width: `${committedPct}%` }} />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex items-start gap-2">
-          <span className="mt-1 size-2 rounded-full bg-violet-500 shrink-0" />
-          <div className="min-w-0">
-            <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Committed
-            </span>
-            <span className="block text-sm font-extrabold text-foreground">{formatSensitive(totalEarmarked)}</span>
-            <span className="block text-[10px] font-medium text-muted-foreground">
-              {hasCommitments
-                ? `${summary.activeGoals.length} ${summary.activeGoals.length === 1 ? 'goal' : 'goals'}`
-                : 'No goals yet'}
-            </span>
-          </div>
-        </div>
-        <div className="flex items-start gap-2">
-          <span className="mt-1 size-2 rounded-full bg-blue-500 shrink-0" />
-          <div className="min-w-0">
-            <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Free to spend
-            </span>
-            <span className="block text-sm font-extrabold text-foreground">{formatSensitive(unassigned)}</span>
-            <span className="block text-[10px] font-medium text-muted-foreground">Claimable on rewards</span>
-          </div>
-        </div>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11px] font-semibold">
+        <span className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full bg-violet-500" aria-hidden />
+          <span className="text-muted-foreground">Committed</span>
+          <span className="text-foreground font-extrabold">{formatSensitive(totalEarmarked)}</span>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full bg-blue-500" aria-hidden />
+          <span className="text-muted-foreground">Free to spend</span>
+          <span className="text-foreground font-extrabold">{formatSensitive(unassigned)}</span>
+        </span>
       </div>
 
-      {/* The one number that turns a list of goals into a plan: whether the Rewards budget can
-          actually keep every deadline. Silently under-funding instead would defeat the point. */}
-      {paceShortfall > 0 && (
-        <div className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3">
-          <AlertTriangle className="size-3.5 text-amber-500 shrink-0 mt-0.5" />
-          <div className="text-[11px] font-semibold text-foreground">
-            Your goals need {formatSensitive(requiredPerCycleTotal)} a cycle — that’s{' '}
-            {formatSensitive(paceShortfall)} more than your rewards budget.
-            <span className="block mt-0.5 font-medium text-muted-foreground">
-              Push a deadline out, lower a target, or raise your rewards allocation in Settings.
-            </span>
-          </div>
-        </div>
-      )}
-
-      {paceShortfall === 0 && hasCommitments && (
-        <div className="flex items-center gap-2 text-[11px] font-semibold text-emerald-500">
-          <Target className="size-3.5 shrink-0" />
-          On pace for every goal at {formatSensitive(requiredPerCycleTotal)} a cycle.
-        </div>
-      )}
+      {/* One status line, not a stack of banners. The budget-level warning wins when present,
+          because an unreachable deadline matters more than this cycle's bookkeeping. */}
+      {paceShortfall > 0 ? (
+        <p className="flex items-start gap-2 text-[11px] font-semibold text-amber-500">
+          <AlertTriangle className="size-3.5 shrink-0 mt-px" />
+          <span>
+            Your goals need {formatSensitive(summary.requiredPerCycleTotal)} a cycle —{' '}
+            {formatSensitive(paceShortfall)} more than your rewards budget. Push a deadline out, lower a
+            target, or raise your rewards allocation.
+          </span>
+        </p>
+      ) : hasGoals && outstandingThisCycleTotal <= 0 ? (
+        <p className="text-[11px] font-semibold text-emerald-500">
+          Every goal has its share for this cycle.
+        </p>
+      ) : null}
     </Card>
   )
 }

@@ -1,5 +1,6 @@
+import { Input } from './ui/Input'
 import React, { useState, useEffect } from 'react'
-import { Lock, User, ShieldAlert, Eye, EyeOff, ShieldCheck } from 'lucide-react'
+import { Lock, User, Eye, EyeOff, ShieldCheck } from 'lucide-react'
 import * as api from '../lib/api'
 import { AppLogo } from './ui/AppLogo'
 import { isPlatformAuthenticatorAvailable, getFingerprintAssertion } from '../lib/webauthn'
@@ -11,6 +12,11 @@ import {
 import { getErrorMessage, getErrorName } from '../lib/errors'
 import { SecurityQuestionSetup } from './SecurityQuestionSetup'
 import { ForgotPassword } from './ForgotPassword'
+import { AlertBanner } from './ui/AlertBanner'
+import { AuthCard, AuthHeader, AuthLoadingState, AuthShell } from './ui/AuthLayout'
+import { Button } from './ui/Button'
+import { FormField } from './ui/FormField'
+import { focusFirstInvalidField } from './ui/formValidation'
 
 interface LoginViewProps {
   onLoginSuccess: (token: string, username: string) => void
@@ -95,7 +101,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     setLoginStep(1)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const newErrors: Record<string, string> = {}
     if (!username.trim()) {
@@ -105,6 +111,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     if (!registering && loginStep === 1) {
       if (Object.keys(newErrors).length > 0) {
         setErrors(newErrors)
+        focusFirstInvalidField(e.currentTarget)
         return
       }
       setErrors({})
@@ -126,6 +133,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
+      focusFirstInvalidField(e.currentTarget)
       return
     }
     setErrors({})
@@ -168,13 +176,15 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     }
   }
 
-  const handleTwoFactorSubmit = async (e: React.FormEvent) => {
+  const handleTwoFactorSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!pendingToken) return
     if (!twoFactorCode.trim()) {
-      setError('Enter the 6-digit code from your authenticator app.')
+      setErrors({ twoFactorCode: 'Verification code is required.' })
+      focusFirstInvalidField(e.currentTarget)
       return
     }
+    setErrors({})
     setError(null)
     setTwoFactorLoading(true)
     try {
@@ -220,14 +230,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   }
 
   if (isRegistered === null && !error) {
-    return (
-      <div className="app-shell min-h-screen text-foreground flex items-center justify-center select-none">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
-          <p className="text-xs font-semibold text-muted-foreground">Checking authentication status...</p>
-        </div>
-      </div>
-    )
+    return <AuthLoadingState label="Checking authentication status…" />
   }
 
   if (forgotPassword) {
@@ -244,102 +247,99 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
   if (pendingToken) {
     return (
-      <div className="app-shell min-h-screen text-foreground flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-card md:bg-card/60 md:backdrop-blur-xl border border-border/60 rounded-3xl p-8 shadow-2xl relative z-10 space-y-6">
-          <div className="text-center space-y-2 select-none">
-            <div className="mx-auto size-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
-              <ShieldCheck className="size-6 text-blue-500" />
-            </div>
-            <h1 className="text-2xl font-black tracking-tight text-foreground">Two-Factor Verification</h1>
-            <p className="text-xs text-muted-foreground">
-              Enter the 6-digit code from your authenticator app, or one of your recovery codes.
-            </p>
-          </div>
+      <AuthShell>
+        <AuthCard>
+          <AuthHeader
+            icon={<span className="flex size-12 items-center justify-center rounded-2xl bg-blue-500/10"><ShieldCheck className="size-6 text-blue-500" /></span>}
+            title="Two-factor verification"
+            description="Enter the code from your authenticator app, or use one of your recovery codes."
+          />
 
           {error && (
-            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-xl flex items-center gap-2.5 animate-in slide-in-from-top-2 duration-200">
-              <ShieldAlert className="size-4 shrink-0" />
-              <span>{error}</span>
-            </div>
+            <AlertBanner variant="error">{error}</AlertBanner>
           )}
 
           <form noValidate onSubmit={handleTwoFactorSubmit} className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Verification code</label>
-              <input
+            <FormField
+              label="Verification code"
+              required
+              error={errors.twoFactorCode}
+              labelClassName="uppercase tracking-wider"
+            >
+              <Input
                 type="text"
                 inputMode="text"
                 autoFocus
                 disabled={twoFactorLoading}
                 placeholder="123456"
                 value={twoFactorCode}
-                onChange={e => setTwoFactorCode(e.target.value)}
+                onChange={e => {
+                  setTwoFactorCode(e.target.value)
+                  if (errors.twoFactorCode) setErrors(previous => ({ ...previous, twoFactorCode: '' }))
+                }}
                 autoComplete="one-time-code"
-                className="w-full px-3.5 py-2 text-sm text-center tracking-[0.3em] bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-ring transition duration-200"
+                className="text-center tracking-[0.3em]"
               />
-            </div>
+            </FormField>
 
-            <button
+            <Button
               type="submit"
+              size="lg"
               disabled={twoFactorLoading}
-              className="press-scale w-full py-3 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground font-bold text-sm rounded-xl shadow-lg shadow-primary/15 hover:shadow-primary/25 transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full rounded-xl py-3 shadow-lg shadow-primary/15"
             >
               {twoFactorLoading ? (
                 <div className="w-4 h-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />
               ) : (
                 'Verify'
               )}
-            </button>
+            </Button>
 
-            <button
+            <Button
               type="button"
+              variant="unstyled"
               onClick={() => { setPendingToken(null); setTwoFactorCode(''); setError(null) }}
               className="w-full text-center text-xs font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer"
             >
               Back to login
-            </button>
+            </Button>
           </form>
-        </div>
-      </div>
+        </AuthCard>
+      </AuthShell>
     )
   }
 
   return (
-    <div className="app-shell min-h-screen text-foreground flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-card md:bg-card/60 md:backdrop-blur-xl border border-border/60 rounded-3xl p-8 shadow-2xl relative z-10 space-y-6">
-
-        {/* Brand Header */}
-        <div className="text-center space-y-2 select-none">
-          <AppLogo className="mx-auto size-12 rounded-2xl shadow-xl shadow-blue-500/15" pulse />
-          <h1 className="text-2xl font-black tracking-tight text-foreground">
-            FinancialApp <span className="text-accent-ink">Ledger</span>
-          </h1>
-          <p className="text-xs text-muted-foreground">
-            {registering
-              ? 'Create your account to get started.'
-              : loginStep === 1
-                ? 'Enter your username to continue.'
-                : 'Enter your password or use device unlock.'}
-          </p>
-        </div>
+    <AuthShell>
+      <AuthCard>
+        <AuthHeader
+          icon={<AppLogo className="size-12 rounded-2xl shadow-xl shadow-primary/15" pulse />}
+          title={<>FinancialApp <span className="text-accent-ink">Ledger</span></>}
+          description={registering
+            ? 'Create your account to get started.'
+            : loginStep === 1
+              ? 'Enter your username to continue.'
+              : 'Enter your password or use device unlock.'}
+        />
 
         {error && (
-          <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-xl flex items-center gap-2.5 animate-in slide-in-from-top-2 duration-200">
-            <ShieldAlert className="size-4 shrink-0" />
-            <span>{error}</span>
-          </div>
+          <AlertBanner variant="error">{error}</AlertBanner>
         )}
 
         <form noValidate onSubmit={handleSubmit} className="space-y-4">
           {/* Username Input */}
           {(registering || loginStep === 1) && (
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Username</label>
+            <FormField
+              label="Username"
+              required
+              error={errors.username}
+              labelClassName="uppercase tracking-wider"
+            >
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex w-10 items-center justify-center pointer-events-none">
                   <User className="size-4 text-muted-foreground/70" />
                 </span>
-                <input
+                <Input
                   type="text"
                   disabled={loading}
                   placeholder="Enter your username"
@@ -351,19 +351,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                     }
                   }}
                   autoComplete="username"
-                  className={`w-full pl-10 pr-3.5 py-2.5 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                    errors.username 
-                      ? 'border-destructive focus:ring-destructive' 
-                      : 'border-border focus:ring-ring'
-                  }`}
+                  className="pl-10"
                 />
               </div>
-              {errors.username && (
-                <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                  {errors.username}
-                </p>
-              )}
-            </div>
+            </FormField>
           )}
 
           {!registering && loginStep === 2 && (
@@ -377,21 +368,26 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   <p className="text-sm font-bold text-foreground truncate">{username}</p>
                 </div>
               </div>
-              <button type="button" onClick={() => { setLoginStep(1); setPassword(''); setError(null) }} className="shrink-0 text-[11px] px-3 py-1.5 bg-background hover:bg-muted border border-border/60 rounded-lg font-bold text-muted-foreground hover:text-foreground transition cursor-pointer shadow-sm">
+              <Button variant="outline" size="sm" onClick={() => { setLoginStep(1); setPassword(''); setError(null) }} className="shrink-0 text-muted-foreground shadow-sm">
                 Change
-              </button>
+              </Button>
             </div>
           )}
 
           {/* Password Input */}
           {(registering || loginStep === 2) && (
-            <div className="space-y-1 animate-in fade-in slide-in-from-right-4 duration-300">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Password</label>
+            <FormField
+              label="Password"
+              required
+              error={errors.password}
+              className="animate-in fade-in slide-in-from-right-4 duration-300"
+              labelClassName="uppercase tracking-wider"
+            >
             <div className="relative">
               <span className="absolute inset-y-0 left-0 flex w-10 items-center justify-center pointer-events-none">
                 <Lock className="size-4 text-muted-foreground/70" />
               </span>
-              <input
+              <Input
                 type={showPassword ? 'text' : 'password'}
                 disabled={loading}
                 placeholder="••••••••"
@@ -403,51 +399,50 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   }
                 }}
                 autoComplete={registering ? 'new-password' : 'current-password'}
-                className={`no-native-reveal w-full pl-10 pr-10 py-2.5 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                  errors.password
-                    ? 'border-destructive focus:ring-destructive'
-                    : 'border-border focus:ring-ring'
-                }`}
+                className="no-native-reveal pl-10 pr-10"
               />
               {password.length > 0 && (
-                <button
+                <Button
                   type="button"
+                  variant="unstyled"
+                  size="icon"
                   onClick={() => setShowPassword(p => !p)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center size-7 text-muted-foreground hover:text-foreground transition cursor-pointer"
+                  className="absolute right-1 top-1/2 size-8 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </button>
+                </Button>
               )}
             </div>
-              {errors.password && (
-                <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                  {errors.password}
-                </p>
-              )}
               {!registering && loginStep === 2 && (
                 <div className="flex justify-end mt-1">
-                  <button
+                  <Button
                     type="button"
+                    variant="unstyled"
                     onClick={() => setForgotPassword(true)}
                     className="text-xs font-semibold text-blue-500 hover:text-blue-600 focus:outline-none focus:underline"
                   >
                     Forgot Password?
-                  </button>
+                  </Button>
                 </div>
               )}
-            </div>
+            </FormField>
           )}
 
           {/* Confirm Password (only for registration) */}
           {registering && (
-            <div className="space-y-1 animate-in fade-in duration-200">
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">Confirm Password</label>
+            <FormField
+              label="Confirm password"
+              required
+              error={errors.confirmPassword}
+              className="animate-in fade-in duration-200"
+              labelClassName="uppercase tracking-wider"
+            >
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 flex w-10 items-center justify-center pointer-events-none">
                   <Lock className="size-4 text-muted-foreground/70" />
                 </span>
-                <input
+                <Input
                   type={showPassword ? 'text' : 'password'}
                   disabled={loading}
                   placeholder="••••••••"
@@ -461,25 +456,17 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   autoComplete="new-password"
                   readOnly
                   onFocus={(e) => e.target.removeAttribute('readonly')}
-                  className={`no-native-reveal w-full pl-10 pr-10 py-2.5 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                    errors.confirmPassword
-                      ? 'border-destructive focus:ring-destructive' 
-                      : 'border-border focus:ring-ring'
-                  }`}
+                  className="no-native-reveal pl-10 pr-10"
                 />
               </div>
-              {errors.confirmPassword && (
-                <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                  {errors.confirmPassword}
-                </p>
-              )}
-            </div>
+            </FormField>
           )}
 
-          <button
+          <Button
             type="submit"
+            size="lg"
             disabled={loading || (isRegistered === null)}
-            className="press-scale w-full py-3 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground font-bold text-sm rounded-xl shadow-lg shadow-primary/15 hover:shadow-primary/25 transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full rounded-xl py-3 shadow-lg shadow-primary/15"
           >
             {loading ? (
               <div className="w-4 h-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />
@@ -490,27 +477,30 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             ) : (
               'Sign in'
             )}
-          </button>
+          </Button>
         </form>
 
         {/* Additional-user signup toggle: only when at least one account exists and slots remain. */}
         {isRegistered && registrationOpen && loginStep === 1 && (
-          <button
+          <Button
             type="button"
+            variant="unstyled"
             onClick={toggleRegisterMode}
             disabled={loading}
             className="w-full text-center text-xs font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer disabled:opacity-50"
           >
             {wantsRegister ? 'Back to sign in' : 'Create a new account'}
-          </button>
+          </Button>
         )}
 
         {!registering && isRegistered && hasFingerprint && platformAuthAvailable && loginStep === 2 && (
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="lg"
             onClick={handleFingerprintLogin}
             disabled={fingerprintLoading}
-            className="press-scale w-full py-2.5 border border-border hover:bg-muted/50 disabled:opacity-50 text-foreground font-semibold text-sm rounded-xl transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full rounded-xl"
           >
             {fingerprintLoading ? (
               <div className="w-4 h-4 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
@@ -518,13 +508,13 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               <ShieldCheck className="size-4 text-blue-500" />
             )}
             Unlock with device
-          </button>
+          </Button>
         )}
 
         <div className="text-center text-[10px] text-muted-foreground select-none">
           Secure Personal Financial Ledger
         </div>
-      </div>
-    </div>
+      </AuthCard>
+    </AuthShell>
   )
 }

@@ -1,3 +1,4 @@
+import { Input } from './ui/Input'
 import React, { useMemo, useRef, useState } from 'react'
 import type { Transaction, TransactionCategory } from '../types'
 import { FileText, Edit2, Trash2, ArrowLeft, Plus, Sparkles, Loader2 } from 'lucide-react'
@@ -13,6 +14,10 @@ import { AnchoredPopover } from './ui/AnchoredPopover'
 import { LedgerAllocationBadge } from './ledger/LedgerAllocationBadge'
 import { SensitiveMask } from './ui/SensitiveAmount'
 import { useTransactionSuggestions } from './ledger/transaction-form/useTransactionSuggestions'
+import { FormField } from './ui/FormField'
+import { focusFirstInvalidField } from './ui/formValidation'
+import { Button } from './ui/Button'
+import { ModalActions } from './ui/ModalActions'
 
 const TRANSFER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards']
 
@@ -121,7 +126,8 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
     suggestions.clearSuggestions()
   }
 
-  const handleSaveEdit = (draft: Transaction) => {
+  const handleSaveEdit = (event: React.FormEvent<HTMLFormElement>, draft: Transaction) => {
+    event.preventDefault()
     const newErrors: Record<string, string> = {}
     if (!description.trim()) {
       newErrors.description = 'Description is required.'
@@ -145,6 +151,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
+      focusFirstInvalidField(event.currentTarget)
       return
     }
     setErrors({})
@@ -201,8 +208,10 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
               'Essentials', 'Growth', 'Stability', 'Rewards'
             ]
             return (
-              <div
+              <form
                 key={draft.id}
+                noValidate
+                onSubmit={event => handleSaveEdit(event, draft)}
                 className="p-4 sm:p-5 rounded-2xl bg-card border border-blue-500/30 shadow-md space-y-4 animate-in zoom-in-95 duration-150"
               >
                 <div className="flex items-center gap-2 pb-1">
@@ -230,34 +239,26 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                   </div>
                   {/* rounded-xl matches the input inside: the beam inherits the host's
                       radius, and a square host would corner the trace off the field. */}
-                  <div ref={descriptionAnchorRef} className={`relative rounded-xl ${suggestions.isSuggestingNote ? 'perimeter-beam-host' : ''}`}>
-                    {suggestions.isSuggestingNote && <PerimeterBeam size={40} />}
-                    <input
-                      type="text"
-                      required
-                      value={description}
-                      onChange={e => {
-                        setDescription(e.target.value)
-                        suggestions.setShowNoteSuggestions(false)
-                        suggestions.setNoteSuggestions([])
-                        suggestions.setIsSuggestingNote(false)
-                        if (errors.description) {
-                          setErrors(prev => ({ ...prev, description: '' }))
-                        }
-                      }}
-                      onBlur={() => { if (!isTransferDraft) void suggestions.requestCategorySuggestions(description.trim(), null) }}
-                      className={`w-full px-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                        errors.description
-                          ? 'border-destructive focus:ring-destructive'
-                          : 'border-border focus:ring-ring'
-                      }`}
-                    />
-                  </div>
-                  {errors.description && (
-                    <p className="text-[10px] text-destructive font-medium animate-in fade-in slide-in-from-top-1 duration-150">
-                      {errors.description}
-                    </p>
-                  )}
+                  <FormField label="Description" labelClassName="sr-only" required error={errors.description}>
+                    <div ref={descriptionAnchorRef} className={`relative rounded-xl ${suggestions.isSuggestingNote ? 'perimeter-beam-host' : ''}`}>
+                      {suggestions.isSuggestingNote && <PerimeterBeam size={40} />}
+                      <Input
+                        type="text"
+                        value={description}
+                        onChange={e => {
+                          setDescription(e.target.value)
+                          suggestions.setShowNoteSuggestions(false)
+                          suggestions.setNoteSuggestions([])
+                          suggestions.setIsSuggestingNote(false)
+                          if (errors.description) {
+                            setErrors(prev => ({ ...prev, description: '' }))
+                          }
+                        }}
+                        onBlur={() => { if (!isTransferDraft) void suggestions.requestCategorySuggestions(description.trim(), null) }}
+                        controlSize="sm"
+                      />
+                    </div>
+                  </FormField>
 
                   <AnchoredPopover
                     open={suggestions.showNoteSuggestions}
@@ -302,8 +303,13 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
 
                 {/* Amount + Date */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Amount ({getCurrencySymbol(currency)})</label>
+                  <FormField
+                    label={`Amount (${getCurrencySymbol(currency)})`}
+                    required
+                    error={errors.amount}
+                    labelClassName="text-[10px] uppercase tracking-wider"
+                    errorClassName="text-[10px]"
+                  >
                     <div className="relative flex items-center">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 z-10 text-xs font-semibold text-muted-foreground pointer-events-none select-none leading-none">
                         {getCurrencySymbol(currency)}
@@ -318,23 +324,19 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                             setErrors(prev => ({ ...prev, amount: '' }))
                           }
                         }}
-                        className={`w-full pr-3 py-2 text-xs bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
+                        className={`w-full pr-3 text-xs ${
                           getCurrencySymbol(currency).length > 2 ? 'pl-11' : getCurrencySymbol(currency).length > 1 ? 'pl-9' : 'pl-7'
-                        } ${
-                          errors.amount
-                            ? 'border-destructive focus:ring-destructive'
-                            : 'border-border focus:ring-ring'
                         }`}
                       />
                     </div>
-                    {errors.amount && (
-                      <p className="text-[10px] text-destructive font-medium animate-in fade-in slide-in-from-top-1 duration-150">
-                        {errors.amount}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Date</label>
+                  </FormField>
+                  <FormField
+                    label="Date"
+                    required
+                    error={errors.date}
+                    labelClassName="text-[10px] uppercase tracking-wider"
+                    errorClassName="text-[10px]"
+                  >
                     <DatePicker
                       value={date}
                       onChange={value => {
@@ -343,15 +345,9 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                           setErrors(prev => ({ ...prev, date: '' }))
                         }
                       }}
-                      error={!!errors.date}
                       className="w-full"
                     />
-                    {errors.date && (
-                      <p className="text-[10px] text-destructive font-medium animate-in fade-in slide-in-from-top-1 duration-150">
-                        {errors.date}
-                      </p>
-                    )}
-                  </div>
+                  </FormField>
                 </div>
 
                 {isTransferDraft ? (
@@ -406,7 +402,15 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                           </span>
                         ) : null}
                       </div>
+                      <FormField
+                        label="Category"
+                        labelClassName="sr-only"
+                        required
+                        error={errors.category}
+                        errorClassName="text-[10px]"
+                      >
                       <SearchableSelect
+                        ariaLabel="Category"
                         value={category}
                         onChange={value => {
                           setCategory(value)
@@ -416,13 +420,16 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                         className="w-full"
                         placeholder="Search categories…"
                       />
-                      {errors.category && <p className="text-[10px] text-destructive font-medium">{errors.category}</p>}
+                      </FormField>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-                        Ledger Category
-                      </label>
+                    <FormField
+                      label="Ledger category"
+                      required
+                      error={errors.ledgerCategory}
+                      labelClassName="text-[10px] uppercase tracking-wider"
+                      errorClassName="text-[10px]"
+                    >
                       <CustomSelect
                         ariaLabel="Ledger category"
                         value={ledgerCategory}
@@ -433,26 +440,27 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                         options={ledgerOptions.map(option => ({ value: option, label: option }))}
                         className="w-full"
                       />
-                      {errors.ledgerCategory && <p className="text-[10px] text-destructive font-medium">{errors.ledgerCategory}</p>}
-                    </div>
+                    </FormField>
                   </div>
                 )}
 
-                <div className="flex gap-2 justify-end pt-1">
-                  <button
+                <ModalActions className="pt-1">
+                  <Button
+                    variant="outline"
+                    type="button"
                     onClick={handleCancelEdit}
-                    className="px-3.5 py-1.5 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-xs rounded-xl transition duration-150 cursor-pointer"
+                    className="rounded-xl px-3.5 py-1.5"
                   >
                     Cancel
-                  </button>
-                  <button
-                    onClick={() => handleSaveEdit(draft)}
-                    className="px-4 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs rounded-xl transition duration-150 cursor-pointer shadow-md"
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="rounded-xl px-4 py-1.5 shadow-md"
                   >
                     Save
-                  </button>
-                </div>
-              </div>
+                  </Button>
+                </ModalActions>
+              </form>
             )
           }
 
@@ -478,7 +486,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                   <button
                     onClick={() => handleStartEdit(draft)}
                     disabled={hideSensitive}
-                    className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-500 text-white dark:text-background text-[11px] font-bold active:bg-blue-400 transition disabled:opacity-50 disabled:pointer-events-none"
+                    className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-500 text-on-vivid text-[11px] font-bold active:bg-blue-400 transition disabled:opacity-50 disabled:pointer-events-none"
                   >
                     <Edit2 className="size-4" />
                     Edit

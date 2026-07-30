@@ -1,7 +1,13 @@
+import { Input } from './ui/Input'
 import React, { useState, useEffect } from 'react'
-import { ShieldCheck, ShieldAlert } from 'lucide-react'
+import { ShieldCheck } from 'lucide-react'
 import * as api from '../lib/api'
 import { CustomSelect } from './ui/CustomSelect'
+import { AlertBanner } from './ui/AlertBanner'
+import { AuthCard, AuthHeader, AuthLoadingState, AuthShell } from './ui/AuthLayout'
+import { Button } from './ui/Button'
+import { FormField } from './ui/FormField'
+import { focusFirstInvalidField } from './ui/formValidation'
 
 interface SecurityQuestionSetupProps {
   onComplete: () => void
@@ -12,6 +18,7 @@ export const SecurityQuestionSetup: React.FC<SecurityQuestionSetupProps> = ({ on
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const [q1, setQ1] = useState<number>(-1)
   const [q2, setQ2] = useState<number>(-1)
@@ -28,24 +35,30 @@ export const SecurityQuestionSetup: React.FC<SecurityQuestionSetupProps> = ({ on
       .finally(() => setLoading(false))
   }, [])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
 
-    if (q1 === -1 || q2 === -1 || q3 === -1) {
-      setError('Please select three questions.')
+    const nextErrors: Record<string, string> = {}
+    const questions = [q1, q2, q3]
+    const answers = [a1, a2, a3]
+    questions.forEach((question, index) => {
+      if (question === -1) nextErrors[`q${index + 1}`] = `Question ${index + 1} is required.`
+    })
+    questions.forEach((question, index) => {
+      if (question !== -1 && questions.filter(candidate => candidate === question).length > 1) {
+        nextErrors[`q${index + 1}`] = 'Choose a different security question.'
+      }
+    })
+    answers.forEach((answer, index) => {
+      if (!answer.trim()) nextErrors[`a${index + 1}`] = `Answer ${index + 1} is required.`
+    })
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors)
+      focusFirstInvalidField(e.currentTarget)
       return
     }
-
-    if (new Set([q1, q2, q3]).size !== 3) {
-      setError('Please select three distinct questions.')
-      return
-    }
-
-    if (!a1.trim() || !a2.trim() || !a3.trim()) {
-      setError('Answers cannot be empty.')
-      return
-    }
+    setFieldErrors({})
 
     setSubmitting(true)
     try {
@@ -62,14 +75,7 @@ export const SecurityQuestionSetup: React.FC<SecurityQuestionSetupProps> = ({ on
   }
 
   if (loading) {
-    return (
-      <div className="app-shell min-h-screen text-foreground flex items-center justify-center select-none">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
-          <p className="text-xs font-semibold text-muted-foreground">Loading security questions...</p>
-        </div>
-      </div>
-    )
+    return <AuthLoadingState label="Loading security questions…" />
   }
 
   const rows = [
@@ -79,26 +85,16 @@ export const SecurityQuestionSetup: React.FC<SecurityQuestionSetupProps> = ({ on
   ]
 
   return (
-    <div className="app-shell min-h-screen text-foreground flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-card md:bg-card/60 md:backdrop-blur-xl border border-border/60 rounded-3xl p-8 shadow-2xl relative z-10 space-y-6">
-
-        {/* Header */}
-        <div className="text-center space-y-2 select-none">
-          <div className="mx-auto size-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
-            <ShieldCheck className="size-6 text-blue-500" />
-          </div>
-          <h1 className="text-2xl font-black tracking-tight text-foreground">Secure your account</h1>
-          <p className="text-xs text-muted-foreground">
-            Pick three questions only you can answer. We use these to verify it's really you if you ever
-            need to recover your password.
-          </p>
-        </div>
+    <AuthShell>
+      <AuthCard>
+        <AuthHeader
+          icon={<span className="flex size-12 items-center justify-center rounded-2xl bg-blue-500/10"><ShieldCheck className="size-6 text-blue-500" /></span>}
+          title="Secure your account"
+          description="Pick three questions only you can answer. We use them to verify your identity during account recovery."
+        />
 
         {error && (
-          <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-xl flex items-center gap-2.5 animate-in slide-in-from-top-2 duration-200">
-            <ShieldAlert className="size-4 shrink-0" />
-            <span>{error}</span>
-          </div>
+          <AlertBanner variant="error">{error}</AlertBanner>
         )}
 
         <form noValidate onSubmit={handleSubmit} className="space-y-5">
@@ -111,45 +107,67 @@ export const SecurityQuestionSetup: React.FC<SecurityQuestionSetupProps> = ({ on
                 .filter(opt => !chosenElsewhere.includes(opt.value)),
             ]
             return (
-              <div key={item.id} className="space-y-2">
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                  <span className="flex items-center justify-center size-5 rounded-md bg-blue-500/10 text-blue-500 text-[10px] font-black">
+              <div key={item.id} className="space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  <span className="flex size-5 items-center justify-center rounded-md bg-blue-500/10 text-[10px] font-black text-blue-500">
                     {idx + 1}
                   </span>
                   Question {idx + 1}
-                </label>
-                <CustomSelect<number>
-                  ariaLabel={`Security question ${idx + 1}`}
-                  value={item.val}
-                  onChange={item.setVal}
-                  options={options}
-                  className="w-full"
-                />
-                <input
-                  type="text"
-                  value={item.ans}
-                  onChange={e => item.setAns(e.target.value)}
-                  placeholder="Your answer"
-                  autoComplete="off"
-                  className="w-full px-3.5 py-2.5 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-ring transition duration-200"
-                />
+                </div>
+                <FormField
+                  label={`Security question ${idx + 1}`}
+                  required
+                  error={fieldErrors[`q${idx + 1}`]}
+                  labelClassName="sr-only"
+                >
+                  <CustomSelect<number>
+                    ariaLabel={`Security question ${idx + 1}`}
+                    value={item.val}
+                    onChange={next => {
+                      item.setVal(next)
+                      const key = `q${idx + 1}`
+                      if (fieldErrors[key]) setFieldErrors(previous => ({ ...previous, [key]: '' }))
+                    }}
+                    options={options}
+                    className="w-full"
+                  />
+                </FormField>
+                <FormField
+                  label={`Answer ${idx + 1}`}
+                  required
+                  error={fieldErrors[`a${idx + 1}`]}
+                  labelClassName="sr-only"
+                >
+                  <Input
+                    type="text"
+                    value={item.ans}
+                    onChange={e => {
+                      item.setAns(e.target.value)
+                      const key = `a${idx + 1}`
+                      if (fieldErrors[key]) setFieldErrors(previous => ({ ...previous, [key]: '' }))
+                    }}
+                    placeholder="Your answer"
+                    autoComplete="off"
+                  />
+                </FormField>
               </div>
             )
           })}
 
-          <button
+          <Button
             type="submit"
+            size="lg"
             disabled={submitting}
-            className="press-scale w-full py-3 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground font-bold text-sm rounded-xl shadow-lg shadow-primary/15 hover:shadow-primary/25 transition duration-200 flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full rounded-xl py-3 shadow-lg shadow-primary/15"
           >
             {submitting ? (
               <div className="w-4 h-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />
             ) : (
               'Save & Continue'
             )}
-          </button>
+          </Button>
         </form>
-      </div>
-    </div>
+      </AuthCard>
+    </AuthShell>
   )
 }

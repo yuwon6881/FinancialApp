@@ -1,3 +1,4 @@
+import { Input } from './ui/Input'
 import React, { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { ShieldCheck, ShieldOff, KeyRound, ChevronDown, ChevronUp } from 'lucide-react'
@@ -7,6 +8,10 @@ import { RecoveryCodesModal } from './ui/RecoveryCodesModal'
 import { CollapsibleBody } from './ui/CollapsibleBody'
 import { PasswordEntryModal } from './ui/PasswordEntryModal'
 import { getErrorMessage } from '../lib/errors'
+import { Button } from './ui/Button'
+import { FormField } from './ui/FormField'
+import { focusFirstInvalidField } from './ui/formValidation'
+import { ModalActions } from './ui/ModalActions'
 
 interface TwoFactorSectionProps {
   hideSensitive: boolean
@@ -65,10 +70,11 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
     }
   }
 
-  const handleConfirmSetup = async (e: React.FormEvent) => {
+  const handleConfirmSetup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!setupCode.trim()) {
-      setSetupError('Enter the 6-digit code from your authenticator app.')
+      setSetupError('Verification code is required.')
+      focusFirstInvalidField(e.currentTarget)
       return
     }
     setSetupError(null)
@@ -95,13 +101,14 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
     setSetupError(null)
   }
 
-  const handleDisable = async (e: React.FormEvent) => {
+  const handleDisable = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const newErrors: Record<string, string> = {}
     if (!disablePassword.trim()) newErrors.password = 'Password is required.'
-    if (!disableCode.trim()) newErrors.code = 'Enter a code or recovery code.'
+    if (!disableCode.trim()) newErrors.code = 'Verification code is required.'
     if (Object.keys(newErrors).length > 0) {
       setDisableErrors(newErrors)
+      focusFirstInvalidField(e.currentTarget)
       return
     }
     setDisableErrors({})
@@ -127,7 +134,8 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
 
   return (
     <section className="app-panel rounded-2xl border border-border/60 bg-card/92 shadow-sm overflow-hidden">
-      <button
+      <Button
+        variant="unstyled"
         type="button"
         onClick={() => setOpen(o => !o)}
         aria-expanded={open}
@@ -142,7 +150,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
           {loaded ? (enabled ? 'Enabled' : 'Disabled') : 'Checking…'}
         </span>
         {open ? <ChevronUp className="size-4 text-muted-foreground shrink-0" /> : <ChevronDown className="size-4 text-muted-foreground shrink-0" />}
-      </button>
+      </Button>
 
       <CollapsibleBody open={open}>
       <div className="px-5 pb-5 space-y-4 border-t border-border/40 pt-4">
@@ -153,81 +161,77 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
 
       {loaded && enabled && !showDisableForm && (
         <div className="space-y-2">
-          <button
+          <Button
+            variant="outline"
             type="button"
             onClick={() => setShowRegenerateModal(true)}
             disabled={hideSensitive}
-            className="press-scale w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border border-border hover:bg-muted/50 disabled:opacity-40 transition cursor-pointer"
+            className="press-scale w-full rounded-xl py-2.5"
           >
             <KeyRound className="size-3.5" /> Regenerate recovery codes
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="destructiveGhost"
             type="button"
             onClick={() => setShowDisableForm(true)}
             disabled={hideSensitive}
-            className="press-scale w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-500 border border-red-500/30 hover:bg-red-500/10 disabled:opacity-40 transition cursor-pointer"
+            className="press-scale w-full rounded-xl py-2.5"
           >
             Disable two-factor authentication
-          </button>
+          </Button>
         </div>
       )}
 
       {loaded && enabled && showDisableForm && (
         <form noValidate onSubmit={handleDisable} className="space-y-2.5">
-          <div className="space-y-1">
-            <input
+          <FormField label="Current password" required error={disableErrors.password}>
+            <Input
               type="password"
-              placeholder="Current password"
               value={disablePassword}
               onChange={e => { setDisablePassword(e.target.value); if (disableErrors.password) setDisableErrors(prev => ({ ...prev, password: '' })) }}
-              className={`w-full px-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                disableErrors.password ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-ring'
-              }`}
+              autoComplete="current-password"
             />
-            {disableErrors.password && (
-              <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">{disableErrors.password}</p>
-            )}
-          </div>
-          <div className="space-y-1">
-            <input
+          </FormField>
+          <FormField label="Verification or recovery code" required error={disableErrors.code}>
+            <Input
               type="text"
-              placeholder="6-digit code or recovery code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
               value={disableCode}
               onChange={e => { setDisableCode(e.target.value); if (disableErrors.code) setDisableErrors(prev => ({ ...prev, code: '' })) }}
-              className={`w-full px-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                disableErrors.code ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-ring'
-              }`}
             />
-            {disableErrors.code && (
-              <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">{disableErrors.code}</p>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <button
+          </FormField>
+          <ModalActions>
+            <Button
+              variant="outline"
               type="button"
               onClick={() => { setShowDisableForm(false); setDisableErrors({}) }}
-              className="press-scale flex-1 py-2.5 rounded-xl text-xs font-bold border border-border hover:bg-muted/50 transition cursor-pointer"
+              className="press-scale flex-1 rounded-xl py-2.5"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="destructive"
               type="submit"
               disabled={disableBusy}
-              className="press-scale flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition cursor-pointer"
+              aria-busy={disableBusy}
+              className="press-scale flex-1 rounded-xl py-2.5"
             >
               {disableBusy ? 'Disabling...' : 'Confirm disable'}
-            </button>
-          </div>
+            </Button>
+          </ModalActions>
         </form>
       )}
 
       {loaded && !enabled && !setupSecret && (
-        <button
+        <Button
+          variant="success"
           type="button"
           onClick={handleStartSetup}
           disabled={setupBusy || hideSensitive}
           title={hideSensitive ? 'Unhide balances to edit' : undefined}
-          className="press-scale w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white shadow-md shadow-emerald-600/20"
+          aria-busy={setupBusy}
+          className="press-scale w-full rounded-xl py-2.5 shadow-md shadow-emerald-600/20"
         >
           {setupBusy ? (
             <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
@@ -235,7 +239,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
             <ShieldCheck className="size-3.5" />
           )}
           Enable two-factor authentication
-        </button>
+        </Button>
       )}
 
       {loaded && !enabled && setupSecret && (
@@ -253,37 +257,40 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
             <p className="text-[11px] font-mono text-center text-foreground break-all bg-muted/20 border border-border/40 rounded-lg px-2 py-1.5">{setupSecret}</p>
           </div>
           <form noValidate onSubmit={handleConfirmSetup} className="space-y-2.5">
-            <div className="space-y-1">
-              <input
+            <FormField
+              label="Authenticator verification code"
+              required
+              error={setupError}
+              errorClassName="text-center"
+            >
+              <Input
                 type="text"
                 autoFocus
-                placeholder="123456"
+                inputMode="numeric"
+                autoComplete="one-time-code"
                 value={setupCode}
                 onChange={e => { setSetupCode(e.target.value); if (setupError) setSetupError(null) }}
-                className={`w-full px-3.5 py-2 text-sm text-center tracking-[0.3em] bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-                  setupError ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-ring'
-                }`}
+                className="text-center tracking-[0.3em]"
               />
-              {setupError && (
-                <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150 text-center">{setupError}</p>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <button
+            </FormField>
+            <ModalActions>
+              <Button
+                variant="outline"
                 type="button"
                 onClick={handleCancelSetup}
-                className="press-scale flex-1 py-2.5 rounded-xl text-xs font-bold border border-border hover:bg-muted/50 transition cursor-pointer"
+                className="press-scale flex-1 rounded-xl py-2.5"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
                 disabled={setupBusy}
-                className="press-scale flex-1 py-2.5 rounded-xl text-xs font-bold text-primary-foreground bg-primary hover:bg-primary/90 disabled:opacity-50 transition cursor-pointer"
+                aria-busy={setupBusy}
+                className="press-scale flex-1 rounded-xl py-2.5"
               >
                 {setupBusy ? 'Verifying...' : 'Confirm'}
-              </button>
-            </div>
+              </Button>
+            </ModalActions>
           </form>
         </div>
       )}

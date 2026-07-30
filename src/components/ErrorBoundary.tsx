@@ -1,6 +1,7 @@
 import { Component, Fragment, type ErrorInfo, type ReactNode } from 'react'
 import { AlertTriangle, RotateCcw, Trash2 } from 'lucide-react'
 import { CACHE_KEYS } from '../lib/cache'
+import { Button } from './ui/Button'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -103,31 +104,31 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             </p>
           </div>
           <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              onClick={() => window.location.reload()}
-              className="press-scale inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-muted cursor-pointer"
+            <Button
+              variant="outline"
+              onClick={this.reset}
+              className="rounded-xl px-4"
             >
               <RotateCcw className="size-3.5" /> Try again
-            </button>
+            </Button>
             {!inline && (
-              <button
-                type="button"
+              <Button
                 onClick={() => window.location.reload()}
-                className="press-scale inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-md shadow-primary/10 transition hover:bg-primary/90 cursor-pointer"
+                className="rounded-xl px-4 shadow-md shadow-primary/10"
               >
                 Reload app
-              </button>
+              </Button>
             )}
           </div>
           {!inline && (
-            <button
-              type="button"
+            <Button
+              variant="destructiveGhost"
+              size="sm"
               onClick={this.clearCacheAndReload}
-              className="press-scale inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/70 hover:text-orange-500 transition cursor-pointer"
+              className="text-[11px]"
             >
               <Trash2 className="size-3" /> Still stuck? Clear local data and reload
-            </button>
+            </Button>
           )}
         </div>
       </div>

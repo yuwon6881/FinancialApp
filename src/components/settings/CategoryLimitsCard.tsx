@@ -7,6 +7,9 @@ import { SmartAmountInput } from '../ui/SmartAmountInput'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
 import { CollapsibleBody } from '../ui/CollapsibleBody'
 import { ToggleButton } from '../ui/ToggleButton'
+import { FormField } from '../ui/FormField'
+import { focusFirstInvalidField } from '../ui/formValidation'
+import { Button } from '../ui/Button'
 
 interface CategoryLimitsCardProps {
   categories: TransactionCategory[]
@@ -27,6 +30,7 @@ export function CategoryLimitsCard({
 }: CategoryLimitsCardProps) {
   const [drafts, setDrafts] = React.useState<Record<string, string | null>>({})
   const [errors, setErrors] = React.useState<Record<string, string>>({})
+  const sectionRef = React.useRef<HTMLElement>(null)
   const [isOpen, setIsOpen] = React.useState(() => {
     if (typeof window !== 'undefined') {
       const search = window.location.search
@@ -83,12 +87,15 @@ export function CategoryLimitsCard({
     }
 
     setErrors(nextErrors)
-    if (Object.keys(nextErrors).length > 0) return
+    if (Object.keys(nextErrors).length > 0) {
+      if (sectionRef.current) focusFirstInvalidField(sectionRef.current)
+      return
+    }
     updates.forEach(update => onUpdate(update.id, update.amount))
   }
 
   return (
-    <section id="category-limits-card" className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs">
+    <section ref={sectionRef} id="category-limits-card" className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs">
       <div
         role="button"
         tabIndex={0}
@@ -159,10 +166,14 @@ export function CategoryLimitsCard({
                   </div>
 
                   {enabled && (
-                    <div className="mt-3 pt-3 border-t border-border/30 animate-in fade-in duration-150 space-y-1.5">
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                        Monthly Cycle Cap
-                      </label>
+                    <FormField
+                      label={`${category.name} cycle spending guide`}
+                      required
+                      error={errors[category.id]}
+                      className="mt-3 pt-3 border-t border-border/30 animate-in fade-in duration-150"
+                      labelClassName="text-[10px] uppercase tracking-wider"
+                      errorClassName="text-[10px] font-semibold"
+                    >
                       <div className="relative flex items-center">
                         <span className="absolute left-3 z-10 text-xs font-bold text-muted-foreground pointer-events-none">
                           {getCurrencySymbol(currency)}
@@ -170,7 +181,6 @@ export function CategoryLimitsCard({
                         <SmartAmountInput
                           type="text"
                           inputMode="decimal"
-                          aria-label={`${category.name} cycle spending guide`}
                           disabled={hideSensitive || isSyncing}
                           value={drafts[category.id] ?? ''}
                           onChange={event => {
@@ -178,19 +188,12 @@ export function CategoryLimitsCard({
                             setErrors(previous => ({ ...previous, [category.id]: '' }))
                           }}
                           placeholder="0.00"
-                          className={`w-full rounded-xl border bg-background py-2 pr-3 text-sm font-semibold focus:outline-none focus:ring-1 ${
+                          className={`w-full py-2 pr-3 text-sm font-semibold ${
                             getCurrencySymbol(currency).length > 2 ? 'pl-12' : 'pl-9'
-                          } ${
-                            errors[category.id]
-                              ? 'border-destructive focus:ring-destructive'
-                              : 'border-border focus:ring-ring'
                           }`}
                         />
                       </div>
-                      {errors[category.id] && (
-                        <p className="mt-1 text-[10px] font-semibold text-destructive">{errors[category.id]}</p>
-                      )}
-                    </div>
+                    </FormField>
                   )}
                 </div>
               )
@@ -201,14 +204,14 @@ export function CategoryLimitsCard({
             <p className="text-[10px] leading-relaxed text-muted-foreground">
               Changes apply from the current salary cycle onward; earlier cycle reports keep their original guide.
             </p>
-            <button
+            <Button
               type="button"
               onClick={save}
               disabled={hideSensitive || changedCategories.length === 0}
-              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground cursor-pointer"
+              className="shrink-0 rounded-xl px-4 py-2"
             >
               <Save className="size-3.5" /> Save Guides
-            </button>
+            </Button>
           </div>
         </div>
       </CollapsibleBody>

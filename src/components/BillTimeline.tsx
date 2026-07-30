@@ -515,7 +515,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                       {/* The dot fills are bright gold/green tints in dark mode, so the
                           count reads in the surface colour rather than white. */}
                       {node.bills.length > 1 && (
-                        <span className="text-[8px] text-white dark:text-background font-extrabold leading-none">{node.bills.length}</span>
+                        <span className="text-[8px] text-on-vivid font-extrabold leading-none">{node.bills.length}</span>
                       )}
                     </span>
                   </button>

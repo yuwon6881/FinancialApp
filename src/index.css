@@ -52,6 +52,7 @@
        a fill: Ayu Light's gold is 2.2:1 on white, so `text-primary` is unreadable
        there even though it is perfect in dark mode. */
     --color-accent-ink: var(--accent-ink);
+    --color-on-vivid: var(--on-vivid);
     /* Tailwind's stock palette is remapped onto the app's semantic ledger ramps so
        that a utility like `text-emerald-500` is a *theme* reference, not a literal
        colour. Every step a component actually uses must be listed here — an
@@ -201,6 +202,7 @@
     --accent-ink: #7a4f00; /* 7.09:1 on the page — the accent as text/icon */
     --destructive: #c0392f; /* Ayu error #e65050, darkened so white text clears AA (5.43:1) */
     --destructive-foreground: #ffffff;
+    --on-vivid: #ffffff;
     /* Ayu ui.line (#6b7d8f at 12%) flattened. Cards are #ffffff on a #fcfcfc
        page — 1.03:1 — so as in dark mode the border is the only thing carrying
        structure and has to stay visible. */
@@ -349,6 +351,7 @@
     --accent-ink: #e6b450; /* 9.76:1 on a card — the accent reads as text unchanged here */
     --destructive: #ea6c73;
     --destructive-foreground: #0b0e14;
+    --on-vivid: #0b0e14;
     /* Lifted above Ayu's own UI line (~#1b1f27). Ayu is an editor theme, where a
        panel edge is incidental; here the border is the *only* thing separating a
        card from the page (card:background is 1.04:1 by design), so it has to be

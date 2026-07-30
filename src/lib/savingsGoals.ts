@@ -15,8 +15,18 @@ export interface GoalPace {
   remaining: number
   /** Whole cycles left including the current one. 1 = due this cycle, <= 0 = deadline passed. */
   cyclesRemaining: number
-  /** What this goal needs each cycle to land on its target date. */
+  /**
+   * What this goal needs each cycle to land on its target date, measured from where it stood at the
+   * START of the current cycle so it holds still as money goes in.
+   */
   requiredPerCycle: number
+  /** Net amount credited during this cycle: automatic funding and manual top-ups, less releases. */
+  fundedThisCycle: number
+  /**
+   * What is still owed this cycle. The funding action operates on exactly this, so a goal already
+   * topped up by hand is skipped and releasing money reopens precisely the released amount.
+   */
+  outstandingThisCycle: number
   isOverdue: boolean
   isFunded: boolean
 }
@@ -94,22 +104,55 @@ export function cyclesRemaining(
   return (target.year - current.year) * 12 + (target.monthIndex - current.monthIndex) + 1
 }
 
-export function computePace(goal: SavingsGoal, today: Date, cycleDay: number): GoalPace {
+export function computePace(
+  goal: SavingsGoal,
+  today: Date,
+  cycleDay: number,
+  currentCycleKey: string,
+): GoalPace {
+  const fundedThisCycle = goal.cycleFundedKey === currentCycleKey
+    ? toCents(Math.max(0, goal.cycleFundedAmount ?? 0))
+    : 0
+
   const remaining = toCents(Math.max(0, goal.targetAmount - goal.earmarkedAmount))
   const cycles = cyclesRemaining(today, parseGoalDate(goal.targetDate), cycleDay)
 
+  // Measured from where the goal stood at the START of this cycle, i.e. excluding what has already
+  // gone in during it. Using the live remainder would make the requirement shrink the moment you
+  // funded it, so a goal could never be "done for this cycle" and the number on screen would move
+  // every time money went in.
+  const remainingAtCycleStart = toCents(
+    Math.max(0, goal.targetAmount - Math.max(0, goal.earmarkedAmount - fundedThisCycle)),
+  )
+
   // Deadline reached or passed: there are no future cycles to spread the balance over, so the whole
   // remainder is due now. Spreading it anyway would hide the missed deadline.
-  const requiredPerCycle = cycles <= 1 ? remaining : roundUpToCent(remaining / cycles)
+  const requiredPerCycle = cycles <= 1
+    ? remainingAtCycleStart
+    : roundUpToCent(remainingAtCycleStart / cycles)
+
+  // Capped by remaining as well: the final cycle of a goal only needs the remainder, however much
+  // its nominal per-cycle pace says.
+  const outstandingThisCycle = toCents(
+    Math.min(Math.max(0, requiredPerCycle - fundedThisCycle), remaining),
+  )
 
   return {
     goalId: goal.id,
     remaining,
     cyclesRemaining: cycles,
     requiredPerCycle,
+    fundedThisCycle,
+    outstandingThisCycle,
     isOverdue: cycles <= 0 && remaining > 0,
     isFunded: remaining <= 0,
   }
+}
+
+/** Cycle key ("yyyy-MM") for a date, matching the backend's key format exactly. */
+export function cycleKeyFor(date: Date, cycleDay: number): string {
+  const { year, monthIndex } = getCycleYearAndMonthForDate(date, cycleDay)
+  return `${String(year).padStart(4, '0')}-${String(monthIndex).padStart(2, '0')}`
 }
 
 /**
@@ -122,6 +165,7 @@ export function distribute(
   available: number,
   today: Date,
   cycleDay: number,
+  currentCycleKey: string,
 ): GoalWaterfall {
   let remainingPool = toCents(Math.max(0, available))
   const grants: GoalGrant[] = []
@@ -129,11 +173,10 @@ export function distribute(
   let totalGranted = 0
 
   for (const goal of orderForFunding(goals)) {
-    const pace = computePace(goal, today, cycleDay)
-    totalRequired = toCents(totalRequired + pace.requiredPerCycle)
+    // Only what the goal still needs *this* cycle, so anything already topped up by hand is skipped.
+    const wanted = computePace(goal, today, cycleDay, currentCycleKey).outstandingThisCycle
+    totalRequired = toCents(totalRequired + wanted)
 
-    // Never earmark past the target: the final cycle of a goal only needs the remainder.
-    const wanted = Math.min(pace.requiredPerCycle, pace.remaining)
     const granted = toCents(Math.min(wanted, remainingPool))
     remainingPool = toCents(remainingPool - granted)
     totalGranted = toCents(totalGranted + granted)
@@ -172,12 +215,23 @@ export interface GoalPoolSummary {
   /** What every active goal needs this cycle to stay on pace. */
   requiredPerCycleTotal: number
   /**
-   * How far the expected per-cycle Rewards inflow falls short of that. Positive means at least one
-   * deadline is unreachable at the current allocation — the signal the whole feature exists to give.
+   * What every active goal still needs *this* cycle, after money already set aside during it. This
+   * — not `requiredPerCycleTotal` vs the budget — is what says whether there is anything to fund
+   * right now, so it is what the funding action and its label key off.
+   */
+  outstandingThisCycleTotal: number
+  /**
+   * How far the expected per-cycle Rewards inflow falls short of the requirement. Positive means at
+   * least one deadline is unreachable at the current allocation — a budget-level warning, separate
+   * from whether this cycle's contributions have been made.
    */
   paceShortfall: number
+  /** True while at least one active goal is not yet fully funded overall. */
+  hasUnfinishedGoals: boolean
   activeGoals: SavingsGoal[]
   paces: Map<number, GoalPace>
+  /** Cycle key the tallies above are measured against. */
+  currentCycleKey: string
 }
 
 /**
@@ -193,15 +247,20 @@ export function summarizePool(
   cycleDay: number,
 ): GoalPoolSummary {
   const activeGoals = orderForFunding(goals.filter(isActiveGoal))
+  const currentCycleKey = cycleKeyFor(today, cycleDay)
   const paces = new Map<number, GoalPace>()
   let totalEarmarked = 0
   let requiredPerCycleTotal = 0
+  let outstandingThisCycleTotal = 0
+  let hasUnfinishedGoals = false
 
   for (const goal of activeGoals) {
-    const pace = computePace(goal, today, cycleDay)
+    const pace = computePace(goal, today, cycleDay, currentCycleKey)
     paces.set(goal.id, pace)
     totalEarmarked = toCents(totalEarmarked + goal.earmarkedAmount)
     requiredPerCycleTotal = toCents(requiredPerCycleTotal + pace.requiredPerCycle)
+    outstandingThisCycleTotal = toCents(outstandingThisCycleTotal + pace.outstandingThisCycle)
+    if (!pace.isFunded) hasUnfinishedGoals = true
   }
 
   return {
@@ -209,9 +268,12 @@ export function summarizePool(
     totalEarmarked,
     unassigned: unassigned(rewardsBalance, totalEarmarked),
     requiredPerCycleTotal,
+    outstandingThisCycleTotal,
     paceShortfall: toCents(Math.max(0, requiredPerCycleTotal - Math.max(0, expectedInflow))),
+    hasUnfinishedGoals,
     activeGoals,
     paces,
+    currentCycleKey,
   }
 }
 
@@ -219,12 +281,16 @@ export function summarizePool(
  * Human-readable pace verdict for a goal card. Percent funded alone cannot distinguish "3% of a
  * six-year house fund" (fine) from "33% of a three-month car service" (a problem); pace can.
  */
-export type GoalPaceStatus = 'funded' | 'overdue' | 'behind' | 'onPace'
+export type GoalPaceStatus = 'funded' | 'overdue' | 'needsFunding' | 'onPace'
 
-export function getPaceStatus(pace: GoalPace, grantedThisCycle: number): GoalPaceStatus {
+/**
+ * Derived purely from what this cycle actually owes, so a goal reads "on pace" only once its share
+ * has genuinely been set aside — never because the budget happens to be large enough.
+ */
+export function getPaceStatus(pace: GoalPace): GoalPaceStatus {
   if (pace.isFunded) return 'funded'
   if (pace.isOverdue) return 'overdue'
-  return grantedThisCycle + 0.005 < pace.requiredPerCycle ? 'behind' : 'onPace'
+  return pace.outstandingThisCycle > 0 ? 'needsFunding' : 'onPace'
 }
 
 /**

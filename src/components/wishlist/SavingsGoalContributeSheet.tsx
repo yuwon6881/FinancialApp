@@ -4,6 +4,9 @@ import { BottomSheet } from '../ui/BottomSheet'
 import { Button } from '../ui/Button'
 import { SmartAmountInput } from '../ui/SmartAmountInput'
 import { maskCurrencyInput } from '../../lib/utils'
+import { FormField } from '../ui/FormField'
+import { focusFirstInvalidField } from '../ui/formValidation'
+import { ModalActions } from '../ui/ModalActions'
 
 export type ContributeMode = 'topUp' | 'release'
 
@@ -50,17 +53,19 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
   const [error, setError] = React.useState('')
 
   const parsed = Number.parseFloat(amountInput)
-  const isValid = Number.isFinite(parsed) && parsed > 0 && parsed <= ceiling + 0.005
 
-  const handleConfirm = () => {
+  const handleConfirm = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
     if (!Number.isFinite(parsed) || parsed <= 0) {
-      setError('Enter an amount greater than 0.')
+      setError('Amount is required.')
+      focusFirstInvalidField(event.currentTarget)
       return
     }
     if (parsed > ceiling + 0.005) {
       setError(isTopUp
         ? 'That is more than your free rewards can cover.'
         : 'That is more than this goal is holding.')
+      focusFirstInvalidField(event.currentTarget)
       return
     }
     // Sign carries the direction: the server treats negative as a release.
@@ -74,7 +79,7 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
       onClose={onClose}
       maxWidthClassName="max-w-md"
     >
-      <div className="space-y-4 py-2">
+      <form noValidate onSubmit={handleConfirm} className="space-y-4 py-2">
         <div className="p-4 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h4 className="font-bold text-sm text-foreground truncate">{goal.name}</h4>
@@ -84,10 +89,17 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
           </div>
         </div>
 
-        <div>
-          <label className="block text-xs font-semibold mb-1 text-foreground">
-            Amount ({currency})
-          </label>
+        <FormField
+          label={`Amount (${currency})`}
+          required
+          error={error}
+          hint={!error
+            ? (isTopUp
+                ? <>Up to {formatSensitive(ceiling)} available from your free rewards.</>
+                : <>Up to {formatSensitive(ceiling)} can go back to your free rewards.</>)
+            : undefined}
+          hintClassName="text-[11px] font-medium"
+        >
           <SmartAmountInput
             type="text"
             value={amountInput}
@@ -96,39 +108,26 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
               setError('')
             }}
             placeholder="0.00"
-            className={`w-full px-3.5 py-2 bg-background border rounded-xl focus:outline-none focus:ring-1 transition font-medium [appearance:textfield] ${
-              error ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-ring'
-            }`}
+            className="font-medium [appearance:textfield]"
           />
-          {error
-            ? <p className="text-[11px] text-destructive font-medium mt-1">{error}</p>
-            : (
-              <p className="text-[11px] text-muted-foreground mt-1 font-medium">
-                {isTopUp
-                  ? <>Up to {formatSensitive(ceiling)} available from your free rewards.</>
-                  : <>Up to {formatSensitive(ceiling)} can go back to your free rewards.</>}
-              </p>
-            )}
-        </div>
+        </FormField>
 
         <p className="text-[11px] text-muted-foreground font-medium">
           This only changes which part of your rewards is spoken for — no transaction is added to your ledger.
         </p>
 
-        <div className="flex gap-2 pt-2">
-          <Button variant="ghost" className="flex-1 justify-center py-2.5" onClick={onClose}>
+        <ModalActions className="pt-2">
+          <Button variant="outline" className="rounded-xl py-2.5" onClick={onClose}>
             Cancel
           </Button>
           <Button
-            variant="primary"
-            className="flex-1 justify-center py-2.5 font-bold"
-            onClick={handleConfirm}
-            disabled={!isValid && !error}
+            type="submit"
+            className="rounded-xl py-2.5"
           >
             {isTopUp ? 'Set Aside' : 'Release'}
           </Button>
-        </div>
-      </div>
+        </ModalActions>
+      </form>
     </BottomSheet>
   )
 }

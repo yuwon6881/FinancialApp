@@ -1,0 +1,280 @@
+import { expect, test, type Page, type Route } from '@playwright/test'
+
+const transaction = {
+  id: 'tx-visual-1',
+  date: '2026-08-01',
+  description: 'Neighbourhood Grocer',
+  category: 'Food',
+  ledgerCategory: 'Essentials',
+  amount: -86.4,
+}
+
+const setting = {
+  targetStabilityFund: 10_000,
+  selectedMonth: 'Jul',
+  selectedYear: 2026,
+  essentialsAlloc: 0.5,
+  growthAlloc: 0.25,
+  stabilityAlloc: 0.15,
+  rewardsAlloc: 0.1,
+  cycleDay: 28,
+  darkMode: false,
+  hideSensitive: false,
+  currency: 'MYR',
+  stabilityOverflowRedirect: 'Split: Growth 50%, Rewards 50%',
+}
+
+const dashboard = {
+  setting,
+  cycleLabel: 'Jul 2026',
+  categories: [
+    { id: 'food', name: 'Food', target: 800, budget: 800, netChange: -86.4, spent: 86.4, remaining: 713.6 },
+    { id: 'salary', name: 'Salary', target: 0, budget: 0, netChange: 5_500, spent: 0, remaining: 5_500 },
+  ],
+  stats: {
+    totalBalance: 12_480.25,
+    monthlyIncome: 5_500,
+    monthlyInflow: 5_500,
+    monthlyExpenses: 1_840.75,
+    activeRecurringTotal: 320,
+    growthPercentAchieved: 64,
+    stabilityPercentReached: 72,
+  },
+  activeRecurringPayments: [],
+  trendPoints: [],
+  last3TrendPoints: [],
+  last6TrendPoints: [],
+  pendingNotifications: [],
+  monthlyCategoryBreakdown: [{ category: 'Food', amount: 86.4 }],
+  todayPlanInsights: {
+    unpaidRecurringCount: 0,
+    unpaidRecurringTotal: 0,
+    unpaidEssentialsTotal: 0,
+    nonRecurringEssentialsSpent: 86.4,
+    nonRecurringEssentialsDailyAverage: 5.76,
+    projectedEssentialsEndingBalance: 713.6,
+  },
+  categoryLimitProgress: [],
+}
+
+const bootstrap = {
+  month: 'Jul',
+  year: 2026,
+  dashboard,
+  insights: {
+    last3CategoryBreakdown: [],
+    last6CategoryBreakdown: [],
+    yearlyCategoryBreakdown: [],
+    pastThreeMonthsRewardsAverage: 500,
+    hasRewardsHistory: true,
+    availableYears: [2026],
+  },
+  transactions: [transaction],
+  recurringPayments: [],
+  categories: [
+    { id: 'food', name: 'Food' },
+    { id: 'salary', name: 'Salary' },
+  ],
+  wishlist: [],
+  savingsGoals: [],
+  autocomplete: [],
+  walletBalance: { totalBalance: 12_480.25 },
+}
+
+const emptyInvestmentAllocation = {
+  status: 'NotStarted',
+  appCurrency: 'MYR',
+  plan: { usEquityTarget: 66, internationalExUsTarget: 10, bondsTarget: 24, watchDrift: 3, alertDrift: 5 },
+  assignments: [],
+  sleeves: [],
+  recommendations: [],
+  incompleteReasons: [],
+  freshness: { isStale: false, hasMissingData: false, maxAgeMinutes: 60, staleInputs: [] },
+  investedValue: 0,
+  availableCash: 0,
+  minimumContribution: 0,
+}
+
+const emptyInvestmentPortfolio = {
+  appCurrency: 'MYR',
+  summary: {
+    growthLedgerBalance: 0,
+    netDeposits: 0,
+    marketValue: 0,
+    costBasis: 0,
+    unrealisedProfitLoss: 0,
+    unrealisedPercent: 0,
+    realisedProfitLoss: 0,
+    netDividends: 0,
+    dailyChange: 0,
+    cashValue: 0,
+    totalValue: 0,
+  },
+  accounts: [],
+  instruments: [],
+  holdings: [],
+  manualPrices: [],
+  chart: [],
+  cashBalances: [],
+  activityCount: 0,
+  cashFlowCount: 0,
+  insights: [],
+  warnings: [],
+  marketDataConfigured: false,
+  allocation: emptyInvestmentAllocation,
+}
+
+async function fulfill(route: Route, body: unknown, status = 200) {
+  await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
+}
+
+async function mockApi(page: Page, options: { registered?: boolean; failStatus?: boolean } = {}) {
+  const darkMode = test.info().project.name.endsWith('-dark')
+  const themedBootstrap = {
+    ...bootstrap,
+    dashboard: {
+      ...bootstrap.dashboard,
+      setting: { ...bootstrap.dashboard.setting, darkMode },
+    },
+  }
+
+  await page.route('**/api/**', async route => {
+    const url = new URL(route.request().url())
+    const pathname = url.pathname
+    if (pathname.endsWith('/auth/status')) {
+      if (options.failStatus) return route.abort('failed')
+      return fulfill(route, {
+        isRegistered: options.registered ?? true,
+        registrationOpen: options.registered === false,
+        hasFingerprint: false,
+      })
+    }
+    if (pathname.endsWith('/bootstrap')) return fulfill(route, themedBootstrap)
+    if (pathname.endsWith('/documents/usage')) return fulfill(route, { totalBytes: 0, documentCount: 0 })
+    if (pathname.endsWith('/documents/years')) return fulfill(route, [2026])
+    if (pathname.endsWith('/documents/expired')) return fulfill(route, [])
+    if (pathname.includes('/documents/relief-categories')) return fulfill(route, [])
+    if (pathname.includes('/documents/summary/')) {
+      return fulfill(route, {
+        taxYear: 2026,
+        confirmedTotal: 0,
+        possibleTotal: 0,
+        categories: [],
+      })
+    }
+    if (pathname.endsWith('/documents')) return fulfill(route, { items: [], totalCount: 0 })
+    if (pathname.endsWith('/transactions')) {
+      return fulfill(route, url.searchParams.has('page')
+        ? { items: [transaction], total: 1, page: 1, pageSize: Number(url.searchParams.get('pageSize') || 25) }
+        : [transaction])
+    }
+    if (pathname.endsWith('/investments/portfolio')) return fulfill(route, emptyInvestmentPortfolio)
+    if (pathname.endsWith('/investments/transactions')) return fulfill(route, { items: [], total: 0, page: 1, pageSize: 10 })
+    if (pathname.endsWith('/investments/cash-flows')) return fulfill(route, { items: [], total: 0, page: 1, pageSize: 10 })
+    if (pathname.endsWith('/investments/allocation')) {
+      return fulfill(route, emptyInvestmentAllocation)
+    }
+    if (route.request().method() === 'GET') return fulfill(route, [])
+    return fulfill(route, {})
+  })
+}
+
+async function establishSession(page: Page) {
+  await page.addInitScript(({ dark }) => {
+    localStorage.setItem('auth_session', '1')
+    localStorage.setItem('auth_username', 'visual-user')
+    localStorage.setItem('dark_mode:visual-user', String(dark))
+    localStorage.setItem('hide_balance_amounts:visual-user', 'false')
+    localStorage.setItem('show_notifications_on_login:visual-user', 'false')
+    localStorage.setItem('cached_is_registered', 'true')
+    localStorage.setItem('session_locked_global', 'false')
+    sessionStorage.setItem('session_locked', 'false')
+  }, { dark: test.info().project.name.endsWith('-dark') })
+}
+
+test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-07-30T10:00:00+08:00'))
+})
+
+test('authentication required validation', async ({ page }) => {
+  await mockApi(page, { registered: false })
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await page.getByRole('button', { name: 'Create account' }).click()
+  await expect(page.getByText('Username is required.')).toBeVisible()
+  await expect(page).toHaveScreenshot('auth-required-errors.png', { fullPage: true })
+})
+
+test('authentication workflow error', async ({ page }) => {
+  await mockApi(page, { failStatus: true })
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await expect(page.getByText(/Could not connect to the backend server/i)).toBeVisible()
+  await expect(page).toHaveScreenshot('auth-workflow-error.png', { fullPage: true })
+})
+
+test('representative dashboard', async ({ page }) => {
+  await establishSession(page)
+  await mockApi(page)
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
+  await expect(page).toHaveScreenshot('dashboard.png', { fullPage: true })
+})
+
+test('mixed input select date form sheet', async ({ page }) => {
+  await establishSession(page)
+  await mockApi(page)
+  await page.goto('/ledger', { waitUntil: 'domcontentloaded' })
+  await expect(page.getByText('Neighbourhood Grocer')).toBeVisible()
+  await page.getByRole('button', { name: /Post Transaction/i }).first().click()
+  const dialog = page.getByRole('dialog', { name: 'Add Transaction' })
+  await expect(dialog).toBeVisible()
+  const dimensions = await dialog.evaluate(element => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+    viewportWidth: document.documentElement.clientWidth,
+    renderedWidth: element.getBoundingClientRect().width,
+  }))
+  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1)
+  expect(dimensions.renderedWidth).toBeLessThanOrEqual(dimensions.viewportWidth)
+  await expect(page).toHaveScreenshot('transaction-form-sheet.png')
+})
+
+test('destructive confirmation sheet', async ({ page }) => {
+  await establishSession(page)
+  await mockApi(page)
+  await page.goto('/ledger', { waitUntil: 'domcontentloaded' })
+  await expect(page.getByText('Neighbourhood Grocer')).toBeVisible()
+  await page.getByRole('button', { name: 'Delete' }).first().dispatchEvent('click')
+  const dialog = page.getByRole('dialog', { name: 'Confirm Deletion' })
+  await expect(dialog).toBeVisible()
+  const dimensions = await dialog.evaluate(element => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+    viewportWidth: document.documentElement.clientWidth,
+    renderedWidth: element.getBoundingClientRect().width,
+  }))
+  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1)
+  expect(dimensions.renderedWidth).toBeLessThanOrEqual(dimensions.viewportWidth)
+  await expect(page).toHaveScreenshot('destructive-confirmation.png')
+})
+
+test('production routes do not create viewport horizontal overflow', async ({ page }) => {
+  await establishSession(page)
+  await mockApi(page)
+
+  for (const route of ['/dashboard', '/reports', '/recurring', '/ledger', '/wishlist', '/settings', '/investments', '/vault']) {
+    await page.goto(route, { waitUntil: 'domcontentloaded' })
+    await expect(page.locator('main')).toBeVisible()
+    await page.waitForFunction(() => document.fonts.status === 'loaded')
+
+    const dimensions = await page.evaluate(() => ({
+      route: window.location.pathname,
+      viewportWidth: document.documentElement.clientWidth,
+      pageWidth: document.documentElement.scrollWidth,
+    }))
+
+    expect(
+      dimensions.pageWidth,
+      `${dimensions.route} is ${dimensions.pageWidth - dimensions.viewportWidth}px wider than its viewport`,
+    ).toBeLessThanOrEqual(dimensions.viewportWidth + 1)
+  }
+})

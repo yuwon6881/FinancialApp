@@ -1,7 +1,12 @@
+import { Input } from './Input'
 import React, { useState } from 'react'
 import { KeyRound } from 'lucide-react'
 import { BottomSheet } from './BottomSheet'
 import { getErrorMessage } from '../../lib/errors'
+import { Button } from './Button'
+import { FormField } from './FormField'
+import { focusFirstInvalidField } from './formValidation'
+import { ModalActions } from './ModalActions'
 
 interface PasswordEntryModalProps {
   isOpen: boolean
@@ -27,10 +32,11 @@ export const PasswordEntryModal: React.FC<PasswordEntryModalProps> = ({
     onClose()
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!password.trim()) {
       setError('Password is required.')
+      focusFirstInvalidField(e.currentTarget)
       return
     }
     setBusy(true)
@@ -51,6 +57,7 @@ export const PasswordEntryModal: React.FC<PasswordEntryModalProps> = ({
       isOpen={isOpen}
       onClose={handleClose}
       maxWidthClassName="max-w-sm"
+      description={description}
       title={
         <div className="flex items-center gap-2 text-blue-500">
           <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
@@ -61,38 +68,32 @@ export const PasswordEntryModal: React.FC<PasswordEntryModalProps> = ({
       }
     >
       <form noValidate onSubmit={handleSubmit} className="space-y-3 -mt-2">
-        {description && <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>}
-        <div className="space-y-1">
-          <input
+        <FormField label="Password" required error={error}>
+          <Input
             type="password"
             autoFocus
             placeholder="Password"
             value={password}
             onChange={e => { setPassword(e.target.value); if (error) setError(null) }}
-            className={`w-full px-3.5 py-2 text-sm bg-background border rounded-xl focus:outline-none focus:ring-1 transition duration-200 ${
-              error ? 'border-destructive focus:ring-destructive' : 'border-border focus:ring-ring'
-            }`}
           />
-          {error && (
-            <p className="text-[11px] text-destructive font-medium mt-1 animate-in fade-in slide-in-from-top-1 duration-150">{error}</p>
-          )}
-        </div>
-        <div className="flex gap-2">
-          <button
+        </FormField>
+        <ModalActions>
+          <Button
             type="button"
+            variant="outline"
             onClick={handleClose}
-            className="press-scale flex-1 py-2.5 rounded-xl text-xs font-bold border border-border hover:bg-muted/50 transition cursor-pointer"
+            className="rounded-xl"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             disabled={busy}
-            className="press-scale flex-1 py-2.5 rounded-xl text-xs font-bold text-primary-foreground bg-primary hover:bg-primary/90 disabled:opacity-50 transition cursor-pointer"
+            className="rounded-xl"
           >
             {busy ? 'Please wait...' : confirmText}
-          </button>
-        </div>
+          </Button>
+        </ModalActions>
       </form>
     </BottomSheet>
   )

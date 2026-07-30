@@ -1,3 +1,5 @@
+import { RangeInput } from '../ui/RangeInput'
+import { Input } from '../ui/Input'
 import { useEffect, useMemo, useState } from 'react'
 import { Reorder, useDragControls, useReducedMotion } from 'framer-motion'
 import { AlertCircle, GripVertical, Info, Loader2, Save, SlidersHorizontal, Lock, Unlock } from 'lucide-react'
@@ -285,9 +287,8 @@ export function InvestmentPlanSection() {
                 <span className="text-muted-foreground flex items-center gap-1.5"><span className="uppercase tracking-wider">{label}</span><button type="button" aria-label={`${lockedSleeve === key ? 'Unlock' : 'Lock'} ${label} target`} onClick={(e) => { e.preventDefault(); toggleSleeveLock(key) }} className="p-1 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-40" disabled={lockedSleeve !== null && lockedSleeve !== key} title={lockedSleeve === key ? "Unlock target" : lockedSleeve ? "Unlock the current target before locking another" : "Lock target"}>{lockedSleeve === key ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</button></span>
                 <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md">{plan[key]}%</span>
               </div>
-              <input
+              <RangeInput
                 aria-label={`${label} target`}
-                type="range"
                 min="1"
                 max="98"
                 step="1"
@@ -308,7 +309,7 @@ export function InvestmentPlanSection() {
               <label className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-xs font-semibold text-foreground">
                 Watch when off by
                 <span className="relative mt-2 block">
-                  <input aria-label="Watch drift" aria-describedby="watch-drift-help" type="number" min="1" max="99" step="1" value={plan.watchDrift} onChange={event => setPlan(value => ({ ...value, watchDrift: Number(event.target.value) }))} className="w-full rounded-xl border border-border/60 bg-background px-3 py-2 pr-8 text-sm text-foreground" />
+                  <Input aria-label="Watch drift" aria-describedby="watch-drift-help" type="number" min="1" max="99" step="1" value={plan.watchDrift} onChange={event => setPlan(value => ({ ...value, watchDrift: Number(event.target.value) }))} className="w-full rounded-xl border border-border/60 bg-background px-3 py-2 pr-8 text-sm text-foreground" />
                   <span className="pointer-events-none absolute right-3 top-2 text-xs text-muted-foreground">pp</span>
                 </span>
                 <span id="watch-drift-help" className="mt-1.5 block text-[9px] font-normal leading-relaxed text-muted-foreground">Shows an early warning; guidance may use new money to correct it.</span>
@@ -316,7 +317,7 @@ export function InvestmentPlanSection() {
               <label className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-3 text-xs font-semibold text-foreground">
                 Alert when off by
                 <span className="relative mt-2 block">
-                  <input aria-label="Alert drift" aria-describedby="alert-drift-help" type="number" min="2" max="100" step="1" value={plan.alertDrift} onChange={event => setPlan(value => ({ ...value, alertDrift: Number(event.target.value) }))} className="w-full rounded-xl border border-border/60 bg-background px-3 py-2 pr-8 text-sm text-foreground" />
+                  <Input aria-label="Alert drift" aria-describedby="alert-drift-help" type="number" min="2" max="100" step="1" value={plan.alertDrift} onChange={event => setPlan(value => ({ ...value, alertDrift: Number(event.target.value) }))} className="w-full rounded-xl border border-border/60 bg-background px-3 py-2 pr-8 text-sm text-foreground" />
                   <span className="pointer-events-none absolute right-3 top-2 text-xs text-muted-foreground">pp</span>
                 </span>
                 <span id="alert-drift-help" className="mt-1.5 block text-[9px] font-normal leading-relaxed text-muted-foreground">Marks a larger mismatch that may eventually require rebalancing.</span>

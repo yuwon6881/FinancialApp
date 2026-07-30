@@ -5,6 +5,7 @@ import { useSyncStatus } from '../../lib/useOptimisticList'
 import { useAutoOpenModal } from '../../lib/useAutoOpenModal'
 import { normalizeRecurringFrequency } from '../../lib/recurringPayments'
 import { formatSensitiveAmount, formatCurrencyAmount } from './formatters'
+import { focusFirstInvalidField } from '../ui/formValidation'
 
 const RECURRING_LEDGER_CATEGORIES = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const
 export type RecurringLedgerCategory = typeof RECURRING_LEDGER_CATEGORIES[number]
@@ -208,7 +209,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
 
   const activeCount = payments.filter(p => p.active).length
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (hideSensitive && editingPayment) return
 
@@ -228,6 +229,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
+      focusFirstInvalidField(e.currentTarget)
       return
     }
     setErrors({})
