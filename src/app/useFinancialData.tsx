@@ -22,7 +22,10 @@ import { createFinalId, createLocalNumericId, createLocalWishlistId, projectFina
 import { triggerHaptic } from '../lib/haptics'
 import { getErrorMessage, getErrorName, hasHttpStatus, isAuthError, isLockError, JUST_LOGGED_IN_WINDOW_MS } from '../lib/errors'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
-import { CategoryReplacementSelect } from '../components/ui/CategoryReplacementSelect'
+// Deliberately the deferred wrapper, not the picker itself: importing CategoryReplacementSelect
+// directly here pulled its CustomSelect -> AnchoredPopover chain onto the eager critical path. See
+// the comment in CategoryReplacementSelectLazy for the measurement.
+import { CategoryReplacementSelectLazy } from '../components/ui/CategoryReplacementSelectLazy'
 
 // Boot payload in the tuple order loadAll's commit path already expects, so switching to
 // /api/bootstrap did not require reshuffling everything downstream of it.
@@ -930,7 +933,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
                 {recurringPaymentCount > 0 ? ` and ${recurringPaymentCount} recurring payment${recurringPaymentCount === 1 ? '' : 's'}` : ''}.
                 Choose a replacement category before deleting it.
               </p>
-              <CategoryReplacementSelect
+              <CategoryReplacementSelectLazy
                 options={replacementOptions}
                 onChange={selected => {
                   selectedReplacementId = selected
@@ -1378,77 +1381,50 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     mutateQueue(prev => enqueue(prev, 'savingsGoal', 'delete', String(id), { name: goal?.name }))
   }
 
-  const requestDeleteSavingsGoal = (id: number) => {
+  const requestDeleteSavingsGoal = async (id: number) => {
     if (!guardSensitive()) return
-    const goal = savingsGoals.find(g => g.id === id)
+    const { describeDeleteGoal } = await import('./savingsGoalActions')
     setConfirmModalData({
-      title: 'Delete Savings Goal',
-      message: goal && goal.earmarkedAmount > 0
-        ? `Delete "${goal.name}"? The ${formatCurrencyVal(goal.earmarkedAmount, optimisticDashboardData?.setting?.currency || 'USD')} set aside for it goes back to your free rewards — no money leaves your ledger.`
-        : `Delete "${goal?.name || 'this savings goal'}"? This removes the commitment from your rewards pool.`,
-      confirmText: 'Delete',
+      ...describeDeleteGoal(
+        savingsGoals.find(g => g.id === id),
+        optimisticDashboardData?.setting?.currency || 'USD',
+      ),
       onConfirm: () => { handleDeleteSavingsGoal(id) }
     })
   }
 
+  // The bodies of the money-moving actions live in ./savingsGoalActions, imported on demand: they
+  // are unreachable until the lazy Rewards view is open, so they do not belong in the entry chunk.
+  const savingsGoalDeps = () => ({
+    currency: optimisticDashboardData?.setting?.currency || 'USD',
+    commitGoals: commitSavingsGoals,
+    showToast,
+  })
+
   /** Positive tops the goal up from the free remainder; negative releases back to it. */
   const handleContributeToSavingsGoal = async (id: number, amount: number) => {
     if (!guardSensitive()) return
-    try {
-      const { contributeToSavingsGoal, fetchSavingsGoals } = await import('../lib/api/savingsGoals')
-      await contributeToSavingsGoal(id, amount)
-      commitSavingsGoals(await fetchSavingsGoals())
-      showToast(
-        amount > 0 ? 'Moved into this goal.' : 'Released back to free rewards.',
-        'Goal updated',
-        'success',
-      )
-    } catch (contributeError: unknown) {
-      // The most likely failure is the server rejecting an over-commit against a balance the
-      // client thought was larger. Surface its message rather than a generic one.
-      showToast(getErrorMessage(contributeError), 'Could not move that money', 'error')
-    }
+    const { contributeToGoal } = await import('./savingsGoalActions')
+    await contributeToGoal(savingsGoalDeps(), id, amount)
   }
 
   const handleFundSavingsGoalsForCycle = async () => {
     if (!guardSensitive()) return
-    try {
-      const { fundSavingsGoalsForCycle } = await import('../lib/api/savingsGoals')
-      const result = await fundSavingsGoalsForCycle()
-      commitSavingsGoals(result.goals)
-      showToast(
-        result.totalGranted > 0
-          ? `${formatCurrencyVal(result.totalGranted, optimisticDashboardData?.setting?.currency || 'USD')} set aside across your goals.`
-          : 'Your goals are already funded for this cycle.',
-        result.totalGranted > 0 ? 'Goals funded' : 'Nothing to fund',
-        result.totalGranted > 0 ? 'success' : 'info',
-      )
-    } catch (fundError: unknown) {
-      showToast(getErrorMessage(fundError), 'Could not fund your goals', 'error')
-    }
+    const { fundGoalsForCycle } = await import('./savingsGoalActions')
+    await fundGoalsForCycle(savingsGoalDeps())
   }
 
   const handleCompleteSavingsGoal = async (id: number) => {
     if (!guardSensitive()) return
-    try {
-      const { completeSavingsGoal, fetchSavingsGoals } = await import('../lib/api/savingsGoals')
-      await completeSavingsGoal(id)
-      commitSavingsGoals(await fetchSavingsGoals())
-      showToast('The money set aside is released — log the actual spend in your ledger.', 'Goal completed', 'success')
-    } catch (completeError: unknown) {
-      showToast(getErrorMessage(completeError), 'Could not complete this goal', 'error')
-    }
+    const { completeGoal } = await import('./savingsGoalActions')
+    await completeGoal(savingsGoalDeps(), id)
   }
 
-  const requestCompleteSavingsGoal = (id: number) => {
+  const requestCompleteSavingsGoal = async (id: number) => {
     if (!guardSensitive()) return
-    const goal = savingsGoals.find(g => g.id === id)
+    const { describeCompleteGoal } = await import('./savingsGoalActions')
     setConfirmModalData({
-      title: goal?.isRecurring ? 'Complete This Round' : 'Complete Savings Goal',
-      message: goal?.isRecurring
-        ? `Mark "${goal.name}" done for this round? Its deadline rolls forward by ${goal.recurrenceMonths} month(s) and saving starts again from zero.`
-        : `Mark "${goal?.name || 'this goal'}" done? The money set aside is released back to your rewards pool — then log the actual spend in your ledger as usual.`,
-      confirmText: goal?.isRecurring ? 'Roll Forward' : 'Complete',
+      ...describeCompleteGoal(savingsGoals.find(g => g.id === id)),
       onConfirm: () => { void handleCompleteSavingsGoal(id) }
     })
   }

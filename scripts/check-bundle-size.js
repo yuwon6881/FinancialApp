@@ -9,13 +9,10 @@ const distAssetsPath = path.join(process.cwd(), 'dist', 'assets')
 // (gzip) when it was switched on. The budgets below were raised once to absorb that and
 // should not drift further — they sit just above the measured sizes on purpose.
 const budgets = [
-  // 62.5: the compiler's memo caches plus the single-request boot decoder and the
-  // If-None-Match revalidation layer. Raised from 62.0 (measured 60.79 -> 62.35) when the tax
-  // relief vault and savings goals landed: both add eagerly-loaded state and handlers to
-  // useFinancialData, plus their boot-payload decoders. Their views, pacing math and API modules
-  // are all lazy — see the critical-path budget below, which is what tracks cold-launch cost;
-  // this per-chunk limit exists to catch unexpected growth.
-  { name: 'index-*.js (main application)', pattern: /^index-.*\.js$/, limitKb: 62.5 },
+  // 62.0: the compiler's memo caches plus the single-request boot decoder and the
+  // If-None-Match revalidation layer. The eager-critical-path budget below is the one that
+  // reflects cold-launch cost; this per-chunk limit exists to catch unexpected growth.
+  { name: 'index-*.js (main application)', pattern: /^index-.*\.js$/, limitKb: 62.0 },
   { name: 'vendor-react-*.js', pattern: /^vendor-react-.*\.js$/, limitKb: 58.0 },
   // No vendor-motion budget: framer-motion is no longer pinned to one chunk, because
   // that collapsed LazyMotion's split point (see vite.config.ts). Its cost is covered by
@@ -48,11 +45,13 @@ if (!fs.existsSync(distAssetsPath)) {
 // This is the single number that tracks cold-launch cost on a phone, and it is the gate
 // that stops a stray static import from quietly pulling a deferred chunk back onto the
 // critical path.
-// 187.75 against a measured 187.26 kB. Raised from 186.0 (measured 184.88 there) for the tax
-// relief vault and savings goals; both keep their views, forms and heavy logic off this path, so
-// what lands here is only the eager state/handlers and boot decoders. For reference it was ~219 kB
-// before LazyMotion: framer-motion's 42 kB feature bundle sat on the critical path and now does not.
-const CRITICAL_PATH_LIMIT_KB = 187.75
+// 186.0. Held at this number through the tax relief vault and savings goals rather than raised for
+// them: the growth they added was paid for by deferring the "Delete Category" replacement picker
+// (see useFinancialData), whose static import had been dragging the shared CustomSelect /
+// AnchoredPopover / DatePicker chunk onto this path for a modal most launches never open. For
+// reference it was ~219 kB before LazyMotion: framer-motion's 42 kB feature bundle sat on the
+// critical path and now does not.
+const CRITICAL_PATH_LIMIT_KB = 186.0
 
 function criticalPathChunks(files) {
   const entry = files.find(f => /^index-.*\.js$/.test(f))
