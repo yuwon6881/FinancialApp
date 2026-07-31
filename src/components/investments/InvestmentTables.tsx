@@ -4,10 +4,12 @@ import type { InvestmentActivity, InvestmentCashFlow, InvestmentPortfolio, Inves
 import * as api from '../../lib/api'
 import { applyOpsToList, type QueuedOp } from '../../lib/outbox'
 import { sortActivityNewestFirst, sortCashFlowsNewestFirst } from '../../lib/investmentOrdering'
+import { formatCurrencyVal } from '../../lib/utils'
 import { Button } from '../ui/Button'
 import { CustomSelect } from '../ui/CustomSelect'
 import { DatePicker } from '../ui/DatePicker'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
+import { DataTable, DataTableBody, DataTableFooter, DataTableHeader, DataTableHeaderCell, DataTablePagination } from '../ui/DataTable'
 import type { AllocationFilter } from './InvestmentCharts'
 
 const activityTypes: Array<{ value: InvestmentTransactionType; label: string }> = [
@@ -18,7 +20,7 @@ const activityTypes: Array<{ value: InvestmentTransactionType; label: string }> 
 ]
 
 const money = (value: number, currency: string) =>
-  new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(value)
+  formatCurrencyVal(value, currency)
 
 const number = (value: number, digits = 4) =>
   new Intl.NumberFormat(undefined, { maximumFractionDigits: digits }).format(value)
@@ -112,12 +114,21 @@ export const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: Invest
         </article>
       ))}
     </div>
-    <div className="hidden overflow-x-auto lg:block">
-      <table className="w-full min-w-[1050px] text-left text-xs">
-        <thead className="border-y border-border/50 bg-muted/25 text-[10px] uppercase tracking-wide text-muted-foreground">
-          <tr><th className="px-4 py-3">Investment</th><th className="px-4 py-3">Account</th><th className="px-4 py-3 text-right">Units</th><th className="px-4 py-3 text-right">Avg cost</th><th className="px-4 py-3 text-right">Latest</th><th className="px-4 py-3 text-right">Native value</th><th className="px-4 py-3 text-right">{portfolio.appCurrency} value</th><th className="px-4 py-3 text-right">Daily</th><th className="px-4 py-3 text-right">P/L</th><th className="px-4 py-3">Price date</th></tr>
-        </thead>
-        <tbody className="divide-y divide-border/40">
+    <div className="hidden lg:block">
+      <DataTable embedded tableClassName="min-w-[1050px]">
+        <DataTableHeader className="text-[10px] uppercase tracking-wide">
+          <DataTableHeaderCell>Investment</DataTableHeaderCell>
+          <DataTableHeaderCell>Account</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">Units</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">Avg cost</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">Latest</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">Native value</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">{portfolio.appCurrency} value</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">Daily</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">P/L</DataTableHeaderCell>
+          <DataTableHeaderCell>Price date</DataTableHeaderCell>
+        </DataTableHeader>
+        <DataTableBody>
           {paginatedHoldings.map(holding => (
             <tr key={`${holding.accountId}-${holding.instrumentId}`} className="hover:bg-muted/20">
               <td className="px-4 py-3"><span className="font-bold text-foreground">{holding.symbol}</span><span className="ml-2 text-[10px] text-muted-foreground">{holding.type}</span><span className="block max-w-44 truncate text-[10px] text-muted-foreground">{holding.name}</span></td>
@@ -132,14 +143,21 @@ export const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: Invest
               <td className="px-4 py-3 text-muted-foreground">{holding.priceDate ?? 'Unavailable'}</td>
             </tr>
           ))}
-        </tbody>
-      </table>
+        </DataTableBody>
+      </DataTable>
     </div>
     {total > 0 && (
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/50 p-3">
-        <CustomSelect value={pageSize} onChange={value => { setPageSize(Number(value) as 10 | 25 | 50); setPage(1) }} options={[10, 25, 50].map(value => ({ value, label: `${value} per page` }))} ariaLabel="Rows per page" />
-        <div className="flex items-center gap-2 text-xs"><Button variant="ghost" size="sm" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>Previous</Button><span>{page} / {pages}</span><Button variant="ghost" size="sm" disabled={page >= pages} onClick={() => setPage(value => value + 1)}>Next</Button></div>
-      </div>
+      <DataTableFooter>
+        <DataTablePagination
+          currentPage={page}
+          pageSize={pageSize}
+          totalItems={total}
+          totalPages={pages}
+          pageSizeOptions={[10, 25, 50]}
+          onPageChange={setPage}
+          onPageSizeChange={value => { setPageSize(value as 10 | 25 | 50); setPage(1) }}
+        />
+      </DataTableFooter>
     )}
   </section>
   )
@@ -318,10 +336,17 @@ export const PagedActivityTable = ({
                   </article>
                 })}
                 </div>
-                <div className="hidden overflow-x-auto lg:block">
-                  <table className="w-full text-left text-xs">
-                    <thead className="border-y border-border/50 bg-muted/25 text-[10px] uppercase text-muted-foreground"><tr><th className="px-4 py-3">Date</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Account</th>{mode === 'investments' && <th className="px-4 py-3">Investment</th>}<th className="px-4 py-3 text-right">Amount</th><th className="px-4 py-3" /></tr></thead>
-                    <tbody className="divide-y divide-border/40">{mode === 'investments' ? displayTransactions.map(value => {
+                <div className="hidden lg:block">
+                  <DataTable embedded>
+                    <DataTableHeader className="text-[10px] uppercase">
+                      <DataTableHeaderCell>Date</DataTableHeaderCell>
+                      <DataTableHeaderCell>Type</DataTableHeaderCell>
+                      <DataTableHeaderCell>Account</DataTableHeaderCell>
+                      {mode === 'investments' && <DataTableHeaderCell>Investment</DataTableHeaderCell>}
+                      <DataTableHeaderCell className="text-right">Amount</DataTableHeaderCell>
+                      <DataTableHeaderCell />
+                    </DataTableHeader>
+                    <DataTableBody>{mode === 'investments' ? displayTransactions.map(value => {
                       const isActive = activeSyncId === value.id
                       const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
                       return <tr key={value.id}><td className="px-4 py-3">{value.tradeDate}</td><td className="px-4 py-3"><span className="flex items-center gap-2 font-bold">{activityTypes.find(item => item.value === value.type)?.label}<RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3">{instruments.get(value.instrumentId)?.symbol}</td><td className="px-4 py-3 text-right">{masked || value.cashAmount === undefined ? '—' : money(value.cashAmount, instruments.get(value.instrumentId)?.currency ?? portfolio.appCurrency)}</td><td className="px-4 py-3"><span className="flex justify-end gap-1"><Button variant="ghost" size="sm" disabled={isBusy} onClick={() => onEdit(value)}>Edit</Button><Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDelete(value)}>Delete</Button></span></td></tr>
@@ -329,17 +354,24 @@ export const PagedActivityTable = ({
                       const isActive = activeSyncId === value.id
                       const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
                       return <tr key={value.id}><td className="px-4 py-3">{value.date}</td><td className="px-4 py-3"><span className="flex items-center gap-2 font-bold">{value.type}<RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3 text-right">{cashFlowAmount(value, masked)}</td><td className="px-4 py-3"><span className="flex justify-end gap-1"><Button variant="ghost" size="sm" disabled={isBusy} onClick={() => onEditCashFlow(value)}>Edit</Button><Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDeleteCashFlow(value)}>Delete</Button></span></td></tr>
-                    })}</tbody>
-                  </table>
+                    })}</DataTableBody>
+                  </DataTable>
                 </div>
               </>
             )}
           </div>
         </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/50 p-3">
-        <CustomSelect value={pageSize} onChange={value => resetPage(() => setPageSize(Number(value) as 10 | 25 | 50))} options={[10, 25, 50].map(value => ({ value, label: `${value} per page` }))} ariaLabel="Rows per page" />
-        <div className="flex items-center gap-2 text-xs"><Button variant="ghost" size="sm" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>Previous</Button><span>{page} / {pages}</span><Button variant="ghost" size="sm" disabled={page >= pages} onClick={() => setPage(value => value + 1)}>Next</Button></div>
-      </div>
+      <DataTableFooter>
+        <DataTablePagination
+          currentPage={page}
+          pageSize={pageSize}
+          totalItems={total}
+          totalPages={pages}
+          pageSizeOptions={[10, 25, 50]}
+          onPageChange={setPage}
+          onPageSizeChange={value => resetPage(() => setPageSize(value as 10 | 25 | 50))}
+        />
+      </DataTableFooter>
     </section>
   )
 }

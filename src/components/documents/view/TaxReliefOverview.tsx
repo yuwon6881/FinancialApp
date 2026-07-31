@@ -3,6 +3,7 @@ import { Check, CheckCircle2, CircleDollarSign, Pencil, Plus, Save, X } from 'lu
 import type { TaxReliefCategoryDefinition, TaxReliefCategorySummary, TaxYearReliefSummary } from '../../../types'
 import { Input } from '../../ui/Input'
 import { Button } from '../../ui/Button'
+import { BottomSheet } from '../../ui/BottomSheet'
 import { useAppUi } from '../../../contexts/AppContext'
 import { getErrorMessage } from '../../../lib/errors'
 import { formatCurrencyVal } from '../../../lib/utils'
@@ -39,7 +40,7 @@ export function TaxReliefOverview({
   onUpdateCategory,
 }: TaxReliefOverviewProps) {
   const { showToast } = useAppUi()
-  const [editorOpen, setEditorOpen] = useState(categories.length === 0)
+  const [editorOpen, setEditorOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draft, setDraft] = useState<CategoryInput>({ name: '', limit: 0, detail: '' })
   const [newCategory, setNewCategory] = useState<CategoryInput>({ name: '', limit: 0, detail: '' })
@@ -118,11 +119,11 @@ export function TaxReliefOverview({
             variant="outline"
             size="sm"
             type="button"
-            onClick={() => setEditorOpen(open => !open)}
+            onClick={() => setEditorOpen(true)}
             className="self-start bg-card text-muted-foreground transition hover:bg-muted hover:text-foreground"
           >
-            {editorOpen ? <X className="size-3.5" /> : <Pencil className="size-3.5" />}
-            {editorOpen ? 'Close limits' : 'Manage limits'}
+            <Pencil className="size-3.5" />
+            Manage limits
           </Button>
         )}
       </div>
@@ -135,7 +136,7 @@ export function TaxReliefOverview({
 
       {trackerCategories.length === 0 ? (
         <p className="mt-4 rounded-xl border border-dashed border-border p-4 text-center text-[11px] text-muted-foreground">
-          No categories are configured for this year yet. Add the limits you want to track below.
+          No categories are configured for this year yet. Use Manage limits to add the limits you want to track.
         </p>
       ) : (
         <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -168,7 +169,18 @@ export function TaxReliefOverview({
       )}
 
       {selectedYear !== undefined && editorOpen && (
-        <div className="mt-4 rounded-xl border border-border/60 bg-card p-3">
+        <BottomSheet
+          isOpen={editorOpen}
+          onClose={() => {
+            setEditorOpen(false)
+            setEditingId(null)
+            setIsAdding(false)
+            setNewCategory({ name: '', limit: 0, detail: '' })
+          }}
+          title={`Manage tax relief limits for YA ${selectedYear}`}
+          maxWidthClassName="max-w-2xl"
+        >
+        <div className="space-y-3">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h4 className="text-xs font-black">Categories and limits for YA {selectedYear}</h4>
@@ -212,6 +224,7 @@ export function TaxReliefOverview({
             </div>
           )}
         </div>
+        </BottomSheet>
       )}
 
       <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">

@@ -22,6 +22,15 @@ precacheAndRoute(self.__WB_MANIFEST)
 // directly from the Workbox precache, it never consumes the preloaded network response.
 // Enabling it causes Chrome to fire a useless network request and then complain when
 // the SW responds from cache without waiting for the preload to settle.
+// Disable it during activation as well so a worker installed from an older build
+// cannot leave an enabled preload request behind after this worker takes over.
+self.addEventListener('activate', event => {
+  event.waitUntil((async () => {
+    if (self.registration.navigationPreload) {
+      await self.registration.navigationPreload.disable()
+    }
+  })())
+})
 
 registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html')))
 

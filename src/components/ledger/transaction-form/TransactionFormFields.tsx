@@ -11,6 +11,7 @@ import { maskCurrencyInput } from '../../../lib/utils'
 import type { TransactionFormState, TransferBucket, SelectableLedgerCategory } from './transactionFormReducer'
 import { FormField } from '../../ui/FormField'
 import { Button } from '../../ui/Button'
+import { HorizontalRail } from '../../ui/HorizontalRail'
 
 interface TransactionFormFieldsProps {
   state: TransactionFormState
@@ -86,13 +87,6 @@ export function TransactionFormFields({
       setShowSuggestions(false)
     } else if (e.key === 'Escape') {
       setShowSuggestions(false)
-    }
-  }
-
-  const handleQuickSuggestionsWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    if (e.deltaY !== 0) {
-      e.currentTarget.scrollLeft += e.deltaY
-      e.preventDefault()
     }
   }
 
@@ -289,10 +283,7 @@ export function TransactionFormFields({
         </AnchoredPopover>
 
         {!suggestions.showNoteSuggestions && !state.description.trim() && quickSuggestionEntries.length > 0 && (
-          <div
-            onWheel={handleQuickSuggestionsWheel}
-            className="flex flex-wrap gap-1.5 pt-1 pb-0.5"
-          >
+          <HorizontalRail label="Quick transaction suggestions" className="gap-1.5 pt-1 pb-0.5">
             {quickSuggestionEntries.map(s => (
               <button
                 key={s.description}
@@ -306,7 +297,7 @@ export function TransactionFormFields({
                 {s.description}
               </button>
             ))}
-          </div>
+          </HorizontalRail>
         )}
       </div>
 

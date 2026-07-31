@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { m, useReducedMotion } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
 import type { InvestmentPortfolio, InvestmentRange } from '../../types'
+import { formatCurrencyVal } from '../../lib/utils'
 import { Button } from '../ui/Button'
 import { CustomSelect } from '../ui/CustomSelect'
 import { InteractiveDoughnutChart } from '../ui/InteractiveDoughnutChart'
@@ -18,7 +19,7 @@ const ranges: Array<{ value: InvestmentRange; label: string }> = [
 ]
 
 const money = (value: number, currency: string) =>
-  new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(value)
+  formatCurrencyVal(value, currency)
 
 export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange }: {
   portfolio: InvestmentPortfolio

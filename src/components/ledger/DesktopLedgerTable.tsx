@@ -1,4 +1,5 @@
 import { ArrowRightLeft } from 'lucide-react'
+import { DataTable, DataTableBody, DataTableHeader, DataTableHeaderCell } from '../ui/DataTable'
 import { DesktopLedgerRow } from './LedgerRows'
 import type { LedgerListProps } from './ledgerListShared'
 
@@ -22,29 +23,25 @@ export function DesktopLedgerTable({
   const hasRows = transactions.length > 0
   const net = pageTotals.inflow - pageTotals.outflow
   return (
-    <div className="overflow-hidden border border-border/60 rounded-2xl bg-card shadow-xs">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-separate border-spacing-0">
-          <thead>
-            <tr className="border-b border-border/50 bg-muted/20 text-xs font-semibold text-muted-foreground select-none">
-              <th className="p-4">Date</th>
-              <th className="p-4">Description</th>
-              <th className="p-4">Category</th>
-              <th className="p-4">Ledger Allocation</th>
-              <th className="p-4 text-right text-orange-500/90 font-bold">Debit (Outflow)</th>
-              <th className="p-4 text-right text-emerald-500/90 font-bold">Credit (Inflow)</th>
-              <th className="p-4 text-center">Actions</th>
-            </tr>
-          </thead>
+    <DataTable>
+      <DataTableHeader>
+        <DataTableHeaderCell>Date</DataTableHeaderCell>
+        <DataTableHeaderCell>Description</DataTableHeaderCell>
+        <DataTableHeaderCell>Category</DataTableHeaderCell>
+        <DataTableHeaderCell>Ledger Allocation</DataTableHeaderCell>
+        <DataTableHeaderCell className="text-right text-orange-500/90 font-bold">Debit (Outflow)</DataTableHeaderCell>
+        <DataTableHeaderCell className="text-right text-emerald-500/90 font-bold">Credit (Inflow)</DataTableHeaderCell>
+        <DataTableHeaderCell className="text-center">Actions</DataTableHeaderCell>
+      </DataTableHeader>
           {/* The entrance is CSS (see .list-container-enter / .list-row-enter in
               index.css); `key` still remounts the body so a cycle/page change replays it.
               The AnimatePresence that used to wrap these rows is gone with the motion
               components: rowFadeVariants never defined an `exit`, so it was holding a
               presence context open for an exit animation that never existed. */}
-          <tbody
-            key={listKey}
-            className="list-container-enter divide-y divide-border/30 text-xs"
-          >
+      <DataTableBody
+        key={listKey}
+        className="list-container-enter"
+      >
             {transactions.map((t, idx) => (
               <DesktopLedgerRow
                 key={t.id}
@@ -114,9 +111,7 @@ export function DesktopLedgerTable({
                 </td>
               </tr>
             )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+      </DataTableBody>
+    </DataTable>
   )
 }

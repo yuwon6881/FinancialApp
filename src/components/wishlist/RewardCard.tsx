@@ -2,6 +2,7 @@ import React from 'react'
 import { Edit2, PiggyBank, Star, Target, Trash2 } from 'lucide-react'
 import type { WishlistItem } from '../../types'
 import { Button } from '../ui/Button'
+import { Card } from '../ui/Card'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
 
 interface RewardCardProps {
@@ -43,11 +44,11 @@ export const RewardCard: React.FC<RewardCardProps> = ({
   const isBusy = isSyncing || isDeleting || item.isPendingSync === true
 
   return (
-    <div
-      className={`snap-start shrink-0 w-[17.5rem] flex flex-col gap-3 rounded-2xl border p-4 transition-colors duration-300 ${
+    <Card
+      className={`snap-start shrink-0 w-[22rem] flex flex-col gap-3 p-4 transition-colors duration-300 ${
         isFocused
           ? 'bg-linear-to-br from-blue-500/12 to-card border-blue-500/50 ring-1 ring-blue-500/20 shadow-md shadow-blue-500/5'
-          : 'bg-card border-border/60 shadow-xs'
+          : ''
       }`}
     >
       <div className="min-w-0">
@@ -111,19 +112,19 @@ export const RewardCard: React.FC<RewardCardProps> = ({
           aria-label={`Edit ${item.name}`}
           title={hideSensitive ? 'Unhide balances to edit' : 'Edit reward'}
         >
-          <Edit2 className="size-3" />
+          <Edit2 className="size-3.5 shrink-0" /> Edit
         </Button>
         <Button
-          variant="destructiveGhost"
+          variant="danger"
           size="sm"
           onClick={() => onDelete(item.id)}
           disabled={isBusy || hideSensitive}
           aria-label={`Delete ${item.name}`}
           title={hideSensitive ? 'Unhide balances to delete' : 'Delete reward'}
         >
-          <Trash2 className="size-3" />
+          <Trash2 className="size-3.5 shrink-0" /> Delete
         </Button>
       </div>
-    </div>
+    </Card>
   )
 }

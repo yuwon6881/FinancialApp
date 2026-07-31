@@ -27,6 +27,7 @@ import { CycleSkeleton } from './ui/Skeleton'
 import { InfoHint } from './ui/InfoHint'
 import { useInvestmentPortfolio } from './investments/useInvestmentPortfolio'
 import { applyOpsToList } from '../lib/outbox'
+import { formatCurrencyVal } from '../lib/utils'
 import { InvestmentPlanPanel } from './investments/InvestmentPlanPanel'
 import {
   AllocationChart,
@@ -59,7 +60,7 @@ const inputClass = 'h-10 w-full rounded-xl border border-border/60 bg-background
 const interactivePanelClass = 'interactive-card app-panel rounded-2xl border border-border/60 bg-card/92'
 
 const money = (value: number, currency: string) =>
-  new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(value)
+  formatCurrencyVal(value, currency)
 
 
 export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
@@ -167,9 +168,15 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
   return (
     <div className="min-w-0 max-w-full space-y-6 overflow-x-clip soft-rise">
       <header className="flex items-start gap-3">
-        <button type="button" onClick={back} className="mt-0.5 cursor-pointer rounded-xl border border-border/60 p-2 text-muted-foreground hover:text-foreground" aria-label="Back to Today">
+        <Button
+          variant="unstyled"
+          type="button"
+          onClick={back}
+          className="mt-0.5 inline-flex size-9 cursor-pointer items-center justify-center rounded-xl border border-border/60 p-2 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+          aria-label="Back to Today"
+        >
           <ArrowLeft className="size-4" />
-        </button>
+        </Button>
         <div>
           <h1 className="text-2xl font-black tracking-tight text-foreground">Growth Investments</h1>
           <p className="mt-1 text-xs text-muted-foreground">Track what you own, across any broker.</p>
@@ -533,11 +540,12 @@ const AccountsAndInstruments = ({
   const matches = (value: string) => value.toLowerCase().includes(query.trim().toLowerCase())
   return (
     <>
-      <button
+      <Button
+        variant="unstyled"
         type="button"
         onClick={() => setOpen(true)}
         aria-expanded={open}
-        className={`${interactivePanelClass} group flex w-full cursor-pointer items-center justify-between p-4 text-left`}
+        className={`${interactivePanelClass} group flex w-full cursor-pointer items-center justify-between p-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring`}
       >
         <span className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
           <strong className="text-sm text-foreground">Manage portfolio</strong>
@@ -547,14 +555,14 @@ const AccountsAndInstruments = ({
           </span>
         </span>
         <ChevronDown className="size-4 -rotate-90 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-foreground" />
-      </button>
+      </Button>
       <BottomSheet isOpen={open} onClose={() => setOpen(false)} title="Manage portfolio" maxWidthClassName="max-w-2xl">
         <div className="space-y-4">
           <div className="flex rounded-xl bg-muted/40 p-1">
             {([
               ['accounts', `Accounts (${portfolio.accounts.length})`],
               ['investments', `Investments (${portfolio.instruments.length})`],
-            ] as const).map(([value, label]) => <button key={value} type="button" onClick={() => { setTab(value); setQuery('') }} className={`min-w-0 flex-1 rounded-lg px-2 py-2 text-[10px] font-bold sm:text-xs ${tab === value ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}>{label}</button>)}
+            ] as const).map(([value, label]) => <Button key={value} variant="unstyled" type="button" onClick={() => { setTab(value); setQuery('') }} aria-pressed={tab === value} className={`min-w-0 flex-1 cursor-pointer rounded-lg px-2 py-2 text-[10px] font-bold sm:text-xs focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${tab === value ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}>{label}</Button>)}
           </div>
           <Input value={query} onChange={event => setQuery(event.target.value)} placeholder={`Search ${tab}`} className={inputClass} />
           {tab === 'accounts' && <div>

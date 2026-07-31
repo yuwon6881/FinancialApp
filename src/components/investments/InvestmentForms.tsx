@@ -17,6 +17,7 @@ import {
   validateCashFlowBalances,
 } from '../../lib/investmentValidation'
 import { getErrorMessage } from '../../lib/errors'
+import { formatCurrencyVal } from '../../lib/utils'
 import { Button } from '../ui/Button'
 import { CurrencySelect } from '../ui/CurrencySelect'
 import { CustomSelect } from '../ui/CustomSelect'
@@ -70,7 +71,7 @@ const Field = ({ label, hint, error, className = '', required, children }: {
 )
 
 const money = (value: number, currency: string) =>
-  new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(value)
+  formatCurrencyVal(value, currency)
 
 const number = (value: number, digits = 4) =>
   new Intl.NumberFormat(undefined, { maximumFractionDigits: digits }).format(value)

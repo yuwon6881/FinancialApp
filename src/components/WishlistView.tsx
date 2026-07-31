@@ -27,11 +27,10 @@ import {
   Flag,
   Trophy,
   ArrowUpRight,
-  ChevronLeft,
-  ChevronRight,
   Loader2
 } from 'lucide-react'
 import type { PagedWishlistResult } from '../lib/api'
+import { DataTable, DataTableBody, DataTableCell, DataTableFooter, DataTableHeader, DataTableHeaderCell, DataTablePagination } from './ui/DataTable'
 
 const CLAIMED_PAGE_SIZE = 5
 
@@ -304,6 +303,13 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   }, [claimPage, claimTotalPages])
 
   const claimPageItems = selectedClaims.items
+  const claimedRows = claimPageItems.map(item => {
+    const linkedTx = transactions?.find(t => t.wishlistItemId === item.id || (item.purchaseTransactionId && String(t.id) === String(item.purchaseTransactionId)))
+    const displayDate = linkedTx?.date || (item.purchasedAt ? new Date(item.purchasedAt).toLocaleDateString() : 'N/A')
+    const txId = linkedTx?.id ?? (item.purchaseTransactionId ? String(item.purchaseTransactionId) : null)
+    const rawDate = linkedTx?.date ?? item.purchasedAt ?? null
+    return { item, displayDate, txId, rawDate, canNavigate: !!txId && !!onNavigateToLedger }
+  })
 
   // How many queued rewards the FREE remainder can actually cover. Measuring against the whole
   // Rewards balance is what let this count include items the committed money could not pay for.
@@ -316,14 +322,14 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     const remaining = itemPrice - claimableBalance
     if (remaining <= 0) return 'Available Now! 🎉'
     if (rate <= 0) return 'N/A'
-    
+
     const months = remaining / rate
     const days = Math.ceil(months * 30)
-    
+
     const today = new Date()
     const targetDate = new Date(today.setDate(today.getDate() + days))
     const formattedDate = targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    
+
     if (days < 30) {
       return `~${days} Days (${formattedDate})`
     }
@@ -493,13 +499,8 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               {totalClaimed} {totalClaimed === 1 ? 'reward' : 'rewards'}
             </span>
           </div>
-          <div className={`space-y-1.5 transition-opacity duration-150 ${claimLoading ? 'opacity-60' : ''}`}>
-            {claimPageItems.map(item => {
-              const linkedTx = transactions?.find(t => t.wishlistItemId === item.id || (item.purchaseTransactionId && String(t.id) === String(item.purchaseTransactionId)))
-              const displayDate = linkedTx?.date || (item.purchasedAt ? new Date(item.purchasedAt).toLocaleDateString() : 'N/A')
-              const txId = linkedTx?.id ?? (item.purchaseTransactionId ? String(item.purchaseTransactionId) : null)
-              const rawDate = linkedTx?.date ?? item.purchasedAt ?? null
-              const canNavigate = !!txId && !!onNavigateToLedger
+          <div className={`space-y-1.5 transition-opacity duration-150 lg:hidden ${claimLoading ? 'opacity-60' : ''}`}>
+            {claimedRows.map(({ item, displayDate, txId, rawDate, canNavigate }) => {
               return (
                 <button
                   key={item.id}
@@ -539,28 +540,60 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
             })}
           </div>
 
+          <div className={`hidden transition-opacity duration-150 lg:block ${claimLoading ? 'opacity-60' : ''}`}>
+            <DataTable embedded>
+              <DataTableHeader className="text-[10px] uppercase tracking-wider">
+                <DataTableHeaderCell>Reward</DataTableHeaderCell>
+                <DataTableHeaderCell>Claimed</DataTableHeaderCell>
+                <DataTableHeaderCell className="text-right">Amount</DataTableHeaderCell>
+                <DataTableHeaderCell className="text-right"><span className="sr-only">Actions</span></DataTableHeaderCell>
+              </DataTableHeader>
+              <DataTableBody>
+                {claimedRows.map(({ item, displayDate, txId, rawDate, canNavigate }) => (
+                  <tr key={item.id} className="hover:bg-muted/20">
+                    <DataTableCell>
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-blue-500/10 text-blue-500 ring-1 ring-blue-500/15">
+                          <CheckCircle2 className="size-4" />
+                        </span>
+                        <span className="block max-w-64 truncate font-bold text-foreground">{item.name}</span>
+                      </div>
+                    </DataTableCell>
+                    <DataTableCell className="text-muted-foreground">{displayDate}</DataTableCell>
+                    <DataTableCell className="text-right font-black text-foreground">{formatSensitive(item.price)}</DataTableCell>
+                    <DataTableCell className="text-right">
+                      {canNavigate ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => { if (txId) handleOpenClaimInLedger(txId, rawDate) }}
+                        >
+                          View <ArrowUpRight className="size-3.5" />
+                        </Button>
+                      ) : (
+                        <span className="text-[9px] font-bold uppercase tracking-wide text-blue-500/80">Claimed</span>
+                      )}
+                    </DataTableCell>
+                  </tr>
+                ))}
+              </DataTableBody>
+            </DataTable>
+          </div>
+
           {claimTotalPages > 1 && (
-            <div className="mt-3 flex items-center justify-between border-t border-border/30 pt-3">
-              <button
-                type="button"
-                onClick={() => setClaimPage(page => Math.max(1, page - 1))}
-                disabled={claimPage <= 1 || claimLoading}
-                className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-foreground transition-colors hover:bg-muted/50 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
-              >
-                <ChevronLeft className="size-3.5" /> Prev
-              </button>
-              <span className="text-[10px] font-semibold text-muted-foreground">
-                Page {claimPage} of {claimTotalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => setClaimPage(page => Math.min(claimTotalPages, page + 1))}
-                disabled={claimPage >= claimTotalPages || claimLoading}
-                className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-foreground transition-colors hover:bg-muted/50 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
-              >
-                Next <ChevronRight className="size-3.5" />
-              </button>
-            </div>
+            <DataTableFooter className="mt-3">
+              <DataTablePagination
+                currentPage={claimPage}
+                pageSize={CLAIMED_PAGE_SIZE}
+                totalItems={totalClaimed}
+                totalPages={claimTotalPages}
+                serverIsFetching={claimLoading}
+                showPageSize={false}
+                pageSizeOptions={[CLAIMED_PAGE_SIZE]}
+                onPageChange={setClaimPage}
+                onPageSizeChange={() => undefined}
+              />
+            </DataTableFooter>
           )}
         </Card>
       )}

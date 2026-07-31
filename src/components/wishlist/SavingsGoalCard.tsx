@@ -5,6 +5,7 @@ import type { GoalPace, GoalPaceStatus } from '../../lib/savingsGoals'
 import { MONTH_NAMES } from '../../lib/cycle'
 import { parseGoalDate } from '../../lib/savingsGoals'
 import { Button } from '../ui/Button'
+import { Card } from '../ui/Card'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
 
 interface SavingsGoalCardProps {
@@ -66,8 +67,8 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
   const isBusy = isSyncing || isDeleting || goal.isPendingSync === true
 
   return (
-    <div
-      className={`snap-start shrink-0 w-[17.5rem] flex flex-col gap-3 rounded-2xl bg-card border p-4 shadow-xs transition-colors duration-300 ${
+    <Card
+      className={`snap-start shrink-0 w-[22rem] flex flex-col gap-3 p-4 transition-colors duration-300 ${
         status === 'overdue' ? 'border-red-500/40' : 'border-border/60'
       }`}
     >
@@ -113,34 +114,37 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
         <div className="flex items-center gap-px rounded-lg overflow-hidden shrink-0 shadow-xs ring-1 ring-border/50">
           <Button
             variant="secondary"
-            size="sm"
-            className="rounded-none border-none shadow-none hover:shadow-none pr-3"
+            size="icon"
+            className="rounded-none border-none shadow-none hover:shadow-none"
             onClick={() => onTopUp(goal)}
             disabled={isBusy || hideSensitive || pace.isFunded}
+            aria-label={`Add money to ${goal.name}`}
             title={pace.isFunded ? 'This goal already has everything it needs' : 'Move free rewards into this goal'}
           >
-            <Plus className="size-3" /> Top up
+            <Plus className="size-3.5" />
           </Button>
           <div className="w-px h-5 bg-border/40" aria-hidden />
           <Button
             variant="secondary"
-            size="sm"
-            className="rounded-none border-none shadow-none hover:shadow-none px-2.5"
+            size="icon"
+            className="rounded-none border-none shadow-none hover:shadow-none"
             onClick={() => onRelease(goal)}
             disabled={isBusy || hideSensitive || goal.earmarkedAmount <= 0}
+            aria-label={`Release money from ${goal.name}`}
             title="Release money back to your free rewards"
           >
-            <Minus className="size-3" />
+            <Minus className="size-3.5" />
           </Button>
         </div>
         <Button
           variant="successGhost"
-          size="sm"
+          size="icon"
           onClick={() => onComplete(goal.id)}
           disabled={isBusy || hideSensitive}
+          aria-label={goal.isRecurring ? `Complete this cycle for ${goal.name}` : `Mark ${goal.name} done`}
           title={goal.isRecurring ? 'Mark this round done and roll the deadline forward' : 'Mark done and release the money'}
         >
-          <CheckCircle2 className="size-3" /> Done
+          <CheckCircle2 className="size-3.5" />
         </Button>
         <Button
           variant="ghost"
@@ -151,19 +155,19 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
           aria-label={`Edit ${goal.name}`}
           title={hideSensitive ? 'Unhide balances to edit' : 'Edit goal'}
         >
-          <Edit2 className="size-3" />
+          <Edit2 className="size-3.5 shrink-0" /> Edit
         </Button>
         <Button
-          variant="destructiveGhost"
+          variant="danger"
           size="sm"
           onClick={() => onDelete(goal.id)}
           disabled={isBusy || hideSensitive}
           aria-label={`Delete ${goal.name}`}
           title={hideSensitive ? 'Unhide balances to delete' : 'Delete goal'}
         >
-          <Trash2 className="size-3" />
+          <Trash2 className="size-3.5 shrink-0" /> Delete
         </Button>
       </div>
-    </div>
+    </Card>
   )
 }

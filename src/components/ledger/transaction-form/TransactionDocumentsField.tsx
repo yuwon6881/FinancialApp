@@ -245,17 +245,7 @@ export const TransactionDocumentsField = React.forwardRef<
               <X className="size-3.5" />
             </button>
           </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,7rem)_minmax(0,8rem)_minmax(0,1fr)] sm:items-end">
-            <div className="min-w-0 rounded-xl border border-border/70 bg-background px-3 py-2.5">
-              <span className={LABEL_CLASS}>Recorded year</span>
-              <p className="mt-1 truncate text-xs font-bold tabular-nums text-foreground">YA {defaultTaxYear}</p>
-            </div>
-            <div className="min-w-0 rounded-xl border border-border/70 bg-background px-3 py-2.5">
-              <span className={LABEL_CLASS}>Amount</span>
-              <p className="mt-1 truncate text-xs font-bold tabular-nums text-foreground">
-                {document.amount == null ? 'Not entered' : formatCurrencyVal(document.amount, currency)}
-              </p>
-            </div>
+          <div className="grid grid-cols-1 gap-2 sm:items-end">
             <label className="min-w-0 space-y-1">
               <span className={LABEL_CLASS}>Tax relief category <span className="text-destructive">*</span></span>
               <CustomSelect

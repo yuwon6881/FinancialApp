@@ -153,16 +153,18 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
             suggestions={form.suggestions}
           />
 
-          <div className="sm:col-span-2">
-            <TransactionDocumentsField
-              ref={form.documentsFieldRef}
-              existingDocuments={form.existingDocuments}
-              defaultTaxYear={Number(form.state.date.slice(0, 4)) || new Date().getFullYear()}
-              transactionAmount={form.state.amount}
-              currency={props.currency}
-              disabled={app?.isOffline || !navigator.onLine}
-            />
-          </div>
+          {form.state.transactionType === 'outflow' && (
+            <div className="sm:col-span-2">
+              <TransactionDocumentsField
+                ref={form.documentsFieldRef}
+                existingDocuments={form.existingDocuments}
+                defaultTaxYear={Number(form.state.date.slice(0, 4)) || new Date().getFullYear()}
+                transactionAmount={form.state.amount}
+                currency={props.currency}
+                disabled={app?.isOffline || !navigator.onLine}
+              />
+            </div>
+          )}
         </div>
 
         <ModalActions className="pt-2">

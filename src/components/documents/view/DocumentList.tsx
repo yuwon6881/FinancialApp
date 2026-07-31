@@ -10,6 +10,7 @@ import { Skeleton } from '../../ui/Skeleton'
 import { formatBytes, formatDate } from './formatters'
 import { CustomSelect } from '../../ui/CustomSelect'
 import { Button } from '../../ui/Button'
+import { DataTable, DataTableBody, DataTableHeader, DataTableHeaderCell } from '../../ui/DataTable'
 
 interface DocumentListProps {
   documents: VaultDocument[]
@@ -294,20 +295,18 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
       </div>
 
       <div className="hidden w-full lg:block">
-        <table className="w-full text-left text-xs">
-        <thead>
-          <tr className="border-b border-border/60 text-[10px] uppercase tracking-wider text-muted-foreground">
-            <th scope="col" className="w-8 px-3 py-2.5 font-bold"><span className="sr-only">Select</span></th>
-            <th scope="col" className="px-3 py-2.5 font-bold">Document</th>
-            <th scope="col" className="px-3 py-2.5 font-bold">Tax relief</th>
-            <th scope="col" className="px-3 py-2.5 font-bold">Tax Year</th>
-            <th scope="col" className="px-3 py-2.5 font-bold">Size</th>
-            <th scope="col" className="px-3 py-2.5 font-bold">Amount</th>
-            <th scope="col" className="px-3 py-2.5 font-bold">Uploaded</th>
-            <th scope="col" className="px-3 py-2.5 text-right font-bold">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border/40">
+        <DataTable>
+        <DataTableHeader className="text-[10px] uppercase tracking-wider">
+            <DataTableHeaderCell className="w-8 font-bold"><span className="sr-only">Select</span></DataTableHeaderCell>
+            <DataTableHeaderCell className="font-bold">Document</DataTableHeaderCell>
+            <DataTableHeaderCell className="font-bold">Tax relief</DataTableHeaderCell>
+            <DataTableHeaderCell className="font-bold">Tax Year</DataTableHeaderCell>
+            <DataTableHeaderCell className="font-bold">Size</DataTableHeaderCell>
+            <DataTableHeaderCell className="font-bold">Amount</DataTableHeaderCell>
+            <DataTableHeaderCell className="font-bold">Uploaded</DataTableHeaderCell>
+            <DataTableHeaderCell className="text-right font-bold">Actions</DataTableHeaderCell>
+        </DataTableHeader>
+        <DataTableBody>
           {isLoading && documents.length === 0 ? (
             Array.from({ length: 5 }).map((_, index) => (
               <tr key={index}>
@@ -374,8 +373,8 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
               </tr>
             )
           })}
-        </tbody>
-      </table>
+        </DataTableBody>
+      </DataTable>
       </div>
     </>
   )

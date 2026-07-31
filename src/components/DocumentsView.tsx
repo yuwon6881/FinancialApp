@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, ChevronLeft, ChevronRight, Download, ShieldCheck, Trash2, UploadCloud } from 'lucide-react'
+import { AlertTriangle, Download, ShieldCheck, Trash2, UploadCloud } from 'lucide-react'
 import { DocumentUploadSheet } from './documents/DocumentUploadSheet'
 import { useDocumentsView } from './documents/view/useDocumentsView'
 import { CustomConfirmModal } from './ui/CustomConfirmModal'
@@ -9,9 +9,9 @@ import { DocumentList } from './documents/view/DocumentList'
 import { useAppPrefs, useAppUi } from '../contexts/AppContext'
 import { TaxReliefOverview } from './documents/view/TaxReliefOverview'
 import * as documentsApi from '../lib/api/documents'
-import { CustomSelect } from './ui/CustomSelect'
 import { getErrorMessage } from '../lib/errors'
 import { Button } from './ui/Button'
+import { DataTableFooter, DataTablePagination } from './ui/DataTable'
 
 interface DocumentsViewProps {
   onNavigateToTransaction?: (transactionId: string) => Promise<void> | void
@@ -277,47 +277,17 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
         />
 
         {totalCount > 0 && (
-          <div className="mt-4 flex flex-col gap-3 border-t border-border/60 pt-3 text-[11px] sm:flex-row sm:items-center sm:justify-between">
-            <span className="font-semibold text-muted-foreground tabular-nums">
-              Showing {Math.min((page - 1) * pageSize + 1, totalCount)}–{Math.min(page * pageSize, totalCount)} of {totalCount}
-            </span>
-            <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-muted-foreground">Rows per page</span>
-                <CustomSelect
-                  value={pageSize}
-                  onChange={value => setPageSize(Number(value) as 10 | 25 | 50)}
-                  options={[10, 25, 50].map(value => ({ value, label: String(value) }))}
-                  ariaLabel="Rows per page"
-                  className="w-20"
-                  direction="up"
-                />
-              </div>
-              <span className="font-semibold text-muted-foreground tabular-nums">Page {page} of {totalPages}</span>
-              <div className="flex gap-2">
-              <Button
-                variant="unstyled"
-                type="button"
-                disabled={page === 1}
-                onClick={() => setPage(page - 1)}
-                className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <ChevronLeft className="size-3.5" aria-hidden="true" />
-                Previous
-              </Button>
-              <Button
-                variant="unstyled"
-                type="button"
-                disabled={page * pageSize >= totalCount}
-                onClick={() => setPage(page + 1)}
-                className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Next
-                <ChevronRight className="size-3.5" aria-hidden="true" />
-              </Button>
-              </div>
-            </div>
-          </div>
+          <DataTableFooter className="mt-4">
+            <DataTablePagination
+              currentPage={page}
+              pageSize={pageSize}
+              totalItems={totalCount}
+              totalPages={totalPages}
+              pageSizeOptions={[10, 25, 50]}
+              onPageChange={setPage}
+              onPageSizeChange={value => setPageSize(value as 10 | 25 | 50)}
+            />
+          </DataTableFooter>
         )}
       </div>
 

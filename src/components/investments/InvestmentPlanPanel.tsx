@@ -170,8 +170,8 @@ export function InvestmentPlanPanel({
             </h3>
             {usdRate !== undefined && allocation.appCurrency !== 'USD' && (
               <div className="flex rounded-xl bg-muted/40 p-1">
-                <button type="button" onClick={() => setShowUsd(true)} className={`rounded-lg px-2 py-1 text-[10px] font-bold transition-all duration-200 hover:text-foreground ${showUsd ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}>USD</button>
-                <button type="button" onClick={() => setShowUsd(false)} className={`rounded-lg px-2 py-1 text-[10px] font-bold transition-all duration-200 hover:text-foreground ${!showUsd ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}>{allocation.appCurrency}</button>
+                <Button variant="unstyled" type="button" onClick={() => setShowUsd(true)} aria-pressed={showUsd} className={`cursor-pointer rounded-lg px-2 py-1 text-[10px] font-bold transition-all duration-200 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${showUsd ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}>USD</Button>
+                <Button variant="unstyled" type="button" onClick={() => setShowUsd(false)} aria-pressed={!showUsd} className={`cursor-pointer rounded-lg px-2 py-1 text-[10px] font-bold transition-all duration-200 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${!showUsd ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}>{allocation.appCurrency}</Button>
               </div>
             )}
           </div>
