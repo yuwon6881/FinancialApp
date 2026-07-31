@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, type ReactNode } from 'react'
+import { useCallback, useRef, type ReactNode } from 'react'
 import { cn } from '../../lib/utils'
 
 interface HorizontalRailProps {
@@ -17,45 +17,16 @@ const DRAG_CLICK_THRESHOLD = 6
  * Used for the Rewards page's commitment and reward rows: they grow sideways instead of pushing the
  * page down forever, so the whole picture stays on one screen no matter how many items exist.
  *
- * Touch scrolls natively. Desktop has neither a scrollbar nor a touch surface, so it gets two
- * affordances: vertical wheel movement translated into horizontal scrolling, and click-drag on the
- * rail background. Both are deliberately conditional -- the wheel hands the gesture back to the page
- * once the rail reaches an end, so the pointer never feels trapped, and a drag only suppresses the
- * click it lands on after travelling far enough to be unambiguous.
+ * The vertical gesture belongs to the page, never to the rail. A rail sits in the middle of a
+ * scrolling page, so anything that claims the wheel or a vertical swipe strands the reader on it --
+ * which is why this does not translate wheel-down into scroll-right and does not restrict
+ * touch-action. Horizontal movement reaches the rail through the browser's own handling: a trackpad
+ * swipe, shift+wheel, and touch drag all work natively. A plain mouse gets click-drag, which only
+ * suppresses the click it lands on after travelling far enough to be unambiguously a drag.
  */
 export function HorizontalRail({ children, className, label }: HorizontalRailProps) {
   const railRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ pointerId: number; startX: number; startScrollLeft: number; moved: boolean } | null>(null)
-
-  const handleWheel = useCallback((event: WheelEvent) => {
-    const rail = railRef.current
-    if (!rail) return
-
-    // A genuinely horizontal gesture (shift+wheel, or a trackpad swipe) already works natively.
-    if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) return
-
-    const maxScroll = rail.scrollWidth - rail.clientWidth
-    if (maxScroll <= 0) return
-
-    const atStart = rail.scrollLeft <= 0
-    const atEnd = rail.scrollLeft >= maxScroll - 1
-    // Hand the gesture back to the page at either end, so the rail never traps the pointer.
-    if ((event.deltaY < 0 && atStart) || (event.deltaY > 0 && atEnd)) return
-
-    event.preventDefault()
-    // Deliberately not scrollBy({ behavior: 'smooth' }): a wheel emits a burst of events, and each
-    // smooth animation restarts from the last *animated* position rather than the target, so the
-    // burst fights itself and the rail crawls. Direct assignment tracks the wheel one-to-one.
-    rail.scrollLeft += event.deltaY
-  }, [])
-
-  useEffect(() => {
-    const rail = railRef.current
-    if (!rail) return
-    // Non-passive so preventDefault actually suppresses the page scroll.
-    rail.addEventListener('wheel', handleWheel, { passive: false })
-    return () => rail.removeEventListener('wheel', handleWheel)
-  }, [handleWheel])
 
   const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     // Touch and pen already scroll natively; hijacking them would break momentum and snapping.
@@ -115,11 +86,11 @@ export function HorizontalRail({ children, className, label }: HorizontalRailPro
       onPointerCancel={endDrag}
       onClickCapture={handleClickCapture}
       className={cn(
+        // No touch-action restriction: pan-x would have told the browser this element only handles
+        // horizontal gestures, but the browser reads that as "vertical does nothing here" rather
+        // than "pass vertical to the page", so a finger dragging up over the rail went nowhere.
         'no-scrollbar flex gap-3 overflow-x-auto overscroll-x-contain',
-        // touch-pan-x keeps the browser's own momentum scrolling on mobile while letting a vertical
-        // swipe fall through to the page.
-        'touch-pan-x',
-        // Proximity, not mandatory: mandatory snapping cancels a free wheel or drag mid-flight and
+        // Proximity, not mandatory: mandatory snapping cancels a free drag mid-flight and
         // yanks back to the nearest card, which is most of what made desktop scrolling feel stuck.
         'snap-x snap-proximity pb-1',
         className,
