@@ -38,12 +38,12 @@ function AmountReview({ document, updateDocument }: { document: VaultDocument; u
       setEditing(false)
     } finally { setSaving(false) }
   }
-  if (!editing) return <button type="button" onClick={() => setEditing(true)} className="inline-flex items-center gap-1 text-[10px] font-bold text-accent-ink">
-    {document.amount != null ? `RM${document.amount.toFixed(2)}` : 'Add amount'}<Pencil className="size-3" />
+  if (!editing) return <button type="button" onClick={() => setEditing(true)} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-1 text-[11px] font-bold text-accent-ink transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">
+    {document.amount != null ? `RM${document.amount.toFixed(2)}` : 'Add amount'}<Pencil className="size-3.5" />
   </button>
-  return <div className="flex items-center gap-1"><span className="text-[10px] font-bold">RM</span>
-    <Input value={value} onChange={event => setValue(event.target.value)} inputMode="decimal" aria-label={`Amount for ${document.originalFileName}`} className="w-20 rounded-md border border-border bg-background px-1.5 py-1 text-[10px]" />
-    <button type="button" onClick={() => void save()} disabled={saving} aria-label={`Confirm amount for ${document.originalFileName}`} className="rounded-md bg-emerald-500/10 p-1 text-emerald-600"><Check className="size-3.5" /></button>
+  return <div className="flex items-center gap-1.5"><span className="text-[11px] font-bold text-foreground">RM</span>
+    <Input value={value} onChange={event => setValue(event.target.value)} inputMode="decimal" aria-label={`Amount for ${document.originalFileName}`} className="h-9 w-20 rounded-lg border-border bg-background px-2 text-[11px] tabular-nums" />
+    <button type="button" onClick={() => void save()} disabled={saving} aria-label={`Confirm amount for ${document.originalFileName}`} title="Confirm amount" className="inline-grid size-9 shrink-0 place-items-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"><Check className="size-4" strokeWidth={2.5} /></button>
   </div>
 }
 
@@ -125,7 +125,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
         ) : documents.map(document => {
           const Icon = iconFor(document.contentType)
           return (
-            <article key={document.id} className="rounded-xl border border-border/50 bg-muted/20 p-3">
+            <article key={document.id} className="rounded-2xl border border-border/60 bg-card p-3 shadow-sm shadow-black/5">
               <div className="flex min-w-0 items-start gap-2.5">
                 <Checkbox  checked={selectedIds.has(document.id)} onChange={() => toggleSelected(document.id)} aria-label={`Select ${document.originalFileName}`} className="mt-2 size-4 accent-primary" />
                 <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent text-accent-ink">
@@ -153,7 +153,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
                 />
               </div>
 
-              <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border/40 pt-2.5 text-[10px]">
+              <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2.5 border-t border-border/50 pt-3 text-[10px]">
                 <div className="min-w-0">
                   <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Type</dt>
                   <dd className="mt-0.5 truncate font-bold text-foreground" title={document.documentType}>
@@ -176,11 +176,11 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
               <p className="mt-2 text-[10px] text-muted-foreground">
                 Keep until {formatDate(document.retentionUntil)}
               </p>
-              <div className="mt-2 flex items-center justify-between gap-2 border-t border-border/40 pt-2">
+              <div className="mt-3 flex items-center justify-between gap-3 border-t border-border/50 pt-3">
                 <span className="text-[10px] text-muted-foreground">{document.amountStatus === 'NeedsReview' ? 'AI suggestion · please confirm' : document.amountStatus === 'Confirmed' ? 'Confirmed amount' : document.amountExtractionMessage || 'No amount confirmed'}</span>
                 <AmountReview document={document} updateDocument={updateDocument} />
               </div>
-              <div className="mt-2"><CustomSelect value={document.reliefCategory ?? ''} onChange={value => void updateDocument(document.id, { reliefCategory: String(value) || null })}
+              <div className="mt-3 border-t border-border/50 pt-3"><p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Tax relief category</p><CustomSelect value={document.reliefCategory ?? ''} onChange={value => void updateDocument(document.id, { reliefCategory: String(value) || null })}
                 options={[{ value: '', label: 'Uncategorised' }, ...reliefCategories.map(category => ({ value: category.id, label: category.name }))]} ariaLabel={`Tax relief category for ${document.originalFileName}`} className="w-full" /></div>
             </article>
           )
