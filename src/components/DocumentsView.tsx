@@ -123,18 +123,6 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
             </span>
             Document Vault
           </h2>
-
-  return (
-    <div className="space-y-5 soft-rise">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-lg font-black text-foreground">
-            <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-accent text-accent-ink">
-              <ShieldCheck className="size-4" aria-hidden="true" />
-            </span>
-            Document Vault
-          </h2>
           <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
             Long-term storage for receipts, invoices and tax records. Retention dates are shown for
             reference only — nothing is ever deleted automatically.
@@ -326,6 +314,13 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
               >
                 Next
                 <ChevronRight className="size-3.5" aria-hidden="true" />
+              </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       <DocumentUploadSheet
         isOpen={isUploadSheetOpen}
         onClose={() => setIsUploadSheetOpen(false)}
