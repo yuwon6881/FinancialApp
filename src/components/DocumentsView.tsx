@@ -10,7 +10,11 @@ import { useAppUi } from '../contexts/AppContext'
 import { TaxReliefOverview } from './documents/view/TaxReliefOverview'
 import * as documentsApi from '../lib/api/documents'
 
-export function DocumentsView() {
+interface DocumentsViewProps {
+  onNavigateToTransaction?: (transactionId: string) => Promise<void> | void
+}
+
+export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
   const {
     documents,
     usage,
@@ -31,6 +35,8 @@ export function DocumentsView() {
     loadUsage,
     loadAvailableYears,
     loadTaxInsights,
+    addReliefCategory,
+    updateReliefCategory,
     deleteDocument,
     updateDocumentMetadata,
     bulkDelete,
@@ -122,7 +128,13 @@ export function DocumentsView() {
 
         <StorageUsageMeter usage={usage} />
 
-        <TaxReliefOverview summary={summary} />
+        <TaxReliefOverview
+          summary={summary}
+          categories={reliefCategories}
+          taxYear={taxYear}
+          onAddCategory={addReliefCategory}
+          onUpdateCategory={updateReliefCategory}
+        />
 
         {selectedIds.size > 0 && (
           <div className="mb-3 flex items-center justify-between rounded-xl border border-destructive/25 bg-destructive/5 p-3">
@@ -149,6 +161,7 @@ export function DocumentsView() {
             void loadTaxInsights()
           }}
           reliefCategories={reliefCategories}
+          onNavigateToTransaction={onNavigateToTransaction}
         />
 
         {totalCount > pageSize && (

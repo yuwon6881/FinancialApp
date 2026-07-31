@@ -8,6 +8,7 @@ import { useAppUi } from '../../../contexts/AppContext'
 import { Skeleton } from '../../ui/Skeleton'
 import { formatBytes, formatDate } from './formatters'
 import { CustomSelect } from '../../ui/CustomSelect'
+import { Button } from '../../ui/Button'
 
 interface DocumentListProps {
   documents: VaultDocument[]
@@ -17,11 +18,12 @@ interface DocumentListProps {
   toggleSelected: (id: number) => void
   updateDocument: (
     id: number,
-    updates: Pick<Partial<VaultDocument>, 'taxYear' | 'documentType' | 'notes' | 'transactionId' | 'reliefCategory' | 'amount' | 'amountCurrency'> & {
+    updates: Pick<Partial<VaultDocument>, 'taxYear' | 'notes' | 'transactionId' | 'reliefCategory' | 'amount' | 'amountCurrency'> & {
       amountStatus?: 'Confirmed' | 'NeedsReview'
     },
   ) => Promise<void>
   reliefCategories: TaxReliefCategoryDefinition[]
+  onNavigateToTransaction?: (transactionId: string) => Promise<void> | void
 }
 
 function AmountReview({ document, updateDocument }: { document: VaultDocument; updateDocument: DocumentListProps['updateDocument'] }) {
@@ -97,10 +99,20 @@ function DocumentActions({
   )
 }
 
-export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds, toggleSelected, updateDocument, reliefCategories }: DocumentListProps) {
+export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds, toggleSelected, updateDocument, reliefCategories, onNavigateToTransaction }: DocumentListProps) {
   const { showToast } = useAppUi()
+  const [openingTransactionId, setOpeningTransactionId] = useState<string | null>(null)
   const downloadFailed = () =>
     showToast('The document could not be downloaded.', 'Download Failed', 'error')
+  const openLinkedTransaction = async (transactionId: string) => {
+    if (!onNavigateToTransaction) return
+    setOpeningTransactionId(transactionId)
+    try {
+      await onNavigateToTransaction(transactionId)
+    } finally {
+      setOpeningTransactionId(current => current === transactionId ? null : current)
+    }
+  }
 
   return (
     <>
@@ -136,9 +148,11 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
                     <p className="truncate text-xs font-bold text-foreground" title={document.originalFileName}>
                       {document.originalFileName}
                     </p>
-                    {document.transactionId && (
-                      <Link2 className="size-3 shrink-0 text-accent-ink" aria-label="Attached to a ledger record" />
-                    )}
+                    {document.transactionId && (onNavigateToTransaction ? (
+                      <Button variant="unstyled" type="button" onClick={() => void openLinkedTransaction(document.transactionId!)} disabled={openingTransactionId === document.transactionId} className="inline-flex shrink-0 cursor-pointer rounded p-0.5 text-accent-ink transition hover:bg-accent disabled:cursor-wait disabled:opacity-50" title="Open linked ledger transaction" aria-label={`Open linked transaction for ${document.originalFileName}`}>
+                        <Link2 className="size-3" />
+                      </Button>
+                    ) : <Link2 className="size-3 shrink-0 text-accent-ink" aria-label="Attached to a ledger record" />)}
                   </div>
                   {document.notes && (
                     <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">
@@ -154,12 +168,6 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
               </div>
 
               <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2.5 border-t border-border/50 pt-3 text-[10px]">
-                <div className="min-w-0">
-                  <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Type</dt>
-                  <dd className="mt-0.5 truncate font-bold text-foreground" title={document.documentType}>
-                    {document.documentType}
-                  </dd>
-                </div>
                 <div>
                   <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Tax year</dt>
                   <dd className="mt-0.5 font-bold text-foreground tabular-nums">{document.taxYear}</dd>
@@ -180,8 +188,8 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
                 <span className="text-[10px] text-muted-foreground">{document.amountStatus === 'NeedsReview' ? 'AI suggestion · please confirm' : document.amountStatus === 'Confirmed' ? 'Confirmed amount' : document.amountExtractionMessage || 'No amount confirmed'}</span>
                 <AmountReview document={document} updateDocument={updateDocument} />
               </div>
-              <div className="mt-3 border-t border-border/50 pt-3"><p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Tax relief category</p><CustomSelect value={document.reliefCategory ?? ''} onChange={value => void updateDocument(document.id, { reliefCategory: String(value) || null })}
-                options={[{ value: '', label: 'Uncategorised' }, ...reliefCategories.map(category => ({ value: category.id, label: category.name }))]} ariaLabel={`Tax relief category for ${document.originalFileName}`} className="w-full" /></div>
+              <div className="mt-3 border-t border-border/50 pt-3"><p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Tax relief category <span className="text-destructive">*</span></p><CustomSelect value={document.reliefCategory ?? ''} onChange={value => void updateDocument(document.id, { reliefCategory: String(value) || null })}
+                options={[{ value: '', label: 'Uncategorised (legacy)', disabled: true }, ...reliefCategories.map(category => ({ value: category.id, label: category.name }))]} ariaLabel={`Tax relief category for ${document.originalFileName}`} className="w-full" /></div>
             </article>
           )
         })}
@@ -193,7 +201,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
           <tr className="border-b border-border/60 text-[10px] uppercase tracking-wider text-muted-foreground">
             <th scope="col" className="w-8 px-3 py-2.5 font-bold"><span className="sr-only">Select</span></th>
             <th scope="col" className="px-3 py-2.5 font-bold">Document</th>
-            <th scope="col" className="px-3 py-2.5 font-bold">Type</th>
+            <th scope="col" className="px-3 py-2.5 font-bold">Tax relief</th>
             <th scope="col" className="px-3 py-2.5 font-bold">Tax Year</th>
             <th scope="col" className="px-3 py-2.5 font-bold">Size</th>
             <th scope="col" className="px-3 py-2.5 font-bold">Amount</th>
@@ -207,11 +215,11 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
               <tr key={index}>
                 <td className="px-3 py-3"><Skeleton className="size-4" /></td>
                 <td className="px-3 py-3"><Skeleton className="h-4 w-56" /></td>
-                <td className="px-3 py-3"><Skeleton className="h-4 w-20" /></td>
                 <td className="px-3 py-3"><Skeleton className="h-4 w-12" /></td>
                 <td className="px-3 py-3"><Skeleton className="h-4 w-14" /></td>
                 <td className="px-3 py-3"><Skeleton className="h-4 w-20" /></td>
                 <td className="px-3 py-3"><Skeleton className="h-4 w-24" /></td>
+                <td className="px-3 py-3"><Skeleton className="ml-auto h-7 w-16" /></td>
                 <td className="px-3 py-3"><Skeleton className="ml-auto h-7 w-16" /></td>
               </tr>
             ))
@@ -232,9 +240,11 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
                         <p className="truncate font-bold text-foreground" title={document.originalFileName}>
                           {document.originalFileName}
                         </p>
-                        {document.transactionId && (
-                          <Link2 className="size-3 shrink-0 text-accent-ink" aria-label="Attached to a ledger record" />
-                        )}
+                        {document.transactionId && (onNavigateToTransaction ? (
+                          <Button variant="unstyled" type="button" onClick={() => void openLinkedTransaction(document.transactionId!)} disabled={openingTransactionId === document.transactionId} className="inline-flex shrink-0 cursor-pointer rounded p-0.5 text-accent-ink transition hover:bg-accent disabled:cursor-wait disabled:opacity-50" title="Open linked ledger transaction" aria-label={`Open linked transaction for ${document.originalFileName}`}>
+                            <Link2 className="size-3" />
+                          </Button>
+                        ) : <Link2 className="size-3 shrink-0 text-accent-ink" aria-label="Attached to a ledger record" />)}
                       </div>
                       {document.notes && (
                         <p className="truncate text-[11px] text-muted-foreground" title={document.notes}>
@@ -245,9 +255,8 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
                   </div>
                 </td>
                 <td className="px-3 py-2.5">
-                  <span className="mb-1 inline-flex whitespace-nowrap rounded-md border border-border/40 bg-muted/40 px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">{document.documentType}</span>
                   <CustomSelect value={document.reliefCategory ?? ''} onChange={value => void updateDocument(document.id, { reliefCategory: String(value) || null })}
-                    options={[{ value: '', label: 'Uncategorised' }, ...reliefCategories.map(category => ({ value: category.id, label: category.name }))]}
+                    options={[{ value: '', label: 'Uncategorised (legacy)', disabled: true }, ...reliefCategories.map(category => ({ value: category.id, label: category.name }))]}
                     ariaLabel={`Tax relief category for ${document.originalFileName}`} className="min-w-40" />
                 </td>
                 <td className="px-3 py-2.5 font-bold text-foreground tabular-nums">{document.taxYear}</td>

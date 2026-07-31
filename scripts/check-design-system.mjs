@@ -55,7 +55,6 @@ const RAW_BUTTON_BASELINE = {
   'src/components/settings/ActiveDevicesSection.tsx': 3,
   'src/components/WishlistView.tsx': 6,
   'src/components/settings/InvestmentPlanSection.tsx': 3,
-  'src/components/settings/VaultDocumentTypesPanel.tsx': 3,
   'src/components/settings/FingerprintSection.tsx': 1,
   'src/components/settings/ManageableNameList.tsx': 3,
 }

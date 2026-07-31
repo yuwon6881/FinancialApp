@@ -9,6 +9,8 @@ const api = vi.hoisted(() => ({
   getExpiredTaxYears: vi.fn(),
   getTaxYearReliefSummary: vi.fn(),
   getTaxReliefCategories: vi.fn(),
+  addTaxReliefCategory: vi.fn(),
+  updateTaxReliefCategory: vi.fn(),
   bulkDeleteDocuments: vi.fn(),
   deleteDocument: vi.fn(),
   updateDocument: vi.fn(),
@@ -22,7 +24,6 @@ const document = {
   contentType: 'application/pdf',
   sizeBytes: 12,
   taxYear: 2026,
-  documentType: 'Tax Return',
   notes: null,
   transactionId: null,
   uploadedAt: '2026-07-29T00:00:00Z',
@@ -44,14 +45,14 @@ describe('useDocumentsView', () => {
     api.getExpiredTaxYears.mockResolvedValue([])
     api.getTaxYearReliefSummary.mockResolvedValue({
       taxYear: 2026,
-      policyYear: 2025,
-      isPolicyProvisional: true,
       confirmedAmount: 0,
       pendingReviewAmount: 0,
       documentCount: 1,
       categories: [],
     })
     api.getTaxReliefCategories.mockResolvedValue([])
+    api.addTaxReliefCategory.mockResolvedValue({ id: 'category', name: 'Category', limit: 100, detail: '' })
+    api.updateTaxReliefCategory.mockResolvedValue({ id: 'category', name: 'Category', limit: 100, detail: '' })
     api.bulkDeleteDocuments.mockResolvedValue([])
     api.deleteDocument.mockResolvedValue(undefined)
   })

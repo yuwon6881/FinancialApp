@@ -3,7 +3,6 @@ import { invalidateAllDocumentCaches } from './documentsCache'
 import {
   deleteDocument,
   downloadDocument,
-  listDocumentTypes,
   listDocuments,
   updateDocument,
   uploadDocument,
@@ -38,7 +37,7 @@ describe('documents API', () => {
       new File(['two'], 'too-large.pdf', { type: 'application/pdf' }),
     ]
 
-    const results = await uploadDocuments(files, 2025, 'Receipt', undefined, 'lifestyle')
+    const results = await uploadDocuments(files, 2025, undefined, 'lifestyle')
 
     expect(results).toHaveLength(2)
     expect(results[1].uploaded).toBe(false)
@@ -52,7 +51,7 @@ describe('documents API', () => {
     vi.stubGlobal('fetch', fetchMock)
     const file = new File(['%PDF-1.4 test'], 'test.pdf', { type: 'application/pdf' })
 
-    await uploadDocument(file, 2026, 'Receipt', 'Annual filing')
+    await uploadDocument(file, 2026, 'Annual filing', undefined, undefined, 'lifestyle')
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(url).toContain('/api/documents')
@@ -62,7 +61,7 @@ describe('documents API', () => {
     const formData = init.body as FormData
     expect(formData.get('file')).toBe(file)
     expect(formData.get('taxYear')).toBe('2026')
-    expect(formData.get('documentType')).toBe('Receipt')
+    expect(formData.get('reliefCategory')).toBe('lifestyle')
   })
 
   it('lists with filters and sends authenticated mutation requests', async () => {
@@ -74,7 +73,6 @@ describe('documents API', () => {
         contentType: 'application/pdf',
         sizeBytes: 10,
         taxYear: 2025,
-        documentType: 'Tax Return',
         uploadedAt: '2026-01-01T00:00:00Z',
         retentionUntil: '2032-12-31',
       }))
@@ -116,16 +114,6 @@ describe('documents API', () => {
     expect(revokeObjectUrl).toHaveBeenCalledWith('blob:test')
   })
 
-  it('treats an empty successful document type response as an empty list', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      status: 204,
-      headers: { get: () => null },
-    }))
-
-    await expect(listDocumentTypes()).resolves.toEqual([])
-  })
-
   describe('caching behavior', () => {
     beforeEach(() => {
       invalidateAllDocumentCaches()
@@ -140,18 +128,6 @@ describe('documents API', () => {
       const second = listDocuments(2026, undefined, 'receipt', 0, 50)
 
       await Promise.all([first, second])
-      expect(fetchMock).toHaveBeenCalledTimes(1)
-    })
-
-    it('reuses document types within their freshness window', async () => {
-      const fetchMock = vi.fn().mockResolvedValue(okJson([
-        { id: 'receipt', name: 'Receipt', usageCount: 0 },
-      ]))
-      vi.stubGlobal('fetch', fetchMock)
-
-      await listDocumentTypes()
-      await listDocumentTypes()
-
       expect(fetchMock).toHaveBeenCalledTimes(1)
     })
 
@@ -182,7 +158,7 @@ describe('documents API', () => {
       await listDocuments(2026)
       await listDocuments(2026)
 
-      await uploadDocument(new File([''], 'test.pdf'), 2026, 'Receipt')
+      await uploadDocument(new File([''], 'test.pdf'), 2026, undefined, undefined, undefined, 'lifestyle')
       await listDocuments(2026)
       await listDocuments(2026)
 

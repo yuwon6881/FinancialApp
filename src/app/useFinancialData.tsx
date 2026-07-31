@@ -196,12 +196,14 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
             for (const pending of documentChanges.pending) {
               const uploadFile = await compressImageFile(pending.file)
-              const uploaded = await uploadDocument(
+              await uploadDocument(
                 uploadFile,
                 pending.taxYear,
-                pending.documentType,
+                undefined,
+                op.targetId,
+                undefined,
+                pending.reliefCategory,
               )
-              await updateDocument(uploaded.id, { transactionId: op.targetId })
             }
           }
         } catch (error) {

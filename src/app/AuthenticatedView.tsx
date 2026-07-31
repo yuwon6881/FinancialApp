@@ -18,6 +18,7 @@ import type { usePushNotifications } from './usePushNotifications'
 import type { useInvestmentScanPolling } from '../lib/useInvestmentScanPolling'
 import type { useReceiptScanPolling } from '../lib/useReceiptScanPolling'
 import type { useReceiptSplitPolling } from '../lib/useReceiptSplitPolling'
+import { getCycleYearAndMonthForDate, MONTH_NAMES } from '../lib/cycle'
 
 const DashboardView = lazy(() => import('../components/DashboardView').then(module => ({ default: module.DashboardView })))
 const ReportsView = lazy(() => import('../components/ReportsView').then(module => ({ default: module.ReportsView })))
@@ -120,6 +121,34 @@ export function AuthenticatedView({
     handleInvestmentScanStarted,
     clearInvestmentScanJob,
   } = investmentScan
+
+  const openLinkedVaultTransaction = async (transactionId: string) => {
+    try {
+      const transaction = await apiClient.fetchTransactionById(transactionId)
+      const match = /^(\d{4})-(\d{2})-/.exec(transaction.date)
+      if (!match) {
+        alert('The linked transaction date is invalid.')
+        return
+      }
+      const monthIndex = Number(match[2]) - 1
+      const day = Number(transaction.date.slice(8, 10))
+      if (monthIndex < 0 || monthIndex >= MONTH_NAMES.length || day < 1 || day > 31) {
+        alert('The linked transaction date is invalid.')
+        return
+      }
+      const cycleDay = financial.optimisticDashboardData?.setting?.cycleDay || 28
+      const cycle = getCycleYearAndMonthForDate(new Date(Number(match[1]), monthIndex, day), cycleDay)
+      nav.handleNavigateToLedger({
+        highlightedTxId: transaction.id,
+        showAllCycles: false,
+        range: 'monthly',
+        targetMonth: MONTH_NAMES[cycle.monthIndex - 1],
+        targetYear: cycle.year,
+      })
+    } catch {
+      alert('The linked ledger transaction could not be opened.')
+    }
+  }
 
   return (
     <>
@@ -396,7 +425,7 @@ export function AuthenticatedView({
                   )}
 
                   {prefs.activeTab === 'documents' && (
-                    <DocumentsView />
+                    <DocumentsView onNavigateToTransaction={openLinkedVaultTransaction} />
                   )}
                 </m.div>
               </LaunchReady>

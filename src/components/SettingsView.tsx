@@ -20,7 +20,6 @@ import { useAppContext } from '../contexts/AppContext'
 const ActiveDevicesSection = React.lazy(() => import('./settings/ActiveDevicesSection').then(m => ({ default: m.ActiveDevicesSection })))
 const FingerprintSection = React.lazy(() => import('./settings/FingerprintSection').then(m => ({ default: m.FingerprintSection })))
 const InvestmentPlanSection = React.lazy(() => import('./settings/InvestmentPlanSection').then(m => ({ default: m.InvestmentPlanSection })))
-const VaultDocumentTypesPanel = React.lazy(() => import('./settings/VaultDocumentTypesPanel').then(m => ({ default: m.VaultDocumentTypesPanel })))
 
 import { useSettingsView } from './settings/view/useSettingsView'
 import { CategoryLimitsCard } from './settings/CategoryLimitsCard'
@@ -90,12 +89,11 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
     onToast,
   })
 
-  const [activeTab, setActiveTab] = React.useState<'financial-model' | 'investment-plan' | 'categories-preferences' | 'vault-types' | 'security'>(() => {
+  const [activeTab, setActiveTab] = React.useState<'financial-model' | 'investment-plan' | 'categories-preferences' | 'security'>(() => {
     if (typeof window !== 'undefined') {
       const search = window.location.search
       const hash = window.location.hash
       if (search.includes('investment-plan') || hash.includes('investment-plan')) return 'investment-plan'
-      if (search.includes('vault-types') || hash.includes('vault-types')) return 'vault-types'
       if (search.includes('category') || search.includes('limits') || hash.includes('category') || hash.includes('limits')) {
         return 'categories-preferences'
       }
@@ -109,10 +107,6 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       const hash = window.location.hash
       if (search.includes('investment-plan') || hash.includes('investment-plan')) {
         setActiveTab('investment-plan')
-        return
-      }
-      if (search.includes('vault-types') || hash.includes('vault-types')) {
-        setActiveTab('vault-types')
         return
       }
       if (search.includes('category') || search.includes('limits') || hash.includes('category') || hash.includes('limits')) {
@@ -155,7 +149,6 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
           ['financial-model', 'Plan & Preferences'],
           ['investment-plan', 'Investment Plan'],
           ['categories-preferences', 'Categories & Limits'],
-          ['vault-types', 'Vault Types'],
           ['security', 'Security & Devices']
         ] as const).map(([id, label]) => (
           <button
@@ -653,14 +646,6 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             />
           </div>
         </div>
-      )}
-
-      {activeTab === 'vault-types' && (
-        <React.Suspense fallback={<div className="flex h-40 items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>}>
-          <div id="settings-panel-vault-types" role="tabpanel" aria-labelledby="settings-tab-vault-types" className="animate-in fade-in duration-200">
-            <VaultDocumentTypesPanel />
-          </div>
-        </React.Suspense>
       )}
 
       {activeTab === 'security' && (

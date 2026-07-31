@@ -73,6 +73,25 @@ export function useDocumentsView() {
     }
   }, [taxYear, availableYears])
 
+  const addReliefCategory = useCallback(async (input: { name: string; limit: number; detail?: string }) => {
+    const selectedYear = taxYear ?? availableYears[0]
+    if (selectedYear === undefined) throw new Error('Choose a tax year first.')
+    const result = await api.addTaxReliefCategory(selectedYear, input)
+    await loadTaxInsights()
+    return result
+  }, [taxYear, availableYears, loadTaxInsights])
+
+  const updateReliefCategory = useCallback(async (
+    categoryId: string,
+    input: { name: string; limit: number; detail?: string },
+  ) => {
+    const selectedYear = taxYear ?? availableYears[0]
+    if (selectedYear === undefined) throw new Error('Choose a tax year first.')
+    const result = await api.updateTaxReliefCategory(selectedYear, categoryId, input)
+    await loadTaxInsights()
+    return result
+  }, [taxYear, availableYears, loadTaxInsights])
+
   useEffect(() => {
     loadDocuments(true)
   }, [taxYear, search]) // Reset to page 1 on filter change
@@ -107,7 +126,7 @@ export function useDocumentsView() {
 
   const updateDocumentMetadata = async (
     id: number,
-    updates: Pick<Partial<VaultDocument>, 'taxYear' | 'documentType' | 'notes' | 'transactionId' | 'reliefCategory' | 'amount' | 'amountCurrency'> & {
+    updates: Pick<Partial<VaultDocument>, 'taxYear' | 'notes' | 'transactionId' | 'reliefCategory' | 'amount' | 'amountCurrency'> & {
       amountStatus?: 'Confirmed' | 'NeedsReview'
     },
   ) => {
@@ -149,6 +168,8 @@ export function useDocumentsView() {
     loadUsage,
     loadAvailableYears,
     loadTaxInsights,
+    addReliefCategory,
+    updateReliefCategory,
     deleteDocument,
     updateDocumentMetadata,
     bulkDelete,

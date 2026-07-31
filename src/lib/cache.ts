@@ -14,7 +14,6 @@ export const CACHE_KEYS = {
   pendingOperations: 'pending_operations',
   walletBalance: 'cached_wallet_balance',
   investmentPortfolio: 'cached_investment_portfolio',
-  vaultDocumentTypes: 'cached_vault_document_types',
 } as const
 
 // Local amount masking only discourages casual inspection. It is deliberately
@@ -31,14 +30,26 @@ const DISPOSABLE_CACHE_KEYS = new Set<string>([
   CACHE_KEYS.savingsGoals,
   CACHE_KEYS.walletBalance,
   CACHE_KEYS.investmentPortfolio,
-  CACHE_KEYS.vaultDocumentTypes,
   CYCLE_SNAPSHOTS_KEY,
 ])
 const EXPIRING_CACHE_KEYS = DISPOSABLE_CACHE_KEYS
+const LEGACY_VAULT_DOCUMENT_TYPES_CACHE_KEYS = [
+  'cached_vault_document_types',
+  'documents:types',
+] as const
 
 function removeCachedKey(key: string): void {
   localStorage.removeItem(key)
   localStorage.removeItem(`${key}${CACHE_TIMESTAMP_SUFFIX}`)
+}
+
+/** Remove state written by the retired Vault Type feature before it can be rendered again. */
+export function clearLegacyVaultDocumentTypeState(): void {
+  try {
+    LEGACY_VAULT_DOCUMENT_TYPES_CACHE_KEYS.forEach(removeCachedKey)
+  } catch {
+    // Local storage may be unavailable; the feature has no fallback consumer.
+  }
 }
 
 export function getCachedJSON<T>(key: string, fallback: T): T {
@@ -197,6 +208,7 @@ export function clearLocalFinancialData(): void {
     }
   }
   clearCachedInvestmentPages()
+  clearLegacyVaultDocumentTypeState()
   for (const key of [
     'draft_transactions', 'pending_operations_backup', 'pending_transactions_backup',
     'draft_transactions_backup', 'failed_operations', 'failed_operations_backup',
@@ -258,9 +270,15 @@ export function setCachedCycleSnapshot(month: string, year: number, dashboardDat
 }
 
 export function getCachedOps(): QueuedOp[] {
+  clearLegacyVaultDocumentTypeState()
   const rawOps = localStorage.getItem(CACHE_KEYS.pendingOperations)
   if (rawOps !== null) {
-    return sanitizeQueuedOps(getCachedJSON<unknown>(CACHE_KEYS.pendingOperations, []))
+    const raw = getCachedJSON<unknown>(CACHE_KEYS.pendingOperations, [])
+    const sanitized = sanitizeQueuedOps(raw)
+    if (Array.isArray(raw) && sanitized.length !== raw.length) {
+      setCachedJSON(CACHE_KEYS.pendingOperations, sanitized)
+    }
+    return sanitized
   }
 
   // Migration path for legacy pending_transactions key

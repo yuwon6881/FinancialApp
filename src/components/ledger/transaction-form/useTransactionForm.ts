@@ -380,6 +380,12 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       return
     }
 
+    const documentValidationError = documentsFieldRef.current?.getValidationError()
+    if (documentValidationError) {
+      onShowAlert?.(documentValidationError, 'Document category required')
+      return
+    }
+
     const mapped = mapFormToTransaction(state, {
       essentialsAlloc,
       growthAlloc,

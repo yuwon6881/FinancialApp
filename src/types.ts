@@ -509,7 +509,6 @@ export interface VaultDocument {
   contentType: string
   sizeBytes: number
   taxYear: number
-  documentType: string
   notes?: string | null
   reliefCategory?: string | null
   amount?: number | null
@@ -543,6 +542,7 @@ export interface TaxReliefCategoryDefinition {
   name: string
   limit: number
   detail: string
+  isInherited?: boolean
 }
 
 export interface TaxReliefCategorySummary extends TaxReliefCategoryDefinition {
@@ -554,8 +554,6 @@ export interface TaxReliefCategorySummary extends TaxReliefCategoryDefinition {
 
 export interface TaxYearReliefSummary {
   taxYear: number
-  policyYear: number
-  isPolicyProvisional: boolean
   confirmedAmount: number
   pendingReviewAmount: number
   documentCount: number
@@ -569,30 +567,10 @@ export interface ExpiredTaxYearSummary {
   retentionUntil: string
 }
 
-export type VaultDocumentType = string
-
-export interface VaultDocumentTypeDefinition {
-  id: string
-  name: string
-  usageCount: number
-}
-
-export interface VaultTypeCleanupSuggestion {
-  id: string
-  type: 'delete' | 'merge' | 'add' | 'consolidate'
-  title: string
-  summary: string
-  categories: string[]
-  targetCategory?: string | null
-  newCategoryName?: string | null
-  affectedTransactionCount: number
-  confidence: number
-}
-
 export interface PendingVaultDocument {
   file: File
   taxYear: number
-  documentType: VaultDocumentType
+  reliefCategory: string
 }
 
 export interface TransactionDocumentChanges {

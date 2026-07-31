@@ -50,20 +50,6 @@ describe('undo helpers', () => {
       .toBeUndefined()
   })
 
-  it('restores a deleted Vault document type from its queued snapshot', () => {
-    const enqueue = vi.fn()
-    const snapshot = { id: 'invoice', name: 'Invoice', usageCount: 0 }
-    const action = buildUndoAction(
-      new Map(),
-      op('vaultDocumentType', 'delete', 'invoice', { name: 'Invoice', undoSnapshot: snapshot }),
-      undefined,
-      enqueue,
-    )
-
-    action?.onAction()
-    expect(enqueue).toHaveBeenCalledWith('vaultDocumentType', 'add', 'invoice', snapshot)
-  })
-
   it('uses the authoritative server snapshot when undoing investment activity deletion', () => {
     const enqueue = vi.fn()
     const persisted = { transactions: [{ id: 'buy', type: 'Buy' }] }

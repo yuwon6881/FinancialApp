@@ -1,8 +1,8 @@
 import type { ToastAction } from '../components/ui/ToastViewport'
-import type { InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, RecurringPayment, SavingsGoal, Transaction, TransactionCategory, VaultDocumentTypeDefinition, WishlistItem } from '../types'
+import type { InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, RecurringPayment, SavingsGoal, Transaction, TransactionCategory, WishlistItem } from '../types'
 import { createLocalNumericId, createLocalWishlistId, type DispatchResult, type EntityKind, type OutboxPayload, type QueuedOp } from './outbox'
 
-export type UndoSnapshot = (Transaction | RecurringPayment | TransactionCategory | VaultDocumentTypeDefinition | WishlistItem | SavingsGoal | InvestmentAccount | InvestmentInstrument | InvestmentActivity | InvestmentCashFlow) & {
+export type UndoSnapshot = (Transaction | RecurringPayment | TransactionCategory | WishlistItem | SavingsGoal | InvestmentAccount | InvestmentInstrument | InvestmentActivity | InvestmentCashFlow) & {
   isPendingSync?: boolean
   isPendingDelete?: boolean
 }
@@ -56,8 +56,6 @@ export function buildUndoAction(
       return action('recurringPayment', 'delete', String(op.targetId), op.payload)
     case 'category:add':
       return action('category', 'delete', String(op.targetId), op.payload)
-    case 'vaultDocumentType:add':
-      return action('vaultDocumentType', 'delete', String(op.targetId), op.payload)
     case 'investmentAccount:add':
       return action('investmentAccount', 'delete', String(op.targetId), op.payload)
     case 'investmentInstrument:add':
@@ -85,10 +83,6 @@ export function buildUndoAction(
     case 'category:delete':
       return !op.payload?.replacementCategoryId && before
         ? action('category', 'add', String(before.id), toPayload(before))
-        : undefined
-    case 'vaultDocumentType:delete':
-      return !op.payload?.replacementCategoryId && before
-        ? action('vaultDocumentType', 'add', String(before.id), toPayload(before))
         : undefined
     case 'wishlistItem:delete': {
       if (!before) return undefined

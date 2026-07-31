@@ -1,15 +1,14 @@
-import { Input } from '../../ui/Input'
-import React, { useRef, useImperativeHandle, useState, useEffect } from 'react'
-import { FileText, X, UploadCloud, Link2Off } from 'lucide-react'
+import React, { useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { FileText, Link2Off, UploadCloud, X } from 'lucide-react'
 import {
   type PendingVaultDocument,
+  type TaxReliefCategoryDefinition,
   type TransactionDocumentChanges,
   type VaultDocument,
-  type VaultDocumentTypeDefinition,
-  type VaultDocumentType,
 } from '../../../types'
+import { getTaxReliefCategories } from '../../../lib/api/documents'
+import { Input } from '../../ui/Input'
 import { CustomSelect } from '../../ui/CustomSelect'
-import { listDocumentTypes } from '../../../lib/api/documents'
 
 interface PendingDocument extends PendingVaultDocument {
   previewUrl: string | null
@@ -17,6 +16,7 @@ interface PendingDocument extends PendingVaultDocument {
 
 export interface TransactionDocumentsFieldRef {
   getChanges: () => TransactionDocumentChanges
+  getValidationError: () => string | null
   reset: () => void
 }
 
@@ -34,80 +34,113 @@ export const TransactionDocumentsField = React.forwardRef<
 >(({ existingDocuments = [], disabled = false, defaultTaxYear }, ref) => {
   const [pendingDocs, setPendingDocs] = useState<PendingDocument[]>([])
   const [unlinkIds, setUnlinkIds] = useState<number[]>([])
-  const [documentTypes, setDocumentTypes] = useState<VaultDocumentTypeDefinition[]>([])
+  const [reliefCategories, setReliefCategories] = useState<TaxReliefCategoryDefinition[]>([])
+  const [categoriesLoaded, setCategoriesLoaded] = useState(false)
+  const [categoryLoadFailed, setCategoryLoadFailed] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const pendingDocsRef = useRef<PendingDocument[]>([])
 
-  // Mirrored into a ref via an effect rather than during render: writing a ref while
-  // rendering is unsafe, and the React Compiler is enabled in this project.
   useEffect(() => {
     pendingDocsRef.current = pendingDocs
   }, [pendingDocs])
+
+  useEffect(() => {
+    let active = true
+    setCategoriesLoaded(false)
+    setCategoryLoadFailed(false)
+    void getTaxReliefCategories(defaultTaxYear)
+      .then(categories => {
+        if (!active) return
+        setReliefCategories(categories)
+        setPendingDocs(current => current.map(document => (
+          document.reliefCategory && categories.some(category => category.id === document.reliefCategory)
+            ? document
+            : { ...document, reliefCategory: '' }
+        )))
+      })
+      .catch(() => {
+        if (!active) return
+        setReliefCategories([])
+        setCategoryLoadFailed(true)
+      })
+      .finally(() => {
+        if (active) setCategoriesLoaded(true)
+      })
+    return () => {
+      active = false
+    }
+  }, [defaultTaxYear])
 
   useImperativeHandle(
     ref,
     () => ({
       getChanges: () => ({
-        pending: pendingDocs.map(({ file, taxYear, documentType }) => ({ file, taxYear, documentType })),
+        // The transaction posting date is authoritative, even when the date was
+        // changed after a file was attached.
+        pending: pendingDocs.map(({ file, reliefCategory }) => ({
+          file,
+          taxYear: defaultTaxYear,
+          reliefCategory,
+        })),
         unlinkIds,
       }),
+      getValidationError: () => {
+        const missingCategory = pendingDocs.find(document => !document.reliefCategory)
+        if (missingCategory) return `Choose a tax relief category for ${missingCategory.file.name}.`
+        if (pendingDocs.length > 0 && (!categoriesLoaded || categoryLoadFailed)) {
+          return 'Tax relief categories could not be loaded. Try again before saving the transaction.'
+        }
+        return null
+      },
       reset: () => {
-        pendingDocs.forEach(d => {
-          if (d.previewUrl) URL.revokeObjectURL(d.previewUrl)
+        pendingDocs.forEach(document => {
+          if (document.previewUrl) URL.revokeObjectURL(document.previewUrl)
         })
         setPendingDocs([])
         setUnlinkIds([])
       },
     }),
-    [pendingDocs, unlinkIds],
+    [categoriesLoaded, categoryLoadFailed, defaultTaxYear, pendingDocs, unlinkIds],
   )
 
-  // Revoke any object URLs still alive when the form unmounts.
-  useEffect(() => {
-    return () => {
-      pendingDocsRef.current.forEach(d => {
-        if (d.previewUrl) URL.revokeObjectURL(d.previewUrl)
-      })
-    }
+  useEffect(() => () => {
+    pendingDocsRef.current.forEach(document => {
+      if (document.previewUrl) URL.revokeObjectURL(document.previewUrl)
+    })
   }, [])
 
-  useEffect(() => {
-    void listDocumentTypes()
-      .then(setDocumentTypes)
-      .catch(() => setDocumentTypes([]))
-  }, [])
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files) return
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || documentTypes.length === 0) return
-
-    const newDocs: PendingDocument[] = Array.from(e.target.files).map(file => ({
+    const newDocs: PendingDocument[] = Array.from(event.target.files).map(file => ({
       file,
       previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
-      taxYear: Math.max(new Date().getFullYear() - 7, Math.min(new Date().getFullYear(), defaultTaxYear)),
-      documentType: documentTypes[0].name as VaultDocumentType,
+      taxYear: defaultTaxYear,
+      reliefCategory: '',
     }))
-
-    setPendingDocs(prev => [...prev, ...newDocs])
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
+    setPendingDocs(previous => [...previous, ...newDocs])
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  // Replaces the entry rather than mutating it in place — a mutated object keeps its
-  // identity, so memoized children would not see the change.
   const updatePending = (index: number, patch: Partial<PendingVaultDocument>) => {
-    setPendingDocs(prev => prev.map((doc, i) => (i === index ? { ...doc, ...patch } : doc)))
+    setPendingDocs(previous => previous.map((document, itemIndex) => (
+      itemIndex === index ? { ...document, ...patch } : document
+    )))
   }
 
   const removePending = (index: number) => {
-    setPendingDocs(prev => {
-      const doc = prev[index]
-      if (doc?.previewUrl) URL.revokeObjectURL(doc.previewUrl)
-      return prev.filter((_, i) => i !== index)
+    setPendingDocs(previous => {
+      const document = previous[index]
+      if (document?.previewUrl) URL.revokeObjectURL(document.previewUrl)
+      return previous.filter((_, itemIndex) => itemIndex !== index)
     })
   }
 
-  const visibleExisting = existingDocuments.filter(doc => !unlinkIds.includes(doc.id))
+  const visibleExisting = existingDocuments.filter(document => !unlinkIds.includes(document.id))
+  const categoryOptions = [
+    { value: '', label: categoriesLoaded ? 'Choose tax relief category' : 'Loading categories…' },
+    ...reliefCategories.map(category => ({ value: category.id, label: `${category.name} · RM${category.limit.toLocaleString()}` })),
+  ]
 
   if (disabled && visibleExisting.length === 0 && pendingDocs.length === 0) {
     return (
@@ -124,108 +157,102 @@ export const TransactionDocumentsField = React.forwardRef<
     <div className="flex flex-col gap-2">
       <span className={LABEL_CLASS}>Documents</span>
 
-      {/* Already attached */}
-      {visibleExisting.map(doc => (
-        <div
-          key={doc.id}
-          className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-muted/30 p-2.5"
-        >
-          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent text-accent-ink">
-            <FileText className="size-4" aria-hidden="true" />
-          </span>
-          <div className="min-w-0 flex-1">
+      {visibleExisting.map(document => {
+        const categoryName = reliefCategories.find(category => category.id === document.reliefCategory)?.name
+          ?? document.reliefCategory
+          ?? 'Uncategorised'
+        return (
+          <div key={document.id} className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-muted/30 p-2.5">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent text-accent-ink">
+              <FileText className="size-4" aria-hidden="true" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <button
+                type="button"
+                onClick={() => {
+                  void import('../../../lib/api/documents').then(({ downloadDocument }) =>
+                    downloadDocument(document.id, document.originalFileName))
+                }}
+                className="block max-w-full cursor-pointer truncate text-left text-xs font-bold text-accent-ink hover:underline"
+                title={`Download ${document.originalFileName}`}
+              >
+                {document.originalFileName}
+              </button>
+              <p className="truncate text-[10px] text-muted-foreground" title={categoryName}>
+                {categoryName} · YA {document.taxYear}
+              </p>
+            </div>
             <button
               type="button"
-              onClick={() => {
-                void import('../../../lib/api/documents').then(({ downloadDocument }) =>
-                  downloadDocument(doc.id, doc.originalFileName),
-                )
-              }}
-              className="block max-w-full cursor-pointer truncate text-left text-xs font-bold text-accent-ink hover:underline"
-              title={`Download ${doc.originalFileName}`}
+              onClick={() => setUnlinkIds(ids => [...ids, document.id])}
+              disabled={disabled}
+              className="cursor-pointer rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-40"
+              title="Detach from this transaction (the document stays in your vault)"
+              aria-label={`Detach ${document.originalFileName} from this transaction`}
             >
-              {doc.originalFileName}
+              <Link2Off className="size-3.5" />
             </button>
-            <p className="text-[10px] text-muted-foreground">
-              {doc.documentType} · YA {doc.taxYear}
-            </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setUnlinkIds(ids => [...ids, doc.id])}
-            disabled={disabled}
-            className="cursor-pointer rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-40"
-            title="Detach from this transaction (the document stays in your vault)"
-            aria-label={`Detach ${doc.originalFileName} from this transaction`}
-          >
-            <Link2Off className="size-3.5" />
-          </button>
-        </div>
-      ))}
+        )
+      })}
 
       {unlinkIds.length > 0 && (
         <p className="text-[10px] text-muted-foreground">
-          {unlinkIds.length} document{unlinkIds.length === 1 ? '' : 's'} will be detached on save. They stay in
-          your Document Vault.
+          {unlinkIds.length} document{unlinkIds.length === 1 ? '' : 's'} will be detached on save. They stay in your Document Vault.
         </p>
       )}
 
-      {/* Queued for upload */}
-      {pendingDocs.map((doc, i) => (
-        <div
-          key={`${doc.file.name}-${i}`}
-          className="flex flex-col gap-2.5 rounded-xl border border-primary/30 bg-primary/5 p-2.5"
-        >
+      {pendingDocs.map((document, index) => (
+        <div key={`${document.file.name}-${index}`} className="flex flex-col gap-2.5 rounded-xl border border-primary/30 bg-primary/5 p-2.5">
           <div className="flex items-center gap-2.5">
-            {doc.previewUrl ? (
-              <img src={doc.previewUrl} alt="" className="size-9 shrink-0 rounded-lg object-cover" />
+            {document.previewUrl ? (
+              <img src={document.previewUrl} alt="" className="size-9 shrink-0 rounded-lg object-cover" />
             ) : (
               <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent text-accent-ink">
                 <FileText className="size-4" aria-hidden="true" />
               </span>
             )}
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-bold text-foreground" title={doc.file.name}>
-                {doc.file.name}
-              </p>
-              <p className="text-[10px] text-muted-foreground tabular-nums">
-                Uploads on save · {(doc.file.size / 1024 / 1024).toFixed(2)} MB
-              </p>
+              <p className="truncate text-xs font-bold text-foreground" title={document.file.name}>{document.file.name}</p>
+              <p className="text-[10px] text-muted-foreground tabular-nums">Uploads on save · {(document.file.size / 1024 / 1024).toFixed(2)} MB</p>
             </div>
             <button
               type="button"
-              onClick={() => removePending(i)}
-              aria-label={`Remove ${doc.file.name}`}
+              onClick={() => removePending(index)}
+              aria-label={`Remove ${document.file.name}`}
               className="cursor-pointer rounded-lg p-2 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
             >
               <X className="size-3.5" />
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <CustomSelect
-              value={doc.taxYear}
-              ariaLabel={`Tax year for ${doc.file.name}`}
-              onChange={value => updatePending(i, { taxYear: Number(value) })}
-              options={Array.from({ length: 8 }, (_, index) => {
-                const year = new Date().getFullYear() - index
-                return { value: year, label: `YA ${year}` }
-              })}
-              className="w-full"
-            />
-            <CustomSelect
-              value={doc.documentType}
-              ariaLabel={`Document type for ${doc.file.name}`}
-              onChange={value => updatePending(i, { documentType: String(value) })}
-              options={documentTypes.map(type => ({ value: type.name, label: type.name }))}
-              className="w-full"
-            />
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,8rem)_minmax(0,1fr)] sm:items-end">
+            <div className="min-w-0 rounded-xl border border-border bg-background px-3 py-2.5">
+              <span className={LABEL_CLASS}>Recorded year</span>
+              <p className="mt-1 truncate text-xs font-bold tabular-nums text-foreground">YA {defaultTaxYear}</p>
+            </div>
+            <label className="min-w-0 space-y-1">
+              <span className={LABEL_CLASS}>Tax relief category <span className="text-destructive">*</span></span>
+              <CustomSelect
+                value={document.reliefCategory}
+                ariaLabel={`Tax relief category for ${document.file.name}`}
+                onChange={value => updatePending(index, { reliefCategory: String(value) })}
+                options={categoryOptions}
+                className="w-full"
+                disabled={!categoriesLoaded || reliefCategories.length === 0}
+                required
+                invalid={!document.reliefCategory}
+              />
+            </label>
           </div>
+          {!document.reliefCategory && (
+            <p className="text-[10px] font-semibold text-destructive">Choose a tax relief category before saving this transaction.</p>
+          )}
         </div>
       ))}
 
       <button
         type="button"
-        disabled={disabled || documentTypes.length === 0}
+        disabled={disabled || !categoriesLoaded || reliefCategories.length === 0}
         onClick={() => fileInputRef.current?.click()}
         className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border px-3 py-2.5 text-xs font-semibold text-muted-foreground transition hover:border-ring/60 hover:bg-muted/40 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
       >
@@ -240,14 +267,12 @@ export const TransactionDocumentsField = React.forwardRef<
         accept="image/*,.pdf,application/pdf,.xml,application/xml,.json,application/json"
         onChange={handleFileChange}
       />
-      {disabled && (
+      {disabled && <p className="text-center text-[10px] text-muted-foreground">Attachments are unavailable while offline.</p>}
+      {!disabled && categoriesLoaded && reliefCategories.length === 0 && (
         <p className="text-center text-[10px] text-muted-foreground">
-          Attachments are unavailable while offline.
-        </p>
-      )}
-      {!disabled && documentTypes.length === 0 && (
-        <p className="text-center text-[10px] text-muted-foreground">
-          Add a document type in Settings before attaching documents.
+          {categoryLoadFailed
+            ? 'Tax relief categories could not be loaded. Try again before attaching a document.'
+            : 'Add a tax relief category in the Document Vault before attaching documents.'}
         </p>
       )}
     </div>

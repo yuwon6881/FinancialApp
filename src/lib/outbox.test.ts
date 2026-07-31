@@ -118,7 +118,6 @@ describe('sync success toast copy', () => {
     ['category', 'delete', { name: 'Food' }, 'Category Deleted', '"Food" was deleted.'],
     ['transaction', 'delete', { description: 'Lunch' }, 'Transaction Deleted', '"Lunch" was deleted.'],
     ['recurringPayment', 'delete', { name: 'Netflix' }, 'Recurring Payment Deleted', '"Netflix" was deleted.'],
-    ['vaultDocumentType', 'add', { name: 'Invoice' }, 'Document Type Added', '"Invoice" was added.'],
   ] as const)('includes the item name for %s:%s', (entity, type, payload, title, message) => {
     expect(getSyncSuccessToast(makeOp({ entity, type, payload }))).toEqual({
       title,

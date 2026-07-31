@@ -1,9 +1,6 @@
 import type {
   VaultDocument,
-  VaultDocumentType,
   DocumentVaultUsage,
-  VaultDocumentTypeDefinition,
-  VaultTypeCleanupSuggestion,
   DocumentVaultConstraints,
   TaxReliefCategoryDefinition,
   TaxYearReliefSummary,
@@ -15,14 +12,12 @@ import {
   DOCUMENT_CACHE_TTL,
   documentListCacheKey,
   invalidateDocumentDerivedData,
-  invalidateDocumentTypes,
 } from './documentsCache'
 import { downloadCsvBlob } from '../csvExport'
 
 export async function uploadDocument(
   file: File,
   taxYear: number,
-  documentType: VaultDocumentType,
   notes?: string,
   transactionId?: string,
   clientKey?: string,
@@ -31,7 +26,6 @@ export async function uploadDocument(
   const formData = new FormData()
   formData.append('file', file)
   formData.append('taxYear', taxYear.toString())
-  formData.append('documentType', documentType)
   if (notes) formData.append('notes', notes)
   if (transactionId) formData.append('transactionId', transactionId)
   if (clientKey) formData.append('clientKey', clientKey)
@@ -57,14 +51,12 @@ export interface BulkDocumentResult {
 export async function uploadDocuments(
   files: File[],
   taxYear: number,
-  documentType: VaultDocumentType,
   notes?: string,
   reliefCategory?: string,
 ): Promise<BulkDocumentResult[]> {
   const formData = new FormData()
   files.forEach(file => formData.append('files', file))
   formData.append('taxYear', taxYear.toString())
-  formData.append('documentType', documentType)
   if (notes) formData.append('notes', notes)
   if (reliefCategory) formData.append('reliefCategory', reliefCategory)
   const response = await apiFetch('/documents/bulk', { method: 'POST', body: formData })
@@ -116,7 +108,6 @@ export async function updateDocument(
   id: number,
   updates: {
     taxYear?: number
-    documentType?: string
     notes?: string | null
     transactionId?: string | null
     reliefCategory?: string | null
@@ -150,6 +141,44 @@ export function getTaxReliefCategories(taxYear: number): Promise<TaxReliefCatego
     method: 'GET',
     errorMessage: 'Failed to load tax relief categories',
   }), { staleTime: DOCUMENT_CACHE_TTL.reference })
+}
+
+export interface TaxReliefCategoryInput {
+  name: string
+  limit: number
+  detail?: string
+}
+
+export async function addTaxReliefCategory(
+  taxYear: number,
+  input: TaxReliefCategoryInput,
+): Promise<TaxReliefCategoryDefinition> {
+  const result = await request<TaxReliefCategoryDefinition>(`/documents/relief-categories/${taxYear}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+    errorMessage: 'Failed to add tax relief category',
+  })
+  invalidateDocumentDerivedData()
+  return result
+}
+
+export async function updateTaxReliefCategory(
+  taxYear: number,
+  categoryId: string,
+  input: TaxReliefCategoryInput,
+): Promise<TaxReliefCategoryDefinition> {
+  const result = await request<TaxReliefCategoryDefinition>(
+    `/documents/relief-categories/${taxYear}/${encodeURIComponent(categoryId)}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+      errorMessage: 'Failed to update tax relief category',
+    },
+  )
+  invalidateDocumentDerivedData()
+  return result
 }
 
 export function getTaxYearReliefSummary(taxYear: number): Promise<TaxYearReliefSummary> {
@@ -204,64 +233,6 @@ export function getAvailableDocumentYears(): Promise<number[]> {
     method: 'GET',
     errorMessage: 'Failed to load document years',
   }), { staleTime: DOCUMENT_CACHE_TTL.derived })
-}
-
-export async function listDocumentTypes(): Promise<VaultDocumentTypeDefinition[]> {
-  return cachedGet(DOCUMENT_CACHE_KEYS.types, async () => {
-    const types = await request<VaultDocumentTypeDefinition[] | null>('/document-types', {
-      method: 'GET',
-      errorMessage: 'Failed to load document types',
-    })
-    return Array.isArray(types) ? types : []
-  }, { staleTime: DOCUMENT_CACHE_TTL.types })
-}
-
-export async function addDocumentType(name: string, id?: string): Promise<VaultDocumentTypeDefinition> {
-  const result = await request<VaultDocumentTypeDefinition>('/document-types', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, id }),
-    errorMessage: 'Failed to add document type',
-  })
-  invalidateDocumentTypes()
-  invalidateDocumentDerivedData()
-  return result
-}
-
-export async function deleteDocumentType(id: string, replacementId?: string): Promise<void> {
-  const query = replacementId ? `?replacementId=${encodeURIComponent(replacementId)}` : ''
-  await requestVoid(`/document-types/${encodeURIComponent(id)}${query}`, {
-    method: 'DELETE',
-    errorMessage: 'Failed to delete document type',
-  })
-  invalidateDocumentTypes()
-  invalidateDocumentDerivedData()
-}
-
-export function reviewDocumentTypeCleanup(): Promise<{ suggestions: VaultTypeCleanupSuggestion[] }> {
-  return request<{ suggestions: VaultTypeCleanupSuggestion[] }>('/document-types/cleanup/review', {
-    method: 'POST',
-    errorMessage: 'Failed to review document types',
-  })
-}
-
-export async function applyDocumentTypeCleanup(
-  suggestion: VaultTypeCleanupSuggestion,
-  targetCategory?: string,
-): Promise<void> {
-  await request('/document-types/cleanup/apply', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      type: suggestion.type,
-      categories: suggestion.categories,
-      targetCategory: targetCategory || suggestion.targetCategory,
-      newCategoryName: suggestion.newCategoryName,
-    }),
-    errorMessage: 'Failed to apply document type cleanup',
-  })
-  invalidateDocumentTypes()
-  invalidateDocumentDerivedData()
 }
 
 export async function downloadDocument(id: number, fileName: string): Promise<void> {

@@ -5,6 +5,7 @@ import {
   DISPATCH,
   enqueue as enqueueOperation,
   getSyncSuccessToast,
+  sanitizeQueuedOps,
   type DispatchResult,
   type EntityKind,
   type OpType,
@@ -61,7 +62,14 @@ export interface UseOutboxResult {
 
 export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
   const [pendingOps, setPendingOps] = useState<QueuedOp[]>(() => getCachedOps())
-  const [failedOps, setFailedOps] = useState<QueuedOp[]>(() => getCachedJSON<QueuedOp[]>('failed_operations', []))
+  const [failedOps, setFailedOps] = useState<QueuedOp[]>(() => {
+    const raw = getCachedJSON<unknown>('failed_operations', [])
+    const sanitized = sanitizeQueuedOps(raw)
+    if (Array.isArray(raw) && sanitized.length !== raw.length) {
+      setCachedJSON('failed_operations', sanitized)
+    }
+    return sanitized
+  })
   const [recentlyCompletedOps, setRecentlyCompletedOps] = useState<QueuedOp[]>([])
   const [isBackgroundSyncing, setIsBackgroundSyncing] = useState(false)
   const [activeSyncId, setActiveSyncId] = useState<string | null>(null)

@@ -1,8 +1,7 @@
 import * as api from './api'
-import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentAllocationSleeve, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, RecurringPayment, SavingsGoal, Transaction, TransactionCategory, VaultDocumentTypeDefinition, WishlistItem } from '../types'
+import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentAllocationSleeve, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, RecurringPayment, SavingsGoal, Transaction, TransactionCategory, WishlistItem } from '../types'
 
 export type EntityKind = 'transaction' | 'recurringPayment' | 'wishlistItem' | 'savingsGoal' | 'category' | 'settings'
-  | 'vaultDocumentType'
   | 'investmentAccount' | 'investmentInstrument' | 'investmentActivity' | 'investmentManualPrice' | 'investmentCashFlow'
   | 'investmentPlan' | 'investmentAllocation'
   | 'investmentAllocationOrder'
@@ -32,7 +31,6 @@ export type DispatchResult =
   | WishlistItem
   | SavingsGoal
   | TransactionCategory
-  | VaultDocumentTypeDefinition
   | InvestmentAccount
   | InvestmentInstrument
   | InvestmentActivity
@@ -121,7 +119,6 @@ const ENTITY_LABELS: Record<EntityKind, string> = {
   wishlistItem: 'Wishlist item',
   savingsGoal: 'Savings goal',
   category: 'Category',
-  vaultDocumentType: 'Document type',
   settings: 'Settings'
   , investmentAccount: 'Investment account'
   , investmentInstrument: 'Investment'
@@ -204,7 +201,6 @@ export function createFinalId(entity: EntityKind): string {
   const prefix = entity === 'transaction' ? 'tx'
     : entity === 'recurringPayment' ? 'rec'
     : entity === 'category' ? 'cat'
-    : entity === 'vaultDocumentType' ? 'doc-type'
     : 'op'
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
 }
@@ -643,18 +639,6 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
   ),
   'category:delete': (op) => api.deleteCategory(op.targetId, typeof op.payload?.replacementCategoryId === 'string' ? op.payload.replacementCategoryId : undefined),
 
-  'vaultDocumentType:add': async (op) => {
-    const { addDocumentType } = await import('./api/documents')
-    return addDocumentType(String(op.payload?.name || ''), op.targetId)
-  },
-  'vaultDocumentType:delete': async (op) => {
-    const { deleteDocumentType } = await import('./api/documents')
-    return deleteDocumentType(
-      op.targetId,
-      typeof op.payload?.replacementCategoryId === 'string' ? op.payload.replacementCategoryId : undefined,
-    )
-  },
-
   'settings:update': (op) => {
     if (op.targetId === 'darkMode') return api.updateDarkMode(op.payload?.darkMode === true)
     if (op.targetId === 'hideSensitive') return api.updateHideSensitive(op.payload?.hideSensitive === true)
@@ -709,7 +693,7 @@ function isWellFormedOp(op: unknown): op is QueuedOp {
   return (
     typeof o.id === 'string' &&
     typeof o.entity === 'string' &&
-    ['transaction', 'recurringPayment', 'wishlistItem', 'savingsGoal', 'category', 'settings', 'vaultDocumentType', 'investmentAccount', 'investmentInstrument', 'investmentActivity', 'investmentManualPrice', 'investmentCashFlow', 'investmentPlan', 'investmentAllocation', 'investmentAllocationOrder'].includes(o.entity as string) &&
+    ['transaction', 'recurringPayment', 'wishlistItem', 'savingsGoal', 'category', 'settings', 'investmentAccount', 'investmentInstrument', 'investmentActivity', 'investmentManualPrice', 'investmentCashFlow', 'investmentPlan', 'investmentAllocation', 'investmentAllocationOrder'].includes(o.entity as string) &&
     typeof o.type === 'string' &&
     ['add', 'update', 'delete', 'restore', 'toggle', 'purchase', 'unpurchase'].includes(o.type as string) &&
     (typeof o.targetId === 'string' || typeof o.targetId === 'number') &&
