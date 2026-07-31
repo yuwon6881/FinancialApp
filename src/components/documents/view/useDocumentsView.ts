@@ -16,7 +16,7 @@ export function useDocumentsView() {
   
   const [isLoading, setIsLoading] = useState(false)
   const [page, setPage] = useState(1)
-  const pageSize = 50
+  const [pageSize, setPageSize] = useState<10 | 25 | 50>(10)
   const requestIdRef = useRef(0)
 
   const loadDocuments = useCallback(async (isRefresh = false) => {
@@ -93,12 +93,13 @@ export function useDocumentsView() {
   }, [taxYear, availableYears, loadTaxInsights])
 
   useEffect(() => {
-    loadDocuments(true)
-  }, [taxYear, search]) // Reset to page 1 on filter change
+    setPage(1)
+    void loadDocuments(true)
+  }, [taxYear, search, pageSize]) // Reset to page 1 when the query shape changes
 
   useEffect(() => {
     if (page > 1) {
-      loadDocuments()
+      void loadDocuments()
     }
   }, [page])
 
@@ -139,6 +140,19 @@ export function useDocumentsView() {
     }
   }
 
+  const bulkUpdateDocumentCategories = useCallback(async (
+    updates: api.BulkDocumentCategoryUpdate[],
+  ) => {
+    const results = await api.bulkUpdateDocumentCategories(updates)
+    const categoryById = new Map(updates.map(update => [update.id, update.reliefCategory]))
+    const updatedIds = new Set(results.filter(result => result.updated).map(result => result.id))
+    setDocuments(current => current.map(document => updatedIds.has(document.id)
+      ? { ...document, reliefCategory: categoryById.get(document.id) ?? document.reliefCategory }
+      : document))
+    await loadTaxInsights()
+    return results
+  }, [loadTaxInsights])
+
   const bulkDelete = async (ids: number[]) => {
     const results = await api.bulkDeleteDocuments(ids)
     const deletedIds = new Set(results.filter(result => result.deleted).map(result => result.id))
@@ -160,6 +174,7 @@ export function useDocumentsView() {
     page,
     setPage,
     pageSize,
+    setPageSize,
     taxYear,
     setTaxYear,
     search,
@@ -172,6 +187,7 @@ export function useDocumentsView() {
     updateReliefCategory,
     deleteDocument,
     updateDocumentMetadata,
+    bulkUpdateDocumentCategories,
     bulkDelete,
   }
 }

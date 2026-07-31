@@ -8,6 +8,7 @@ import { compressImageFile } from '../../lib/imageCompression'
 import { getErrorMessage } from '../../lib/errors'
 import * as api from '../../lib/api/documents'
 import { useAppUi } from '../../contexts/AppContext'
+import { formatCurrencyVal } from '../../lib/utils'
 import type { DocumentVaultConstraints, TaxReliefCategoryDefinition } from '../../types'
 
 interface Props {
@@ -16,6 +17,7 @@ interface Props {
   onSuccess: () => void
   initialTaxYear?: number
   defaultTransactionId?: string
+  currency: string
 }
 
 const FIELD_CLASS = 'w-full rounded-xl border border-border bg-background px-3 py-2.5 text-xs text-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/40'
@@ -23,7 +25,7 @@ const LABEL_CLASS = 'text-[10px] font-bold uppercase tracking-wider text-muted-f
 const FALLBACK_CONSTRAINTS: DocumentVaultConstraints = { maxDocumentBytes: 20 * 1024 * 1024, maxBulkDocuments: 10, maxTotalBytesPerUser: 2 * 1024 * 1024 * 1024 }
 const formatMb = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(2)} MB`
 
-export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear, defaultTransactionId }: Props) {
+export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear, defaultTransactionId, currency }: Props) {
   const currentYear = new Date().getFullYear()
   const [files, setFiles] = useState<File[]>([])
   const [taxYear, setTaxYear] = useState(String(initialTaxYear ?? currentYear))
@@ -171,7 +173,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
           </div>
             <label className="space-y-1.5"><span className={LABEL_CLASS}>Tax relief category <span className="text-destructive">*</span></span>
             <CustomSelect value={reliefCategory} onChange={value => setReliefCategory(String(value))}
-              options={[{ value: '', label: 'Choose tax relief category' }, ...reliefCategories.map(category => ({ value: category.id, label: `${category.name} · RM${category.limit.toLocaleString()}` }))]}
+              options={[{ value: '', label: 'Choose tax relief category' }, ...reliefCategories.map(category => ({ value: category.id, label: `${category.name} · ${formatCurrencyVal(category.limit, currency)}` }))]}
               ariaLabel="Tax relief category" className="w-full" required invalid={files.length > 0 && !reliefCategory}
               disabled={categoriesLoading || reliefCategories.length === 0} /></label>
           {files.length > 0 && !categoriesLoading && reliefCategories.length === 0 && (

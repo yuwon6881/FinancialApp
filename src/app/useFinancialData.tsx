@@ -203,6 +203,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
                 op.targetId,
                 undefined,
                 pending.reliefCategory,
+                pending.amount,
+                pending.amountCurrency,
               )
             }
           }

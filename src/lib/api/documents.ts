@@ -21,7 +21,9 @@ export async function uploadDocument(
   notes?: string,
   transactionId?: string,
   clientKey?: string,
-  reliefCategory?: string
+  reliefCategory?: string,
+  amount?: number,
+  amountCurrency?: 'MYR' | 'OTHER',
 ): Promise<{ id: number }> {
   const formData = new FormData()
   formData.append('file', file)
@@ -30,6 +32,8 @@ export async function uploadDocument(
   if (transactionId) formData.append('transactionId', transactionId)
   if (clientKey) formData.append('clientKey', clientKey)
   if (reliefCategory) formData.append('reliefCategory', reliefCategory)
+  if (amount !== undefined && Number.isFinite(amount)) formData.append('amount', amount.toFixed(2))
+  if (amountCurrency) formData.append('amountCurrency', amountCurrency)
 
   const response = await apiFetch('/documents', {
     method: 'POST',
@@ -45,6 +49,17 @@ export interface BulkDocumentResult {
   fileName: string
   uploaded: boolean
   id?: number | null
+  message?: string | null
+}
+
+export interface BulkDocumentCategoryUpdate {
+  id: number
+  reliefCategory: string
+}
+
+export interface BulkDocumentCategoryUpdateResult {
+  id: number
+  updated: boolean
   message?: string | null
 }
 
@@ -129,6 +144,19 @@ export async function updateDocument(
   return data
 }
 
+export async function bulkUpdateDocumentCategories(
+  updates: BulkDocumentCategoryUpdate[],
+): Promise<BulkDocumentCategoryUpdateResult[]> {
+  const result = await request<{ results: BulkDocumentCategoryUpdateResult[] }>('/documents/bulk-update-categories', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ updates }),
+    errorMessage: 'Failed to update document categories',
+  })
+  invalidateDocumentDerivedData()
+  return result.results
+}
+
 export function getDocumentConstraints(): Promise<DocumentVaultConstraints> {
   return cachedGet(DOCUMENT_CACHE_KEYS.constraints, () => request<DocumentVaultConstraints>('/documents/constraints', {
     method: 'GET',
@@ -211,6 +239,16 @@ export async function downloadDocumentArchive(taxYear?: number): Promise<void> {
   const response = await apiFetch(`/documents/export${query}`)
   if (!response.ok) await throwApiError(response, 'Failed to export documents')
   downloadCsvBlob(await response.blob(), taxYear === undefined ? 'tax-vault-all-tax-years.zip' : `tax-vault-${taxYear}.zip`)
+}
+
+export async function downloadSelectedDocumentArchive(ids: number[]): Promise<void> {
+  const response = await apiFetch('/documents/export-selected', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  })
+  if (!response.ok) await throwApiError(response, 'Failed to export selected documents')
+  downloadCsvBlob(await response.blob(), 'tax-vault-selected.zip')
 }
 
 export async function deleteDocument(id: number): Promise<void> {

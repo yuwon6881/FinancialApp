@@ -571,6 +571,8 @@ export interface PendingVaultDocument {
   file: File
   taxYear: number
   reliefCategory: string
+  amount?: number
+  amountCurrency?: 'MYR' | 'OTHER'
 }
 
 export interface TransactionDocumentChanges {

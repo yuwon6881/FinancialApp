@@ -1,10 +1,11 @@
 import { Input } from '../../ui/Input'
 import { Checkbox } from '../../ui/Checkbox'
-import { useEffect, useState } from 'react'
-import { Check, Download, FileArchive, FileCode, FileImage, FileText, Link2, Pencil, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Check, Download, ExternalLink, FileArchive, FileCode, FileImage, FileText, Link2, ListChecks, Pencil, Trash2 } from 'lucide-react'
 import type { TaxReliefCategoryDefinition, VaultDocument } from '../../../types'
 import { downloadDocument } from '../../../lib/api/documents'
-import { useAppUi } from '../../../contexts/AppContext'
+import { useAppPrefs, useAppUi } from '../../../contexts/AppContext'
+import { formatCurrencyVal, getCurrencySymbol } from '../../../lib/utils'
 import { Skeleton } from '../../ui/Skeleton'
 import { formatBytes, formatDate } from './formatters'
 import { CustomSelect } from '../../ui/CustomSelect'
@@ -16,6 +17,10 @@ interface DocumentListProps {
   setDocToDelete: (id: number) => void
   selectedIds: Set<number>
   toggleSelected: (id: number) => void
+  onToggleSelectAll: () => void
+  allVisibleSelected: boolean
+  someVisibleSelected: boolean
+  currency: string
   updateDocument: (
     id: number,
     updates: Pick<Partial<VaultDocument>, 'taxYear' | 'notes' | 'transactionId' | 'reliefCategory' | 'amount' | 'amountCurrency'> & {
@@ -23,10 +28,14 @@ interface DocumentListProps {
     },
   ) => Promise<void>
   reliefCategories: TaxReliefCategoryDefinition[]
+  pendingReliefCategories: ReadonlyMap<number, string>
+  onReliefCategoryChange: (id: number, reliefCategory: string) => void
   onNavigateToTransaction?: (transactionId: string) => Promise<void> | void
 }
 
-function AmountReview({ document, updateDocument }: { document: VaultDocument; updateDocument: DocumentListProps['updateDocument'] }) {
+function AmountReview({ document, updateDocument, currency }: { document: VaultDocument; updateDocument: DocumentListProps['updateDocument']; currency?: string }) {
+  const { currency: appCurrency } = useAppPrefs()
+  const activeCurrency = currency ?? appCurrency
   const [editing, setEditing] = useState(document.amountStatus === 'NeedsReview')
   const [value, setValue] = useState(document.amount?.toFixed(2) ?? '')
   const [saving, setSaving] = useState(false)
@@ -36,14 +45,18 @@ function AmountReview({ document, updateDocument }: { document: VaultDocument; u
     if (amount !== null && (!Number.isFinite(amount) || amount < 0)) return
     setSaving(true)
     try {
-      await updateDocument(document.id, { amount, amountCurrency: 'MYR', amountStatus: 'Confirmed' })
+      await updateDocument(document.id, {
+        amount,
+        amountCurrency: activeCurrency.toUpperCase() === 'MYR' ? 'MYR' : 'OTHER',
+        amountStatus: 'Confirmed',
+      })
       setEditing(false)
     } finally { setSaving(false) }
   }
   if (!editing) return <button type="button" onClick={() => setEditing(true)} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-1 text-[11px] font-bold text-accent-ink transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">
-    {document.amount != null ? `RM${document.amount.toFixed(2)}` : 'Add amount'}<Pencil className="size-3.5" />
+    {document.amount != null ? formatCurrencyVal(document.amount, activeCurrency) : 'Add amount'}<Pencil className="size-3.5" />
   </button>
-  return <div className="flex items-center gap-1.5"><span className="text-[11px] font-bold text-foreground">RM</span>
+  return <div className="flex items-center gap-1.5"><span className="text-[11px] font-bold text-foreground">{getCurrencySymbol(activeCurrency)}</span>
     <Input value={value} onChange={event => setValue(event.target.value)} inputMode="decimal" aria-label={`Amount for ${document.originalFileName}`} className="h-9 w-20 rounded-lg border-border bg-background px-2 text-[11px] tabular-nums" />
     <button type="button" onClick={() => void save()} disabled={saving} aria-label={`Confirm amount for ${document.originalFileName}`} title="Confirm amount" className="inline-grid size-9 shrink-0 place-items-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"><Check className="size-4" strokeWidth={2.5} /></button>
   </div>
@@ -99,7 +112,80 @@ function DocumentActions({
   )
 }
 
-export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds, toggleSelected, updateDocument, reliefCategories, onNavigateToTransaction }: DocumentListProps) {
+function LinkedTransactionButton({
+  document,
+  openingTransactionId,
+  onOpen,
+}: {
+  document: VaultDocument
+  openingTransactionId: string | null
+  onOpen?: (transactionId: string) => void
+}) {
+  if (!document.transactionId) return null
+  const isOpening = openingTransactionId === document.transactionId
+  if (!onOpen) {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-accent/30 bg-accent/10 px-1.5 py-1 text-[9px] font-bold text-accent-ink" title="Attached to a ledger record">
+        <Link2 className="size-3" aria-hidden="true" />
+        <span className="hidden sm:inline">Linked</span>
+      </span>
+    )
+  }
+  return (
+    <Button
+      variant="outline"
+      size="xs"
+      type="button"
+      onClick={() => onOpen(document.transactionId!)}
+      disabled={isOpening}
+      className="shrink-0 border-accent/30 bg-accent/10 px-1.5 py-1 text-[9px] text-accent-ink hover:border-accent/50 hover:bg-accent/20"
+      title="Open linked ledger transaction"
+      aria-label={`Open linked transaction for ${document.originalFileName}`}
+    >
+      <ExternalLink className="size-3" aria-hidden="true" />
+      <span className="hidden sm:inline">Ledger</span>
+    </Button>
+  )
+}
+
+function SelectAllDocumentsControl({
+  count,
+  allSelected,
+  someSelected,
+  onToggle,
+}: {
+  count: number
+  allSelected: boolean
+  someSelected: boolean
+  onToggle: () => void
+}) {
+  const checkboxRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (checkboxRef.current) checkboxRef.current.indeterminate = someSelected
+  }, [someSelected])
+
+  return (
+    <label className={`inline-flex w-fit items-center gap-2 rounded-xl border px-2.5 py-2 transition ${count > 0 ? 'cursor-pointer border-primary/25 bg-primary/5 hover:bg-primary/10' : 'border-border/50 bg-muted/20 opacity-60'}`}>
+      <span className="grid size-7 place-items-center rounded-lg bg-primary/15 text-primary" aria-hidden="true">
+        <ListChecks className="size-3.5" />
+      </span>
+      <Checkbox
+        ref={checkboxRef}
+        checked={allSelected}
+        onChange={onToggle}
+        disabled={count === 0}
+        aria-label={allSelected ? 'Clear document selection on this page' : 'Select all documents on this page'}
+        className="size-4 border-primary/50 bg-card accent-primary"
+      />
+      <span className="pr-0.5 leading-tight">
+        <span className="block text-[10px] font-black uppercase tracking-wide text-foreground">Select page</span>
+        <span className="block text-[10px] text-muted-foreground">{count > 0 ? `${count} document${count === 1 ? '' : 's'} below` : 'No documents'}</span>
+      </span>
+    </label>
+  )
+}
+
+export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds, toggleSelected, onToggleSelectAll, allVisibleSelected, someVisibleSelected, currency, updateDocument, reliefCategories, pendingReliefCategories, onReliefCategoryChange, onNavigateToTransaction }: DocumentListProps) {
   const { showToast } = useAppUi()
   const [openingTransactionId, setOpeningTransactionId] = useState<string | null>(null)
   const downloadFailed = () =>
@@ -116,6 +202,18 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
 
   return (
     <>
+      <div className="mb-3 flex flex-col gap-2 border-b border-border/50 pb-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 className="text-sm font-black text-foreground">Documents</h3>
+          <p className="mt-0.5 text-[10px] text-muted-foreground">Select files here to download or delete them together.</p>
+        </div>
+        <SelectAllDocumentsControl
+          count={documents.length}
+          allSelected={allVisibleSelected}
+          someSelected={someVisibleSelected}
+          onToggle={onToggleSelectAll}
+        />
+      </div>
       <div className="space-y-2 lg:hidden">
         {isLoading && documents.length === 0 ? (
           Array.from({ length: 3 }).map((_, index) => (
@@ -148,11 +246,11 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
                     <p className="truncate text-xs font-bold text-foreground" title={document.originalFileName}>
                       {document.originalFileName}
                     </p>
-                    {document.transactionId && (onNavigateToTransaction ? (
-                      <Button variant="unstyled" type="button" onClick={() => void openLinkedTransaction(document.transactionId!)} disabled={openingTransactionId === document.transactionId} className="inline-flex shrink-0 cursor-pointer rounded p-0.5 text-accent-ink transition hover:bg-accent disabled:cursor-wait disabled:opacity-50" title="Open linked ledger transaction" aria-label={`Open linked transaction for ${document.originalFileName}`}>
-                        <Link2 className="size-3" />
-                      </Button>
-                    ) : <Link2 className="size-3 shrink-0 text-accent-ink" aria-label="Attached to a ledger record" />)}
+                    <LinkedTransactionButton
+                      document={document}
+                      openingTransactionId={openingTransactionId}
+                      onOpen={onNavigateToTransaction ? transactionId => void openLinkedTransaction(transactionId) : undefined}
+                    />
                   </div>
                   {document.notes && (
                     <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">
@@ -186,9 +284,9 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
               </p>
               <div className="mt-3 flex items-center justify-between gap-3 border-t border-border/50 pt-3">
                 <span className="text-[10px] text-muted-foreground">{document.amountStatus === 'NeedsReview' ? 'AI suggestion · please confirm' : document.amountStatus === 'Confirmed' ? 'Confirmed amount' : document.amountExtractionMessage || 'No amount confirmed'}</span>
-                <AmountReview document={document} updateDocument={updateDocument} />
+                <AmountReview document={document} updateDocument={updateDocument} currency={currency} />
               </div>
-              <div className="mt-3 border-t border-border/50 pt-3"><p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Tax relief category <span className="text-destructive">*</span></p><CustomSelect value={document.reliefCategory ?? ''} onChange={value => void updateDocument(document.id, { reliefCategory: String(value) || null })}
+              <div className="mt-3 border-t border-border/50 pt-3"><p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Tax relief category <span className="text-destructive">*</span></p><CustomSelect value={pendingReliefCategories.get(document.id) ?? document.reliefCategory ?? ''} onChange={value => onReliefCategoryChange(document.id, String(value))}
                 options={[{ value: '', label: 'Uncategorised (legacy)', disabled: true }, ...reliefCategories.map(category => ({ value: category.id, label: category.name }))]} ariaLabel={`Tax relief category for ${document.originalFileName}`} className="w-full" /></div>
             </article>
           )
@@ -240,11 +338,11 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
                         <p className="truncate font-bold text-foreground" title={document.originalFileName}>
                           {document.originalFileName}
                         </p>
-                        {document.transactionId && (onNavigateToTransaction ? (
-                          <Button variant="unstyled" type="button" onClick={() => void openLinkedTransaction(document.transactionId!)} disabled={openingTransactionId === document.transactionId} className="inline-flex shrink-0 cursor-pointer rounded p-0.5 text-accent-ink transition hover:bg-accent disabled:cursor-wait disabled:opacity-50" title="Open linked ledger transaction" aria-label={`Open linked transaction for ${document.originalFileName}`}>
-                            <Link2 className="size-3" />
-                          </Button>
-                        ) : <Link2 className="size-3 shrink-0 text-accent-ink" aria-label="Attached to a ledger record" />)}
+                        <LinkedTransactionButton
+                          document={document}
+                          openingTransactionId={openingTransactionId}
+                          onOpen={onNavigateToTransaction ? transactionId => void openLinkedTransaction(transactionId) : undefined}
+                        />
                       </div>
                       {document.notes && (
                         <p className="truncate text-[11px] text-muted-foreground" title={document.notes}>
@@ -255,13 +353,13 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
                   </div>
                 </td>
                 <td className="px-3 py-2.5">
-                  <CustomSelect value={document.reliefCategory ?? ''} onChange={value => void updateDocument(document.id, { reliefCategory: String(value) || null })}
+                  <CustomSelect value={pendingReliefCategories.get(document.id) ?? document.reliefCategory ?? ''} onChange={value => onReliefCategoryChange(document.id, String(value))}
                     options={[{ value: '', label: 'Uncategorised (legacy)', disabled: true }, ...reliefCategories.map(category => ({ value: category.id, label: category.name }))]}
                     ariaLabel={`Tax relief category for ${document.originalFileName}`} className="min-w-40" />
                 </td>
                 <td className="px-3 py-2.5 font-bold text-foreground tabular-nums">{document.taxYear}</td>
                 <td className="px-3 py-2.5 text-muted-foreground tabular-nums">{formatBytes(document.sizeBytes)}</td>
-                <td className="px-3 py-2.5"><AmountReview document={document} updateDocument={updateDocument} />{document.amountStatus === 'NeedsReview' && <p className="mt-0.5 text-[9px] text-amber-600">AI · review</p>}</td>
+                <td className="px-3 py-2.5"><AmountReview document={document} updateDocument={updateDocument} currency={currency} />{document.amountStatus === 'NeedsReview' && <p className="mt-0.5 text-[9px] text-amber-600">AI · review</p>}</td>
                 <td className="px-3 py-2.5 text-muted-foreground">
                   <div className="whitespace-nowrap">{formatDate(document.uploadedAt)}</div>
                   <div className="whitespace-nowrap text-[10px]">Keep until {formatDate(document.retentionUntil)}</div>

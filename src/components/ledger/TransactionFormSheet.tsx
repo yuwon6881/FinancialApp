@@ -158,6 +158,8 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
               ref={form.documentsFieldRef}
               existingDocuments={form.existingDocuments}
               defaultTaxYear={Number(form.state.date.slice(0, 4)) || new Date().getFullYear()}
+              transactionAmount={form.state.amount}
+              currency={props.currency}
               disabled={app?.isOffline || !navigator.onLine}
             />
           </div>

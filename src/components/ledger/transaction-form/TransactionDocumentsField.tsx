@@ -7,6 +7,7 @@ import {
   type VaultDocument,
 } from '../../../types'
 import { getTaxReliefCategories } from '../../../lib/api/documents'
+import { formatCurrencyVal } from '../../../lib/utils'
 import { Input } from '../../ui/Input'
 import { CustomSelect } from '../../ui/CustomSelect'
 
@@ -24,14 +25,22 @@ interface TransactionDocumentsFieldProps {
   existingDocuments?: VaultDocument[]
   disabled?: boolean
   defaultTaxYear: number
+  transactionAmount: string
+  currency: string
 }
 
 const LABEL_CLASS = 'text-[10px] font-bold uppercase tracking-wider text-muted-foreground'
+const parseTransactionAmount = (value: string): number | undefined => {
+  const trimmed = value.trim()
+  if (!trimmed) return undefined
+  const amount = Number(trimmed)
+  return Number.isFinite(amount) ? Math.abs(amount) : undefined
+}
 
 export const TransactionDocumentsField = React.forwardRef<
   TransactionDocumentsFieldRef,
   TransactionDocumentsFieldProps
->(({ existingDocuments = [], disabled = false, defaultTaxYear }, ref) => {
+>(({ existingDocuments = [], disabled = false, defaultTaxYear, transactionAmount, currency }, ref) => {
   const [pendingDocs, setPendingDocs] = useState<PendingDocument[]>([])
   const [unlinkIds, setUnlinkIds] = useState<number[]>([])
   const [reliefCategories, setReliefCategories] = useState<TaxReliefCategoryDefinition[]>([])
@@ -77,10 +86,12 @@ export const TransactionDocumentsField = React.forwardRef<
       getChanges: () => ({
         // The transaction posting date is authoritative, even when the date was
         // changed after a file was attached.
-        pending: pendingDocs.map(({ file, reliefCategory }) => ({
+        pending: pendingDocs.map(({ file, reliefCategory, amount, amountCurrency }) => ({
           file,
           taxYear: defaultTaxYear,
           reliefCategory,
+          amount,
+          amountCurrency,
         })),
         unlinkIds,
       }),
@@ -117,10 +128,18 @@ export const TransactionDocumentsField = React.forwardRef<
       previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
       taxYear: defaultTaxYear,
       reliefCategory: '',
+      amount: parseTransactionAmount(transactionAmount),
+      amountCurrency: currency.toUpperCase() === 'MYR' ? 'MYR' : 'OTHER',
     }))
     setPendingDocs(previous => [...previous, ...newDocs])
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
+
+  useEffect(() => {
+    const amount = parseTransactionAmount(transactionAmount)
+    const amountCurrency = currency.toUpperCase() === 'MYR' ? 'MYR' : 'OTHER'
+    setPendingDocs(current => current.map(document => ({ ...document, amount, amountCurrency })))
+  }, [transactionAmount, currency])
 
   const updatePending = (index: number, patch: Partial<PendingVaultDocument>) => {
     setPendingDocs(previous => previous.map((document, itemIndex) => (
@@ -139,7 +158,7 @@ export const TransactionDocumentsField = React.forwardRef<
   const visibleExisting = existingDocuments.filter(document => !unlinkIds.includes(document.id))
   const categoryOptions = [
     { value: '', label: categoriesLoaded ? 'Choose tax relief category' : 'Loading categories…' },
-    ...reliefCategories.map(category => ({ value: category.id, label: `${category.name} · RM${category.limit.toLocaleString()}` })),
+    ...reliefCategories.map(category => ({ value: category.id, label: `${category.name} · ${formatCurrencyVal(category.limit, currency)}` })),
   ]
 
   if (disabled && visibleExisting.length === 0 && pendingDocs.length === 0) {
@@ -162,8 +181,8 @@ export const TransactionDocumentsField = React.forwardRef<
           ?? document.reliefCategory
           ?? 'Uncategorised'
         return (
-          <div key={document.id} className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-muted/30 p-2.5">
-            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent text-accent-ink">
+          <div key={document.id} className="flex min-w-0 items-center gap-2.5 rounded-xl border border-border/60 bg-muted/30 p-2.5 shadow-sm shadow-black/5">
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent text-accent-ink ring-1 ring-accent/30">
               <FileText className="size-4" aria-hidden="true" />
             </span>
             <div className="min-w-0 flex-1">
@@ -186,11 +205,12 @@ export const TransactionDocumentsField = React.forwardRef<
               type="button"
               onClick={() => setUnlinkIds(ids => [...ids, document.id])}
               disabled={disabled}
-              className="cursor-pointer rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-40"
+              className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-border/60 bg-background px-2 py-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
               title="Detach from this transaction (the document stays in your vault)"
               aria-label={`Detach ${document.originalFileName} from this transaction`}
             >
               <Link2Off className="size-3.5" />
+              <span className="hidden text-[10px] font-bold sm:inline">Detach</span>
             </button>
           </div>
         )
@@ -203,7 +223,7 @@ export const TransactionDocumentsField = React.forwardRef<
       )}
 
       {pendingDocs.map((document, index) => (
-        <div key={`${document.file.name}-${index}`} className="flex flex-col gap-2.5 rounded-xl border border-primary/30 bg-primary/5 p-2.5">
+        <div key={`${document.file.name}-${index}`} className="relative flex flex-col gap-2.5 overflow-hidden rounded-2xl border border-primary/30 bg-primary/5 p-3 shadow-sm shadow-primary/5">
           <div className="flex items-center gap-2.5">
             {document.previewUrl ? (
               <img src={document.previewUrl} alt="" className="size-9 shrink-0 rounded-lg object-cover" />
@@ -225,10 +245,16 @@ export const TransactionDocumentsField = React.forwardRef<
               <X className="size-3.5" />
             </button>
           </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,8rem)_minmax(0,1fr)] sm:items-end">
-            <div className="min-w-0 rounded-xl border border-border bg-background px-3 py-2.5">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,7rem)_minmax(0,8rem)_minmax(0,1fr)] sm:items-end">
+            <div className="min-w-0 rounded-xl border border-border/70 bg-background px-3 py-2.5">
               <span className={LABEL_CLASS}>Recorded year</span>
               <p className="mt-1 truncate text-xs font-bold tabular-nums text-foreground">YA {defaultTaxYear}</p>
+            </div>
+            <div className="min-w-0 rounded-xl border border-border/70 bg-background px-3 py-2.5">
+              <span className={LABEL_CLASS}>Amount</span>
+              <p className="mt-1 truncate text-xs font-bold tabular-nums text-foreground">
+                {document.amount == null ? 'Not entered' : formatCurrencyVal(document.amount, currency)}
+              </p>
             </div>
             <label className="min-w-0 space-y-1">
               <span className={LABEL_CLASS}>Tax relief category <span className="text-destructive">*</span></span>
@@ -254,7 +280,7 @@ export const TransactionDocumentsField = React.forwardRef<
         type="button"
         disabled={disabled || !categoriesLoaded || reliefCategories.length === 0}
         onClick={() => fileInputRef.current?.click()}
-        className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border px-3 py-2.5 text-xs font-semibold text-muted-foreground transition hover:border-ring/60 hover:bg-muted/40 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 px-3 py-3 text-xs font-semibold text-muted-foreground transition hover:border-primary/60 hover:bg-primary/10 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
       >
         <UploadCloud className="size-4" aria-hidden="true" />
         Attach Document

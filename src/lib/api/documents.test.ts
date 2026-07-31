@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { invalidateAllDocumentCaches } from './documentsCache'
 import {
+  bulkUpdateDocumentCategories,
   deleteDocument,
   downloadDocument,
+  downloadSelectedDocumentArchive,
   listDocuments,
   updateDocument,
   uploadDocument,
@@ -46,12 +48,36 @@ describe('documents API', () => {
     expect(form.get('reliefCategory')).toBe('lifestyle')
   })
 
+  it('saves multiple document category changes in one request', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okJson({
+      results: [
+        { id: 1, updated: true },
+        { id: 2, updated: false, message: 'The category is not configured for this document\'s tax year.' },
+      ],
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const results = await bulkUpdateDocumentCategories([
+      { id: 1, reliefCategory: 'education' },
+      { id: 2, reliefCategory: 'lifestyle' },
+    ])
+
+    expect(results[0].updated).toBe(true)
+    expect(fetchMock.mock.calls[0][1].method).toBe('POST')
+    expect(fetchMock.mock.calls[0][1].body).toBe(JSON.stringify({
+      updates: [
+        { id: 1, reliefCategory: 'education' },
+        { id: 2, reliefCategory: 'lifestyle' },
+      ],
+    }))
+  })
+
   it('uploads multipart data without setting a content-type header', async () => {
     const fetchMock = vi.fn().mockResolvedValue(okJson({ id: 1 }))
     vi.stubGlobal('fetch', fetchMock)
     const file = new File(['%PDF-1.4 test'], 'test.pdf', { type: 'application/pdf' })
 
-    await uploadDocument(file, 2026, 'Annual filing', undefined, undefined, 'lifestyle')
+    await uploadDocument(file, 2026, 'Annual filing', undefined, undefined, 'lifestyle', 123.45, 'OTHER')
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(url).toContain('/api/documents')
@@ -62,6 +88,8 @@ describe('documents API', () => {
     expect(formData.get('file')).toBe(file)
     expect(formData.get('taxYear')).toBe('2026')
     expect(formData.get('reliefCategory')).toBe('lifestyle')
+    expect(formData.get('amount')).toBe('123.45')
+    expect(formData.get('amountCurrency')).toBe('OTHER')
   })
 
   it('lists with filters and sends authenticated mutation requests', async () => {
@@ -112,6 +140,30 @@ describe('documents API', () => {
     expect(String(fetchMock.mock.calls[0][0])).toContain('/api/documents/9/content')
     expect(createObjectUrl).toHaveBeenCalledOnce()
     expect(revokeObjectUrl).toHaveBeenCalledWith('blob:test')
+  })
+
+  it('downloads a ZIP archive for the selected documents', async () => {
+    const createObjectUrl = vi.fn(() => 'blob:selected')
+    const revokeObjectUrl = vi.fn()
+    vi.stubGlobal('URL', { ...URL, createObjectURL: createObjectUrl, revokeObjectURL: revokeObjectUrl })
+    sessionStorage.setItem('csrf_token', 'test-token')
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      blob: async () => new Blob(['zip bytes'], { type: 'application/zip' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await downloadSelectedDocumentArchive([3, 7])
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/api/documents/export-selected')
+    expect(fetchMock.mock.calls[0][1].method).toBe('POST')
+    expect(fetchMock.mock.calls[0][1].body).toBe(JSON.stringify({ ids: [3, 7] }))
+    expect(createObjectUrl).toHaveBeenCalledOnce()
+    expect(revokeObjectUrl).toHaveBeenCalledWith('blob:selected')
+    sessionStorage.removeItem('csrf_token')
   })
 
   describe('caching behavior', () => {

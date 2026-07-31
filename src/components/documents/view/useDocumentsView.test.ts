@@ -14,6 +14,7 @@ const api = vi.hoisted(() => ({
   bulkDeleteDocuments: vi.fn(),
   deleteDocument: vi.fn(),
   updateDocument: vi.fn(),
+  bulkUpdateDocumentCategories: vi.fn(),
 }))
 
 vi.mock('../../../lib/api/documents', () => api)
@@ -55,6 +56,7 @@ describe('useDocumentsView', () => {
     api.updateTaxReliefCategory.mockResolvedValue({ id: 'category', name: 'Category', limit: 100, detail: '' })
     api.bulkDeleteDocuments.mockResolvedValue([])
     api.deleteDocument.mockResolvedValue(undefined)
+    api.bulkUpdateDocumentCategories.mockResolvedValue([{ id: 1, updated: true }])
   })
 
   it('loads documents and usage, then updates local state after deletion', async () => {
@@ -81,7 +83,31 @@ describe('useDocumentsView', () => {
     act(() => result.current.setTaxYear(2025))
 
     await waitFor(() => {
-      expect(api.listDocuments).toHaveBeenLastCalledWith(2025, undefined, '', 0, 50)
+      expect(api.listDocuments).toHaveBeenLastCalledWith(2025, undefined, '', 0, 10)
     })
+  })
+
+  it('requests later pages from the server and resets the offset when the page size changes', async () => {
+    const { result } = renderHook(() => useDocumentsView())
+    await waitFor(() => expect(api.listDocuments).toHaveBeenCalledWith(2026, undefined, '', 0, 10))
+
+    act(() => result.current.setPage(2))
+    await waitFor(() => expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, '', 10, 10))
+
+    act(() => result.current.setPageSize(25))
+    await waitFor(() => expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, '', 0, 25))
+    expect(result.current.page).toBe(1)
+  })
+
+  it('updates staged category results locally after one bulk request', async () => {
+    const { result } = renderHook(() => useDocumentsView())
+    await waitFor(() => expect(result.current.documents).toEqual([document]))
+
+    await act(async () => {
+      await result.current.bulkUpdateDocumentCategories([{ id: 1, reliefCategory: 'education' }])
+    })
+
+    expect(api.bulkUpdateDocumentCategories).toHaveBeenCalledWith([{ id: 1, reliefCategory: 'education' }])
+    expect(result.current.documents[0].reliefCategory).toBe('education')
   })
 })
