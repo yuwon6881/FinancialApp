@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, Download, ShieldCheck, Trash2, UploadCloud } from 'lucide-react'
+import { AlertTriangle, Download, Loader2, ShieldCheck, Trash2, UploadCloud } from 'lucide-react'
 import { DocumentUploadSheet } from './documents/DocumentUploadSheet'
 import { useDocumentsView } from './documents/view/useDocumentsView'
 import { CustomConfirmModal } from './ui/CustomConfirmModal'
@@ -12,6 +12,7 @@ import * as documentsApi from '../lib/api/documents'
 import { getErrorMessage } from '../lib/errors'
 import { Button } from './ui/Button'
 import { DataTableFooter, DataTablePagination } from './ui/DataTable'
+import { CycleSkeleton } from './ui/Skeleton'
 
 interface DocumentsViewProps {
   onNavigateToTransaction?: (transactionId: string) => Promise<void> | void
@@ -26,6 +27,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     expiredYears,
     reliefCategories,
     isLoading,
+    isInitialLoading,
     taxYear,
     setTaxYear,
     search,
@@ -66,6 +68,10 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
   useEffect(() => {
     setSelectedIds(new Set())
   }, [taxYear, search, pageSize])
+
+  if (isInitialLoading) {
+    return <CycleSkeleton variant="documents" />
+  }
 
   const toggleSelectAllVisible = () => {
     setSelectedIds(current => {
@@ -251,44 +257,56 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
           </div>
         )}
 
-        <DocumentList
-          documents={documents}
-          isLoading={isLoading}
-          setDocToDelete={setDocToDelete}
-          selectedIds={selectedIds}
-          toggleSelected={id => setSelectedIds(current => {
-            const next = new Set(current)
-            if (next.has(id)) next.delete(id)
-            else next.add(id)
-            return next
-          })}
-          onToggleSelectAll={toggleSelectAllVisible}
-          allVisibleSelected={allVisibleSelected}
-          someVisibleSelected={someVisibleSelected}
-          currency={currency}
-          pendingReliefCategories={pendingReliefCategories}
-          onReliefCategoryChange={stageReliefCategory}
-          updateDocument={async (id, updates) => {
-            await updateDocumentMetadata(id, updates)
-            void loadTaxInsights()
-          }}
-          reliefCategories={reliefCategories}
-          onNavigateToTransaction={onNavigateToTransaction}
-        />
-
-        {totalCount > 0 && (
-          <DataTableFooter className="mt-4">
-            <DataTablePagination
-              currentPage={page}
-              pageSize={pageSize}
-              totalItems={totalCount}
-              totalPages={totalPages}
-              pageSizeOptions={[10, 25, 50]}
-              onPageChange={setPage}
-              onPageSizeChange={value => setPageSize(value as 10 | 25 | 50)}
+        <div className="relative" aria-busy={isLoading}>
+          {isLoading && documents.length > 0 && (
+            <div className="absolute inset-0 z-10 flex items-start justify-center pt-24 pointer-events-none">
+              <div className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-card/90 px-3 py-2 text-[11px] font-semibold text-muted-foreground shadow-lg backdrop-blur-sm">
+                <Loader2 className="size-3.5 animate-spin text-accent-ink" aria-hidden="true" />
+                Updating documents…
+              </div>
+            </div>
+          )}
+          <div className={isLoading && documents.length > 0 ? 'pointer-events-none opacity-55 blur-[1px] transition-all duration-200' : 'transition-all duration-200'}>
+            <DocumentList
+              documents={documents}
+              isLoading={isLoading}
+              setDocToDelete={setDocToDelete}
+              selectedIds={selectedIds}
+              toggleSelected={id => setSelectedIds(current => {
+                const next = new Set(current)
+                if (next.has(id)) next.delete(id)
+                else next.add(id)
+                return next
+              })}
+              onToggleSelectAll={toggleSelectAllVisible}
+              allVisibleSelected={allVisibleSelected}
+              someVisibleSelected={someVisibleSelected}
+              currency={currency}
+              pendingReliefCategories={pendingReliefCategories}
+              onReliefCategoryChange={stageReliefCategory}
+              updateDocument={async (id, updates) => {
+                await updateDocumentMetadata(id, updates)
+                void loadTaxInsights()
+              }}
+              reliefCategories={reliefCategories}
+              onNavigateToTransaction={onNavigateToTransaction}
             />
-          </DataTableFooter>
-        )}
+
+            {totalCount > 0 && (
+              <DataTableFooter className="mt-4">
+                <DataTablePagination
+                  currentPage={page}
+                  pageSize={pageSize}
+                  totalItems={totalCount}
+                  totalPages={totalPages}
+                  pageSizeOptions={[10, 25, 50]}
+                  onPageChange={setPage}
+                  onPageSizeChange={value => setPageSize(value as 10 | 25 | 50)}
+                />
+              </DataTableFooter>
+            )}
+          </div>
+        </div>
       </div>
 
       <DocumentUploadSheet

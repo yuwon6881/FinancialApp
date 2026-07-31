@@ -95,12 +95,14 @@ export const RewardCard: React.FC<RewardCardProps> = ({
         {!isFocused && (
           <Button
             variant="secondary"
-            size="sm"
+            size="icon"
+            className="size-8 shrink-0"
             onClick={() => onFocus(item)}
             disabled={isBusy || hideSensitive}
-            title="Make this the reward you are saving toward"
+            aria-label={`Focus ${item.name}`}
+            title="Focus this reward"
           >
-            <Target className="size-3" /> Focus
+            <Target className="size-3.5" />
           </Button>
         )}
         <Button

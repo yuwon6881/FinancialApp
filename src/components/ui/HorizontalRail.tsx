@@ -23,17 +23,26 @@ export function HorizontalRail({ children, className, label }: HorizontalRailPro
   const railRef = useRef<HTMLDivElement>(null)
   const handleWheel = useCallback((event: WheelEvent) => {
     const rail = railRef.current
-    if (!rail || event.deltaY === 0) return
+    if (!rail) return
+
+    // A mouse wheel normally reports deltaY, while a trackpad can report deltaX. Prefer the
+    // dominant axis so both desktop input styles move the same rail.
+    const rawDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
+    if (rawDelta === 0) return
+    const deltaMultiplier = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? rail.clientWidth : 1
+    const delta = rawDelta * deltaMultiplier
 
     const maxScrollLeft = Math.max(0, rail.scrollWidth - rail.clientWidth)
     if (maxScrollLeft === 0) return
 
     const atStart = rail.scrollLeft <= 0
     const atEnd = rail.scrollLeft >= maxScrollLeft - 1
-    const canConsumeWheel = event.deltaY < 0 ? !atStart : !atEnd
+    // Leave the event untouched at either edge so the page can continue scrolling in the same
+    // direction instead of trapping the pointer inside the rail.
+    const canConsumeWheel = delta < 0 ? !atStart : !atEnd
     if (!canConsumeWheel) return
 
-    rail.scrollLeft = Math.max(0, Math.min(maxScrollLeft, rail.scrollLeft + event.deltaY))
+    rail.scrollLeft = Math.max(0, Math.min(maxScrollLeft, rail.scrollLeft + delta))
     // React's delegated wheel event can be passive in the browser. This listener is explicitly
     // non-passive so consuming horizontal rail movement never logs a preventDefault warning.
     if (event.cancelable) event.preventDefault()
@@ -53,7 +62,7 @@ export function HorizontalRail({ children, className, label }: HorizontalRailPro
       aria-label={label}
       className={cn(
         // No touch-action restriction: vertical finger gestures must remain available to the page.
-        'no-scrollbar flex gap-3 overflow-x-auto overscroll-x-contain',
+        'no-scrollbar flex w-full min-w-0 gap-3 overflow-x-auto overscroll-x-contain',
         'snap-x snap-proximity pb-1',
         className,
       )}

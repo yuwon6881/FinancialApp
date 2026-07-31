@@ -37,5 +37,13 @@ describe('HorizontalRail', () => {
 
     expect(scrollLeft).toBe(700)
     expect(beyondEndPreventDefault).not.toHaveBeenCalled()
+
+    scrollLeft = 300
+    const horizontalTrackpad = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaX: -80 })
+    const horizontalPreventDefault = vi.spyOn(horizontalTrackpad, 'preventDefault')
+    rail.dispatchEvent(horizontalTrackpad)
+
+    expect(scrollLeft).toBe(220)
+    expect(horizontalPreventDefault).toHaveBeenCalledOnce()
   })
 })

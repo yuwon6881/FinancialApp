@@ -203,19 +203,19 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
 
   return (
     <>
-      <div className="mb-3 flex flex-col gap-2 border-b border-border/50 pb-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="text-sm font-black text-foreground">Documents</h3>
-          <p className="mt-0.5 text-[10px] text-muted-foreground">Select files here to download or delete them together.</p>
-        </div>
+      <div className="mb-3 flex flex-col gap-3 border-b border-border/50 pb-3 sm:flex-row sm:items-center sm:justify-start">
         <SelectAllDocumentsControl
           count={documents.length}
           allSelected={allVisibleSelected}
           someSelected={someVisibleSelected}
           onToggle={onToggleSelectAll}
         />
+        <div>
+          <h3 className="text-sm font-black text-foreground">Documents</h3>
+          <p className="mt-0.5 text-[10px] text-muted-foreground">Select files here to download or delete them together.</p>
+        </div>
       </div>
-      <div className="space-y-2 lg:hidden">
+      <div className="space-y-3 lg:hidden">
         {isLoading && documents.length === 0 ? (
           Array.from({ length: 3 }).map((_, index) => (
             <div key={index} className="rounded-xl border border-border/50 bg-muted/20 p-3">
@@ -236,15 +236,15 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
         ) : documents.map(document => {
           const Icon = iconFor(document.contentType)
           return (
-            <article key={document.id} className="rounded-2xl border border-border/60 bg-card p-3 shadow-sm shadow-black/5">
-              <div className="flex min-w-0 items-start gap-2.5">
-                <Checkbox  checked={selectedIds.has(document.id)} onChange={() => toggleSelected(document.id)} aria-label={`Select ${document.originalFileName}`} className="mt-2 size-4 accent-primary" />
-                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent text-accent-ink">
+            <article key={document.id} className="rounded-2xl border border-border/60 bg-card p-3.5 shadow-sm shadow-black/5">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <Checkbox checked={selectedIds.has(document.id)} onChange={() => toggleSelected(document.id)} aria-label={`Select ${document.originalFileName}`} className="size-4 shrink-0 accent-primary" />
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent text-accent-ink">
                   <Icon className="size-4" aria-hidden="true" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex min-w-0 items-center gap-1.5">
-                    <p className="truncate text-xs font-bold text-foreground" title={document.originalFileName}>
+                    <p className="line-clamp-2 min-w-0 text-xs font-bold leading-snug text-foreground" title={document.originalFileName}>
                       {document.originalFileName}
                     </p>
                     <LinkedTransactionButton

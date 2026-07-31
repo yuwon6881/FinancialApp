@@ -197,11 +197,11 @@ export function TaxReliefOverview({
             {categories.map(category => (
               <div key={category.id} className="rounded-lg border border-border/60 p-2.5">
                 {editingId === category.id ? (
-                  <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8rem_auto] sm:items-end">
+                  <div className="grid gap-2 sm:grid-cols-2">
                     <label className="space-y-1"><span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Category</span><Input value={draft.name} onChange={event => setDraft(current => ({ ...current, name: event.target.value }))} className={FIELD_CLASS} /></label>
                     <label className="space-y-1"><span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Limit ({currency})</span><Input type="number" min="0" step="0.01" value={draft.limit} onChange={event => setDraft(current => ({ ...current, limit: Number(event.target.value) }))} className={`${FIELD_CLASS} tabular-nums`} /></label>
-                    <div className="flex gap-1.5"><Button variant="primary" size="sm" type="button" onClick={() => void saveEdit(category.id)} disabled={savingId === category.id} className="py-2"><Save className="size-3.5" /> Save</Button><Button variant="unstyled" type="button" onClick={() => setEditingId(null)} aria-label="Cancel category edit" className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted"><X className="size-3.5" /></Button></div>
-                    <label className="space-y-1 sm:col-span-3"><span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Note (optional)</span><Input value={draft.detail ?? ''} onChange={event => setDraft(current => ({ ...current, detail: event.target.value }))} maxLength={300} className={FIELD_CLASS} /></label>
+                    <label className="space-y-1 sm:col-span-2"><span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Note (optional)</span><Input value={draft.detail ?? ''} onChange={event => setDraft(current => ({ ...current, detail: event.target.value }))} maxLength={300} className={FIELD_CLASS} /></label>
+                    <div className="flex gap-1.5 sm:col-span-2"><Button variant="primary" size="sm" type="button" onClick={() => void saveEdit(category.id)} disabled={savingId === category.id} className="py-2"><Save className="size-3.5" /> Save</Button><Button variant="unstyled" type="button" onClick={() => setEditingId(null)} aria-label="Close category editor" className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted"><X className="size-3.5" /></Button></div>
                   </div>
                 ) : (
                   <div className="flex items-start gap-2">
@@ -215,11 +215,11 @@ export function TaxReliefOverview({
 
           {isAdding && (
             <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
-              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8rem_auto] sm:items-end">
+              <div className="grid gap-2 sm:grid-cols-2">
                 <label className="space-y-1"><span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Category</span><Input autoFocus value={newCategory.name} onChange={event => setNewCategory(current => ({ ...current, name: event.target.value }))} placeholder="e.g. Education" className={FIELD_CLASS} /></label>
                 <label className="space-y-1"><span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Limit ({currency})</span><Input type="number" min="0" step="0.01" value={newCategory.limit} onChange={event => setNewCategory(current => ({ ...current, limit: Number(event.target.value) }))} className={`${FIELD_CLASS} tabular-nums`} /></label>
-                <div className="flex gap-1.5"><Button variant="primary" size="sm" type="button" onClick={() => void addCategory()} disabled={isAdding && !newCategory.name.trim()} className="py-2"><Check className="size-3.5" /> Add</Button><Button variant="unstyled" type="button" onClick={() => { setIsAdding(false); setNewCategory({ name: '', limit: 0, detail: '' }) }} aria-label="Cancel adding category" className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted"><X className="size-3.5" /></Button></div>
-                <label className="space-y-1 sm:col-span-3"><span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Note (optional)</span><Input value={newCategory.detail ?? ''} onChange={event => setNewCategory(current => ({ ...current, detail: event.target.value }))} maxLength={300} className={FIELD_CLASS} /></label>
+                <label className="space-y-1 sm:col-span-2"><span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Note (optional)</span><Input value={newCategory.detail ?? ''} onChange={event => setNewCategory(current => ({ ...current, detail: event.target.value }))} maxLength={300} className={FIELD_CLASS} /></label>
+                <div className="flex gap-1.5 sm:col-span-2"><Button variant="primary" size="sm" type="button" onClick={() => void addCategory()} disabled={isAdding && !newCategory.name.trim()} className="py-2"><Check className="size-3.5" /> Add</Button><Button variant="unstyled" type="button" onClick={() => { setIsAdding(false); setNewCategory({ name: '', limit: 0, detail: '' }) }} aria-label="Close add category form" className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted"><X className="size-3.5" /></Button></div>
               </div>
             </div>
           )}

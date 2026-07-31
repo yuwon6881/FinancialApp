@@ -210,7 +210,7 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
     return (
       <div data-testid="documents-skeleton" className="space-y-5 soft-rise">
         {/* Mirrors DocumentsView: plain title block + action button, then one panel
-            holding the filter row, the usage meter and the document rows. */}
+            holding the filter row, usage meter, tax-relief tracker and document rows. */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
             <Skeleton className="h-6 w-48" />
@@ -224,6 +224,7 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
             <Skeleton className="h-10 w-full rounded-xl sm:w-40" />
           </div>
           <Skeleton className="h-14 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-2xl" />
           <div className="space-y-3">
             {[1, 2, 3, 4, 5].map(i => <ListRowSkeleton key={i} />)}
           </div>

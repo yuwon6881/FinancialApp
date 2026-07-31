@@ -14,10 +14,13 @@ export function useDocumentsView() {
   const [taxYear, setTaxYear] = useState<number | undefined>(undefined)
   const [search, setSearch] = useState<string>('')
   
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [hasLoadedYears, setHasLoadedYears] = useState(false)
+  const [hasLoadedDocuments, setHasLoadedDocuments] = useState(false)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState<10 | 25 | 50>(10)
   const requestIdRef = useRef(0)
+  const queryKeyRef = useRef<string | null>(null)
 
   const loadDocuments = useCallback(async (isRefresh = false) => {
     const requestId = ++requestIdRef.current
@@ -34,7 +37,10 @@ export function useDocumentsView() {
     } catch (err) {
       console.error('Failed to load documents:', err)
     } finally {
-      if (requestId === requestIdRef.current) setIsLoading(false)
+      if (requestId === requestIdRef.current) {
+        setIsLoading(false)
+        setHasLoadedDocuments(true)
+      }
     }
   }, [page, pageSize, taxYear, search])
 
@@ -54,6 +60,8 @@ export function useDocumentsView() {
       setTaxYear(current => current === undefined ? years[0] : !years.includes(current) ? years[0] : current)
     } catch (err) {
       console.error('Failed to load document years:', err)
+    } finally {
+      setHasLoadedYears(true)
     }
   }, [])
 
@@ -93,20 +101,28 @@ export function useDocumentsView() {
   }, [taxYear, availableYears, loadTaxInsights])
 
   useEffect(() => {
-    setPage(1)
-    void loadDocuments(true)
-  }, [taxYear, search, pageSize]) // Reset to page 1 when the query shape changes
-
-  useEffect(() => {
-    if (page > 1) {
-      void loadDocuments()
-    }
-  }, [page])
-
-  useEffect(() => {
     loadUsage()
     loadAvailableYears()
   }, [loadUsage, loadAvailableYears])
+
+  useEffect(() => {
+    if (!hasLoadedYears) return
+
+    const queryKey = JSON.stringify([taxYear ?? 'all', search, pageSize])
+    const queryChanged = queryKeyRef.current !== queryKey
+    queryKeyRef.current = queryKey
+
+    // A filter/page-size change always starts at page one. If the user was on a later page,
+    // update the visible page first and let this effect run again so the request uses the
+    // state that the pagination control displays. This also means page 1 is fetched when the
+    // user navigates backwards; the old `page > 1` guard left that page visibly stale.
+    if (queryChanged && page !== 1) {
+      setPage(1)
+      return
+    }
+
+    void loadDocuments()
+  }, [hasLoadedYears, page, pageSize, search, taxYear, loadDocuments])
 
   useEffect(() => {
     void loadTaxInsights()
@@ -171,6 +187,7 @@ export function useDocumentsView() {
     expiredYears,
     reliefCategories,
     isLoading,
+    isInitialLoading: !hasLoadedYears || !hasLoadedDocuments,
     page,
     setPage,
     pageSize,

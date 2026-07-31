@@ -63,6 +63,7 @@ describe('useDocumentsView', () => {
     const { result } = renderHook(() => useDocumentsView())
 
     await waitFor(() => expect(result.current.documents).toEqual([document]))
+    expect(result.current.isInitialLoading).toBe(false)
     expect(result.current.usage).toEqual({ totalBytes: 12, documentCount: 1 })
 
     api.getDocumentUsage.mockResolvedValue({ totalBytes: 0, documentCount: 0 })
@@ -93,6 +94,9 @@ describe('useDocumentsView', () => {
 
     act(() => result.current.setPage(2))
     await waitFor(() => expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, '', 10, 10))
+
+    act(() => result.current.setPage(1))
+    await waitFor(() => expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, '', 0, 10))
 
     act(() => result.current.setPageSize(25))
     await waitFor(() => expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, '', 0, 25))
