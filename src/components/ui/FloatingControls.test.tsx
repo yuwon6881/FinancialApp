@@ -90,12 +90,12 @@ describe('floating form controls', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Jul 17, 2026/i }))
 
-    expect((screen.getByRole('gridcell', { name: /^[^,]+, 9 July 2026$/i }) as HTMLButtonElement).disabled).toBe(true)
-    expect((screen.getByRole('gridcell', { name: /^[^,]+, 20 July 2026$/i }) as HTMLButtonElement).disabled).toBe(false)
-    expect((screen.getByRole('gridcell', { name: /^[^,]+, 21 July 2026$/i }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('gridcell', { name: /^[^,]+, (9 July 2026|July 9, 2026)$/i }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('gridcell', { name: /^[^,]+, (20 July 2026|July 20, 2026)$/i }) as HTMLButtonElement).disabled).toBe(false)
+    expect((screen.getByRole('gridcell', { name: /^[^,]+, (21 July 2026|July 21, 2026)$/i }) as HTMLButtonElement).disabled).toBe(true)
     expect(screen.getByRole('dialog', { name: 'Choose date' }).closest('body')).not.toBeNull()
 
-    fireEvent.click(screen.getByRole('gridcell', { name: /^[^,]+, 20 July 2026$/i }))
+    fireEvent.click(screen.getByRole('gridcell', { name: /^[^,]+, (20 July 2026|July 20, 2026)$/i }))
     expect(onChange).toHaveBeenCalledWith('2026-07-20')
   })
 
@@ -104,10 +104,10 @@ describe('floating form controls', () => {
     const trigger = screen.getByRole('button', { name: /Choose date: Jul 17, 2026/i })
     fireEvent.click(trigger)
 
-    const selected = screen.getByRole('gridcell', { name: /^[^,]+, 17 July 2026$/i })
+    const selected = screen.getByRole('gridcell', { name: /^[^,]+, (17 July 2026|July 17, 2026)$/i })
     selected.focus()
     fireEvent.keyDown(selected, { key: 'ArrowRight' })
-    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('gridcell', { name: /^[^,]+, 18 July 2026$/i })))
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('gridcell', { name: /^[^,]+, (18 July 2026|July 18, 2026)$/i })))
 
     fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'Escape' })
     expect(screen.queryByRole('dialog', { name: 'Choose date' })).toBeNull()
