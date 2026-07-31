@@ -11,6 +11,7 @@ import { TaxReliefOverview } from './documents/view/TaxReliefOverview'
 import * as documentsApi from '../lib/api/documents'
 import { CustomSelect } from './ui/CustomSelect'
 import { getErrorMessage } from '../lib/errors'
+import { Button } from './ui/Button'
 
 interface DocumentsViewProps {
   onNavigateToTransaction?: (transactionId: string) => Promise<void> | void
@@ -122,13 +123,26 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
             </span>
             Document Vault
           </h2>
+
+  return (
+    <div className="space-y-5 soft-rise">
+      {/* Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="flex items-center gap-2 text-lg font-black text-foreground">
+            <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-accent text-accent-ink">
+              <ShieldCheck className="size-4" aria-hidden="true" />
+            </span>
+            Document Vault
+          </h2>
           <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
             Long-term storage for receipts, invoices and tax records. Retention dates are shown for
             reference only — nothing is ever deleted automatically.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
+          <Button
+            variant="unstyled"
             type="button"
             disabled={isDownloading || availableYears.length === 0}
             onClick={() => {
@@ -140,15 +154,16 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5 text-xs font-bold disabled:opacity-50"
           >
             <Download className="size-4" /> {isDownloading ? 'Preparing ZIP…' : taxYear ? `Download ${taxYear}` : 'Download all'}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="unstyled"
             type="button"
             onClick={() => setIsUploadSheetOpen(true)}
             className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-md transition hover:bg-primary/90"
           >
             <UploadCloud className="size-4" />
             Upload
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -194,22 +209,24 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
               <p className="mt-0.5 text-[10px] text-muted-foreground">Save them together to update the Vault in one request.</p>
             </div>
             <div className="flex shrink-0 gap-2">
-              <button
+              <Button
+                variant="unstyled"
                 type="button"
                 disabled={isSavingReliefCategories}
                 onClick={() => setPendingReliefCategories(new Map())}
                 className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-muted-foreground disabled:opacity-50"
               >
                 Discard
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="unstyled"
                 type="button"
                 disabled={isSavingReliefCategories}
                 onClick={() => void saveReliefCategories()}
                 className="rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-50"
               >
                 {isSavingReliefCategories ? 'Saving…' : 'Save categories'}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -221,7 +238,8 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
               {selectedIds.size > 100 && <p className="mt-0.5 text-[10px] text-destructive">Select up to 100 documents at a time.</p>}
             </div>
             <div className="flex w-full flex-wrap justify-start gap-2 sm:w-auto sm:justify-end">
-              <button
+              <Button
+                variant="unstyled"
                 type="button"
                 disabled={isDownloading || selectedIds.size > 100}
                 onClick={() => {
@@ -237,10 +255,10 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold text-foreground disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Download className="size-3.5" /> {isDownloading ? 'Preparing ZIP…' : 'Download selected'}
-              </button>
-              <button type="button" disabled={selectedIds.size > 100} onClick={() => setIsBulkDeleteOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-destructive px-3 py-2 text-xs font-bold text-destructive-foreground disabled:cursor-not-allowed disabled:opacity-50">
+              </Button>
+              <Button variant="unstyled" type="button" disabled={selectedIds.size > 100} onClick={() => setIsBulkDeleteOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-destructive px-3 py-2 text-xs font-bold text-destructive-foreground disabled:cursor-not-allowed disabled:opacity-50">
                 <Trash2 className="size-3.5" /> Delete selected
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -289,7 +307,8 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
               </div>
               <span className="font-semibold text-muted-foreground tabular-nums">Page {page} of {totalPages}</span>
               <div className="flex gap-2">
-              <button
+              <Button
+                variant="unstyled"
                 type="button"
                 disabled={page === 1}
                 onClick={() => setPage(page - 1)}
@@ -297,8 +316,9 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
               >
                 <ChevronLeft className="size-3.5" aria-hidden="true" />
                 Previous
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="unstyled"
                 type="button"
                 disabled={page * pageSize >= totalCount}
                 onClick={() => setPage(page + 1)}
@@ -306,13 +326,6 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
               >
                 Next
                 <ChevronRight className="size-3.5" aria-hidden="true" />
-              </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
       <DocumentUploadSheet
         isOpen={isUploadSheetOpen}
         onClose={() => setIsUploadSheetOpen(false)}
