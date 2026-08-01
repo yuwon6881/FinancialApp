@@ -1,6 +1,6 @@
 import type { SavingsGoal } from '../../types'
-import type { WireSavingsGoal, WireSavingsGoalFundingResult, WireSavingsGoalPool } from '../apiTypes'
-import { deobfuscateAmount, deobfuscateSavingsGoal, obfuscateAmount } from './amounts'
+import type { WireSavingsGoal, WireSavingsGoalCompletionResult, WireSavingsGoalFundingResult, WireSavingsGoalPool } from '../apiTypes'
+import { deobfuscateAmount, deobfuscateSavingsGoal, deobfuscateTransaction, obfuscateAmount } from './amounts'
 import { cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
 
 export function fetchSavingsGoals(signal?: AbortSignal): Promise<SavingsGoal[]> {
@@ -111,11 +111,14 @@ export async function fundSavingsGoalsForCycle(): Promise<SavingsGoalFundingResu
   }
 }
 
-export async function completeSavingsGoal(id: number): Promise<SavingsGoal> {
-  const data = await request<WireSavingsGoal>(`/savings-goals/${id}/complete`, {
+export async function completeSavingsGoal(id: number) {
+  const data = await request<WireSavingsGoalCompletionResult>(`/savings-goals/${id}/complete`, {
     method: 'POST',
     errorMessage: 'Failed to complete savings goal',
   })
   invalidateCache()
-  return deobfuscateSavingsGoal(data)
+  return {
+    goal: deobfuscateSavingsGoal(data.goal),
+    transaction: deobfuscateTransaction(data.transaction),
+  }
 }

@@ -10,6 +10,7 @@
 //    because a replayed op could apply against a pool that has since changed.
 
 import type { SavingsGoal } from '../types'
+import type { ToastAction } from '../components/ui/ToastViewport'
 import { getErrorMessage } from '../lib/errors'
 import { formatCurrencyVal } from '../lib/utils'
 
@@ -18,7 +19,9 @@ type ToastTone = 'info' | 'success' | 'warning' | 'error'
 export interface SavingsGoalActionDeps {
   currency: string
   commitGoals: (goals: SavingsGoal[]) => void
-  showToast: (message: string, title?: string, tone?: ToastTone) => void
+  commitGoal: (goal: SavingsGoal) => void
+  refreshAll: () => Promise<void>
+  showToast: (message: string, title?: string, tone?: ToastTone, action?: ToastAction) => void
 }
 
 export async function contributeToGoal(
@@ -61,14 +64,35 @@ export async function fundGoalsForCycle(deps: SavingsGoalActionDeps): Promise<vo
 }
 
 export async function completeGoal(deps: SavingsGoalActionDeps, id: number): Promise<void> {
-  const { completeSavingsGoal, fetchSavingsGoals } = await import('../lib/api/savingsGoals')
+  const { completeSavingsGoal } = await import('../lib/api/savingsGoals')
   try {
-    await completeSavingsGoal(id)
-    deps.commitGoals(await fetchSavingsGoals())
+    const result = await completeSavingsGoal(id)
+    deps.commitGoal(result.goal)
+    await deps.refreshAll()
+    const spent = formatCurrencyVal(Math.abs(result.transaction.amount), deps.currency)
     deps.showToast(
-      'The money set aside is released — log the actual spend in your ledger.',
-      'Goal completed',
+      `${spent} was spent from Rewards and recorded in your ledger.`,
+      result.goal.isRecurring ? `${result.goal.name} rolled forward` : `${result.goal.name} completed`,
       'success',
+      {
+        label: 'Undo',
+        onAction: () => {
+          void (async () => {
+            try {
+              const { deleteTransaction } = await import('../lib/api/transactions')
+              await deleteTransaction(result.transaction.id)
+              await deps.refreshAll()
+              deps.showToast(
+                `The ledger entry was removed and "${result.goal.name}" was restored.`,
+                'Completion undone',
+                'success',
+              )
+            } catch (error: unknown) {
+              deps.showToast(getErrorMessage(error), 'Could not undo completion', 'error')
+            }
+          })()
+        },
+      },
     )
   } catch (error: unknown) {
     deps.showToast(getErrorMessage(error), 'Could not complete this goal', 'error')
@@ -87,17 +111,18 @@ export function describeDeleteGoal(goal: SavingsGoal | undefined, currency: stri
 }
 
 /** Confirmation copy for completing a goal, or rolling a recurring one forward. */
-export function describeCompleteGoal(goal: SavingsGoal | undefined) {
+export function describeCompleteGoal(goal: SavingsGoal | undefined, currency: string) {
+  const amount = formatCurrencyVal(goal?.earmarkedAmount ?? 0, currency)
   if (goal?.isRecurring) {
     return {
       title: 'Complete This Round',
-      message: `Mark "${goal.name}" done for this round? Its deadline rolls forward by ${goal.recurrenceMonths} month(s) and saving starts again from zero.`,
+      message: `Mark "${goal.name}" done for this round? ${amount} will be spent from Rewards and recorded in your ledger. Its deadline then rolls forward by ${goal.recurrenceMonths} month(s). Deleting that ledger entry restores this round and its date.`,
       confirmText: 'Roll Forward',
     }
   }
   return {
     title: 'Complete Savings Goal',
-    message: `Mark "${goal?.name || 'this goal'}" done? The money set aside is released back to your rewards pool — then log the actual spend in your ledger as usual.`,
+    message: `Mark "${goal?.name || 'this goal'}" done? ${amount} will be spent from Rewards and recorded in your ledger. Deleting that ledger entry restores the commitment.`,
     confirmText: 'Complete',
   }
 }

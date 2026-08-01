@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, CheckCircle2, CircleDollarSign, Filter, Loader2, Pencil, Plus, Save, X } from 'lucide-react'
 import type { TaxReliefCategoryDefinition, TaxReliefCategorySummary, TaxYearReliefSummary } from '../../../types'
 import { Input } from '../../ui/Input'
 import { Button } from '../../ui/Button'
 import { BottomSheet } from '../../ui/BottomSheet'
-import { useAppUi } from '../../../contexts/AppContext'
+import { useAppPrefs, useAppUi } from '../../../contexts/AppContext'
 import { getErrorMessage } from '../../../lib/errors'
-import { formatCurrencyVal } from '../../../lib/utils'
+import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../../../lib/utils'
 import { HorizontalRail } from '../../ui/HorizontalRail'
 import { FormField } from '../../ui/FormField'
 import { orderTaxReliefCategories } from '../../../lib/taxReliefOrdering'
@@ -47,6 +47,7 @@ export function TaxReliefOverview({
   onUpdateCategory,
 }: TaxReliefOverviewProps) {
   const { showToast } = useAppUi()
+  const { hideSensitive } = useAppPrefs()
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draft, setDraft] = useState<CategoryInput>({ name: '', limit: 0, detail: '' })
@@ -54,11 +55,18 @@ export function TaxReliefOverview({
   const [isAdding, setIsAdding] = useState(false)
   const [savingId, setSavingId] = useState<string | null>(null)
 
+  useEffect(() => {
+    if (!hideSensitive) return
+    setEditorOpen(false)
+    setEditingId(null)
+    setIsAdding(false)
+  }, [hideSensitive])
+
   const selectedYear = summary?.taxYear ?? taxYear
   const trackerCategories = summary?.categories ?? categories.map(zeroSummary)
   const orderedTrackerCategories = orderTaxReliefCategories(trackerCategories)
   const inheritedDefaults = categories.length > 0 && categories.every(category => category.isInherited)
-  const money = (value: number) => formatCurrencyVal(value, currency)
+  const money = (value: number) => hideSensitive ? SENSITIVE_AMOUNT_MASK : formatCurrencyVal(value, currency)
 
   const beginEdit = (category: TaxReliefCategoryDefinition) => {
     setEditingId(category.id)
@@ -127,6 +135,7 @@ export function TaxReliefOverview({
             variant="outline"
             size="sm"
             type="button"
+            disabled={hideSensitive}
             onClick={() => setEditorOpen(true)}
             className="self-start bg-card text-muted-foreground transition hover:bg-muted hover:text-foreground"
           >

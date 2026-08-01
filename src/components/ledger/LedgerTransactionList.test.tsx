@@ -29,7 +29,7 @@ function renderList() {
       isTxSyncing={() => false}
       onStartEdit={() => {}}
       onDeleteClick={() => {}}
-      onSplitEditBlocked={() => {}}
+      onEditBlocked={() => {}}
       formatSensitive={(v) => <span>{v.toFixed(2)}</span>}
     />,
   )

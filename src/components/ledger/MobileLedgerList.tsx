@@ -16,7 +16,7 @@ export function MobileLedgerList({
   isTxSyncing,
   onStartEdit,
   onDeleteClick,
-  onSplitEditBlocked,
+  onEditBlocked,
   formatSensitive,
 }: LedgerListProps) {
   const hasRows = transactions.length > 0
@@ -41,7 +41,7 @@ export function MobileLedgerList({
           currency={currency}
           onStartEdit={onStartEdit}
           onDeleteClick={onDeleteClick}
-          onSplitEditBlocked={onSplitEditBlocked}
+          onEditBlocked={onEditBlocked}
         />
       ))}
       {hasRows && (

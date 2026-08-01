@@ -21,6 +21,7 @@ interface WishlistSavingsActionDependencies {
   mutateQueue: UseOutboxResult['mutateQueue']
   snapshotForUndo: UseOutboxResult['snapshotForUndo']
   setSavingsGoals: Dispatch<SetStateAction<SavingsGoal[]>>
+  refreshAll: () => Promise<void>
 }
 
 const toOutboxPayload = (value: object): OutboxPayload => ({ ...value })
@@ -41,6 +42,7 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
     mutateQueue,
     snapshotForUndo,
     setSavingsGoals,
+    refreshAll,
   } = deps
 
   const handleAddWishlistItem = (newWish: Partial<WishlistItem>) => {
@@ -118,6 +120,16 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
     setCachedJSON(CACHE_KEYS.savingsGoals, goals)
   }
 
+  const commitSavingsGoal = (goal: SavingsGoal) => {
+    setSavingsGoals(previous => {
+      const next = previous.some(item => item.id === goal.id)
+        ? previous.map(item => item.id === goal.id ? goal : item)
+        : [...previous, goal]
+      setCachedJSON(CACHE_KEYS.savingsGoals, next)
+      return next
+    })
+  }
+
   const handleAddSavingsGoal = (goal: Partial<SavingsGoal>) => {
     const placeholderId = String(createLocalNumericId())
     const payload = {
@@ -160,6 +172,8 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
   const savingsGoalDependencies = () => ({
     currency,
     commitGoals: commitSavingsGoals,
+    commitGoal: commitSavingsGoal,
+    refreshAll,
     showToast,
   })
 
@@ -185,7 +199,7 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
     if (!guardSensitive()) return
     const { describeCompleteGoal } = await import('../savingsGoalActions')
     setConfirmModalData({
-      ...describeCompleteGoal(savingsGoals.find(goal => goal.id === id)),
+      ...describeCompleteGoal(savingsGoals.find(goal => goal.id === id), currency),
       onConfirm: () => { void handleCompleteSavingsGoal(id) },
     })
   }

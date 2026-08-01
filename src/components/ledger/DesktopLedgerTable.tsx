@@ -17,7 +17,7 @@ export function DesktopLedgerTable({
   isTxSyncing,
   onStartEdit,
   onDeleteClick,
-  onSplitEditBlocked,
+  onEditBlocked,
   formatSensitive,
 }: LedgerListProps) {
   const hasRows = transactions.length > 0
@@ -53,7 +53,7 @@ export function DesktopLedgerTable({
                 currency={currency}
                 onStartEdit={onStartEdit}
                 onDeleteClick={onDeleteClick}
-                onSplitEditBlocked={onSplitEditBlocked}
+                onEditBlocked={onEditBlocked}
               />
             ))}
             {hasRows && (

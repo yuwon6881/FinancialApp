@@ -36,7 +36,7 @@ interface LedgerViewProps {
     transaction: Omit<Transaction, 'id'>,
     documentChanges?: TransactionDocumentChanges,
   ) => Promise<string | void> | string | void
-  onDeleteTransaction: (id: string) => Promise<void> | void
+  onDeleteTransaction: (id: string, transaction?: Transaction) => Promise<void> | void
   onUpdateTransaction?: (
     id: string,
     transaction: Omit<Transaction, 'id'>,
@@ -363,7 +363,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         isTxSyncing={ledger.isTxSyncing}
         onStartEdit={ledger.onStartEditStable}
         onDeleteClick={ledger.onDeleteClickStable}
-        onSplitEditBlocked={ledger.onSplitEditBlockedStable}
+        onEditBlocked={ledger.onEditBlockedStable}
         formatSensitive={formatSensitive}
       />
 
@@ -403,6 +403,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
 
       <EditDisabledModal
         isOpen={ledger.showEditDisabledModal}
+        transaction={ledger.editBlockedTransaction}
         onClose={() => ledger.setShowEditDisabledModal(false)}
       />
     </div>

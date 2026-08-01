@@ -20,7 +20,7 @@ export interface LedgerRowProps {
   index?: number
   onStartEdit: (transaction: Transaction) => void
   onDeleteClick: (transaction: Transaction) => void
-  onSplitEditBlocked: () => void
+  onEditBlocked: (transaction: Transaction) => void
 }
 
 // Per-row entrance delay, replacing Framer Motion's `staggerChildren: 0.05`. Capped so
@@ -43,6 +43,8 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
   const outflow = transaction.amount < 0
   const income = transaction.ledgerCategory === 'Income' || transaction.ledgerCategory.startsWith('IncomeSplit:')
   const split = transaction.id.includes('-split-')
+  const completion = transaction.savingsGoalId != null
+  const editBlocked = split || completion
   const transfer = transaction.ledgerCategory.startsWith('Transfer:')
   const money = (value: number) => <Amount value={formatCurrencyVal(value, props.currency)} hidden={props.hideSensitive} />
   return (
@@ -76,7 +78,7 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
         {!transfer && (income || !outflow) ? <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 font-bold text-xs">{money(transaction.amount)}</span> : <span className="text-muted-foreground/30">-</span>}
       </td>
       <td className="p-4 text-center flex items-center justify-center gap-2">
-        <Button variant="ghost" size="sm" onClick={split ? props.onSplitEditBlocked : () => props.onStartEdit(transaction)} disabled={!split && (props.isDeleting || props.hideSensitive)}>Edit</Button>
+        <Button variant="ghost" size="sm" onClick={editBlocked ? () => props.onEditBlocked(transaction) : () => props.onStartEdit(transaction)} disabled={!editBlocked && (props.isDeleting || props.hideSensitive)}>Edit</Button>
         <Button variant="danger" size="sm" onClick={() => props.onDeleteClick(transaction)} disabled={props.isDeleting || props.hideSensitive}>Delete</Button>
       </td>
     </tr>
@@ -88,6 +90,7 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
   const outflow = transaction.amount < 0
   const transfer = transaction.ledgerCategory.startsWith('Transfer:')
   const split = transaction.id.includes('-split-')
+  const editBlocked = split || transaction.savingsGoalId != null
   const formatted = formatCurrencyVal(outflow ? Math.abs(transaction.amount) : transaction.amount, props.currency)
   return (
     <div className="cv-row list-row-enter" style={staggerStyle(props.index)}>
@@ -97,7 +100,7 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
         disabled={props.isDeleting}
         className="rounded-2xl border border-border shadow-xs"
         actionsWidth={128}
-        actions={<><button onClick={split ? props.onSplitEditBlocked : () => props.onStartEdit(transaction)} disabled={!split && (props.isDeleting || props.isSyncing || props.hideSensitive)} className="flex-1 flex flex-col items-center justify-center gap-1 bg-primary text-primary-foreground text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Edit2 className="size-4" />Edit</button><button onClick={() => props.onDeleteClick(transaction)} disabled={props.isDeleting || props.isSyncing || props.hideSensitive} className="flex-1 flex flex-col items-center justify-center gap-1 bg-destructive text-destructive-foreground text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 className="size-4" />Delete</button></>}
+        actions={<><button onClick={editBlocked ? () => props.onEditBlocked(transaction) : () => props.onStartEdit(transaction)} disabled={!editBlocked && (props.isDeleting || props.isSyncing || props.hideSensitive)} className="flex-1 flex flex-col items-center justify-center gap-1 bg-primary text-primary-foreground text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Edit2 className="size-4" />Edit</button><button onClick={() => props.onDeleteClick(transaction)} disabled={props.isDeleting || props.isSyncing || props.hideSensitive} className="flex-1 flex flex-col items-center justify-center gap-1 bg-destructive text-destructive-foreground text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"><Trash2 className="size-4" />Delete</button></>}
       >
         <div className={`h-0.5 w-full ${transfer ? 'bg-blue-500/60' : outflow ? 'bg-orange-500/60' : 'bg-emerald-500/60'}`} />
         <div className="p-4 space-y-3">

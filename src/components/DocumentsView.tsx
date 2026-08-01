@@ -53,8 +53,8 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     bulkDelete,
   } = useDocumentsView()
 
-  const { showToast } = useAppUi()
-  const { currency } = useAppPrefs()
+  const { showToast, guardSensitive } = useAppUi()
+  const { currency, hideSensitive } = useAppPrefs()
   const [isUploadSheetOpen, setIsUploadSheetOpen] = useState(false)
   const [docToDelete, setDocToDelete] = useState<number | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
@@ -73,6 +73,13 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     setSelectedIds(new Set())
   }, [taxYear, reliefCategory, sortOrder, pageSize])
 
+  useEffect(() => {
+    if (!hideSensitive) return
+    setIsUploadSheetOpen(false)
+    setDocToDelete(null)
+    setIsBulkDeleteOpen(false)
+  }, [hideSensitive])
+
   if (isInitialLoading) {
     return <CycleSkeleton variant="documents" />
   }
@@ -87,6 +94,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
   }
 
   const stageReliefCategory = (id: number, reliefCategory: string) => {
+    if (!guardSensitive()) return
     const document = documents.find(item => item.id === id)
     if (!document) return
     const originalCategory = document.reliefCategory ?? ''
@@ -99,6 +107,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
   }
 
   const saveReliefCategories = async () => {
+    if (!guardSensitive()) return
     if (pendingReliefCategories.size === 0 || isSavingReliefCategories) return
     const staged = Array.from(pendingReliefCategories.entries())
     setIsSavingReliefCategories(true)
@@ -150,8 +159,9 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
             variant="outline"
             size="lg"
             type="button"
-            disabled={isDownloading || availableYears.length === 0}
+            disabled={hideSensitive || isDownloading || availableYears.length === 0}
             onClick={() => {
+              if (!guardSensitive()) return
               setIsDownloading(true)
               void documentsApi.downloadDocumentArchive(taxYear).catch(() =>
                 showToast('The ZIP archive could not be prepared.', 'Download Failed', 'error'))
@@ -165,7 +175,11 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
             variant="primary"
             size="lg"
             type="button"
-            onClick={() => setIsUploadSheetOpen(true)}
+            disabled={hideSensitive}
+            onClick={() => {
+              if (!guardSensitive()) return
+              setIsUploadSheetOpen(true)
+            }}
             className="shrink-0 rounded-xl text-xs shadow-md"
           >
             <UploadCloud className="size-4" />
@@ -200,8 +214,14 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
           isLoading={isTaxInsightsLoading}
           selectedReliefCategory={reliefCategory}
           onSelectReliefCategory={setReliefCategory}
-          onAddCategory={addReliefCategory}
-          onUpdateCategory={updateReliefCategory}
+          onAddCategory={async input => {
+            if (!guardSensitive()) return
+            return addReliefCategory(input)
+          }}
+          onUpdateCategory={async (categoryId, input) => {
+            if (!guardSensitive()) return
+            return updateReliefCategory(categoryId, input)
+          }}
         />
       </div>
 
@@ -282,6 +302,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
               someVisibleSelected={someVisibleSelected}
               isDownloadingSelected={isDownloading}
               onDownloadSelected={() => {
+                if (!guardSensitive()) return
                 const idsToDownload = [...selectedIds]
                 setIsDownloading(true)
                 void documentsApi.downloadSelectedDocumentArchive(idsToDownload)
@@ -296,11 +317,15 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
                   .catch(() => showToast('The selected documents could not be downloaded.', 'Download Failed', 'error'))
                   .finally(() => setIsDownloading(false))
               }}
-              onDeleteSelected={() => setIsBulkDeleteOpen(true)}
+              onDeleteSelected={() => {
+                if (!guardSensitive()) return
+                setIsBulkDeleteOpen(true)
+              }}
               currency={currency}
               pendingReliefCategories={pendingReliefCategories}
               onReliefCategoryChange={stageReliefCategory}
               updateDocument={async (id, updates) => {
+                if (!guardSensitive()) return
                 await updateDocumentMetadata(id, updates)
                 void loadTaxInsights()
               }}
@@ -347,6 +372,10 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
         variant="danger"
         onConfirm={async () => {
           if (docToDelete === null) return
+          if (!guardSensitive()) {
+            setDocToDelete(null)
+            return
+          }
           try {
             await deleteDocument(docToDelete)
             setSelectedIds(current => {
@@ -374,6 +403,10 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
         cancelText="Cancel"
         variant="danger"
         onConfirm={async () => {
+          if (!guardSensitive()) {
+            setIsBulkDeleteOpen(false)
+            return
+          }
           const idsToDelete = [...selectedIds]
           try {
             const results = await bulkDelete(idsToDelete)

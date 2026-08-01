@@ -184,14 +184,14 @@ export interface AiActionsDeps {
 export async function requestAiLedgerDelete(
   id: string,
   deps: Pick<AiActionsDeps, 'showToast' | 'setConfirmModalData'> & {
-    allTransactions: { id: string; description: string }[]
-    handleDeleteTransaction: (id: string) => void
+    allTransactions: Transaction[]
+    handleDeleteTransaction: (id: string, transaction?: Transaction) => void
   }
 ): Promise<void> {
-  let transaction: { id: string; description: string } | undefined =
+  let transaction: Transaction | undefined =
     deps.allTransactions.find(t => String(t.id) === String(id))
   if (!transaction) {
-    transaction = await fetchTransactionById(id).catch(() => undefined) as typeof transaction
+    transaction = await fetchTransactionById(id).catch(() => undefined)
   }
   if (!transaction) {
     deps.showToast('The transaction could not be found.', 'Delete unavailable', 'warning')
@@ -203,9 +203,11 @@ export async function requestAiLedgerDelete(
     title: 'Delete Transaction',
     message: deletesSplitGroup
       ? `Delete "${tx.description}"? This is part of an Income Auto-Split, so the main Income record and all related splits will be deleted.`
+      : tx.savingsGoalId != null
+        ? `Delete "${tx.description}"? This will restore the completed commitment, including its saved amount and prior deadline.`
       : `Delete "${tx.description}"? This action will only proceed after you confirm here.`,
     confirmText: 'Delete',
-    onConfirm: () => deps.handleDeleteTransaction(tx.id),
+    onConfirm: () => deps.handleDeleteTransaction(tx.id, tx),
   })
 }
 

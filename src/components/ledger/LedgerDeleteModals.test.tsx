@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { DeleteTransactionModal } from './LedgerDeleteModals'
+import { DeleteTransactionModal, EditDisabledModal } from './LedgerDeleteModals'
 
 describe('DeleteTransactionModal document safety', () => {
   it('keeps attached documents by default', () => {
@@ -49,5 +49,34 @@ describe('DeleteTransactionModal document safety', () => {
 
     expect((screen.getByRole('checkbox', { name: /also delete attached documents/i }) as HTMLInputElement).disabled).toBe(true)
     expect(screen.getByText(/cannot delete vault documents while offline/i)).toBeTruthy()
+  })
+
+  it('explains that deleting a completion restores its commitment snapshot', () => {
+    const completion = {
+      id: 'savings-goal-completion-7-test',
+      date: '2026-08-01',
+      description: 'Completed commitment: Car service',
+      category: 'Other',
+      ledgerCategory: 'Rewards',
+      amount: -1200,
+      savingsGoalId: 7,
+    }
+
+    const { unmount } = render(
+      <DeleteTransactionModal
+        isOpen
+        transaction={completion}
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+        formatSensitive={value => `MYR ${value.toFixed(2)}`}
+      />,
+    )
+
+    expect(screen.getByText(/restore the amount that was set aside/i)).toBeTruthy()
+    expect(screen.getByText('MYR 1200.00')).toBeTruthy()
+    unmount()
+
+    render(<EditDisabledModal isOpen transaction={completion} onClose={vi.fn()} />)
+    expect(screen.getByText(/delete it to restore the commitment/i)).toBeTruthy()
   })
 })

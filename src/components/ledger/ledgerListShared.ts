@@ -15,6 +15,6 @@ export interface LedgerListProps {
   isTxSyncing: (id: string) => boolean
   onStartEdit: (t: Transaction) => void
   onDeleteClick: (t: Transaction) => void
-  onSplitEditBlocked: () => void
+  onEditBlocked: (t: Transaction) => void
   formatSensitive: (val: number) => ReactNode
 }

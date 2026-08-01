@@ -43,7 +43,7 @@ export interface UseLedgerViewOptions {
   onShowAlert?: (message: string, title?: string) => void
   activeSyncId?: string | null
   deletingTxId?: string | null
-  onDeleteTransaction: (id: string) => Promise<void> | void
+  onDeleteTransaction: (id: string, transaction?: Transaction) => Promise<void> | void
   onAiExportRequestConsumed?: () => void
   aiExportRequest?: any
   hideSensitive: boolean
@@ -208,6 +208,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   const [areAttachedDocumentsLoading, setAreAttachedDocumentsLoading] = useState(false)
   const deleteDocumentLookupRef = useRef(0)
   const [showEditDisabledModal, setShowEditDisabledModal] = useState(false)
+  const [editBlockedTransaction, setEditBlockedTransaction] = useState<Transaction | null>(null)
 
   // Synchronize AI export requests
   useEffect(() => {
@@ -645,7 +646,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
       }
     }
 
-    await onDeleteTransaction(deleteId)
+    await onDeleteTransaction(deleteId, txToDelete)
     setShowDeleteModal(false)
     setTxToDelete(null)
     setAttachedDocumentIds([])
@@ -795,7 +796,10 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   })
   const onStartEditStable = useCallback((t: Transaction) => formRef.current?.handleStartEdit(t), [formRef])
   const onDeleteClickStable = useCallback((t: Transaction) => handleDeleteClickRef.current(t), [])
-  const onSplitEditBlockedStable = useCallback(() => setShowEditDisabledModal(true), [])
+  const onEditBlockedStable = useCallback((transaction: Transaction) => {
+    setEditBlockedTransaction(transaction)
+    setShowEditDisabledModal(true)
+  }, [])
 
   const handleResetFilters = useCallback(() => {
     onClearIncomingFilters?.()
@@ -997,6 +1001,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     areAttachedDocumentsLoading,
     showEditDisabledModal,
     setShowEditDisabledModal,
+    editBlockedTransaction,
     displayTransactions,
     totalPages,
     filteredTransactions,
@@ -1004,7 +1009,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     isTxSyncing,
     onStartEditStable,
     onDeleteClickStable,
-    onSplitEditBlockedStable,
+    onEditBlockedStable,
     handleToggleFilter,
     handleClearFilters,
     handleApplyFilters,

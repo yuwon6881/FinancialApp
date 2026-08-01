@@ -50,7 +50,7 @@ export interface UseAiActionRouterOptions {
   handleNavigateToLedger: (options: any) => void
   setConfirmModalData: (data: any) => void
   allTransactions: any[]
-  handleDeleteTransaction: (id: string) => void
+  handleDeleteTransaction: (id: string, transaction?: Transaction) => void
   allRecurringPayments: any[]
   allWishlist: any[]
   getRewardsBalance: () => number

@@ -43,11 +43,12 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
 }) => {
   const isTopUp = mode === 'topUp'
   // The most this move can be: free rewards (capped by what the goal still needs) for a top-up, or
-  // everything the goal currently holds for a release.
+  // everything the goal currently holds for a release. Both directions default to one cycle's
+  // pace; releasing the entire commitment remains available by entering that amount explicitly.
   const ceiling = isTopUp
     ? Math.min(available, Math.max(0, goal.targetAmount - goal.earmarkedAmount))
     : goal.earmarkedAmount
-  const defaultAmount = isTopUp ? Math.min(ceiling, suggested > 0 ? suggested : ceiling) : ceiling
+  const defaultAmount = Math.min(ceiling, suggested > 0 ? suggested : ceiling)
 
   const [amountInput, setAmountInput] = React.useState(() => (defaultAmount > 0 ? defaultAmount.toFixed(2) : ''))
   const [error, setError] = React.useState('')

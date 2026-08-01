@@ -140,9 +140,13 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
           variant="successGhost"
           size="icon"
           onClick={() => onComplete(goal.id)}
-          disabled={isBusy || hideSensitive}
+          disabled={isBusy || hideSensitive || goal.earmarkedAmount <= 0}
           aria-label={goal.isRecurring ? `Complete this cycle for ${goal.name}` : `Mark ${goal.name} done`}
-          title={goal.isRecurring ? 'Mark this round done and roll the deadline forward' : 'Mark done and release the money'}
+          title={goal.earmarkedAmount <= 0
+            ? 'Set aside some rewards before marking this commitment done'
+            : goal.isRecurring
+              ? 'Spend the saved amount and roll the deadline forward'
+              : 'Spend the saved amount and mark this commitment done'}
         >
           <CheckCircle2 className="size-3.5" />
         </Button>

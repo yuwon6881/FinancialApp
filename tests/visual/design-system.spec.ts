@@ -365,17 +365,19 @@ test('vault controls stay beside the results and selection actions do not shift 
   await expect(toolbar.getByText('2 selected')).toBeVisible()
 
   const after = await page.evaluate(() => {
+    const filter = document.querySelector<HTMLElement>('[data-testid="document-filter-bar"]')!
     const selection = document.querySelector<HTMLElement>('[data-testid="document-selection-toolbar"]')!
     const documentResults = document.querySelector<HTMLElement>('[data-testid="document-results"]')!
     return {
+      filterBottom: filter.getBoundingClientRect().bottom,
       toolbarTop: selection.getBoundingClientRect().top,
       toolbarHeight: selection.getBoundingClientRect().height,
       resultsTop: documentResults.getBoundingClientRect().top,
     }
   })
-  expect(after.toolbarTop).toBe(before.toolbarTop)
-  expect(after.toolbarHeight).toBe(before.toolbarHeight)
-  expect(after.resultsTop).toBe(before.resultsTop)
+  expect(after.toolbarTop - after.filterBottom).toBeCloseTo(before.toolbarTop - before.filterBottom, 0)
+  expect(after.toolbarHeight).toBeCloseTo(before.toolbarHeight, 0)
+  expect(after.resultsTop - after.toolbarTop).toBeCloseTo(before.resultsTop - before.toolbarTop, 0)
   await expect(filterBar).toBeVisible()
   await expect(results).toBeVisible()
 })

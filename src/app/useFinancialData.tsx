@@ -1053,7 +1053,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     })
   }
 
-  const handleDeleteTransaction = (id: string) => {
+  const handleDeleteTransaction = (id: string, transactionHint?: Transaction) => {
     if (!guardSensitive()) return
     void triggerHaptic(30)
     let deleteId = id
@@ -1061,7 +1061,29 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       deleteId = id.split('-split-')[0]
     }
     setDeletingTxId(deleteId)
-    const transaction = allTransactions.find(t => String(t.id) === deleteId)
+    const transaction = transactionHint?.id === deleteId
+      ? transactionHint
+      : allTransactions.find(t => String(t.id) === deleteId)
+    if (transaction?.savingsGoalId != null) {
+      // A completion delete is an authoritative rollback of both the ledger row and its goal
+      // snapshot, so it cannot use the offline outbox's transaction-only optimistic projection.
+      void (async () => {
+        try {
+          await api.deleteTransaction(deleteId)
+          await loadAll(selectedMonth || undefined, selectedYear || undefined, true)
+          showToast(
+            `"${transaction.description}" was deleted and its commitment was restored.`,
+            'Completion undone',
+            'success',
+          )
+        } catch (error: unknown) {
+          showToast(getErrorMessage(error), 'Could not undo completion', 'error')
+        } finally {
+          setDeletingTxId(null)
+        }
+      })()
+      return
+    }
     snapshotForUndo('transaction', deleteId, transaction)
     mutateQueue(prev => enqueue(prev, 'transaction', 'delete', deleteId, {
       description: transaction?.description,
@@ -1258,6 +1280,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     mutateQueue,
     snapshotForUndo,
     setSavingsGoals,
+    refreshAll: () => loadAll(selectedMonth || undefined, selectedYear || undefined, true),
   })
 
   return {

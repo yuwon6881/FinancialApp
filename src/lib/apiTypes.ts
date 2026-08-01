@@ -73,6 +73,11 @@ export interface WireSavingsGoalFundingResult {
   freeToSpend: WireAmount
 }
 
+export interface WireSavingsGoalCompletionResult {
+  goal: WireSavingsGoal
+  transaction: WireTransaction
+}
+
 type WireDashboardSetting = Omit<FinancialSetting, 'targetStabilityFund'> & {
   targetStabilityFund: WireAmount
 }

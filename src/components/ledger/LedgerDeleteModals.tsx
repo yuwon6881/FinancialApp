@@ -36,6 +36,7 @@ export function DeleteTransactionModal({
   if (!isOpen || !transaction) return null
   const isSplitSubRecord = transaction.id.includes('-split-')
   const isIncomeMain = transaction.ledgerCategory === 'Income' || (transaction.ledgerCategory || '').startsWith('IncomeSplit:')
+  const isCommitmentCompletion = transaction.savingsGoalId != null
   return (
     <BottomSheet
       isOpen={isOpen}
@@ -73,6 +74,23 @@ export function DeleteTransactionModal({
           <p>
             This is the <span className="font-semibold text-foreground">main Income Auto-Split record</span>. Deleting it will delete all its associated category sub-split records as well.
           </p>
+        ) : isCommitmentCompletion ? (
+          <div className="space-y-2">
+            <p>
+              Deleting this ledger entry will undo the commitment completion, restore the amount
+              that was set aside, and roll its deadline back.
+            </p>
+            <div className="rounded-lg border border-border/60 bg-muted/30 p-4 space-y-2.5">
+              <div className="flex items-start justify-between gap-4">
+                <span className="font-semibold text-foreground shrink-0">Commitment</span>
+                <span className="break-words text-right min-w-0">{transaction.description}</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="font-semibold text-foreground shrink-0">Restore</span>
+                <span className="font-bold text-foreground whitespace-nowrap">{formatSensitive(Math.abs(transaction.amount))}</span>
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="space-y-2">
             <p>Are you sure you want to delete this transaction?</p>
@@ -131,12 +149,14 @@ export function DeleteTransactionModal({
 
 interface EditDisabledModalProps {
   isOpen: boolean
+  transaction: Transaction | null
   onClose: () => void
 }
 
-// Shown when the user tries to edit an auto-generated split sub-record.
-export function EditDisabledModal({ isOpen, onClose }: EditDisabledModalProps) {
+// Shown when the user tries to edit a generated row whose invariants require delete/recreate.
+export function EditDisabledModal({ isOpen, transaction, onClose }: EditDisabledModalProps) {
   if (!isOpen) return null
+  const isCommitmentCompletion = transaction?.savingsGoalId != null
   return (
     <BottomSheet
       isOpen={isOpen}
@@ -159,12 +179,25 @@ export function EditDisabledModal({ isOpen, onClose }: EditDisabledModalProps) {
       }
     >
       <div className="space-y-3 text-xs leading-relaxed text-muted-foreground">
-        <p>
-          This transaction is a <span className="font-semibold text-foreground">split transfer sub-record</span> generated automatically from an Income Auto-Split.
-        </p>
-        <p>
-          To edit this transaction's amount, description, or split allocations, please find and edit the main <span className="font-semibold text-foreground">Income (Auto-Split)</span> record.
-        </p>
+        {isCommitmentCompletion ? (
+          <>
+            <p>
+              This transaction records a <span className="font-semibold text-foreground">commitment completion</span> and must stay matched to the amount and date that were rolled forward.
+            </p>
+            <p>
+              Delete it to restore the commitment, make your changes there, then complete it again.
+            </p>
+          </>
+        ) : (
+          <>
+            <p>
+              This transaction is a <span className="font-semibold text-foreground">split transfer sub-record</span> generated automatically from an Income Auto-Split.
+            </p>
+            <p>
+              To edit this transaction's amount, description, or split allocations, please find and edit the main <span className="font-semibold text-foreground">Income (Auto-Split)</span> record.
+            </p>
+          </>
+        )}
       </div>
     </BottomSheet>
   )
