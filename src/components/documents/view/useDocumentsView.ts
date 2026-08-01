@@ -14,7 +14,6 @@ export function useDocumentsView() {
   const [reliefCategoriesByTaxYear, setReliefCategoriesByTaxYear] = useState<Record<number, TaxReliefCategoryDefinition[]>>({})
   
   const [taxYear, setTaxYear] = useState<number | undefined>(undefined)
-  const [search, setSearch] = useState<string>('')
   const [reliefCategory, setReliefCategory] = useState<string | undefined>(undefined)
   const [sortOrder, setSortOrder] = useState<DocumentSort>('uploaded-desc')
   
@@ -34,7 +33,7 @@ export function useDocumentsView() {
       setIsLoading(true)
       const currentPage = isRefresh ? 1 : page
       const skip = (currentPage - 1) * pageSize
-      const res = await api.listDocuments(taxYear, undefined, search, skip, pageSize, reliefCategory, sortOrder)
+      const res = await api.listDocuments(taxYear, undefined, skip, pageSize, reliefCategory, sortOrder)
       
       if (requestId !== requestIdRef.current) return
       setDocuments(res.items)
@@ -48,7 +47,7 @@ export function useDocumentsView() {
         setHasLoadedDocuments(true)
       }
     }
-  }, [page, pageSize, taxYear, search, reliefCategory, sortOrder])
+  }, [page, pageSize, taxYear, reliefCategory, sortOrder])
 
   const loadUsage = useCallback(async () => {
     try {
@@ -122,7 +121,7 @@ export function useDocumentsView() {
   useEffect(() => {
     if (!hasLoadedYears) return
 
-    const queryKey = JSON.stringify([taxYear ?? 'all', search, pageSize, reliefCategory ?? '', sortOrder])
+    const queryKey = JSON.stringify([taxYear ?? 'all', pageSize, reliefCategory ?? '', sortOrder])
     const queryChanged = queryKeyRef.current !== queryKey
     queryKeyRef.current = queryKey
 
@@ -136,7 +135,7 @@ export function useDocumentsView() {
     }
 
     void loadDocuments()
-  }, [hasLoadedYears, page, pageSize, search, taxYear, reliefCategory, sortOrder, loadDocuments])
+  }, [hasLoadedYears, page, pageSize, taxYear, reliefCategory, sortOrder, loadDocuments])
 
   useEffect(() => {
     void loadTaxInsights()
@@ -229,8 +228,6 @@ export function useDocumentsView() {
     setPageSize,
     taxYear,
     setTaxYear,
-    search,
-    setSearch,
     reliefCategory,
     setReliefCategory,
     sortOrder,

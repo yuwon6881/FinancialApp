@@ -27,7 +27,6 @@ export const DOCUMENT_CACHE_TTL = {
 export function documentListCacheKey(
   taxYear: number | undefined,
   transactionId: string | undefined,
-  search: string | undefined,
   skip: number,
   take: number,
   reliefCategory?: string,
@@ -36,7 +35,6 @@ export function documentListCacheKey(
   return DOCUMENT_CACHE_KEYS.listPrefix + JSON.stringify([
     taxYear ?? 'all',
     transactionId ?? 'none',
-    search ?? '',
     skip,
     take,
     reliefCategory ?? '',

@@ -6,6 +6,7 @@ import { BottomSheet } from './ui/BottomSheet'
 import { ToggleButton } from './ui/ToggleButton'
 import { DatePicker } from './ui/DatePicker'
 import { SensitiveMask } from './ui/SensitiveAmount'
+import { Button } from './ui/Button'
 import { BellRing, CheckCircle2, Loader2 } from 'lucide-react'
 
 interface PendingSubscriptionsModalProps {
@@ -89,12 +90,13 @@ export function PendingSubscriptionsModal({
               className="size-6 shrink-0"
             />
           </div>
-          <button
+          <Button
+            variant="secondary"
             onClick={onClose}
-            className="w-full sm:w-auto px-4 py-2 bg-foreground text-background font-bold text-xs rounded-xl hover:bg-foreground/90 transition shadow-sm cursor-pointer text-center"
+            className="w-full rounded-xl shadow-sm sm:w-auto"
           >
             Close
-          </button>
+          </Button>
         </div>
       }
     >
@@ -143,7 +145,8 @@ export function PendingSubscriptionsModal({
                   />
               </div>
                 <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
-                  <button
+                  <Button
+                    variant="primary"
                     onClick={() => runSubscriptionAction(
                       noti,
                       'confirm',
@@ -151,32 +154,34 @@ export function PendingSubscriptionsModal({
                     )}
                     disabled={hideSensitive || isPending}
                     title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
-                    className="col-span-2 inline-flex min-h-10 min-w-0 cursor-pointer items-center justify-center whitespace-nowrap rounded-xl bg-primary px-4 py-2 text-center text-xs font-bold text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:cursor-wait disabled:opacity-70 sm:col-span-1 sm:min-h-9 sm:flex-initial sm:rounded-lg sm:px-3 sm:py-1.5"
+                    className="col-span-2 min-h-10 min-w-0 whitespace-nowrap rounded-xl px-4 py-2 shadow-sm disabled:cursor-wait disabled:opacity-70 sm:col-span-1 sm:min-h-9 sm:flex-initial sm:rounded-lg sm:px-3 sm:py-1.5"
                   >
                     {pendingAction === 'confirm'
                       ? <span className="flex items-center justify-center gap-1.5"><Loader2 className="size-3 animate-spin" /> Confirming…</span>
                       : 'Confirm Paid'}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
                     onClick={() => runSubscriptionAction(noti, 'discard', () => onDiscardSubscription(noti))}
                     disabled={hideSensitive || isPending}
                     title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
-                    className="inline-flex min-h-10 min-w-0 cursor-pointer items-center justify-center whitespace-nowrap rounded-xl border border-slate-500/10 bg-slate-500/10 px-3 py-2 text-center text-xs font-bold text-slate-400 transition duration-150 hover:bg-slate-500/20 disabled:cursor-wait disabled:opacity-70 sm:min-h-9 sm:flex-initial sm:rounded-lg sm:py-1.5"
+                    className="min-h-10 min-w-0 whitespace-nowrap rounded-xl border-border/50 bg-muted/30 px-3 py-2 text-muted-foreground disabled:cursor-wait disabled:opacity-70 sm:min-h-9 sm:flex-initial sm:rounded-lg sm:py-1.5"
                   >
                     {pendingAction === 'discard'
                       ? <span className="flex items-center justify-center gap-1.5"><Loader2 className="size-3 animate-spin" /> Discarding…</span>
                       : 'Discard'}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="danger"
                     onClick={() => runSubscriptionAction(noti, 'remove', () => onRemoveSubscription(noti.recurringPaymentId))}
                     disabled={hideSensitive || isPending}
                     title={hideSensitive ? 'Show sensitive information to change bills' : undefined}
-                    className="inline-flex min-h-10 min-w-0 cursor-pointer items-center justify-center whitespace-nowrap rounded-xl border border-orange-500/10 bg-orange-500/5 px-3 py-2 text-center text-xs font-semibold text-orange-500 transition duration-150 hover:bg-orange-500/10 disabled:cursor-wait disabled:opacity-70 sm:min-h-9 sm:flex-initial sm:rounded-lg sm:py-1.5"
+                    className="min-h-10 min-w-0 whitespace-nowrap rounded-xl px-3 py-2 disabled:cursor-wait disabled:opacity-70 sm:min-h-9 sm:flex-initial sm:rounded-lg sm:py-1.5"
                   >
                     {pendingAction === 'remove'
                       ? <span className="flex items-center justify-center gap-1.5"><Loader2 className="size-3 animate-spin" /> Removing…</span>
                       : 'Remove'}
-                  </button>
+                  </Button>
                 </div>
             </div>
           </div>

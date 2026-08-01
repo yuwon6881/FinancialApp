@@ -8,6 +8,8 @@ import { formatCurrencyVal } from '../../lib/utils'
 import { BottomSheet } from '../ui/BottomSheet'
 import { DatePicker } from '../ui/DatePicker'
 import { SwipeableRow } from '../ui/SwipeableRow'
+import { Button } from '../ui/Button'
+import { FormField } from '../ui/FormField'
 import type { TransactionPrefillDraft } from './TransactionFormSheet'
 
 interface Props {
@@ -19,8 +21,6 @@ interface Props {
   onClose: () => void
   onUseResult: (draft: TransactionPrefillDraft) => void
 }
-
-const inputClassName = 'w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground shadow-xs outline-none transition hover:border-border/80 focus:border-ring focus:ring-2 focus:ring-ring/20'
 
 function receiptQuantity(item: ReceiptSplitItem): number {
   return Math.max(1, Math.floor(item.quantity))
@@ -113,13 +113,6 @@ export function ReceiptSplitSheet({
     closeAndClear()
   }
 
-  const updateItem = (index: number, update: Partial<ReceiptSplitItem>) => {
-    setReceipt(current => current ? {
-      ...current,
-      items: current.items.map((item, itemIndex) => itemIndex === index ? { ...item, ...update } : item),
-    } : current)
-  }
-
   const updatePrice = (index: number, value: string) => {
     setReceipt(current => {
       if (!current) return current
@@ -178,17 +171,18 @@ export function ReceiptSplitSheet({
       maxWidthClassName="max-w-3xl"
       footer={receipt ? (
         <div className="flex gap-3">
-          <button type="button" onClick={closeAndClear} className="flex-1 rounded-xl border border-border py-2.5 text-xs font-bold hover:bg-muted cursor-pointer">
+          <Button variant="outline" type="button" onClick={closeAndClear} className="flex-1 rounded-xl py-2.5">
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
             type="button"
             disabled={!canUse}
             onClick={useResult}
-            className="flex-1 rounded-xl bg-primary py-2.5 text-xs font-bold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer"
+            className="flex-1 rounded-xl py-2.5"
           >
             Use This Amount
-          </button>
+          </Button>
         </div>
       ) : undefined}
     >
@@ -212,24 +206,27 @@ export function ReceiptSplitSheet({
               <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
             </summary>
             <div className="grid gap-3 border-t border-border/50 p-3.5 sm:grid-cols-[minmax(0,2fr)_minmax(12rem,1fr)]">
-              <label className={`min-w-0 text-xs font-semibold text-muted-foreground ${receipt.fieldConfidence.description < 0.65 ? 'text-amber-600 dark:text-amber-400' : ''}`}>
-                Description
+              <FormField
+                label="Description"
+                labelClassName={receipt.fieldConfidence.description < 0.65 ? 'text-amber-600 dark:text-amber-400' : undefined}
+              >
                 <Input
                   aria-label="Description"
                   value={receipt.description}
                   onChange={event => setReceipt({ ...receipt, description: event.target.value })}
-                  className={`mt-1 ${inputClassName}`}
                 />
-              </label>
-              <label className={`min-w-0 text-xs font-semibold text-muted-foreground ${receipt.fieldConfidence.date < 0.65 ? 'text-amber-600 dark:text-amber-400' : ''}`}>
-                Date
+              </FormField>
+              <FormField
+                label="Date"
+                labelClassName={receipt.fieldConfidence.date < 0.65 ? 'text-amber-600 dark:text-amber-400' : undefined}
+              >
                 <DatePicker
                   value={receipt.date ?? ''}
                   onChange={value => setReceipt({ ...receipt, date: value || null })}
-                  className="mt-1 w-full"
+                  className="w-full"
                   align="right"
                 />
-              </label>
+              </FormField>
             </div>
           </details>
 
@@ -265,7 +262,7 @@ export function ReceiptSplitSheet({
                 <button
                   type="button"
                   onClick={() => removeItem(index)}
-                  className="flex h-full w-full items-center justify-center gap-1 bg-red-500 px-3 text-[11px] font-bold text-destructive-foreground cursor-pointer rounded-r-2xl"
+                  className="flex h-full w-full items-center justify-center gap-1 bg-destructive px-3 text-[11px] font-bold text-destructive-foreground cursor-pointer rounded-r-2xl"
                   aria-label={`Delete ${item.name || `item ${index + 1}`}`}
                 >
                   <Trash2 className="size-4" /> Delete
@@ -291,13 +288,9 @@ export function ReceiptSplitSheet({
                   contentClassName={`rounded-2xl p-3 sm:p-4 bg-card ${item.confidence < 0.65 ? 'before:absolute before:inset-0 before:bg-amber-500/10 before:rounded-2xl before:pointer-events-none relative' : ''}`}
                 >
                   <div className="relative space-y-3">
-                    <Input
-                      aria-label={`Item ${index + 1} name`}
-                      value={item.name}
-                      onChange={event => updateItem(index, { name: event.target.value })}
-                      placeholder="Item name"
-                      className={inputClassName}
-                    />
+                    <h4 className="min-w-0 px-1 text-sm font-bold text-foreground">
+                      {item.name.trim() || `Item ${index + 1}`}
+                    </h4>
 
                     <div className="flex items-center justify-between gap-3 rounded-xl bg-blue-500/6 px-3 py-2.5">
                       <div className="min-w-0">
@@ -326,7 +319,8 @@ export function ReceiptSplitSheet({
                             value={inputNumber(unitPrice)}
                             onChange={event => updatePrice(index, event.target.value)}
                             disabled={!priceUnlocked}
-                            className="min-w-0 flex-1 rounded-lg border border-border bg-background px-2 py-1.5 text-xs font-bold text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-60"
+                            controlSize="sm"
+                            className="min-w-0 flex-1 font-bold"
                           />
                           <button
                             type="button"

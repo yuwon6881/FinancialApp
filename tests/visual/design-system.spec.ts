@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
-import type { WishlistItem } from '../../src/types'
+import type { VaultDocument, WishlistItem } from '../../src/types'
 
 const transaction = {
   id: 'tx-visual-1',
@@ -9,6 +9,43 @@ const transaction = {
   ledgerCategory: 'Essentials',
   amount: -86.4,
 }
+
+const vaultDocuments: VaultDocument[] = [
+  {
+    id: 1,
+    originalFileName: '2026-tax-return.pdf',
+    contentType: 'application/pdf',
+    sizeBytes: 245_760,
+    taxYear: 2026,
+    notes: 'Annual tax filing',
+    transactionId: null,
+    uploadedAt: '2026-07-29T00:00:00Z',
+    retentionUntil: '2033-12-31',
+    reliefCategory: null,
+    amount: 1_250,
+    amountCurrency: 'MYR',
+    amountStatus: 'Confirmed',
+    amountConfidence: null,
+    amountExtractionMessage: null,
+  },
+  {
+    id: 2,
+    originalFileName: 'medical-receipt.png',
+    contentType: 'image/png',
+    sizeBytes: 98_304,
+    taxYear: 2026,
+    notes: null,
+    transactionId: null,
+    uploadedAt: '2026-07-28T00:00:00Z',
+    retentionUntil: '2033-12-31',
+    reliefCategory: null,
+    amount: 180,
+    amountCurrency: 'MYR',
+    amountStatus: 'Confirmed',
+    amountConfidence: null,
+    amountExtractionMessage: null,
+  },
+]
 
 const setting = {
   targetStabilityFund: 10_000,
@@ -129,7 +166,7 @@ async function fulfill(route: Route, body: unknown, status = 200) {
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
 }
 
-async function mockApi(page: Page, options: { registered?: boolean; failStatus?: boolean; wishlist?: WishlistItem[] } = {}) {
+async function mockApi(page: Page, options: { registered?: boolean; failStatus?: boolean; wishlist?: WishlistItem[]; documents?: VaultDocument[] } = {}) {
   const darkMode = test.info().project.name.endsWith('-dark')
   const themedBootstrap = {
     ...bootstrap,
@@ -152,7 +189,13 @@ async function mockApi(page: Page, options: { registered?: boolean; failStatus?:
       })
     }
     if (pathname.endsWith('/bootstrap')) return fulfill(route, themedBootstrap)
-    if (pathname.endsWith('/documents/usage')) return fulfill(route, { totalBytes: 0, documentCount: 0 })
+    if (pathname.endsWith('/documents/usage')) {
+      const documents = options.documents ?? []
+      return fulfill(route, {
+        totalBytes: documents.reduce((total, document) => total + document.sizeBytes, 0),
+        documentCount: documents.length,
+      })
+    }
     if (pathname.endsWith('/documents/years')) return fulfill(route, [2026])
     if (pathname.endsWith('/documents/expired')) return fulfill(route, [])
     if (pathname.includes('/documents/relief-categories')) return fulfill(route, [])
@@ -164,7 +207,10 @@ async function mockApi(page: Page, options: { registered?: boolean; failStatus?:
         categories: [],
       })
     }
-    if (pathname.endsWith('/documents')) return fulfill(route, { items: [], totalCount: 0 })
+    if (pathname.endsWith('/documents')) {
+      const documents = options.documents ?? []
+      return fulfill(route, { items: documents, totalCount: documents.length })
+    }
     if (pathname.endsWith('/wishlist')) return fulfill(route, options.wishlist ?? [])
     if (pathname.endsWith('/transactions')) {
       return fulfill(route, url.searchParams.has('page')
@@ -282,6 +328,58 @@ test('production routes do not create viewport horizontal overflow', async ({ pa
   }
 })
 
+test('vault controls stay beside the results and selection actions do not shift them', async ({ page }) => {
+  await establishSession(page)
+  await mockApi(page, { documents: vaultDocuments })
+  const vaultUrl = process.env.VAULT_VISUAL_BASE_URL
+    ? new URL('/vault', process.env.VAULT_VISUAL_BASE_URL).toString()
+    : '/vault'
+  await page.goto(vaultUrl, { waitUntil: 'domcontentloaded' })
+
+  const documentsRegion = page.getByRole('region', { name: 'Your documents' })
+  await expect(documentsRegion).toBeVisible()
+  await expect(documentsRegion.getByPlaceholder('Search file names or notes...')).toHaveCount(0)
+  await expect(documentsRegion.getByRole('combobox', { name: 'Sort vault documents' })).toBeVisible()
+  await expect(documentsRegion.getByRole('combobox', { name: 'Filter by tax year' })).toBeVisible()
+
+  const filterBar = documentsRegion.getByTestId('document-filter-bar')
+  const toolbar = documentsRegion.getByTestId('document-selection-toolbar')
+  const results = documentsRegion.getByTestId('document-results')
+  const selectAll = documentsRegion.getByRole('checkbox', { name: 'Select all documents on this page' })
+  const before = await page.evaluate(() => {
+    const filter = document.querySelector<HTMLElement>('[data-testid="document-filter-bar"]')!
+    const selection = document.querySelector<HTMLElement>('[data-testid="document-selection-toolbar"]')!
+    const documentResults = document.querySelector<HTMLElement>('[data-testid="document-results"]')!
+    return {
+      filterBottom: filter.getBoundingClientRect().bottom,
+      toolbarTop: selection.getBoundingClientRect().top,
+      toolbarHeight: selection.getBoundingClientRect().height,
+      resultsTop: documentResults.getBoundingClientRect().top,
+    }
+  })
+  expect(before.toolbarTop - before.filterBottom).toBeLessThanOrEqual(16)
+
+  await selectAll.check()
+  await expect(documentsRegion.getByRole('button', { name: 'Download selected documents' })).toBeVisible()
+  await expect(documentsRegion.getByRole('button', { name: 'Delete selected documents' })).toBeVisible()
+  await expect(toolbar.getByText('2 selected')).toBeVisible()
+
+  const after = await page.evaluate(() => {
+    const selection = document.querySelector<HTMLElement>('[data-testid="document-selection-toolbar"]')!
+    const documentResults = document.querySelector<HTMLElement>('[data-testid="document-results"]')!
+    return {
+      toolbarTop: selection.getBoundingClientRect().top,
+      toolbarHeight: selection.getBoundingClientRect().height,
+      resultsTop: documentResults.getBoundingClientRect().top,
+    }
+  })
+  expect(after.toolbarTop).toBe(before.toolbarTop)
+  expect(after.toolbarHeight).toBe(before.toolbarHeight)
+  expect(after.resultsTop).toBe(before.resultsTop)
+  await expect(filterBar).toBeVisible()
+  await expect(results).toBeVisible()
+})
+
 test('rewards rail responds to a desktop mouse wheel and releases page scrolling at its edge', async ({ page }) => {
   const rewardItems: WishlistItem[] = Array.from({ length: 5 }, (_, index) => ({
     id: index + 1,
@@ -311,7 +409,8 @@ test('rewards rail responds to a desktop mouse wheel and releases page scrolling
   if (!box) throw new Error('Rewards rail did not have a layout box')
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
 
-  await page.mouse.wheel(0, 240)
+  await expect(rail).toHaveCSS('scroll-snap-type', 'none')
+  await page.mouse.wheel(0, 100)
   await expect.poll(() => rail.evaluate(element => element.scrollLeft)).toBeGreaterThan(0)
 
   await rail.evaluate(element => { element.scrollLeft = element.scrollWidth })

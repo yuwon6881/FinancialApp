@@ -832,6 +832,21 @@ html {
     display: none;
 }
 
+/* Wide cards sit hundreds of pixels apart, so proximity snapping can undo a normal 100px mouse
+   wheel tick before it reaches the next snap point. Keep the polished snap on touch devices, but
+   let fine-pointer desktop rails retain every wheel/trackpad delta. */
+.horizontal-rail-control {
+    display: none;
+}
+@media (hover: hover) and (pointer: fine) {
+    .horizontal-rail {
+        scroll-snap-type: none;
+    }
+    .horizontal-rail-control {
+        display: grid;
+    }
+}
+
 /* Apple-like momentum scrolling container.
    No `will-change: scroll-position`: held permanently it pins a compositing layer and
    its memory for the container's whole lifetime, which is a cost on every frame rather

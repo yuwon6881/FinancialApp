@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, Download, Loader2, ShieldCheck, Trash2, UploadCloud } from 'lucide-react'
+import { AlertTriangle, Download, Loader2, ShieldCheck, UploadCloud } from 'lucide-react'
 import { DocumentUploadSheet } from './documents/DocumentUploadSheet'
 import { useDocumentsView } from './documents/view/useDocumentsView'
 import { CustomConfirmModal } from './ui/CustomConfirmModal'
@@ -32,8 +32,6 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     isInitialLoading,
     taxYear,
     setTaxYear,
-    search,
-    setSearch,
     reliefCategory,
     setReliefCategory,
     sortOrder,
@@ -73,7 +71,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
 
   useEffect(() => {
     setSelectedIds(new Set())
-  }, [taxYear, search, reliefCategory, sortOrder, pageSize])
+  }, [taxYear, reliefCategory, sortOrder, pageSize])
 
   if (isInitialLoading) {
     return <CycleSkeleton variant="documents" />
@@ -149,7 +147,8 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
-            variant="unstyled"
+            variant="outline"
+            size="lg"
             type="button"
             disabled={isDownloading || availableYears.length === 0}
             onClick={() => {
@@ -158,15 +157,16 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
                 showToast('The ZIP archive could not be prepared.', 'Download Failed', 'error'))
                 .finally(() => setIsDownloading(false))
             }}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5 text-xs font-bold disabled:opacity-50"
+            className="rounded-xl bg-card text-xs"
           >
             <Download className="size-4" /> {isDownloading ? 'Preparing ZIP…' : taxYear ? `Download ${taxYear}` : 'Download all'}
           </Button>
           <Button
-            variant="unstyled"
+            variant="primary"
+            size="lg"
             type="button"
             onClick={() => setIsUploadSheetOpen(true)}
-            className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-md transition hover:bg-primary/90"
+            className="shrink-0 rounded-xl text-xs shadow-md"
           >
             <UploadCloud className="size-4" />
             Upload
@@ -188,20 +188,8 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
         </section>
       )}
 
-      {/* Panel */}
+      {/* Vault insights */}
       <div className="rounded-2xl border border-border/60 bg-card p-3 shadow-xs sm:p-4">
-        <DocumentFilterBar
-          search={search}
-          setSearch={setSearch}
-          taxYear={taxYear}
-          setTaxYear={setTaxYear}
-          availableYears={availableYears}
-          sortOrder={sortOrder}
-          setSortOrder={setSortOrder}
-          reliefCategoryLabel={reliefCategories.find(category => category.id === reliefCategory)?.name}
-          onClearReliefCategory={() => setReliefCategory(undefined)}
-        />
-
         <StorageUsageMeter usage={usage} />
 
         <TaxReliefOverview
@@ -214,6 +202,29 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
           onSelectReliefCategory={setReliefCategory}
           onAddCategory={addReliefCategory}
           onUpdateCategory={updateReliefCategory}
+        />
+      </div>
+
+      {/* Documents */}
+      <section className="rounded-2xl border border-border/60 bg-card p-3 shadow-xs sm:p-4" aria-labelledby="vault-documents-heading">
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <div>
+            <h3 id="vault-documents-heading" className="text-sm font-black text-foreground">Your documents</h3>
+            <p className="mt-0.5 text-[10px] text-muted-foreground">Filter, review, and manage the files in your Vault.</p>
+          </div>
+          <span className="shrink-0 rounded-lg bg-muted px-2.5 py-1.5 text-[10px] font-bold text-muted-foreground tabular-nums">
+            {totalCount} file{totalCount === 1 ? '' : 's'}
+          </span>
+        </div>
+
+        <DocumentFilterBar
+          taxYear={taxYear}
+          setTaxYear={setTaxYear}
+          availableYears={availableYears}
+          sortOrder={sortOrder}
+          setSortOrder={setSortOrder}
+          reliefCategoryLabel={reliefCategories.find(category => category.id === reliefCategory)?.name}
+          onClearReliefCategory={() => setReliefCategory(undefined)}
         />
 
         {pendingReliefCategories.size > 0 && (
@@ -245,46 +256,9 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
           </div>
         )}
 
-        {selectedIds.size > 0 && (
-          <div className="mb-3 flex flex-col gap-3 rounded-xl border border-destructive/25 bg-destructive/5 p-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <span className="text-xs font-bold">{selectedIds.size} selected</span>
-              {selectedIds.size > 100 && <p className="mt-0.5 text-[10px] text-destructive">Select up to 100 documents at a time.</p>}
-            </div>
-            <div className="flex w-full flex-wrap justify-start gap-2 sm:w-auto sm:justify-end">
-              <Button
-                variant="unstyled"
-                type="button"
-                disabled={isDownloading || selectedIds.size > 100}
-                onClick={() => {
-                  const idsToDownload = [...selectedIds]
-                  setIsDownloading(true)
-                  void documentsApi.downloadSelectedDocumentArchive(idsToDownload)
-                    .then(() => {
-                      setSelectedIds(current => {
-                        const next = new Set(current)
-                        idsToDownload.forEach(id => next.delete(id))
-                        return next
-                      })
-                      showToast(`${idsToDownload.length} document${idsToDownload.length === 1 ? '' : 's'} downloaded.`, 'Download Complete', 'success')
-                    })
-                    .catch(() => showToast('The selected documents could not be downloaded.', 'Download Failed', 'error'))
-                    .finally(() => setIsDownloading(false))
-                }}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Download className="size-3.5" /> {isDownloading ? 'Preparing ZIP…' : 'Download selected'}
-              </Button>
-              <Button variant="unstyled" type="button" disabled={selectedIds.size > 100} onClick={() => setIsBulkDeleteOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-destructive px-3 py-2 text-xs font-bold text-destructive-foreground disabled:cursor-not-allowed disabled:opacity-50">
-                <Trash2 className="size-3.5" /> Delete selected
-              </Button>
-            </div>
-          </div>
-        )}
-
         <div className="relative" aria-busy={isLoading}>
           {isLoading && documents.length > 0 && (
-            <div className="absolute inset-0 z-10 flex items-start justify-center pt-24 pointer-events-none">
+            <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
               <div className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-card/90 px-3 py-2 text-[11px] font-semibold text-muted-foreground shadow-lg backdrop-blur-sm">
                 <Loader2 className="size-3.5 animate-spin text-accent-ink" aria-hidden="true" />
                 Updating documents…
@@ -306,6 +280,23 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
               onToggleSelectAll={toggleSelectAllVisible}
               allVisibleSelected={allVisibleSelected}
               someVisibleSelected={someVisibleSelected}
+              isDownloadingSelected={isDownloading}
+              onDownloadSelected={() => {
+                const idsToDownload = [...selectedIds]
+                setIsDownloading(true)
+                void documentsApi.downloadSelectedDocumentArchive(idsToDownload)
+                  .then(() => {
+                    setSelectedIds(current => {
+                      const next = new Set(current)
+                      idsToDownload.forEach(id => next.delete(id))
+                      return next
+                    })
+                    showToast(`${idsToDownload.length} document${idsToDownload.length === 1 ? '' : 's'} downloaded.`, 'Download Complete', 'success')
+                  })
+                  .catch(() => showToast('The selected documents could not be downloaded.', 'Download Failed', 'error'))
+                  .finally(() => setIsDownloading(false))
+              }}
+              onDeleteSelected={() => setIsBulkDeleteOpen(true)}
               currency={currency}
               pendingReliefCategories={pendingReliefCategories}
               onReliefCategoryChange={stageReliefCategory}
@@ -332,7 +323,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
             )}
           </div>
         </div>
-      </div>
+      </section>
 
       <DocumentUploadSheet
         isOpen={isUploadSheetOpen}

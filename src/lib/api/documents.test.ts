@@ -143,14 +143,14 @@ describe('documents API', () => {
       .mockResolvedValueOnce({ ...okJson(undefined), status: 204 })
     vi.stubGlobal('fetch', fetchMock)
 
-    await listDocuments(2026, 'tx-1', 'tax', 50, 25, 'education', 'name-asc')
+    await listDocuments(2026, 'tx-1', 50, 25, 'education', 'name-asc')
     await updateDocument(4, { transactionId: null })
     await deleteDocument(4)
 
     const listUrl = String(fetchMock.mock.calls[0][0])
     expect(listUrl).toContain('taxYear=2026')
     expect(listUrl).toContain('transactionId=tx-1')
-    expect(listUrl).toContain('search=tax')
+    expect(listUrl).not.toContain('search=')
     expect(listUrl).toContain('reliefCategory=education')
     expect(listUrl).toContain('sort=name-asc')
     expect(fetchMock.mock.calls[1][1].method).toBe('PATCH')
@@ -214,21 +214,21 @@ describe('documents API', () => {
       const fetchMock = vi.fn().mockResolvedValue(okJson({ items: [], totalCount: 0 }))
       vi.stubGlobal('fetch', fetchMock)
 
-      const first = listDocuments(2026, undefined, 'receipt', 0, 50)
-      const second = listDocuments(2026, undefined, 'receipt', 0, 50)
+      const first = listDocuments(2026, undefined, 0, 50)
+      const second = listDocuments(2026, undefined, 0, 50)
 
       await Promise.all([first, second])
       expect(fetchMock).toHaveBeenCalledTimes(1)
     })
 
-    it('different tax years, searches, and pages do not collide', async () => {
+    it('different tax years, offsets, and page sizes do not collide', async () => {
       const fetchMock = vi.fn().mockResolvedValue(okJson({ items: [], totalCount: 0 }))
       vi.stubGlobal('fetch', fetchMock)
 
-      await listDocuments(2025, undefined, 'receipt', 0, 50)
-      await listDocuments(2026, undefined, 'receipt', 0, 50)
-      await listDocuments(2025, undefined, 'invoice', 0, 50)
-      await listDocuments(2025, undefined, 'receipt', 50, 50)
+      await listDocuments(2025, undefined, 0, 50)
+      await listDocuments(2026, undefined, 0, 50)
+      await listDocuments(2025, undefined, 50, 50)
+      await listDocuments(2025, undefined, 0, 25)
 
       expect(fetchMock).toHaveBeenCalledTimes(4)
     })

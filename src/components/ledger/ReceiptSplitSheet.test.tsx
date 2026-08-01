@@ -84,6 +84,13 @@ describe('ReceiptSplitSheet', () => {
     expect(onClear).toHaveBeenCalledWith('split-1')
   })
 
+  it('renders scanned item names as titles instead of editable fields', () => {
+    renderSheet()
+
+    expect(screen.getByRole('heading', { name: 'Food' })).toBeTruthy()
+    expect(screen.queryByRole('textbox', { name: 'Item 1 name' })).toBeNull()
+  })
+
   it('keeps prices locked until the matching settings-style lock button is used', () => {
     renderSheet()
     fireEvent.click(screen.getAllByText('Price and charge breakdown')[0])

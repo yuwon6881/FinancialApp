@@ -161,7 +161,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             onClick={() => setActiveTab(id)}
             className={`relative min-w-0 px-1.5 pb-3 text-left text-xs font-bold transition cursor-pointer sm:shrink-0 sm:px-1 sm:text-center ${
               activeTab === id
-                ? 'text-blue-500 font-extrabold'
+                ? 'text-accent-ink font-extrabold'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -169,7 +169,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             {activeTab === id && (
               <m.div
                 layoutId="activeSettingsTabLine"
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full"
                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}
               />
             )}
@@ -450,7 +450,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition cursor-pointer ${
                     view.isReviewingCleanup
                       ? 'border-blue-500/35 bg-blue-500/5 text-blue-600 dark:text-blue-400'
-                      : 'text-blue-600 dark:text-blue-400 bg-blue-500/5 border-blue-500/30 hover:bg-primary/90/10 disabled:opacity-45 disabled:cursor-not-allowed'
+                      : 'text-blue-600 dark:text-blue-400 bg-blue-500/5 border-blue-500/30 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed'
                   }`}
                 >
                   {view.isReviewingCleanup ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
@@ -580,7 +580,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                                   onClick={() => void view.handleApplyCleanupSuggestion(suggestion)}
                                   disabled={!props.onApplyCategoryCleanupSuggestion || view.applyingCleanupId !== null || isConsolidateDisabled}
                                   title={!props.onApplyCategoryCleanupSuggestion ? 'Category cleanup is unavailable' : isConsolidateDisabled ? 'Choose a category first' : 'Accept'}
-                                  className="inline-flex h-8 w-20 shrink-0 items-center justify-center rounded-lg border border-blue-500/30 bg-blue-500/5 px-3 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-primary/90/10 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="inline-flex h-8 w-20 shrink-0 items-center justify-center rounded-lg border border-blue-500/30 bg-blue-500/5 px-3 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   {isApplyingThis ? <Loader2 className="size-3 animate-spin" /> : 'Accept'}
                                 </button>

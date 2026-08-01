@@ -221,25 +221,22 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
 
                 {/* Description — full width */}
                 <div className="space-y-1.5 relative">
-                  <div className="flex items-center justify-between gap-2">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Description</label>
-                    {!isTransferDraft && (
-                      <button
-                        type="button"
-                        onMouseDown={e => e.preventDefault()}
-                        onClick={() => void suggestions.requestNoteSuggestions(description.trim())}
-                        disabled={suggestions.isSuggestingNote || description.trim().length < 2}
-                        title={description.trim().length < 2 ? 'Enter a description first' : 'Suggest cleaner notes'}
-                        className="inline-flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/5 px-2 py-0.5 text-[9px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed transition cursor-pointer"
-                      >
-                        {suggestions.isSuggestingNote ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
-                        AI
-                      </button>
-                    )}
-                  </div>
+                  {!isTransferDraft && (
+                    <button
+                      type="button"
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={() => void suggestions.requestNoteSuggestions(description.trim())}
+                      disabled={suggestions.isSuggestingNote || description.trim().length < 2}
+                      title={description.trim().length < 2 ? 'Enter a description first' : 'Suggest cleaner notes'}
+                      className="absolute right-0 top-0 z-10 inline-flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/5 px-2 py-0.5 text-[9px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed transition cursor-pointer"
+                    >
+                      {suggestions.isSuggestingNote ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
+                      AI
+                    </button>
+                  )}
                   {/* rounded-xl matches the input inside: the beam inherits the host's
                       radius, and a square host would corner the trace off the field. */}
-                  <FormField label="Description" labelClassName="sr-only" required error={errors.description}>
+                  <FormField label="Description" labelClassName="pr-10 text-[10px] uppercase tracking-wider" required error={errors.description}>
                     <div ref={descriptionAnchorRef} className={`relative rounded-xl ${suggestions.isSuggestingNote ? 'perimeter-beam-host' : ''}`}>
                       {suggestions.isSuggestingNote && <PerimeterBeam size={40} />}
                       <Input
@@ -352,10 +349,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
 
                 {isTransferDraft ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-                        Source (From)
-                      </label>
+                    <FormField label="Source (from)" labelClassName="text-[10px] uppercase tracking-wider">
                       <CustomSelect
                         ariaLabel="Transfer source category"
                         value={transferSource}
@@ -370,12 +364,9 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                         options={TRANSFER_BUCKETS.map(option => ({ value: option, label: option }))}
                         className="w-full"
                       />
-                    </div>
+                    </FormField>
 
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-                        Target (To)
-                      </label>
+                    <FormField label="Target (to)" labelClassName="text-[10px] uppercase tracking-wider">
                       <CustomSelect
                         ariaLabel="Transfer target category"
                         value={transferTarget}
@@ -383,28 +374,23 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                         options={TRANSFER_BUCKETS.filter(option => option !== transferSource).map(option => ({ value: option, label: option }))}
                         className="w-full"
                       />
-                    </div>
+                    </FormField>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-                          Category
-                        </label>
-                        {suggestions.isSuggestingCategory ? (
-                          <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-blue-500 whitespace-nowrap shrink-0">
-                            <Loader2 className="size-3 animate-spin" /> Suggesting
-                          </span>
-                        ) : suggestions.categorySuggestionUnavailable ? (
-                          <span className="text-[9px] font-semibold text-amber-600 dark:text-amber-500 whitespace-nowrap shrink-0">
-                            AI unavailable
-                          </span>
-                        ) : null}
-                      </div>
+                    <div className="relative">
+                      {suggestions.isSuggestingCategory ? (
+                        <span className="absolute right-0 top-0 inline-flex items-center gap-1 text-[9px] font-semibold text-blue-500 whitespace-nowrap">
+                          <Loader2 className="size-3 animate-spin" /> Suggesting
+                        </span>
+                      ) : suggestions.categorySuggestionUnavailable ? (
+                        <span className="absolute right-0 top-0 text-[9px] font-semibold text-amber-600 dark:text-amber-500 whitespace-nowrap">
+                          AI unavailable
+                        </span>
+                      ) : null}
                       <FormField
                         label="Category"
-                        labelClassName="sr-only"
+                        labelClassName="pr-20 text-[10px] uppercase tracking-wider"
                         required
                         error={errors.category}
                         errorClassName="text-[10px]"
@@ -486,7 +472,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                   <button
                     onClick={() => handleStartEdit(draft)}
                     disabled={hideSensitive}
-                    className="flex-1 flex flex-col items-center justify-center gap-1 bg-blue-500 text-on-vivid text-[11px] font-bold active:bg-blue-400 transition disabled:opacity-50 disabled:pointer-events-none"
+                    className="flex-1 flex flex-col items-center justify-center gap-1 bg-primary text-primary-foreground text-[11px] font-bold active:bg-primary/80 transition disabled:opacity-50 disabled:pointer-events-none"
                   >
                     <Edit2 className="size-4" />
                     Edit
@@ -494,7 +480,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                   <button
                     onClick={() => { if (!hideSensitive) onDeleteDraftTransaction(draft.id) }}
                     disabled={hideSensitive}
-                    className="flex-1 flex flex-col items-center justify-center gap-1 bg-red-500 text-destructive-foreground text-[11px] font-bold active:bg-red-400 transition disabled:opacity-50 disabled:pointer-events-none"
+                    className="flex-1 flex flex-col items-center justify-center gap-1 bg-destructive text-destructive-foreground text-[11px] font-bold active:bg-destructive/80 transition disabled:opacity-50 disabled:pointer-events-none"
                   >
                     <Trash2 className="size-4" />
                     Delete
@@ -514,7 +500,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                   <button
                     onClick={() => { if (!hideSensitive) onDeleteDraftTransaction(draft.id) }}
                     disabled={hideSensitive}
-                    className="p-2 hover:bg-red-500/10 rounded-xl text-muted-foreground hover:text-red-500 cursor-pointer transition select-none disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="p-2 hover:bg-destructive/10 rounded-xl text-muted-foreground hover:text-destructive cursor-pointer transition select-none disabled:opacity-40 disabled:cursor-not-allowed"
                     title={hideSensitive ? 'Unhide balances to edit' : 'Remove from batch list'}
                   >
                     <Trash2 className="size-4" />
@@ -547,15 +533,16 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
 
       {/* Prominent full-width add-entry action */}
       {onAddAnother && (
-        <button
+        <Button
+          variant="outline"
           onClick={onAddAnother}
-          className="w-full flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl border-2 border-dashed border-blue-500/40 bg-blue-500/5 hover:bg-blue-500/10 hover:border-blue-500/60 text-blue-600 dark:text-blue-400 font-bold text-sm cursor-pointer transition select-none active:scale-[0.99]"
+          className="w-full gap-2.5 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 px-4 py-4 text-sm text-accent-ink hover:border-primary/60 hover:bg-primary/10 active:scale-[0.99]"
         >
           <span className="flex items-center justify-center size-7 rounded-full bg-primary text-primary-foreground shadow-md shadow-primary/20">
             <Plus className="size-4" />
           </span>
           Add Another Entry
-        </button>
+        </Button>
       )}
 
     </div>

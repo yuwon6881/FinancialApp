@@ -4,6 +4,8 @@ import ts from 'typescript'
 
 const ROOT = process.cwd()
 const SRC = path.join(ROOT, 'src')
+const THEME_CSS = fs.readFileSync(path.join(SRC, 'index.css'), 'utf8')
+const PALETTE_NAMES = 'blue|indigo|sky|cyan|green|emerald|teal|lime|orange|red|rose|amber|yellow|violet|purple|fuchsia|pink|slate|gray|zinc|neutral'
 const CONTROL_IMPLEMENTATIONS = new Set([
   'src/components/ui/Input.tsx',
   'src/components/ui/Textarea.tsx',
@@ -154,6 +156,21 @@ for (const file of allSourceFiles(SRC)) {
     const prefix = themeText.slice(0, match.index)
     const line = prefix.split(/\r?\n/).length
     errors.push(`${fileName}:${line} Unapproved literal theme color "${match[0]}"; use a semantic token.`)
+  }
+
+  const malformedOpacityPattern = /\b(?:bg|text|border|ring|outline|fill|stroke|from|via|to|shadow)-[^\s'"`]+\/\d+\/\d+\b/g
+  for (const match of sourceText.matchAll(malformedOpacityPattern)) {
+    const prefix = sourceText.slice(0, match.index)
+    const line = prefix.split(/\r?\n/).length
+    errors.push(`${fileName}:${line} Malformed theme utility "${match[0]}"; use a single opacity modifier.`)
+  }
+
+  const paletteUtilityPattern = new RegExp(`\\b(?:bg|text|border|ring|outline|fill|stroke|from|via|to|shadow)-((?:${PALETTE_NAMES})-\\d{2,3})(?:/\\d+)?\\b`, 'g')
+  for (const match of sourceText.matchAll(paletteUtilityPattern)) {
+    if (THEME_CSS.includes(`--color-${match[1]}:`)) continue
+    const prefix = sourceText.slice(0, match.index)
+    const line = prefix.split(/\r?\n/).length
+    errors.push(`${fileName}:${line} Unmapped palette utility "${match[0]}"; map it to an Ayu theme token in src/index.css.`)
   }
 }
 

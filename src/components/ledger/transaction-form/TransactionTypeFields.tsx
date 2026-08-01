@@ -14,16 +14,20 @@ export function TransactionTypeFields({ txType, onChangeTxType, disabled = false
   }`
 
   return (
-    <div className="space-y-1 sm:col-span-2">
-      <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+    <fieldset className="min-w-0 space-y-1.5 sm:col-span-2">
+      <legend className="text-xs font-bold text-muted-foreground">
         Transaction Type
-      </label>
+      </legend>
       <div
+        role="radiogroup"
+        aria-label="Transaction type"
         className="flex flex-wrap sm:flex-nowrap gap-2"
         title={disabled ? 'Transaction type cannot be changed while editing. Delete and re-add to change it.' : undefined}
       >
         <button
           type="button"
+          role="radio"
+          aria-checked={txType === 'outflow'}
           disabled={disabled}
           onClick={() => onChangeTxType('outflow')}
           className={`${base} ${
@@ -36,6 +40,8 @@ export function TransactionTypeFields({ txType, onChangeTxType, disabled = false
         </button>
         <button
           type="button"
+          role="radio"
+          aria-checked={txType === 'inflow'}
           disabled={disabled}
           onClick={() => onChangeTxType('inflow')}
           className={`${base} ${
@@ -48,6 +54,8 @@ export function TransactionTypeFields({ txType, onChangeTxType, disabled = false
         </button>
         <button
           type="button"
+          role="radio"
+          aria-checked={txType === 'transfer'}
           disabled={disabled}
           onClick={() => onChangeTxType('transfer')}
           className={`${base} ${
@@ -59,6 +67,6 @@ export function TransactionTypeFields({ txType, onChangeTxType, disabled = false
           <RefreshCw className="size-3.5" /> Transfer
         </button>
       </div>
-    </div>
+    </fieldset>
   )
 }

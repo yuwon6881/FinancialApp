@@ -1,7 +1,7 @@
 import { Input } from '../../ui/Input'
 import { Checkbox } from '../../ui/Checkbox'
 import { useEffect, useRef, useState } from 'react'
-import { Check, Download, ExternalLink, FileArchive, FileCode, FileImage, FileText, Link2, ListChecks, Pencil, Trash2 } from 'lucide-react'
+import { Check, Download, ExternalLink, FileArchive, FileCode, FileImage, FileText, Link2, Pencil, Trash2 } from 'lucide-react'
 import type { TaxReliefCategoryDefinition, VaultDocument } from '../../../types'
 import { downloadDocument } from '../../../lib/api/documents'
 import { useAppPrefs, useAppUi } from '../../../contexts/AppContext'
@@ -21,6 +21,9 @@ interface DocumentListProps {
   onToggleSelectAll: () => void
   allVisibleSelected: boolean
   someVisibleSelected: boolean
+  isDownloadingSelected: boolean
+  onDownloadSelected: () => void
+  onDeleteSelected: () => void
   currency: string
   updateDocument: (
     id: number,
@@ -166,10 +169,7 @@ function SelectAllDocumentsControl({
   }, [someSelected])
 
   return (
-    <label className={`inline-flex w-fit items-center gap-2 rounded-xl border px-2.5 py-2 transition ${count > 0 ? 'cursor-pointer border-primary/25 bg-primary/5 hover:bg-primary/10' : 'border-border/50 bg-muted/20 opacity-60'}`}>
-      <span className="grid size-7 place-items-center rounded-lg bg-primary/15 text-primary" aria-hidden="true">
-        <ListChecks className="size-3.5" />
-      </span>
+    <label className={`inline-flex min-h-9 min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 transition ${count > 0 ? 'cursor-pointer hover:bg-muted' : 'opacity-60'}`}>
       <Checkbox
         ref={checkboxRef}
         checked={allSelected}
@@ -178,17 +178,16 @@ function SelectAllDocumentsControl({
         aria-label={allSelected ? 'Clear document selection on this page' : 'Select all documents on this page'}
         className="size-4 border-primary/50 bg-card accent-primary"
       />
-      <span className="pr-0.5 leading-tight">
-        <span className="block text-[10px] font-black uppercase tracking-wide text-foreground">Select page</span>
-        <span className="block text-[10px] text-muted-foreground">{count > 0 ? `${count} document${count === 1 ? '' : 's'} below` : 'No documents'}</span>
-      </span>
+      <span className="truncate text-[10px] font-black uppercase tracking-wide text-foreground">Select page</span>
     </label>
   )
 }
 
-export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds, toggleSelected, onToggleSelectAll, allVisibleSelected, someVisibleSelected, currency, updateDocument, reliefCategoriesByTaxYear, pendingReliefCategories, onReliefCategoryChange, onNavigateToTransaction }: DocumentListProps) {
+export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds, toggleSelected, onToggleSelectAll, allVisibleSelected, someVisibleSelected, isDownloadingSelected, onDownloadSelected, onDeleteSelected, currency, updateDocument, reliefCategoriesByTaxYear, pendingReliefCategories, onReliefCategoryChange, onNavigateToTransaction }: DocumentListProps) {
   const { showToast } = useAppUi()
   const [openingTransactionId, setOpeningTransactionId] = useState<string | null>(null)
+  const hasSelection = selectedIds.size > 0
+  const exceedsSelectionLimit = selectedIds.size > 100
   const downloadFailed = () =>
     showToast('The document could not be downloaded.', 'Download Failed', 'error')
   const openLinkedTransaction = async (transactionId: string) => {
@@ -203,14 +202,59 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
 
   return (
     <>
-      <div className="mb-3 flex items-center border-b border-border/50 pb-3">
-        <SelectAllDocumentsControl
-          count={documents.length}
-          allSelected={allVisibleSelected}
-          someSelected={someVisibleSelected}
-          onToggle={onToggleSelectAll}
-        />
+      <div data-testid="document-selection-toolbar" className={`mb-3 grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-xl border px-2.5 py-2 transition-colors sm:px-3 ${hasSelection ? 'border-primary/30 bg-primary/5' : 'border-border/60 bg-muted/20'}`}>
+        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2.5">
+          <SelectAllDocumentsControl
+            count={documents.length}
+            allSelected={allVisibleSelected}
+            someSelected={someVisibleSelected}
+            onToggle={onToggleSelectAll}
+          />
+          <span className="hidden h-5 w-px shrink-0 bg-border sm:block" aria-hidden="true" />
+          <p
+            className={`truncate text-[10px] font-semibold sm:text-xs ${exceedsSelectionLimit ? 'text-destructive' : hasSelection ? 'text-primary' : 'text-muted-foreground'}`}
+            aria-live="polite"
+          >
+            {hasSelection
+              ? `${selectedIds.size} selected${exceedsSelectionLimit ? ' · max 100' : ''}`
+              : `${documents.length} on this page`}
+          </p>
+        </div>
+
+        <div data-testid="document-selection-actions" className="flex w-20 shrink-0 items-center justify-end gap-1.5 sm:w-60">
+          {hasSelection && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                disabled={isDownloadingSelected || exceedsSelectionLimit}
+                onClick={onDownloadSelected}
+                aria-label={isDownloadingSelected ? 'Preparing selected document download' : 'Download selected documents'}
+                title="Download selected"
+                className="size-9 shrink-0 bg-card p-0 sm:size-auto sm:px-3"
+              >
+                <Download className={`size-3.5 ${isDownloadingSelected ? 'animate-pulse' : ''}`} aria-hidden="true" />
+                <span className="hidden sm:inline">{isDownloadingSelected ? 'Preparing…' : 'Download'}</span>
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                type="button"
+                disabled={exceedsSelectionLimit}
+                onClick={onDeleteSelected}
+                aria-label="Delete selected documents"
+                title="Delete selected"
+                className="size-9 shrink-0 p-0 sm:size-auto sm:px-3"
+              >
+                <Trash2 className="size-3.5" aria-hidden="true" />
+                <span className="hidden sm:inline">Delete</span>
+              </Button>
+            </>
+          )}
+        </div>
       </div>
+      <div data-testid="document-results">
       <div className="space-y-3 lg:hidden">
         {isLoading && documents.length === 0 ? (
           Array.from({ length: 3 }).map((_, index) => (
@@ -373,6 +417,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
           })}
         </DataTableBody>
       </DataTable>
+      </div>
       </div>
     </>
   )

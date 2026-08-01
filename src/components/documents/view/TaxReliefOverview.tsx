@@ -8,11 +8,10 @@ import { useAppUi } from '../../../contexts/AppContext'
 import { getErrorMessage } from '../../../lib/errors'
 import { formatCurrencyVal } from '../../../lib/utils'
 import { HorizontalRail } from '../../ui/HorizontalRail'
+import { FormField } from '../../ui/FormField'
 import { orderTaxReliefCategories } from '../../../lib/taxReliefOrdering'
 
 type CategoryInput = { name: string; limit: number; detail?: string }
-
-const FIELD_CLASS = 'w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/40'
 
 interface TaxReliefOverviewProps {
   summary: TaxYearReliefSummary | null
@@ -154,7 +153,7 @@ export function TaxReliefOverview({
             No categories are configured for this year yet. Use Manage limits to add the limits you want to track.
           </p>
         ) : (
-          <HorizontalRail label="Tax relief categories" className="items-stretch">
+          <HorizontalRail label="Tax relief categories" className="items-stretch" showControls>
             {orderedTrackerCategories.map(category => {
               const progress = category.limit > 0 ? Math.min(100, category.confirmedAmount / category.limit * 100) : 0
               const full = category.limit > 0 && progress >= 100
@@ -234,9 +233,9 @@ export function TaxReliefOverview({
               <div key={category.id} className="rounded-lg border border-border/60 p-2.5">
                 {editingId === category.id ? (
                   <div className="grid gap-2 sm:grid-cols-2">
-                    <label className="space-y-1"><span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Category</span><Input value={draft.name} onChange={event => setDraft(current => ({ ...current, name: event.target.value }))} className={FIELD_CLASS} /></label>
-                    <label className="space-y-1"><span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Limit ({currency})</span><Input type="number" min="0" step="0.01" value={draft.limit} onChange={event => setDraft(current => ({ ...current, limit: Number(event.target.value) }))} className={`${FIELD_CLASS} tabular-nums`} /></label>
-                    <label className="space-y-1 sm:col-span-2"><span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Note (optional)</span><Input value={draft.detail ?? ''} onChange={event => setDraft(current => ({ ...current, detail: event.target.value }))} maxLength={300} className={FIELD_CLASS} /></label>
+                    <FormField label="Category"><Input value={draft.name} onChange={event => setDraft(current => ({ ...current, name: event.target.value }))} controlSize="sm" /></FormField>
+                    <FormField label={`Limit (${currency})`}><Input type="number" min="0" step="0.01" value={draft.limit} onChange={event => setDraft(current => ({ ...current, limit: Number(event.target.value) }))} controlSize="sm" className="tabular-nums" /></FormField>
+                    <FormField label="Note (optional)" className="sm:col-span-2"><Input value={draft.detail ?? ''} onChange={event => setDraft(current => ({ ...current, detail: event.target.value }))} maxLength={300} controlSize="sm" /></FormField>
                     <div className="flex justify-end gap-1.5 sm:col-span-2"><Button variant="primary" size="sm" type="button" onClick={() => void saveEdit(category.id)} disabled={savingId === category.id} className="py-2"><Save className="size-3.5" /> Save</Button><Button variant="unstyled" type="button" onClick={() => setEditingId(null)} aria-label="Close category editor" className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted"><X className="size-3.5" /></Button></div>
                   </div>
                 ) : (
@@ -252,9 +251,9 @@ export function TaxReliefOverview({
           {isAdding && (
             <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
               <div className="grid gap-2 sm:grid-cols-2">
-                <label className="space-y-1"><span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Category</span><Input autoFocus value={newCategory.name} onChange={event => setNewCategory(current => ({ ...current, name: event.target.value }))} placeholder="e.g. Education" className={FIELD_CLASS} /></label>
-                <label className="space-y-1"><span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Limit ({currency})</span><Input type="number" min="0" step="0.01" value={newCategory.limit} onChange={event => setNewCategory(current => ({ ...current, limit: Number(event.target.value) }))} className={`${FIELD_CLASS} tabular-nums`} /></label>
-                <label className="space-y-1 sm:col-span-2"><span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Note (optional)</span><Input value={newCategory.detail ?? ''} onChange={event => setNewCategory(current => ({ ...current, detail: event.target.value }))} maxLength={300} className={FIELD_CLASS} /></label>
+                <FormField label="Category"><Input autoFocus value={newCategory.name} onChange={event => setNewCategory(current => ({ ...current, name: event.target.value }))} placeholder="e.g. Education" controlSize="sm" /></FormField>
+                <FormField label={`Limit (${currency})`}><Input type="number" min="0" step="0.01" value={newCategory.limit} onChange={event => setNewCategory(current => ({ ...current, limit: Number(event.target.value) }))} controlSize="sm" className="tabular-nums" /></FormField>
+                <FormField label="Note (optional)" className="sm:col-span-2"><Input value={newCategory.detail ?? ''} onChange={event => setNewCategory(current => ({ ...current, detail: event.target.value }))} maxLength={300} controlSize="sm" /></FormField>
                 <div className="flex justify-end gap-1.5 sm:col-span-2"><Button variant="primary" size="sm" type="button" onClick={() => void addCategory()} disabled={isAdding && !newCategory.name.trim()} className="py-2"><Check className="size-3.5" /> Add</Button><Button variant="unstyled" type="button" onClick={() => { setIsAdding(false); setNewCategory({ name: '', limit: 0, detail: '' }) }} aria-label="Close add category form" className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted"><X className="size-3.5" /></Button></div>
               </div>
             </div>

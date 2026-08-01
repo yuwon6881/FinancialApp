@@ -209,8 +209,8 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
   if (variant === 'documents') {
     return (
       <div data-testid="documents-skeleton" className="space-y-5 soft-rise">
-        {/* Mirrors DocumentsView: plain title block + action button, then one panel
-            holding the filter row, usage meter, tax-relief tracker and document rows. */}
+        {/* Mirrors DocumentsView: header actions, a Vault-insights panel, then a
+            separate document-management panel with filters beside the records. */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
             <Skeleton className="h-6 w-48" />
@@ -219,12 +219,19 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
           <Skeleton className="h-10 w-full rounded-xl sm:w-40" />
         </div>
         <div className="app-panel space-y-4 rounded-2xl border border-border/60 bg-card/92 p-3 sm:p-5">
-          <div className="flex flex-col gap-2.5 sm:flex-row">
-            <Skeleton className="h-10 flex-1 rounded-xl" />
-            <Skeleton className="h-10 w-full rounded-xl sm:w-40" />
-          </div>
           <Skeleton className="h-14 w-full rounded-xl" />
           <Skeleton className="h-32 w-full rounded-2xl" />
+        </div>
+        <div className="app-panel space-y-4 rounded-2xl border border-border/60 bg-card/92 p-3 sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-2"><Skeleton className="h-4 w-32" /><Skeleton className="h-3 w-56 max-w-full" /></div>
+            <Skeleton className="h-7 w-16 rounded-lg" />
+          </div>
+          <div className="space-y-2.5 rounded-xl border border-border/60 bg-muted/20 p-3 lg:flex lg:space-y-0 lg:gap-2.5">
+            <Skeleton className="h-10 flex-1 rounded-xl" />
+            <div className="grid grid-cols-2 gap-2 lg:w-80"><Skeleton className="h-10 rounded-xl" /><Skeleton className="h-10 rounded-xl" /></div>
+          </div>
+          <Skeleton className="h-14 w-full rounded-xl" />
           <div className="space-y-3">
             {[1, 2, 3, 4, 5].map(i => <ListRowSkeleton key={i} />)}
           </div>

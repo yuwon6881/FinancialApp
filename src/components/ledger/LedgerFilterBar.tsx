@@ -8,6 +8,7 @@ import { AnchoredPopover } from '../ui/AnchoredPopover'
 import { CustomSelect } from '../ui/CustomSelect'
 import { DatePicker } from '../ui/DatePicker'
 import { PillSwitch } from '../ui/PillSwitch'
+import { FormField } from '../ui/FormField'
 import { getCategoryDotClass, getCategoryFilterClass } from '../../lib/categoryColors'
 import { LEDGER_BUCKETS as LEDGER_BUCKET_VALUES } from '../../lib/transactionFilters'
 import type { TransactionSort } from '../../lib/transactionOrdering'
@@ -125,32 +126,34 @@ export function LedgerFilterBar({
           <CalendarDays className="size-3" /> Date range
         </span>
         <div className="grid grid-cols-2 gap-2">
-          <label className="space-y-1 text-[10px] font-semibold text-muted-foreground">
-            From
+          <FormField label="From" labelClassName="text-[10px]">
             <DatePicker
               value={startDate}
               max={endDate || undefined}
               onChange={onStartDateChange}
               clearable
               clearAriaLabel="Clear ledger from date"
+              invalid={hasInvalidDateRange}
+              controlSize="sm"
               className="w-full"
               popoverClassName="ledger-filter-dropdown"
             />
-          </label>
-          <label className="space-y-1 text-[10px] font-semibold text-muted-foreground">
-            To
+          </FormField>
+          <FormField label="To" labelClassName="text-[10px]">
             <DatePicker
               value={endDate}
               min={startDate || undefined}
               onChange={onEndDateChange}
               clearable
               clearAriaLabel="Clear ledger to date"
+              invalid={hasInvalidDateRange}
+              controlSize="sm"
               className="w-full"
               popoverClassName="ledger-filter-dropdown"
             />
-          </label>
+          </FormField>
         </div>
-        {hasInvalidDateRange && <p className="text-[10px] font-semibold text-red-500">Start date must be before the end date.</p>}
+        {hasInvalidDateRange && <p role="alert" className="text-[10px] font-semibold text-destructive">Start date must be before the end date.</p>}
       </div>
 
       <div className="space-y-2">
@@ -158,8 +161,7 @@ export function LedgerFilterBar({
           <Banknote className="size-3" /> Amount range
         </span>
         <div className="grid grid-cols-2 gap-2">
-          <label className="space-y-1 text-[10px] font-semibold text-muted-foreground">
-            Minimum
+          <FormField label="Minimum" labelClassName="text-[10px]">
             <Input
               type="number"
               min="0"
@@ -168,11 +170,11 @@ export function LedgerFilterBar({
               placeholder="0.00"
               value={minAmount}
               onChange={event => onMinAmountChange(event.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/20"
+              invalid={hasInvalidAmountRange}
+              controlSize="sm"
             />
-          </label>
-          <label className="space-y-1 text-[10px] font-semibold text-muted-foreground">
-            Maximum
+          </FormField>
+          <FormField label="Maximum" labelClassName="text-[10px]">
             <Input
               type="number"
               min="0"
@@ -181,12 +183,13 @@ export function LedgerFilterBar({
               placeholder="Any"
               value={maxAmount}
               onChange={event => onMaxAmountChange(event.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/20"
+              invalid={hasInvalidAmountRange}
+              controlSize="sm"
             />
-          </label>
+          </FormField>
         </div>
         <p className="text-[9px] text-muted-foreground">Uses the absolute amount for both inflows and outflows.</p>
-        {hasInvalidAmountRange && <p className="text-[10px] font-semibold text-red-500">Minimum amount cannot exceed maximum amount.</p>}
+        {hasInvalidAmountRange && <p role="alert" className="text-[10px] font-semibold text-destructive">Minimum amount cannot exceed maximum amount.</p>}
       </div>
 
       <div className="space-y-2">

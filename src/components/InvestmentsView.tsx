@@ -54,9 +54,6 @@ interface InvestmentsViewProps {
 
 type Panel = 'account' | 'instrument' | 'activity' | 'cash' | null
 
-// Height matches CustomSelect / DatePicker / CurrencySelect (h-10) so every control
-// in a modal row lines up and measures the same, whatever kind of input it is.
-const inputClass = 'h-10 w-full rounded-xl border border-border/60 bg-background px-3 text-sm text-foreground outline-none focus:border-ring'
 const interactivePanelClass = 'interactive-card app-panel rounded-2xl border border-border/60 bg-card/92'
 
 const money = (value: number, currency: string) =>
@@ -564,7 +561,7 @@ const AccountsAndInstruments = ({
               ['investments', `Investments (${portfolio.instruments.length})`],
             ] as const).map(([value, label]) => <Button key={value} variant="unstyled" type="button" onClick={() => { setTab(value); setQuery('') }} aria-pressed={tab === value} className={`min-w-0 flex-1 cursor-pointer rounded-lg px-2 py-2 text-[10px] font-bold sm:text-xs focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${tab === value ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}>{label}</Button>)}
           </div>
-          <Input value={query} onChange={event => setQuery(event.target.value)} placeholder={`Search ${tab}`} className={inputClass} />
+          <Input value={query} onChange={event => setQuery(event.target.value)} placeholder={`Search ${tab}`} />
           {tab === 'accounts' && <div>
             <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Accounts</h3>
             <div className="mt-2 space-y-2">

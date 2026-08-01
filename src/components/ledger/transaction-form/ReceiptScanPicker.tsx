@@ -138,8 +138,8 @@ export function ReceiptScanPicker({
               }}
               className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border transition duration-200 text-xs font-semibold cursor-pointer ${
                 isSplitScanning
-                  ? 'perimeter-beam-host border-sky-500/20 bg-sky-500/5 text-sky-600 dark:text-sky-400 cursor-not-allowed relative overflow-hidden'
-                  : 'border-sky-500/40 bg-sky-500/5 hover:bg-sky-500/10 text-sky-600 dark:text-sky-400 disabled:opacity-45 disabled:cursor-not-allowed'
+                  ? 'perimeter-beam-host border-primary/20 bg-primary/5 text-accent-ink cursor-not-allowed relative overflow-hidden'
+                  : 'border-primary/40 bg-primary/5 hover:bg-primary/10 text-accent-ink disabled:opacity-45 disabled:cursor-not-allowed'
               }`}
             >
               {isSplitScanning && <PerimeterBeam size={40} />}

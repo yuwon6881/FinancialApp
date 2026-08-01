@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import type { WishlistItem, SavingsGoal } from '../types'
 import { BottomSheet } from './ui/BottomSheet'
 import { DatePicker } from './ui/DatePicker'
+import { FormField } from './ui/FormField'
 import { CycleSkeleton } from './ui/Skeleton'
 import { Card } from './ui/Card'
 import { HorizontalRail } from './ui/HorizontalRail'
@@ -283,7 +284,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
         </div>
 
         {pool.activeGoals.length > 0 ? (
-          <HorizontalRail label="Commitments">
+          <HorizontalRail label="Commitments" showControls>
             {pool.activeGoals.map(goal => {
               const pace = pool.paces.get(goal.id)
               if (!pace) return null
@@ -354,7 +355,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
         </div>
 
         {rewardItems.length > 0 ? (
-          <HorizontalRail label="Rewards">
+          <HorizontalRail label="Rewards" showControls>
             {rewardItems.map(item => (
               <RewardCard
                 key={item.id}
@@ -396,17 +397,16 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               <span className="text-lg font-extrabold text-blue-500">{formatSensitive(purchasingItem.price)}</span>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold mb-1 text-foreground">Purchased Date</label>
+            <FormField
+              label="Purchased date"
+              hint="Select the date this reward was acquired. A ledger transaction will be logged on this date."
+            >
               <DatePicker
                 value={purchaseDateInput}
                 onChange={setPurchaseDateInput}
                 className="w-full"
               />
-              <p className="text-[11px] text-muted-foreground mt-1 font-medium">
-                Select the date this reward was acquired. A ledger transaction will be logged on this date.
-              </p>
-            </div>
+            </FormField>
 
             <div className="flex gap-2 pt-4">
               <Button variant="ghost" className="flex-1" onClick={() => setPurchasingItem(null)}>

@@ -3,7 +3,6 @@ import React, { useRef, useEffect } from 'react'
 import { Sparkles, Loader2 } from 'lucide-react'
 import { PerimeterBeam } from '../../ui/PerimeterBeam'
 import { CustomSelect } from '../../ui/CustomSelect'
-import { SearchableSelect } from '../../ui/SearchableSelect'
 import { DatePicker } from '../../ui/DatePicker'
 import { AnchoredPopover } from '../../ui/AnchoredPopover'
 import { SmartAmountInput } from '../../ui/SmartAmountInput'
@@ -327,8 +326,7 @@ export function TransactionFormFields({
 
       {state.transactionType === 'transfer' ? (
         <>
-          <div className="space-y-1">
-            <label className="flex items-center h-5 text-xs font-semibold text-muted-foreground">Source Category (From)</label>
+          <FormField label="Source category (from)">
             <CustomSelect
               ariaLabel="Transfer source category"
               value={state.transferSource}
@@ -341,7 +339,7 @@ export function TransactionFormFields({
               ]}
               className="w-full"
             />
-          </div>
+          </FormField>
 
           <FormField label="Target category (to)" required error={errors.transferTarget}>
             <CustomSelect
@@ -360,29 +358,31 @@ export function TransactionFormFields({
         </>
       ) : (
         <>
-          <div className="space-y-1 sm:col-span-2">
-            <div className="flex items-center justify-between gap-2 h-5">
-              <label className="text-xs font-semibold text-muted-foreground">Category</label>
-              {suggestions.isSuggestingCategory ? (
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-500 whitespace-nowrap shrink-0">
+          <FormField
+            className="relative sm:col-span-2"
+            required
+            error={errors.category}
+            label="Category"
+          >
+            {suggestions.isSuggestingCategory ? (
+                <span className="absolute right-0 top-0 inline-flex items-center gap-1 whitespace-nowrap text-[10px] font-semibold text-blue-500">
                   <Loader2 className="size-3 animate-spin" /> Suggesting
                 </span>
               ) : suggestions.categorySuggestionUnavailable ? (
-                <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-500 whitespace-nowrap shrink-0">
+                <span className="absolute right-0 top-0 whitespace-nowrap text-[10px] font-semibold text-amber-600 dark:text-amber-500">
                   AI unavailable
                 </span>
               ) : null}
-            </div>
-            <SearchableSelect
+            <CustomSelect
+              ariaLabel="Category"
               value={state.category}
               onChange={val => onSetField('category', val)}
               options={categorySelectOptions}
               className="w-full"
             />
-          </div>
+          </FormField>
 
-          <div className="space-y-1">
-            <label className="flex items-center h-5 text-xs font-semibold text-muted-foreground">Ledger Category</label>
+          <FormField label="Ledger category">
             <CustomSelect
               ariaLabel="Ledger category"
               value={state.ledgerCategory}
@@ -396,7 +396,7 @@ export function TransactionFormFields({
               ]}
               className="w-full"
             />
-          </div>
+          </FormField>
         </>
       )}
 

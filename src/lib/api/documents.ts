@@ -85,7 +85,6 @@ export async function uploadDocuments(
 export async function listDocuments(
   taxYear?: number,
   transactionId?: string,
-  search?: string,
   skip = 0,
   take = 50,
   reliefCategory?: string,
@@ -94,13 +93,12 @@ export async function listDocuments(
   const params = new URLSearchParams()
   if (taxYear !== undefined) params.append('taxYear', taxYear.toString())
   if (transactionId) params.append('transactionId', transactionId)
-  if (search) params.append('search', search)
   if (reliefCategory) params.append('reliefCategory', reliefCategory)
   params.append('skip', skip.toString())
   params.append('take', take.toString())
   params.append('sort', sort)
 
-  const cacheKey = documentListCacheKey(taxYear, transactionId, search, skip, take, reliefCategory, sort)
+  const cacheKey = documentListCacheKey(taxYear, transactionId, skip, take, reliefCategory, sort)
   return cachedGet(cacheKey, () => request<{ items: VaultDocument[]; totalCount: number }>(`/documents?${params.toString()}`, {
     method: 'GET',
     errorMessage: 'Failed to load documents',
@@ -112,7 +110,7 @@ export async function listAllDocumentsForTransaction(transactionId: string): Pro
   const pageSize = 100
 
   while (true) {
-    const page = await listDocuments(undefined, transactionId, undefined, documents.length, pageSize)
+    const page = await listDocuments(undefined, transactionId, documents.length, pageSize)
     documents.push(...page.items)
     if (page.items.length === 0 || documents.length >= page.totalCount) {
       return documents

@@ -78,7 +78,7 @@ describe('DraftStagingView', () => {
 
     fireEvent.click(screen.getByTitle('Edit draft item'))
 
-    fireEvent.click(screen.getByRole('combobox', { name: 'Transfer source category' }))
+    fireEvent.click(screen.getByRole('combobox', { name: /Source \(from\)/i }))
     fireEvent.click(screen.getByRole('option', { name: 'Stability' }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))

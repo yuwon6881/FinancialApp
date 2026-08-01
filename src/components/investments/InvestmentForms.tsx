@@ -44,7 +44,6 @@ const today = () => {
 }
 
 const numberOrUndefined = (value: string) => value.trim() === '' ? undefined : Number(value)
-const inputClass = 'h-10 w-full rounded-xl border border-border/60 bg-background px-3 text-sm text-foreground outline-none focus:border-ring'
 const formGridClass = 'grid items-start gap-4 sm:grid-cols-2'
 const formGridWideClass = 'grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-4'
 
@@ -132,7 +131,7 @@ export const InstrumentForm = ({ busy, offline, onCancel, onSave }: { busy: bool
   }, [query, offline])
   return <div className="space-y-4">
     <>
-      <Field label="Symbol or company / fund name"><span className="relative block"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input value={query} onChange={event => { setQuery(event.target.value); setSelected(null) }} placeholder="Search at least 3 characters" className={`${inputClass} pl-9`} />{searching && <Loader2 className="absolute right-3 top-3 size-4 animate-spin text-blue-500" />}</span></Field>
+      <Field label="Symbol or company / fund name"><span className="relative block"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input value={query} onChange={event => { setQuery(event.target.value); setSelected(null) }} placeholder="Search at least 3 characters" className="pl-9" />{searching && <Loader2 className="absolute right-3 top-3 size-4 animate-spin text-blue-500" />}</span></Field>
       {message && <p className="text-xs text-muted-foreground">{message}</p>}
       {selected ? (
         <div className="rounded-xl border border-blue-500 bg-blue-500/5 p-3">
@@ -363,8 +362,8 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
     {trade && <Field label={`Unit price (${selectedInstrument?.currency})`} error={errors.unitPrice}><Input type="number" min="0" step="0.0000000001" value={unitPrice} onChange={event => { noteEdit('price'); setUnitPrice(event.target.value); setErrors(prev => ({ ...prev, unitPrice: '', form: '' })) }} /></Field>}
     <Field required={type === 'Dividend'} label={`${type === 'Dividend' ? 'Gross dividend' : type === 'FeeTax' ? 'Charge amount' : 'Gross amount'} (${selectedInstrument?.currency})`} error={errors.cashAmount} hint={['Buy', 'FeeTax'].includes(type) && selectedInstrument ? `${money(Math.max(heldCash, 0), selectedInstrument.currency)} cash available` : undefined}><Input type="number" min={type === 'Dividend' ? '0.0000000001' : '0'} step="0.0000000001" value={cashAmount} onChange={event => { noteEdit('gross'); setCashAmount(event.target.value); setErrors(prev => ({ ...prev, cashAmount: '', form: '' })) }} /></Field>
     {type !== 'FeeTax' && <>
-      <Field label={`Fees${feesLabelSuffix}`}><Input type="number" min="0" step="0.0000000001" value={fees} onChange={event => setFees(event.target.value)} className={inputClass} /></Field>
-      <Field label={`Taxes${feesLabelSuffix}`}><Input type="number" min="0" step="0.0000000001" value={taxes} onChange={event => setTaxes(event.target.value)} className={inputClass} /></Field>
+      <Field label={`Fees${feesLabelSuffix}`}><Input type="number" min="0" step="0.0000000001" value={fees} onChange={event => setFees(event.target.value)} /></Field>
+      <Field label={`Taxes${feesLabelSuffix}`}><Input type="number" min="0" step="0.0000000001" value={taxes} onChange={event => setTaxes(event.target.value)} /></Field>
     </>}
     </div>
     {trade && <p className="text-[10px] text-muted-foreground">Fill any two of units, unit price, and gross amount — the third is worked out for you.</p>}

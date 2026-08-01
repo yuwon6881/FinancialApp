@@ -29,7 +29,7 @@ const STATUS: Record<GoalPaceStatus, { label: string; dot: string; text: string;
   funded: { label: 'Ready', dot: 'bg-emerald-500', text: 'text-emerald-500', bar: 'bg-emerald-500' },
   onPace: { label: 'On pace', dot: 'bg-emerald-500', text: 'text-emerald-500', bar: 'bg-violet-500' },
   needsFunding: { label: 'Needs funding', dot: 'bg-amber-500', text: 'text-amber-500', bar: 'bg-violet-500' },
-  overdue: { label: 'Overdue', dot: 'bg-red-500', text: 'text-red-500', bar: 'bg-red-500' },
+  overdue: { label: 'Overdue', dot: 'bg-destructive', text: 'text-destructive', bar: 'bg-destructive' },
 }
 
 function formatDeadline(targetDate: string): string {
@@ -69,7 +69,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
   return (
     <Card
       className={`snap-start shrink-0 w-[22rem] flex flex-col gap-3 p-4 transition-colors duration-300 ${
-        status === 'overdue' ? 'border-red-500/40' : 'border-border/60'
+        status === 'overdue' ? 'border-destructive/40' : 'border-border/60'
       }`}
     >
       <div className="min-w-0">

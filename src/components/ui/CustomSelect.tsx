@@ -7,6 +7,7 @@ import { useFormFieldControlProps } from './formFieldControl'
 export interface SelectOption<T extends string | number = string | number> {
   value: T
   label: string
+  badge?: string
   disabled?: boolean
 }
 
@@ -214,19 +215,33 @@ export function CustomSelect<T extends string | number>({
             id={`${listboxId}-option-${index}`}
             type="button"
             role="option"
+            aria-label={option.badge ? `${option.label}, ${option.badge}` : undefined}
             aria-selected={option.value === value}
             aria-disabled={option.disabled || undefined}
             disabled={option.disabled}
             tabIndex={-1}
             onMouseEnter={() => setActiveIndex(index)}
             onClick={() => selectIndex(index)}
-            className={`block h-auto min-h-9 w-full min-w-0 shrink-0 truncate whitespace-nowrap px-3.5 py-2 text-left text-xs leading-4 rounded-lg transition duration-100 cursor-pointer ${
+            className={`h-auto min-h-9 w-full min-w-0 shrink-0 px-3.5 py-2 text-left text-xs leading-4 rounded-lg transition duration-100 cursor-pointer ${option.badge ? 'flex items-center justify-between gap-2' : 'block truncate whitespace-nowrap'} ${
               index === activeIndex
                 ? 'bg-primary text-primary-foreground font-bold shadow-xs'
                 : 'hover:bg-muted/80 text-foreground font-medium disabled:cursor-not-allowed disabled:opacity-45'
             }`}
           >
-            {option.label}
+            {option.badge ? (
+              <>
+                <span className="min-w-0 truncate">{option.label}</span>
+                <span
+                  className={`shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-normal ${
+                    option.value === value
+                      ? 'border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground'
+                      : 'border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-300'
+                  }`}
+                >
+                  {option.badge}
+                </span>
+              </>
+            ) : option.label}
           </button>
         ))}
       </AnchoredPopover>
