@@ -28,7 +28,7 @@ interface DocumentListProps {
       amountStatus?: 'Confirmed' | 'NeedsReview'
     },
   ) => Promise<void>
-  reliefCategories: TaxReliefCategoryDefinition[]
+  reliefCategoriesByTaxYear: Readonly<Record<number, TaxReliefCategoryDefinition[]>>
   pendingReliefCategories: ReadonlyMap<number, string>
   onReliefCategoryChange: (id: number, reliefCategory: string) => void
   onNavigateToTransaction?: (transactionId: string) => Promise<void> | void
@@ -186,7 +186,7 @@ function SelectAllDocumentsControl({
   )
 }
 
-export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds, toggleSelected, onToggleSelectAll, allVisibleSelected, someVisibleSelected, currency, updateDocument, reliefCategories, pendingReliefCategories, onReliefCategoryChange, onNavigateToTransaction }: DocumentListProps) {
+export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds, toggleSelected, onToggleSelectAll, allVisibleSelected, someVisibleSelected, currency, updateDocument, reliefCategoriesByTaxYear, pendingReliefCategories, onReliefCategoryChange, onNavigateToTransaction }: DocumentListProps) {
   const { showToast } = useAppUi()
   const [openingTransactionId, setOpeningTransactionId] = useState<string | null>(null)
   const downloadFailed = () =>
@@ -203,17 +203,13 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
 
   return (
     <>
-      <div className="mb-3 flex flex-col gap-3 border-b border-border/50 pb-3 sm:flex-row sm:items-center sm:justify-start">
+      <div className="mb-3 flex items-center border-b border-border/50 pb-3">
         <SelectAllDocumentsControl
           count={documents.length}
           allSelected={allVisibleSelected}
           someSelected={someVisibleSelected}
           onToggle={onToggleSelectAll}
         />
-        <div>
-          <h3 className="text-sm font-black text-foreground">Documents</h3>
-          <p className="mt-0.5 text-[10px] text-muted-foreground">Select files here to download or delete them together.</p>
-        </div>
       </div>
       <div className="space-y-3 lg:hidden">
         {isLoading && documents.length === 0 ? (
@@ -235,6 +231,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
           </div>
         ) : documents.map(document => {
           const Icon = iconFor(document.contentType)
+          const documentReliefCategories = reliefCategoriesByTaxYear[document.taxYear] ?? []
           return (
             <article key={document.id} className="rounded-2xl border border-border/60 bg-card p-3.5 shadow-sm shadow-black/5">
               <div className="flex min-w-0 items-center gap-2.5">
@@ -288,7 +285,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
                 <AmountReview document={document} updateDocument={updateDocument} currency={currency} />
               </div>
               <div className="mt-3 border-t border-border/50 pt-3"><p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Tax relief category <span className="text-destructive">*</span></p><CustomSelect value={pendingReliefCategories.get(document.id) ?? document.reliefCategory ?? ''} onChange={value => onReliefCategoryChange(document.id, String(value))}
-                options={[{ value: '', label: 'Uncategorised (legacy)', disabled: true }, ...reliefCategories.map(category => ({ value: category.id, label: category.name }))]} ariaLabel={`Tax relief category for ${document.originalFileName}`} className="w-full" /></div>
+                options={[{ value: '', label: 'Uncategorised (legacy)', disabled: true }, ...documentReliefCategories.map(category => ({ value: category.id, label: category.name }))]} ariaLabel={`Tax relief category for ${document.originalFileName}`} className="w-full" /></div>
             </article>
           )
         })}
@@ -324,6 +321,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
             <tr><td colSpan={8}><EmptyState /></td></tr>
           ) : documents.map(document => {
             const Icon = iconFor(document.contentType)
+            const documentReliefCategories = reliefCategoriesByTaxYear[document.taxYear] ?? []
             return (
               <tr key={document.id} className="transition-colors hover:bg-muted/40">
                 <td className="px-3 py-2.5"><Checkbox  checked={selectedIds.has(document.id)} onChange={() => toggleSelected(document.id)} aria-label={`Select ${document.originalFileName}`} className="size-4 accent-primary" /></td>
@@ -353,8 +351,8 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
                 </td>
                 <td className="px-3 py-2.5">
                   <CustomSelect value={pendingReliefCategories.get(document.id) ?? document.reliefCategory ?? ''} onChange={value => onReliefCategoryChange(document.id, String(value))}
-                    options={[{ value: '', label: 'Uncategorised (legacy)', disabled: true }, ...reliefCategories.map(category => ({ value: category.id, label: category.name }))]}
-                    ariaLabel={`Tax relief category for ${document.originalFileName}`} className="min-w-40" />
+                    options={[{ value: '', label: 'Uncategorised (legacy)', disabled: true }, ...documentReliefCategories.map(category => ({ value: category.id, label: category.name }))]}
+                    ariaLabel={`Tax relief category for ${document.originalFileName}`} className="w-40 max-w-40" />
                 </td>
                 <td className="px-3 py-2.5 font-bold text-foreground tabular-nums">{document.taxYear}</td>
                 <td className="px-3 py-2.5 text-muted-foreground tabular-nums">{formatBytes(document.sizeBytes)}</td>

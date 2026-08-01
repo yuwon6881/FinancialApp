@@ -14,6 +14,8 @@ export type EnqueueUndo = (
   payload?: OutboxPayload,
 ) => void
 
+export type RequestSensitiveReveal = () => void
+
 const snapshotKey = (entity: EntityKind, targetId: string) => `${entity}:${targetId}`
 const toPayload = (value: object): OutboxPayload => ({ ...value })
 
@@ -37,6 +39,7 @@ export function buildUndoAction(
   op: QueuedOp,
   result: DispatchResult,
   enqueue: EnqueueUndo,
+  onRequestSensitiveReveal?: RequestSensitiveReveal,
 ): ToastAction | undefined {
   const key = snapshotKey(op.entity, op.targetId)
   const persisted = op.payload?.undoSnapshot
@@ -167,6 +170,15 @@ export function buildUndoAction(
       })
     }
     case 'settings:update':
+      if (op.targetId === 'hideSensitive' && op.payload?.hideSensitive === true) {
+        // Revealing sensitive data must go through the same identity check as the
+        // manual toggle. Do not silently queue the inverse privacy setting here.
+        return onRequestSensitiveReveal
+          ? { label: 'Undo', onAction: onRequestSensitiveReveal }
+          : persisted && typeof persisted === 'object'
+            ? action('settings', 'update', String(op.targetId), { ...(persisted as object) })
+            : undefined
+      }
       return op.targetId !== 'summarySeen' && persisted && typeof persisted === 'object'
         ? action('settings', 'update', String(op.targetId), { ...(persisted as object) })
         : undefined

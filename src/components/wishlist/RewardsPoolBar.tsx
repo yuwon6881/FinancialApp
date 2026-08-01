@@ -52,7 +52,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
           : 'Set aside what your goals still need this cycle'
 
   return (
-    <Card className="p-5 space-y-4">
+    <Card className="space-y-4 p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
@@ -67,7 +67,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {onViewRewardsHistory && (
             <Button variant="ghost" size="sm" onClick={onViewRewardsHistory}>
               <History className="size-3" /> History

@@ -51,8 +51,11 @@ export function HorizontalRail({ children, className, label }: HorizontalRailPro
   useEffect(() => {
     const rail = railRef.current
     if (!rail) return
-    rail.addEventListener('wheel', handleWheel, { passive: false })
-    return () => rail.removeEventListener('wheel', handleWheel)
+    // Capture the event before a card or button can handle it. This is important for real mouse
+    // wheels: the pointer is usually over a nested card control, while the rail owns the scroll.
+    const options: AddEventListenerOptions = { passive: false, capture: true }
+    rail.addEventListener('wheel', handleWheel, options)
+    return () => rail.removeEventListener('wheel', handleWheel, options)
   }, [handleWheel])
 
   return (

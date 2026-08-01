@@ -3,7 +3,7 @@ import type { RecurringPayment, RecurringFrequency, TransactionCategory } from '
 import { maskCurrencyInput } from '../../lib/utils'
 import { useSyncStatus } from '../../lib/useOptimisticList'
 import { useAutoOpenModal } from '../../lib/useAutoOpenModal'
-import { normalizeRecurringFrequency } from '../../lib/recurringPayments'
+import { hasBillingEnded, normalizeRecurringFrequency } from '../../lib/recurringPayments'
 import { formatSensitiveAmount, formatCurrencyAmount } from './formatters'
 import { focusFirstInvalidField } from '../ui/formValidation'
 
@@ -203,8 +203,10 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     }
   }, [categories, category])
 
+  // Only subscriptions that still bill count toward the committed total: an expired one keeps its
+  // `active` flag (that toggle is the user's pause switch, not an expiry flag) but costs nothing.
   const totalCommittedMonthly = payments
-    .filter(p => p.active)
+    .filter(p => p.active && !hasBillingEnded(p))
     .reduce((acc, p) => acc + Math.abs(p.amount) / (normalizeRecurringFrequency(p.frequency) === 'Annually' ? 12 : 1), 0)
 
   const activeCount = payments.filter(p => p.active).length

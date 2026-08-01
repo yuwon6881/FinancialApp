@@ -41,6 +41,17 @@ export function computeNextOccurrenceDate(payment: Pick<RecurringPayment, 'nextD
   return formatDateOnly(new Date(targetYear, targetMonth, clampedDay))
 }
 
+// True once a subscription's end date has passed. Such a row can stay flagged `active` (the
+// toggle is the user's pause switch, not an expiry flag) but it no longer bills, so it must not
+// count toward committed spend.
+export function hasBillingEnded(
+  payment: Pick<RecurringPayment, 'endDate'>,
+  today: Date = new Date()
+): boolean {
+  if (!payment.endDate) return false
+  return payment.endDate < formatDateOnly(today)
+}
+
 // "Pay Early" is only offered for an active subscription whose next due date is strictly in
 // the future -- due-today/overdue subscriptions keep the normal pay flow unchanged.
 export function isEligibleForPayEarly(payment: Pick<RecurringPayment, 'active' | 'nextDueDate'>, today: Date = new Date()): boolean {

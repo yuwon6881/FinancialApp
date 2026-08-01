@@ -13,7 +13,7 @@ import {
   type QueuedOp,
 } from './outbox'
 import { drainQueue, type SuccessfulSyncOp } from './outboxSync'
-import { buildUndoAction, snapshotForUndo, type UndoSnapshot } from './undo'
+import { buildUndoAction, snapshotForUndo, type RequestSensitiveReveal, type UndoSnapshot } from './undo'
 
 const TOAST_STAGGER_MS = 350
 
@@ -24,6 +24,7 @@ interface UseOutboxOptions {
   showToast: (message: string, title?: string, tone?: ToastTone, action?: ToastAction) => void
   onAuthError: () => void
   onLockError: () => void
+  onRequestSensitiveReveal?: RequestSensitiveReveal
   shouldRefresh?: (successfulOps: ReadonlyArray<SuccessfulSyncOp>) => boolean
   refresh: (successfulOps: ReadonlyArray<SuccessfulSyncOp>) => Promise<void>
 }
@@ -160,8 +161,8 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
   const createUndo = useCallback((op: QueuedOp, result: DispatchResult) => {
     return buildUndoAction(undoSnapshotsRef.current, op, result, (entity, type, targetId, payload) => {
       mutateQueue(previous => enqueue(previous, entity, type, targetId, payload, true))
-    })
-  }, [enqueue, mutateQueue])
+    }, options.onRequestSensitiveReveal)
+  }, [enqueue, mutateQueue, options.onRequestSensitiveReveal])
 
   const processQueueRef = useRef<() => void>(() => undefined)
   const processQueue = useCallback(async () => {

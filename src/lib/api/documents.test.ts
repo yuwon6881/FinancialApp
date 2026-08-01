@@ -2,9 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { invalidateAllDocumentCaches } from './documentsCache'
 import {
   bulkUpdateDocumentCategories,
+  addTaxReliefCategory,
   deleteDocument,
   downloadDocument,
   downloadSelectedDocumentArchive,
+  getTaxReliefCategories,
   listDocuments,
   updateDocument,
   uploadDocument,
@@ -72,6 +74,40 @@ describe('documents API', () => {
     }))
   })
 
+  it('chunks category changes at the server limit', async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { updates: { id: number; reliefCategory: string }[] }
+      return okJson({ results: body.updates.map(update => ({ id: update.id, updated: true })) })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const updates = Array.from({ length: 101 }, (_, id) => ({ id: id + 1, reliefCategory: 'education' }))
+    const results = await bulkUpdateDocumentCategories(updates)
+
+    expect(results).toHaveLength(101)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)).updates).toHaveLength(100)
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)).updates).toHaveLength(1)
+  })
+
+  it('invalidates cached relief categories after a category mutation', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(okJson([{ id: 'lifestyle', name: 'Lifestyle', limit: 100, detail: '' }]))
+      .mockResolvedValueOnce(okJson({ id: 'education', name: 'Education', limit: 200, detail: '' }))
+      .mockResolvedValueOnce(okJson([
+        { id: 'lifestyle', name: 'Lifestyle', limit: 100, detail: '' },
+        { id: 'education', name: 'Education', limit: 200, detail: '' },
+      ]))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await getTaxReliefCategories(2026)
+    await addTaxReliefCategory(2026, { name: 'Education', limit: 200 })
+    const categories = await getTaxReliefCategories(2026)
+
+    expect(categories).toHaveLength(2)
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
   it('uploads multipart data without setting a content-type header', async () => {
     const fetchMock = vi.fn().mockResolvedValue(okJson({ id: 1 }))
     vi.stubGlobal('fetch', fetchMock)
@@ -107,7 +143,7 @@ describe('documents API', () => {
       .mockResolvedValueOnce({ ...okJson(undefined), status: 204 })
     vi.stubGlobal('fetch', fetchMock)
 
-    await listDocuments(2026, 'tx-1', 'tax', 50, 25)
+    await listDocuments(2026, 'tx-1', 'tax', 50, 25, 'education', 'name-asc')
     await updateDocument(4, { transactionId: null })
     await deleteDocument(4)
 
@@ -115,6 +151,8 @@ describe('documents API', () => {
     expect(listUrl).toContain('taxYear=2026')
     expect(listUrl).toContain('transactionId=tx-1')
     expect(listUrl).toContain('search=tax')
+    expect(listUrl).toContain('reliefCategory=education')
+    expect(listUrl).toContain('sort=name-asc')
     expect(fetchMock.mock.calls[1][1].method).toBe('PATCH')
     expect(fetchMock.mock.calls[1][1].body).toBe('{"transactionId":null}')
     expect(fetchMock.mock.calls[2][1].method).toBe('DELETE')

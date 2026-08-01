@@ -77,6 +77,23 @@ describe('useDocumentsView', () => {
     await waitFor(() => expect(result.current.usage).toEqual({ totalBytes: 0, documentCount: 0 }))
   })
 
+  it('clamps the page and reloads after bulk deletion removes the current page', async () => {
+    const { result } = renderHook(() => useDocumentsView())
+    await waitFor(() => expect(api.listDocuments).toHaveBeenCalledWith(2026, undefined, '', 0, 10, undefined, 'uploaded-desc'))
+
+    api.listDocuments.mockResolvedValue({ items: [document], totalCount: 11 })
+    act(() => result.current.setPage(2))
+    await waitFor(() => expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, '', 10, 10, undefined, 'uploaded-desc'))
+
+    api.bulkDeleteDocuments.mockResolvedValue([{ id: 1, deleted: true }])
+    await act(async () => {
+      await result.current.bulkDelete([1])
+    })
+
+    await waitFor(() => expect(result.current.page).toBe(1))
+    expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, '', 0, 10, undefined, 'uploaded-desc')
+  })
+
   it('reloads page one when the tax-year filter changes', async () => {
     const { result } = renderHook(() => useDocumentsView())
     await waitFor(() => expect(api.listDocuments).toHaveBeenCalled())
@@ -84,22 +101,22 @@ describe('useDocumentsView', () => {
     act(() => result.current.setTaxYear(2025))
 
     await waitFor(() => {
-      expect(api.listDocuments).toHaveBeenLastCalledWith(2025, undefined, '', 0, 10)
+      expect(api.listDocuments).toHaveBeenLastCalledWith(2025, undefined, '', 0, 10, undefined, 'uploaded-desc')
     })
   })
 
   it('requests later pages from the server and resets the offset when the page size changes', async () => {
     const { result } = renderHook(() => useDocumentsView())
-    await waitFor(() => expect(api.listDocuments).toHaveBeenCalledWith(2026, undefined, '', 0, 10))
+    await waitFor(() => expect(api.listDocuments).toHaveBeenCalledWith(2026, undefined, '', 0, 10, undefined, 'uploaded-desc'))
 
     act(() => result.current.setPage(2))
-    await waitFor(() => expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, '', 10, 10))
+    await waitFor(() => expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, '', 10, 10, undefined, 'uploaded-desc'))
 
     act(() => result.current.setPage(1))
-    await waitFor(() => expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, '', 0, 10))
+    await waitFor(() => expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, '', 0, 10, undefined, 'uploaded-desc'))
 
     act(() => result.current.setPageSize(25))
-    await waitFor(() => expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, '', 0, 25))
+    await waitFor(() => expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, '', 0, 25, undefined, 'uploaded-desc'))
     expect(result.current.page).toBe(1)
   })
 
@@ -113,5 +130,33 @@ describe('useDocumentsView', () => {
 
     expect(api.bulkUpdateDocumentCategories).toHaveBeenCalledWith([{ id: 1, reliefCategory: 'education' }])
     expect(result.current.documents[0].reliefCategory).toBe('education')
+  })
+
+  it('reloads the active category filter after a bulk category update', async () => {
+    const { result } = renderHook(() => useDocumentsView())
+    await waitFor(() => expect(api.listDocuments).toHaveBeenCalledWith(2026, undefined, '', 0, 10, undefined, 'uploaded-desc'))
+
+    act(() => result.current.setReliefCategory('education'))
+    await waitFor(() => expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, '', 0, 10, 'education', 'uploaded-desc'))
+
+    await act(async () => {
+      await result.current.bulkUpdateDocumentCategories([{ id: 1, reliefCategory: 'education' }])
+    })
+
+    expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, '', 0, 10, 'education', 'uploaded-desc')
+  })
+
+  it('applies a tracker category and document sort through the same paged request', async () => {
+    const { result } = renderHook(() => useDocumentsView())
+    await waitFor(() => expect(api.listDocuments).toHaveBeenCalledWith(2026, undefined, '', 0, 10, undefined, 'uploaded-desc'))
+
+    act(() => {
+      result.current.setReliefCategory('education')
+      result.current.setSortOrder('name-asc')
+    })
+
+    await waitFor(() => {
+      expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, '', 0, 10, 'education', 'name-asc')
+    })
   })
 })

@@ -137,4 +137,42 @@ describe('undo helpers', () => {
     action?.onAction()
     expect(enqueue).toHaveBeenCalledWith('settings', 'update', 'darkMode', { darkMode: false })
   })
+
+  it('opens the sensitive reveal prompt when undoing sensitive mode', () => {
+    const enqueue = vi.fn()
+    const requestSensitiveReveal = vi.fn()
+    const action = buildUndoAction(
+      new Map(),
+      op('settings', 'update', 'hideSensitive', {
+        hideSensitive: true,
+        undoSnapshot: { hideSensitive: false },
+      }),
+      undefined,
+      enqueue,
+      requestSensitiveReveal,
+    )
+
+    action?.onAction()
+    expect(requestSensitiveReveal).toHaveBeenCalledOnce()
+    expect(enqueue).not.toHaveBeenCalled()
+  })
+
+  it('re-enables sensitive mode directly when undoing a manual reveal', () => {
+    const enqueue = vi.fn()
+    const requestSensitiveReveal = vi.fn()
+    const action = buildUndoAction(
+      new Map(),
+      op('settings', 'update', 'hideSensitive', {
+        hideSensitive: false,
+        undoSnapshot: { hideSensitive: true },
+      }),
+      undefined,
+      enqueue,
+      requestSensitiveReveal,
+    )
+
+    action?.onAction()
+    expect(enqueue).toHaveBeenCalledWith('settings', 'update', 'hideSensitive', { hideSensitive: true })
+    expect(requestSensitiveReveal).not.toHaveBeenCalled()
+  })
 })

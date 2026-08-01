@@ -14,6 +14,7 @@ import {
   invalidateDocumentDerivedData,
 } from './documentsCache'
 import { downloadCsvBlob } from '../csvExport'
+import type { DocumentSort } from '../documentOrdering'
 
 export async function uploadDocument(
   file: File,
@@ -86,16 +87,20 @@ export async function listDocuments(
   transactionId?: string,
   search?: string,
   skip = 0,
-  take = 50
+  take = 50,
+  reliefCategory?: string,
+  sort: DocumentSort = 'uploaded-desc',
 ): Promise<{ items: VaultDocument[]; totalCount: number }> {
   const params = new URLSearchParams()
   if (taxYear !== undefined) params.append('taxYear', taxYear.toString())
   if (transactionId) params.append('transactionId', transactionId)
   if (search) params.append('search', search)
+  if (reliefCategory) params.append('reliefCategory', reliefCategory)
   params.append('skip', skip.toString())
   params.append('take', take.toString())
+  params.append('sort', sort)
 
-  const cacheKey = documentListCacheKey(taxYear, transactionId, search, skip, take)
+  const cacheKey = documentListCacheKey(taxYear, transactionId, search, skip, take, reliefCategory, sort)
   return cachedGet(cacheKey, () => request<{ items: VaultDocument[]; totalCount: number }>(`/documents?${params.toString()}`, {
     method: 'GET',
     errorMessage: 'Failed to load documents',
@@ -147,14 +152,19 @@ export async function updateDocument(
 export async function bulkUpdateDocumentCategories(
   updates: BulkDocumentCategoryUpdate[],
 ): Promise<BulkDocumentCategoryUpdateResult[]> {
-  const result = await request<{ results: BulkDocumentCategoryUpdateResult[] }>('/documents/bulk-update-categories', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ updates }),
-    errorMessage: 'Failed to update document categories',
-  })
+  const results: BulkDocumentCategoryUpdateResult[] = []
+  for (let index = 0; index < updates.length; index += 100) {
+    const batch = updates.slice(index, index + 100)
+    const result = await request<{ results: BulkDocumentCategoryUpdateResult[] }>('/documents/bulk-update-categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ updates: batch }),
+      errorMessage: 'Failed to update document categories',
+    })
+    results.push(...result.results)
+  }
   invalidateDocumentDerivedData()
-  return result.results
+  return results
 }
 
 export function getDocumentConstraints(): Promise<DocumentVaultConstraints> {

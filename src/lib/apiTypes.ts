@@ -196,13 +196,6 @@ export interface WireWishlistPurchaseResult {
   transaction: WireTransaction
 }
 
-export interface WirePagedWishlistResult {
-  items?: WireWishlistItem[]
-  total?: number
-  page?: number
-  pageSize?: number
-}
-
 export type WirePayEarlyResult = Omit<PayEarlyResult, 'transaction'> & {
   transaction: WireTransaction
 }

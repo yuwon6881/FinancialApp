@@ -52,7 +52,7 @@ describe('floating form controls', () => {
     expect(onChange).toHaveBeenCalledWith('two')
   })
 
-  it('keeps long option rows at their natural height inside a scrollable menu', () => {
+  it('truncates long option rows inside a scrollable menu', () => {
     render(
       <CustomSelect
         value="one"
@@ -73,8 +73,8 @@ describe('floating form controls', () => {
 
     expect(menu?.className).toContain('overflow-y-auto')
     expect(menu?.className).not.toContain('flex-col')
-    expect(option.className).toContain('h-auto')
-    expect(option.className).toContain('whitespace-normal')
+    expect(option.className).toContain('truncate')
+    expect(option.className).toContain('whitespace-nowrap')
   })
 
   it('uses the shared date picker constraints inside its portalled calendar', () => {

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import type { VaultDocument, DocumentVaultUsage, TaxYearReliefSummary, ExpiredTaxYearSummary, TaxReliefCategoryDefinition } from '../../../types'
 import * as api from '../../../lib/api/documents'
+import type { DocumentSort } from '../../../lib/documentOrdering'
 
 export function useDocumentsView() {
   const [documents, setDocuments] = useState<VaultDocument[]>([])
@@ -10,16 +11,21 @@ export function useDocumentsView() {
   const [summary, setSummary] = useState<TaxYearReliefSummary | null>(null)
   const [expiredYears, setExpiredYears] = useState<ExpiredTaxYearSummary[]>([])
   const [reliefCategories, setReliefCategories] = useState<TaxReliefCategoryDefinition[]>([])
+  const [reliefCategoriesByTaxYear, setReliefCategoriesByTaxYear] = useState<Record<number, TaxReliefCategoryDefinition[]>>({})
   
   const [taxYear, setTaxYear] = useState<number | undefined>(undefined)
   const [search, setSearch] = useState<string>('')
+  const [reliefCategory, setReliefCategory] = useState<string | undefined>(undefined)
+  const [sortOrder, setSortOrder] = useState<DocumentSort>('uploaded-desc')
   
   const [isLoading, setIsLoading] = useState(true)
+  const [isTaxInsightsLoading, setIsTaxInsightsLoading] = useState(true)
   const [hasLoadedYears, setHasLoadedYears] = useState(false)
   const [hasLoadedDocuments, setHasLoadedDocuments] = useState(false)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState<10 | 25 | 50>(10)
   const requestIdRef = useRef(0)
+  const taxInsightsRequestIdRef = useRef(0)
   const queryKeyRef = useRef<string | null>(null)
 
   const loadDocuments = useCallback(async (isRefresh = false) => {
@@ -28,7 +34,7 @@ export function useDocumentsView() {
       setIsLoading(true)
       const currentPage = isRefresh ? 1 : page
       const skip = (currentPage - 1) * pageSize
-      const res = await api.listDocuments(taxYear, undefined, search, skip, pageSize)
+      const res = await api.listDocuments(taxYear, undefined, search, skip, pageSize, reliefCategory, sortOrder)
       
       if (requestId !== requestIdRef.current) return
       setDocuments(res.items)
@@ -42,7 +48,7 @@ export function useDocumentsView() {
         setHasLoadedDocuments(true)
       }
     }
-  }, [page, pageSize, taxYear, search])
+  }, [page, pageSize, taxYear, search, reliefCategory, sortOrder])
 
   const loadUsage = useCallback(async () => {
     try {
@@ -66,18 +72,26 @@ export function useDocumentsView() {
   }, [])
 
   const loadTaxInsights = useCallback(async () => {
+    const requestId = ++taxInsightsRequestIdRef.current
     const selectedYear = taxYear ?? availableYears[0]
+    const categoryYears = taxYear === undefined ? availableYears : selectedYear === undefined ? [] : [selectedYear]
+    setIsTaxInsightsLoading(true)
     try {
-      const [expired, yearSummary, categories] = await Promise.all([
+      const [expired, yearSummary, categoryResults] = await Promise.all([
         api.getExpiredTaxYears(),
         selectedYear ? api.getTaxYearReliefSummary(selectedYear).catch(() => null) : Promise.resolve(null),
-        selectedYear ? api.getTaxReliefCategories(selectedYear) : Promise.resolve([]),
+        Promise.all(categoryYears.map(async year => [year, await api.getTaxReliefCategories(year).catch(() => [])] as const)),
       ])
+      if (requestId !== taxInsightsRequestIdRef.current) return
+      const categoriesByYear = Object.fromEntries(categoryResults) as Record<number, TaxReliefCategoryDefinition[]>
       setExpiredYears(expired)
       setSummary(yearSummary)
-      setReliefCategories(categories)
+      setReliefCategories(selectedYear === undefined ? [] : categoriesByYear[selectedYear] ?? [])
+      setReliefCategoriesByTaxYear(categoriesByYear)
     } catch (err) {
       console.error('Failed to load tax insights:', err)
+    } finally {
+      if (requestId === taxInsightsRequestIdRef.current) setIsTaxInsightsLoading(false)
     }
   }, [taxYear, availableYears])
 
@@ -108,7 +122,7 @@ export function useDocumentsView() {
   useEffect(() => {
     if (!hasLoadedYears) return
 
-    const queryKey = JSON.stringify([taxYear ?? 'all', search, pageSize])
+    const queryKey = JSON.stringify([taxYear ?? 'all', search, pageSize, reliefCategory ?? '', sortOrder])
     const queryChanged = queryKeyRef.current !== queryKey
     queryKeyRef.current = queryKey
 
@@ -122,17 +136,27 @@ export function useDocumentsView() {
     }
 
     void loadDocuments()
-  }, [hasLoadedYears, page, pageSize, search, taxYear, loadDocuments])
+  }, [hasLoadedYears, page, pageSize, search, taxYear, reliefCategory, sortOrder, loadDocuments])
 
   useEffect(() => {
     void loadTaxInsights()
   }, [loadTaxInsights])
 
+  useEffect(() => {
+    setReliefCategory(undefined)
+  }, [taxYear])
+
   const deleteDocument = async (id: number) => {
     try {
       await api.deleteDocument(id)
+      const nextTotalCount = Math.max(0, totalCount - 1)
       setDocuments(docs => docs.filter(d => d.id !== id))
-      setTotalCount(c => Math.max(0, c - 1))
+      setTotalCount(nextTotalCount)
+      if (nextTotalCount > 0) {
+        const nextPage = Math.max(1, Math.min(page, Math.ceil(nextTotalCount / pageSize)))
+        if (nextPage !== page) setPage(nextPage)
+        else await loadDocuments()
+      }
       void loadUsage()
       void loadAvailableYears()
     } catch (err) {
@@ -165,15 +189,24 @@ export function useDocumentsView() {
     setDocuments(current => current.map(document => updatedIds.has(document.id)
       ? { ...document, reliefCategory: categoryById.get(document.id) ?? document.reliefCategory }
       : document))
-    await loadTaxInsights()
+    await Promise.all([
+      reliefCategory === undefined ? Promise.resolve() : loadDocuments(),
+      loadTaxInsights(),
+    ])
     return results
-  }, [loadTaxInsights])
+  }, [loadDocuments, loadTaxInsights, reliefCategory])
 
   const bulkDelete = async (ids: number[]) => {
     const results = await api.bulkDeleteDocuments(ids)
     const deletedIds = new Set(results.filter(result => result.deleted).map(result => result.id))
+    const nextTotalCount = Math.max(0, totalCount - deletedIds.size)
     setDocuments(current => current.filter(document => !deletedIds.has(document.id)))
-    setTotalCount(current => Math.max(0, current - deletedIds.size))
+    setTotalCount(nextTotalCount)
+    if (nextTotalCount > 0) {
+      const nextPage = Math.max(1, Math.min(page, Math.ceil(nextTotalCount / pageSize)))
+      if (nextPage !== page) setPage(nextPage)
+      else await loadDocuments()
+    }
     await Promise.all([loadUsage(), loadAvailableYears(), loadTaxInsights()])
     return results
   }
@@ -186,7 +219,9 @@ export function useDocumentsView() {
     summary,
     expiredYears,
     reliefCategories,
+    reliefCategoriesByTaxYear,
     isLoading,
+    isTaxInsightsLoading,
     isInitialLoading: !hasLoadedYears || !hasLoadedDocuments,
     page,
     setPage,
@@ -196,6 +231,10 @@ export function useDocumentsView() {
     setTaxYear,
     search,
     setSearch,
+    reliefCategory,
+    setReliefCategory,
+    sortOrder,
+    setSortOrder,
     loadDocuments,
     loadUsage,
     loadAvailableYears,

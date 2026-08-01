@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
+import type { WishlistItem } from '../../src/types'
 
 const transaction = {
   id: 'tx-visual-1',
@@ -75,7 +76,7 @@ const bootstrap = {
     { id: 'food', name: 'Food' },
     { id: 'salary', name: 'Salary' },
   ],
-  wishlist: [],
+  wishlist: [] as WishlistItem[],
   savingsGoals: [],
   autocomplete: [],
   walletBalance: { totalBalance: 12_480.25 },
@@ -128,10 +129,11 @@ async function fulfill(route: Route, body: unknown, status = 200) {
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
 }
 
-async function mockApi(page: Page, options: { registered?: boolean; failStatus?: boolean } = {}) {
+async function mockApi(page: Page, options: { registered?: boolean; failStatus?: boolean; wishlist?: WishlistItem[] } = {}) {
   const darkMode = test.info().project.name.endsWith('-dark')
   const themedBootstrap = {
     ...bootstrap,
+    wishlist: options.wishlist ?? bootstrap.wishlist,
     dashboard: {
       ...bootstrap.dashboard,
       setting: { ...bootstrap.dashboard.setting, darkMode },
@@ -163,6 +165,7 @@ async function mockApi(page: Page, options: { registered?: boolean; failStatus?:
       })
     }
     if (pathname.endsWith('/documents')) return fulfill(route, { items: [], totalCount: 0 })
+    if (pathname.endsWith('/wishlist')) return fulfill(route, options.wishlist ?? [])
     if (pathname.endsWith('/transactions')) {
       return fulfill(route, url.searchParams.has('page')
         ? { items: [transaction], total: 1, page: 1, pageSize: Number(url.searchParams.get('pageSize') || 25) }
@@ -277,4 +280,42 @@ test('production routes do not create viewport horizontal overflow', async ({ pa
       `${dimensions.route} is ${dimensions.pageWidth - dimensions.viewportWidth}px wider than its viewport`,
     ).toBeLessThanOrEqual(dimensions.viewportWidth + 1)
   }
+})
+
+test('rewards rail responds to a desktop mouse wheel and releases page scrolling at its edge', async ({ page }) => {
+  const rewardItems: WishlistItem[] = Array.from({ length: 5 }, (_, index) => ({
+    id: index + 1,
+    name: `Reward ${index + 1}`,
+    price: 100 + index * 25,
+    priority: index === 0 ? 'High' : 'Medium',
+    isPurchased: false,
+    createdAt: `2026-07-${String(index + 1).padStart(2, '0')}`,
+    isActive: index === 0,
+  }))
+
+  await establishSession(page)
+  await mockApi(page, { wishlist: rewardItems })
+  // Keep the desktop width while making the page tall enough to prove the edge handoff.
+  await page.setViewportSize({ width: 1440, height: 600 })
+  await page.goto('/wishlist', { waitUntil: 'domcontentloaded' })
+
+  const rail = page.getByRole('group', { name: 'Rewards' })
+  await expect(rail).toBeVisible()
+  const dimensions = await rail.evaluate(element => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }))
+  expect(dimensions.scrollWidth).toBeGreaterThan(dimensions.clientWidth)
+
+  const box = await rail.boundingBox()
+  if (!box) throw new Error('Rewards rail did not have a layout box')
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+
+  await page.mouse.wheel(0, 240)
+  await expect.poll(() => rail.evaluate(element => element.scrollLeft)).toBeGreaterThan(0)
+
+  await rail.evaluate(element => { element.scrollLeft = element.scrollWidth })
+  const pageOffsetBeforeEdgeWheel = await page.evaluate(() => window.scrollY)
+  await page.mouse.wheel(0, 240)
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(pageOffsetBeforeEdgeWheel)
 })

@@ -3,11 +3,13 @@ import {
   invalidateCachePrefix,
   invalidateRevalidationPrefix,
 } from './client'
+import type { DocumentSort } from '../documentOrdering'
 
 export const DOCUMENT_CACHE_KEYS = {
   constraints: 'documents:constraints',
   expired: 'documents:expired',
   listPrefix: 'documents:list:',
+  reliefCategoriesPrefix: 'documents:relief-categories:',
   reliefCategories: (taxYear: number) => `documents:relief-categories:${taxYear}`,
   summaryPrefix: 'documents:summary:',
   summary: (taxYear: number) => `documents:summary:${taxYear}`,
@@ -28,6 +30,8 @@ export function documentListCacheKey(
   search: string | undefined,
   skip: number,
   take: number,
+  reliefCategory?: string,
+  sort: DocumentSort = 'uploaded-desc',
 ): string {
   return DOCUMENT_CACHE_KEYS.listPrefix + JSON.stringify([
     taxYear ?? 'all',
@@ -35,12 +39,15 @@ export function documentListCacheKey(
     search ?? '',
     skip,
     take,
+    reliefCategory ?? '',
+    sort,
   ])
 }
 
 export function invalidateDocumentDerivedData(): void {
   invalidateCachePrefix(DOCUMENT_CACHE_KEYS.listPrefix)
   invalidateCachePrefix(DOCUMENT_CACHE_KEYS.summaryPrefix)
+  invalidateCachePrefix(DOCUMENT_CACHE_KEYS.reliefCategoriesPrefix)
   invalidateCacheKey(DOCUMENT_CACHE_KEYS.usage)
   invalidateCacheKey(DOCUMENT_CACHE_KEYS.years)
   invalidateCacheKey(DOCUMENT_CACHE_KEYS.expired)

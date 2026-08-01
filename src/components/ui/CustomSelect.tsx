@@ -191,7 +191,7 @@ export function CustomSelect<T extends string | number>({
           className: 'cursor-pointer disabled:cursor-not-allowed',
         })}
       >
-        <span className="truncate">{selectedOption?.label || value}</span>
+        <span className="min-w-0 flex-1 truncate">{selectedOption?.label || value}</span>
         <ChevronDown className={`size-3.5 text-muted-foreground/80 transition duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
@@ -220,7 +220,7 @@ export function CustomSelect<T extends string | number>({
             tabIndex={-1}
             onMouseEnter={() => setActiveIndex(index)}
             onClick={() => selectIndex(index)}
-            className={`block h-auto min-h-9 w-full shrink-0 whitespace-normal break-words px-3.5 py-2 text-left text-xs leading-4 rounded-lg transition duration-100 cursor-pointer ${
+            className={`block h-auto min-h-9 w-full min-w-0 shrink-0 truncate whitespace-nowrap px-3.5 py-2 text-left text-xs leading-4 rounded-lg transition duration-100 cursor-pointer ${
               index === activeIndex
                 ? 'bg-primary text-primary-foreground font-bold shadow-xs'
                 : 'hover:bg-muted/80 text-foreground font-medium disabled:cursor-not-allowed disabled:opacity-45'

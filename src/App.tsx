@@ -88,6 +88,8 @@ function App() {
     onLoginSuccessRestore: (username) => financial.handleLoginSuccessRestore(username),
   })
 
+  const openSensitivePrompt = useCallback(() => session.setShowPasswordPrompt(true), [session.setShowPasswordPrompt])
+
   const push = usePushNotifications(
     !!session.token && !session.isLocked,
     dialogs.showToast,
@@ -117,6 +119,7 @@ function App() {
     showToast: dialogs.showToast,
     guardSensitive,
     setConfirmModalData: dialogs.setConfirmModalData,
+    onRequestSensitiveReveal: openSensitivePrompt,
     resolveHideSensitive: prefs.resolveHideSensitive,
     markSensitivePreferenceUnavailable: prefs.markSensitivePreferenceUnavailable,
     setDarkMode: prefs.setDarkMode,
@@ -326,7 +329,7 @@ function App() {
   const handleToggleHideSensitive = async () => {
     if (prefs.sensitivePreferenceStatus !== 'resolved') return
     if (prefs.hideSensitive) {
-      session.setShowPasswordPrompt(true)
+      openSensitivePrompt()
     } else {
       prefs.setHideSensitive(true)
       if (session.hasFingerprintSetup) {

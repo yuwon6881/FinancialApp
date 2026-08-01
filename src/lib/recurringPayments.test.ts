@@ -5,6 +5,7 @@ import {
   DEFAULT_REMINDER_SETTINGS,
   getEffectiveReminderSettings,
   getReminderEffectiveState,
+  hasBillingEnded,
   isEligibleForPayEarly,
   normalizeRecurringFrequency,
   REMINDER_LEAD_DAY_OPTIONS,
@@ -40,6 +41,26 @@ describe('computeNextOccurrenceDate', () => {
 
   it('rolls over into the next year', () => {
     expect(computeNextOccurrenceDate({ nextDueDate: '2024-12-15', frequency: 'Monthly' })).toBe('2025-01-15')
+  })
+})
+
+describe('hasBillingEnded', () => {
+  const today = new Date(2024, 5, 15)
+
+  it('treats an open-ended subscription as still billing', () => {
+    expect(hasBillingEnded({ endDate: undefined }, today)).toBe(false)
+  })
+
+  it('treats a future end date as still billing', () => {
+    expect(hasBillingEnded({ endDate: '2024-06-16' }, today)).toBe(false)
+  })
+
+  it('is inclusive of the end date itself', () => {
+    expect(hasBillingEnded({ endDate: '2024-06-15' }, today)).toBe(false)
+  })
+
+  it('reports a past end date as ended', () => {
+    expect(hasBillingEnded({ endDate: '2024-06-14' }, today)).toBe(true)
   })
 })
 

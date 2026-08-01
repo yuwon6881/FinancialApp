@@ -364,7 +364,6 @@ export function AuthenticatedView({
                     <WishlistView
                       wishlist={financial.allWishlist}
                       savingsGoals={financial.allSavingsGoals}
-                      transactions={financial.allTransactions}
                       rewardsBalance={wishlistRewardsBalance}
                       rewardsTarget={wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')?.target ?? 400}
                       pastThreeMonthsRewardsAverage={wishlistDashboardData?.stats?.pastThreeMonthsRewardsAverage ?? 0}
@@ -384,7 +383,6 @@ export function AuthenticatedView({
                       onResetAutoOpen={() => nav.setAutoOpenWishlistAdd(false)}
                       onNavigateToLedger={nav.handleNavigateToLedger}
                       cycleDay={financial.optimisticDashboardData?.setting?.cycleDay || 28}
-                      onFetchClaimedWishlist={apiClient.fetchClaimedWishlistPage}
                       isSwitchingCycle={nav.isSwitchingCycle}
                       onStartEditPending={financial.setEditingPendingId}
                       aiDraft={aiRouter.state.aiWishlistDraft}

@@ -15,7 +15,6 @@ import type {
 } from '../types'
 import type { CategoryCleanupSuggestion } from '../lib/api'
 import { CACHE_KEYS, getCachedJSON, getCachedTransactions, getCachedWishlist, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod, setCachedCycleSnapshot } from '../lib/cache'
-import { computeNextOccurrenceDate } from '../lib/recurringPayments'
 import { useOptimisticList } from '../lib/useOptimisticList'
 import { computeOptimisticDashboard } from '../lib/optimisticDashboard'
 import { useOutbox } from '../lib/useOutbox'
@@ -46,6 +45,7 @@ export interface UseFinancialDataOptions {
   showToast: (message: string, title?: string, tone?: ToastTone, action?: ToastAction) => void
   guardSensitive: () => boolean
   setConfirmModalData: React.Dispatch<React.SetStateAction<ConfirmModalData | null>>
+  onRequestSensitiveReveal?: () => void
   resolveHideSensitive: (value: boolean) => void
   markSensitivePreferenceUnavailable: () => void
   setDarkMode: (value: boolean) => void
@@ -82,6 +82,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     showToast,
     guardSensitive,
     setConfirmModalData,
+    onRequestSensitiveReveal,
     resolveHideSensitive,
     markSensitivePreferenceUnavailable,
     setDarkMode,
@@ -175,6 +176,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     showToast,
     onAuthError: handleLogout,
     onLockError: markSessionLocked,
+    onRequestSensitiveReveal,
     refresh: async successfulOps => {
       const ops = successfulOps.map(({ op }) => op)
       for (const op of ops) {
@@ -1192,7 +1194,10 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       const result = await api.payRecurringPaymentEarly(id, payment?.nextDueDate || '')
       await loadAll(selectedMonth || undefined, selectedYear || undefined, true)
       setRecurringPayments(prev => prev.map(p => p.id === id
-        ? { ...p, nextDueDate: result.nextOccurrenceDate || computeNextOccurrenceDate({ nextDueDate: result.settledOccurrenceDate, frequency: p.frequency }) }
+        // A null nextOccurrenceDate means the server found none left (end date reached, or the
+        // scan horizon). Fall back to the occurrence just settled rather than synthesising one a
+        // cycle later, which would keep offering Pay Early for a bill that can no longer be paid.
+        ? { ...p, nextDueDate: result.nextOccurrenceDate || result.settledOccurrenceDate }
         : p
       ))
       showToast(

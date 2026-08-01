@@ -26,12 +26,18 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     summary,
     expiredYears,
     reliefCategories,
+    reliefCategoriesByTaxYear,
     isLoading,
+    isTaxInsightsLoading,
     isInitialLoading,
     taxYear,
     setTaxYear,
     search,
     setSearch,
+    reliefCategory,
+    setReliefCategory,
+    sortOrder,
+    setSortOrder,
     page,
     setPage,
     pageSize,
@@ -67,7 +73,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
 
   useEffect(() => {
     setSelectedIds(new Set())
-  }, [taxYear, search, pageSize])
+  }, [taxYear, search, reliefCategory, sortOrder, pageSize])
 
   if (isInitialLoading) {
     return <CycleSkeleton variant="documents" />
@@ -102,7 +108,15 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
       const results = await bulkUpdateDocumentCategories(staged.map(([id, reliefCategory]) => ({ id, reliefCategory })))
       const resultsById = new Map(results.map(result => [result.id, result]))
       const failed = staged.filter(([id]) => resultsById.get(id)?.updated !== true)
-      setPendingReliefCategories(new Map(failed))
+      setPendingReliefCategories(current => {
+        const next = new Map(current)
+        for (const [id, stagedCategory] of staged) {
+          if (current.get(id) !== stagedCategory) continue
+          if (resultsById.get(id)?.updated === true) next.delete(id)
+          else next.set(id, stagedCategory)
+        }
+        return next
+      })
       const savedCount = staged.length - failed.length
       showToast(
         failed.length
@@ -130,8 +144,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
             Document Vault
           </h2>
           <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
-            Long-term storage for receipts, invoices and tax records. Retention dates are shown for
-            reference only — nothing is ever deleted automatically.
+            Keep receipts, invoices, and tax records in one place. Nothing is deleted automatically.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -176,13 +189,17 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
       )}
 
       {/* Panel */}
-      <div className="rounded-2xl border border-border/60 bg-card p-3 shadow-xs sm:p-5">
+      <div className="rounded-2xl border border-border/60 bg-card p-3 shadow-xs sm:p-4">
         <DocumentFilterBar
           search={search}
           setSearch={setSearch}
           taxYear={taxYear}
           setTaxYear={setTaxYear}
           availableYears={availableYears}
+          sortOrder={sortOrder}
+          setSortOrder={setSortOrder}
+          reliefCategoryLabel={reliefCategories.find(category => category.id === reliefCategory)?.name}
+          onClearReliefCategory={() => setReliefCategory(undefined)}
         />
 
         <StorageUsageMeter usage={usage} />
@@ -192,6 +209,9 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
           categories={reliefCategories}
           taxYear={taxYear}
           currency={currency}
+          isLoading={isTaxInsightsLoading}
+          selectedReliefCategory={reliefCategory}
+          onSelectReliefCategory={setReliefCategory}
           onAddCategory={addReliefCategory}
           onUpdateCategory={updateReliefCategory}
         />
@@ -237,11 +257,16 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
                 type="button"
                 disabled={isDownloading || selectedIds.size > 100}
                 onClick={() => {
+                  const idsToDownload = [...selectedIds]
                   setIsDownloading(true)
-                  void documentsApi.downloadSelectedDocumentArchive([...selectedIds])
+                  void documentsApi.downloadSelectedDocumentArchive(idsToDownload)
                     .then(() => {
-                      setSelectedIds(new Set())
-                      showToast(`${selectedIds.size} document${selectedIds.size === 1 ? '' : 's'} downloaded.`, 'Download Complete', 'success')
+                      setSelectedIds(current => {
+                        const next = new Set(current)
+                        idsToDownload.forEach(id => next.delete(id))
+                        return next
+                      })
+                      showToast(`${idsToDownload.length} document${idsToDownload.length === 1 ? '' : 's'} downloaded.`, 'Download Complete', 'success')
                     })
                     .catch(() => showToast('The selected documents could not be downloaded.', 'Download Failed', 'error'))
                     .finally(() => setIsDownloading(false))
@@ -288,7 +313,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
                 await updateDocumentMetadata(id, updates)
                 void loadTaxInsights()
               }}
-              reliefCategories={reliefCategories}
+              reliefCategoriesByTaxYear={reliefCategoriesByTaxYear}
               onNavigateToTransaction={onNavigateToTransaction}
             />
 
@@ -312,6 +337,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
       <DocumentUploadSheet
         isOpen={isUploadSheetOpen}
         onClose={() => setIsUploadSheetOpen(false)}
+        initialTaxYear={taxYear}
         onSuccess={() => {
           void loadDocuments(true)
           void loadUsage()
@@ -357,10 +383,16 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
         cancelText="Cancel"
         variant="danger"
         onConfirm={async () => {
+          const idsToDelete = [...selectedIds]
           try {
-            const results = await bulkDelete([...selectedIds])
+            const results = await bulkDelete(idsToDelete)
             const failed = results.filter(result => !result.deleted)
-            setSelectedIds(new Set(failed.map(result => result.id)))
+            setSelectedIds(current => {
+              const next = new Set(current)
+              idsToDelete.forEach(id => next.delete(id))
+              failed.forEach(result => next.add(result.id))
+              return next
+            })
             showToast(
               failed.length ? `${results.length - failed.length} deleted; ${failed.length} failed and remain selected.` : `${results.length} documents deleted.`,
               failed.length ? 'Partially Deleted' : 'Deleted',
