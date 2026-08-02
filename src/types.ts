@@ -75,6 +75,8 @@ interface InvestmentHolding {
   dailyChangeApp?: number
   unrealisedProfitLossApp?: number
   unrealisedPercent?: number
+  realisedProfitLossApp?: number
+  netDividendsApp?: number
   priceDate?: string
   priceFetchedAt?: string
   usesManualPrice: boolean

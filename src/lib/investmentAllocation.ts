@@ -1,4 +1,65 @@
-import type { InvestmentPlan } from '../types'
+import type { InvestmentAllocationStatus, InvestmentAllocationSleeve, InvestmentInstrument, InvestmentPlan } from '../types'
+
+/**
+ * `key` is what code groups and matches on; `label` is only ever shown to a person.
+ * They are kept apart deliberately: the backend sends its own sleeve labels, and
+ * matching those strings against a copy of them here would silently produce empty
+ * baskets the moment either side reworded a label.
+ */
+export type SleeveIndexEntry = {
+  sleeve?: InvestmentAllocationSleeve
+  key: string
+  label: string
+}
+
+export const UNASSIGNED_SLEEVE_KEY = 'Unassigned'
+
+const sleeveLabels: Record<InvestmentAllocationSleeve, string> = {
+  USEquity: 'US shares',
+  InternationalExUS: 'Shares outside the US',
+  Bonds: 'Bonds',
+}
+
+const unassignedSleeve: SleeveIndexEntry = { key: UNASSIGNED_SLEEVE_KEY, label: 'Not sorted yet' }
+
+export function buildSleeveIndex(instruments: InvestmentInstrument[]) {
+  return new Map(instruments.map(instrument => [
+    instrument.id,
+    instrument.allocationSleeve
+      ? {
+          sleeve: instrument.allocationSleeve,
+          key: instrument.allocationSleeve,
+          label: sleeveLabels[instrument.allocationSleeve],
+        }
+      : unassignedSleeve,
+  ]))
+}
+
+export function sleeveOf(
+  holding: { instrumentId: string },
+  index: Map<string, SleeveIndexEntry>,
+): SleeveIndexEntry {
+  return index.get(holding.instrumentId) ?? unassignedSleeve
+}
+
+/** The human label for a sleeve key, for UI that only has the key to hand. */
+export function sleeveLabelFor(key: string, index: Map<string, SleeveIndexEntry>) {
+  if (key === UNASSIGNED_SLEEVE_KEY) return unassignedSleeve.label
+  return [...index.values()].find(entry => entry.key === key)?.label ?? key
+}
+
+const statusLabels: Record<InvestmentAllocationStatus, string> = {
+  NotStarted: 'Not started',
+  Incomplete: 'Needs sorting',
+  OnTrack: 'On track',
+  Watch: 'Drifting',
+  Alert: 'Off target',
+}
+
+/** Status codes arrive as `OnTrack`/`NotStarted`; never show those to a person. */
+export function allocationStatusLabel(status: InvestmentAllocationStatus) {
+  return statusLabels[status]
+}
 
 type TargetKey = 'usEquityTarget' | 'internationalExUsTarget' | 'bondsTarget'
 

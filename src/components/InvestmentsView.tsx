@@ -250,6 +250,8 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
           />
           <InvestmentPlanPanel
             allocation={portfolio.allocation}
+            holdings={portfolio.holdings}
+            instruments={portfolio.instruments}
             usdRate={portfolio.usdRate}
             masked={hideSensitive}
             onNavigate={onNavigate}

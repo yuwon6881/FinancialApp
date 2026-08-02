@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { InvestmentAllocationOverview } from '../../types'
+import type { InvestmentAllocationOverview, InvestmentPortfolio } from '../../types'
 import { InvestmentPlanPanel } from './InvestmentPlanPanel'
 
 const allocation: InvestmentAllocationOverview = {
@@ -29,7 +29,7 @@ const allocation: InvestmentAllocationOverview = {
 
 describe('InvestmentPlanPanel guidance', () => {
   it('omits the guidance section when every sleeve is within its configured drift', () => {
-    render(<InvestmentPlanPanel allocation={allocation} usdRate={0.25} masked={false} onNavigate={vi.fn()} />)
+    render(<InvestmentPlanPanel allocation={allocation} holdings={[]} instruments={[]} usdRate={0.25} masked={false} onNavigate={vi.fn()} />)
 
     expect(screen.getByText('What you hold vs your target')).toBeTruthy()
     expect(screen.queryByText('What to do next')).toBeNull()
@@ -46,7 +46,7 @@ describe('InvestmentPlanPanel guidance', () => {
         { priority: 4, kind: 'TransferBuy', sleeve: 'Bonds', amount: 20, message: 'reinvest' },
       ],
     }
-    render(<InvestmentPlanPanel allocation={watch} usdRate={0.25} masked={false} onNavigate={vi.fn()} />)
+    render(<InvestmentPlanPanel allocation={watch} holdings={[]} instruments={[]} usdRate={0.25} masked={false} onNavigate={vi.fn()} />)
 
     expect(screen.getByText('What to do next')).toBeTruthy()
     expect(screen.getByText(/usual completed-cycle Growth deposit/).textContent).toContain('RM')
@@ -63,7 +63,7 @@ describe('InvestmentPlanPanel guidance', () => {
         { priority: 2, kind: 'Buy', sleeve: 'Bonds', amount: 100, message: 'buy' },
       ],
     }
-    render(<InvestmentPlanPanel allocation={watch} masked={false} onNavigate={vi.fn()} />)
+    render(<InvestmentPlanPanel allocation={watch} holdings={[]} instruments={[]} masked={false} onNavigate={vi.fn()} />)
 
     expect(screen.queryByText(/available cash/i)).toBeNull()
     expect(screen.getByText('1.')).toBeTruthy()
@@ -88,7 +88,7 @@ describe('InvestmentPlanPanel contribution split', () => {
   }
 
   it('shows the per-sleeve split even when the plan is on track', () => {
-    render(<InvestmentPlanPanel allocation={withPlan} masked={false} onNavigate={vi.fn()} />)
+    render(<InvestmentPlanPanel allocation={withPlan} holdings={[]} instruments={[]} masked={false} onNavigate={vi.fn()} />)
 
     // The rebalancing guidance stays hidden; the routine split does not.
     expect(screen.queryByText('What to do next')).toBeNull()
@@ -99,15 +99,36 @@ describe('InvestmentPlanPanel contribution split', () => {
   })
 
   it('masks the amounts when sensitive values are hidden', () => {
-    render(<InvestmentPlanPanel allocation={withPlan} masked onNavigate={vi.fn()} />)
+    render(<InvestmentPlanPanel allocation={withPlan} holdings={[]} instruments={[]} masked onNavigate={vi.fn()} />)
 
     expect(screen.queryByText('RM 660.00')).toBeNull()
     expect(screen.getAllByText('••••').length).toBeGreaterThan(0)
   })
 
   it('omits the section when there is nothing ready to invest', () => {
-    render(<InvestmentPlanPanel allocation={allocation} masked={false} onNavigate={vi.fn()} />)
+    render(<InvestmentPlanPanel allocation={allocation} holdings={[]} instruments={[]} masked={false} onNavigate={vi.fn()} />)
 
     expect(screen.queryByText('Your next deposit, split three ways')).toBeNull()
+  })
+})
+
+describe('InvestmentPlanPanel sleeve holdings', () => {
+  const instruments: InvestmentPortfolio['instruments'] = [
+    { id: 'voo', symbol: 'VOO', name: 'Vanguard S&P 500 ETF', type: 'ETF', currency: 'USD', allocationSleeve: 'USEquity', isCustom: false, isArchived: false },
+    { id: 'other', symbol: 'OTHER', name: 'Unclassified ETF', type: 'ETF', currency: 'USD', isCustom: true, isArchived: false },
+  ]
+  const holdings: InvestmentPortfolio['holdings'] = [
+    { accountId: 'a1', accountName: 'Broker', instrumentId: 'voo', symbol: 'VOO', name: 'Vanguard S&P 500 ETF', type: 'ETF', currency: 'USD', units: 1, averageCostNative: 400, valueApp: 500, unrealisedProfitLossApp: 100, usesManualPrice: false, fxIncomplete: false },
+    { accountId: 'a1', accountName: 'Broker', instrumentId: 'other', symbol: 'OTHER', name: 'Unclassified ETF', type: 'ETF', currency: 'USD', units: 1, averageCostNative: 20, usesManualPrice: false, fxIncomplete: false },
+  ]
+
+  it('shows assigned and unassigned funds without inventing missing values', () => {
+    render(<InvestmentPlanPanel allocation={allocation} holdings={holdings} instruments={instruments} masked={false} onNavigate={vi.fn()} />)
+
+    expect(screen.getByText('VOO · Vanguard S&P 500 ETF')).toBeTruthy()
+    expect(screen.getByText('Not sorted yet')).toBeTruthy()
+    expect(screen.getByText('OTHER · Unclassified ETF')).toBeTruthy()
+    expect(screen.getByText('Share unavailable')).toBeTruthy()
+    expect(screen.getByText('Gain unavailable')).toBeTruthy()
   })
 })

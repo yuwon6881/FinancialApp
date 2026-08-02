@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown, Loader2, Search } from 'lucide-react'
 import type { InvestmentActivity, InvestmentCashFlow, InvestmentPortfolio, InvestmentTransactionType } from '../../types'
 import * as api from '../../lib/api'
 import { applyOpsToList, type QueuedOp } from '../../lib/outbox'
 import { sortActivityNewestFirst, sortCashFlowsNewestFirst } from '../../lib/investmentOrdering'
 import { formatCurrencyVal } from '../../lib/utils'
+import { buildSleeveIndex, sleeveLabelFor, sleeveOf } from '../../lib/investmentAllocation'
 import { Button } from '../ui/Button'
 import { CustomSelect } from '../ui/CustomSelect'
 import { DatePicker } from '../ui/DatePicker'
@@ -37,10 +38,13 @@ const cashFlowAmount = (flow: InvestmentCashFlow, masked: boolean) => {
 export const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: InvestmentPortfolio; masked: boolean; filter: AllocationFilter }) => {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState<10 | 25 | 50>(10)
+  const sleeveIndex = useMemo(() => buildSleeveIndex(portfolio.instruments), [portfolio.instruments])
+  const filterLabel = filter?.mode === 'sleeve' ? sleeveLabelFor(filter.key, sleeveIndex) : filter?.key
 
   const holdings = portfolio.holdings.filter(holding =>
     !filter ||
-    (filter.mode === 'asset' ? holding.type === filter.key :
+    (filter.mode === 'sleeve' ? sleeveOf(holding, sleeveIndex).key === filter.key :
+      filter.mode === 'asset' ? holding.type === filter.key :
       filter.mode === 'instrument' ? holding.symbol === filter.key :
         holding.accountName === filter.key))
 
@@ -64,13 +68,13 @@ export const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: Invest
     .filter(group => group.holdings.length > 0 || group.cash.length > 0)
   return (
   <section aria-labelledby="holdings-title" className="app-panel overflow-hidden rounded-2xl border border-border/60 bg-card/92">
-    <div className="p-5"><h2 id="holdings-title" className="text-base font-bold text-foreground">Holdings by account</h2><p className="mt-1 text-xs text-muted-foreground">Recording a buy places a reusable investment in an account.{filter ? ` Filtered by ${filter.key}.` : ''}</p></div>
+    <div className="p-5"><h2 id="holdings-title" className="text-base font-bold text-foreground">What you hold</h2><p className="mt-1 text-xs text-muted-foreground">Every fund you own, grouped by the account holding it.{filter ? ` Showing only ${filterLabel}.` : ''}</p></div>
     <div className="grid gap-3 px-3 pb-3 sm:grid-cols-2 lg:grid-cols-3">
       {accountGroups.map(({ account, holdings: accountHoldings, cash, total }) => (
         <article key={account.id} className="interactive-card rounded-xl border border-border/50 bg-muted/15 p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0"><h3 className="truncate text-sm font-bold">{account.name}</h3><p className="text-[10px] text-muted-foreground">Base currency {account.baseCurrency} · {accountHoldings.length} holding{accountHoldings.length === 1 ? '' : 's'}</p></div>
-            <strong className="shrink-0 text-xs">{masked ? '••••' : total === undefined ? 'Incomplete FX' : money(total, portfolio.appCurrency)}</strong>
+            <strong className="shrink-0 text-xs">{masked ? '••••' : total === undefined ? 'Exchange rate missing' : money(total, portfolio.appCurrency)}</strong>
           </div>
           {cash.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{cash.map(balance => (
             <span key={balance.currency} className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${balance.amount < 0 ? 'bg-orange-500/10 text-orange-700 dark:text-orange-300' : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'}`}>
@@ -87,17 +91,19 @@ export const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: Invest
         <article key={`${holding.accountId}-${holding.instrumentId}`} className="interactive-card min-w-0 rounded-xl border border-border/50 p-4">
           <div className="flex min-w-0 items-start justify-between gap-3">
             <div className="min-w-0"><strong className="block truncate text-sm">{holding.symbol} · {holding.name}</strong><span className="text-[10px] text-muted-foreground">{holding.accountName} · {holding.type}</span></div>
-            <strong className="shrink-0 text-sm">{masked ? '••••' : holding.valueApp === undefined ? 'Incomplete FX' : money(holding.valueApp, portfolio.appCurrency)}</strong>
+            <strong className="shrink-0 text-sm">{masked ? '••••' : holding.valueApp === undefined ? 'Exchange rate missing' : money(holding.valueApp, portfolio.appCurrency)}</strong>
           </div>
           <dl className="mt-3 grid grid-cols-2 gap-2 text-[10px]">
             <div><dt className="text-muted-foreground">Units</dt><dd className="break-words font-semibold">{masked ? '••••' : number(holding.units, 8)}</dd></div>
-            <div><dt className="text-muted-foreground">Close</dt><dd className="break-words font-semibold">{masked || holding.latestPriceNative === undefined ? '—' : money(holding.latestPriceNative, holding.currency)}</dd></div>
-            <div><dt className="text-muted-foreground">Native value</dt><dd className="break-words font-semibold">{masked || holding.valueNative === undefined ? '—' : money(holding.valueNative, holding.currency)}</dd></div>
-            <div><dt className="text-muted-foreground">FX rate</dt><dd className="break-words font-semibold">{holding.fxRate === undefined ? 'Missing' : number(holding.fxRate, 8)}</dd></div>
+            <div><dt className="text-muted-foreground">Latest price</dt><dd className="break-words font-semibold">{masked || holding.latestPriceNative === undefined ? '—' : money(holding.latestPriceNative, holding.currency)}</dd></div>
+            <div><dt className="text-muted-foreground">Worth in fund currency</dt><dd className="break-words font-semibold">{masked || holding.valueNative === undefined ? '—' : money(holding.valueNative, holding.currency)}</dd></div>
+            <div><dt className="text-muted-foreground">Exchange rate</dt><dd className="break-words font-semibold">{holding.fxRate === undefined ? 'Missing' : number(holding.fxRate, 8)}</dd></div>
+            <div><dt className="text-muted-foreground">Already banked</dt><dd className={`break-words font-semibold ${holding.realisedProfitLossApp === undefined ? '' : holding.realisedProfitLossApp >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>{masked ? '••••' : holding.realisedProfitLossApp === undefined ? '—' : money(holding.realisedProfitLossApp, portfolio.appCurrency)}</dd></div>
+            <div><dt className="text-muted-foreground">Dividends</dt><dd className={`break-words font-semibold ${holding.netDividendsApp === undefined ? '' : holding.netDividendsApp >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>{masked ? '••••' : holding.netDividendsApp === undefined ? '—' : money(holding.netDividendsApp, portfolio.appCurrency)}</dd></div>
           </dl>
           <details className="mt-3 group rounded-lg border border-border/50 bg-muted/20">
             <summary className="flex cursor-pointer select-none items-center justify-between p-2.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground outline-none transition-colors hover:bg-muted/30">
-              <span>Valuation Details</span>
+              <span>How this was worked out</span>
               <ChevronDown className="size-3.5 transition-transform duration-200 group-open:rotate-180" />
             </summary>
             <div className="border-t border-border/50 p-2.5 pt-2 text-[10px] text-muted-foreground">
@@ -106,8 +112,8 @@ export const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: Invest
                 {holding.currency !== portfolio.appCurrency ? ` × ${holding.fxRate === undefined ? 'missing FX' : number(holding.fxRate, 8)} = ${holding.valueApp === undefined ? 'incomplete' : money(holding.valueApp, portfolio.appCurrency)}` : ''}
               </p>
               <div className="mt-2 space-y-1 text-[9px]">
-                <div className="flex justify-between gap-2"><span className="opacity-70">Price Source</span><span className="text-right">{holding.priceSource ?? 'Price source unavailable'} · {holding.priceDate ?? 'No date'}</span></div>
-                {holding.fxSource && <div className="flex justify-between gap-2"><span className="opacity-70">FX Source</span><span className="text-right">{holding.fxSource} · {holding.fxDate ?? 'No date'}</span></div>}
+                <div className="flex justify-between gap-2"><span className="opacity-70">Price from</span><span className="text-right">{holding.priceSource ?? 'Price source unavailable'} · {holding.priceDate ?? 'No date'}</span></div>
+                {holding.fxSource && <div className="flex justify-between gap-2"><span className="opacity-70">Rate from</span><span className="text-right">{holding.fxSource} · {holding.fxDate ?? 'No date'}</span></div>}
               </div>
             </div>
           </details>
@@ -120,27 +126,27 @@ export const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: Invest
           <DataTableHeaderCell>Investment</DataTableHeaderCell>
           <DataTableHeaderCell>Account</DataTableHeaderCell>
           <DataTableHeaderCell className="text-right">Units</DataTableHeaderCell>
-          <DataTableHeaderCell className="text-right">Avg cost</DataTableHeaderCell>
-          <DataTableHeaderCell className="text-right">Latest</DataTableHeaderCell>
-          <DataTableHeaderCell className="text-right">Native value</DataTableHeaderCell>
-          <DataTableHeaderCell className="text-right">{portfolio.appCurrency} value</DataTableHeaderCell>
-          <DataTableHeaderCell className="text-right">Daily</DataTableHeaderCell>
-          <DataTableHeaderCell className="text-right">P/L</DataTableHeaderCell>
-          <DataTableHeaderCell>Price date</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">Avg price paid</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">Latest price</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">Worth now ({portfolio.appCurrency})</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">Change today</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">Gain on paper</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">Already banked</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">Dividends</DataTableHeaderCell>
         </DataTableHeader>
         <DataTableBody>
           {paginatedHoldings.map(holding => (
             <tr key={`${holding.accountId}-${holding.instrumentId}`} className="hover:bg-muted/20">
-              <td className="px-4 py-3"><span className="font-bold text-foreground">{holding.symbol}</span><span className="ml-2 text-[10px] text-muted-foreground">{holding.type}</span><span className="block max-w-44 truncate text-[10px] text-muted-foreground">{holding.name}</span></td>
+              <td className="px-4 py-3"><span className="font-bold text-foreground">{holding.symbol}</span><span className="ml-2 text-[10px] text-muted-foreground">{holding.type}</span><span className="block max-w-44 truncate text-[10px] text-muted-foreground">{holding.name}</span><details className="group/valuation mt-1 text-[9px] text-muted-foreground"><summary className="cursor-pointer select-none outline-none">How this was worked out</summary><div className="mt-1">Worth in fund currency {masked || holding.valueNative === undefined ? '—' : money(holding.valueNative, holding.currency)} · {holding.priceDate ?? 'No price date'}</div></details></td>
               <td className="px-4 py-3 text-muted-foreground">{holding.accountName}</td>
               <td className="px-4 py-3 text-right font-medium">{masked ? '••••' : number(holding.units, 8)}</td>
               <td className="px-4 py-3 text-right">{masked ? '••••' : money(holding.averageCostNative, holding.currency)}</td>
               <td className="px-4 py-3 text-right">{masked ? '••••' : holding.latestPriceNative === undefined ? 'Unavailable' : money(holding.latestPriceNative, holding.currency)}</td>
-              <td className="px-4 py-3 text-right">{masked ? '••••' : holding.valueNative === undefined ? '—' : money(holding.valueNative, holding.currency)}</td>
-              <td className="px-4 py-3 text-right font-bold">{masked ? '••••' : holding.valueApp === undefined ? 'Incomplete FX' : money(holding.valueApp, portfolio.appCurrency)}</td>
+              <td className="px-4 py-3 text-right font-bold">{masked ? '••••' : holding.valueApp === undefined ? 'Exchange rate missing' : money(holding.valueApp, portfolio.appCurrency)}</td>
               <td className="px-4 py-3 text-right">{masked ? '••••' : holding.dailyChangeApp === undefined ? '—' : money(holding.dailyChangeApp, portfolio.appCurrency)}</td>
               <td className={`px-4 py-3 text-right font-bold ${(holding.unrealisedProfitLossApp ?? 0) >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>{masked ? '••••' : holding.unrealisedProfitLossApp === undefined ? '—' : `${money(holding.unrealisedProfitLossApp, portfolio.appCurrency)} (${(holding.unrealisedPercent ?? 0).toFixed(1)}%)`}</td>
-              <td className="px-4 py-3 text-muted-foreground">{holding.priceDate ?? 'Unavailable'}</td>
+              <td className={`px-4 py-3 text-right font-bold ${holding.realisedProfitLossApp === undefined ? '' : holding.realisedProfitLossApp >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>{masked ? '••••' : holding.realisedProfitLossApp === undefined ? '—' : money(holding.realisedProfitLossApp, portfolio.appCurrency)}</td>
+              <td className={`px-4 py-3 text-right font-bold ${holding.netDividendsApp === undefined ? '' : holding.netDividendsApp >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>{masked ? '••••' : holding.netDividendsApp === undefined ? '—' : money(holding.netDividendsApp, portfolio.appCurrency)}</td>
             </tr>
           ))}
         </DataTableBody>

@@ -1,10 +1,13 @@
 import { AlertTriangle, ArrowRight, CheckCircle2, CircleHelp, Settings2 } from 'lucide-react'
 import { m, useReducedMotion } from 'framer-motion'
-import type { AppTab, InvestmentAllocationOverview, InvestmentAllocationStatus } from '../../types'
+import type { AppTab, InvestmentAllocationOverview, InvestmentAllocationStatus, InvestmentPortfolio } from '../../types'
 import { Button } from '../ui/Button'
 import { InfoHint } from '../ui/InfoHint'
 import { formatCurrencyVal } from '../../lib/utils'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { allocationStatusLabel, buildSleeveIndex, UNASSIGNED_SLEEVE_KEY } from '../../lib/investmentAllocation'
+import { breakdownBySleeve } from '../../lib/investmentSleeveBreakdown'
+import { SleeveCard } from './SleeveCard'
 
 const tone: Record<InvestmentAllocationStatus, string> = {
   NotStarted: 'border-border/60 bg-muted/20 text-muted-foreground',
@@ -18,11 +21,15 @@ const colors = ['bg-blue-500', 'bg-amber-500', 'bg-emerald-500']
 
 export function InvestmentPlanPanel({
   allocation,
+  holdings,
+  instruments,
   usdRate,
   masked,
   onNavigate,
 }: {
   allocation: InvestmentAllocationOverview
+  holdings: InvestmentPortfolio['holdings']
+  instruments: InvestmentPortfolio['instruments']
   usdRate?: number
   masked: boolean
   onNavigate: (tab: AppTab) => void
@@ -51,6 +58,13 @@ export function InvestmentPlanPanel({
   const showGuidance = allocation.status !== 'OnTrack' &&
     (allocation.incompleteReasons.length > 0 || actionableRecommendations.length > 0)
   const contributionPlan = allocation.contributionPlan
+  // Grouped once here, not per card — every card needs a different slice of the
+  // same single pass over the holdings.
+  const constituentsBySleeve = useMemo(
+    () => breakdownBySleeve(holdings, buildSleeveIndex(instruments)),
+    [holdings, instruments],
+  )
+  const unassigned = constituentsBySleeve.get(UNASSIGNED_SLEEVE_KEY) ?? []
 
   return (
     <m.section
@@ -75,7 +89,7 @@ export function InvestmentPlanPanel({
               />
             </h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Across every brokerage account · {allocation.status.replace(/([A-Z])/g, ' $1').trim()}
+              Across every brokerage account · {allocationStatusLabel(allocation.status)}
             </p>
           </div>
         </div>
@@ -86,41 +100,28 @@ export function InvestmentPlanPanel({
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {allocation.sleeves.map((sleeve, index) => (
-          <m.article
+          <SleeveCard
             key={sleeve.sleeve}
-            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: reduceMotion ? 0 : index * 0.07 }}
-            whileHover={reduceMotion ? undefined : { y: -4, scale: 1.01 }}
-            className={`group/sleeve rounded-xl border p-4 shadow-sm transition-[border-color,box-shadow] duration-300 hover:border-current/30 hover:shadow-md ${tone[sleeve.status]}`}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-bold">{sleeve.label}</span>
-              <span className="rounded-full bg-background/60 px-2 py-0.5 text-[10px] font-bold transition-transform duration-300 group-hover/sleeve:scale-105">{sleeve.status}</span>
-            </div>
-            <div className="mt-3 flex items-end gap-2">
-              <strong className="text-2xl text-foreground">
-                {sleeve.currentPercentage === undefined ? '—' : `${sleeve.currentPercentage.toFixed(1)}%`}
-              </strong>
-              <span className="pb-1 text-xs text-muted-foreground">/ {sleeve.targetPercentage}% target</span>
-            </div>
-            <p className="mt-1 text-[10px] text-muted-foreground">
-              {money(sleeve.value)}
-              {sleeve.driftPercentagePoints !== undefined
-                ? ` · ${sleeve.driftPercentagePoints > 0 ? '+' : ''}${sleeve.driftPercentagePoints.toFixed(1)}% off target`
-                : ''}
-            </p>
-            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-background/70">
-              <m.div
-                className={`h-full origin-left ${colors[index]}`}
-                initial={reduceMotion ? false : { scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ duration: 0.55, delay: reduceMotion ? 0 : 0.12 + index * 0.08, ease: 'easeOut' }}
-                style={{ width: `${Math.min(100, sleeve.currentPercentage ?? 0)}%` }}
-              />
-            </div>
-          </m.article>
+            sleeve={sleeve}
+            constituents={constituentsBySleeve.get(sleeve.sleeve) ?? []}
+            masked={masked}
+            money={money}
+            colorClass={colors[index]}
+            toneClass={tone[sleeve.status]}
+            animationIndex={index}
+          />
         ))}
+        {unassigned.length > 0 && (
+          <SleeveCard
+            sleeve={{ label: 'Not sorted yet', status: 'Incomplete' }}
+            constituents={unassigned}
+            masked={masked}
+            money={money}
+            colorClass="bg-muted-foreground"
+            toneClass={tone.Incomplete}
+            animationIndex={allocation.sleeves.length}
+          />
+        )}
       </div>
 
       {contributionPlan && (
