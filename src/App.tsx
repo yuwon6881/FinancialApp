@@ -34,7 +34,6 @@ import { usePushNotifications } from './app/usePushNotifications'
 import { useInvestmentRefreshCoordinator } from './app/useInvestmentRefreshCoordinator'
 import { useFabMenu } from './app/useFabMenu'
 import { useCurrentCycleDashboard } from './app/useCurrentCycleDashboard'
-import { AppOverlays } from './app/AppOverlays'
 import { AuthenticatedView } from './app/AuthenticatedView'
 import { LaunchReady } from './app/LaunchReady'
 import { hideNativeSplashAfterPaint } from './app/launchHandoff'
@@ -44,6 +43,7 @@ import { readAppLocation, updateAppSearch } from './lib/appLocation'
 
 // Instant, flash-free placeholder while a lazily-loaded chunk is fetched at the root level.
 const ViewFallback = () => <div className="app-shell min-h-screen" />
+const AppOverlays = lazy(() => import('./app/AppOverlays').then(module => ({ default: module.AppOverlays })))
 
 // Skeleton placeholder for tab navigation to prevent empty squares in the main content area.
 const getPageSkeletonVariant = (tab: AppTab): PageSkeletonVariant => tab
@@ -551,18 +551,20 @@ function App() {
           alert={alert}
         />
 
-        <AppOverlays
-          dialogs={dialogs}
-          financial={financial}
-          session={session}
-          prefs={prefs}
-          nav={nav}
-          cycleSummary={cycleSummary}
-          fabMenu={fabMenu}
-          todayDashboardData={todayDashboardData}
-          currentPendingNotifications={currentPendingNotifications}
-          setIsAiOpen={setIsAiOpen}
-        />
+        <Suspense fallback={null}>
+          <AppOverlays
+            dialogs={dialogs}
+            financial={financial}
+            session={session}
+            prefs={prefs}
+            nav={nav}
+            cycleSummary={cycleSummary}
+            fabMenu={fabMenu}
+            todayDashboardData={todayDashboardData}
+            currentPendingNotifications={currentPendingNotifications}
+            setIsAiOpen={setIsAiOpen}
+          />
+        </Suspense>
       </div>
     </AppProvider>
   )
