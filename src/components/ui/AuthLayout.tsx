@@ -19,7 +19,7 @@ export function AuthCard({ children, className }: { children: ReactNode; classNa
     <section
       className={cn(
         'relative z-10 w-full max-w-md space-y-6 rounded-3xl border border-border/60',
-        'bg-card p-6 shadow-2xl sm:p-8 md:bg-card/60 md:backdrop-blur-xl',
+        'view-enter bg-card p-6 shadow-2xl sm:p-8 md:bg-card/60 md:backdrop-blur-xl',
         className,
       )}
     >
@@ -51,7 +51,7 @@ export function AuthHeader({
 export function AuthLoadingState({ label }: { label: string }) {
   return (
     <AuthShell className="select-none">
-      <div role="status" aria-live="polite" className="flex flex-col items-center gap-3">
+      <div role="status" aria-live="polite" className="view-enter flex flex-col items-center gap-3">
         <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         <p className="text-xs font-semibold text-muted-foreground">{label}</p>
       </div>

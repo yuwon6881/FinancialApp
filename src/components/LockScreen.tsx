@@ -108,7 +108,7 @@ export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScre
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         tabIndex={-1}
-        className="flex w-full max-w-sm flex-col items-center gap-6 outline-none"
+        className="view-enter flex w-full max-w-sm flex-col items-center gap-6 outline-none"
       >
         <AppLogo className="size-16 rounded-2xl shadow-xl shadow-primary/20" />
         <div className="text-center">

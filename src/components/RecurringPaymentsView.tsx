@@ -105,7 +105,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   }
 
   return (
-    <div className="space-y-6 soft-rise">
+    <div className="space-y-6">
 
       {/* Header section with Stats */}
       <RecurringPaymentsHeader

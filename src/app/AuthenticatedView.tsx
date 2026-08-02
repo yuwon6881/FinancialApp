@@ -1,5 +1,4 @@
 import { lazy, Suspense, type Dispatch, type SetStateAction } from 'react'
-import { m } from 'framer-motion'
 import type { AppTab, DashboardData } from '../types'
 import { clearLocalFinancialData } from '../lib/cache'
 import { ErrorBoundary } from '../components/ErrorBoundary'
@@ -34,7 +33,7 @@ const DocumentsView = lazy(() => import('../components/DocumentsView').then(modu
 const getPageSkeletonVariant = (tab: AppTab): PageSkeletonVariant => tab
 
 const ContentViewFallback = ({ tab }: { tab: AppTab }) => (
-  <div className="w-full pt-2 animate-in fade-in duration-300">
+  <div className="w-full pt-2 view-enter">
     <CycleSkeleton variant={getPageSkeletonVariant(tab)} fullPage />
   </div>
 )
@@ -168,12 +167,9 @@ export function AuthenticatedView({
           <ErrorBoundary variant="inline" resetKey={prefs.activeTab}>
             <Suspense fallback={<ContentViewFallback tab={prefs.activeTab} />}>
               <LaunchReady>
-                <m.div
+                <div
                   key={prefs.activeTab}
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 30, mass: 1 }}
-                  className="w-full gpu-layer"
+                  className="w-full view-enter"
                 >
                   {prefs.activeTab === 'dashboard' && (
                     <DashboardView
@@ -428,7 +424,7 @@ export function AuthenticatedView({
                   {prefs.activeTab === 'documents' && (
                     <DocumentsView onNavigateToTransaction={openLinkedVaultTransaction} />
                   )}
-                </m.div>
+                </div>
               </LaunchReady>
             </Suspense>
           </ErrorBoundary>

@@ -84,7 +84,7 @@ const PanelSkeleton = ({ height = 'h-40' }: { height?: string }) => (
 export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: boolean }> = ({ variant, fullPage = false }) => {
   if (variant === 'dashboard') {
     return (
-      <div data-testid="dashboard-skeleton" className="space-y-6 soft-rise">
+      <div data-testid="dashboard-skeleton" className="space-y-6">
         <CycleHeaderSkeleton subtitleWidth="w-72" controlWidth="w-60" />
         <PanelSkeleton height="h-12" />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-[repeat(2,minmax(0,1fr))]">
@@ -101,7 +101,7 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
 
   if (variant === 'reports') {
     return (
-      <div data-testid="reports-skeleton" className="space-y-6 soft-rise">
+      <div data-testid="reports-skeleton" className="space-y-6">
         <CycleHeaderSkeleton titleWidth="w-28" subtitleWidth="w-72" controlWidth="w-80" />
         <PanelSkeleton height="h-28" />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-[repeat(2,minmax(0,1fr))] xl:grid-cols-[repeat(3,minmax(0,1fr))]">
@@ -118,7 +118,7 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
 
   if (variant === 'ledger') {
     return (
-      <div data-testid="ledger-skeleton" className="space-y-6 soft-rise w-full min-w-0 overflow-hidden">
+      <div data-testid="ledger-skeleton" className="space-y-6 w-full min-w-0 overflow-hidden">
         <CycleHeaderSkeleton titleWidth="w-44" subtitleWidth="w-64" controlWidth="w-52" />
         <div className="flex flex-col gap-3 sm:flex-row min-w-0">
           <Skeleton className="h-10 flex-1 rounded-xl min-w-0" />
@@ -133,7 +133,7 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
 
   if (variant === 'recurring') {
     return (
-      <div data-testid="recurring-skeleton" className="space-y-6 soft-rise">
+      <div data-testid="recurring-skeleton" className="space-y-6">
         <CycleHeaderSkeleton controlWidth="w-40" />
         <PanelSkeleton height="h-36" />
         <Skeleton className="h-10 w-full rounded-xl sm:w-72" />
@@ -155,7 +155,7 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
 
   if (variant === 'wishlist') {
     return (
-      <div data-testid="wishlist-skeleton" className="space-y-6 soft-rise">
+      <div data-testid="wishlist-skeleton" className="space-y-6">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <StatTileSkeleton />
           <StatTileSkeleton />
@@ -173,7 +173,7 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
 
   if (variant === 'settings') {
     return (
-      <div data-testid="settings-skeleton" className="space-y-6 soft-rise">
+      <div data-testid="settings-skeleton" className="space-y-6">
         <CycleHeaderSkeleton titleWidth="w-28" subtitleWidth="w-80" controlWidth="w-0" />
         <div className="flex gap-6 border-b border-border/30 pb-3">
           <Skeleton className="h-4 w-28" />
@@ -192,7 +192,7 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
 
   if (variant === 'investments') {
     return (
-      <div data-testid="investments-skeleton" className="space-y-6 soft-rise">
+      <div data-testid="investments-skeleton" className="space-y-6">
         <CycleHeaderSkeleton titleWidth="w-52" subtitleWidth="w-80" controlWidth="w-44" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[1, 2, 3, 4].map(i => <StatTileSkeleton key={i} />)}
@@ -208,7 +208,7 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
 
   if (variant === 'documents') {
     return (
-      <div data-testid="documents-skeleton" className="space-y-5 soft-rise">
+      <div data-testid="documents-skeleton" className="space-y-5">
         {/* Mirrors DocumentsView: header actions, a Vault-insights panel, then a
             separate document-management panel with filters beside the records. */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -241,7 +241,7 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
   }
 
   return (
-    <div data-testid="drafts-skeleton" className="space-y-6 soft-rise">
+    <div data-testid="drafts-skeleton" className="space-y-6">
       {/* Matches DraftStagingView's simple back-button + "Queue" header row,
           not the card-style CycleHeaderSkeleton used by the other tabs. */}
       <div className="flex items-center gap-3 border-b border-border/40 pb-4">

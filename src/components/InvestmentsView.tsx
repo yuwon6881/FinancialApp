@@ -1,6 +1,5 @@
 import { Input } from './ui/Input'
 import React, { useEffect, useMemo, useState } from 'react'
-import { m, useReducedMotion } from 'framer-motion'
 import {
   ArrowLeft,
   Building2,
@@ -166,7 +165,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
   }
 
   return (
-    <div className="min-w-0 max-w-full space-y-6 overflow-x-clip soft-rise">
+    <div className="min-w-0 max-w-full space-y-6 overflow-x-clip">
       <header className="flex items-start gap-3">
         <Button
           variant="unstyled"
@@ -409,7 +408,6 @@ interface SummaryMetric {
 }
 
 const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; masked: boolean }) => {
-  const reduceMotion = useReducedMotion()
   const currency = portfolio.appCurrency
   const format = (value?: number) => value === undefined ? 'Not available yet' : masked ? '••••' : money(value, currency)
   const signed = (value?: number) => value === undefined
@@ -488,12 +486,10 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
   return (
     <section aria-label="Investment summary" className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {cards.map(({ label, hint, hero, rows, bg }, index) => (
-        <m.article
+        <article
           key={label}
-          className={`interactive-card app-panel flex flex-col rounded-2xl border p-4 ${bg}`}
-          initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: reduceMotion ? 0 : index * 0.035, ease: 'easeOut' }}
+          className={`list-card-enter interactive-card app-panel flex flex-col rounded-2xl border p-4 ${bg}`}
+          style={index === 0 ? undefined : { animationDelay: `${index * 35}ms` }}
         >
           <div className="flex items-center justify-between gap-2">
             <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
@@ -512,7 +508,7 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
               </div>
             ))}
           </div>
-        </m.article>
+        </article>
       ))}
     </section>
   )

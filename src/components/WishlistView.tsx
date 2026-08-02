@@ -251,7 +251,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   }
 
   return (
-    <div className="space-y-5 soft-rise">
+    <div className="space-y-5">
       {/* One stacked bar over one balance. rewardsBalance/rewardsTarget are cycle-scoped, so show a
           skeleton while a new cycle's dashboard data loads rather than briefly flashing the
           previous cycle's numbers. */}

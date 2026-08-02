@@ -185,7 +185,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
   }
 
   return (
-    <div className="space-y-6 soft-rise">
+    <div className="space-y-6">
       <LedgerToolbar
         selectedMonth={props.selectedMonth}
         selectedYear={props.selectedYear}

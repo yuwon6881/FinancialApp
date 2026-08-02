@@ -151,7 +151,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
   const isCategoryListLoading = categoryRows.length === 0 && view.isLoadingUsage
 
   return (
-    <div className="space-y-6 soft-rise">
+    <div className="space-y-6">
       <div className="flex flex-col gap-2 p-4 sm:p-6 bg-card rounded-2xl border border-border/60">
         <div className="flex items-center gap-2">
           <Settings className="size-5 text-blue-500" />

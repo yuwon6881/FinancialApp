@@ -80,7 +80,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   }
 
   return (
-    <div className="space-y-6 soft-rise">
+    <div className="space-y-6">
 
       <DashboardHeader
         cycleLabel={view.cycleLabel}
