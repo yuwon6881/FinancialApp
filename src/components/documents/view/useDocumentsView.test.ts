@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from '@testing-library/react'
+﻿import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useDocumentsView } from './useDocumentsView'
 
@@ -11,6 +11,7 @@ const api = vi.hoisted(() => ({
   getTaxReliefCategories: vi.fn(),
   addTaxReliefCategory: vi.fn(),
   updateTaxReliefCategory: vi.fn(),
+  deleteTaxReliefCategory: vi.fn(),
   bulkDeleteDocuments: vi.fn(),
   deleteDocument: vi.fn(),
   updateDocument: vi.fn(),
@@ -51,8 +52,9 @@ describe('useDocumentsView', () => {
       categories: [],
     })
     api.getTaxReliefCategories.mockResolvedValue([])
-    api.addTaxReliefCategory.mockResolvedValue({ id: 'category', name: 'Category', limit: 100, detail: '' })
-    api.updateTaxReliefCategory.mockResolvedValue({ id: 'category', name: 'Category', limit: 100, detail: '' })
+    api.addTaxReliefCategory.mockResolvedValue({ id: 'category', name: 'Category', limit: 100 })
+    api.updateTaxReliefCategory.mockResolvedValue({ id: 'category', name: 'Category', limit: 100 })
+    api.deleteTaxReliefCategory.mockResolvedValue(undefined)
     api.bulkDeleteDocuments.mockResolvedValue([])
     api.deleteDocument.mockResolvedValue(undefined)
     api.bulkUpdateDocumentCategories.mockResolvedValue([{ id: 1, updated: true }])
@@ -162,3 +164,4 @@ describe('useDocumentsView', () => {
     })
   })
 })
+

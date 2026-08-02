@@ -309,3 +309,46 @@ describe('InvestmentsView provider call boundaries', () => {
     expect(context.queueMutation).not.toHaveBeenCalled()
   })
 })
+
+describe('InvestmentsView money-you-put-in card', () => {
+  beforeEach(() => {
+    vi.mocked(api.readCachedInvestmentPortfolio).mockReturnValue(null)
+    vi.mocked(api.fetchInvestmentActivity).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 10 })
+    vi.mocked(api.fetchInvestmentCashFlows).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 10 })
+    vi.mocked(api.fetchCurrencyCatalog).mockResolvedValue([])
+  })
+
+  const withSummary = (summary: Partial<InvestmentPortfolio['summary']>): InvestmentPortfolio => ({
+    ...tradablePortfolio,
+    summary: { ...tradablePortfolio.summary, ...summary },
+  })
+
+  it('derives the waiting amount from earmarked minus sent, not from the ledger balance', async () => {
+    vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(withSummary({
+      // The ledger balance used to be printed here and happened to equal netDeposits,
+      // which made the card claim nothing was waiting when 155.29 was.
+      growthLedgerBalance: 2943.5,
+      growthContributions: 3098.79,
+      netDeposits: 2943.5,
+    }))
+    renderView()
+
+    expect(await screen.findByText('Waiting to be sent')).toBeTruthy()
+    expect(screen.getByText('$155.29')).toBeTruthy()
+    expect(screen.queryByText('Not yet sent')).toBeNull()
+    expect(screen.getByText('Put to work')).toBeTruthy()
+    expect(screen.getByText('95%')).toBeTruthy()
+  })
+
+  it('names the overshoot when the broker received more than the budget earmarked', async () => {
+    vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(withSummary({
+      growthLedgerBalance: 0,
+      growthContributions: 1000,
+      netDeposits: 1250,
+    }))
+    renderView()
+
+    expect(await screen.findByText('Sent beyond earmark')).toBeTruthy()
+    expect(screen.getByText('$250.00')).toBeTruthy()
+  })
+})

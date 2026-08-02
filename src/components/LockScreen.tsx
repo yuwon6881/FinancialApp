@@ -13,6 +13,7 @@ import {
 import { getErrorMessage, getErrorName, getStatus } from '../lib/errors'
 import { AlertBanner } from './ui/AlertBanner'
 import { Button } from './ui/Button'
+import { Z_LAYERS } from '../lib/zLayers'
 import { FormField } from './ui/FormField'
 import { focusFirstInvalidField } from './ui/formValidation'
 import { useDialog } from '../lib/useDialog'
@@ -96,11 +97,12 @@ export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScre
 
   // Rendered through a portal to document.body so the lock overlay is a top-level
   // stacking sibling of every other portal (bottom sheets, modals, the AI chat panel).
-  // Mounted inside App's tree its z-[300] was trapped in a nested stacking context and
-  // the sheet portals (z-[100]) painted over it; at body level the higher z-index wins,
-  // so the lock screen always covers any open modal without having to close it first.
+  // Mounted inside App's tree its z-index was trapped in a nested stacking context and
+  // the sheet portals painted over it; at body level the higher z-index wins, so the
+  // lock screen always covers any open modal — and any toast — without having to close
+  // it first. See lib/zLayers for the full ordering.
   return createPortal(
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-background/95 p-4 backdrop-blur-md animate-in fade-in duration-300">
+    <div className={`fixed inset-0 ${Z_LAYERS.lockScreen} flex items-center justify-center bg-background/95 p-4 backdrop-blur-md animate-in fade-in duration-300`}>
       <div
         ref={panelRef}
         role="dialog"

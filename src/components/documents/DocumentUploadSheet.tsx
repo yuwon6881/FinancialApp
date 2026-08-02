@@ -11,6 +11,9 @@ import * as api from '../../lib/api/documents'
 import { useAppUi } from '../../contexts/AppContext'
 import { formatCurrencyVal } from '../../lib/utils'
 import type { DocumentVaultConstraints, TaxReliefCategoryDefinition } from '../../types'
+import { FormField } from '../ui/FormField'
+import { mapServerErrorToField, type ServerFieldRule } from '../../lib/formErrors'
+import { revealFirstFieldError } from '../ui/formValidation'
 
 interface Props {
   isOpen: boolean
@@ -25,6 +28,13 @@ const LABEL_CLASS = 'text-[10px] font-bold uppercase tracking-wider text-muted-f
 const FALLBACK_CONSTRAINTS: DocumentVaultConstraints = { maxDocumentBytes: 20 * 1024 * 1024, maxBulkDocuments: 10, maxTotalBytesPerUser: 2 * 1024 * 1024 * 1024 }
 const TAX_YEAR_LOOKBACK = 7
 const formatMb = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(2)} MB`
+type UploadValidationErrors = { taxYear?: string; reliefCategory?: string; files?: string }
+
+const UPLOAD_ERROR_RULES: ServerFieldRule<'taxYear' | 'reliefCategory' | 'files'>[] = [
+  { field: 'taxYear', match: ['tax year must be between'] },
+  { field: 'reliefCategory', match: ['tax relief category is required', 'category is not configured'] },
+  { field: 'files', match: ['exceeds the maximum allowed size', 'unsupported file type', 'storage quota exceeded'] },
+]
 
 export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear, defaultTransactionId, currency }: Props) {
   const currentYear = new Date().getFullYear()
@@ -42,7 +52,9 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
   const [isPreparing, setIsPreparing] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [results, setResults] = useState<api.BulkDocumentResult[] | null>(null)
+  const [validationErrors, setValidationErrors] = useState<UploadValidationErrors>({})
   const inputRef = useRef<HTMLInputElement>(null)
+  const sheetBodyRef = useRef<HTMLDivElement>(null)
   const { showToast } = useAppUi()
 
   useEffect(() => {
@@ -51,6 +63,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
     setTaxYear(String(safeInitialTaxYear))
     setReliefCategory('')
     setResults(null)
+    setValidationErrors({})
     api.getDocumentConstraints()
       .then(setConstraints)
       .catch(() => setConstraints(FALLBACK_CONSTRAINTS))
@@ -82,6 +95,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
 
   const chooseFiles = async (selected: File[]) => {
     setResults(null)
+    setValidationErrors({})
     const limited = selected.slice(0, constraints.maxBulkDocuments)
     setIsPreparing(true)
     try {
@@ -97,16 +111,24 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
   }
 
   const upload = async () => {
-    if (files.length === 0 || !reliefCategory || isPreparing) return
+    if (isPreparing || isUploading) return
     const selectedTaxYear = Number(taxYear)
+    const errors: UploadValidationErrors = {}
+    if (files.length === 0) errors.files = 'Choose at least one document.'
     if (!Number.isInteger(selectedTaxYear) || selectedTaxYear < minimumTaxYear || selectedTaxYear > currentYear) {
-      showToast(`Choose a tax year from ${minimumTaxYear} to ${currentYear}.`, 'Invalid tax year', 'error')
+      errors.taxYear = `Choose a tax year from ${minimumTaxYear} to ${currentYear}.`
+    }
+    if (!reliefCategory) {
+      errors.reliefCategory = 'Choose a tax relief category before uploading.'
+    } else if (!reliefCategories.some(category => category.id === reliefCategory)) {
+      errors.reliefCategory = 'Choose a valid category for the selected tax year.'
+    }
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors)
+      revealFirstFieldError(sheetBodyRef)
       return
     }
-    if (reliefCategory && !reliefCategories.some(category => category.id === reliefCategory)) {
-      showToast('Choose a valid category for the selected tax year.', 'Category unavailable', 'error')
-      return
-    }
+    setValidationErrors({})
     setIsUploading(true)
     try {
       const uploadResults = defaultTransactionId && files.length === 1
@@ -125,6 +147,14 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
         showToast(copy.message, copy.title, copy.tone)
       }
     } catch (error) {
+      // A rejected tax year or category is answerable inside the sheet; storage
+      // and transport failures are not, so those still surface as a toast.
+      const mapped = mapServerErrorToField(error, UPLOAD_ERROR_RULES)
+      if (mapped) {
+        setValidationErrors({ [mapped.field]: mapped.message })
+        revealFirstFieldError(sheetBodyRef)
+        return
+      }
       showToast(getErrorMessage(error, 'The documents could not be uploaded.'), 'Upload Failed', 'error')
     } finally {
       setIsUploading(false)
@@ -134,18 +164,24 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
   const failedCount = results?.filter(result => !result.uploaded).length ?? 0
   const taxYearOptions = Array.from({ length: TAX_YEAR_LOOKBACK + 1 }, (_, index) => currentYear - index)
     .map(year => ({ value: String(year), label: String(year) }))
+  const reliefCategoryError = validationErrors.reliefCategory
+    ?? (files.length > 0 && !categoriesLoading && reliefCategories.length > 0 && !reliefCategory
+      ? 'Choose a tax relief category before uploading.'
+      : undefined)
 
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose} maxWidthClassName="max-w-2xl"
       title={<span className="flex items-center gap-2"><UploadCloud className="size-4" />Upload tax documents</span>}
       footer={<div className="flex justify-end gap-3">
         <Button variant="outline" type="button" onClick={onClose} className="rounded-xl px-4 py-2">{results ? 'Done' : 'Cancel'}</Button>
-        {!results && <Button type="button" onClick={upload} disabled={files.length === 0 || !reliefCategory || isPreparing || isUploading}
+        {/* Deliberately not disabled on missing files/category: an inert button
+            explains nothing, while submitting surfaces the reason on the field. */}
+        {!results && <Button type="button" onClick={upload} disabled={isPreparing || isUploading}
           className="rounded-xl px-5 py-2">
           {isPreparing ? 'Preparing…' : isUploading ? 'Uploading and reading amounts…' : `Upload ${files.length || ''}`}
         </Button>}
       </div>}>
-      <div className="space-y-4">
+      <div className="space-y-4" ref={sheetBodyRef}>
         {results ? (
           <div className="space-y-3" role="status">
             <div className={`rounded-xl border p-3 ${failedCount ? 'border-amber-500/30 bg-amber-500/8' : 'border-emerald-500/30 bg-emerald-500/8'}`}>
@@ -165,10 +201,11 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
               <UploadCloud className="mb-2 size-8 text-muted-foreground/60" /><span className="text-xs font-bold text-foreground">Choose one or multiple files</span>
               <span className="mt-1 text-[10px] text-muted-foreground">Up to {constraints.maxBulkDocuments} files · {formatMb(constraints.maxDocumentBytes)} each</span>
             </Button>
-            <Input ref={inputRef} type="file" multiple={!defaultTransactionId} className="hidden"
-              accept="image/*,.pdf,application/pdf,.xml,application/xml,.json,application/json"
-              onChange={event => void chooseFiles(Array.from(event.target.files ?? []))} />
-          </div>
+             <Input ref={inputRef} type="file" multiple={!defaultTransactionId} className="hidden"
+               accept="image/*,.pdf,application/pdf,.xml,application/xml,.json,application/json"
+               onChange={event => void chooseFiles(Array.from(event.target.files ?? []))} />
+             {validationErrors.files && <p role="alert" className="mt-1.5 text-[10px] font-semibold text-destructive">{validationErrors.files}</p>}
+           </div>
           {files.length > 0 && <div className="max-h-40 space-y-1.5 overflow-y-auto">
             {files.map((file, index) => {
               const tooLarge = file.size > constraints.maxDocumentBytes
@@ -181,14 +218,34 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
             })}
           </div>}
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="space-y-1.5"><span className={LABEL_CLASS}>Tax year</span>
-              <CustomSelect value={taxYear} onChange={value => setTaxYear(String(value))} options={taxYearOptions} ariaLabel="Tax year" className="w-full" /></label>
+            <FormField label="Tax year" error={validationErrors.taxYear}>
+              <CustomSelect
+                value={taxYear}
+                onChange={value => {
+                  setTaxYear(String(value))
+                  setValidationErrors(current => ({ ...current, taxYear: undefined, reliefCategory: undefined }))
+                }}
+                options={taxYearOptions}
+                ariaLabel="Tax year"
+                className="w-full"
+              />
+            </FormField>
+            <FormField label="Tax relief category" required error={reliefCategoryError}>
+              <CustomSelect
+                value={reliefCategory}
+                onChange={value => {
+                  setReliefCategory(String(value))
+                  setValidationErrors(current => ({ ...current, reliefCategory: undefined }))
+                }}
+                options={[{ value: '', label: 'Choose tax relief category' }, ...reliefCategories.map(category => ({ value: category.id, label: `${category.name} · ${formatCurrencyVal(category.limit, currency)}` }))]}
+                ariaLabel="Tax relief category"
+                className="w-full"
+                required
+                invalid={Boolean(reliefCategoryError)}
+                disabled={categoriesLoading || reliefCategories.length === 0}
+              />
+            </FormField>
           </div>
-            <label className="space-y-1.5"><span className={LABEL_CLASS}>Tax relief category <span className="text-destructive">*</span></span>
-            <CustomSelect value={reliefCategory} onChange={value => setReliefCategory(String(value))}
-              options={[{ value: '', label: 'Choose tax relief category' }, ...reliefCategories.map(category => ({ value: category.id, label: `${category.name} · ${formatCurrencyVal(category.limit, currency)}` }))]}
-              ariaLabel="Tax relief category" className="w-full" required invalid={files.length > 0 && !reliefCategory}
-              disabled={categoriesLoading || reliefCategories.length === 0} /></label>
           {files.length > 0 && !categoriesLoading && reliefCategories.length === 0 && (
             <p className="-mt-2 text-[10px] leading-relaxed text-muted-foreground">
               {categoryLoadFailed

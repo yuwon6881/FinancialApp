@@ -70,3 +70,44 @@ describe('InvestmentPlanPanel guidance', () => {
     expect(screen.queryByText('2.')).toBeNull()
   })
 })
+
+describe('InvestmentPlanPanel contribution split', () => {
+  const withPlan: InvestmentAllocationOverview = {
+    ...allocation,
+    contributionPlan: {
+      amount: 1000,
+      basis: 'The median of your Growth deposits across 3 completed cycles.',
+      cyclesObserved: 3,
+      isEstimated: false,
+      sleeves: [
+        { sleeve: 'USEquity', label: 'US Equity', amount: 660, percentageOfContribution: 66, projectedPercentage: 66, projectedDriftPercentagePoints: 0 },
+        { sleeve: 'InternationalExUS', label: 'International ex-US', amount: 100, percentageOfContribution: 10, projectedPercentage: 10, projectedDriftPercentagePoints: 0 },
+        { sleeve: 'Bonds', label: 'Bonds', amount: 240, percentageOfContribution: 24, projectedPercentage: 24, projectedDriftPercentagePoints: 0 },
+      ],
+    },
+  }
+
+  it('shows the per-sleeve split even when the plan is on track', () => {
+    render(<InvestmentPlanPanel allocation={withPlan} masked={false} onNavigate={vi.fn()} />)
+
+    // The rebalancing guidance stays hidden; the routine split does not.
+    expect(screen.queryByText('What to do next')).toBeNull()
+    expect(screen.getByText('Your next deposit, split three ways')).toBeTruthy()
+    expect(screen.getByText('RM 660.00')).toBeTruthy()
+    expect(screen.getByText(/66.0% of this deposit/)).toBeTruthy()
+    expect(screen.getByText(/median of your Growth deposits/)).toBeTruthy()
+  })
+
+  it('masks the amounts when sensitive values are hidden', () => {
+    render(<InvestmentPlanPanel allocation={withPlan} masked onNavigate={vi.fn()} />)
+
+    expect(screen.queryByText('RM 660.00')).toBeNull()
+    expect(screen.getAllByText('••••').length).toBeGreaterThan(0)
+  })
+
+  it('omits the section when there is nothing ready to invest', () => {
+    render(<InvestmentPlanPanel allocation={allocation} masked={false} onNavigate={vi.fn()} />)
+
+    expect(screen.queryByText('Your next deposit, split three ways')).toBeNull()
+  })
+})

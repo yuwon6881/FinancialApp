@@ -34,14 +34,21 @@ export interface SavingsGoalActionDeps {
   showToast: (message: string, title?: string, tone?: ToastTone, action?: ToastAction) => void
 }
 
+/**
+ * Returns the rejection message when the move was refused, or `null` when it
+ * succeeded (or was already reported, as with the offline notice). The caller
+ * keeps its sheet open and renders the message on the amount field: an
+ * over-commit is an answer about the number the user just typed, and a toast
+ * for it would land behind the sheet that produced it.
+ */
 export async function contributeToGoal(
   deps: SavingsGoalActionDeps,
   id: number,
   amount: number,
-): Promise<void> {
+): Promise<string | null> {
   if (!isOnline()) {
     showOnlineOnlyMessage(deps, 'Moving money into a savings goal needs a live connection so the current Rewards balance can be checked.')
-    return
+    return null
   }
   const { contributeToSavingsGoal, fetchSavingsGoals } = await import('../lib/api/savingsGoals')
   deps.beginDirectSync?.([id])
@@ -57,10 +64,11 @@ export async function contributeToGoal(
         : `${formatCurrencyVal(Math.abs(amount), deps.currency)} was released back to free rewards.`,
     })
     deps.showToast(copy.message, copy.title, copy.tone)
+    return null
   } catch (error: unknown) {
     // The likeliest failure is the server rejecting an over-commit against a balance the client
     // thought was larger. Surface its message rather than a generic one.
-    deps.showToast(getErrorMessage(error), 'Could not move that money', 'error')
+    return getErrorMessage(error, 'That money could not be moved.')
   } finally {
     deps.endDirectSync?.([id])
   }

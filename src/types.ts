@@ -196,6 +196,30 @@ export interface InvestmentAllocationOverview {
   investedValue?: number
   availableCash: number
   minimumContribution?: number
+  /**
+   * How to split the next routine Growth deposit across the sleeves. Present even
+   * when the plan is on track — see InvestmentAllocationService.BuildContributionPlan.
+   */
+  contributionPlan?: InvestmentContributionPlan
+}
+
+export interface InvestmentContributionPlan {
+  /** The deposit being split, in the app currency. */
+  amount: number
+  /** Plain-language explanation of where `amount` came from. */
+  basis: string
+  /** Completed cycles the median was taken over; 0 when falling back to idle cash. */
+  cyclesObserved: number
+  /** True when `amount` is uninvested cash rather than an observed deposit rhythm. */
+  isEstimated: boolean
+  sleeves: Array<{
+    sleeve: InvestmentAllocationSleeve
+    label: string
+    amount: number
+    percentageOfContribution: number
+    projectedPercentage: number
+    projectedDriftPercentagePoints: number
+  }>
 }
 
 export interface Transaction {
@@ -549,7 +573,6 @@ export interface TaxReliefCategoryDefinition {
   id: string
   name: string
   limit: number
-  detail: string
   isInherited?: boolean
 }
 

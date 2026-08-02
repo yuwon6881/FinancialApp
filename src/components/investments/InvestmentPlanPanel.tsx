@@ -50,6 +50,7 @@ export function InvestmentPlanPanel({
   )
   const showGuidance = allocation.status !== 'OnTrack' &&
     (allocation.incompleteReasons.length > 0 || actionableRecommendations.length > 0)
+  const contributionPlan = allocation.contributionPlan
 
   return (
     <m.section
@@ -121,6 +122,48 @@ export function InvestmentPlanPanel({
           </m.article>
         ))}
       </div>
+
+      {contributionPlan && (
+        <div className="mt-5 rounded-xl border border-border/50 bg-muted/20 p-4 transition-all duration-300 hover:border-primary/20 hover:bg-muted/30 hover:shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <h3 className="flex items-center gap-1 text-xs font-bold text-foreground">
+              Your next deposit, split three ways
+              <InfoHint
+                label="how your next deposit is split"
+                align="left"
+                text="Your routine Growth money, divided so the mix you hold keeps matching your target. On target, this is simply your target percentages. If a basket has drifted low, more of the deposit goes there so the mix corrects itself without you selling anything."
+              />
+            </h3>
+            <span className="rounded-full border border-border/60 bg-background/60 px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+              {money(contributionPlan.amount)} to invest
+            </span>
+          </div>
+          <ul className="mt-3 grid gap-2 sm:grid-cols-3">
+            {contributionPlan.sleeves.map((sleeve, index) => (
+              <li
+                key={sleeve.sleeve}
+                className="rounded-lg border border-border/50 bg-background/50 p-3 transition-colors duration-200 hover:border-primary/25"
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`size-2 shrink-0 rounded-full ${colors[index]}`} aria-hidden="true" />
+                  <span className="min-w-0 truncate text-[11px] font-bold text-foreground">{sleeve.label}</span>
+                </div>
+                <strong className="mt-2 block text-lg text-foreground">{money(sleeve.amount)}</strong>
+                <p className="mt-0.5 text-[10px] text-muted-foreground">
+                  {sleeve.percentageOfContribution.toFixed(1)}% of this deposit · leaves you at {sleeve.projectedPercentage.toFixed(1)}%
+                  {Math.abs(sleeve.projectedDriftPercentagePoints) >= 0.05
+                    ? ` (${sleeve.projectedDriftPercentagePoints > 0 ? '+' : ''}${sleeve.projectedDriftPercentagePoints.toFixed(1)} off target)`
+                    : ' (on target)'}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-[10px] text-muted-foreground">
+            {contributionPlan.basis} Buying in these proportions keeps your mix on target without selling anything.
+            {contributionPlan.isEstimated ? ' Record a Growth deposit and this will follow your own rhythm instead.' : ''}
+          </p>
+        </div>
+      )}
 
       <div className={`mt-5 grid gap-4 ${showGuidance ? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]' : ''}`}>
         <div className="rounded-xl border border-border/50 bg-muted/20 p-4 transition-all duration-300 hover:border-primary/20 hover:bg-muted/30 hover:shadow-sm">

@@ -177,7 +177,6 @@ export function getTaxReliefCategories(taxYear: number): Promise<TaxReliefCatego
 export interface TaxReliefCategoryInput {
   name: string
   limit: number
-  detail?: string
 }
 
 export async function addTaxReliefCategory(
@@ -210,6 +209,17 @@ export async function updateTaxReliefCategory(
   )
   invalidateDocumentDerivedData()
   return result
+}
+
+export async function deleteTaxReliefCategory(taxYear: number, categoryId: string): Promise<void> {
+  await requestVoid(
+    `/documents/relief-categories/${taxYear}/${encodeURIComponent(categoryId)}`,
+    {
+      method: 'DELETE',
+      errorMessage: 'Failed to delete tax relief category',
+    },
+  )
+  invalidateDocumentDerivedData()
 }
 
 export function getTaxYearReliefSummary(taxYear: number): Promise<TaxYearReliefSummary> {

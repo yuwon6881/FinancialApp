@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Check, CheckCircle2, CircleDollarSign, Filter, Loader2, Pencil, Plus, Save, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Check, CheckCircle2, CircleDollarSign, Filter, Loader2, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
 import type { TaxReliefCategoryDefinition, TaxReliefCategorySummary, TaxYearReliefSummary } from '../../../types'
 import { Input } from '../../ui/Input'
 import { Button } from '../../ui/Button'
@@ -11,8 +11,42 @@ import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../../../lib/utils'
 import { HorizontalRail } from '../../ui/HorizontalRail'
 import { FormField } from '../../ui/FormField'
 import { orderTaxReliefCategories } from '../../../lib/taxReliefOrdering'
+import { mapServerErrorToField, type ServerFieldRule } from '../../../lib/formErrors'
+import { revealFirstFieldError } from '../../ui/formValidation'
 
-type CategoryInput = { name: string; limit: number; detail?: string }
+type CategoryInput = { name: string; limit: number }
+type CategoryDraft = { name: string; limit: string }
+type CategoryValidationErrors = { name?: string; limit?: string }
+
+const EMPTY_CATEGORY_DRAFT: CategoryDraft = { name: '', limit: '' }
+
+/** Mirrors TryNormalizeCategoryInput in DocumentVaultService. */
+const MAX_CATEGORY_NAME_LENGTH = 120
+/**
+ * The server's ceiling is 9,999,999,999,999,999.99, which a double cannot hold
+ * exactly. This stays comfortably under it and inside the exact-integer range,
+ * so the check is deterministic — and it is still astronomically above any real
+ * relief limit.
+ */
+const MAX_CATEGORY_LIMIT = 1e15
+/** Mirrors TaxYearLookbackYears in DocumentVaultService. */
+const TAX_YEAR_LOOKBACK = 7
+
+/**
+ * The server owns the final word on these rules — a name can be taken, or the
+ * last document moved off a category, between this tab loading and submitting.
+ * Routing the rejection back onto the field keeps the explanation inside the
+ * sheet instead of behind it.
+ */
+const SAVE_ERROR_RULES: ServerFieldRule<'name' | 'limit'>[] = [
+  { field: 'name', match: ['already exists'], status: 409 },
+  { field: 'name', match: ['details are invalid'], status: 400, message: 'Check the category name and limit, then try again.' },
+]
+
+const DELETE_ERROR_RULES: ServerFieldRule<'category'>[] = [
+  { field: 'category', match: ['before deleting'], status: 409 },
+  { field: 'category', match: [], status: 404, message: 'This category has already been removed. Close and reopen to refresh the list.' },
+]
 
 interface TaxReliefOverviewProps {
   summary: TaxYearReliefSummary | null
@@ -24,6 +58,19 @@ interface TaxReliefOverviewProps {
   onSelectReliefCategory: (categoryId: string | undefined) => void
   onAddCategory: (input: CategoryInput) => Promise<unknown>
   onUpdateCategory: (categoryId: string, input: CategoryInput) => Promise<unknown>
+  onDeleteCategory: (categoryId: string) => Promise<unknown>
+}
+
+/**
+ * The server refuses to delete a category that documents still point at. The
+ * tracker summary already carries those counts, so the refusal can be shown as
+ * a blocked button with a reason instead of arriving as an error afterwards.
+ */
+function blockedDeleteReason(documentCount: number | undefined): string | null {
+  if (!documentCount) return null
+  return documentCount === 1
+    ? 'Move the 1 document filed under this category to another one before deleting it.'
+    : `Move the ${documentCount} documents filed under this category to another one before deleting it.`
 }
 
 function zeroSummary(category: TaxReliefCategoryDefinition): TaxReliefCategorySummary {
@@ -46,47 +93,92 @@ export function TaxReliefOverview({
   onSelectReliefCategory,
   onAddCategory,
   onUpdateCategory,
+  onDeleteCategory,
 }: TaxReliefOverviewProps) {
   const { showToast } = useAppUi()
   const { hideSensitive } = useAppPrefs()
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [draft, setDraft] = useState<CategoryInput>({ name: '', limit: 0, detail: '' })
-  const [newCategory, setNewCategory] = useState<CategoryInput>({ name: '', limit: 0, detail: '' })
+  const [draft, setDraft] = useState<CategoryDraft>(EMPTY_CATEGORY_DRAFT)
+  const [newCategory, setNewCategory] = useState<CategoryDraft>(EMPTY_CATEGORY_DRAFT)
+  const [draftErrors, setDraftErrors] = useState<CategoryValidationErrors>({})
+  const [newCategoryErrors, setNewCategoryErrors] = useState<CategoryValidationErrors>({})
   const [isAdding, setIsAdding] = useState(false)
+  const [isAddingBusy, setIsAddingBusy] = useState(false)
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<{ id: string; message: string } | null>(null)
+  const sheetBodyRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!hideSensitive) return
     setEditorOpen(false)
     setEditingId(null)
     setIsAdding(false)
+    setIsAddingBusy(false)
+    setConfirmingDeleteId(null)
+    setDraftErrors({})
+    setNewCategoryErrors({})
+    setDeleteError(null)
   }, [hideSensitive])
 
   const selectedYear = summary?.taxYear ?? taxYear
+  const currentYear = new Date().getFullYear()
+  const isEditableTaxYear = selectedYear !== undefined
+    && selectedYear <= currentYear
+    && selectedYear >= currentYear - TAX_YEAR_LOOKBACK
   const trackerCategories = summary?.categories ?? categories.map(zeroSummary)
   const orderedTrackerCategories = orderTaxReliefCategories(trackerCategories)
+  // The summary already knows how many documents sit in each category, so the
+  // server's "still in use" refusal can be prevented rather than reported.
+  const documentCountByCategory = new Map(
+    (summary?.categories ?? []).map(category => [category.id, category.documentCount]),
+  )
+  const deleteBlockedById = new Map(categories.map(category => [category.id, blockedDeleteReason(documentCountByCategory.get(category.id))]))
   const inheritedDefaults = categories.length > 0 && categories.every(category => category.isInherited)
   const money = (value: number) => hideSensitive ? SENSITIVE_AMOUNT_MASK : formatCurrencyVal(value, currency)
 
   const beginEdit = (category: TaxReliefCategoryDefinition) => {
     setEditingId(category.id)
-    setDraft({ name: category.name, limit: category.limit, detail: category.detail })
+    setDraft({ name: category.name, limit: String(category.limit) })
+    setDraftErrors({})
+    setConfirmingDeleteId(null)
+    setDeleteError(null)
   }
 
-  const validate = (input: CategoryInput): CategoryInput | null => {
+  const validate = (input: CategoryDraft, editingCategoryId?: string): { value: CategoryInput | null; errors: CategoryValidationErrors } => {
     const name = input.name.trim()
-    const limit = Number(input.limit)
-    if (!name || name.length > 120 || !Number.isFinite(limit) || limit < 0) return null
-    return { name, limit, detail: input.detail?.trim() ?? '' }
+    const errors: CategoryValidationErrors = {}
+    if (!name) errors.name = 'Category name is required.'
+    else if (name.length > MAX_CATEGORY_NAME_LENGTH) errors.name = `Category names must be ${MAX_CATEGORY_NAME_LENGTH} characters or fewer.`
+
+    const rawLimit = input.limit.trim()
+    const limit = Number(rawLimit)
+    if (!rawLimit || !Number.isFinite(limit) || limit < 0) errors.limit = 'Enter a non-negative limit.'
+    else if (limit > MAX_CATEGORY_LIMIT) errors.limit = 'That limit is larger than this tracker supports.'
+    else if (!isEditableTaxYear) errors.limit = `Only tax years ${currentYear - TAX_YEAR_LOOKBACK} to ${currentYear} can be edited.`
+
+    const normalizedName = name.toLowerCase()
+    if (
+      name
+      && categories.some(category => category.id !== editingCategoryId && category.name.trim().toLowerCase() === normalizedName)
+    ) {
+      errors.name = 'A category with this name already exists.'
+    }
+
+    return Object.keys(errors).length > 0 ? { value: null, errors } : { value: { name, limit }, errors: {} }
   }
 
   const saveEdit = async (categoryId: string) => {
-    const input = validate(draft)
-    if (!input) {
-      showToast('Enter a category name and a non-negative limit.', 'Invalid limit', 'error')
+    const validation = validate(draft, categoryId)
+    if (!validation.value) {
+      setDraftErrors(validation.errors)
+      revealFirstFieldError(sheetBodyRef)
       return
     }
+    const input = validation.value
+    setDraftErrors({})
     setSavingId(categoryId)
     try {
       await onUpdateCategory(categoryId, input)
@@ -99,6 +191,12 @@ export function TaxReliefOverview({
       })
       showToast(copy.message, copy.title, copy.tone)
     } catch (error) {
+      const mapped = mapServerErrorToField(error, SAVE_ERROR_RULES)
+      if (mapped) {
+        setDraftErrors({ [mapped.field]: mapped.message })
+        revealFirstFieldError(sheetBodyRef)
+        return
+      }
       showToast(getErrorMessage(error, 'The tax relief category could not be updated.'), 'Tax relief update failed', 'error')
     } finally {
       setSavingId(null)
@@ -106,15 +204,18 @@ export function TaxReliefOverview({
   }
 
   const addCategory = async () => {
-    const input = validate(newCategory)
-    if (!input) {
-      showToast('Enter a category name and a non-negative limit.', 'Invalid limit', 'error')
+    const validation = validate(newCategory)
+    if (!validation.value) {
+      setNewCategoryErrors(validation.errors)
+      revealFirstFieldError(sheetBodyRef)
       return
     }
-    setIsAdding(true)
+    const input = validation.value
+    setNewCategoryErrors({})
+    setIsAddingBusy(true)
     try {
       await onAddCategory(input)
-      setNewCategory({ name: '', limit: 0, detail: '' })
+      setNewCategory(EMPTY_CATEGORY_DRAFT)
       const copy = buildMutationSuccessToast({
         entity: 'Tax Relief Category',
         action: 'Added',
@@ -123,9 +224,49 @@ export function TaxReliefOverview({
       })
       showToast(copy.message, copy.title, copy.tone)
     } catch (error) {
+      const mapped = mapServerErrorToField(error, SAVE_ERROR_RULES)
+      if (mapped) {
+        setNewCategoryErrors({ [mapped.field]: mapped.message })
+        revealFirstFieldError(sheetBodyRef)
+        return
+      }
       showToast(getErrorMessage(error, 'The tax relief category could not be added.'), 'Tax relief add failed', 'error')
     } finally {
-      setIsAdding(false)
+      setIsAddingBusy(false)
+    }
+  }
+
+  const deleteCategory = async (category: TaxReliefCategoryDefinition) => {
+    const blocked = deleteBlockedById.get(category.id) ?? null
+    if (blocked) {
+      setDeleteError({ id: category.id, message: blocked })
+      return
+    }
+    setDeleteError(null)
+    setDeletingId(category.id)
+    try {
+      await onDeleteCategory(category.id)
+      setConfirmingDeleteId(null)
+      if (editingId === category.id) setEditingId(null)
+      const copy = buildMutationSuccessToast({
+        entity: 'Tax Relief Category',
+        action: 'Deleted',
+        recordName: category.name,
+        messageSuffix: `For YA ${selectedYear}.`,
+      })
+      showToast(copy.message, copy.title, copy.tone)
+    } catch (error) {
+      // "Still in use" and "already gone" are both answers about this row, so
+      // they belong next to it rather than in a notification over the sheet.
+      const mapped = mapServerErrorToField(error, DELETE_ERROR_RULES)
+      if (mapped) {
+        setDeleteError({ id: category.id, message: mapped.message })
+        revealFirstFieldError(sheetBodyRef)
+        return
+      }
+      showToast(getErrorMessage(error, 'The tax relief category could not be deleted.'), 'Tax relief delete failed', 'error')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -232,12 +373,17 @@ export function TaxReliefOverview({
             setEditorOpen(false)
             setEditingId(null)
             setIsAdding(false)
-            setNewCategory({ name: '', limit: 0, detail: '' })
+            setConfirmingDeleteId(null)
+            setDraftErrors({})
+            setNewCategoryErrors({})
+            setDeleteError(null)
+            setDraft(EMPTY_CATEGORY_DRAFT)
+            setNewCategory(EMPTY_CATEGORY_DRAFT)
           }}
           title={`Manage tax relief limits for YA ${selectedYear}`}
           maxWidthClassName="max-w-2xl"
         >
-        <div className="space-y-3">
+        <div className="space-y-3" ref={sheetBodyRef}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <h4 className="text-xs font-black">Categories and limits for YA {selectedYear}</h4>
@@ -255,15 +401,43 @@ export function TaxReliefOverview({
               <div key={category.id} className="rounded-lg border border-border/60 p-2.5">
                 {editingId === category.id ? (
                   <div className="grid gap-2 sm:grid-cols-2">
-                    <FormField label="Category"><Input value={draft.name} onChange={event => setDraft(current => ({ ...current, name: event.target.value }))} controlSize="sm" /></FormField>
-                    <FormField label={`Limit (${currency})`}><Input type="number" min="0" step="0.01" value={draft.limit} onChange={event => setDraft(current => ({ ...current, limit: Number(event.target.value) }))} controlSize="sm" className="tabular-nums" /></FormField>
-                    <FormField label="Note (optional)" className="sm:col-span-2"><Input value={draft.detail ?? ''} onChange={event => setDraft(current => ({ ...current, detail: event.target.value }))} maxLength={300} controlSize="sm" /></FormField>
+                    <FormField label="Category" required error={draftErrors.name}><Input value={draft.name} onChange={event => { setDraft(current => ({ ...current, name: event.target.value })); setDraftErrors(current => ({ ...current, name: undefined })) }} controlSize="sm" /></FormField>
+                    <FormField label={`Limit (${currency})`} required error={draftErrors.limit}><Input type="number" min="0" step="0.01" value={draft.limit} onChange={event => { setDraft(current => ({ ...current, limit: event.target.value })); setDraftErrors(current => ({ ...current, limit: undefined })) }} controlSize="sm" className="tabular-nums" /></FormField>
                     <div className="flex justify-end gap-1.5 sm:col-span-2"><Button variant="primary" size="sm" type="button" onClick={() => void saveEdit(category.id)} disabled={savingId === category.id} className="py-2"><Save className="size-3.5" /> Save</Button><Button variant="unstyled" type="button" onClick={() => setEditingId(null)} aria-label="Close category editor" className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted"><X className="size-3.5" /></Button></div>
+                  </div>
+                ) : confirmingDeleteId === category.id ? (
+                  <div className="space-y-1.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="min-w-0 flex-1 text-[10px] text-muted-foreground">
+                        Delete <span className="font-bold text-foreground">{category.name}</span> from YA {selectedYear}? Documents already filed under it must be moved first.
+                      </p>
+                      <div className="flex shrink-0 gap-1.5">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          type="button"
+                          onClick={() => void deleteCategory(category)}
+                          disabled={deletingId === category.id || Boolean(deleteBlockedById.get(category.id))}
+                          title={deleteBlockedById.get(category.id) ?? undefined}
+                        >
+                          <Trash2 className="size-3" /> Delete
+                        </Button>
+                        <Button variant="outline" size="sm" type="button" onClick={() => { setConfirmingDeleteId(null); setDeleteError(null) }} className="text-muted-foreground hover:bg-muted hover:text-foreground">Cancel</Button>
+                      </div>
+                    </div>
+                    {(deleteError?.id === category.id ? deleteError.message : deleteBlockedById.get(category.id)) && (
+                      <p role="alert" className="text-[10px] font-semibold text-destructive">
+                        {deleteError?.id === category.id ? deleteError.message : deleteBlockedById.get(category.id)}
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <div className="flex items-start gap-2">
-                    <div className="min-w-0 flex-1"><p className="truncate text-[11px] font-bold">{category.name}</p><p className="mt-0.5 text-[10px] text-muted-foreground">{money(category.limit)} limit{category.detail ? ` · ${category.detail}` : ''}{category.isInherited ? ' · inherited default' : ''}</p></div>
-                    <Button variant="outline" size="sm" type="button" onClick={() => beginEdit(category)} className="shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"><Pencil className="size-3" /> Edit</Button>
+                    <div className="min-w-0 flex-1"><p className="truncate text-[11px] font-bold">{category.name}</p><p className="mt-0.5 text-[10px] text-muted-foreground">{money(category.limit)} limit{category.isInherited ? ' · inherited default' : ''}</p></div>
+                    <div className="flex shrink-0 gap-1.5">
+                      <Button variant="outline" size="sm" type="button" onClick={() => beginEdit(category)} className="text-muted-foreground hover:bg-muted hover:text-foreground"><Pencil className="size-3" /> Edit</Button>
+                      <Button variant="unstyled" type="button" onClick={() => { setEditingId(null); setDeleteError(null); setConfirmingDeleteId(category.id) }} aria-label={`Delete ${category.name}`} title={`Delete ${category.name}`} className="rounded-lg border border-border p-2 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-3" /></Button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -273,10 +447,9 @@ export function TaxReliefOverview({
           {isAdding && (
             <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
               <div className="grid gap-2 sm:grid-cols-2">
-                <FormField label="Category"><Input autoFocus value={newCategory.name} onChange={event => setNewCategory(current => ({ ...current, name: event.target.value }))} placeholder="e.g. Education" controlSize="sm" /></FormField>
-                <FormField label={`Limit (${currency})`}><Input type="number" min="0" step="0.01" value={newCategory.limit} onChange={event => setNewCategory(current => ({ ...current, limit: Number(event.target.value) }))} controlSize="sm" className="tabular-nums" /></FormField>
-                <FormField label="Note (optional)" className="sm:col-span-2"><Input value={newCategory.detail ?? ''} onChange={event => setNewCategory(current => ({ ...current, detail: event.target.value }))} maxLength={300} controlSize="sm" /></FormField>
-                <div className="flex justify-end gap-1.5 sm:col-span-2"><Button variant="primary" size="sm" type="button" onClick={() => void addCategory()} disabled={isAdding && !newCategory.name.trim()} className="py-2"><Check className="size-3.5" /> Add</Button><Button variant="unstyled" type="button" onClick={() => { setIsAdding(false); setNewCategory({ name: '', limit: 0, detail: '' }) }} aria-label="Close add category form" className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted"><X className="size-3.5" /></Button></div>
+                <FormField label="Category" required error={newCategoryErrors.name}><Input autoFocus value={newCategory.name} onChange={event => { setNewCategory(current => ({ ...current, name: event.target.value })); setNewCategoryErrors(current => ({ ...current, name: undefined })) }} placeholder="e.g. Education" controlSize="sm" /></FormField>
+                <FormField label={`Limit (${currency})`} required error={newCategoryErrors.limit}><Input type="number" min="0" step="0.01" value={newCategory.limit} onChange={event => { setNewCategory(current => ({ ...current, limit: event.target.value })); setNewCategoryErrors(current => ({ ...current, limit: undefined })) }} controlSize="sm" className="tabular-nums" /></FormField>
+                <div className="flex justify-end gap-1.5 sm:col-span-2"><Button variant="primary" size="sm" type="button" onClick={() => void addCategory()} disabled={isAddingBusy} className="py-2"><Check className="size-3.5" /> Add</Button><Button variant="unstyled" type="button" onClick={() => { setIsAdding(false); setNewCategory(EMPTY_CATEGORY_DRAFT); setNewCategoryErrors({}) }} aria-label="Close add category form" className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted"><X className="size-3.5" /></Button></div>
               </div>
             </div>
           )}

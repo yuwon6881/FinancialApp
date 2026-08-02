@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+﻿import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { invalidateAllDocumentCaches } from './documentsCache'
 import {
   bulkUpdateDocumentCategories,
@@ -92,11 +92,11 @@ describe('documents API', () => {
 
   it('invalidates cached relief categories after a category mutation', async () => {
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce(okJson([{ id: 'lifestyle', name: 'Lifestyle', limit: 100, detail: '' }]))
-      .mockResolvedValueOnce(okJson({ id: 'education', name: 'Education', limit: 200, detail: '' }))
+      .mockResolvedValueOnce(okJson([{ id: 'lifestyle', name: 'Lifestyle', limit: 100 }]))
+      .mockResolvedValueOnce(okJson({ id: 'education', name: 'Education', limit: 200 }))
       .mockResolvedValueOnce(okJson([
-        { id: 'lifestyle', name: 'Lifestyle', limit: 100, detail: '' },
-        { id: 'education', name: 'Education', limit: 200, detail: '' },
+        { id: 'lifestyle', name: 'Lifestyle', limit: 100 },
+        { id: 'education', name: 'Education', limit: 200 },
       ]))
     vi.stubGlobal('fetch', fetchMock)
 
@@ -262,3 +262,4 @@ describe('documents API', () => {
     })
   })
 })
+

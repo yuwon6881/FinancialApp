@@ -20,7 +20,12 @@ interface SavingsGoalContributeSheetProps {
   suggested: number
   formatSensitive: (value: number) => React.ReactNode
   onClose: () => void
-  onConfirm: (amount: number) => void
+  /**
+   * Resolves to the server's rejection message when the move was refused, or
+   * null once it succeeded. The sheet stays open on refusal so the reason is
+   * readable on the field rather than behind the sheet.
+   */
+  onConfirm: (amount: number) => Promise<string | null> | void
 }
 
 /**
@@ -52,11 +57,14 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
 
   const [amountInput, setAmountInput] = React.useState(() => (defaultAmount > 0 ? defaultAmount.toFixed(2) : ''))
   const [error, setError] = React.useState('')
+  const [busy, setBusy] = React.useState(false)
 
   const parsed = Number.parseFloat(amountInput)
 
-  const handleConfirm = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleConfirm = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (busy) return
+    const form = event.currentTarget
     if (!Number.isFinite(parsed) || parsed <= 0) {
       setError('Amount is required.')
       focusFirstInvalidField(event.currentTarget)
@@ -70,7 +78,16 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
       return
     }
     // Sign carries the direction: the server treats negative as a release.
-    onConfirm(isTopUp ? parsed : -parsed)
+    setBusy(true)
+    try {
+      const rejection = await onConfirm(isTopUp ? parsed : -parsed)
+      if (rejection) {
+        setError(rejection)
+        focusFirstInvalidField(form)
+      }
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -80,7 +97,7 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
       onClose={onClose}
       maxWidthClassName="max-w-md"
     >
-      <form noValidate onSubmit={handleConfirm} className="space-y-4 py-2">
+      <form noValidate onSubmit={event => { void handleConfirm(event) }} className="space-y-4 py-2">
         <div className="p-4 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h4 className="font-bold text-sm text-foreground truncate">{goal.name}</h4>
@@ -118,12 +135,13 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
         </p>
 
         <ModalActions className="pt-2">
-          <Button variant="outline" className="rounded-xl py-2.5" onClick={onClose}>
+          <Button variant="outline" className="rounded-xl py-2.5" onClick={onClose} disabled={busy}>
             Cancel
           </Button>
           <Button
             type="submit"
             className="rounded-xl py-2.5"
+            disabled={busy}
           >
             {isTopUp ? 'Set Aside' : 'Release'}
           </Button>

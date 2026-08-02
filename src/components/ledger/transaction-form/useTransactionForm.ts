@@ -382,7 +382,10 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
 
     const documentValidationError = documentsFieldRef.current?.getValidationError()
     if (documentValidationError) {
-      onShowAlert?.(documentValidationError, 'Document category required')
+      // TransactionDocumentsField already renders the missing-category or
+      // category-load message inline. Keep validation feedback in the sheet so
+      // a submit cannot produce a notification behind its own backdrop.
+      focusFirstInvalidField(e.currentTarget)
       return
     }
 

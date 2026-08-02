@@ -82,7 +82,7 @@ const FormActions = ({ busy, onCancel, submitLabel, disabled }: { busy: boolean;
   </div>
 )
 
-export const AccountForm = ({ appCurrency = 'USD', busy, onCancel, onSave }: { appCurrency?: string; busy: boolean; onCancel: () => void; onSave: (value: api.AccountMutation) => Promise<boolean> }) => {
+export const AccountForm = ({ appCurrency = 'USD', existingAccounts = [], busy, onCancel, onSave }: { appCurrency?: string; existingAccounts?: { name: string }[]; busy: boolean; onCancel: () => void; onSave: (value: api.AccountMutation) => Promise<boolean> }) => {
   const [name, setName] = useState('')
   const [currency, setCurrency] = useState(appCurrency)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -90,6 +90,14 @@ export const AccountForm = ({ appCurrency = 'USD', busy, onCancel, onSave }: { a
     event.preventDefault();
     if (!name.trim()) {
       setErrors({ name: 'Account name is required.' })
+      focusFirstInvalidField(event.currentTarget)
+      return
+    }
+    // Mirrors the unique (UserId, Name) index behind the API's 409. Investment
+    // saves go through the offline queue, so without this check the rejection
+    // only reaches the user much later, detached from this form.
+    if (existingAccounts.some(account => account.name.trim() === name.trim())) {
+      setErrors({ name: 'An investment account with this name already exists.' })
       focusFirstInvalidField(event.currentTarget)
       return
     }
@@ -105,7 +113,7 @@ export const AccountForm = ({ appCurrency = 'USD', busy, onCancel, onSave }: { a
   </form>
 }
 
-export const InstrumentForm = ({ busy, offline, onCancel, onSave }: { busy: boolean; offline: boolean; onCancel: () => void; onSave: (value: api.InstrumentMutation) => Promise<boolean> }) => {
+export const InstrumentForm = ({ busy, offline, existingInstruments = [], onCancel, onSave }: { busy: boolean; offline: boolean; existingInstruments?: { symbol: string; providerMic?: string }[]; onCancel: () => void; onSave: (value: api.InstrumentMutation) => Promise<boolean> }) => {
   const [query, setQuery] = useState('')
   const [searching, setSearching] = useState(false)
   const [results, setResults] = useState<InstrumentSearchResult[]>([])
@@ -129,6 +137,10 @@ export const InstrumentForm = ({ busy, offline, onCancel, onSave }: { busy: bool
     }, 600)
     return () => { window.clearTimeout(timer); abort.abort() }
   }, [query, offline])
+  // Mirrors the unique (Symbol, ProviderMic) index behind the API's
+  // "This instrument is already saved." conflict.
+  const alreadySaved = Boolean(selected) && existingInstruments.some(instrument =>
+    instrument.symbol === selected?.symbol && (instrument.providerMic ?? '') === (selected?.mic ?? ''))
   return <div className="space-y-4">
     <>
       <Field label="Symbol or company / fund name"><span className="relative block"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input value={query} onChange={event => { setQuery(event.target.value); setSelected(null) }} placeholder="Search at least 3 characters" className="pl-9" />{searching && <Loader2 className="absolute right-3 top-3 size-4 animate-spin text-blue-500" />}</span></Field>
@@ -144,9 +156,10 @@ export const InstrumentForm = ({ busy, offline, onCancel, onSave }: { busy: bool
           <span className="mt-1 block text-[10px] text-muted-foreground">{[result.exchange, result.mic, result.currency, result.country].filter(Boolean).join(' · ')}</span>
         </Button>)}
       </div>}
+      {alreadySaved && <p role="alert" className="text-xs font-semibold text-destructive">This investment is already saved. Pick a different one, or record activity against the existing entry.</p>}
       <div className="sticky bottom-0 flex justify-end gap-2 border-t border-border/40 bg-card py-3">
         <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
-        <Button disabled={busy || !selected || !selected.availableOnBasic} onClick={() => selected && void onSave({ symbol: selected.symbol, name: selected.name, type: selected.type, currency: selected.currency, exchange: selected.exchange, mic: selected.mic, country: selected.country, providerSymbol: selected.symbol, providerMic: selected.mic, isCustom: false })}>{busy && <Loader2 className="size-4 animate-spin" />} Save investment</Button>
+        <Button disabled={busy || !selected || !selected.availableOnBasic || alreadySaved} onClick={() => selected && !alreadySaved && void onSave({ symbol: selected.symbol, name: selected.name, type: selected.type, currency: selected.currency, exchange: selected.exchange, mic: selected.mic, country: selected.country, providerSymbol: selected.symbol, providerMic: selected.mic, isCustom: false })}>{busy && <Loader2 className="size-4 animate-spin" />} Save investment</Button>
       </div>
     </>
   </div>

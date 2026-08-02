@@ -43,7 +43,8 @@ interface WishlistViewProps {
   onUpdateGoal: (id: number, goal: SavingsGoal) => Promise<void> | void
   onDeleteGoal: (id: number) => Promise<void> | void
   onCompleteGoal: (id: number) => Promise<void> | void
-  onContributeToGoal: (id: number, amount: number) => Promise<void> | void
+  /** Resolves to the server's rejection message, or null when the move stuck. */
+  onContributeToGoal: (id: number, amount: number) => Promise<string | null> | void
   onFundGoalsForCycle: () => Promise<void> | void
   isOffline?: boolean
   formatSensitive?: (val: number) => React.ReactNode
@@ -525,10 +526,12 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
           suggested={pool.paces.get(contributeTarget.goal.id)?.requiredPerCycle ?? 0}
           formatSensitive={formatSensitive}
           onClose={() => setContributeTarget(null)}
-          onConfirm={amount => {
-            const goalId = contributeTarget.goal.id
-            setContributeTarget(null)
-            void onContributeToGoal(goalId, amount)
+          onConfirm={async amount => {
+            const rejection = await onContributeToGoal(contributeTarget.goal.id, amount)
+            // Only a clean move closes the sheet; a refusal stays put with the
+            // reason on the amount field.
+            if (!rejection) setContributeTarget(null)
+            return rejection ?? null
           }}
         />
       )}

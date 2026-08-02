@@ -196,13 +196,13 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
       )}
 
       <BottomSheet isOpen={panel === 'account'} title="Add investment account" onClose={closePanel} maxWidthClassName="max-w-lg">
-        <AccountForm key={`account-${formKey}`} appCurrency={portfolio?.appCurrency} busy={busy} onCancel={closePanel} onSave={value => {
+        <AccountForm key={`account-${formKey}`} appCurrency={portfolio?.appCurrency} existingAccounts={setupPortfolio?.accounts ?? []} busy={busy} onCancel={closePanel} onSave={value => {
           const id = crypto.randomUUID()
           return queueInvestment('investmentAccount', 'add', id, { ...value, id })
         }} />
       </BottomSheet>
       <BottomSheet isOpen={panel === 'instrument'} title="Add investment" onClose={closePanel} maxWidthClassName="max-w-2xl">
-        <InstrumentForm key={`instrument-${formKey}`} busy={busy} offline={isOffline} onCancel={closePanel} onSave={value => {
+        <InstrumentForm key={`instrument-${formKey}`} busy={busy} offline={isOffline} existingInstruments={setupPortfolio?.instruments ?? []} onCancel={closePanel} onSave={value => {
           const id = crypto.randomUUID()
           return queueInvestment('investmentInstrument', 'add', id, { ...value, id })
         }} />
@@ -429,6 +429,48 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
     return value > 0 ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-orange-500/5 border-orange-500/20'
   }
 
+  // "Money you put in" compares two independent records of the same money: what the
+  // budget earmarked for Growth, and what the broker actually received. The old
+  // "Not yet sent" row read the net Growth ledger balance instead of that difference,
+  // so it silently meant something else — and could print a figure identical to
+  // "Sent to broker" while the two records were in fact thousands apart. Deriving the
+  // gap from the two numbers on the card keeps it self-consistent by construction.
+  const earmarked = portfolio.summary.growthContributions ?? 0
+  const sentToBroker = portfolio.summary.netDeposits
+  const undeployed = sentToBroker === undefined ? undefined : earmarked - sentToBroker
+  const deployedPercent = sentToBroker === undefined || earmarked <= 0
+    ? undefined
+    : Math.min(999, sentToBroker / earmarked * 100)
+  const moneyInRows: SummaryMetric[] = [
+    {
+      label: 'Set aside to invest',
+      value: format(earmarked),
+      hint: 'Total your budget has earmarked for investing so far.',
+      color: 'text-blue-500',
+    },
+    undeployed !== undefined && undeployed < -0.005
+      ? {
+          label: 'Sent beyond earmark',
+          value: format(Math.abs(undeployed)),
+          hint: 'You have sent your broker more than your budget earmarked for Growth — money from another bucket, or a Growth allocation not yet recorded.',
+          color: 'text-amber-500',
+        }
+      : {
+          label: 'Waiting to be sent',
+          value: format(undeployed === undefined ? undefined : Math.max(0, undeployed)),
+          hint: 'Earmarked money your broker has not received yet: what you set aside minus what you sent.',
+          color: (undeployed ?? 0) > 0.005 ? 'text-foreground' : 'text-emerald-500',
+        },
+    {
+      label: 'Put to work',
+      value: deployedPercent === undefined
+        ? '—'
+        : masked ? '••••' : `${deployedPercent.toFixed(0)}%`,
+      hint: 'How much of what you earmarked has actually reached your broker.',
+      color: deployedPercent === undefined || deployedPercent >= 95 ? 'text-foreground' : 'text-amber-500',
+    },
+  ]
+
   const cards: Array<{
     label: string
     hint: string
@@ -452,10 +494,7 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
       hint: 'How much of your own money has gone towards investing, before any gains.',
       bg: 'bg-blue-500/5 border-blue-500/20',
       hero: { label: 'Sent to broker', value: format(portfolio.summary.netDeposits), color: portfolio.summary.netDeposits === undefined ? 'text-amber-500' : 'text-foreground' },
-      rows: [
-        { label: 'Set aside to invest', value: format(portfolio.summary.growthContributions ?? 0), hint: 'Total you have earmarked for investing in your budget so far.', color: 'text-blue-500' },
-        { label: 'Not yet sent', value: format(portfolio.summary.growthLedgerBalance), hint: 'Money earmarked for investing that is still in your budget, not with the broker.', color: portfolio.summary.growthLedgerBalance >= 0 ? 'text-foreground' : 'text-orange-500' },
-      ],
+      rows: moneyInRows,
     },
     {
       label: 'Profit and loss',

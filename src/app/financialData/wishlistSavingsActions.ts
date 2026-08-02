@@ -202,12 +202,13 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
     showToast,
   })
 
-  const handleContributeToSavingsGoal = async (id: number, amount: number) => {
-    if (!guardSensitive()) return
+  /** Resolves to the rejection message when the move was refused, else null. */
+  const handleContributeToSavingsGoal = async (id: number, amount: number): Promise<string | null> => {
+    if (!guardSensitive()) return null
     beginDirectSync([id])
     try {
       const { contributeToGoal } = await import('../savingsGoalActions')
-      await contributeToGoal(savingsGoalDependencies(), id, amount)
+      return await contributeToGoal(savingsGoalDependencies(), id, amount)
     } finally {
       endDirectSync([id])
     }

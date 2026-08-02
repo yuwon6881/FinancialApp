@@ -4,6 +4,7 @@ import { m, AnimatePresence, useDragControls, type PanInfo } from 'framer-motion
 import { useDialog } from '../../lib/useDialog'
 import { useIsMobile } from '../../lib/useIsMobile'
 import { lockBodyScroll, unlockBodyScroll } from '../../lib/scrollLock'
+import { Z_LAYERS } from '../../lib/zLayers'
 
 interface BottomSheetProps {
   isOpen: boolean
@@ -36,7 +37,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   description,
   ariaLabel,
   ariaDescribedBy,
-  layerClassName = 'z-[100]',
+  layerClassName = Z_LAYERS.sheet,
   backdropClassName = '',
   panelClassName = '',
 }) => {

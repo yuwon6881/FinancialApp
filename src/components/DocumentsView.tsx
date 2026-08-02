@@ -48,6 +48,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     loadTaxInsights,
     addReliefCategory,
     updateReliefCategory,
+    deleteReliefCategory,
     deleteDocument,
     updateDocumentMetadata,
     bulkUpdateDocumentCategories,
@@ -229,6 +230,10 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
           onUpdateCategory={async (categoryId, input) => {
             if (!guardSensitive()) return
             return updateReliefCategory(categoryId, input)
+          }}
+          onDeleteCategory={async categoryId => {
+            if (!guardSensitive()) return
+            return deleteReliefCategory(categoryId)
           }}
         />
       </div>

@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Button } from './Button'
 import { AlertCircle, CheckCircle2, Info, Undo2, X } from 'lucide-react'
 import { m, AnimatePresence } from 'framer-motion'
+import { Z_LAYERS } from '../../lib/zLayers'
 
 export type ToastTone = 'info' | 'success' | 'warning' | 'error'
 
@@ -64,13 +66,18 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
     return () => timers.forEach(window.clearTimeout)
   }, [toasts, onDismiss])
 
-  return (
+  const viewport = (
     <div
       role="region"
       aria-label="Notifications"
       aria-live="polite"
       aria-atomic="false"
-      className="fixed left-3 right-3 top-[calc(4.75rem+env(safe-area-inset-top,0px))] z-[120] flex flex-col gap-2 pointer-events-none sm:left-auto sm:right-4 sm:w-96"
+      // This host deliberately lives at document.body level. The app shell is
+      // an isolated stacking context, while BottomSheet and other overlays are
+      // body-level portals; keeping notifications inside the shell lets a
+      // modal backdrop paint over them regardless of the local z-index.
+      // Z_LAYERS.toast is above the normal sheet/popover stack; see lib/zLayers.
+      className={`fixed left-3 right-3 top-[calc(4.75rem+env(safe-area-inset-top,0px))] ${Z_LAYERS.toast} flex flex-col gap-2 pointer-events-none sm:left-auto sm:right-4 sm:w-96`}
     >
       <AnimatePresence mode="popLayout">
         {toasts.map(toast => {
@@ -137,4 +144,6 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
       </AnimatePresence>
     </div>
   )
+
+  return typeof document === 'undefined' ? null : createPortal(viewport, document.body)
 }
