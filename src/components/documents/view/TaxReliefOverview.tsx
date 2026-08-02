@@ -6,6 +6,7 @@ import { Button } from '../../ui/Button'
 import { BottomSheet } from '../../ui/BottomSheet'
 import { useAppPrefs, useAppUi } from '../../../contexts/AppContext'
 import { getErrorMessage } from '../../../lib/errors'
+import { buildMutationSuccessToast } from '../../../lib/mutationToast'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../../../lib/utils'
 import { HorizontalRail } from '../../ui/HorizontalRail'
 import { FormField } from '../../ui/FormField'
@@ -90,7 +91,13 @@ export function TaxReliefOverview({
     try {
       await onUpdateCategory(categoryId, input)
       setEditingId(null)
-      showToast(`"${input.name}" was updated for YA ${selectedYear}.`, 'Tax relief updated', 'success')
+      const copy = buildMutationSuccessToast({
+        entity: 'Tax Relief Category',
+        action: 'Updated',
+        recordName: input.name,
+        messageSuffix: `For YA ${selectedYear}.`,
+      })
+      showToast(copy.message, copy.title, copy.tone)
     } catch (error) {
       showToast(getErrorMessage(error, 'The tax relief category could not be updated.'), 'Tax relief update failed', 'error')
     } finally {
@@ -108,7 +115,13 @@ export function TaxReliefOverview({
     try {
       await onAddCategory(input)
       setNewCategory({ name: '', limit: 0, detail: '' })
-      showToast(`"${input.name}" was added for YA ${selectedYear}.`, 'Tax relief category added', 'success')
+      const copy = buildMutationSuccessToast({
+        entity: 'Tax Relief Category',
+        action: 'Added',
+        recordName: input.name,
+        messageSuffix: `For YA ${selectedYear}.`,
+      })
+      showToast(copy.message, copy.title, copy.tone)
     } catch (error) {
       showToast(getErrorMessage(error, 'The tax relief category could not be added.'), 'Tax relief add failed', 'error')
     } finally {

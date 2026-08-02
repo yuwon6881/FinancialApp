@@ -23,6 +23,7 @@ import { createFinalId, projectFinancialSetting, sanitizeQueuedOps, type OutboxP
 import { triggerHaptic } from '../lib/haptics'
 import { getErrorMessage, getErrorName, isAuthError, isLockError, JUST_LOGGED_IN_WINDOW_MS } from '../lib/errors'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
+import { buildMutationSuccessToast, buildUndoSuccessToast } from '../lib/mutationToast'
 import type { ToastAction, ToastTone } from '../components/ui/ToastViewport'
 import type { ConfirmModalData } from './useAppDialogs'
 import { fetchBootstrapPayload } from './financialData/bootstrap'
@@ -958,7 +959,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
                 try {
                   await api.applyCategoryCleanup(result.undoActions)
                   await loadAll(selectedMonth, selectedYear, true)
-                  showToast('AI cleanup was undone.', 'Undo successful', 'success')
+                  const undoCopy = buildUndoSuccessToast(undefined, 'category')
+                  showToast(undoCopy.message, undoCopy.title, undoCopy.tone)
                 } catch (err: unknown) {
                   showToast(getErrorMessage(err, 'Could not undo AI cleanup.'), 'Undo failed', 'error')
                 }
@@ -966,12 +968,12 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
             }
           }
         : undefined
-      showToast(
-        `${result.appliedCount} AI category cleanup action${result.appliedCount === 1 ? '' : 's'} applied.`,
-        'AI Cleanup Applied',
-        'success',
-        undoAction
-      )
+      const copy = buildMutationSuccessToast({
+        entity: 'Category Cleanup',
+        action: 'Applied',
+        message: `Category cleanup was applied to ${result.appliedCount} action${result.appliedCount === 1 ? '' : 's'}.`,
+      })
+      showToast(copy.message, copy.title, copy.tone, undoAction)
     } catch (err: unknown) {
       showToast(getErrorMessage(err, 'Could not apply AI category cleanup.'), 'AI Cleanup Failed', 'error')
     }
@@ -1071,11 +1073,10 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         try {
           await api.deleteTransaction(deleteId)
           await loadAll(selectedMonth || undefined, selectedYear || undefined, true)
-          showToast(
-            `"${transaction.description}" was deleted and its commitment was restored.`,
-            'Completion undone',
-            'success',
-          )
+          const goalName = allSavingsGoals.find(goal => goal.id === transaction.savingsGoalId)?.name
+          const fallbackName = transaction.description.replace(/^Completed commitment:\s*/i, '')
+          const undoCopy = buildUndoSuccessToast(goalName || fallbackName, 'savings goal')
+          showToast(undoCopy.message, undoCopy.title, undoCopy.tone)
         } catch (error: unknown) {
           showToast(getErrorMessage(error), 'Could not undo completion', 'error')
         } finally {
@@ -1222,11 +1223,13 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         ? { ...p, nextDueDate: result.nextOccurrenceDate || result.settledOccurrenceDate }
         : p
       ))
-      showToast(
-        `${payment?.name || 'Subscription'} was paid early. Reminders for this cycle have stopped.`,
-        'Paid Early',
-        'success'
-      )
+      const copy = buildMutationSuccessToast({
+        entity: 'Recurring Payment',
+        action: 'Paid Early',
+        recordName: payment?.name,
+        messageSuffix: 'Reminders for this cycle have stopped.',
+      })
+      showToast(copy.message, copy.title, copy.tone)
     } catch (err: unknown) {
       showToast(getErrorMessage(err, 'Could not pay this subscription early.'), 'Pay Early Failed', 'error')
     }

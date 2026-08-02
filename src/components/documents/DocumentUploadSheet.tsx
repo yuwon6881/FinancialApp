@@ -6,6 +6,7 @@ import { BottomSheet } from '../ui/BottomSheet'
 import { CustomSelect } from '../ui/CustomSelect'
 import { compressImageFile } from '../../lib/imageCompression'
 import { getErrorMessage } from '../../lib/errors'
+import { buildMutationSuccessToast } from '../../lib/mutationToast'
 import * as api from '../../lib/api/documents'
 import { useAppUi } from '../../contexts/AppContext'
 import { formatCurrencyVal } from '../../lib/utils'
@@ -109,7 +110,12 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
       const successCount = uploadResults.filter(result => result.uploaded).length
       if (successCount > 0) onSuccess()
       if (uploadResults.every(result => result.uploaded)) {
-        showToast(`${successCount} document${successCount === 1 ? '' : 's'} saved. Review the extracted amount${successCount === 1 ? '' : 's'} in the Vault.`, 'Upload Complete', 'success')
+        const copy = buildMutationSuccessToast({
+          entity: 'Documents',
+          action: 'Added',
+          message: `${successCount} document${successCount === 1 ? '' : 's'} were added. Review the extracted amount${successCount === 1 ? '' : 's'} in the Vault.`,
+        })
+        showToast(copy.message, copy.title, copy.tone)
       }
     } catch (error) {
       showToast(getErrorMessage(error, 'The documents could not be uploaded.'), 'Upload Failed', 'error')

@@ -5,6 +5,7 @@ import * as api from '../lib/api'
 import type { ToastTone } from './ui/ToastViewport'
 import { CollapsibleBody } from './ui/CollapsibleBody'
 import { getErrorMessage } from '../lib/errors'
+import { buildMutationSuccessToast } from '../lib/mutationToast'
 import { Button } from './ui/Button'
 import { FormField } from './ui/FormField'
 import { focusFirstInvalidField } from './ui/formValidation'
@@ -48,7 +49,12 @@ export const ChangePasswordSection: React.FC<ChangePasswordSectionProps> = ({ hi
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
-      onToast?.('Password changed. Other devices have been logged out.', 'Password updated', 'success')
+      const copy = buildMutationSuccessToast({
+        entity: 'Password',
+        action: 'Updated',
+        message: 'Password was updated. Other devices were logged out.',
+      })
+      onToast?.(copy.message, copy.title, copy.tone)
     } catch (err: unknown) {
       onToast?.(getErrorMessage(err, 'Failed to change password.'), 'Error', 'error')
     } finally {

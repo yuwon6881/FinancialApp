@@ -1,5 +1,6 @@
 import * as api from './api'
 import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentAllocationSleeve, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, RecurringPayment, SavingsGoal, Transaction, TransactionCategory, WishlistItem } from '../types'
+import { buildMutationSuccessToast, buildUndoSuccessToast } from './mutationToast'
 
 export type EntityKind = 'transaction' | 'recurringPayment' | 'wishlistItem' | 'savingsGoal' | 'category' | 'settings'
   | 'investmentAccount' | 'investmentInstrument' | 'investmentActivity' | 'investmentManualPrice' | 'investmentCashFlow'
@@ -130,33 +131,34 @@ const ENTITY_LABELS: Record<EntityKind, string> = {
   , investmentAllocationOrder: 'Investment classification order'
 }
 
-const TYPE_COPY: Record<OpType, { title: string; message: string }> = {
-  add: { title: 'Added', message: 'was added' },
-  update: { title: 'Updated', message: 'was updated' },
-  delete: { title: 'Deleted', message: 'was deleted' },
-  restore: { title: 'Restored', message: 'was restored' },
-  toggle: { title: 'Updated', message: 'was updated' },
-  purchase: { title: 'Purchased', message: 'was purchased' },
-  unpurchase: { title: 'Purchase Undone', message: 'purchase was undone' },
+const TYPE_COPY: Record<OpType, { title: string; messageVerb: string }> = {
+  add: { title: 'Added', messageVerb: 'added' },
+  update: { title: 'Updated', messageVerb: 'updated' },
+  delete: { title: 'Deleted', messageVerb: 'deleted' },
+  restore: { title: 'Restored', messageVerb: 'restored' },
+  toggle: { title: 'Updated', messageVerb: 'updated' },
+  purchase: { title: 'Purchased', messageVerb: 'purchased' },
+  unpurchase: { title: 'Purchase Undone', messageVerb: 'unmarked as purchased' },
 }
 
 function defaultSyncSuccessToast(op: QueuedOp): ToastCopy {
   const entityName = ENTITY_LABELS[op.entity] || 'Item'
-  const typeCopy = TYPE_COPY[op.type] || { title: 'Processed', message: 'was processed' }
+  const typeCopy = TYPE_COPY[op.type] || { title: 'Processed', messageVerb: 'processed' }
   const payloadSnapshot = op.payload?.undoSnapshot
   const snapshot = payloadSnapshot && typeof payloadSnapshot === 'object'
     ? payloadSnapshot as Record<string, unknown>
     : undefined
   const itemName = [op.payload?.description, op.payload?.name, op.payload?.symbol, snapshot?.description, snapshot?.name, snapshot?.symbol]
     .find(value => typeof value === 'string' && value.trim().length > 0) as string | undefined
-  const title = `${entityName} ${typeCopy.title}`.replace(/\b\w/g, letter => letter.toUpperCase())
-  const message = itemName
-    ? `"${itemName}" ${typeCopy.message}.`
-    : `${entityName} ${typeCopy.message}.`
-  return { title, message, tone: 'success' }
+  return buildMutationSuccessToast({
+    entity: entityName,
+    action: typeCopy.title,
+    recordName: itemName,
+    messageVerb: typeCopy.messageVerb,
+  })
 }
 
-// Override copy per "entity:type" key only where the default "<Entity> <verb> successfully"
+// Override copy per "entity:type" key only where the default "<Entity> <action>" sentence
 // sentence isn't right (e.g. a setting keyed by targetId rather than a named record) or to
 // silence a specific op by returning null. Anything not listed here — including any new
 // entity/op type added later — automatically gets the default copy above with zero changes
@@ -164,10 +166,22 @@ function defaultSyncSuccessToast(op: QueuedOp): ToastCopy {
 const SUCCESS_TOAST_OVERRIDES: Partial<Record<string, (op: QueuedOp) => ToastCopy | null>> = {
   'settings:update': (op) => {
     if (op.targetId === 'darkMode') {
-      return { title: 'Theme synced', message: `Dark mode ${op.payload?.darkMode ? 'enabled' : 'disabled'} — synced to server`, tone: 'success' }
+      return buildMutationSuccessToast({
+        entity: 'Settings',
+        action: 'Updated',
+        recordName: 'Dark mode',
+        messageVerb: op.payload?.darkMode ? 'enabled' : 'disabled',
+        messageSuffix: 'Synced to the server.',
+      })
     }
     if (op.targetId === 'hideSensitive') {
-      return { title: 'Settings synced', message: `Hide sensitive data ${op.payload?.hideSensitive ? 'enabled' : 'disabled'} — synced to server`, tone: 'success' }
+      return buildMutationSuccessToast({
+        entity: 'Settings',
+        action: 'Updated',
+        recordName: 'Hide sensitive data',
+        messageVerb: op.payload?.hideSensitive ? 'enabled' : 'disabled',
+        messageSuffix: 'Synced to the server.',
+      })
     }
     // Acknowledging an end-of-cycle summary is a silent bookkeeping write — no toast.
     if (op.targetId === 'summarySeen') return null
@@ -181,15 +195,9 @@ const SUCCESS_TOAST_OVERRIDES: Partial<Record<string, (op: QueuedOp) => ToastCop
 export function getSyncSuccessToast(op: QueuedOp): ToastCopy | null {
   if (op.isUndo) {
     const entityName = ENTITY_LABELS[op.entity] || 'Item'
-    const itemName = [op.payload?.description, op.payload?.name]
+    const itemName = [op.payload?.description, op.payload?.name, op.payload?.symbol]
       .find(value => typeof value === 'string' && value.trim().length > 0) as string | undefined
-    return {
-      title: 'Undo successful',
-      message: itemName
-        ? `The change to "${itemName}" was undone.`
-        : `The previous ${entityName.toLowerCase()} change was undone.`,
-      tone: 'success',
-    }
+    return buildUndoSuccessToast(itemName, entityName)
   }
 
   const key = `${op.entity}:${op.type}`

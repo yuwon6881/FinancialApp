@@ -10,6 +10,7 @@ import { useAppPrefs, useAppUi } from '../contexts/AppContext'
 import { TaxReliefOverview } from './documents/view/TaxReliefOverview'
 import * as documentsApi from '../lib/api/documents'
 import { getErrorMessage } from '../lib/errors'
+import { buildMutationSuccessToast } from '../lib/mutationToast'
 import { Button } from './ui/Button'
 import { DataTableFooter, DataTablePagination } from './ui/DataTable'
 import { CycleSkeleton } from './ui/Skeleton'
@@ -125,13 +126,20 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
         return next
       })
       const savedCount = staged.length - failed.length
-      showToast(
-        failed.length
-          ? `${savedCount} document categor${savedCount === 1 ? 'y' : 'ies'} saved; ${failed.length} remain staged.`
-          : `${savedCount} document categor${savedCount === 1 ? 'y' : 'ies'} saved together.`,
-        failed.length ? 'Category changes partially saved' : 'Categories saved',
-        failed.length ? 'error' : 'success',
-      )
+      if (failed.length) {
+        showToast(
+          `${savedCount} document categor${savedCount === 1 ? 'y' : 'ies'} updated; ${failed.length} remain staged.`,
+          'Document Categories Partially Updated',
+          'error',
+        )
+      } else {
+        const copy = buildMutationSuccessToast({
+          entity: 'Document Categories',
+          action: 'Updated',
+          message: `${savedCount} document categor${savedCount === 1 ? 'y' : 'ies'} were updated together.`,
+        })
+        showToast(copy.message, copy.title, copy.tone)
+      }
     } catch (error) {
       showToast(getErrorMessage(error, 'The document categories could not be saved.'), 'Category update failed', 'error')
     } finally {
@@ -312,7 +320,12 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
                       idsToDownload.forEach(id => next.delete(id))
                       return next
                     })
-                    showToast(`${idsToDownload.length} document${idsToDownload.length === 1 ? '' : 's'} downloaded.`, 'Download Complete', 'success')
+                    const copy = buildMutationSuccessToast({
+                      entity: 'Documents',
+                      action: 'Downloaded',
+                      message: `${idsToDownload.length} document${idsToDownload.length === 1 ? '' : 's'} were downloaded.`,
+                    })
+                    showToast(copy.message, copy.title, copy.tone)
                   })
                   .catch(() => showToast('The selected documents could not be downloaded.', 'Download Failed', 'error'))
                   .finally(() => setIsDownloading(false))
@@ -376,6 +389,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
             setDocToDelete(null)
             return
           }
+          const document = documents.find(item => item.id === docToDelete)
           try {
             await deleteDocument(docToDelete)
             setSelectedIds(current => {
@@ -383,7 +397,12 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
               next.delete(docToDelete)
               return next
             })
-            showToast('Document deleted.', 'Deleted', 'success')
+            const copy = buildMutationSuccessToast({
+              entity: 'Document',
+              action: 'Deleted',
+              recordName: document?.originalFileName,
+            })
+            showToast(copy.message, copy.title, copy.tone)
           } catch {
             // deleteDocument rethrows so the row stays put; surface it instead of
             // leaving the modal open on an unhandled rejection.
@@ -417,11 +436,20 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
               failed.forEach(result => next.add(result.id))
               return next
             })
-            showToast(
-              failed.length ? `${results.length - failed.length} deleted; ${failed.length} failed and remain selected.` : `${results.length} documents deleted.`,
-              failed.length ? 'Partially Deleted' : 'Deleted',
-              failed.length ? 'error' : 'success',
-            )
+            if (failed.length) {
+              showToast(
+                `${results.length - failed.length} document${results.length - failed.length === 1 ? '' : 's'} deleted; ${failed.length} failed and remain selected.`,
+                'Documents Partially Deleted',
+                'error',
+              )
+            } else {
+              const copy = buildMutationSuccessToast({
+                entity: 'Documents',
+                action: 'Deleted',
+                message: `${results.length} document${results.length === 1 ? '' : 's'} were deleted.`,
+              })
+              showToast(copy.message, copy.title, copy.tone)
+            }
           } catch {
             showToast('The selected documents could not be deleted.', 'Delete Failed', 'error')
           } finally {

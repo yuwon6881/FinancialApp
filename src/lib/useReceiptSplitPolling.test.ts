@@ -58,8 +58,8 @@ describe('useReceiptSplitPolling', () => {
       expect(result.current.activeReceiptSplitDraft?.jobId).toBe('split-complete')
     })
     expect(options.showToast).toHaveBeenCalledWith(
-      'Your receipt items are ready to review.',
-      'Receipt Split Complete',
+      'Receipt items were prepared for review.',
+      'Receipt Split Completed',
       'success',
     )
 

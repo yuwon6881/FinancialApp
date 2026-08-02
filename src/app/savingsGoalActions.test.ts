@@ -52,12 +52,19 @@ describe('completeGoal', () => {
       currency: 'MYR',
       commitGoals: vi.fn(),
       commitGoal,
+      getGoalName: id => id === goal.id ? goal.name : undefined,
       refreshAll,
       showToast,
     }, goal.id)
 
     expect(commitGoal).toHaveBeenCalledWith(goal)
     expect(refreshAll).toHaveBeenCalledOnce()
+    expect(showToast).toHaveBeenCalledWith(
+      expect.stringContaining('"Car service" was rolled forward.'),
+      'Savings Goal Rolled Forward',
+      'success',
+      expect.objectContaining({ label: 'Undo' }),
+    )
     const action = showToast.mock.calls[0]?.[3]
     expect(action?.label).toBe('Undo')
 
@@ -65,8 +72,8 @@ describe('completeGoal', () => {
     await vi.waitFor(() => expect(deleteTransaction).toHaveBeenCalledWith(transaction.id))
     await vi.waitFor(() => expect(refreshAll).toHaveBeenCalledTimes(2))
     expect(showToast).toHaveBeenLastCalledWith(
-      expect.stringContaining('was restored'),
-      'Completion undone',
+      'The change to "Car service" was undone.',
+      'Undo successful',
       'success',
     )
   })

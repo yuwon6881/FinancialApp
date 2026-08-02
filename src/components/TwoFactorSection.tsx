@@ -8,6 +8,7 @@ import { RecoveryCodesModal } from './ui/RecoveryCodesModal'
 import { CollapsibleBody } from './ui/CollapsibleBody'
 import { PasswordEntryModal } from './ui/PasswordEntryModal'
 import { getErrorMessage } from '../lib/errors'
+import { buildMutationSuccessToast } from '../lib/mutationToast'
 import { Button } from './ui/Button'
 import { FormField } from './ui/FormField'
 import { focusFirstInvalidField } from './ui/formValidation'
@@ -86,7 +87,12 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
       setQrDataUrl(null)
       setSetupCode('')
       setRecoveryCodes(codes)
-      onToast?.('Two-factor authentication is now enabled.', 'Two-factor enabled', 'success')
+      const copy = buildMutationSuccessToast({
+        entity: 'Two-Factor Authentication',
+        action: 'Enabled',
+        message: 'Two-factor authentication was enabled.',
+      })
+      onToast?.(copy.message, copy.title, copy.tone)
     } catch (err: unknown) {
       setSetupError(getErrorMessage(err, 'Invalid code.'))
     } finally {
@@ -119,7 +125,12 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
       setShowDisableForm(false)
       setDisablePassword('')
       setDisableCode('')
-      onToast?.('Two-factor authentication has been disabled.', 'Two-factor disabled', 'success')
+      const copy = buildMutationSuccessToast({
+        entity: 'Two-Factor Authentication',
+        action: 'Disabled',
+        message: 'Two-factor authentication was disabled.',
+      })
+      onToast?.(copy.message, copy.title, copy.tone)
     } catch (err: unknown) {
       setDisableErrors({ code: getErrorMessage(err, 'Failed to disable two-factor authentication.') })
     } finally {

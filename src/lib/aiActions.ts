@@ -10,6 +10,7 @@ import type { Dispatch, ReactNode } from 'react'
 import type { AiUiAction } from './api/ai'
 import { fetchTransactionById } from './api/transactions'
 import { capitalizeWords } from './utils'
+import { buildMutationSuccessToast } from './mutationToast'
 import { REMINDER_LEAD_DAY_OPTIONS } from './recurringPayments'
 import type { PendingNotification, RecurringPayment, Transaction, TransactionCategory, WishlistItem } from '../types'
 import type {
@@ -379,11 +380,13 @@ export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDe
       }
       if (requestedActive !== null && payment.active !== requestedActive) {
         deps.handleToggleActive(payment.id)
-        deps.showToast(
-          `"${payment.name}" is now ${requestedActive ? 'active' : 'paused'}.`,
-          requestedActive ? 'Subscription resumed' : 'Subscription paused',
-          'success',
-        )
+        const copy = buildMutationSuccessToast({
+          entity: 'Recurring Payment',
+          action: requestedActive ? 'Resumed' : 'Paused',
+          recordName: payment.name,
+          messageVerb: requestedActive ? 'resumed' : 'paused',
+        })
+        deps.showToast(copy.message, copy.title, copy.tone)
       } else {
         deps.showToast(`"${payment.name}" is already ${requestedActive ? 'on' : 'off'}.`, 'No change needed', 'info')
       }
@@ -422,13 +425,15 @@ export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDe
         deps.showToast(`"${payment.name}" already uses those reminder settings.`, 'No change needed', 'info')
       } else {
         deps.handleUpdateReminder(payment.id, { ...settings })
-        deps.showToast(
-          settings.enabled
-            ? `Reminder for "${payment.name}" is on — ${settings.mode === 'Daily' ? 'daily' : 'once'}, ${settings.leadDays} day${settings.leadDays === 1 ? '' : 's'} before it is due.`
-            : `Reminder for "${payment.name}" is off.`,
-          'Payment reminder updated',
-          'success',
-        )
+        const copy = buildMutationSuccessToast({
+          entity: 'Recurring Payment',
+          action: 'Updated',
+          recordName: payment.name,
+          messageSuffix: settings.enabled
+            ? `Reminder is on — ${settings.mode === 'Daily' ? 'daily' : 'once'}, ${settings.leadDays} day${settings.leadDays === 1 ? '' : 's'} before it is due.`
+            : 'Reminder is off.',
+        })
+        deps.showToast(copy.message, copy.title, copy.tone)
       }
       setDestination({ tab: 'recurring', recurringId: payment.id })
     } else if (action.type === 'requestConfirmRecurringBill' || action.type === 'requestDiscardRecurringBill') {

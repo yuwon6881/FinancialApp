@@ -12,6 +12,7 @@
 import type { SavingsGoal } from '../types'
 import type { ToastAction } from '../components/ui/ToastViewport'
 import { getErrorMessage } from '../lib/errors'
+import { buildMutationSuccessToast, buildUndoSuccessToast } from '../lib/mutationToast'
 import { formatCurrencyVal } from '../lib/utils'
 
 type ToastTone = 'info' | 'success' | 'warning' | 'error'
@@ -20,6 +21,7 @@ export interface SavingsGoalActionDeps {
   currency: string
   commitGoals: (goals: SavingsGoal[]) => void
   commitGoal: (goal: SavingsGoal) => void
+  getGoalName: (id: number) => string | undefined
   refreshAll: () => Promise<void>
   showToast: (message: string, title?: string, tone?: ToastTone, action?: ToastAction) => void
 }
@@ -33,11 +35,15 @@ export async function contributeToGoal(
   try {
     await contributeToSavingsGoal(id, amount)
     deps.commitGoals(await fetchSavingsGoals())
-    deps.showToast(
-      amount > 0 ? 'Moved into this goal.' : 'Released back to free rewards.',
-      'Goal updated',
-      'success',
-    )
+    const copy = buildMutationSuccessToast({
+      entity: 'Savings Goal',
+      action: 'Updated',
+      recordName: deps.getGoalName(id),
+      messageSuffix: amount > 0
+        ? `${formatCurrencyVal(Math.abs(amount), deps.currency)} was moved into this goal.`
+        : `${formatCurrencyVal(Math.abs(amount), deps.currency)} was released back to free rewards.`,
+    })
+    deps.showToast(copy.message, copy.title, copy.tone)
   } catch (error: unknown) {
     // The likeliest failure is the server rejecting an over-commit against a balance the client
     // thought was larger. Surface its message rather than a generic one.
@@ -51,13 +57,16 @@ export async function fundGoalsForCycle(deps: SavingsGoalActionDeps): Promise<vo
     const result = await fundSavingsGoalsForCycle()
     deps.commitGoals(result.goals)
     const funded = result.totalGranted > 0
-    deps.showToast(
-      funded
-        ? `${formatCurrencyVal(result.totalGranted, deps.currency)} set aside across your goals.`
-        : 'Your goals are already funded for this cycle.',
-      funded ? 'Goals funded' : 'Nothing to fund',
-      funded ? 'success' : 'info',
-    )
+    if (funded) {
+      const copy = buildMutationSuccessToast({
+        entity: 'Savings Goals',
+        action: 'Funded',
+        message: `Savings goals were funded for this cycle. ${formatCurrencyVal(result.totalGranted, deps.currency)} was set aside across your goals.`,
+      })
+      deps.showToast(copy.message, copy.title, copy.tone)
+    } else {
+      deps.showToast('Your goals are already funded for this cycle.', 'Nothing to fund', 'info')
+    }
   } catch (error: unknown) {
     deps.showToast(getErrorMessage(error), 'Could not fund your goals', 'error')
   }
@@ -70,30 +79,28 @@ export async function completeGoal(deps: SavingsGoalActionDeps, id: number): Pro
     deps.commitGoal(result.goal)
     await deps.refreshAll()
     const spent = formatCurrencyVal(Math.abs(result.transaction.amount), deps.currency)
-    deps.showToast(
-      `${spent} was spent from Rewards and recorded in your ledger.`,
-      result.goal.isRecurring ? `${result.goal.name} rolled forward` : `${result.goal.name} completed`,
-      'success',
-      {
-        label: 'Undo',
-        onAction: () => {
-          void (async () => {
-            try {
-              const { deleteTransaction } = await import('../lib/api/transactions')
-              await deleteTransaction(result.transaction.id)
-              await deps.refreshAll()
-              deps.showToast(
-                `The ledger entry was removed and "${result.goal.name}" was restored.`,
-                'Completion undone',
-                'success',
-              )
-            } catch (error: unknown) {
-              deps.showToast(getErrorMessage(error), 'Could not undo completion', 'error')
-            }
-          })()
-        },
+    const copy = buildMutationSuccessToast({
+      entity: 'Savings Goal',
+      action: result.goal.isRecurring ? 'Rolled Forward' : 'Completed',
+      recordName: result.goal.name,
+      messageSuffix: `${spent} was spent from Rewards and recorded in your ledger.`,
+    })
+    deps.showToast(copy.message, copy.title, copy.tone, {
+      label: 'Undo',
+      onAction: () => {
+        void (async () => {
+          try {
+            const { deleteTransaction } = await import('../lib/api/transactions')
+            await deleteTransaction(result.transaction.id)
+            await deps.refreshAll()
+            const undoCopy = buildUndoSuccessToast(result.goal.name, 'savings goal')
+            deps.showToast(undoCopy.message, undoCopy.title, undoCopy.tone)
+          } catch (error: unknown) {
+            deps.showToast(getErrorMessage(error), 'Could not undo completion', 'error')
+          }
+        })()
       },
-    )
+    })
   } catch (error: unknown) {
     deps.showToast(getErrorMessage(error), 'Could not complete this goal', 'error')
   }

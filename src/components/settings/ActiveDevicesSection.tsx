@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import * as api from '../../lib/api'
 import type { SessionSummary } from '../../lib/api'
 import { getErrorMessage } from '../../lib/errors'
+import { buildMutationSuccessToast } from '../../lib/mutationToast'
 import { useAppPrefs, useAppUi } from '../../contexts/AppContext'
 import { CollapsibleBody } from '../ui/CollapsibleBody'
 
@@ -33,10 +34,16 @@ export function ActiveDevicesSection() {
 
   const revoke = async (id: string) => {
     if (hideSensitive) return
+    const session = sessions.find(item => item.id === id)
     try {
       await api.revokeSession(id)
       await load()
-      showToast('Session revoked.', 'Session removed', 'success')
+      const copy = buildMutationSuccessToast({
+        entity: 'Session',
+        action: 'Revoked',
+        recordName: session?.deviceName,
+      })
+      showToast(copy.message, copy.title, copy.tone)
     } catch (error) {
       showToast(getErrorMessage(error, 'Failed to revoke session.'), 'Error', 'error')
     }
@@ -46,7 +53,12 @@ export function ActiveDevicesSection() {
     try {
       const { revokedCount } = await api.revokeAllSessions(true)
       await load()
-      showToast(`Logged out ${revokedCount} other device(s).`, 'Devices logged out', 'success')
+      const copy = buildMutationSuccessToast({
+        entity: 'Sessions',
+        action: 'Revoked',
+        message: `${revokedCount} other session${revokedCount === 1 ? '' : 's'} were revoked.`,
+      })
+      showToast(copy.message, copy.title, copy.tone)
     } catch (error) {
       showToast(getErrorMessage(error, 'Failed to log out other devices.'), 'Error', 'error')
     }

@@ -138,6 +138,31 @@ describe('sync success toast copy', () => {
       tone: 'success',
     })
   })
+
+  it('uses the same record-first shape for an undone wishlist purchase', () => {
+    expect(getSyncSuccessToast(makeOp({
+      entity: 'wishlistItem',
+      type: 'unpurchase',
+      payload: { name: 'Headphones' },
+    }))).toEqual({
+      title: 'Wishlist Item Purchase Undone',
+      message: '"Headphones" was unmarked as purchased.',
+      tone: 'success',
+    })
+  })
+
+  it('keeps setting sync copy in the shared entity/action format', () => {
+    expect(getSyncSuccessToast(makeOp({
+      entity: 'settings',
+      type: 'update',
+      targetId: 'darkMode',
+      payload: { darkMode: true },
+    }))).toEqual({
+      title: 'Settings Updated',
+      message: '"Dark mode" was enabled. Synced to the server.',
+      tone: 'success',
+    })
+  })
 })
 
 describe('projectSettingPreference', () => {

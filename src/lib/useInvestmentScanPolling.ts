@@ -4,6 +4,7 @@ import type { InvestmentActivityScanResult } from './api'
 import type { AppTab } from '../types'
 import type { ToastTone } from '../components/ui/ToastViewport'
 import { errorMessageIncludes, errorMessageIncludesLower } from './errors'
+import { buildMutationSuccessToast } from './mutationToast'
 
 const JOB_IDS_KEY = 'investment_scan_job_ids'
 const NOTIFIED_IDS_KEY = 'investment_scan_notified_ids'
@@ -128,7 +129,12 @@ export function useInvestmentScanPolling(options: Options) {
               if (!isInModal) {
                 if (!notifiedIds.includes(jobId)) {
                   setNotifiedIds(current => current.includes(jobId) ? current : [...current, jobId])
-                  showToast('Your investment record has been scanned successfully.', 'Investment Scan Complete', 'success')
+                  const copy = buildMutationSuccessToast({
+                    entity: 'Investment Scan',
+                    action: 'Completed',
+                    message: 'Investment record was scanned successfully.',
+                  })
+                  showToast(copy.message, copy.title, copy.tone)
                 }
                 window.setTimeout(() => {
                   if (!isMountedRef.current) return

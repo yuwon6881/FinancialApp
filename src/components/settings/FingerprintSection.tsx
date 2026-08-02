@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import * as api from '../../lib/api'
 import type { FingerprintCredentialSummary } from '../../lib/api'
 import { getErrorMessage, getErrorName } from '../../lib/errors'
+import { buildMutationSuccessToast } from '../../lib/mutationToast'
 import { base64UrlToHex, createFingerprintCredential, getFriendlyDeviceLabel, isPlatformAuthenticatorAvailable } from '../../lib/webauthn'
 import { useAppPrefs, useAppUi } from '../../contexts/AppContext'
 import { CollapsibleBody } from '../ui/CollapsibleBody'
@@ -55,7 +56,12 @@ export function FingerprintSection() {
       await api.verifyFingerprintRegistration(challengeId, credential, getFriendlyDeviceLabel())
       localStorage.setItem(DEVICE_CREDENTIAL_ID_KEY, base64UrlToHex(credential.id))
       await load()
-      showToast('Device unlock enabled on this device.', 'Device unlock enabled', 'success')
+      const copy = buildMutationSuccessToast({
+        entity: 'Device Unlock',
+        action: 'Enabled',
+        message: 'Device unlock was enabled on this device.',
+      })
+      showToast(copy.message, copy.title, copy.tone)
     } catch (error) {
       if (getErrorName(error) === 'InvalidStateError') {
         localStorage.setItem(DEVICE_CREDENTIAL_ID_KEY, 'already_enrolled')
@@ -73,7 +79,12 @@ export function FingerprintSection() {
     try {
       await api.deleteFingerprintCredential(id)
       await load()
-      showToast('Device unlock credential removed.', 'Device unlock removed', 'success')
+      const copy = buildMutationSuccessToast({
+        entity: 'Device Unlock Credential',
+        action: 'Removed',
+        message: 'Device unlock credential was removed.',
+      })
+      showToast(copy.message, copy.title, copy.tone)
     } catch (error) {
       showToast(getErrorMessage(error, 'Failed to remove device unlock credential.'), 'Device unlock error', 'error')
     }

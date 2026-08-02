@@ -173,6 +173,7 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
     currency,
     commitGoals: commitSavingsGoals,
     commitGoal: commitSavingsGoal,
+    getGoalName: (id: number) => allSavingsGoals.find(goal => goal.id === id)?.name,
     refreshAll,
     showToast,
   })

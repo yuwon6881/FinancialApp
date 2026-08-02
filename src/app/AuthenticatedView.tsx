@@ -19,6 +19,7 @@ import type { useInvestmentScanPolling } from '../lib/useInvestmentScanPolling'
 import type { useReceiptScanPolling } from '../lib/useReceiptScanPolling'
 import type { useReceiptSplitPolling } from '../lib/useReceiptSplitPolling'
 import { getCycleYearAndMonthForDate, MONTH_NAMES } from '../lib/cycle'
+import { buildMutationSuccessToast, buildUndoSuccessToast } from '../lib/mutationToast'
 
 const DashboardView = lazy(() => import('../components/DashboardView').then(module => ({ default: module.DashboardView })))
 const ReportsView = lazy(() => import('../components/ReportsView').then(module => ({ default: module.ReportsView })))
@@ -226,18 +227,19 @@ export function AuthenticatedView({
                       onToggleNotifyOnLogin={(checked) => {
                         const previous = prefs.notifyOnLogin
                         prefs.setNotifyOnLogin(checked)
-                        dialogs.showToast(
-                          `Login notifications were ${checked ? 'enabled' : 'disabled'}.`,
-                          'Settings Saved',
-                          'success',
-                          {
-                            label: 'Undo',
-                            onAction: () => {
-                              prefs.setNotifyOnLogin(previous)
-                              dialogs.showToast('Notification preference change was undone.', 'Undo successful', 'success')
-                            },
+                        const copy = buildMutationSuccessToast({
+                          entity: 'Settings',
+                          action: 'Updated',
+                          message: `Login notifications were ${checked ? 'enabled' : 'disabled'}.`,
+                        })
+                        dialogs.showToast(copy.message, copy.title, copy.tone, {
+                          label: 'Undo',
+                          onAction: () => {
+                            prefs.setNotifyOnLogin(previous)
+                            const undoCopy = buildUndoSuccessToast('Login notifications', 'settings')
+                            dialogs.showToast(undoCopy.message, undoCopy.title, undoCopy.tone)
                           },
-                        )
+                        })
                       }}
                       pushEnabled={push.enabled}
                       pushSupported={push.supported}
@@ -258,11 +260,12 @@ export function AuthenticatedView({
                             clearLocalFinancialData()
                           }
                           await financial.loadAll(month, year, true)
-                          dialogs.showToast(
-                            'Cached financial data and offline drafts were removed from this device.',
-                            'Local Data Cleared',
-                            'success',
-                          )
+                          const copy = buildMutationSuccessToast({
+                            entity: 'Local Data',
+                            action: 'Cleared',
+                            message: 'Cached financial data and offline drafts were removed from this device.',
+                          })
+                          dialogs.showToast(copy.message, copy.title, copy.tone)
                         })()
                       }}
                     />

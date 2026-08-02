@@ -4,6 +4,7 @@ import type { ReceiptScanResult } from './api'
 import type { AppTab } from '../types'
 import type { ToastTone } from '../components/ui/ToastViewport'
 import { errorMessageIncludes, errorMessageIncludesLower } from './errors'
+import { buildMutationSuccessToast } from './mutationToast'
 
 const RECEIPT_SCAN_JOB_IDS_KEY = 'receipt_scan_job_ids'
 const RECEIPT_SCAN_NOTIFIED_IDS_KEY = 'receipt_scan_notified_ids'
@@ -174,7 +175,12 @@ export function useReceiptScanPolling(options: UseReceiptScanPollingOptions): Us
               if (!isInModal) {
                 if (!notifiedReceiptScanJobIds.includes(scanId)) {
                   setNotifiedReceiptScanJobIds(prev => prev.includes(scanId) ? prev : [...prev, scanId])
-                  showToast('Your receipt has been scanned successfully.', 'Receipt Scan Complete', 'success')
+                  const copy = buildMutationSuccessToast({
+                    entity: 'Receipt Scan',
+                    action: 'Completed',
+                    message: 'Receipt was scanned successfully.',
+                  })
+                  showToast(copy.message, copy.title, copy.tone)
                 }
 
                 window.setTimeout(() => {

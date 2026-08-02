@@ -4,6 +4,7 @@ import type { ReceiptSplitScanResult } from './api'
 import type { AppTab } from '../types'
 import type { ToastTone } from '../components/ui/ToastViewport'
 import { errorMessageIncludes, errorMessageIncludesLower } from './errors'
+import { buildMutationSuccessToast } from './mutationToast'
 
 const JOB_IDS_KEY = 'receipt_split_scan_job_ids'
 
@@ -115,7 +116,12 @@ export function useReceiptSplitPolling(options: Options) {
             if (job.status === 'completed' && job.result) {
               setActiveDraft({ jobId: scanId, result: job.result })
               if (!isReceiptSplitOpenRef.current) {
-                showToast('Your receipt items are ready to review.', 'Receipt Split Complete', 'success')
+                const copy = buildMutationSuccessToast({
+                  entity: 'Receipt Split',
+                  action: 'Completed',
+                  message: 'Receipt items were prepared for review.',
+                })
+                showToast(copy.message, copy.title, copy.tone)
                 window.setTimeout(() => {
                   if (!isMountedRef.current) return
                   setActiveTab('ledger')
