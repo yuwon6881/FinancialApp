@@ -1,5 +1,5 @@
 import * as api from './api'
-import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentAllocationSleeve, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, RecurringPayment, SavingsGoal, Transaction, TransactionCategory, WishlistItem } from '../types'
+import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentAllocationSleeve, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, PayEarlyResult, RecurringPayment, SavingsGoal, Transaction, TransactionCategory, WishlistItem } from '../types'
 import { buildMutationSuccessToast, buildUndoSuccessToast } from './mutationToast'
 
 export type EntityKind = 'transaction' | 'recurringPayment' | 'wishlistItem' | 'savingsGoal' | 'category' | 'settings'
@@ -7,6 +7,7 @@ export type EntityKind = 'transaction' | 'recurringPayment' | 'wishlistItem' | '
   | 'investmentPlan' | 'investmentAllocation'
   | 'investmentAllocationOrder'
 export type OpType = 'add' | 'update' | 'delete' | 'restore' | 'toggle' | 'purchase' | 'unpurchase'
+  | 'reminder' | 'payEarly' | 'cleanup'
 export interface OutboxPayload {
   [key: string]: unknown
   id?: string | number
@@ -25,6 +26,16 @@ export interface OutboxPayload {
   cycleLimit?: number | null
   date?: string
   postedAt?: string
+  reminderEnabled?: boolean
+  reminderMode?: string
+  reminderLeadDays?: number
+  occurrenceDate?: string
+  optimisticNextOccurrenceDate?: string
+  settledOccurrenceDate?: string
+  nextOccurrenceDate?: string | null
+  optimisticTransaction?: unknown
+  resultTransaction?: unknown
+  actions?: unknown
 }
 export type DispatchResult =
   | Transaction
@@ -38,6 +49,8 @@ export type DispatchResult =
   | InvestmentCashFlow
   | InvestmentPlan
   | api.DeletedTransactionsSnapshot
+  | api.CategoryCleanupApplyResult
+  | PayEarlyResult
   | { id: string }
   | { item: WishlistItem; transaction: Transaction; id?: undefined }
   | void
@@ -139,6 +152,9 @@ const TYPE_COPY: Record<OpType, { title: string; messageVerb: string }> = {
   toggle: { title: 'Updated', messageVerb: 'updated' },
   purchase: { title: 'Purchased', messageVerb: 'purchased' },
   unpurchase: { title: 'Purchase Undone', messageVerb: 'unmarked as purchased' },
+  reminder: { title: 'Updated', messageVerb: 'updated' },
+  payEarly: { title: 'Paid Early', messageVerb: 'paid early' },
+  cleanup: { title: 'Applied', messageVerb: 'applied' },
 }
 
 function defaultSyncSuccessToast(op: QueuedOp): ToastCopy {
@@ -186,7 +202,25 @@ const SUCCESS_TOAST_OVERRIDES: Partial<Record<string, (op: QueuedOp) => ToastCop
     // Acknowledging an end-of-cycle summary is a silent bookkeeping write — no toast.
     if (op.targetId === 'summarySeen') return null
     return defaultSyncSuccessToast(op)
-  }
+  },
+  'recurringPayment:reminder': (op) => buildMutationSuccessToast({
+    entity: 'Recurring payment reminder',
+    action: 'Updated',
+    recordName: op.payload?.name as string | undefined,
+    messageSuffix: 'Synced to the server.',
+  }),
+  'recurringPayment:payEarly': (op) => buildMutationSuccessToast({
+    entity: 'Recurring payment',
+    action: 'Paid Early',
+    recordName: op.payload?.name as string | undefined,
+    messageSuffix: 'Reminders for this cycle have stopped.',
+  }),
+  'category:cleanup': (op) => buildMutationSuccessToast({
+    entity: 'Category cleanup',
+    action: 'Applied',
+    recordName: op.payload?.description as string | undefined,
+    messageSuffix: 'Synced to the server.',
+  }),
 }
 
 // Single source of truth for "queued op finished syncing" toast copy, used by the outbox
@@ -363,6 +397,36 @@ export function enqueue(
     return [...queue, newOp]
   }
 
+  if (type === 'reminder') {
+    if (hasQueuedDelete) return queue
+    const existingReminder = queue.find(op => sameTarget(op) && op.type === 'reminder')
+    if (existingReminder && existingReminder.id !== activeSyncOpId) {
+      return queue.map(op => op.id === existingReminder.id
+        ? {
+            ...op,
+            payload: {
+              ...op.payload,
+              ...payload,
+              // Keep the first pre-change snapshot so Undo always returns to the state before
+              // the user's first edit, even if the control is changed several times offline.
+              undoSnapshot: op.payload?.undoSnapshot ?? payload?.undoSnapshot,
+            },
+          }
+        : op)
+    }
+    return [...queue, newOp]
+  }
+
+  if (type === 'payEarly') {
+    if (hasQueuedDelete || queue.some(op => sameTarget(op) && op.type === 'payEarly')) return queue
+    return [...queue, newOp]
+  }
+
+  if (type === 'cleanup') {
+    if (queue.some(op => sameTarget(op) && op.type === 'cleanup')) return queue
+    return [...queue, newOp]
+  }
+
   if (type === 'purchase') {
     // Collapse duplicate purchases so a double-tap can't fire two calls.
     if (queue.some(op => sameTarget(op) && op.type === 'purchase')) {
@@ -397,13 +461,171 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         ...entityOps,
         ...ops.filter(op =>
           (op.entity === 'wishlistItem' && (op.type === 'purchase' || op.type === 'unpurchase' || op.type === 'delete')) ||
-          (op.entity === 'recurringPayment' && op.type === 'delete')
+          (op.entity === 'recurringPayment' && (op.type === 'delete' || op.type === 'payEarly')) ||
+          (op.entity === 'category' && (op.type === 'delete' || op.type === 'cleanup'))
         )
       ]
-    : entityOps
+    : entity === 'recurringPayment'
+      ? [
+          ...entityOps,
+          ...ops.filter(op => op.entity === 'category' && (op.type === 'delete' || op.type === 'cleanup'))
+        ]
+      : entityOps
 
   for (const op of effectiveOps) {
     const targetStr = String(op.targetId)
+
+    if (op.entity === 'recurringPayment' && op.type === 'reminder' && entity === 'recurringPayment') {
+      const existingIndex = result.findIndex(item => String(item.id) === targetStr)
+      if (existingIndex >= 0) {
+        result[existingIndex] = {
+          ...result[existingIndex],
+          ...(typeof op.payload?.reminderEnabled === 'boolean' ? { reminderEnabled: op.payload.reminderEnabled } : {}),
+          ...(typeof op.payload?.reminderMode === 'string' ? { reminderMode: op.payload.reminderMode } : {}),
+          ...(typeof op.payload?.reminderLeadDays === 'number' ? { reminderLeadDays: op.payload.reminderLeadDays } : {}),
+          isPendingSync: !op.isCompleted,
+          pendingSyncOperationId: op.isCompleted ? undefined : op.id,
+        } as unknown as T
+      }
+      continue
+    }
+
+    if (op.entity === 'recurringPayment' && op.type === 'payEarly') {
+      if (entity === 'recurringPayment') {
+        const existingIndex = result.findIndex(item => String(item.id) === targetStr)
+        if (existingIndex >= 0) {
+          const nextDate = op.isCompleted
+            ? (typeof op.payload?.nextOccurrenceDate === 'string'
+              ? op.payload.nextOccurrenceDate
+              : typeof op.payload?.settledOccurrenceDate === 'string' ? op.payload.settledOccurrenceDate : undefined)
+            : typeof op.payload?.optimisticNextOccurrenceDate === 'string'
+              ? op.payload.optimisticNextOccurrenceDate
+              : undefined
+          result[existingIndex] = {
+            ...result[existingIndex],
+            ...(nextDate ? { nextDueDate: nextDate } : {}),
+            isPendingSync: !op.isCompleted,
+            pendingSyncOperationId: op.isCompleted ? undefined : op.id,
+          } as unknown as T
+        }
+      } else if (entity === 'transaction') {
+        const rawTransaction = op.isCompleted ? op.payload?.resultTransaction : op.payload?.optimisticTransaction
+        if (rawTransaction && typeof rawTransaction === 'object') {
+          const transaction = rawTransaction as Record<string, unknown>
+          const transactionId = typeof transaction.id === 'string' ? transaction.id : undefined
+          const recurringPaymentId = typeof transaction.recurringPaymentId === 'string'
+            ? transaction.recurringPaymentId
+            : targetStr
+          const occurrenceDate = typeof transaction.recurringOccurrenceDate === 'string'
+            ? transaction.recurringOccurrenceDate
+            : typeof op.payload?.occurrenceDate === 'string' ? op.payload.occurrenceDate : undefined
+          const existingIndex = result.findIndex(item =>
+            (transactionId && String(item.id) === transactionId) ||
+            (String((item as T & { recurringPaymentId?: string | null }).recurringPaymentId) === recurringPaymentId &&
+              occurrenceDate != null && (item as T & { recurringOccurrenceDate?: string | null }).recurringOccurrenceDate === occurrenceDate)
+          )
+          const projected = {
+            ...transaction,
+            ...(transactionId ? { id: transactionId } : {}),
+            isPendingDelete: false,
+            isPendingSync: !op.isCompleted,
+            pendingSyncOperationId: op.isCompleted ? undefined : op.id,
+          } as unknown as T
+          if (existingIndex >= 0) result[existingIndex] = { ...result[existingIndex], ...projected }
+          else result = [projected, ...result]
+        }
+      }
+      continue
+    }
+
+    if (op.entity === 'category' && op.type === 'cleanup') {
+      const rawActions = Array.isArray(op.payload?.actions) ? op.payload.actions : []
+      const actions = rawActions.filter((value): value is Record<string, unknown> => Boolean(value && typeof value === 'object'))
+      if (entity === 'category') {
+        for (const action of actions) {
+          const actionType = typeof action.type === 'string' ? action.type : ''
+          const categories = Array.isArray(action.categories)
+            ? action.categories.filter((value): value is string => typeof value === 'string')
+            : []
+          const sourceNames = new Set(categories.map(name => name.trim().toLowerCase()).filter(Boolean))
+          if (actionType === 'add' && typeof action.newCategoryName === 'string' && action.newCategoryName.trim()) {
+            const name = action.newCategoryName.trim()
+            const categoryId = typeof action.categoryId === 'string' && action.categoryId ? action.categoryId : `${op.targetId}:${name}`
+            const existingIndex = result.findIndex(item => {
+              const itemName = (item as T & { name?: string }).name
+              return String(item.id) === categoryId || (typeof itemName === 'string' && itemName.toLowerCase() === name.toLowerCase())
+            })
+            const projected = {
+              ...(existingIndex >= 0 ? result[existingIndex] : {}),
+              id: categoryId,
+              name,
+              cycleLimit: existingIndex >= 0 ? (result[existingIndex] as T & { cycleLimit?: number | null }).cycleLimit ?? null : null,
+              isPendingSync: !op.isCompleted,
+              isPendingDelete: false,
+            } as unknown as T
+            if (existingIndex >= 0) result[existingIndex] = projected
+            else result = [projected, ...result]
+          } else if (sourceNames.size > 0 && (actionType === 'delete' || actionType === 'deleteByName' || actionType === 'merge')) {
+            result = op.isCompleted
+              ? result.filter(item => {
+                  const itemName = (item as T & { name?: string }).name
+                  return !(typeof itemName === 'string' && sourceNames.has(itemName.trim().toLowerCase()))
+                })
+              : result.map(item => {
+                const itemName = (item as T & { name?: string }).name
+                return typeof itemName === 'string' && sourceNames.has(itemName.trim().toLowerCase())
+                ? { ...item, isPendingDelete: true, isPendingSync: true, pendingSyncOperationId: op.id } as unknown as T
+                : item
+              })
+          }
+        }
+      } else if (entity === 'transaction' || entity === 'recurringPayment') {
+        for (const action of actions) {
+          const actionType = typeof action.type === 'string' ? action.type : ''
+          const targetCategory = typeof action.targetCategory === 'string' ? action.targetCategory : ''
+          if ((actionType === 'merge' || actionType === 'restoreTransactions' || actionType === 'restoreRecurringPayments') && targetCategory) {
+            const rawIds = actionType === 'restoreTransactions'
+              ? action.transactionIds
+              : actionType === 'restoreRecurringPayments' ? action.recurringPaymentIds : undefined
+            const ids = new Set(Array.isArray(rawIds)
+              ? rawIds.filter((value): value is string => typeof value === 'string')
+              : [])
+            const sourceNames = new Set((Array.isArray(action.categories) ? action.categories : [])
+              .filter((value): value is string => typeof value === 'string')
+              .map(value => value.trim().toLowerCase()))
+            result = result.map(item => {
+              const itemId = String(item.id)
+              const itemCategory = (item as T & { category?: string }).category
+              const matches = actionType === 'merge'
+                ? typeof itemCategory === 'string' && sourceNames.has(itemCategory.trim().toLowerCase())
+                : ids.has(itemId)
+              return matches
+                ? { ...item, category: targetCategory, isPendingSync: !op.isCompleted, pendingSyncOperationId: op.isCompleted ? undefined : op.id } as unknown as T
+                : item
+            })
+          }
+        }
+      }
+      continue
+    }
+
+    if (op.entity === 'category' && op.type === 'delete' && (entity === 'transaction' || entity === 'recurringPayment')) {
+      // The API moves both ledger transactions and recurring payments to the selected replacement
+      // category in the same request. Keep those dependent records visibly pending too.
+      const sourceName = typeof op.payload?.name === 'string' ? op.payload.name.trim().toLowerCase() : ''
+      const replacementName = typeof op.payload?.replacementCategoryName === 'string'
+        ? op.payload.replacementCategoryName
+        : ''
+      if (sourceName && replacementName) {
+        result = result.map(item => {
+          const category = (item as T & { category?: string }).category
+          return typeof category === 'string' && category.trim().toLowerCase() === sourceName
+            ? { ...item, category: replacementName, isPendingSync: !op.isCompleted, pendingSyncOperationId: op.isCompleted ? undefined : op.id }
+            : item
+        })
+      }
+      continue
+    }
 
     if (op.type === 'add') {
       // Wishlist items and savings goals have server-generated int PKs, so an offline add carries
@@ -582,6 +804,29 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
           isPendingSync: !op.isCompleted
         }
       }
+    } else if (op.type === 'restore') {
+      // Investment activity/cash-flow undo uses a dedicated restore endpoint rather than
+      // re-adding a record. Project the snapshot back into the visible list immediately so an
+      // undo followed by navigation does not leave the user staring at a missing row.
+      const snapshots = entity === 'investmentActivity' && Array.isArray(op.payload?.transactions)
+        ? op.payload.transactions
+        : entity === 'investmentCashFlow' && op.payload
+          ? [op.payload]
+          : []
+      for (const snapshot of snapshots) {
+        if (!snapshot || typeof snapshot !== 'object') continue
+        const snapshotId = 'id' in snapshot ? String(snapshot.id) : targetStr
+        if (!snapshotId) continue
+        const restored = {
+          ...snapshot,
+          id: snapshotId,
+          isPendingDelete: false,
+          isPendingSync: !op.isCompleted,
+        } as unknown as T
+        const existingIndex = result.findIndex(item => String(item.id) === snapshotId)
+        if (existingIndex >= 0) result[existingIndex] = restored
+        else result = [restored, ...result]
+      }
     }
   }
 
@@ -609,6 +854,16 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
   ),
   'recurringPayment:delete': (op) => api.deleteRecurringPayment(op.targetId),
   'recurringPayment:toggle': (op) => api.toggleRecurringPayment(op.targetId, typeof op.payload?.active === 'boolean' ? op.payload.active : undefined),
+  'recurringPayment:reminder': (op) => api.updateRecurringPaymentReminder(op.targetId, {
+    enabled: op.payload?.reminderEnabled === true,
+    mode: (typeof op.payload?.reminderMode === 'string' ? op.payload.reminderMode : 'Once') as 'Once' | 'Daily',
+    leadDays: typeof op.payload?.reminderLeadDays === 'number' ? op.payload.reminderLeadDays : 1,
+  }),
+  'recurringPayment:payEarly': (op) => api.payRecurringPaymentEarly(
+    op.targetId,
+    typeof op.payload?.occurrenceDate === 'string' ? op.payload.occurrenceDate : '',
+    op.id,
+  ),
 
   'wishlistItem:add': (op) => api.addWishlistItem(op.payload as Partial<WishlistItem>, op.id),
   'wishlistItem:update': (op) => api.updateWishlistItem(
@@ -646,6 +901,9 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
     typeof op.payload?.cycleLimit === 'number' ? op.payload.cycleLimit : null,
   ),
   'category:delete': (op) => api.deleteCategory(op.targetId, typeof op.payload?.replacementCategoryId === 'string' ? op.payload.replacementCategoryId : undefined),
+  'category:cleanup': (op) => api.applyCategoryCleanup(
+    Array.isArray(op.payload?.actions) ? op.payload.actions as api.CategoryCleanupAction[] : [],
+  ),
 
   'settings:update': (op) => {
     if (op.targetId === 'darkMode') return api.updateDarkMode(op.payload?.darkMode === true)
@@ -703,7 +961,7 @@ function isWellFormedOp(op: unknown): op is QueuedOp {
     typeof o.entity === 'string' &&
     ['transaction', 'recurringPayment', 'wishlistItem', 'savingsGoal', 'category', 'settings', 'investmentAccount', 'investmentInstrument', 'investmentActivity', 'investmentManualPrice', 'investmentCashFlow', 'investmentPlan', 'investmentAllocation', 'investmentAllocationOrder'].includes(o.entity as string) &&
     typeof o.type === 'string' &&
-    ['add', 'update', 'delete', 'restore', 'toggle', 'purchase', 'unpurchase'].includes(o.type as string) &&
+    ['add', 'update', 'delete', 'restore', 'toggle', 'purchase', 'unpurchase', 'reminder', 'payEarly', 'cleanup'].includes(o.type as string) &&
     (typeof o.targetId === 'string' || typeof o.targetId === 'number') &&
     typeof o.createdAt === 'number' &&
     typeof o.retryCount === 'number'

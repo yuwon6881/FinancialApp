@@ -162,7 +162,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
           if (suppressNextClick.current) return
           if (open) close()
         }}
-        className={cn('relative bg-card', contentClassName)}
+        
       >
         {children}
 

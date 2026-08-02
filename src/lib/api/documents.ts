@@ -19,7 +19,6 @@ import type { DocumentSort } from '../documentOrdering'
 export async function uploadDocument(
   file: File,
   taxYear: number,
-  notes?: string,
   transactionId?: string,
   clientKey?: string,
   reliefCategory?: string,
@@ -29,7 +28,6 @@ export async function uploadDocument(
   const formData = new FormData()
   formData.append('file', file)
   formData.append('taxYear', taxYear.toString())
-  if (notes) formData.append('notes', notes)
   if (transactionId) formData.append('transactionId', transactionId)
   if (clientKey) formData.append('clientKey', clientKey)
   if (reliefCategory) formData.append('reliefCategory', reliefCategory)
@@ -67,13 +65,11 @@ export interface BulkDocumentCategoryUpdateResult {
 export async function uploadDocuments(
   files: File[],
   taxYear: number,
-  notes?: string,
   reliefCategory?: string,
 ): Promise<BulkDocumentResult[]> {
   const formData = new FormData()
   files.forEach(file => formData.append('files', file))
   formData.append('taxYear', taxYear.toString())
-  if (notes) formData.append('notes', notes)
   if (reliefCategory) formData.append('reliefCategory', reliefCategory)
   const response = await apiFetch('/documents/bulk', { method: 'POST', body: formData })
   if (!response.ok) await throwApiError(response, 'Failed to upload documents')
@@ -126,7 +122,6 @@ export async function updateDocument(
   id: number,
   updates: {
     taxYear?: number
-    notes?: string | null
     transactionId?: string | null
     reliefCategory?: string | null
     amount?: number | null

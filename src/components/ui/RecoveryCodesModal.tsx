@@ -1,4 +1,5 @@
 import { Checkbox } from './Checkbox'
+import { Button } from './Button'
 import React, { useState } from 'react'
 import { KeyRound, Copy, CheckCircle2 } from 'lucide-react'
 import { BottomSheet } from './BottomSheet'
@@ -50,14 +51,14 @@ export const RecoveryCodesModal: React.FC<RecoveryCodesModalProps> = ({ isOpen, 
             />
             I've saved these codes somewhere safe.
           </label>
-          <button
+          <Button variant="unstyled"
             type="button"
             disabled={!acknowledged}
             onClick={onAcknowledge}
             className="press-scale w-full py-2.5 bg-primary hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed text-primary-foreground font-bold text-xs rounded-xl shadow-md transition cursor-pointer"
           >
             Done
-          </button>
+          </Button>
         </div>
       }
     >
@@ -71,14 +72,14 @@ export const RecoveryCodesModal: React.FC<RecoveryCodesModalProps> = ({ isOpen, 
             <div key={code} className="text-foreground text-center py-1">{code}</div>
           ))}
         </div>
-        <button
+        <Button variant="unstyled"
           type="button"
           onClick={handleCopyAll}
           className="press-scale w-full inline-flex items-center justify-center gap-2 py-2 border border-border rounded-xl text-xs font-semibold text-foreground hover:bg-muted/50 transition cursor-pointer"
         >
           {copied ? <CheckCircle2 className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
           {copied ? 'Copied' : 'Copy all codes'}
-        </button>
+        </Button>
       </div>
     </BottomSheet>
   )

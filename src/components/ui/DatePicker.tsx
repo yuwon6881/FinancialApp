@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { Button } from './Button'
 import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { AnchoredPopover } from './AnchoredPopover'
 import { cn } from '../../lib/utils'
@@ -212,7 +213,7 @@ export function DatePicker({
           isInvalid && 'focus-within:border-destructive focus-within:ring-destructive/25',
         )}
       >
-        <button
+        <Button variant="unstyled"
           ref={triggerRef}
           type="button"
           id={accessibleProps.id}
@@ -232,9 +233,9 @@ export function DatePicker({
             {display ?? placeholder}
           </span>
           <Calendar className="size-3.5 shrink-0 text-muted-foreground/80" aria-hidden="true" />
-        </button>
+        </Button>
         {clearable && value && (
-          <button
+          <Button variant="unstyled"
             type="button"
             disabled={disabled}
             aria-label={clearAriaLabel}
@@ -246,7 +247,7 @@ export function DatePicker({
             className="mr-1 flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground outline-none transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed"
           >
             <X className="size-3.5" aria-hidden="true" />
-          </button>
+          </Button>
         )}
       </div>
 
@@ -274,25 +275,25 @@ export function DatePicker({
         }}
       >
         <div className="mb-2.5 flex items-center justify-between">
-          <button
+          <Button variant="unstyled"
             type="button"
             onClick={() => goToMonth(-1)}
             className="cursor-pointer rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted/80 hover:text-foreground"
             aria-label="Previous month"
           >
             <ChevronLeft className="size-4" />
-          </button>
+          </Button>
           <span aria-live="polite" className="text-xs font-bold text-foreground select-none">
             {MONTHS[viewDate.month]} {viewDate.year}
           </span>
-          <button
+          <Button variant="unstyled"
             type="button"
             onClick={() => goToMonth(1)}
             className="cursor-pointer rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted/80 hover:text-foreground"
             aria-label="Next month"
           >
             <ChevronRight className="size-4" />
-          </button>
+          </Button>
         </div>
 
         <div role="grid" aria-label={`${MONTHS[viewDate.month]} ${viewDate.year}`}>
@@ -318,7 +319,7 @@ export function DatePicker({
               const isDisabled = Boolean((min && cellISO < min) || (max && cellISO > max))
 
               return (
-                <button
+                <Button variant="unstyled"
                   key={cellISO}
                   ref={node => {
                     if (node) dayRefs.current.set(cellISO, node)
@@ -377,21 +378,21 @@ export function DatePicker({
                   )}
                 >
                   {day}
-                </button>
+                </Button>
               )
             })}
           </div>
         </div>
 
         <div className="mt-2.5 flex justify-end border-t border-border/40 pt-2.5">
-          <button
+          <Button variant="unstyled"
             type="button"
             disabled={Boolean((min && todayISO < min) || (max && todayISO > max))}
             onClick={() => select(todayISO)}
             className="cursor-pointer rounded-lg px-2.5 py-1 text-[11px] font-bold text-blue-600 transition hover:bg-blue-500/10 disabled:cursor-not-allowed disabled:opacity-40 dark:text-blue-400"
           >
             Today
-          </button>
+          </Button>
         </div>
       </AnchoredPopover>
     </div>

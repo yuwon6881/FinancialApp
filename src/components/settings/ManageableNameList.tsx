@@ -1,4 +1,5 @@
 import { Input } from '../ui/Input'
+import { Button } from '../ui/Button'
 import { Loader2, Plus, Search, Trash2, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
@@ -75,7 +76,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
           maxLength={40}
           className="h-9 min-w-0 flex-1 rounded-lg border border-border bg-background px-3 text-xs focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
         />
-        <button
+        <Button variant="unstyled"
           type="button"
           onClick={() => void add()}
           disabled={!trimmedName || duplicate || Boolean(validationError) || disabled || busyId !== null}
@@ -83,7 +84,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
           className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-primary text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
         >
           {busyId === 'new' ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
-        </button>
+        </Button>
       </div>
       {duplicate && <p className="text-[10px] font-semibold text-destructive">{itemLabel} already exists.</p>}
       {validationError && <p className="text-[10px] font-semibold text-destructive">{validationError}</p>}
@@ -100,14 +101,14 @@ export function ManageableNameList<T extends ManageableNameItem>({
           className="h-10 w-full rounded-xl border border-border/70 bg-muted/20 py-2 pl-10 pr-10 text-xs shadow-inner shadow-black/[0.025] transition placeholder:text-muted-foreground/75 hover:border-border focus:border-ring/70 focus:bg-background focus:outline-none focus:ring-2 focus:ring-ring/15"
         />
         {search && (
-          <button
+          <Button variant="unstyled"
             type="button"
             onClick={() => setSearch('')}
             aria-label={`Clear ${lowerItemLabel} search`}
             className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground"
           >
             <X className="size-3.5" />
-          </button>
+          </Button>
         )}
       </label>
 
@@ -129,7 +130,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
             </div>
             <div className="flex shrink-0 items-center gap-2">
               {renderStatus?.(item)}
-              <button
+              <Button variant="unstyled"
                 type="button"
                 disabled={disabled || busyId !== null}
                 onClick={async () => {
@@ -144,7 +145,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
                 className="cursor-pointer text-muted-foreground transition hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {busyId === item.id ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3" />}
-              </button>
+              </Button>
             </div>
           </div>
         ))}

@@ -28,7 +28,7 @@ interface DocumentListProps {
   currency: string
   updateDocument: (
     id: number,
-    updates: Pick<Partial<VaultDocument>, 'taxYear' | 'notes' | 'transactionId' | 'reliefCategory' | 'amount' | 'amountCurrency'> & {
+    updates: Pick<Partial<VaultDocument>, 'taxYear' | 'transactionId' | 'reliefCategory' | 'amount' | 'amountCurrency'> & {
       amountStatus?: 'Confirmed' | 'NeedsReview'
     },
   ) => Promise<void>
@@ -303,11 +303,6 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
                       onOpen={onNavigateToTransaction ? transactionId => void openLinkedTransaction(transactionId) : undefined}
                     />
                   </div>
-                  {document.notes && (
-                    <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">
-                      {document.notes}
-                    </p>
-                  )}
                 </div>
                 <DocumentActions
                   document={document}
@@ -394,11 +389,6 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
                           onOpen={onNavigateToTransaction ? transactionId => void openLinkedTransaction(transactionId) : undefined}
                         />
                       </div>
-                      {document.notes && (
-                        <p className="truncate text-[11px] text-muted-foreground" title={document.notes}>
-                          {document.notes}
-                        </p>
-                      )}
                     </div>
                   </div>
                 </td>

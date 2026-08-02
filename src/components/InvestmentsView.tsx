@@ -8,6 +8,7 @@ import {
   CloudOff,
   Info,
   Loader2,
+
   Plus,
   RefreshCw,
   Search,
@@ -22,6 +23,8 @@ import type {
 } from '../types'
 import { useAppContext } from '../contexts/AppContext'
 import { Button } from './ui/Button'
+import { RowSyncStatus } from './ui/RowSyncBadge'
+import { FormField } from './ui/FormField'
 import { BottomSheet } from './ui/BottomSheet'
 import { CycleSkeleton } from './ui/Skeleton'
 import { InfoHint } from './ui/InfoHint'
@@ -71,7 +74,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
   onInvestmentScanStarted,
   onInvestmentScanCleared,
 }) => {
-  const { hideSensitive, isOffline, confirm, activeSyncId, operations = [], queueMutation = () => undefined } = useAppContext()
+  const { hideSensitive, isOffline, confirm, activeSyncId, activeSyncIds = [], operations = [], queueMutation = () => undefined } = useAppContext()
   const investmentOps = useMemo(
     () => operations.filter(operation => operation.entity.startsWith('investment')),
     [operations],
@@ -228,7 +231,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
         }} onNeedAccount={() => openPanel('account')} />
       </BottomSheet>
 
-      {!portfolio || (portfolio.accounts.length === 0 && portfolio.instruments.length === 0 && (portfolio.activityCount ?? portfolio.activity.length) === 0 && (portfolio.cashFlowCount ?? portfolio.cashFlows.length) === 0) ? (
+      {!portfolio || ((setupPortfolio?.accounts.length ?? 0) === 0 && (setupPortfolio?.instruments.length ?? 0) === 0 && (portfolio.activityCount ?? portfolio.activity.length) === 0 && (portfolio.cashFlowCount ?? portfolio.cashFlows.length) === 0) ? (
         <EmptyState
           onAddAccount={() => openPanel('account')}
           onAddInvestment={() => openPanel('instrument')}
@@ -237,7 +240,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
         <>
           <SummaryCards portfolio={portfolio} masked={hideSensitive} />
           <ActionToolbar
-            portfolio={portfolio}
+            portfolio={setupPortfolio ?? portfolio}
             isOffline={isOffline}
             refreshing={refreshing}
             onAddActivity={() => openPanel('activity')}
@@ -301,6 +304,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
                 undoSnapshot: instrument,
               })
             }}
+            activeSyncIds={activeSyncIds.length > 0 ? activeSyncIds : activeSyncId ? [activeSyncId] : []}
           />
           {portfolio.warnings.length > 0 && (
             <details className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
@@ -318,7 +322,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
           <PerformanceBars portfolio={portfolio} masked={hideSensitive} />
           <HoldingsTable portfolio={portfolio} masked={hideSensitive} filter={allocationFilter} />
           <PagedActivityTable
-            portfolio={portfolio}
+            portfolio={setupPortfolio ?? portfolio}
             masked={hideSensitive}
             refreshToken={activityRevision}
             operations={investmentOps}
@@ -522,6 +526,7 @@ const AccountsAndInstruments = ({
   onDeleteInstrument,
   onArchiveInstrument,
   onUnarchiveInstrument,
+  activeSyncIds,
 }: {
   portfolio: InvestmentPortfolio
   onArchiveAccount: (id: string) => void
@@ -530,6 +535,7 @@ const AccountsAndInstruments = ({
   onDeleteInstrument: (id: string) => void
   onArchiveInstrument: (id: string) => void
   onUnarchiveInstrument: (id: string) => void
+  activeSyncIds: string[]
 }) => {
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<'accounts' | 'investments'>('accounts')
@@ -561,7 +567,9 @@ const AccountsAndInstruments = ({
               ['investments', `Investments (${portfolio.instruments.length})`],
             ] as const).map(([value, label]) => <Button key={value} variant="unstyled" type="button" onClick={() => { setTab(value); setQuery('') }} aria-pressed={tab === value} className={`min-w-0 flex-1 cursor-pointer rounded-lg px-2 py-2 text-[10px] font-bold sm:text-xs focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${tab === value ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}>{label}</Button>)}
           </div>
-          <Input value={query} onChange={event => setQuery(event.target.value)} placeholder={`Search ${tab}`} />
+          <FormField label={`Search ${tab}`} labelClassName="sr-only">
+            <Input value={query} onChange={event => setQuery(event.target.value)} placeholder={`Search ${tab}`} />
+          </FormField>
           {tab === 'accounts' && <div>
             <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Accounts</h3>
             <div className="mt-2 space-y-2">
@@ -570,6 +578,12 @@ const AccountsAndInstruments = ({
                   <span className="min-w-0">
                     <strong className="flex items-center gap-2 truncate text-xs text-foreground">
                       {value.name}
+                      <RowSyncStatus
+                        isDeleting={Boolean(value.isPendingDelete)}
+                        isSyncing={activeSyncIds.includes(value.id)}
+                        isPending={value.isPendingSync && !activeSyncIds.includes(value.id)}
+                        entityLabel="account"
+                      />
                       {!value.canDelete && !value.canArchive && !value.isArchived && (
                         <span title="Close every position and bring all cash balances to zero before archiving." className="flex cursor-help items-center gap-1.5 rounded-md px-1.5 py-0.5 text-amber-500 hover:bg-amber-500/10">
                           <Info className="size-3.5" />
@@ -584,6 +598,7 @@ const AccountsAndInstruments = ({
                       <Button
                         variant="ghost"
                         size="sm"
+                        disabled={Boolean(value.isPendingSync || value.isPendingDelete)}
                         onClick={() => onUnarchiveAccount(value.id, value.name, value.baseCurrency)}
                       >
                         Unarchive
@@ -592,7 +607,7 @@ const AccountsAndInstruments = ({
                       <Button
                         variant="danger"
                         size="sm"
-                        disabled={!value.canDelete && !value.canArchive}
+                        disabled={Boolean(value.isPendingSync || value.isPendingDelete) || (!value.canDelete && !value.canArchive)}
                         title={value.archiveUnavailableReason}
                         onClick={() => value.canDelete ? onDeleteAccount(value.id) : onArchiveAccount(value.id)}
                       >
@@ -609,10 +624,16 @@ const AccountsAndInstruments = ({
             <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Investments</h3>
             <div className="mt-2 space-y-2">
               {portfolio.instruments.filter(value => matches(`${value.symbol} ${value.name} ${value.currency}`)).map(value => (
-                <div key={value.id} className="flex items-center justify-between gap-2 rounded-xl bg-muted/25 p-3">
+                <div key={value.id} className="flex items-center justify-between gap-2 rounded-xl bg-muted/25 p-3" aria-busy={value.isPendingSync || value.isPendingDelete || activeSyncIds.includes(value.id)}>
                   <span className="min-w-0">
                     <strong className="flex items-center gap-2 truncate text-xs text-foreground">
                       {value.symbol} · {value.name}
+                      <RowSyncStatus
+                        isDeleting={Boolean(value.isPendingDelete)}
+                        isSyncing={activeSyncIds.includes(value.id)}
+                        isPending={value.isPendingSync && !activeSyncIds.includes(value.id)}
+                        entityLabel="investment"
+                      />
                       {!value.canDelete && !value.canArchive && !value.isArchived && (
                         <span title={value.archiveUnavailableReason} className="flex cursor-help items-center gap-1.5 rounded-md px-1.5 py-0.5 text-amber-500 hover:bg-amber-500/10">
                           <Info className="size-3.5" />
@@ -625,7 +646,7 @@ const AccountsAndInstruments = ({
                   <Button
                     variant={value.isArchived ? 'ghost' : 'danger'}
                     size="sm"
-                    disabled={!value.isArchived && !value.canDelete && !value.canArchive}
+                    disabled={Boolean(value.isPendingSync || value.isPendingDelete) || (!value.isArchived && !value.canDelete && !value.canArchive)}
                     title={value.archiveUnavailableReason}
                     onClick={() => value.isArchived
                       ? onUnarchiveInstrument(value.id)

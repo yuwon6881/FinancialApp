@@ -104,7 +104,7 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
       <div data-testid="reports-skeleton" className="space-y-6 soft-rise">
         <CycleHeaderSkeleton titleWidth="w-28" subtitleWidth="w-72" controlWidth="w-80" />
         <PanelSkeleton height="h-28" />
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-[repeat(3,minmax(0,1fr))]">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[repeat(2,minmax(0,1fr))] xl:grid-cols-[repeat(3,minmax(0,1fr))]">
           {[1, 2, 3].map(i => <CardSkeleton key={i} />)}
         </div>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[repeat(2,minmax(0,1fr))]">
@@ -194,7 +194,7 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
     return (
       <div data-testid="investments-skeleton" className="space-y-6 soft-rise">
         <CycleHeaderSkeleton titleWidth="w-52" subtitleWidth="w-80" controlWidth="w-44" />
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[1, 2, 3, 4].map(i => <StatTileSkeleton key={i} />)}
         </div>
         <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">

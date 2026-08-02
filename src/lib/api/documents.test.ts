@@ -41,7 +41,7 @@ describe('documents API', () => {
       new File(['two'], 'too-large.pdf', { type: 'application/pdf' }),
     ]
 
-    const results = await uploadDocuments(files, 2025, undefined, 'lifestyle')
+    const results = await uploadDocuments(files, 2025, 'lifestyle')
 
     expect(results).toHaveLength(2)
     expect(results[1].uploaded).toBe(false)
@@ -113,7 +113,7 @@ describe('documents API', () => {
     vi.stubGlobal('fetch', fetchMock)
     const file = new File(['%PDF-1.4 test'], 'test.pdf', { type: 'application/pdf' })
 
-    await uploadDocument(file, 2026, 'Annual filing', undefined, undefined, 'lifestyle', 123.45, 'OTHER')
+    await uploadDocument(file, 2026, undefined, undefined, 'lifestyle', 123.45, 'OTHER')
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(url).toContain('/api/documents')
@@ -248,11 +248,11 @@ describe('documents API', () => {
       await listDocuments(2026)
       await listDocuments(2026)
 
-      await uploadDocument(new File([''], 'test.pdf'), 2026, undefined, undefined, undefined, 'lifestyle')
+      await uploadDocument(new File([''], 'test.pdf'), 2026, undefined, undefined, 'lifestyle')
       await listDocuments(2026)
       await listDocuments(2026)
 
-      await updateDocument(1, { notes: 'test' })
+      await updateDocument(1, { transactionId: 'test' })
       await listDocuments(2026)
 
       await deleteDocument(1)

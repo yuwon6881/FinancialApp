@@ -1,5 +1,6 @@
 import { Download, Loader2 } from 'lucide-react'
 import { BottomSheet } from '../ui/BottomSheet'
+import { Button } from '../ui/Button'
 
 interface LedgerExportModalProps {
   isOpen: boolean
@@ -42,34 +43,34 @@ export function LedgerExportModal({
       </div>
 
       <div className="flex flex-col gap-2 mt-2">
-        <button
-          type="button"
+        <Button
+          variant="outline"
           onClick={onExportPage}
           disabled={exportIsFetching}
-          className="px-4 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-muted text-foreground transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded-xl px-4 py-2 text-xs font-semibold"
         >
           Export This Page
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="primary"
           onClick={onExportAll}
           disabled={exportIsFetching}
-          className="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold shadow-md transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="rounded-xl px-4 py-2 text-xs font-semibold shadow-md"
         >
           {exportIsFetching && <Loader2 className="size-3.5 animate-spin" />}
           Export Entire Result
-        </button>
+        </Button>
       </div>
 
       <div className="flex justify-end gap-3 pt-2">
-        <button
-          type="button"
+        <Button
+          variant="outline"
           onClick={onClose}
           disabled={exportIsFetching}
-          className="px-4 py-2 rounded-xl border border-border text-xs font-semibold hover:bg-muted text-foreground transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded-xl px-4 py-2 text-xs font-semibold"
         >
           Cancel
-        </button>
+        </Button>
       </div>
     </BottomSheet>
   )

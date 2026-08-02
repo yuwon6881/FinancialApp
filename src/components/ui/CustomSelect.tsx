@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type FocusEventHandler } from 'react'
+import { Button } from './Button'
 import { ChevronDown } from 'lucide-react'
 import { AnchoredPopover } from './AnchoredPopover'
 import { controlTriggerClassName, type ControlSize } from './controlStyles'
@@ -169,7 +170,7 @@ export function CustomSelect<T extends string | number>({
         }
       }}
     >
-      <button
+      <Button variant="unstyled"
         type="button"
         id={accessibleProps.id}
         ref={triggerRef}
@@ -194,7 +195,7 @@ export function CustomSelect<T extends string | number>({
       >
         <span className="min-w-0 flex-1 truncate">{selectedOption?.label || value}</span>
         <ChevronDown className={`size-3.5 text-muted-foreground/80 transition duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
+      </Button>
 
       <AnchoredPopover
         ref={panelRef}
@@ -210,7 +211,7 @@ export function CustomSelect<T extends string | number>({
         className={`bg-popover text-popover-foreground border border-border rounded-xl shadow-xl p-1 z-[200] overflow-y-auto overscroll-contain animate-in fade-in ${direction === 'up' ? 'slide-in-from-bottom-1' : 'slide-in-from-top-1'} duration-100 space-y-0.5`}
       >
         {options.map((option, index) => (
-          <button
+          <Button variant="unstyled"
             key={option.value}
             id={`${listboxId}-option-${index}`}
             type="button"
@@ -242,7 +243,7 @@ export function CustomSelect<T extends string | number>({
                 </span>
               </>
             ) : option.label}
-          </button>
+          </Button>
         ))}
       </AnchoredPopover>
     </div>

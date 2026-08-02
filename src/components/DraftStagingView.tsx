@@ -180,13 +180,13 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
       {/* Header section */}
       <div className="flex items-center justify-between border-b border-border/40 pb-4">
         <div className="flex items-center gap-3">
-          <button
+          <Button variant="ghost" size="icon"
             onClick={onCancel}
-            className="p-2 hover:bg-muted rounded-xl text-muted-foreground hover:text-foreground cursor-pointer transition select-none"
+            className="text-muted-foreground hover:text-foreground"
             title="Go back"
           >
             <ArrowLeft className="size-4" />
-          </button>
+          </Button>
           <div>
             <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
               <FileText className="size-5 text-amber-500" />
@@ -222,17 +222,17 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                 {/* Description — full width */}
                 <div className="space-y-1.5 relative">
                   {!isTransferDraft && (
-                    <button
+                    <Button variant="unstyled"
                       type="button"
                       onMouseDown={e => e.preventDefault()}
                       onClick={() => void suggestions.requestNoteSuggestions(description.trim())}
                       disabled={suggestions.isSuggestingNote || description.trim().length < 2}
                       title={description.trim().length < 2 ? 'Enter a description first' : 'Suggest cleaner notes'}
-                      className="absolute right-0 top-0 z-10 inline-flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/5 px-2 py-0.5 text-[9px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed transition cursor-pointer"
+                      className="absolute right-0 top-0 z-10 h-6 px-2 text-[9px] font-bold text-blue-600 dark:text-blue-400 border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10"
                     >
                       {suggestions.isSuggestingNote ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
                       AI
-                    </button>
+                    </Button>
                   )}
                   {/* rounded-xl matches the input inside: the beam inherits the host's
                       radius, and a square host would corner the trace off the field. */}
@@ -271,7 +271,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                         </div>
                       ) : suggestions.noteSuggestions.length > 0 ? (
                         suggestions.noteSuggestions.map(s => (
-                          <button
+                          <Button variant="ghost"
                             key={s.note}
                             type="button"
                             onMouseDown={e => e.preventDefault()}
@@ -280,11 +280,11 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                               suggestions.setShowNoteSuggestions(false)
                               if (errors.description) setErrors(prev => ({ ...prev, description: '' }))
                             }}
-                            className="w-full text-left px-3 py-2 text-xs flex flex-col gap-0.5 cursor-pointer transition duration-100 hover:bg-blue-500/10 first:rounded-t-xl last:rounded-b-xl"
+                            className="w-full justify-start h-auto px-3 py-2 flex-col items-start gap-0.5 hover:bg-blue-500/10 rounded-none first:rounded-t-xl last:rounded-b-xl"
                           >
                             <span className="font-semibold text-foreground">{s.note}</span>
                             <span className="text-[10px] text-muted-foreground">{s.reason}</span>
-                          </button>
+                          </Button>
                         ))
                       ) : suggestions.noteSuggestionUnavailable ? (
                         <div className="px-3 py-2.5 text-xs font-semibold text-amber-600 dark:text-amber-500">
@@ -442,6 +442,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                   <Button
                     type="submit"
                     className="rounded-xl px-4 py-1.5 shadow-md"
+                    disabled={!description.trim() || !amount.trim() || !date || (!isTransferDraft && (!category || !ledgerCategory))}
                   >
                     Save
                   </Button>
@@ -469,42 +470,42 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
               actionsWidth={128}
               actions={
                 <>
-                  <button
+                  <Button variant="unstyled"
                     onClick={() => handleStartEdit(draft)}
                     disabled={hideSensitive}
                     className="flex-1 flex flex-col items-center justify-center gap-1 bg-primary text-primary-foreground text-[11px] font-bold active:bg-primary/80 transition disabled:opacity-50 disabled:pointer-events-none"
                   >
                     <Edit2 className="size-4" />
                     Edit
-                  </button>
-                  <button
+                  </Button>
+                  <Button variant="unstyled"
                     onClick={() => { if (!hideSensitive) onDeleteDraftTransaction(draft.id) }}
                     disabled={hideSensitive}
                     className="flex-1 flex flex-col items-center justify-center gap-1 bg-destructive text-destructive-foreground text-[11px] font-bold active:bg-destructive/80 transition disabled:opacity-50 disabled:pointer-events-none"
                   >
                     <Trash2 className="size-4" />
                     Delete
-                  </button>
+                  </Button>
                 </>
               }
               desktopActions={
                 <>
-                  <button
+                  <Button variant="unstyled"
                     onClick={() => handleStartEdit(draft)}
                     disabled={hideSensitive}
                     className="p-2 hover:bg-muted rounded-xl text-muted-foreground hover:text-foreground cursor-pointer transition select-none disabled:opacity-40 disabled:cursor-not-allowed"
                     title={hideSensitive ? 'Unhide balances to edit' : 'Edit draft item'}
                   >
                     <Edit2 className="size-4" />
-                  </button>
-                  <button
+                  </Button>
+                  <Button variant="unstyled"
                     onClick={() => { if (!hideSensitive) onDeleteDraftTransaction(draft.id) }}
                     disabled={hideSensitive}
                     className="p-2 hover:bg-destructive/10 rounded-xl text-muted-foreground hover:text-destructive cursor-pointer transition select-none disabled:opacity-40 disabled:cursor-not-allowed"
                     title={hideSensitive ? 'Unhide balances to edit' : 'Remove from batch list'}
                   >
                     <Trash2 className="size-4" />
-                  </button>
+                  </Button>
                 </>
               }
             >

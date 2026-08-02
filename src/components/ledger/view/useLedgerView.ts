@@ -42,6 +42,7 @@ export interface UseLedgerViewOptions {
   onExportTransactions?: (params: any) => Promise<{ blob: Blob; filename: string }>
   onShowAlert?: (message: string, title?: string) => void
   activeSyncId?: string | null
+  activeSyncIds?: ReadonlyArray<string>
   deletingTxId?: string | null
   onDeleteTransaction: (id: string, transaction?: Transaction) => Promise<void> | void
   onAiExportRequestConsumed?: () => void
@@ -100,6 +101,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     onExportTransactions,
     onShowAlert,
     activeSyncId,
+    activeSyncIds,
     deletingTxId,
     onDeleteTransaction,
     onAiExportRequestConsumed,
@@ -673,13 +675,16 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   }, [deletingTxId, transactions])
 
   const isTxSyncing = useCallback((txId: string) => {
-    if (!activeSyncId) return false
-    if (txId === activeSyncId) return true
-    if (txId === `wishlist-purchase-${activeSyncId}`) return true
-    if (txId.startsWith(`${activeSyncId}-split-`)) return true
-    if (txId.includes('-split-') && txId.split('-split-')[0] === activeSyncId) return true
-    return false
-  }, [activeSyncId])
+    const syncIds = activeSyncIds?.length ? activeSyncIds : activeSyncId ? [activeSyncId] : []
+    const transaction = transactions.find(value => String(value.id) === String(txId))
+    if (transaction?.pendingSyncOperationId && syncIds.includes(transaction.pendingSyncOperationId)) return true
+    return syncIds.some(syncId => {
+      if (txId === syncId) return true
+      if (txId === `wishlist-purchase-${syncId}`) return true
+      if (txId.startsWith(`${syncId}-split-`)) return true
+      return txId.includes('-split-') && txId.split('-split-')[0] === syncId
+    })
+  }, [activeSyncId, activeSyncIds, transactions])
 
   const pendingTransactions = useMemo(() => {
     return transactions.filter(t => t.isPendingSync || recentlySyncedIds.has(String(t.id)))

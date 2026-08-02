@@ -23,7 +23,8 @@ import { createFinalId, projectFinancialSetting, sanitizeQueuedOps, type OutboxP
 import { triggerHaptic } from '../lib/haptics'
 import { getErrorMessage, getErrorName, isAuthError, isLockError, JUST_LOGGED_IN_WINDOW_MS } from '../lib/errors'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
-import { buildMutationSuccessToast, buildUndoSuccessToast } from '../lib/mutationToast'
+import { buildUndoSuccessToast } from '../lib/mutationToast'
+import { computeNextOccurrenceDate } from '../lib/recurringPayments'
 import type { ToastAction, ToastTone } from '../components/ui/ToastViewport'
 import type { ConfirmModalData } from './useAppDialogs'
 import { fetchBootstrapPayload } from './financialData/bootstrap'
@@ -146,7 +147,39 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
   const toOutboxPayload = (value: object): OutboxPayload => ({ ...value })
 
-  const [directSyncId, setDirectSyncId] = useState<string | null>(null)
+  // Direct, authoritative POSTs are not outbox operations, but they still need the same
+  // cross-page contract: the source row and any record created by the request stay visible
+  // with a syncing state until the server has answered.
+  const [directSyncIds, setDirectSyncIds] = useState<string[]>([])
+  const [pendingLedgerTransactions, setPendingLedgerTransactions] = useState<Transaction[]>([])
+
+  const beginDirectSync = useCallback((ids: Array<string | number>) => {
+    const normalized = ids.map(String).filter(Boolean)
+    if (normalized.length === 0) return
+    setDirectSyncIds(previous => Array.from(new Set([...previous, ...normalized])))
+  }, [])
+
+  const endDirectSync = useCallback((ids: Array<string | number>) => {
+    const toRemove = new Set(ids.map(String))
+    setDirectSyncIds(previous => previous.filter(id => !toRemove.has(id)))
+  }, [])
+
+  const addPendingLedgerTransaction = useCallback((transaction: Transaction) => {
+    setPendingLedgerTransactions(previous => [
+      ...previous.filter(item => String(item.id) !== String(transaction.id)),
+      transaction,
+    ])
+  }, [])
+
+  const replacePendingLedgerTransaction = useCallback((pendingId: string, transaction: Transaction) => {
+    setPendingLedgerTransactions(previous => previous.map(item =>
+      String(item.id) === String(pendingId) ? { ...transaction, isPendingSync: false } : item,
+    ))
+  }, [])
+
+  const removePendingLedgerTransaction = useCallback((id: string) => {
+    setPendingLedgerTransactions(previous => previous.filter(item => String(item.id) !== String(id)))
+  }, [])
 
   const {
     pendingOps,
@@ -202,7 +235,6 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
               await uploadDocument(
                 uploadFile,
                 pending.taxYear,
-                undefined,
                 op.targetId,
                 undefined,
                 pending.reliefCategory,
@@ -297,7 +329,17 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     },
   })
 
-  const activeSyncId = outboxActiveSyncId || directSyncId
+  const activeQueueOperationIds = useMemo(() => outboxActiveSyncId
+    ? activeOps
+      .filter(op => op.targetId === outboxActiveSyncId && !op.isCompleted)
+      .map(op => op.id)
+    : [], [activeOps, outboxActiveSyncId])
+  const activeSyncIds = useMemo(() => Array.from(new Set([
+    ...(outboxActiveSyncId ? [outboxActiveSyncId] : []),
+    ...activeQueueOperationIds,
+    ...directSyncIds,
+  ])), [activeQueueOperationIds, directSyncIds, outboxActiveSyncId])
+  const activeSyncId = activeSyncIds[0] || null
 
   // Fetch initial ledger and dashboard statistics
   const loadAllInner = useCallback(async (
@@ -577,6 +619,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     setCategoriesList([])
     setWishlist([])
     setSavingsGoals([])
+    setDirectSyncIds([])
+    setPendingLedgerTransactions([])
     setSelectedMonth('')
     setSelectedYear(0)
     setLoading(true)
@@ -755,8 +799,17 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     }
   }, [token, wakeUpAndSync])
 
-  const allTransactions = useOptimisticList(transactions, activeOps, 'transaction')
-  const allRecurringPayments = useOptimisticList(recurringPayments, activeOps, 'recurringPayment')
+  const queuedTransactions = useOptimisticList(transactions, activeOps, 'transaction')
+  const allTransactions = useMemo(() => {
+    // Direct server actions can create a ledger row before the next bootstrap response arrives.
+    // Keep that row in the same collection consumed by LedgerView so changing tabs immediately
+    // after the click cannot hide the in-flight transaction.
+    const queuedIds = new Set(queuedTransactions.map(transaction => String(transaction.id)))
+    const directTransactions = pendingLedgerTransactions.filter(transaction => !queuedIds.has(String(transaction.id)))
+    return [...directTransactions, ...queuedTransactions]
+  }, [pendingLedgerTransactions, queuedTransactions])
+  const queuedRecurringPayments = useOptimisticList(recurringPayments, activeOps, 'recurringPayment')
+  const allRecurringPayments = queuedRecurringPayments
   const allWishlist = useOptimisticList(wishlist, activeOps, 'wishlistItem')
   const allSavingsGoals = useOptimisticList(savingsGoals, activeOps, 'savingsGoal')
   const allCategories = useOptimisticList(categoriesList, activeOps, 'category')
@@ -862,10 +915,14 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
   const handleDeleteCategory = (id: string, replacementCategoryId?: string) => {
     const category = allCategories.find(cat => String(cat.id) === String(id))
+    const replacementCategory = replacementCategoryId
+      ? allCategories.find(cat => String(cat.id) === String(replacementCategoryId))
+      : undefined
     snapshotForUndo('category', String(id), category)
     mutateQueue(prev => enqueue(prev, 'category', 'delete', id, {
       name: category?.name,
       replacementCategoryId,
+      replacementCategoryName: replacementCategory?.name,
       undoSnapshot: category,
     }))
   }
@@ -937,46 +994,24 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       return
     }
     const actions = suggestion.type === 'add'
-      ? [{ type: 'add' as const, newCategoryName: suggestion.newCategoryName || undefined }]
+      ? [{ type: 'add' as const, newCategoryName: suggestion.newCategoryName || undefined, categoryId: createFinalId('category') }]
       : suggestion.type === 'merge'
       ? [{ type: 'merge' as const, categories: suggestion.categories, targetCategory: suggestion.targetCategory || undefined }]
       : suggestion.type === 'consolidate'
       ? [{ type: 'merge' as const, categories: suggestion.categories, targetCategory: targetCategoryOverride }]
       : [{ type: 'delete' as const, categories: suggestion.categories }]
 
-    try {
-      const result = await api.applyCategoryCleanup(actions)
-      await loadAll(selectedMonth, selectedYear, true)
-      if (result.appliedCount === 0) {
-        showToast('No category changes were applied.', 'AI Cleanup', 'info')
-        return
-      }
-      const undoAction = result.undoActions.length > 0
-        ? {
-            label: 'Undo',
-            onAction: () => {
-              void (async () => {
-                try {
-                  await api.applyCategoryCleanup(result.undoActions)
-                  await loadAll(selectedMonth, selectedYear, true)
-                  const undoCopy = buildUndoSuccessToast(undefined, 'category')
-                  showToast(undoCopy.message, undoCopy.title, undoCopy.tone)
-                } catch (err: unknown) {
-                  showToast(getErrorMessage(err, 'Could not undo AI cleanup.'), 'Undo failed', 'error')
-                }
-              })()
-            }
-          }
-        : undefined
-      const copy = buildMutationSuccessToast({
-        entity: 'Category Cleanup',
-        action: 'Applied',
-        message: `Category cleanup was applied to ${result.appliedCount} action${result.appliedCount === 1 ? '' : 's'}.`,
-      })
-      showToast(copy.message, copy.title, copy.tone, undoAction)
-    } catch (err: unknown) {
-      showToast(getErrorMessage(err, 'Could not apply AI category cleanup.'), 'AI Cleanup Failed', 'error')
-    }
+    const description = suggestion.type === 'add'
+      ? suggestion.newCategoryName || 'new category'
+      : suggestion.type === 'consolidate'
+        ? `${suggestion.categories.join(', ')} → ${targetCategoryOverride}`
+        : suggestion.type === 'merge'
+          ? `${suggestion.categories.join(', ')} → ${suggestion.targetCategory || 'target category'}`
+          : suggestion.categories.join(', ')
+    mutateQueue(previous => enqueue(previous, 'category', 'cleanup', suggestion.id, {
+      actions,
+      description,
+    }))
   }
 
   const handleAddTransaction = (
@@ -1069,6 +1104,13 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     if (transaction?.savingsGoalId != null) {
       // A completion delete is an authoritative rollback of both the ledger row and its goal
       // snapshot, so it cannot use the offline outbox's transaction-only optimistic projection.
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        setDeletingTxId(null)
+        showToast('Undoing a completed savings goal needs a live connection so the linked ledger row and goal snapshot stay consistent.', 'Available online only', 'warning')
+        return
+      }
+      const syncIds = [deleteId, String(transaction.savingsGoalId)]
+      beginDirectSync(syncIds)
       void (async () => {
         try {
           await api.deleteTransaction(deleteId)
@@ -1081,6 +1123,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
           showToast(getErrorMessage(error), 'Could not undo completion', 'error')
         } finally {
           setDeletingTxId(null)
+          endDirectSync(syncIds)
         }
       })()
       return
@@ -1185,54 +1228,43 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     })
   }
 
-  const handleUpdateReminder = async (id: string, settings: RecurringReminderSettings) => {
+  const handleUpdateReminder = (id: string, settings: RecurringReminderSettings) => {
     if (!guardSensitive()) return
-    setDirectSyncId(id)
-    const previous = recurringPayments.find(p => p.id === id)
-    setRecurringPayments(prev => prev.map(p => p.id === id
-      ? { ...p, reminderEnabled: settings.enabled, reminderMode: settings.mode, reminderLeadDays: settings.leadDays }
-      : p
-    ))
-    try {
-      await api.updateRecurringPaymentReminder(id, settings)
-    } catch (err: unknown) {
-      // Roll back only the three fields this handler owns, so a concurrent refresh
-      // that changed other fields survives. Falling back to the current row keeps
-      // the rollback sound when no pre-write snapshot was captured.
-      setRecurringPayments(prev => prev.map(p => p.id !== id ? p : {
-        ...p,
-        reminderEnabled: previous?.reminderEnabled ?? p.reminderEnabled,
-        reminderMode: previous?.reminderMode ?? p.reminderMode,
-        reminderLeadDays: previous?.reminderLeadDays ?? p.reminderLeadDays,
-      }))
-      showToast(getErrorMessage(err, 'Could not update the payment reminder.'), 'Reminder Update Failed', 'error')
-    } finally {
-      setDirectSyncId(null)
-    }
+    const previous = allRecurringPayments.find(p => p.id === id)
+    snapshotForUndo('recurringPayment', id, previous)
+    mutateQueue(queue => enqueue(queue, 'recurringPayment', 'reminder', id, {
+      name: previous?.name,
+      reminderEnabled: settings.enabled,
+      reminderMode: settings.mode,
+      reminderLeadDays: settings.leadDays,
+      undoSnapshot: previous,
+    }))
   }
 
-  const handlePayEarly = async (id: string) => {
+  const handlePayEarly = (id: string) => {
+    if (!guardSensitive()) return
     const payment = allRecurringPayments.find(p => p.id === id)
-    try {
-      const result = await api.payRecurringPaymentEarly(id, payment?.nextDueDate || '')
-      await loadAll(selectedMonth || undefined, selectedYear || undefined, true)
-      setRecurringPayments(prev => prev.map(p => p.id === id
-        // A null nextOccurrenceDate means the server found none left (end date reached, or the
-        // scan horizon). Fall back to the occurrence just settled rather than synthesising one a
-        // cycle later, which would keep offering Pay Early for a bill that can no longer be paid.
-        ? { ...p, nextDueDate: result.nextOccurrenceDate || result.settledOccurrenceDate }
-        : p
-      ))
-      const copy = buildMutationSuccessToast({
-        entity: 'Recurring Payment',
-        action: 'Paid Early',
-        recordName: payment?.name,
-        messageSuffix: 'Reminders for this cycle have stopped.',
-      })
-      showToast(copy.message, copy.title, copy.tone)
-    } catch (err: unknown) {
-      showToast(getErrorMessage(err, 'Could not pay this subscription early.'), 'Pay Early Failed', 'error')
+    if (!payment) return
+    const postedAt = new Date().toISOString()
+    const pendingTransactionId = createLocalId('pay-early-transaction')
+    const pendingTransaction: Transaction = {
+      id: pendingTransactionId,
+      date: postedAt.slice(0, 10),
+      postedAt,
+      description: payment.name,
+      category: payment.category,
+      ledgerCategory: payment.ledgerCategory,
+      amount: -Math.abs(payment.amount),
+      recurringPaymentId: payment.id,
+      recurringOccurrenceDate: payment.nextDueDate,
+      isPendingSync: true,
     }
+    mutateQueue(queue => enqueue(queue, 'recurringPayment', 'payEarly', id, {
+      name: payment.name,
+      occurrenceDate: payment.nextDueDate,
+      optimisticNextOccurrenceDate: computeNextOccurrenceDate(payment),
+      optimisticTransaction: pendingTransaction,
+    }))
   }
 
   const requestPayEarly = (id: string) => {
@@ -1264,7 +1296,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
         </div>
       ),
       confirmText: 'Pay Now',
-      onConfirm: () => { void handlePayEarly(id) }
+      onConfirm: () => { handlePayEarly(id) }
     })
   }
 
@@ -1283,6 +1315,14 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     mutateQueue,
     snapshotForUndo,
     setSavingsGoals,
+    beginDirectSync,
+    endDirectSync,
+    getGoal: (id: number) => allSavingsGoals.find(goal => goal.id === id),
+    getActiveGoalIds: () => allSavingsGoals.filter(goal => goal.status === 'active').map(goal => goal.id),
+    addPendingLedgerTransaction,
+    replacePendingLedgerTransaction,
+    removePendingLedgerTransaction,
+    setDeletingTransactionId: setDeletingTxId,
     refreshAll: () => loadAll(selectedMonth || undefined, selectedYear || undefined, true),
   })
 
@@ -1312,6 +1352,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     setIsOffline,
     isBackgroundSyncing,
     activeSyncId,
+    activeSyncIds,
     deletingTxId,
     setDeletingTxId,
     syncCountdownMs,

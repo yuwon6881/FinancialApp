@@ -13,6 +13,7 @@
 // an `await dispatch` -- e.g. an Undo tap -- is preserved rather than clobbered.
 
 import type { QueuedOp, DispatchResult, ToastCopy } from './outbox'
+import type { PayEarlyResult } from '../types'
 import type { ToastAction } from '../components/ui/ToastViewport'
 import {
   getErrorMessage,
@@ -127,6 +128,16 @@ function mergeCompletedOps(
   return merged
 }
 
+function isPayEarlyResult(result: DispatchResult): result is PayEarlyResult {
+  return Boolean(
+    result &&
+    typeof result === 'object' &&
+    'transaction' in result &&
+    'settledOccurrenceDate' in result &&
+    typeof result.settledOccurrenceDate === 'string',
+  )
+}
+
 /**
  * Drain the pending-op queue. Mirrors the original processQueue() exactly;
  * safe to call re-entrantly (guards on `isSyncing()`).
@@ -188,6 +199,17 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
         // Functional removal keyed off the live queue, so any op enqueued during
         // the await above (e.g. an Undo tap) is preserved rather than clobbered.
         let completedOp = nextOp
+        if (nextOp.entity === 'recurringPayment' && nextOp.type === 'payEarly' && isPayEarlyResult(result)) {
+          completedOp = {
+            ...nextOp,
+            payload: {
+              ...nextOp.payload,
+              resultTransaction: result.transaction,
+              settledOccurrenceDate: result.settledOccurrenceDate,
+              nextOccurrenceDate: result.nextOccurrenceDate,
+            },
+          }
+        }
         deps.mutateQueue(prev => {
           let next = prev.filter(item => item.id !== nextOp.id)
           if (nextOp.entity === 'wishlistItem' && nextOp.type === 'add' && result && 'id' in result && result.id) {

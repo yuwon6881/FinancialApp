@@ -31,6 +31,7 @@ export function AppProvider({ value, children }: { value: AppContextValue; child
 
   const sync = useMemo(() => ({
     activeSyncId: value.activeSyncId,
+    activeSyncIds: value.activeSyncIds,
     deletingId: value.deletingId,
     isSyncing: value.isSyncing,
     isOffline: value.isOffline,
@@ -38,6 +39,7 @@ export function AppProvider({ value, children }: { value: AppContextValue; child
     queueMutation: value.queueMutation,
   }), [
     value.activeSyncId,
+    value.activeSyncIds,
     value.deletingId,
     value.isSyncing,
     value.isOffline,

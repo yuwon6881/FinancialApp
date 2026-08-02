@@ -53,6 +53,7 @@ interface SettingsViewProps {
   notifyOnLoginEnabled?: boolean
   onToggleNotifyOnLogin?: (checked: boolean) => void
   activeSyncId?: string | null
+  activeSyncIds?: string[]
   deletingId?: string | null
   onToast?: (message: string, title?: string, tone?: ToastTone) => void
   onNavigateToLedger?: (options: any) => void
@@ -77,14 +78,32 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
   const darkMode = props.darkMode ?? app.darkMode
   const hideSensitive = props.hideSensitive ?? app.hideSensitive
   const activeSyncId = props.activeSyncId ?? app.activeSyncId
+  const activeSyncIds = props.activeSyncIds
+    ?? (props.activeSyncId !== undefined
+      ? (props.activeSyncId ? [props.activeSyncId] : [])
+      : (app.activeSyncIds?.length ? app.activeSyncIds : (app.activeSyncId ? [app.activeSyncId] : [])))
   const deletingId = props.deletingId ?? app.deletingId
   const onToast = props.onToast ?? app.showToast
+  const syncIds = activeSyncIds.length > 0 ? activeSyncIds : activeSyncId ? [activeSyncId] : []
+  const settingsOperation = [...(app.operations ?? [])].reverse().find(operation =>
+    operation.entity === 'settings' && operation.type === 'update' && operation.targetId === 'settings')
+  const darkModeOperation = [...(app.operations ?? [])].reverse().find(operation =>
+    operation.entity === 'settings' && operation.type === 'update' && operation.targetId === 'darkMode')
+  const hideSensitiveOperation = [...(app.operations ?? [])].reverse().find(operation =>
+    operation.entity === 'settings' && operation.type === 'update' && operation.targetId === 'hideSensitive')
+  const settingsSyncing = syncIds.includes('settings')
+  const settingsPending = Boolean(settingsOperation && !settingsOperation.isCompleted && !settingsSyncing)
+  const darkModeSyncing = syncIds.includes('darkMode')
+  const darkModePending = Boolean(darkModeOperation && !darkModeOperation.isCompleted && !darkModeSyncing)
+  const hideSensitiveSyncing = syncIds.includes('hideSensitive')
+  const hideSensitivePending = Boolean(hideSensitiveOperation && !hideSensitiveOperation.isCompleted && !hideSensitiveSyncing)
 
   const view = useSettingsView({
     ...props,
     darkMode,
     hideSensitive,
     activeSyncId,
+    activeSyncIds,
     deletingId,
     onToast,
   })
@@ -151,7 +170,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
           ['categories-preferences', 'Categories & Limits'],
           ['security', 'Security & Devices']
         ] as const).map(([id, label]) => (
-          <button
+          <Button variant="unstyled"
             key={id}
             id={`settings-tab-${id}`}
             type="button"
@@ -173,7 +192,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}
               />
             )}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -182,7 +201,10 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
           <form noValidate onSubmit={view.handleSaveSettings} className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-5 lg:col-span-2">
             <div className="flex items-center justify-between gap-3 border-b border-border/40 pb-3">
               <div>
-                <h3 className="text-sm font-bold text-foreground">Financial Model</h3>
+                <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
+                  Financial Model
+                  <RowSyncStatus isSyncing={settingsSyncing} isPending={settingsPending} entityLabel="financial rules" />
+                </h3>
                 <p className="text-[11px] text-muted-foreground mt-0.5">Controls budget targets and cycle calculations.</p>
               </div>
             </div>
@@ -279,7 +301,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                 ] as const).map(([label, value, key, accentClass]) => (
                   <label key={label} className="space-y-2 block">
                     <div className="flex justify-between items-center text-[11px] font-bold">
-                      <span className="text-muted-foreground flex items-center gap-1.5"><span className="uppercase tracking-wider">{label}</span><button type="button" onClick={() => view.toggleLock(key)} className="p-1 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer" title={view.lockedAllocations.includes(key) ? 'Unlock' : 'Lock'}>{view.lockedAllocations.includes(key) ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</button></span>
+                      <span className="text-muted-foreground flex items-center gap-1.5"><span className="uppercase tracking-wider">{label}</span><Button variant="ghost" size="icon" type="button" onClick={() => view.toggleLock(key)} className="size-6 text-muted-foreground hover:text-foreground hover:bg-muted" title={view.lockedAllocations.includes(key) ? 'Unlock' : 'Lock'}>{view.lockedAllocations.includes(key) ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</Button></span>
                       <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md">{Number(value).toFixed(0)}%</span>
                     </div>
                     <RangeInput  min="0" max="100" step="5" disabled={view.globalAllocLock || view.lockedAllocations.includes(key)} value={value} onChange={e => view.handleAllocationChange(key, parseFloat(e.target.value))} className={`w-full h-2 rounded-full cursor-pointer ${accentClass} bg-border disabled:opacity-50 disabled:cursor-not-allowed`} />
@@ -294,9 +316,12 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             <div className="flex justify-end pt-3">
               <Button
                 type="submit"
+                disabled={settingsSyncing || settingsPending}
+                aria-busy={settingsSyncing}
                 className="rounded-xl px-4 py-2 shadow-lg shadow-primary/10 hover:shadow-primary/20"
               >
-                <Save className="size-3.5" /> Save Rules
+                {settingsSyncing ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+                {settingsSyncing ? 'Saving…' : 'Save Rules'}
               </Button>
             </div>
           </form>
@@ -312,14 +337,20 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
               <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
                 <div className="flex flex-1 min-w-0 pr-4 items-center gap-2">
                   {darkMode ? <Moon className="size-4 text-muted-foreground shrink-0" /> : <Sun className="size-4 text-muted-foreground shrink-0" />}
-                  <span className="font-medium text-foreground truncate">Dark Mode</span>
+                  <span className="flex min-w-0 items-center gap-2 font-medium text-foreground truncate">
+                    <span className="truncate">Dark Mode</span>
+                    <RowSyncStatus isSyncing={darkModeSyncing} isPending={darkModePending} entityLabel="dark mode" />
+                  </span>
                 </div>
-                <ToggleButton active={darkMode} onClick={props.onToggleDarkMode || (() => {})} label="Dark mode" />
+                <ToggleButton active={darkMode} onClick={props.onToggleDarkMode || (() => {})} disabled={darkModeSyncing || darkModePending} label="Dark mode" />
               </div>
               <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
                 <div className="flex flex-1 min-w-0 pr-4 items-center gap-2">
                   {hideSensitive ? <EyeOff className="size-4 text-muted-foreground shrink-0" /> : <Eye className="size-4 text-muted-foreground shrink-0" />}
-                  <span className="font-medium text-foreground truncate">Sensitive Mode (Masked)</span>
+                  <span className="flex min-w-0 items-center gap-2 font-medium text-foreground truncate">
+                    <span className="truncate">Sensitive Mode (Masked)</span>
+                    <RowSyncStatus isSyncing={hideSensitiveSyncing} isPending={hideSensitivePending} entityLabel="sensitive mode" />
+                  </span>
                 </div>
                 <ToggleButton
                   active={hideSensitive}
@@ -331,7 +362,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                         ? 'Sensitive mode, privacy setting unavailable'
                         : 'Sensitive mode'
                   }
-                  disabled={props.sensitivePreferenceStatus !== undefined && props.sensitivePreferenceStatus !== 'resolved'}
+                  disabled={hideSensitiveSyncing || hideSensitivePending || (props.sensitivePreferenceStatus !== undefined && props.sensitivePreferenceStatus !== 'resolved')}
                 />
               </div>
               <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
@@ -377,13 +408,13 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                     <span className="text-[10px] text-muted-foreground">Clear cached data on this device.</span>
                   </div>
                 </div>
-                <button
+                <Button variant="unstyled"
                   type="button"
                   onClick={props.onClearLocalFinancialData}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-xs font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-xs font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer cursor-pointer"
                 >
                   <DatabaseZap className="size-3.5 text-muted-foreground" /> Clear
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -442,7 +473,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <button
+                <Button variant="unstyled"
                   type="button"
                   onClick={e => { e.stopPropagation(); void view.handleAiCleanupReview() }}
                   disabled={hideSensitive || view.isReviewingCleanup || view.visibleCategories.length === 0}
@@ -455,7 +486,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                 >
                   {view.isReviewingCleanup ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
                   AI
-                </button>
+                </Button>
                 {view.categoriesOpen ? <ChevronUp className="size-4 text-muted-foreground" /> : <ChevronDown className="size-4 text-muted-foreground" />}
               </div>
             </div>
@@ -470,14 +501,14 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                         <Sparkles className="size-3.5 text-accent-ink" />
                         AI Category Review
                       </div>
-                      <button
+                      <Button variant="unstyled"
                         type="button"
                         onClick={() => { view.setCleanupReviewOpen(false) }}
                         className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-background transition cursor-pointer"
                         aria-label="Close AI category review"
                       >
                         <ChevronUp className="size-3.5" />
-                      </button>
+                      </Button>
                     </div>
 
                     {view.isReviewingCleanup && (
@@ -527,7 +558,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                               {suggestion.categories.length > 0 && (
                                 <div className="flex flex-wrap gap-1">
                                   {suggestion.categories.map(name => (
-                                    <button
+                                    <Button variant="unstyled"
                                       key={name}
                                       type="button"
                                       onClick={() => props.onNavigateToLedger?.({ category: name, showAllCycles: true })}
@@ -535,7 +566,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                                       className={`press-scale inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-semibold cursor-pointer hover:opacity-85 transition ${getCategoryBadgeClass(name)}`}
                                     >
                                       {name}
-                                    </button>
+                                    </Button>
                                   ))}
                                 </div>
                               )}
@@ -560,14 +591,14 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
 
                               <div className="flex items-center justify-between gap-2">
                                 {suggestion.affectedTransactionCount > 0 && suggestion.categories.length > 0 ? (
-                                  <button
+                                  <Button variant="unstyled"
                                     type="button"
                                     onClick={() => props.onNavigateToLedger?.({ category: suggestion.categories[0], showAllCycles: true })}
                                     title="View entries in ledger"
                                     className="press-scale inline-flex h-8 min-w-0 items-center px-2.5 rounded-full border border-orange-500/20 bg-orange-500/10 text-[9px] font-bold uppercase text-orange-600 dark:text-orange-400 hover:bg-orange-500/20 transition cursor-pointer select-none"
                                   >
                                     <span className="truncate">{suggestion.affectedTransactionCount} ledger {suggestion.affectedTransactionCount === 1 ? 'entry' : 'entries'} need validation</span>
-                                  </button>
+                                  </Button>
                                 ) : (
                                   <span className="inline-flex h-8 min-w-0 items-center px-2.5 rounded-full border border-border bg-muted/30 text-[9px] font-bold uppercase text-muted-foreground select-none">
                                     {suggestion.affectedTransactionCount > 0
@@ -575,7 +606,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                                       : 'No ledger entries affected'}
                                   </span>
                                 )}
-                                <button
+                                <Button variant="unstyled"
                                   type="button"
                                   onClick={() => void view.handleApplyCleanupSuggestion(suggestion)}
                                   disabled={!props.onApplyCategoryCleanupSuggestion || view.applyingCleanupId !== null || isConsolidateDisabled}
@@ -583,7 +614,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                                   className="inline-flex h-8 w-20 shrink-0 items-center justify-center rounded-lg border border-blue-500/30 bg-blue-500/5 px-3 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   {isApplyingThis ? <Loader2 className="size-3 animate-spin" /> : 'Accept'}
-                                </button>
+                                </Button>
                               </div>
                             </div>
                           )
@@ -642,6 +673,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
               currency={view.activeSettings.currency || 'USD'}
               hideSensitive={hideSensitive}
               activeSyncId={activeSyncId}
+              activeSyncIds={activeSyncIds}
               onUpdate={props.onUpdateCategoryCycleLimit}
             />
           </div>

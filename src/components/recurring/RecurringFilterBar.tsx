@@ -1,4 +1,5 @@
 import { Checkbox } from '../ui/Checkbox'
+import { Button } from '../ui/Button'
 import React from 'react'
 import { CustomSelect } from '../ui/CustomSelect'
 import { BottomSheet } from '../ui/BottomSheet'
@@ -43,7 +44,7 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
           }
         }}
       >
-        <button
+        <Button variant="unstyled"
           ref={filterButtonRef}
           onClick={() => setIsFilterDropdownOpen(prev => !prev)}
           aria-haspopup="dialog"
@@ -58,7 +59,7 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
             </span>
           </span>
           <span className="text-[9px] text-muted-foreground">{'▼'}</span>
-        </button>
+        </Button>
 
         {/* Desktop Filter Popover */}
         <AnchoredPopover
@@ -73,12 +74,12 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
             <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3">
               <span className="text-xs font-bold text-foreground">Filter Categories</span>
               {selectedCategories.length > 0 && (
-                <button
+                <Button variant="unstyled"
                   onClick={onClearFilters}
                   className="text-[9px] font-bold text-orange-500 hover:underline cursor-pointer"
                 >
                   Clear All
-                </button>
+                </Button>
               )}
             </div>
             <div className="grid grid-cols-1 gap-1.5 pr-1">
@@ -112,12 +113,12 @@ export const RecurringFilterBar: React.FC<RecurringFilterBarProps> = ({
             <div className="recurring-filter-dropdown space-y-4 pr-1">
               {selectedCategories.length > 0 && (
                 <div className="flex justify-end">
-                  <button
+                  <Button variant="unstyled"
                     onClick={onClearFilters}
                     className="text-xs font-bold text-orange-500 hover:underline cursor-pointer"
                   >
                     Clear All
-                  </button>
+                  </Button>
                 </div>
               )}
               <div className="grid grid-cols-1 gap-2">

@@ -25,7 +25,6 @@ const document = {
   contentType: 'application/pdf',
   sizeBytes: 12,
   taxYear: 2026,
-  notes: null,
   transactionId: null,
   uploadedAt: '2026-07-29T00:00:00Z',
   retentionUntil: '2033-12-31',

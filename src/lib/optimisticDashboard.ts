@@ -110,6 +110,35 @@ export function computeOptimisticDashboard(
     }
   })
 
+  // Pay-early is queued under its recurring-payment target but creates a ledger row. Project the
+  // row into the dashboard until the normal bootstrap refresh reconciles it, including after a
+  // successful POST whose refresh briefly fails. Avoid double-counting a row already present in
+  // the server snapshot (for example when a refresh raced the outbox completion).
+  const payEarlyOps = activeOps.filter(o => o.entity === 'recurringPayment' && o.type === 'payEarly')
+  payEarlyOps.forEach(op => {
+    const rawTransaction = op.payload?.resultTransaction ?? op.payload?.optimisticTransaction
+    if (!rawTransaction || typeof rawTransaction !== 'object') return
+    const transaction = rawTransaction as Partial<Transaction>
+    const alreadyPresent = transactions.some(existing =>
+      (transaction.id != null && String(existing.id) === String(transaction.id)) ||
+      (transaction.recurringPaymentId != null && transaction.recurringOccurrenceDate != null &&
+        String(existing.recurringPaymentId) === String(transaction.recurringPaymentId) &&
+        existing.recurringOccurrenceDate === transaction.recurringOccurrenceDate)
+    )
+    if (alreadyPresent) return
+
+    const amount = typeof transaction.amount === 'number' ? transaction.amount : 0
+    data.stats.totalBalance += amount
+    const catName = transaction.category || transaction.ledgerCategory || ''
+    const cat = data.categories.find(c => c.name.toLowerCase() === catName.toLowerCase())
+    if (cat) {
+      cat.netChange += amount
+      cat.remaining += amount
+    }
+    if (amount > 0) data.stats.monthlyInflow += amount
+    else data.stats.monthlyExpenses += Math.abs(amount)
+  })
+
   const wishlistPurchaseOps = activeOps.filter(o => o.entity === 'wishlistItem' && (o.type === 'purchase' || o.type === 'unpurchase'))
   wishlistPurchaseOps.forEach(op => {
     if (op.type === 'purchase' && op.payload) {

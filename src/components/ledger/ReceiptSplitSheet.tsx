@@ -259,14 +259,14 @@ export function ReceiptSplitSheet({
                 ? (chargeAmount / itemCalculation.itemSubtotal) * 100
                 : 0
               const deleteButton = (
-                <button
+                <Button variant="unstyled"
                   type="button"
                   onClick={() => removeItem(index)}
                   className="flex h-full w-full items-center justify-center gap-1 bg-destructive px-3 text-[11px] font-bold text-destructive-foreground cursor-pointer rounded-r-2xl"
                   aria-label={`Delete ${item.name || `item ${index + 1}`}`}
                 >
                   <Trash2 className="size-4" /> Delete
-                </button>
+                </Button>
               )
 
               return (
@@ -275,14 +275,14 @@ export function ReceiptSplitSheet({
                   actionsWidth={88}
                   actions={deleteButton}
                   desktopActions={(
-                    <button
+                    <Button variant="unstyled"
                       type="button"
                       onClick={() => removeItem(index)}
                       className="rounded-lg p-2 text-destructive hover:bg-destructive/10 cursor-pointer"
                       aria-label={`Delete ${item.name || `item ${index + 1}`}`}
                     >
                       <Trash2 className="size-4" />
-                    </button>
+                    </Button>
                   )}
                   className={`rounded-2xl border shadow-xs ${item.confidence < 0.65 ? 'border-amber-500/40' : 'border-border'}`}
                   contentClassName={`rounded-2xl p-3 sm:p-4 bg-card ${item.confidence < 0.65 ? 'before:absolute before:inset-0 before:bg-amber-500/10 before:rounded-2xl before:pointer-events-none relative' : ''}`}
@@ -322,7 +322,7 @@ export function ReceiptSplitSheet({
                             controlSize="sm"
                             className="min-w-0 flex-1 font-bold"
                           />
-                          <button
+                          <Button variant="unstyled"
                             type="button"
                             onClick={() => togglePriceLock(index)}
                             className="p-1 inline-flex shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer"
@@ -330,7 +330,7 @@ export function ReceiptSplitSheet({
                             aria-label={`${priceUnlocked ? 'Lock' : 'Unlock'} price for item ${index + 1}`}
                           >
                             {priceUnlocked ? <Unlock className="size-3.5" /> : <Lock className="size-3.5 text-blue-500" />}
-                          </button>
+                          </Button>
                         </div>
                       </div>
 
@@ -358,7 +358,7 @@ export function ReceiptSplitSheet({
                         <span className="text-[10px] text-muted-foreground">Receipt quantity: {maximum}</span>
                       </div>
                       <div className="flex items-center rounded-xl border border-border bg-background p-1 shadow-xs">
-                        <button
+                        <Button variant="unstyled"
                           type="button"
                           onClick={() => changeQuantity(index, -1)}
                           disabled={selected <= 1}
@@ -366,11 +366,11 @@ export function ReceiptSplitSheet({
                           aria-label={`Decrease quantity for item ${index + 1}`}
                         >
                           <Minus className="size-3.5" />
-                        </button>
+                        </Button>
                         <span className="min-w-9 text-center text-sm font-extrabold text-foreground" aria-label={`Quantity for item ${index + 1}`}>
                           {selected}
                         </span>
-                        <button
+                        <Button variant="unstyled"
                           type="button"
                           onClick={() => changeQuantity(index, 1)}
                           disabled={selected >= maximum}
@@ -378,7 +378,7 @@ export function ReceiptSplitSheet({
                           aria-label={`Increase quantity for item ${index + 1}`}
                         >
                           <Plus className="size-3.5" />
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   </div>

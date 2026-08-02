@@ -58,6 +58,13 @@ describe('useSyncStatus', () => {
     expect(result.current.isSyncing('1')).toBe(false)
   })
 
+  it('reports syncing for every row participating in a direct multi-record mutation', () => {
+    const { result } = renderHook(() => useSyncStatus(list, ['1', '2'], null))
+    expect(result.current.isSyncing('1')).toBe(true)
+    expect(result.current.isSyncing('2')).toBe(true)
+    expect(result.current.isSyncing('3')).toBe(false)
+  })
+
   it('reports deleting for either the explicit deletingId or an isPendingDelete item', () => {
     const { result } = renderHook(() => useSyncStatus(list, null, '2'))
     expect(result.current.isDeleting('2')).toBe(true) // explicit deletingId match

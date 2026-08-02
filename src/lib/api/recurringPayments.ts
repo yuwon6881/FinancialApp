@@ -62,10 +62,10 @@ export async function updateRecurringPaymentReminder(id: string, settings: Recur
   invalidateCache()
 }
 
-export async function payRecurringPaymentEarly(id: string, occurrenceDate: string): Promise<PayEarlyResult> {
+export async function payRecurringPaymentEarly(id: string, occurrenceDate: string, clientKey?: string): Promise<PayEarlyResult> {
   const data = await request<WirePayEarlyResult>(`/recurring-payments/${id}/pay-early`, {
     method: 'POST',
-    ...jsonBody({ occurrenceDate }),
+    ...jsonBody({ occurrenceDate, ...(clientKey ? { clientKey } : {}) }),
     errorMessage: 'Failed to pay this subscription early',
   })
   invalidateCache()

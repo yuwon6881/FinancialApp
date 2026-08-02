@@ -1,3 +1,4 @@
+import { Button } from './ui/Button'
 import type { QueuedOp } from '../lib/outbox'
 import { BottomSheet } from './ui/BottomSheet'
 
@@ -80,18 +81,18 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
       }
       footer={
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-          <button
+          <Button variant="unstyled"
             onClick={onDiscardAll}
-            className="w-full sm:w-auto px-4 py-2 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-xs rounded-xl transition cursor-pointer text-center"
+            className="w-full sm:w-auto px-4 py-2 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-xs rounded-xl transition cursor-pointer text-center cursor-pointer"
           >
             Discard All
-          </button>
-          <button
+          </Button>
+          <Button variant="unstyled"
             onClick={onClose}
-            className="w-full sm:w-auto px-4 py-2 bg-foreground text-background font-bold text-xs rounded-xl hover:bg-foreground/90 transition shadow-sm cursor-pointer text-center"
+            className="w-full sm:w-auto px-4 py-2 bg-foreground text-background font-bold text-xs rounded-xl hover:bg-foreground/90 transition shadow-sm cursor-pointer text-center cursor-pointer"
           >
             Close
-          </button>
+          </Button>
         </div>
       }
     >
@@ -134,12 +135,12 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
               </div>
             )}
             <div className="flex justify-end">
-              <button
+              <Button variant="unstyled"
                 onClick={() => onDiscard(op.id)}
                 className="px-3 py-1.5 bg-slate-500/10 hover:bg-slate-500/20 text-slate-400 font-bold text-xs rounded-lg transition duration-150 cursor-pointer border border-slate-500/10"
               >
                 Discard
-              </button>
+              </Button>
             </div>
           </div>
         ))}

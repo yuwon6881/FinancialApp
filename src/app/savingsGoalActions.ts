@@ -9,7 +9,7 @@
 //    enforce SUM(earmarked) <= balance. They are deliberately online-only rather than outbox ops,
 //    because a replayed op could apply against a pool that has since changed.
 
-import type { SavingsGoal } from '../types'
+import type { SavingsGoal, Transaction } from '../types'
 import type { ToastAction } from '../components/ui/ToastViewport'
 import { getErrorMessage } from '../lib/errors'
 import { buildMutationSuccessToast, buildUndoSuccessToast } from '../lib/mutationToast'
@@ -22,6 +22,14 @@ export interface SavingsGoalActionDeps {
   commitGoals: (goals: SavingsGoal[]) => void
   commitGoal: (goal: SavingsGoal) => void
   getGoalName: (id: number) => string | undefined
+  getGoal?: (id: number) => SavingsGoal | undefined
+  beginDirectSync?: (ids: Array<string | number>) => void
+  endDirectSync?: (ids: Array<string | number>) => void
+  getActiveGoalIds?: () => number[]
+  addPendingLedgerTransaction?: (transaction: Transaction) => void
+  replacePendingLedgerTransaction?: (pendingId: string, transaction: Transaction) => void
+  removePendingLedgerTransaction?: (id: string) => void
+  setDeletingTransactionId?: (id: string | null) => void
   refreshAll: () => Promise<void>
   showToast: (message: string, title?: string, tone?: ToastTone, action?: ToastAction) => void
 }
@@ -31,7 +39,12 @@ export async function contributeToGoal(
   id: number,
   amount: number,
 ): Promise<void> {
+  if (!isOnline()) {
+    showOnlineOnlyMessage(deps, 'Moving money into a savings goal needs a live connection so the current Rewards balance can be checked.')
+    return
+  }
   const { contributeToSavingsGoal, fetchSavingsGoals } = await import('../lib/api/savingsGoals')
+  deps.beginDirectSync?.([id])
   try {
     await contributeToSavingsGoal(id, amount)
     deps.commitGoals(await fetchSavingsGoals())
@@ -48,11 +61,19 @@ export async function contributeToGoal(
     // The likeliest failure is the server rejecting an over-commit against a balance the client
     // thought was larger. Surface its message rather than a generic one.
     deps.showToast(getErrorMessage(error), 'Could not move that money', 'error')
+  } finally {
+    deps.endDirectSync?.([id])
   }
 }
 
 export async function fundGoalsForCycle(deps: SavingsGoalActionDeps): Promise<void> {
+  if (!isOnline()) {
+    showOnlineOnlyMessage(deps, 'Funding goals for a new cycle needs a live connection so the current Rewards balance can be checked.')
+    return
+  }
   const { fundSavingsGoalsForCycle } = await import('../lib/api/savingsGoals')
+  const syncIds = ['savings-goals-fund', ...(deps.getActiveGoalIds?.() ?? [])]
+  deps.beginDirectSync?.(syncIds)
   try {
     const result = await fundSavingsGoalsForCycle()
     deps.commitGoals(result.goals)
@@ -69,15 +90,30 @@ export async function fundGoalsForCycle(deps: SavingsGoalActionDeps): Promise<vo
     }
   } catch (error: unknown) {
     deps.showToast(getErrorMessage(error), 'Could not fund your goals', 'error')
+  } finally {
+    deps.endDirectSync?.(syncIds)
   }
 }
 
 export async function completeGoal(deps: SavingsGoalActionDeps, id: number): Promise<void> {
+  if (!isOnline()) {
+    showOnlineOnlyMessage(deps, 'Completing a savings goal needs a live connection so its Rewards transaction and rollback snapshot stay authoritative.')
+    return
+  }
   const { completeSavingsGoal } = await import('../lib/api/savingsGoals')
+  const goal = deps.getGoal?.(id)
+  const pendingTransaction = goal ? createPendingCompletionTransaction(goal) : undefined
+  const syncIds = [String(id), ...(pendingTransaction ? [pendingTransaction.id] : [])]
+  deps.beginDirectSync?.(syncIds)
+  if (pendingTransaction) deps.addPendingLedgerTransaction?.(pendingTransaction)
   try {
     const result = await completeSavingsGoal(id)
     deps.commitGoal(result.goal)
+    if (pendingTransaction) {
+      deps.replacePendingLedgerTransaction?.(pendingTransaction.id, result.transaction)
+    }
     await deps.refreshAll()
+    if (pendingTransaction) deps.removePendingLedgerTransaction?.(pendingTransaction.id)
     const spent = formatCurrencyVal(Math.abs(result.transaction.amount), deps.currency)
     const copy = buildMutationSuccessToast({
       entity: 'Savings Goal',
@@ -88,7 +124,14 @@ export async function completeGoal(deps: SavingsGoalActionDeps, id: number): Pro
     deps.showToast(copy.message, copy.title, copy.tone, {
       label: 'Undo',
       onAction: () => {
+        if (!isOnline()) {
+          showOnlineOnlyMessage(deps, 'Undoing a completed savings goal needs a live connection so the linked ledger row and goal snapshot stay consistent.')
+          return
+        }
         void (async () => {
+          const undoSyncIds = [result.transaction.id, String(result.goal.id)]
+          deps.beginDirectSync?.(undoSyncIds)
+          deps.setDeletingTransactionId?.(result.transaction.id)
           try {
             const { deleteTransaction } = await import('../lib/api/transactions')
             await deleteTransaction(result.transaction.id)
@@ -97,12 +140,41 @@ export async function completeGoal(deps: SavingsGoalActionDeps, id: number): Pro
             deps.showToast(undoCopy.message, undoCopy.title, undoCopy.tone)
           } catch (error: unknown) {
             deps.showToast(getErrorMessage(error), 'Could not undo completion', 'error')
+          } finally {
+            deps.setDeletingTransactionId?.(null)
+            deps.endDirectSync?.(undoSyncIds)
           }
         })()
       },
     })
   } catch (error: unknown) {
+    if (pendingTransaction) deps.removePendingLedgerTransaction?.(pendingTransaction.id)
     deps.showToast(getErrorMessage(error), 'Could not complete this goal', 'error')
+  } finally {
+    deps.endDirectSync?.(syncIds)
+  }
+}
+
+function isOnline(): boolean {
+  return typeof navigator === 'undefined' || navigator.onLine !== false
+}
+
+function showOnlineOnlyMessage(deps: SavingsGoalActionDeps, message: string): void {
+  deps.showToast(message, 'Available online only', 'warning')
+}
+
+function createPendingCompletionTransaction(goal: SavingsGoal): Transaction {
+  const postedAt = new Date().toISOString()
+  return {
+    id: `pending-savings-goal-completion-${goal.id}-${Date.now()}`,
+    date: postedAt.slice(0, 10),
+    postedAt,
+    description: `Completed commitment: ${goal.name}`,
+    category: 'Other',
+    ledgerCategory: 'Rewards',
+    amount: -Math.abs(goal.earmarkedAmount),
+    savingsGoalId: goal.id,
+    isPendingSync: true,
   }
 }
 

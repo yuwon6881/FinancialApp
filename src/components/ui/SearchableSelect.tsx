@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useId } from 'react'
+import { Button } from './Button'
 import { ChevronDown, Search } from 'lucide-react'
 import { AnchoredPopover } from './AnchoredPopover'
 import { controlTriggerClassName, type ControlSize } from './controlStyles'
@@ -153,7 +154,7 @@ export function SearchableSelect<T extends string | number>({
       }}
     >
       {/* Trigger button */}
-      <button
+      <Button variant="unstyled"
         type="button"
         id={accessibleProps.id}
         ref={triggerRef}
@@ -183,7 +184,7 @@ export function SearchableSelect<T extends string | number>({
         <ChevronDown
           className={`size-3.5 text-muted-foreground/80 transition duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`}
         />
-      </button>
+      </Button>
 
       {/* Dropdown */}
       <AnchoredPopover
@@ -254,7 +255,7 @@ export function SearchableSelect<T extends string | number>({
           >
             {filtered.length > 0 ? (
               filtered.map((opt, index) => (
-                <button
+                <Button variant="unstyled"
                   key={opt.value}
                   id={`${listboxId}-option-${index}`}
                   type="button"
@@ -291,7 +292,7 @@ export function SearchableSelect<T extends string | number>({
                       </span>
                     )}
                   </span>
-                </button>
+                </Button>
               ))
             ) : (
               <p className="px-3.5 py-3 text-xs text-muted-foreground text-center font-medium">

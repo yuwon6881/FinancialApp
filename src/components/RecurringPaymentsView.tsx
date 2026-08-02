@@ -30,6 +30,7 @@ interface RecurringPaymentsViewProps {
   highlightedRecurringId?: string | null
   onClearHighlightedRecurring?: () => void
   activeSyncId?: string | null
+  activeSyncIds?: string[]
   deletingId?: string | null
   aiDraft?: { nonce: number; fields: Record<string, unknown> } | null
   aiEditDraft?: { nonce: number; id: string; changes: Record<string, unknown> } | null
@@ -60,6 +61,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   highlightedRecurringId = null,
   onClearHighlightedRecurring,
   activeSyncId: activeSyncIdProp,
+  activeSyncIds: activeSyncIdsProp,
   deletingId: deletingIdProp,
   aiDraft = null,
   aiEditDraft = null,
@@ -73,6 +75,10 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   const hideSensitive = hideSensitiveProp ?? app.hideSensitive
   const currency = currencyProp ?? app.currency
   const activeSyncId = activeSyncIdProp ?? app.activeSyncId
+  const activeSyncIds = activeSyncIdsProp
+    ?? (activeSyncIdProp !== undefined
+      ? (activeSyncIdProp ? [activeSyncIdProp] : [])
+      : (app.activeSyncIds?.length ? app.activeSyncIds : (app.activeSyncId ? [app.activeSyncId] : [])))
   const deletingId = deletingIdProp ?? app.deletingId
   const isMobile = useIsMobile()
 
@@ -82,6 +88,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     hideSensitive,
     currency,
     activeSyncId,
+    activeSyncIds,
     deletingId,
     onAddPayment,
     onUpdatePayment,

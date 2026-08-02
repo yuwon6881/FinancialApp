@@ -7,6 +7,7 @@ export function buildAppContextValue(params: {
   currency: string
   darkMode: boolean
   activeSyncId: string | null
+  activeSyncIds?: string[]
   deletingId: string | null
   isSyncing: boolean
   isOffline: boolean
@@ -22,6 +23,7 @@ export function buildAppContextValue(params: {
     currency: params.currency,
     darkMode: params.darkMode,
     activeSyncId: params.activeSyncId,
+    activeSyncIds: params.activeSyncIds,
     deletingId: params.deletingId,
     isSyncing: params.isSyncing,
     isOffline: params.isOffline,

@@ -1,4 +1,5 @@
 import React, { type InputHTMLAttributes, useEffect, useRef, useState } from 'react'
+import { Button } from './Button'
 import { evaluateMathString } from '../../lib/math'
 import { Input } from './Input'
 
@@ -109,22 +110,22 @@ export const SmartAmountInput = React.forwardRef<HTMLInputElement, InputHTMLAttr
             ['×', '×'],
             ['÷', '÷'],
           ].map(([label, operator]) => (
-            <button
+            <Button variant="unstyled"
               key={operator}
               type="button"
               onMouseDown={event => { event.preventDefault(); appendOperator(operator) }}
               className="border-r border-border/50 px-2 py-1.5 text-xs font-semibold hover:bg-muted/80"
             >
               {label}
-            </button>
+            </Button>
           ))}
-          <button
+          <Button variant="unstyled"
             type="button"
             onMouseDown={event => { event.preventDefault(); evaluate() }}
             className="bg-blue-500/10 px-2.5 py-1.5 text-xs font-bold text-blue-600 hover:bg-blue-500/20"
           >
             =
-          </button>
+          </Button>
         </div>
       )}
     </div>

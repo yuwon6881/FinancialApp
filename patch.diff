@@ -1,0 +1,351 @@
+diff --git a/src/app/useFinancialData.tsx b/src/app/useFinancialData.tsx
+index cbc85b4..2e4a685 100644
+--- a/src/app/useFinancialData.tsx
++++ b/src/app/useFinancialData.tsx
+@@ -71,6 +71,15 @@ const createLocalId = (prefix: string, separator = '_') => {
+   return `${prefix}${separator}${Date.now()}${separator}${Math.random().toString(36).substring(2, 9)}`
+ }
+ 
++interface PendingCategoryCleanupProjection {
++  operationId: string
++  sourceNames: string[]
++  replacementName?: string
++  addedName?: string
++  transactionIds: string[]
++  recurringPaymentIds: string[]
++}
++
+ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'username' | 'usernameRef' | 'setIsSwitchingCycle'>) {
+   const {
+     token,
+@@ -146,7 +155,39 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
+ 
+   const toOutboxPayload = (value: object): OutboxPayload => ({ ...value })
+ 
+-  const [directSyncId, setDirectSyncId] = useState<string | null>(null)
++  // Direct, authoritative POSTs are not outbox operations, but they still need the same
++  // cross-page contract: the source row and any record created by the request stay visible
++  // with a syncing state until the server has answered.
++  const [directSyncIds, setDirectSyncIds] = useState<string[]>([])
++  const [pendingLedgerTransactions, setPendingLedgerTransactions] = useState<Transaction[]>([])
++
++  const beginDirectSync = useCallback((ids: Array<string | number>) => {
++    const normalized = ids.map(String).filter(Boolean)
++    if (normalized.length === 0) return
++    setDirectSyncIds(previous => Array.from(new Set([...previous, ...normalized])))
++  }, [])
++
++  const endDirectSync = useCallback((ids: Array<string | number>) => {
++    const toRemove = new Set(ids.map(String))
++    setDirectSyncIds(previous => previous.filter(id => !toRemove.has(id)))
++  }, [])
++
++  const addPendingLedgerTransaction = useCallback((transaction: Transaction) => {
++    setPendingLedgerTransactions(previous => [
++      ...previous.filter(item => String(item.id) !== String(transaction.id)),
++      transaction,
++    ])
++  }, [])
++
++  const replacePendingLedgerTransaction = useCallback((pendingId: string, transaction: Transaction) => {
++    setPendingLedgerTransactions(previous => previous.map(item =>
++      String(item.id) === String(pendingId) ? { ...transaction, isPendingSync: false } : item,
++    ))
++  }, [])
++
++  const removePendingLedgerTransaction = useCallback((id: string) => {
++    setPendingLedgerTransactions(previous => previous.filter(item => String(item.id) !== String(id)))
++  }, [])
+ 
+   const {
+     pendingOps,
+@@ -202,7 +243,6 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
+               await uploadDocument(
+                 uploadFile,
+                 pending.taxYear,
+-                undefined,
+                 op.targetId,
+                 undefined,
+                 pending.reliefCategory,
+@@ -297,7 +337,18 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
+     },
+   })
+ 
+-  const activeSyncId = outboxActiveSyncId || directSyncId
++  const activeQueueOperationIds = useMemo(() => outboxActiveSyncId
++    ? activeOps
++      .filter(op => op.targetId === outboxActiveSyncId && !op.isCompleted)
++      .map(op => op.id)
++    : [], [activeOps, outboxActiveSyncId])
++  const activeSyncIds = useMemo(() => Array.from(new Set([
++    ...(outboxActiveSyncId ? [outboxActiveSyncId] : []),
++    ...activeQueueOperationIds,
++    ...directSyncIds,
++    ...(pendingCategoryCleanup ? [pendingCategoryCleanup.operationId] : []),
++  ])), [activeQueueOperationIds, directSyncIds, outboxActiveSyncId, pendingCategoryCleanup])
++  const activeSyncId = activeSyncIds[0] || null
+ 
+   // Fetch initial ledger and dashboard statistics
+   const loadAllInner = useCallback(async (
+@@ -577,6 +628,9 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
+     setCategoriesList([])
+     setWishlist([])
+     setSavingsGoals([])
++    setDirectSyncIds([])
++    setPendingLedgerTransactions([])
++    setPendingCategoryCleanup(null)
+     setSelectedMonth('')
+     setSelectedYear(0)
+     setLoading(true)
+@@ -755,11 +809,70 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
+     }
+   }, [token, wakeUpAndSync])
+ 
+-  const allTransactions = useOptimisticList(transactions, activeOps, 'transaction')
+-  const allRecurringPayments = useOptimisticList(recurringPayments, activeOps, 'recurringPayment')
++  const queuedTransactions = useOptimisticList(transactions, activeOps, 'transaction')
++  const allTransactions = useMemo(() => {
++    // Direct server actions can create a ledger row before the next bootstrap response arrives.
++    // Keep that row in the same collection consumed by LedgerView so changing tabs immediately
++    // after the click cannot hide the in-flight transaction.
++    const queuedIds = new Set(queuedTransactions.map(transaction => String(transaction.id)))
++    const directTransactions = pendingLedgerTransactions.filter(transaction => !queuedIds.has(String(transaction.id)))
++    if (!pendingCategoryCleanup) return [...directTransactions, ...queuedTransactions]
++    const projected = [...directTransactions, ...queuedTransactions]
++    return projected.map(transaction => {
++      const matchesCategory = pendingCategoryCleanup.sourceNames.includes(transaction.category.trim().toLowerCase())
++      const matchesId = pendingCategoryCleanup.transactionIds.includes(String(transaction.id))
++      if (!matchesCategory && !matchesId) return transaction
++      return {
++        ...transaction,
++        ...(pendingCategoryCleanup.replacementName ? { category: pendingCategoryCleanup.replacementName } : {}),
++        isPendingSync: true,
++        pendingSyncOperationId: pendingCategoryCleanup.operationId,
++      }
++    })
++  }, [pendingCategoryCleanup, pendingLedgerTransactions, queuedTransactions])
++  const queuedRecurringPayments = useOptimisticList(recurringPayments, activeOps, 'recurringPayment')
++  const allRecurringPayments = useMemo(() => {
++    if (!pendingCategoryCleanup) return queuedRecurringPayments
++    return queuedRecurringPayments.map(payment => {
++      const matchesCategory = pendingCategoryCleanup.sourceNames.includes(payment.category.trim().toLowerCase())
++      const matchesId = pendingCategoryCleanup.recurringPaymentIds.includes(String(payment.id))
++      return matchesCategory || matchesId
++        ? {
++            ...payment,
++            ...(pendingCategoryCleanup.replacementName ? { category: pendingCategoryCleanup.replacementName } : {}),
++            isPendingSync: true,
++            pendingSyncOperationId: pendingCategoryCleanup.operationId,
++          }
++        : payment
++    })
++  }, [pendingCategoryCleanup, queuedRecurringPayments])
+   const allWishlist = useOptimisticList(wishlist, activeOps, 'wishlistItem')
+   const allSavingsGoals = useOptimisticList(savingsGoals, activeOps, 'savingsGoal')
+-  const allCategories = useOptimisticList(categoriesList, activeOps, 'category')
++  const queuedCategories = useOptimisticList(categoriesList, activeOps, 'category')
++  const allCategories = useMemo(() => {
++    if (!pendingCategoryCleanup) return queuedCategories
++    let projected = queuedCategories.map(category => {
++      const matches = pendingCategoryCleanup.sourceNames.includes(category.name.trim().toLowerCase())
++      return matches
++        ? {
++            ...category,
++            isPendingDelete: true,
++            isPendingSync: true,
++            pendingSyncOperationId: pendingCategoryCleanup.operationId,
++          }
++        : category
++    })
++    if (pendingCategoryCleanup.addedName) {
++      projected = [{
++        id: pendingCategoryCleanup.operationId,
++        name: pendingCategoryCleanup.addedName,
++        cycleLimit: null,
++        isPendingSync: true,
++        pendingSyncOperationId: pendingCategoryCleanup.operationId,
++      }, ...projected]
++    }
++    return projected
++  }, [pendingCategoryCleanup, queuedCategories])
+ 
+   const optimisticDashboardData = useMemo(
+     () => computeOptimisticDashboard(dashboardData, { activeOps, transactions }),
+@@ -862,10 +975,14 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
+ 
+   const handleDeleteCategory = (id: string, replacementCategoryId?: string) => {
+     const category = allCategories.find(cat => String(cat.id) === String(id))
++    const replacementCategory = replacementCategoryId
++      ? allCategories.find(cat => String(cat.id) === String(replacementCategoryId))
++      : undefined
+     snapshotForUndo('category', String(id), category)
+     mutateQueue(prev => enqueue(prev, 'category', 'delete', id, {
+       name: category?.name,
+       replacementCategoryId,
++      replacementCategoryName: replacementCategory?.name,
+       undoSnapshot: category,
+     }))
+   }
+@@ -930,6 +1047,26 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
+     })
+   }
+ 
++  const buildCategoryCleanupProjection = (actions: CategoryCleanupAction[], operationId: string): PendingCategoryCleanupProjection => {
++    const sourceNames = Array.from(new Set(actions.flatMap(action => action.categories ?? [])
++      .map(name => name.trim().toLowerCase())
++      .filter(Boolean)))
++    const replacementName = actions
++      .map(action => action.targetCategory?.trim())
++      .find((name): name is string => Boolean(name))
++    const addedName = actions
++      .map(action => action.newCategoryName?.trim())
++      .find((name): name is string => Boolean(name))
++    return {
++      operationId,
++      sourceNames,
++      replacementName,
++      addedName,
++      transactionIds: Array.from(new Set(actions.flatMap(action => action.transactionIds ?? []))),
++      recurringPaymentIds: Array.from(new Set(actions.flatMap(action => action.recurringPaymentIds ?? []))),
++    }
++  }
++
+   const handleApplyCategoryCleanupSuggestion = async (suggestion: CategoryCleanupSuggestion, targetCategoryOverride?: string) => {
+     if (!guardSensitive()) return
+     if (suggestion.type === 'consolidate' && !targetCategoryOverride) {
+@@ -944,6 +1081,9 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
+       ? [{ type: 'merge' as const, categories: suggestion.categories, targetCategory: targetCategoryOverride }]
+       : [{ type: 'delete' as const, categories: suggestion.categories }]
+ 
++    const operationId = `category-cleanup-${suggestion.id}-${Date.now()}`
++    setPendingCategoryCleanup(buildCategoryCleanupProjection(actions, operationId))
++    beginDirectSync([operationId])
+     try {
+       const result = await api.applyCategoryCleanup(actions)
+       await loadAll(selectedMonth, selectedYear, true)
+@@ -956,6 +1096,9 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
+             label: 'Undo',
+             onAction: () => {
+               void (async () => {
++                const undoOperationId = `category-cleanup-undo-${suggestion.id}-${Date.now()}`
++                setPendingCategoryCleanup(buildCategoryCleanupProjection(result.undoActions, undoOperationId))
++                beginDirectSync([undoOperationId])
+                 try {
+                   await api.applyCategoryCleanup(result.undoActions)
+                   await loadAll(selectedMonth, selectedYear, true)
+@@ -963,6 +1106,9 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
+                   showToast(undoCopy.message, undoCopy.title, undoCopy.tone)
+                 } catch (err: unknown) {
+                   showToast(getErrorMessage(err, 'Could not undo AI cleanup.'), 'Undo failed', 'error')
++                } finally {
++                  setPendingCategoryCleanup(null)
++                  endDirectSync([undoOperationId])
+                 }
+               })()
+             }
+@@ -976,6 +1122,9 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
+       showToast(copy.message, copy.title, copy.tone, undoAction)
+     } catch (err: unknown) {
+       showToast(getErrorMessage(err, 'Could not apply AI category cleanup.'), 'AI Cleanup Failed', 'error')
++    } finally {
++      setPendingCategoryCleanup(null)
++      endDirectSync([operationId])
+     }
+   }
+ 
+@@ -1069,6 +1218,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
+     if (transaction?.savingsGoalId != null) {
+       // A completion delete is an authoritative rollback of both the ledger row and its goal
+       // snapshot, so it cannot use the offline outbox's transaction-only optimistic projection.
++      const syncIds = [deleteId, String(transaction.savingsGoalId)]
++      beginDirectSync(syncIds)
+       void (async () => {
+         try {
+           await api.deleteTransaction(deleteId)
+@@ -1081,6 +1232,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
+           showToast(getErrorMessage(error), 'Could not undo completion', 'error')
+         } finally {
+           setDeletingTxId(null)
++          endDirectSync(syncIds)
+         }
+       })()
+       return
+@@ -1187,7 +1339,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
+ 
+   const handleUpdateReminder = async (id: string, settings: RecurringReminderSettings) => {
+     if (!guardSensitive()) return
+-    setDirectSyncId(id)
++    beginDirectSync([id])
+     const previous = recurringPayments.find(p => p.id === id)
+     setRecurringPayments(prev => prev.map(p => p.id === id
+       ? { ...p, reminderEnabled: settings.enabled, reminderMode: settings.mode, reminderLeadDays: settings.leadDays }
+@@ -1207,14 +1359,33 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
+       }))
+       showToast(getErrorMessage(err, 'Could not update the payment reminder.'), 'Reminder Update Failed', 'error')
+     } finally {
+-      setDirectSyncId(null)
++      endDirectSync([id])
+     }
+   }
+ 
+   const handlePayEarly = async (id: string) => {
+     const payment = allRecurringPayments.find(p => p.id === id)
++    if (!payment) return
++    const postedAt = new Date().toISOString()
++    const pendingTransactionId = createLocalId('pay-early-transaction')
++    const pendingTransaction: Transaction = {
++      id: pendingTransactionId,
++      date: postedAt.slice(0, 10),
++      postedAt,
++      description: payment.name,
++      category: payment.category,
++      ledgerCategory: payment.ledgerCategory,
++      amount: -Math.abs(payment.amount),
++      recurringPaymentId: payment.id,
++      recurringOccurrenceDate: payment.nextDueDate,
++      isPendingSync: true,
++    }
++    const syncIds = [id, pendingTransactionId]
++    beginDirectSync(syncIds)
++    addPendingLedgerTransaction(pendingTransaction)
+     try {
+       const result = await api.payRecurringPaymentEarly(id, payment?.nextDueDate || '')
++      replacePendingLedgerTransaction(pendingTransactionId, result.transaction)
+       await loadAll(selectedMonth || undefined, selectedYear || undefined, true)
+       setRecurringPayments(prev => prev.map(p => p.id === id
+         // A null nextOccurrenceDate means the server found none left (end date reached, or the
+@@ -1231,7 +1402,11 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
+       })
+       showToast(copy.message, copy.title, copy.tone)
+     } catch (err: unknown) {
++      removePendingLedgerTransaction(pendingTransactionId)
+       showToast(getErrorMessage(err, 'Could not pay this subscription early.'), 'Pay Early Failed', 'error')
++    } finally {
++      removePendingLedgerTransaction(pendingTransactionId)
++      endDirectSync(syncIds)
+     }
+   }
+ 
+@@ -1283,6 +1458,14 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
+     mutateQueue,
+     snapshotForUndo,
+     setSavingsGoals,
++    beginDirectSync,
++    endDirectSync,
++    getGoal: (id: number) => allSavingsGoals.find(goal => goal.id === id),
++    getActiveGoalIds: () => allSavingsGoals.filter(goal => goal.status === 'active').map(goal => goal.id),
++    addPendingLedgerTransaction,
++    replacePendingLedgerTransaction,
++    removePendingLedgerTransaction,
++    setDeletingTransactionId: setDeletingTxId,
+     refreshAll: () => loadAll(selectedMonth || undefined, selectedYear || undefined, true),
+   })
+ 
+@@ -1312,6 +1495,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
+     setIsOffline,
+     isBackgroundSyncing,
+     activeSyncId,
++    activeSyncIds,
+     deletingTxId,
+     setDeletingTxId,
+     syncCountdownMs,

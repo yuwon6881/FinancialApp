@@ -1,3 +1,4 @@
+import { Button } from './ui/Button'
 import React, { useState, useCallback, useEffect, useRef } from 'react'
 import type {
   Transaction,
@@ -81,6 +82,7 @@ interface LedgerViewProps {
   onExportTransactions?: (params: any) => Promise<{ blob: Blob; filename: string }>
   onShowAlert?: (message: string, title?: string) => void
   activeSyncId?: string | null
+  activeSyncIds?: string[]
   deletingTxId?: string | null
   onStartEditPending?: (id: string | null) => void
   isSwitchingCycle?: boolean
@@ -108,6 +110,10 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
   const hideSensitive = props.hideSensitive ?? app.hideSensitive
   const currency = props.currency ?? app.currency
   const activeSyncId = props.activeSyncId ?? app.activeSyncId
+  const activeSyncIds = props.activeSyncIds
+    ?? (props.activeSyncId !== undefined
+      ? (props.activeSyncId ? [props.activeSyncId] : [])
+      : (app.activeSyncIds?.length ? app.activeSyncIds : (app.activeSyncId ? [app.activeSyncId] : [])))
   const deletingTxId = props.deletingTxId ?? app.deletingId
   const isMobile = useIsMobile(1024)
 
@@ -144,6 +150,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
     isMobile,
     hideSensitive,
     activeSyncId,
+    activeSyncIds,
     deletingTxId,
     formRef,
   })
@@ -255,12 +262,12 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
               <span className="size-1.5 rounded-full bg-blue-500 shrink-0 animate-pulse" />
               {label}
             </div>
-            <button
+            <Button variant="unstyled"
               onClick={ledger.handleResetFilters}
-              className="flex shrink-0 items-center gap-1 whitespace-nowrap text-blue-500/70 hover:text-blue-500 text-[10px] font-semibold transition cursor-pointer"
+              className="flex shrink-0 items-center gap-1 whitespace-nowrap text-blue-500/70 hover:text-blue-500 text-[10px] font-semibold transition cursor-pointer cursor-pointer"
             >
               <X className="size-3" /> Clear filter
-            </button>
+            </Button>
           </div>
         )
       })()}

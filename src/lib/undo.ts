@@ -124,6 +124,14 @@ export function buildUndoAction(
       return before ? action('transaction', 'update', String(op.targetId), toPayload(before)) : undefined
     case 'recurringPayment:update':
       return before ? action('recurringPayment', 'update', String(op.targetId), toPayload(before)) : undefined
+    case 'recurringPayment:reminder':
+      return before ? action('recurringPayment', 'reminder', String(op.targetId), {
+        name: (before as any).name,
+        reminderEnabled: (before as any).reminderEnabled === true,
+        reminderMode: (before as any).reminderMode ?? 'Once',
+        reminderLeadDays: (before as any).reminderLeadDays ?? 3,
+        undoSnapshot: before,
+      }) : undefined
     case 'category:update':
       return before ? action('category', 'update', String(op.targetId), toPayload(before)) : undefined
     case 'wishlistItem:update':
@@ -168,6 +176,17 @@ export function buildUndoAction(
         active: !op.payload.active,
         name: op.payload.name,
       })
+    }
+    case 'category:cleanup': {
+      const undoActions = result && typeof result === 'object' && 'undoActions' in result && Array.isArray(result.undoActions)
+        ? result.undoActions
+        : []
+      return undoActions.length > 0
+        ? action('category', 'cleanup', `${op.targetId}:undo`, {
+            actions: undoActions,
+            description: op.payload?.description || 'AI category cleanup',
+          })
+        : undefined
     }
     case 'settings:update':
       if (op.targetId === 'hideSensitive' && op.payload?.hideSensitive === true) {

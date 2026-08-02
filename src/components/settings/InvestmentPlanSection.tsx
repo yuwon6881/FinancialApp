@@ -13,6 +13,7 @@ import { useAppContext } from '../../contexts/AppContext'
 import { CustomSelect } from '../ui/CustomSelect'
 import { Button } from '../ui/Button'
 import { FormField } from '../ui/FormField'
+import { RowSyncStatus } from '../ui/RowSyncBadge'
 import { redistributeInvestmentTargets } from '../../lib/investmentAllocation'
 
 type TargetKey = 'usEquityTarget' | 'internationalExUsTarget' | 'bondsTarget'
@@ -29,13 +30,20 @@ function ClassificationRow({
   value,
   classify,
   onReorderFinished,
+  isSyncing,
+  isPending,
+  orderBusy,
 }: {
   value: InvestmentAllocationOverview['assignments'][number]
   classify: (instrumentId: string, sleeve?: InvestmentAllocationSleeve) => void
   onReorderFinished: () => void
+  isSyncing: boolean
+  isPending: boolean
+  orderBusy: boolean
 }) {
   const controls = useDragControls()
   const reduceMotion = useReducedMotion()
+  const isBusy = isSyncing || isPending || orderBusy
 
   return (
     <Reorder.Item
@@ -48,22 +56,25 @@ function ClassificationRow({
       whileDrag={reduceMotion ? undefined : { scale: 1.015, boxShadow: 'var(--app-shadow)' }}
       className="grid touch-pan-y gap-2 rounded-xl border border-border/50 bg-muted/20 p-3 sm:grid-cols-[auto_minmax(0,1fr)_190px] sm:items-center"
     >
-      <button
+      <Button variant="unstyled"
         type="button"
         aria-label={`Reorder ${value.symbol}`}
         onPointerDown={event => controls.start(event)}
+        disabled={isBusy}
         className="row-start-1 inline-flex size-8 touch-none cursor-grab items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground active:cursor-grabbing sm:row-auto"
       >
         <GripVertical className="size-4" />
-      </button>
+      </Button>
       <div className="min-w-0">
         <strong className="block truncate text-xs text-foreground">{value.symbol}</strong>
+        <RowSyncStatus isSyncing={isSyncing} isPending={isPending} entityLabel="classification" />
         <span className="block truncate text-[10px] text-muted-foreground">{value.name}</span>
       </div>
       <CustomSelect
         ariaLabel={`Classify ${value.symbol}`}
         value={value.sleeve ?? ''}
         onChange={next => classify(value.instrumentId, String(next) === '' ? undefined : String(next) as InvestmentAllocationSleeve)}
+        disabled={isBusy}
         options={[
           { value: '', label: 'Unassigned' },
           { value: 'USEquity', label: 'US Equity' },
@@ -79,6 +90,8 @@ function ClassificationRow({
 export function InvestmentPlanSection() {
   const {
     isOffline,
+    activeSyncId,
+    activeSyncIds = [],
     operations = [],
     queueMutation = () => undefined,
   } = useAppContext()
@@ -86,6 +99,15 @@ export function InvestmentPlanSection() {
     () => operations.filter(operation => operation.entity.startsWith('investment')),
     [operations],
   )
+  const isActive = (targetId: string) => activeSyncIds.includes(targetId) || activeSyncId === targetId
+  const planOperation = useMemo(() => [...investmentOps].reverse().find(operation =>
+    operation.entity === 'investmentPlan' && operation.type === 'update'), [investmentOps])
+  const orderOperation = useMemo(() => [...investmentOps].reverse().find(operation =>
+    operation.entity === 'investmentAllocationOrder' && operation.type === 'update'), [investmentOps])
+  const planSyncing = isActive('three-fund')
+  const planPending = Boolean(planOperation && !planOperation.isCompleted && !planSyncing)
+  const orderSyncing = isActive('classification')
+  const orderPending = Boolean(orderOperation && !orderOperation.isCompleted && !orderSyncing)
   const cachedOverview = () => api.readCachedInvestmentPortfolio()?.allocation ?? null
   const projectQueuedPlan = (value: InvestmentPlan) => {
     const queuedPlan = [...investmentOps].reverse().find(operation =>
@@ -264,18 +286,18 @@ export function InvestmentPlanSection() {
           <div className="flex items-start gap-3">
             <div className="rounded-xl bg-violet-500/10 p-2 text-violet-500 shrink-0"><SlidersHorizontal className="size-4" /></div>
             <div>
-              <h3 className="text-sm font-bold text-foreground">Portfolio targets</h3>
+              <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">Portfolio targets <RowSyncStatus isSyncing={planSyncing} isPending={planPending} entityLabel="investment plan" /></h3>
               <p className="mt-1 text-[11px] text-muted-foreground">Changing one sleeve automatically redistributes the other two.</p>
             </div>
           </div>
-          <button
+          <Button variant="unstyled"
             type="button"
             onClick={() => setGlobalTargetLock(!globalTargetLock)}
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/60 bg-secondary/60 text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer shrink-0 mt-1"
           >
             {globalTargetLock ? <Lock className="size-3" /> : <Unlock className="size-3" />}
             {globalTargetLock ? 'Locked' : 'Unlocked'}
-          </button>
+          </Button>
         </div>
         <div className="mt-5 space-y-5">
           {([
@@ -285,7 +307,7 @@ export function InvestmentPlanSection() {
           ] as const).map(([label, key, accentClass]) => (
             <label key={key} className="space-y-2 block">
               <div className="flex justify-between items-center text-[11px] font-bold">
-                <span className="text-muted-foreground flex items-center gap-1.5"><span className="uppercase tracking-wider">{label}</span><button type="button" aria-label={`${lockedSleeve === key ? 'Unlock' : 'Lock'} ${label} target`} onClick={(e) => { e.preventDefault(); toggleSleeveLock(key) }} className="p-1 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-40" disabled={lockedSleeve !== null && lockedSleeve !== key} title={lockedSleeve === key ? "Unlock target" : lockedSleeve ? "Unlock the current target before locking another" : "Lock target"}>{lockedSleeve === key ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</button></span>
+                <span className="text-muted-foreground flex items-center gap-1.5"><span className="uppercase tracking-wider">{label}</span><Button variant="unstyled" type="button" aria-label={`${lockedSleeve === key ? 'Unlock' : 'Lock'} ${label} target`} onClick={(e) => { e.preventDefault(); toggleSleeveLock(key) }} className="p-1 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-40" disabled={lockedSleeve !== null && lockedSleeve !== key} title={lockedSleeve === key ? "Unlock target" : lockedSleeve ? "Unlock the current target before locking another" : "Lock target"}>{lockedSleeve === key ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</Button></span>
                 <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md">{plan[key]}%</span>
               </div>
               <RangeInput
@@ -334,12 +356,12 @@ export function InvestmentPlanSection() {
             </div>
           </div>
           {(validation || error) && <p role="alert" className="flex gap-2 text-xs text-destructive"><AlertCircle className="size-4 shrink-0" />{validation || error}</p>}
-          <Button variant="primary" disabled={Boolean(validation)} onClick={save}><Save className="size-4" /> Save targets</Button>
+          <Button variant="primary" disabled={Boolean(validation) || planSyncing || planPending} aria-busy={planSyncing} onClick={save}>{planSyncing ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} {planSyncing ? 'Saving…' : 'Save targets'}</Button>
         </div>
       </section>
 
       <section className="rounded-2xl border border-border/60 bg-card p-5 sm:p-6">
-        <h3 className="text-sm font-bold text-foreground">Investment classification</h3>
+        <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">Investment classification <RowSyncStatus isSyncing={orderSyncing} isPending={orderPending} entityLabel="classification order" /></h3>
         <p className="mt-1 text-[11px] text-muted-foreground">Every open holding needs an explicit sleeve. Multiple funds may share one sleeve.</p>
         <Reorder.Group
           axis="y"
@@ -348,7 +370,20 @@ export function InvestmentPlanSection() {
           className="mt-4 space-y-3 max-h-[300px] overflow-y-auto pr-2"
         >
           {orderedAssignments.map(value => (
-            <ClassificationRow key={value.instrumentId} value={value} classify={classify} onReorderFinished={saveAssignmentOrder} />
+            <ClassificationRow
+              key={value.instrumentId}
+              value={value}
+              classify={classify}
+              onReorderFinished={saveAssignmentOrder}
+              isSyncing={isActive(value.instrumentId)}
+              orderBusy={orderSyncing || orderPending}
+              isPending={Boolean(investmentOps.find(operation =>
+                operation.entity === 'investmentAllocation'
+                && operation.type === 'update'
+                && operation.targetId === value.instrumentId
+                && !operation.isCompleted
+              ))}
+            />
           ))}
           {!overview?.assignments.length && (
             <p className="rounded-xl border border-dashed border-border/60 p-5 text-center text-xs text-muted-foreground">

@@ -77,4 +77,94 @@ describe('completeGoal', () => {
       'success',
     )
   })
+
+  it('projects the completion transaction and marks both records as syncing before the POST resolves', async () => {
+    const committedGoal = { ...goal, earmarkedAmount: 1200 }
+    const committedTransaction = { ...transaction, amount: -1200 }
+    vi.mocked(completeSavingsGoal).mockResolvedValue({ goal: committedGoal, transaction: committedTransaction })
+    const commitGoal = vi.fn()
+    const refreshAll = vi.fn().mockResolvedValue(undefined)
+    const showToast = vi.fn()
+    const beginDirectSync = vi.fn()
+    const endDirectSync = vi.fn()
+    const addPendingLedgerTransaction = vi.fn()
+    const replacePendingLedgerTransaction = vi.fn()
+    const removePendingLedgerTransaction = vi.fn()
+    const setDeletingTransactionId = vi.fn()
+
+    await completeGoal({
+      currency: 'MYR',
+      commitGoals: vi.fn(),
+      commitGoal,
+      getGoalName: id => id === goal.id ? goal.name : undefined,
+      getGoal: id => id === goal.id ? committedGoal : undefined,
+      beginDirectSync,
+      endDirectSync,
+      getActiveGoalIds: () => [goal.id],
+      addPendingLedgerTransaction,
+      replacePendingLedgerTransaction,
+      removePendingLedgerTransaction,
+      setDeletingTransactionId,
+      refreshAll,
+      showToast,
+    }, goal.id)
+
+    const pending = addPendingLedgerTransaction.mock.calls[0]?.[0]
+    expect(pending).toMatchObject({
+      description: 'Completed commitment: Car service',
+      ledgerCategory: 'Rewards',
+      amount: -1200,
+      savingsGoalId: goal.id,
+      isPendingSync: true,
+    })
+    expect(beginDirectSync).toHaveBeenCalledWith([String(goal.id), pending.id])
+    expect(replacePendingLedgerTransaction).toHaveBeenCalledWith(pending.id, committedTransaction)
+    expect(removePendingLedgerTransaction).toHaveBeenCalledWith(pending.id)
+    expect(endDirectSync).toHaveBeenCalledWith([String(goal.id), pending.id])
+
+    const action = showToast.mock.calls[0]?.[3]
+    action?.onAction()
+    await vi.waitFor(() => expect(deleteTransaction).toHaveBeenCalledWith(committedTransaction.id))
+    expect(setDeletingTransactionId).toHaveBeenCalledWith(committedTransaction.id)
+    await vi.waitFor(() => expect(setDeletingTransactionId).toHaveBeenLastCalledWith(null))
+  })
+
+  it('keeps the projected ledger row active until completion responds', async () => {
+    const committedGoal = { ...goal, earmarkedAmount: 1200 }
+    const committedTransaction = { ...transaction, amount: -1200 }
+    let resolveCompletion: (value: { goal: SavingsGoal; transaction: Transaction }) => void = () => undefined
+    vi.mocked(completeSavingsGoal).mockReturnValue(new Promise(resolve => {
+      resolveCompletion = resolve
+    }))
+
+    const beginDirectSync = vi.fn()
+    const endDirectSync = vi.fn()
+    const addPendingLedgerTransaction = vi.fn()
+    const refreshAll = vi.fn().mockResolvedValue(undefined)
+    const showToast = vi.fn()
+    const request = completeGoal({
+      currency: 'MYR',
+      commitGoals: vi.fn(),
+      commitGoal: vi.fn(),
+      getGoalName: () => goal.name,
+      getGoal: () => committedGoal,
+      beginDirectSync,
+      endDirectSync,
+      addPendingLedgerTransaction,
+      replacePendingLedgerTransaction: vi.fn(),
+      removePendingLedgerTransaction: vi.fn(),
+      refreshAll,
+      showToast,
+    }, goal.id)
+
+    await vi.waitFor(() => expect(addPendingLedgerTransaction).toHaveBeenCalledOnce())
+    const pending = addPendingLedgerTransaction.mock.calls[0]?.[0]
+    expect(pending).toMatchObject({ isPendingSync: true, savingsGoalId: goal.id, amount: -1200 })
+    expect(beginDirectSync).toHaveBeenCalledWith([String(goal.id), pending.id])
+    expect(endDirectSync).not.toHaveBeenCalled()
+
+    resolveCompletion({ goal: committedGoal, transaction: committedTransaction })
+    await request
+    expect(endDirectSync).toHaveBeenCalledWith([String(goal.id), pending.id])
+  })
 })

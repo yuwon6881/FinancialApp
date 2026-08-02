@@ -1,3 +1,4 @@
+import { Button } from './components/ui/Button'
 import React from 'react'
 import {
   Menubar,
@@ -177,7 +178,7 @@ const TopNav: React.FC<TopNavProps> = ({
             </div>
           )}
           {failedOpsCount > 0 && (
-            <button
+            <Button variant="unstyled"
               type="button"
               onClick={() => onOpenFailedOps?.()}
               className="ml-2 flex items-center gap-1 px-2 py-0.5 bg-destructive/10 border border-destructive/20 rounded-md text-[10px] font-bold text-destructive cursor-pointer select-none shrink-0 hover:bg-destructive/20 transition duration-150"
@@ -185,10 +186,10 @@ const TopNav: React.FC<TopNavProps> = ({
             >
               <span className="w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
               <span>{failedOpsCount} failed</span>
-            </button>
+            </Button>
           )}
           {draftCount > 0 && (
-            <button
+            <Button variant="unstyled"
               type="button"
               onClick={() => onTabChange('drafts')}
               className="ml-2.5 flex items-center gap-1 px-2.5 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-md text-[10px] font-bold text-amber-500 cursor-pointer select-none shrink-0 hover:bg-amber-500/25 transition duration-150 animate-in fade-in zoom-in-95"
@@ -196,7 +197,7 @@ const TopNav: React.FC<TopNavProps> = ({
             >
               <FileText className="size-3" />
               <span>{draftCount} Draft{draftCount > 1 ? 's' : ''}</span>
-            </button>
+            </Button>
           )}
         </div>
 
@@ -206,7 +207,7 @@ const TopNav: React.FC<TopNavProps> = ({
             {navItems.map(({ tab, label, Icon, activeClass, iconClass, dotClass }) => {
               const isActive = activeTab === tab
               return (
-                <button
+                <Button variant="unstyled"
                   key={tab}
                   onClick={() => onTabChange(tab)}
                   aria-current={isActive ? 'page' : undefined}
@@ -219,7 +220,7 @@ const TopNav: React.FC<TopNavProps> = ({
                   <Icon className={`size-3.5 ${isActive ? iconClass : 'text-muted-foreground'}`} />
                   <span>{label}</span>
                   {isActive && <span className={`absolute -bottom-1 left-1/2 h-1 w-5 -translate-x-1/2 rounded-full ${dotClass}`} />}
-                </button>
+                </Button>
               )
             })}
           </nav>
@@ -228,18 +229,18 @@ const TopNav: React.FC<TopNavProps> = ({
         {/* Right Side Widgets & Actions */}
         <div className="flex flex-1 shrink-0 items-center justify-end gap-1.5 sm:gap-3 lg:gap-4 z-10">
           
-          <button
+          <Button variant="unstyled"
             type="button"
             onClick={onAskAI}
-            className="hidden lg:flex items-center justify-center gap-1.5 px-2.5 lg:px-3 py-1.5 bg-blue-500/8 hover:bg-blue-500/14 border border-blue-500/20 hover:border-blue-500/35 text-blue-600 dark:text-blue-400 rounded-xl select-none shrink-0 transition-all duration-150 cursor-pointer"
+            className="hidden lg:flex items-center justify-center gap-1.5 px-2.5 lg:px-3 py-1.5 bg-blue-500/8 hover:bg-blue-500/14 border border-blue-500/20 hover:border-blue-500/35 text-blue-600 dark:text-blue-400 rounded-xl select-none shrink-0 transition-all duration-150 cursor-pointer cursor-pointer"
             title="ASK AI"
             aria-label="ASK AI"
           >
             <Sparkles className="size-3.5" />
             <span className="hidden xl:inline text-xs font-extrabold tracking-wide">ASK AI</span>
-          </button>
+          </Button>
 
-          <button
+          <Button variant="unstyled"
             type="button"
             onClick={() => onTabChange('wishlist')}
             aria-label="Wishlist"
@@ -252,14 +253,14 @@ const TopNav: React.FC<TopNavProps> = ({
             }`}
           >
             <PiggyBank className="size-4" />
-          </button>
+          </Button>
 
           {/* One notification entry point; the shared review sheet is owned by App. */}
           <div className="relative">
-            <button
+            <Button variant="unstyled"
               type="button"
               onClick={onOpenNotifications}
-              className="p-1.5 bg-amber-500/5 border border-amber-500/10 hover:bg-amber-500/10 hover:border-amber-500/20 text-amber-500/80 hover:text-amber-500 rounded-xl cursor-pointer transition duration-150 flex items-center justify-center relative"
+              className="p-1.5 bg-amber-500/5 border border-amber-500/10 hover:bg-amber-500/10 hover:border-amber-500/20 text-amber-500/80 hover:text-amber-500 rounded-xl cursor-pointer transition duration-150 flex items-center justify-center relative cursor-pointer"
               title={hasAlerts ? `${pendingNotifications.length} bills need review` : 'No bills need review'}
               aria-label={hasAlerts ? `Review ${pendingNotifications.length} pending bills` : 'Bills: all caught up'}
             >
@@ -267,7 +268,7 @@ const TopNav: React.FC<TopNavProps> = ({
               {hasAlerts && (
                 <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-amber-500 ring-2 ring-background animate-pulse" />
               )}
-            </button>
+            </Button>
           </div>
 
           {/* Quick Actions Menubar (Shadcn UI) */}
@@ -403,13 +404,13 @@ const TopNav: React.FC<TopNavProps> = ({
                     <div className="text-sm font-bold text-foreground">Amounts remain protected</div>
                     <div className="text-[13px] leading-relaxed text-muted-foreground mt-0.5">Privacy settings couldn't be verified.</div>
                   </div>
-                  <button
+                  <Button variant="unstyled"
                     type="button"
                     onClick={onRetrySensitivePreference}
-                    className="ml-2 shrink-0 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition cursor-pointer self-center"
+                    className="ml-2 shrink-0 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition cursor-pointer self-center cursor-pointer"
                   >
                     Retry
-                  </button>
+                  </Button>
                 </>
               )}
             </span>
@@ -426,7 +427,7 @@ const TopNav: React.FC<TopNavProps> = ({
         {navItems.map(({ tab, mobileLabel, Icon, activeClass, iconClass, dotClass }) => {
           const isActive = activeTab === tab
           return (
-            <button
+            <Button variant="unstyled"
               key={tab}
               onClick={() => { triggerHaptic(8); onTabChange(tab) }}
               aria-current={isActive ? 'page' : undefined}
@@ -441,7 +442,7 @@ const TopNav: React.FC<TopNavProps> = ({
                 {isActive && <span className={`absolute -top-0.5 -right-0.5 size-1.5 rounded-full ${dotClass}`} />}
               </span>
               <span className="truncate max-w-full px-0.5">{mobileLabel}</span>
-            </button>
+            </Button>
           )
         })}
       </nav>

@@ -1,4 +1,5 @@
 import { Input } from '../ui/Input'
+import { Button } from '../ui/Button'
 import { Checkbox } from '../ui/Checkbox'
 import { useRef } from 'react'
 import { Search, Filter, X, Loader2, CalendarDays, Banknote, ChevronDown } from 'lucide-react'
@@ -201,7 +202,7 @@ export function LedgerFilterBar({
             ['outflow', 'Outflow'],
             ['transfer', 'Transfer'],
           ] as const).map(([value, label]) => (
-            <button
+            <Button variant="unstyled"
               type="button"
               key={label}
               onClick={() => onTxTypeChange(value)}
@@ -212,7 +213,7 @@ export function LedgerFilterBar({
               }`}
             >
               {label}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -231,12 +232,12 @@ export function LedgerFilterBar({
 
   return (
     <div
-      style={{ top: 'calc(4rem + env(safe-area-inset-top, 0px))' }}
+      
       // The translucency + blur is desktop-only. This bar is sticky over the ledger, so on
       // a phone its blurred backdrop had to be re-filtered against freshly painted rows for
       // every frame of every scroll — the single most expensive thing on the screen on
       // mid-range Android. Phones get an opaque `bg-card` and no filter instead.
-      className="sticky z-30 flex flex-row items-center justify-between gap-2 lg:gap-4 p-2 lg:p-4 bg-card lg:bg-card/90 lg:supports-[backdrop-filter]:bg-card/75 lg:backdrop-blur-md border border-border/60 rounded-xl lg:rounded-2xl shadow-sm"
+      className="top-[calc(4rem+env(safe-area-inset-top,0px))] sticky z-30 flex flex-row items-center justify-between gap-2 lg:gap-4 p-2 lg:p-4 bg-card lg:bg-card/90 lg:supports-[backdrop-filter]:bg-card/75 lg:backdrop-blur-md border border-border/60 rounded-xl lg:rounded-2xl shadow-sm"
     >
       {showAllCycles ? (
         /* Server mode: input pill + Search button fused into one focus-aware
@@ -253,17 +254,17 @@ export function LedgerFilterBar({
               className="min-w-0 flex-1 bg-transparent px-2.5 py-2.5 text-xs text-foreground outline-none placeholder:text-foreground/60"
             />
             {pendingSearchTerm && (
-              <button
+              <Button variant="unstyled"
                 type="button"
                 onClick={() => onPendingSearchChange('')}
                 aria-label="Clear search"
                 className="mr-1 flex size-6 shrink-0 items-center justify-center rounded-md text-foreground hover:bg-muted transition cursor-pointer"
               >
                 <X className="size-3.5" />
-              </button>
+              </Button>
             )}
           </div>
-          <button
+          <Button variant="unstyled"
             onClick={onServerSearch}
             disabled={serverIsFetching}
             className="flex min-h-10 shrink-0 items-center justify-center gap-1.5 border-l border-border/50 bg-primary px-3.5 py-2.5 text-xs font-semibold text-primary-foreground whitespace-nowrap transition-colors duration-200 hover:bg-primary/90 active:bg-primary/80 disabled:cursor-wait cursor-pointer lg:px-5"
@@ -272,7 +273,7 @@ export function LedgerFilterBar({
               ? <Loader2 className="size-3.5 animate-spin" />
               : <Search className="size-3.5" />}
             <span className="hidden sm:inline">Search</span>
-          </button>
+          </Button>
         </div>
       ) : (
         /* Client mode: live-filtering search input with a clear affordance. */
@@ -286,14 +287,14 @@ export function LedgerFilterBar({
             className="w-full rounded-xl border border-border/70 bg-background py-2.5 pl-9 pr-9 text-xs shadow-sm outline-none transition duration-200 hover:border-border focus:border-ring/50 focus:ring-2 focus:ring-ring/25"
           />
           {searchTerm && (
-            <button
+            <Button variant="unstyled"
               type="button"
               onClick={() => onSearchTermChange('')}
               aria-label="Clear search"
               className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer"
             >
               <X className="size-3.5" />
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -320,7 +321,7 @@ export function LedgerFilterBar({
           }
         }}
         >
-        <button
+        <Button variant="unstyled"
           ref={filterButtonRef}
           onClick={() => onFilterDropdownOpenChange(!isFilterDropdownOpen)}
           aria-haspopup="dialog"
@@ -341,7 +342,7 @@ export function LedgerFilterBar({
               {activeFilterCount}
             </span>
           )}
-        </button>
+        </Button>
 
         {/* Desktop Filter Popover */}
         <AnchoredPopover
@@ -358,12 +359,12 @@ export function LedgerFilterBar({
             <div className="mb-3 flex shrink-0 items-center justify-between border-b border-border/40 pb-2">
               <span className="text-xs font-bold text-foreground">Filter Ledger Entries</span>
               {draftFilterCount > 0 && (
-                <button
+                <Button variant="unstyled"
                   onClick={onClearFilters}
                   className="text-[9px] font-bold text-orange-500 hover:underline cursor-pointer whitespace-nowrap"
                 >
                   Clear All
-                </button>
+                </Button>
               )}
             </div>
 
@@ -427,7 +428,7 @@ export function LedgerFilterBar({
             {/* Apply button -- only in server mode */}
             {showAllCycles && (
               <div className="pt-3 mt-3 border-t border-border/40">
-                <button
+                <Button variant="unstyled"
                   onClick={onApplyFilters}
                   disabled={serverIsFetching || hasInvalidRange}
                   className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-xs cursor-pointer transition duration-200 disabled:opacity-50
@@ -438,7 +439,7 @@ export function LedgerFilterBar({
                     ? <Loader2 className="size-3.5 animate-spin" />
                     : <Filter className="size-3.5" />}
                   Apply Filters
-                </button>
+                </Button>
               </div>
             )}
         </AnchoredPopover>
@@ -450,7 +451,7 @@ export function LedgerFilterBar({
             title="Filter Ledger Entries"
             onClose={() => onFilterDropdownOpenChange(false)}
             footer={showAllCycles ? (
-              <button
+              <Button variant="unstyled"
                 onClick={() => {
                   onApplyFilters()
                   onFilterDropdownOpenChange(false)
@@ -464,18 +465,18 @@ export function LedgerFilterBar({
                   ? <Loader2 className="size-3.5 animate-spin" />
                   : <Filter className="size-3.5" />}
                 Apply Filters
-              </button>
+              </Button>
             ) : undefined}
           >
             <div className="ledger-filter-dropdown space-y-4 pr-1">
               {draftFilterCount > 0 && (
                 <div className="flex justify-end">
-                  <button
+                  <Button variant="unstyled"
                     onClick={onClearFilters}
                     className="text-xs font-bold text-orange-500 hover:underline cursor-pointer"
                   >
                     Clear All
-                  </button>
+                  </Button>
                 </div>
               )}
 

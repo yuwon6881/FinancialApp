@@ -93,7 +93,7 @@ export function FingerprintSection() {
   if (!available) return null
   return (
     <section className="app-panel rounded-2xl border border-border/60 bg-card/92 shadow-sm overflow-hidden animate-in fade-in duration-200">
-      <button
+      <Button variant="unstyled"
         type="button"
         onClick={() => setOpen(o => !o)}
         aria-expanded={open}
@@ -114,7 +114,7 @@ export function FingerprintSection() {
           {status.label}
         </span>
         {open ? <ChevronUp className="size-4 text-muted-foreground shrink-0" /> : <ChevronDown className="size-4 text-muted-foreground shrink-0" />}
-      </button>
+      </Button>
 
       <CollapsibleBody open={open}>
         <div className="px-5 pb-5 space-y-4 border-t border-border/40 pt-4">

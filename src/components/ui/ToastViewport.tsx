@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { Button } from './Button'
 import { AlertCircle, CheckCircle2, Info, Undo2, X } from 'lucide-react'
 import { m, AnimatePresence } from 'framer-motion'
 
@@ -105,7 +106,7 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
                 {toast.title && <div className="text-sm font-bold text-foreground">{toast.title}</div>}
                 <div className="text-[13px] leading-relaxed text-muted-foreground">{toast.message}</div>
                 {toast.action && (
-                  <button
+                  <Button variant="unstyled"
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation() // prevent drag interfering
@@ -116,10 +117,10 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
                   >
                     <Undo2 className="size-3.5" />
                     {toast.action.label}
-                  </button>
+                  </Button>
                 )}
               </div>
-              <button
+              <Button variant="unstyled"
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation()
@@ -129,7 +130,7 @@ export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss 
                 aria-label="Dismiss notification"
               >
                 <X className="size-4" />
-              </button>
+              </Button>
             </m.div>
           )
         })}

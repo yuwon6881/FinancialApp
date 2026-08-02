@@ -5,6 +5,13 @@ import { describe, it, expect, vi } from 'vitest'
 vi.mock('./api', () => ({
   toggleRecurringPayment: vi.fn(async () => ({})),
   addWishlistItem: vi.fn(async () => ({ id: 1 })),
+  updateRecurringPaymentReminder: vi.fn(async () => undefined),
+  payRecurringPaymentEarly: vi.fn(async () => ({
+    transaction: { id: 'tx-payearly-1' },
+    settledOccurrenceDate: '2026-08-01',
+    nextOccurrenceDate: '2026-09-01',
+  })),
+  applyCategoryCleanup: vi.fn(async () => ({ appliedCount: 1, undoActions: [] })),
 }))
 
 // Savings goals are dispatched through a dynamic import of their own module (it is kept out of the
@@ -109,6 +116,34 @@ describe('DISPATCH idempotency wiring', () => {
       expect(typeof DISPATCH[key]).toBe('function')
     }
     expect(DISPATCH['savingsGoal:contribute']).toBeUndefined()
+  })
+
+  it('dispatches reminder updates through the shared outbox payload', async () => {
+    await DISPATCH['recurringPayment:reminder'](makeOp({
+      entity: 'recurringPayment', type: 'reminder', targetId: 'rp-1',
+      payload: { reminderEnabled: true, reminderMode: 'Daily', reminderLeadDays: 7 },
+    }))
+    expect(api.updateRecurringPaymentReminder).toHaveBeenCalledWith('rp-1', {
+      enabled: true,
+      mode: 'Daily',
+      leadDays: 7,
+    })
+  })
+
+  it('passes the outbox operation id as the pay-early idempotency key', async () => {
+    await DISPATCH['recurringPayment:payEarly'](makeOp({
+      id: 'op-pay-early', entity: 'recurringPayment', type: 'payEarly', targetId: 'rp-1',
+      payload: { occurrenceDate: '2026-08-01' },
+    }))
+    expect(api.payRecurringPaymentEarly).toHaveBeenCalledWith('rp-1', '2026-08-01', 'op-pay-early')
+  })
+
+  it('dispatches category cleanup actions through the shared outbox', async () => {
+    const actions = [{ type: 'merge' as const, categories: ['Old'], targetCategory: 'New' }]
+    await DISPATCH['category:cleanup'](makeOp({
+      entity: 'category', type: 'cleanup', targetId: 'suggestion-1', payload: { actions },
+    }))
+    expect(api.applyCategoryCleanup).toHaveBeenCalledWith(actions)
   })
 })
 
@@ -479,6 +514,89 @@ describe('applyOpsToList', () => {
     expect(result[0]).toMatchObject({ id: 'tx-1', isPendingDelete: true, isPendingSync: true })
     expect(result[1]).toMatchObject({ id: 'tx-2' })
     expect(result[1].isPendingDelete).toBeUndefined()
+  })
+
+  it('moves category-dependent ledger rows optimistically during a category replacement', () => {
+    const base: TestItem[] = [
+      { id: 'tx-1', name: 'Old category row', category: 'Eating out' },
+      { id: 'tx-2', name: 'Unrelated', category: 'Transport' },
+    ]
+    const ops = [makeOp({
+      entity: 'category',
+      type: 'delete',
+      targetId: 'cat-1',
+      payload: {
+        name: 'Eating out',
+        replacementCategoryId: 'cat-2',
+        replacementCategoryName: 'Food',
+      },
+    })]
+    const result = applyOpsToList(base, ops, 'transaction')
+    expect(result[0]).toMatchObject({ category: 'Food', isPendingSync: true })
+    expect(result[1]).toMatchObject({ category: 'Transport' })
+  })
+
+  it('projects a pay-early ledger row and advances its recurring payment', () => {
+    const payment = [{ id: 'rp-1', name: 'Streaming', nextDueDate: '2026-08-01', category: 'Bills' }]
+    const optimisticTransaction = {
+      id: 'pending-pay-early', date: '2026-08-02', postedAt: '2026-08-02T00:00:00.000Z',
+      description: 'Streaming', category: 'Bills', ledgerCategory: 'Needs', amount: -50,
+      recurringPaymentId: 'rp-1', recurringOccurrenceDate: '2026-08-01',
+    }
+    const op = makeOp({
+      entity: 'recurringPayment', type: 'payEarly', targetId: 'rp-1',
+      payload: { occurrenceDate: '2026-08-01', optimisticTransaction },
+    })
+
+    const recurring = applyOpsToList(payment, [op], 'recurringPayment')
+    const transactions = applyOpsToList([], [op], 'transaction')
+    expect(recurring[0]).toMatchObject({ isPendingSync: true, pendingSyncOperationId: 'op-1' })
+    expect(transactions[0]).toMatchObject({ id: 'pending-pay-early', amount: -50, isPendingSync: true })
+
+    const completed = applyOpsToList(payment, [{
+      ...op,
+      isCompleted: true,
+      payload: {
+        ...op.payload,
+        resultTransaction: { ...optimisticTransaction, id: 'tx-server' },
+        nextOccurrenceDate: '2026-09-01',
+        settledOccurrenceDate: '2026-08-01',
+      },
+    }], 'recurringPayment')
+    expect(completed[0]).toMatchObject({ nextDueDate: '2026-09-01', isPendingSync: false })
+  })
+
+  it('projects category cleanup across categories and dependent records', () => {
+    const op = makeOp({
+      entity: 'category', type: 'cleanup', targetId: 'cleanup-1',
+      payload: { actions: [{ type: 'merge', categories: ['Old'], targetCategory: 'New' }] },
+    })
+    const categories = applyOpsToList([{ id: 'old-id', name: 'Old' }, { id: 'new-id', name: 'New' }], [op], 'category')
+    const transactions = applyOpsToList([{ id: 'tx-1', name: 'Lunch', category: 'Old' }], [op], 'transaction')
+    expect(categories[0]).toMatchObject({ name: 'Old', isPendingDelete: true, isPendingSync: true })
+    expect(transactions[0]).toMatchObject({ category: 'New', isPendingSync: true })
+  })
+
+  it('restores an investment activity snapshot as a pending row for an immediate undo', () => {
+    const result = applyOpsToList([], [makeOp({
+      entity: 'investmentActivity',
+      type: 'restore',
+      targetId: 'activity-1',
+      payload: {
+        transactions: [{ id: 'activity-1', type: 'Buy', tradeDate: '2026-08-01' }],
+      },
+    })], 'investmentActivity')
+    expect(result[0]).toMatchObject({ id: 'activity-1', tradeDate: '2026-08-01', isPendingSync: true })
+  })
+
+  it('restores an investment cash movement snapshot as a pending row for an immediate undo', () => {
+    const result = applyOpsToList([], [makeOp({
+      entity: 'investmentCashFlow',
+      type: 'restore',
+      targetId: 'cash-1',
+      payload: { id: 'cash-1', type: 'Deposit', amount: 100, date: '2026-08-01' },
+    })], 'investmentCashFlow')
+    expect(result[0]).toMatchObject({ id: 'cash-1', amount: 100, isPendingSync: true })
   })
 
   it('ignores ops for a different entity', () => {

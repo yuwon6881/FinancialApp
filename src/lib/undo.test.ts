@@ -175,4 +175,49 @@ describe('undo helpers', () => {
     expect(enqueue).toHaveBeenCalledWith('settings', 'update', 'hideSensitive', { hideSensitive: true })
     expect(requestSensitiveReveal).not.toHaveBeenCalled()
   })
+
+  it('undoes a queued reminder update from the original reminder snapshot', () => {
+    const enqueue = vi.fn()
+    const previous = {
+      id: 'rp-1', name: 'Streaming', amount: 50, frequency: 'Monthly' as const,
+      category: 'Bills', ledgerCategory: 'Needs', nextDueDate: '2026-08-01', dueDate: 1,
+      startDate: '2026-01-01', active: true, reminderEnabled: false,
+      reminderMode: 'Once' as const, reminderLeadDays: 3,
+    }
+    const action = buildUndoAction(
+      new Map(),
+      op('recurringPayment', 'reminder', 'rp-1', {
+        name: previous.name,
+        reminderEnabled: true,
+        reminderMode: 'Daily',
+        reminderLeadDays: 7,
+        undoSnapshot: previous,
+      }),
+      undefined,
+      enqueue,
+    )
+
+    action?.onAction()
+    expect(enqueue).toHaveBeenCalledWith('recurringPayment', 'reminder', 'rp-1', expect.objectContaining({
+      reminderEnabled: false,
+      reminderMode: 'Once',
+      reminderLeadDays: 3,
+    }))
+  })
+
+  it('queues server-provided category cleanup undo actions', () => {
+    const enqueue = vi.fn()
+    const action = buildUndoAction(
+      new Map(),
+      op('category', 'cleanup', 'cleanup-1', { description: 'Old → New' }),
+      { appliedCount: 1, undoActions: [{ type: 'deleteByName', categories: ['New'] }] } as never,
+      enqueue,
+    )
+
+    action?.onAction()
+    expect(enqueue).toHaveBeenCalledWith('category', 'cleanup', 'cleanup-1:undo', expect.objectContaining({
+      actions: [{ type: 'deleteByName', categories: ['New'] }],
+      description: 'Old → New',
+    }))
+  })
 })

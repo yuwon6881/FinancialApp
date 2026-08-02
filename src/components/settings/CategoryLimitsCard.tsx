@@ -16,6 +16,7 @@ interface CategoryLimitsCardProps {
   currency: string
   hideSensitive: boolean
   activeSyncId?: string | null
+  activeSyncIds?: ReadonlyArray<string>
   onUpdate: (id: string, cycleLimit: number | null) => void
 }
 
@@ -26,6 +27,7 @@ export function CategoryLimitsCard({
   currency,
   hideSensitive,
   activeSyncId,
+  activeSyncIds,
   onUpdate,
 }: CategoryLimitsCardProps) {
   const [drafts, setDrafts] = React.useState<Record<string, string | null>>({})
@@ -128,7 +130,9 @@ export function CategoryLimitsCard({
           <div className="max-h-80 sm:max-h-96 overflow-y-auto pr-1 space-y-2.5 touch-pan-y">
             {categories.map(category => {
               const enabled = drafts[category.id] != null
-              const isSyncing = activeSyncId === category.id
+              const syncIds = activeSyncIds?.length ? activeSyncIds : activeSyncId ? [activeSyncId] : []
+              const isSyncing = syncIds.includes(category.id)
+                || Boolean(category.pendingSyncOperationId && syncIds.includes(category.pendingSyncOperationId))
               return (
                 <div
                   key={category.id}

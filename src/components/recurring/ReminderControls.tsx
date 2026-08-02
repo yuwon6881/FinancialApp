@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Button } from '../ui/Button'
 import { m, AnimatePresence } from 'framer-motion'
 import { Bell, Check, Loader2 } from 'lucide-react'
 import type { RecurringPayment, RecurringReminderMode, RecurringReminderSettings } from '../../types'
@@ -96,7 +97,7 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
 
               <div role="radiogroup" aria-label={`Reminder frequency for ${payment.name}`} className="flex gap-1.5">
                 {(['Once', 'Daily'] as RecurringReminderMode[]).map(mode => (
-                  <button
+                  <Button variant="unstyled"
                     key={mode}
                     type="button"
                     role="radio"
@@ -108,13 +109,13 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
                     }`}
                   >
                     {mode}
-                  </button>
+                  </Button>
                 ))}
               </div>
 
               <div role="radiogroup" aria-label={`Lead time for ${payment.name}`} className="mt-2 flex gap-1.5">
                 {REMINDER_LEAD_DAY_OPTIONS.map(leadDays => (
-                  <button
+                  <Button variant="unstyled"
                     key={leadDays}
                     type="button"
                     role="radio"
@@ -126,7 +127,7 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
                     }`}
                   >
                     {leadDays}d
-                  </button>
+                  </Button>
                 ))}
               </div>
 
@@ -151,15 +152,15 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
                 Unsaved changes
               </span>
               <div className="flex items-center gap-1.5">
-                <button
+                <Button variant="unstyled"
                   type="button"
                   disabled={disabled || isSyncing}
                   onClick={handleCancel}
                   className="px-2 py-1 rounded-md text-[10px] font-medium text-muted-foreground hover:bg-muted transition cursor-pointer disabled:opacity-40"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button variant="unstyled"
                   type="button"
                   disabled={disabled || isSyncing}
                   onClick={handleSave}
@@ -171,7 +172,7 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
                     <Check className="size-3" />
                   )}
                   Save Reminder
-                </button>
+                </Button>
               </div>
             </div>
           </m.div>

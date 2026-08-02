@@ -1,4 +1,5 @@
 import { CalendarDays, ChevronDown, ChevronUp, Loader2, LogOut, MonitorSmartphone, Trash2 } from 'lucide-react'
+import { Button } from '../ui/Button'
 import { useEffect, useState } from 'react'
 import * as api from '../../lib/api'
 import type { SessionSummary } from '../../lib/api'
@@ -66,14 +67,14 @@ export function ActiveDevicesSection() {
 
   return (
     <section className="app-panel rounded-2xl border border-border/60 bg-card/92 shadow-sm overflow-hidden">
-      <button type="button" onClick={() => setOpen(value => !value)} aria-expanded={open} className="w-full flex items-center gap-3 p-5 text-left cursor-pointer">
+      <Button variant="unstyled" type="button" onClick={() => setOpen(value => !value)} aria-expanded={open} className="w-full flex items-center gap-3 p-5 text-left cursor-pointer">
         <div className="p-2 bg-blue-500/10 rounded-xl"><MonitorSmartphone className="size-4 text-blue-500" /></div>
         <div className="flex-1"><h3 className="text-sm font-bold">Active Devices</h3><p className="text-[11px] text-muted-foreground">Manage devices currently logged into your account.</p></div>
         <span className="inline-flex items-center gap-1 text-[10px] font-bold text-muted-foreground">
           {loading ? <><Loader2 className="size-3 animate-spin" /> Checking…</> : sessions.length}
         </span>
         {open ? <ChevronUp className="size-4 text-muted-foreground" /> : <ChevronDown className="size-4 text-muted-foreground" />}
-      </button>
+      </Button>
       <CollapsibleBody open={open}>
         <div className="px-5 pb-5 border-t border-border/40 pt-4 space-y-4">
           <div className="space-y-1.5">
@@ -84,11 +85,11 @@ export function ActiveDevicesSection() {
                   <span className="text-[10px] text-muted-foreground"><CalendarDays className="inline size-3" /> Logged in: {new Date(session.createdAt).toLocaleDateString()} · Last active: {relativeTime(session.lastActiveAt)}</span>
                   {session.ipAddress && <span className="text-[10px] text-muted-foreground/75">IP: {session.ipAddress}</span>}
                 </div>
-                {!session.isCurrent && <button type="button" onClick={() => void revoke(session.id)} disabled={hideSensitive} className="p-1.5 text-muted-foreground hover:text-red-500 disabled:opacity-40"><Trash2 className="size-3.5" /></button>}
+                {!session.isCurrent && <Button variant="unstyled" type="button" onClick={() => void revoke(session.id)} disabled={hideSensitive} className="p-1.5 text-muted-foreground hover:text-red-500 disabled:opacity-40"><Trash2 className="size-3.5" /></Button>}
               </div>
             ))}
           </div>
-          {sessions.length > 1 && <button type="button" onClick={() => void revokeOthers()} disabled={hideSensitive} className="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-500 border border-red-500/30 disabled:opacity-40"><LogOut className="size-3.5" /> Log out all other devices</button>}
+          {sessions.length > 1 && <Button variant="unstyled" type="button" onClick={() => void revokeOthers()} disabled={hideSensitive} className="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-500 border border-red-500/30 disabled:opacity-40"><LogOut className="size-3.5" /> Log out all other devices</Button>}
         </div>
       </CollapsibleBody>
     </section>

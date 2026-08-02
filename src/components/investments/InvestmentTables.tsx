@@ -260,11 +260,23 @@ export const PagedActivityTable = ({
       (!appliedFilters.from || value.date >= appliedFilters.from) &&
       (!appliedFilters.to || value.date <= appliedFilters.to)))
   const rows = mode === 'investments' ? displayTransactions : displayCashFlows
-  const activeOperation = projectedOperations.find(operation => operation.targetId === activeSyncId)
+  const activeOperation = [...projectedOperations].reverse().find(operation =>
+    operation.targetId === activeSyncId && !operation.isCompleted)
   const activeLabel = activeOperation?.type === 'delete' ? 'Deleting…'
     : activeOperation?.type === 'restore' ? 'Undoing…'
     : activeOperation?.type === 'add' ? 'Saving…'
     : activeOperation ? 'Syncing…' : null
+  const isActiveRecord = (id: string, entity: 'investmentActivity' | 'investmentCashFlow') => {
+    if (!activeSyncId) return false
+    const operation = activeOperation
+    if (!operation || operation.entity !== entity) return false
+    if (String(id) === String(activeSyncId)) return true
+    if (operation.type === 'restore' && entity === 'investmentActivity') {
+      return Array.isArray(operation.payload?.transactions) && operation.payload.transactions.some(item =>
+        item && typeof item === 'object' && 'id' in item && String(item.id) === String(id))
+    }
+    return false
+  }
   const pages = Math.max(1, Math.ceil(total / pageSize))
   const typeOptions = mode === 'investments'
     ? [{ value: '', label: 'All types' }, ...activityTypes]
@@ -315,7 +327,7 @@ export const PagedActivityTable = ({
                 <div className="space-y-2 p-3 lg:hidden">
                 {mode === 'investments' ? displayTransactions.map(value => {
                   const instrument = instruments.get(value.instrumentId)
-                  const isActive = activeSyncId === value.id
+                  const isActive = isActiveRecord(value.id, 'investmentActivity')
                   const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
                   return <article key={value.id} className="interactive-card min-w-0 rounded-xl border border-border/50 p-3">
                     <div className="flex min-w-0 items-start justify-between gap-2"><div className="min-w-0"><strong className="block truncate text-xs">{activityTypes.find(item => item.value === value.type)?.label} · {instrument?.symbol}</strong><span className="text-[10px] text-muted-foreground">{value.tradeDate} · {accounts.get(value.accountId)}</span><RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></div><span className="shrink-0 text-xs font-bold">{masked || value.cashAmount === undefined ? '—' : money(value.cashAmount, instrument?.currency ?? portfolio.appCurrency)}</span></div>
@@ -325,7 +337,7 @@ export const PagedActivityTable = ({
                     </div>
                   </article>
                 }) : displayCashFlows.map(value => {
-                  const isActive = activeSyncId === value.id
+                  const isActive = isActiveRecord(value.id, 'investmentCashFlow')
                   const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
                   return <article key={value.id} className="interactive-card min-w-0 rounded-xl border border-border/50 p-3">
                     <div className="flex items-start justify-between gap-2"><div className="min-w-0"><strong className="block truncate text-xs">{value.type} · {accounts.get(value.accountId)}</strong><span className="text-[10px] text-muted-foreground">{value.date}</span><RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></div><strong className={`shrink-0 text-xs font-bold ${value.type === 'Conversion' ? '' : value.amount < 0 ? 'text-orange-500' : 'text-emerald-500'}`}>{cashFlowAmount(value, masked)}</strong></div>
@@ -347,11 +359,11 @@ export const PagedActivityTable = ({
                       <DataTableHeaderCell />
                     </DataTableHeader>
                     <DataTableBody>{mode === 'investments' ? displayTransactions.map(value => {
-                      const isActive = activeSyncId === value.id
+                      const isActive = isActiveRecord(value.id, 'investmentActivity')
                       const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
                       return <tr key={value.id}><td className="px-4 py-3">{value.tradeDate}</td><td className="px-4 py-3"><span className="flex items-center gap-2 font-bold">{activityTypes.find(item => item.value === value.type)?.label}<RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3">{instruments.get(value.instrumentId)?.symbol}</td><td className="px-4 py-3 text-right">{masked || value.cashAmount === undefined ? '—' : money(value.cashAmount, instruments.get(value.instrumentId)?.currency ?? portfolio.appCurrency)}</td><td className="px-4 py-3"><span className="flex justify-end gap-1"><Button variant="ghost" size="sm" disabled={isBusy} onClick={() => onEdit(value)}>Edit</Button><Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDelete(value)}>Delete</Button></span></td></tr>
                     }) : displayCashFlows.map(value => {
-                      const isActive = activeSyncId === value.id
+                      const isActive = isActiveRecord(value.id, 'investmentCashFlow')
                       const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
                       return <tr key={value.id}><td className="px-4 py-3">{value.date}</td><td className="px-4 py-3"><span className="flex items-center gap-2 font-bold">{value.type}<RowSyncStatus entityLabel="cash movement" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3 text-right">{cashFlowAmount(value, masked)}</td><td className="px-4 py-3"><span className="flex justify-end gap-1"><Button variant="ghost" size="sm" disabled={isBusy} onClick={() => onEditCashFlow(value)}>Edit</Button><Button variant="danger" size="sm" disabled={isBusy} onClick={() => onDeleteCashFlow(value)}>Delete</Button></span></td></tr>
                     })}</DataTableBody>

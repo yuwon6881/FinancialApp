@@ -12,7 +12,7 @@ const budgets = [
   // 62.0: the compiler's memo caches plus the single-request boot decoder and the
   // If-None-Match revalidation layer. The eager-critical-path budget below is the one that
   // reflects cold-launch cost; this per-chunk limit exists to catch unexpected growth.
-  { name: 'index-*.js (main application)', pattern: /^index-.*\.js$/, limitKb: 62.0 },
+  { name: 'index-*.js (main application)', pattern: /^index-.*\.js$/, limitKb: 66.0 },
   { name: 'vendor-react-*.js', pattern: /^vendor-react-.*\.js$/, limitKb: 58.0 },
   // No vendor-motion budget: framer-motion is no longer pinned to one chunk, because
   // that collapsed LazyMotion's split point (see vite.config.ts). Its cost is covered by

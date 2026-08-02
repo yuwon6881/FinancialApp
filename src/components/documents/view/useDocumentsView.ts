@@ -169,7 +169,7 @@ export function useDocumentsView() {
 
   const updateDocumentMetadata = async (
     id: number,
-    updates: Pick<Partial<VaultDocument>, 'taxYear' | 'notes' | 'transactionId' | 'reliefCategory' | 'amount' | 'amountCurrency'> & {
+    updates: Pick<Partial<VaultDocument>, 'taxYear' | 'transactionId' | 'reliefCategory' | 'amount' | 'amountCurrency'> & {
       amountStatus?: 'Confirmed' | 'NeedsReview'
     },
   ) => {

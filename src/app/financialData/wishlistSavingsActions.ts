@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react'
-import type { SavingsGoal, WishlistItem } from '../../types'
+import type { SavingsGoal, Transaction, WishlistItem } from '../../types'
 import { CACHE_KEYS, setCachedJSON } from '../../lib/cache'
 import { createLocalNumericId, createLocalWishlistId, type OutboxPayload } from '../../lib/outbox'
 import { triggerHaptic } from '../../lib/haptics'
@@ -21,6 +21,14 @@ interface WishlistSavingsActionDependencies {
   mutateQueue: UseOutboxResult['mutateQueue']
   snapshotForUndo: UseOutboxResult['snapshotForUndo']
   setSavingsGoals: Dispatch<SetStateAction<SavingsGoal[]>>
+  beginDirectSync: (ids: Array<string | number>) => void
+  endDirectSync: (ids: Array<string | number>) => void
+  getGoal: (id: number) => SavingsGoal | undefined
+  getActiveGoalIds: () => number[]
+  addPendingLedgerTransaction: (transaction: Transaction) => void
+  replacePendingLedgerTransaction: (pendingId: string, transaction: Transaction) => void
+  removePendingLedgerTransaction: (id: string) => void
+  setDeletingTransactionId: (id: string | null) => void
   refreshAll: () => Promise<void>
 }
 
@@ -42,6 +50,14 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
     mutateQueue,
     snapshotForUndo,
     setSavingsGoals,
+    beginDirectSync,
+    endDirectSync,
+    getGoal,
+    getActiveGoalIds,
+    addPendingLedgerTransaction,
+    replacePendingLedgerTransaction,
+    removePendingLedgerTransaction,
+    setDeletingTransactionId,
     refreshAll,
   } = deps
 
@@ -174,26 +190,50 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
     commitGoals: commitSavingsGoals,
     commitGoal: commitSavingsGoal,
     getGoalName: (id: number) => allSavingsGoals.find(goal => goal.id === id)?.name,
+    getGoal,
+    beginDirectSync,
+    endDirectSync,
+    getActiveGoalIds,
+    addPendingLedgerTransaction,
+    replacePendingLedgerTransaction,
+    removePendingLedgerTransaction,
+    setDeletingTransactionId,
     refreshAll,
     showToast,
   })
 
   const handleContributeToSavingsGoal = async (id: number, amount: number) => {
     if (!guardSensitive()) return
-    const { contributeToGoal } = await import('../savingsGoalActions')
-    await contributeToGoal(savingsGoalDependencies(), id, amount)
+    beginDirectSync([id])
+    try {
+      const { contributeToGoal } = await import('../savingsGoalActions')
+      await contributeToGoal(savingsGoalDependencies(), id, amount)
+    } finally {
+      endDirectSync([id])
+    }
   }
 
   const handleFundSavingsGoalsForCycle = async () => {
     if (!guardSensitive()) return
-    const { fundGoalsForCycle } = await import('../savingsGoalActions')
-    await fundGoalsForCycle(savingsGoalDependencies())
+    const syncIds = ['savings-goals-fund', ...getActiveGoalIds()]
+    beginDirectSync(syncIds)
+    try {
+      const { fundGoalsForCycle } = await import('../savingsGoalActions')
+      await fundGoalsForCycle(savingsGoalDependencies())
+    } finally {
+      endDirectSync(syncIds)
+    }
   }
 
   const handleCompleteSavingsGoal = async (id: number) => {
     if (!guardSensitive()) return
-    const { completeGoal } = await import('../savingsGoalActions')
-    await completeGoal(savingsGoalDependencies(), id)
+    beginDirectSync([id])
+    try {
+      const { completeGoal } = await import('../savingsGoalActions')
+      await completeGoal(savingsGoalDependencies(), id)
+    } finally {
+      endDirectSync([id])
+    }
   }
 
   const requestCompleteSavingsGoal = async (id: number) => {

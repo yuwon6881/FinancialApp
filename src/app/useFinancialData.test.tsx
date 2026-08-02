@@ -282,49 +282,69 @@ describe('useFinancialData', () => {
     expect(handleLogout).not.toHaveBeenCalled()
   })
 
-  it('rolls back only the reminder fields when the reminder update fails', async () => {
+  it('queues reminder updates and projects them while offline', async () => {
     mockHappyApi()
     vi.spyOn(api, 'pingServer').mockResolvedValue({ status: 'ok' } as any)
+    const updateReminder = vi.spyOn(api, 'updateRecurringPaymentReminder').mockResolvedValue(undefined)
 
-    let rejectUpdate: (err: unknown) => void = () => undefined
-    vi.spyOn(api, 'updateRecurringPaymentReminder').mockReturnValue(
-      new Promise((_resolve, reject) => { rejectUpdate = reject }) as any)
+    const originalOnline = navigator.onLine
+    Object.defineProperty(window.navigator, 'onLine', { configurable: true, value: false })
 
-    const { result } = renderFinancialData()
-    await waitFor(() => expect(result.current.recurringPayments).toHaveLength(1))
+    try {
+      const { result } = renderFinancialData()
+      await waitFor(() => expect(result.current.recurringPayments).toHaveLength(1))
 
-    let pending: Promise<void> = Promise.resolve()
-    act(() => {
-      pending = result.current.handleUpdateReminder('rp-1', { enabled: true, mode: 'Once', leadDays: 0 })
+      act(() => {
+        result.current.handleUpdateReminder('rp-1', { enabled: true, mode: 'Once', leadDays: 0 })
+      })
+      await waitFor(() => expect(result.current.allRecurringPayments[0].reminderEnabled).toBe(true))
+
+      expect(result.current.pendingOps).toEqual([expect.objectContaining({
+        entity: 'recurringPayment',
+        type: 'reminder',
+        targetId: 'rp-1',
+        payload: expect.objectContaining({ reminderEnabled: true, reminderMode: 'Once', reminderLeadDays: 0 }),
+      })])
+      expect(updateReminder).not.toHaveBeenCalled()
+    } finally {
+      Object.defineProperty(window.navigator, 'onLine', { configurable: true, value: originalOnline })
+    }
+  })
+
+  it('queues pay-early with an optimistic ledger row while offline', async () => {
+    mockHappyApi()
+    vi.spyOn(api, 'pingServer').mockResolvedValue({ status: 'ok' } as any)
+    const payEarly = vi.spyOn(api, 'payRecurringPaymentEarly').mockResolvedValue({
+      transaction: { id: 'tx-server', date: '2026-08-02', description: 'Streaming', category: 'Entertainment', ledgerCategory: 'Needs', amount: -50, recurringPaymentId: 'rp-1', recurringOccurrenceDate: '2026-08-01' },
+      settledOccurrenceDate: '2026-08-01',
+      nextOccurrenceDate: '2026-09-01',
     })
-    await waitFor(() => expect(result.current.recurringPayments[0].reminderEnabled).toBe(true))
+    const originalOnline = navigator.onLine
+    Object.defineProperty(window.navigator, 'onLine', { configurable: true, value: false })
 
-    // A concurrent refresh lands while the request is still in flight. It is staged on the
-    // boot endpoint because that is the request loadAll makes.
-    const refreshed = [{ ...payment, amount: 99, reminderEnabled: true }]
-    vi.mocked(api.fetchRecurringPayments).mockResolvedValue(refreshed)
-    vi.mocked(api.fetchBootstrap).mockResolvedValue({
-      month: 'July',
-      year: 2026,
-      dashboard,
-      insights,
-      transactions: [],
-      recurringPayments: refreshed,
-      categories: [],
-      wishlist: [],
-      autocomplete: [],
-      walletBalance: 100,
-    } as any)
-    await act(async () => { await result.current.loadAll('July', 2026, true) })
-    expect(result.current.recurringPayments[0].amount).toBe(99)
+    try {
+      const { result } = renderFinancialData()
+      await waitFor(() => expect(result.current.recurringPayments).toHaveLength(1))
 
-    await act(async () => {
-      rejectUpdate(new Error('nope'))
-      await pending
-    })
+      act(() => {
+        result.current.handlePayEarly('rp-1')
+      })
 
-    expect(result.current.recurringPayments[0].reminderEnabled).toBe(false)
-    // The concurrently-refreshed field must survive the rollback.
-    expect(result.current.recurringPayments[0].amount).toBe(99)
+      await waitFor(() => expect(result.current.pendingOps).toEqual([expect.objectContaining({
+        entity: 'recurringPayment',
+        type: 'payEarly',
+        targetId: 'rp-1',
+      })]))
+      expect(result.current.allTransactions).toEqual([expect.objectContaining({
+        description: 'Streaming',
+        recurringPaymentId: 'rp-1',
+        recurringOccurrenceDate: '2026-08-01',
+        amount: -50,
+        isPendingSync: true,
+      })])
+      expect(payEarly).not.toHaveBeenCalled()
+    } finally {
+      Object.defineProperty(window.navigator, 'onLine', { configurable: true, value: originalOnline })
+    }
   })
 })

@@ -16,14 +16,21 @@ export function useOptimisticList<T extends { id: string | number; isPendingSync
 // Shared isSyncing/isDeleting row-status predicates, previously copy-pasted per
 // view (WishlistView's isItemSyncing/isItemDeleting, RecurringPaymentsView's
 // isPaymentSyncing/isPaymentDeleting) with identical logic against different lists.
-export function useSyncStatus<T extends { id: string | number; isPendingDelete?: boolean }>(
+export function useSyncStatus<T extends { id: string | number; isPendingDelete?: boolean; pendingSyncOperationId?: string }>(
   list: T[],
-  activeSyncId: string | number | null | undefined,
+  activeSyncId: string | number | ReadonlyArray<string | number> | null | undefined,
   deletingId: string | number | null | undefined
 ) {
-  const isSyncing = useCallback((id: string | number) => {
-    return activeSyncId !== null && activeSyncId !== undefined && String(activeSyncId) === String(id)
+  const activeSyncIds = useMemo(() => {
+    if (Array.isArray(activeSyncId)) return activeSyncId.map(String)
+    return activeSyncId === null || activeSyncId === undefined ? [] : [String(activeSyncId)]
   }, [activeSyncId])
+
+  const isSyncing = useCallback((id: string | number) => {
+    if (activeSyncIds.includes(String(id))) return true
+    const found = list.find(item => String(item.id) === String(id))
+    return Boolean(found?.pendingSyncOperationId && activeSyncIds.includes(found.pendingSyncOperationId))
+  }, [activeSyncIds, list])
 
   const isDeleting = useCallback((id: string | number) => {
     if (deletingId && String(deletingId) === String(id)) return true

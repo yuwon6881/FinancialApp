@@ -18,6 +18,7 @@ export interface UseSettingsViewOptions {
   onApplyCategoryCleanupSuggestion?: (suggestion: CategoryCleanupSuggestion, targetCategoryOverride?: string) => Promise<void> | void
   onToast: (message: string, title?: string, tone?: any) => void
   activeSyncId?: string | null
+  activeSyncIds?: ReadonlyArray<string>
   deletingId?: string | null
 }
 
@@ -39,11 +40,15 @@ export function useSettingsView(options: UseSettingsViewOptions) {
     onApplyCategoryCleanupSuggestion,
     onToast,
     activeSyncId,
+    activeSyncIds,
     deletingId,
   } = options
 
   const isCatSyncing = (catId: string) => {
-    return activeSyncId !== null && activeSyncId !== undefined && String(activeSyncId) === String(catId)
+    const syncIds = activeSyncIds?.length ? activeSyncIds : activeSyncId ? [activeSyncId] : []
+    if (syncIds.includes(String(catId))) return true
+    const category = categoriesList.find(value => String(value.id) === String(catId))
+    return Boolean(category?.pendingSyncOperationId && syncIds.includes(category.pendingSyncOperationId))
   }
 
   const isCatDeleting = (catId: string) => {

@@ -61,6 +61,7 @@ interface WishlistViewProps {
   }) => void
   cycleDay?: number
   activeSyncId?: string | null
+  activeSyncIds?: string[]
   deletingId?: string | null
   isSwitchingCycle?: boolean
   // Signals to the parent's drain loop which item is being edited, so the
@@ -98,6 +99,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   onNavigateToLedger,
   cycleDay = 28,
   activeSyncId: activeSyncIdProp,
+  activeSyncIds: activeSyncIdsProp,
   deletingId: deletingIdProp,
   isSwitchingCycle = false,
   onStartEditPending,
@@ -110,9 +112,12 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   const currency = currencyProp ?? app.currency
   const hideSensitive = hideSensitiveProp ?? app.hideSensitive
   const formatSensitive = formatSensitiveProp ?? app.formatSensitive
-  const activeSyncId = activeSyncIdProp ?? app.activeSyncId
+  const activeSyncIds = activeSyncIdsProp
+    ?? (activeSyncIdProp !== undefined
+      ? (activeSyncIdProp ? [activeSyncIdProp] : [])
+      : (app.activeSyncIds?.length ? app.activeSyncIds : (app.activeSyncId ? [app.activeSyncId] : [])))
   const deletingId = deletingIdProp ?? app.deletingId
-  const { isSyncing: isItemSyncing, isDeleting: isItemDeleting } = useSyncStatus(wishlist, activeSyncId, deletingId)
+  const { isSyncing: isItemSyncing, isDeleting: isItemDeleting } = useSyncStatus(wishlist, activeSyncIds, deletingId)
 
   const [purchasingItem, setPurchasingItem] = React.useState<WishlistItem | null>(null)
   const [purchaseDateInput, setPurchaseDateInput] = React.useState<string>(new Date().toLocaleDateString('en-CA'))
@@ -170,7 +175,8 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     onStartEditPending,
   })
 
-  const { isSyncing: isGoalSyncing, isDeleting: isGoalDeleting } = useSyncStatus(savingsGoals, activeSyncId, deletingId)
+  const { isSyncing: isGoalSyncing, isDeleting: isGoalDeleting } = useSyncStatus(savingsGoals, activeSyncIds, deletingId)
+  const isFunding = activeSyncIds.some(id => String(id) === 'savings-goals-fund')
   const [contributeTarget, setContributeTarget] = React.useState<{ goal: SavingsGoal; mode: ContributeMode } | null>(null)
 
   // --- The shared pool ------------------------------------------------------------------------
@@ -258,6 +264,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
           formatSensitive={formatSensitive}
           hideSensitive={hideSensitive}
           isOffline={isOffline}
+          isFunding={isFunding}
           onFundCycle={() => { void onFundGoalsForCycle() }}
           onViewRewardsHistory={onNavigateToLedger
             ? () => onNavigateToLedger({ category: 'Rewards', showAllCycles: true })

@@ -330,12 +330,10 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             // pan-y lets inner content scroll natively; the non-passive
             // touchmove listener above preventDefaults only the dismiss gesture,
             // so the drag still engages reliably over scrollable content.
-            style={{ touchAction: 'pan-y' }}
-            className={`sheet-panel no-scrollbar w-full bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 max-h-[90vh] overflow-x-hidden overflow-y-auto focus:outline-none ${panelClassName}`}
+            className={`touch-pan-y sheet-panel no-scrollbar w-full bg-card border border-border/80 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 max-h-[90vh] overflow-x-hidden overflow-y-auto focus:outline-none ${panelClassName}`}
           >
             <div
-              style={{ touchAction: 'none' }}
-              className="pb-3 shrink-0"
+              className="touch-none pb-3 shrink-0"
             >
               {isMobile && <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto mb-2 shrink-0" />}
               <div className="flex min-h-9 items-center justify-between gap-3 border-b border-border/40 pb-3">

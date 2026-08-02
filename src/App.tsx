@@ -1,3 +1,4 @@
+import { Button } from './components/ui/Button'
 import { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import TopNav from "./TopNav.tsx"
 import { type AppTab } from './types'
@@ -360,8 +361,9 @@ function App() {
     currency: financial.optimisticDashboardData?.setting?.currency || 'USD',
     darkMode: prefs.darkMode,
     activeSyncId: financial.activeSyncId,
+    activeSyncIds: financial.activeSyncIds,
     deletingId: financial.deletingTxId,
-    isSyncing: financial.isBackgroundSyncing || financial.pendingOps.length > 0,
+    isSyncing: financial.isBackgroundSyncing || financial.pendingOps.length > 0 || financial.activeSyncIds.length > 0,
     isOffline: financial.isOffline,
     formatSensitive: financial.formatSensitive,
     showToast: dialogs.showToast,
@@ -376,6 +378,7 @@ function App() {
     financial.optimisticDashboardData?.setting?.currency,
     prefs.darkMode,
     financial.activeSyncId,
+    financial.activeSyncIds,
     financial.deletingTxId,
     financial.isBackgroundSyncing,
     financial.pendingOps.length,
@@ -505,14 +508,14 @@ function App() {
           <div className="bg-destructive/15 border-b border-destructive/30 text-destructive px-4 py-2 text-xs flex items-center justify-center gap-2">
             <span className="w-2 h-2 rounded-full bg-destructive animate-pulse select-none" />
             <span className="select-none">{financial.error}</span>
-            <button
+            <Button variant="unstyled"
               type="button"
               onClick={() => financial.loadAll(nav.selectedMonth || undefined, nav.selectedYear || undefined, true)}
               disabled={financial.isBackgroundSyncing}
               className="ml-1 font-bold underline underline-offset-2 hover:text-destructive/80 disabled:opacity-60 disabled:cursor-default cursor-pointer"
             >
               {financial.isBackgroundSyncing ? 'Retrying…' : 'Retry'}
-            </button>
+            </Button>
           </div>
         )}
 

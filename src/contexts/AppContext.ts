@@ -39,6 +39,8 @@ export interface AppUiValue {
 
 export interface AppSyncValue {
   activeSyncId: string | null
+  /** All records participating in the current direct/queue mutation. */
+  activeSyncIds?: string[]
   deletingId: string | null
   isSyncing: boolean
   isOffline: boolean
@@ -64,6 +66,7 @@ const defaultUi: AppUiValue = {
 
 const defaultSync: AppSyncValue = {
   activeSyncId: null,
+  activeSyncIds: [],
   deletingId: null,
   isSyncing: false,
   isOffline: false,

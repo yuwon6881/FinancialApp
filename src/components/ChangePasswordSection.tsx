@@ -115,7 +115,7 @@ export const ChangePasswordSection: React.FC<ChangePasswordSectionProps> = ({ hi
         </FormField>
         <Button
           type="submit"
-          disabled={busy || hideSensitive}
+          disabled={busy || hideSensitive || !currentPassword.trim() || !newPassword.trim() || !confirmPassword.trim()}
           className="press-scale w-full rounded-xl py-2.5"
         >
           {busy ? 'Updating...' : 'Change password'}

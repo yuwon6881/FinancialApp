@@ -1,5 +1,5 @@
 import React from 'react'
-import { AlertTriangle, Coins, History } from 'lucide-react'
+import { AlertTriangle, Coins, History, Loader2 } from 'lucide-react'
 import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import type { GoalPoolSummary } from '../../lib/savingsGoals'
@@ -11,6 +11,7 @@ interface RewardsPoolBarProps {
   formatSensitive: (value: number) => React.ReactNode
   hideSensitive: boolean
   isOffline: boolean
+  isFunding?: boolean
   onFundCycle: () => void
   onViewRewardsHistory?: () => void
 }
@@ -28,6 +29,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
   formatSensitive,
   hideSensitive,
   isOffline,
+  isFunding = false,
   onFundCycle,
   onViewRewardsHistory,
 }) => {
@@ -77,11 +79,14 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
             <Button
               size="sm"
               onClick={onFundCycle}
-              disabled={hideSensitive || isOffline || !canFund}
+              disabled={hideSensitive || isOffline || !canFund || isFunding}
+              aria-busy={isFunding}
               title={fundTitle}
             >
-              <Coins className="size-3" />
-              {outstandingThisCycleTotal > 0
+              {isFunding ? <Loader2 className="size-3 animate-spin" /> : <Coins className="size-3" />}
+              {isFunding
+                ? 'Setting aside…'
+                : outstandingThisCycleTotal > 0
                 ? <>Set aside {formatSensitive(outstandingThisCycleTotal)}</>
                 : 'Funded this cycle'}
             </Button>

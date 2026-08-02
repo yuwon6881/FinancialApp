@@ -1,3 +1,4 @@
+import { Button } from './ui/Button'
 import React from 'react'
 import { BarChart3, ChartNoAxesCombined, ChevronRight, TrendingUp } from 'lucide-react'
 import type { AppTab, DashboardData, Transaction, WishlistItem } from '../types'
@@ -103,7 +104,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               align="right"
             />
             {selectedCycleEnded && onViewCycleSummary && (
-              <button
+              <Button variant="unstyled"
                 type="button"
                 onClick={() => onViewCycleSummary(selectedMonthIndex, view.activeSettings.selectedYear)}
                 aria-label="View cycle summary"
@@ -112,7 +113,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               >
                 <ChartNoAxesCombined className="size-3.5" />
                 <span className="hidden whitespace-nowrap text-xs font-bold sm:inline">Summary</span>
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -137,7 +138,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         onNavigateToLedger={onNavigateToLedger}
       />
 
-      <button
+      <Button variant="unstyled"
         type="button"
         onClick={() => onNavigate('investments')}
         className="interactive-card app-panel group flex w-full flex-col gap-3 rounded-2xl border border-violet-500/20 bg-violet-500/5 p-4 text-left sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-5"
@@ -160,7 +161,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           </span>
           <ChevronRight className="size-4 text-violet-500 transition-transform duration-200 group-hover:translate-x-1" />
         </span>
-      </button>
+      </Button>
 
       {/* Cycle inflow / outflow summary — moved here from the Today tab so the
           dashboard stays focused on daily status while Reports holds analysis. */}

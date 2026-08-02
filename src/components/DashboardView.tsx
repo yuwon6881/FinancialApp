@@ -162,7 +162,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
             <ShieldCheck className="size-5 shrink-0 text-blue-500" />
           </div>
-          <div className="mt-5 grid flex-1 gap-3 sm:grid-cols-3 sm:grid-rows-2">
+          <div className="mt-5 grid flex-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:grid-rows-2">
             <button type="button" onClick={() => onNavigateToLedger?.({ category: 'Essentials' })} className="interactive-card rounded-xl border border-border/50 bg-muted/25 p-4 text-left cursor-pointer">
               <span className="text-xs font-semibold text-muted-foreground">Essentials remaining</span>
               <span className="mt-1 block text-xl font-black text-foreground">{view.formatSensitive(view.essentialsMetric.projectedRemaining)}</span>

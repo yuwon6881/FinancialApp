@@ -92,7 +92,7 @@ export function CategoryLimitPerformance({
         )}
       </div>
 
-      <div className={`mt-4 grid gap-3 ${compact ? 'md:grid-cols-3' : 'sm:grid-cols-2 xl:grid-cols-3'}`}>
+      <div className={`mt-4 grid gap-3 ${compact ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2 xl:grid-cols-3'}`}>
         {visibleItems.map(item => {
           const exceeded = item.status === 'Exceeded'
           const watch = item.status === 'Watch'

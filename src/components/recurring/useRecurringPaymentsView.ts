@@ -20,6 +20,7 @@ export interface UseRecurringPaymentsViewOptions {
   hideSensitive: boolean
   currency: string
   activeSyncId: string | null
+  activeSyncIds?: ReadonlyArray<string>
   deletingId: string | null
   onAddPayment: (payment: Omit<RecurringPayment, 'id'>) => void
   onUpdatePayment: (id: string, payment: RecurringPayment) => void
@@ -38,6 +39,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     hideSensitive,
     currency,
     activeSyncId,
+    activeSyncIds,
     deletingId,
     onAddPayment,
     onUpdatePayment,
@@ -49,7 +51,8 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     onAiEditDraftConsumed,
   } = options
 
-  const { isSyncing: isPaymentSyncing, isDeleting: isPaymentDeleting } = useSyncStatus(payments, activeSyncId, deletingId)
+  const effectiveActiveSyncIds = activeSyncIds?.length ? activeSyncIds : activeSyncId
+  const { isSyncing: isPaymentSyncing, isDeleting: isPaymentDeleting } = useSyncStatus(payments, effectiveActiveSyncIds, deletingId)
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingPayment, setEditingPayment] = useState<RecurringPayment | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
