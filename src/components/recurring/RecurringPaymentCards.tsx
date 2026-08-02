@@ -77,7 +77,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
     <m.div
       initial="hidden" animate="show"
       variants={listContainerVariants}
-      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start"
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch"
     >
       <AnimatePresence>
       {payments.map(rp => {
@@ -88,7 +88,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
             id={`recur-card-${rp.id}`}
             variants={listItemVariants}
             exit={listItemExit}
-            className={`p-6 rounded-2xl bg-card border transition-all duration-300 flex flex-col justify-between ${
+            className={`p-6 rounded-2xl bg-card border transition-all duration-300 flex flex-col ${
               rp.active
                 ? 'border-border/60 hover:border-blue-500/30 shadow-xs'
                 : 'border-dashed border-border/60 opacity-60'
@@ -159,42 +159,46 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
               </div>
             </div>
 
-            <ReminderControls
-              payment={rp}
-              globalPushEnabled={globalPushEnabled}
-              disabled={isBusy || hideSensitive}
-              isSyncing={isPaymentSyncing(rp.id)}
-              onUpdateReminder={onUpdateReminder}
-            />
+            {/* mt-auto keeps the reminder + action rows flush with the bottom of the
+                card, so cards in a row line up even when reminders are toggled off. */}
+            <div className="mt-auto">
+              <ReminderControls
+                payment={rp}
+                globalPushEnabled={globalPushEnabled}
+                disabled={isBusy || hideSensitive}
+                isSyncing={isPaymentSyncing(rp.id)}
+                onUpdateReminder={onUpdateReminder}
+              />
 
-            <div className="mt-4 flex items-center justify-between border-t border-border/30 pt-4 gap-2">
-              {isEligibleForPayEarly(rp) ? (
-                <Button
-                  variant="ghost"
-                  onClick={() => onRequestPayEarly?.(rp.id)}
-                  disabled={isBusy || hideSensitive}
-                  title={hideSensitive ? 'Unhide balances to pay early' : 'Pay this subscription now'}
-                >
-                  <FastForward className="size-3.5 shrink-0" /> <span className="max-[420px]:hidden">Pay Early</span>
-                </Button>
-              ) : <span />}
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  onClick={() => onEditPayment(rp)}
-                  disabled={isBusy || hideSensitive}
-                  title={hideSensitive ? 'Unhide balances to edit' : 'Edit subscription'}
-                >
-                  <Edit className="size-3.5 shrink-0" /> <span className="max-[420px]:hidden">Edit</span>
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={() => { if (!hideSensitive) onDeletePayment(rp.id) }}
-                  disabled={isBusy || hideSensitive}
-                  title={hideSensitive ? 'Unhide balances to edit' : 'Delete subscription'}
-                >
-                  <Trash2 className="size-3.5 shrink-0" /> <span className="max-[420px]:hidden">Delete</span>
-                </Button>
+              <div className="mt-4 flex items-center justify-between border-t border-border/30 pt-4 gap-2">
+                {isEligibleForPayEarly(rp) ? (
+                  <Button
+                    variant="ghost"
+                    onClick={() => onRequestPayEarly?.(rp.id)}
+                    disabled={isBusy || hideSensitive}
+                    title={hideSensitive ? 'Unhide balances to pay early' : 'Pay this subscription now'}
+                  >
+                    <FastForward className="size-3.5 shrink-0" /> <span className="max-[420px]:hidden">Pay Early</span>
+                  </Button>
+                ) : <span />}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    onClick={() => onEditPayment(rp)}
+                    disabled={isBusy || hideSensitive}
+                    title={hideSensitive ? 'Unhide balances to edit' : 'Edit subscription'}
+                  >
+                    <Edit className="size-3.5 shrink-0" /> <span className="max-[420px]:hidden">Edit</span>
+                  </Button>
+                  <Button
+                    variant="danger"
+                    onClick={() => { if (!hideSensitive) onDeletePayment(rp.id) }}
+                    disabled={isBusy || hideSensitive}
+                    title={hideSensitive ? 'Unhide balances to edit' : 'Delete subscription'}
+                  >
+                    <Trash2 className="size-3.5 shrink-0" /> <span className="max-[420px]:hidden">Delete</span>
+                  </Button>
+                </div>
               </div>
             </div>
           </m.div>
