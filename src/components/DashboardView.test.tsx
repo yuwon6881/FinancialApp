@@ -4,6 +4,10 @@ import { DashboardView } from './DashboardView'
 import type { DashboardData, WishlistItem } from '../types'
 import { SENSITIVE_AMOUNT_MASK } from '../lib/utils'
 
+vi.mock('../lib/api/documents', () => ({
+  getExpiredTaxYears: vi.fn().mockResolvedValue([]),
+}))
+
 const dashboardData: DashboardData = {
   setting: {
     targetStabilityFund: 10000,

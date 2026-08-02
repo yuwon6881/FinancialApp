@@ -215,6 +215,12 @@ export interface GoalPoolSummary {
   /** What every active goal needs this cycle to stay on pace. */
   requiredPerCycleTotal: number
   /**
+   * What has actually been credited to goals during this cycle. Paired with
+   * `requiredPerCycleTotal` it is what the cycle progress meter reads from; it can exceed the
+   * requirement when a goal has been topped up beyond its share.
+   */
+  fundedThisCycleTotal: number
+  /**
    * What every active goal still needs *this* cycle, after money already set aside during it. This
    * — not `requiredPerCycleTotal` vs the budget — is what says whether there is anything to fund
    * right now, so it is what the funding action and its label key off.
@@ -252,6 +258,7 @@ export function summarizePool(
   let totalEarmarked = 0
   let requiredPerCycleTotal = 0
   let outstandingThisCycleTotal = 0
+  let fundedThisCycleTotal = 0
   let hasUnfinishedGoals = false
 
   for (const goal of activeGoals) {
@@ -260,6 +267,7 @@ export function summarizePool(
     totalEarmarked = toCents(totalEarmarked + goal.earmarkedAmount)
     requiredPerCycleTotal = toCents(requiredPerCycleTotal + pace.requiredPerCycle)
     outstandingThisCycleTotal = toCents(outstandingThisCycleTotal + pace.outstandingThisCycle)
+    fundedThisCycleTotal = toCents(fundedThisCycleTotal + pace.fundedThisCycle)
     if (!pace.isFunded) hasUnfinishedGoals = true
   }
 
@@ -268,6 +276,7 @@ export function summarizePool(
     totalEarmarked,
     unassigned: unassigned(rewardsBalance, totalEarmarked),
     requiredPerCycleTotal,
+    fundedThisCycleTotal,
     outstandingThisCycleTotal,
     paceShortfall: toCents(Math.max(0, requiredPerCycleTotal - Math.max(0, expectedInflow))),
     hasUnfinishedGoals,

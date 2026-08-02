@@ -202,7 +202,7 @@ export const handlers = [
     warnings: [],
   })),
   http.get(`${API}/auth/status`, () =>
-    HttpResponse.json({ isRegistered: state.registered, hasFingerprint: false })),
+    HttpResponse.json({ isRegistered: state.registered, hasFingerprint: false, hasFingerprintOnDevice: false })),
 
   http.post(`${API}/auth/register`, async ({ request }) => {
     if (state.registered) {

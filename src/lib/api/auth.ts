@@ -3,6 +3,7 @@ import type { LoginCredentials, RegisterCredentials } from '../apiTypes'
 import type { QuestionAnswerDto, SecurityQuestionsRecoveryStartResponse } from '../../types'
 import { apiFetch, invalidateCache, jsonBody, request, requestVoid } from './client'
 import { tokenStore } from '../auth'
+import { getDeviceUnlockRegistrationMarker } from '../deviceUnlockRegistration'
 
 function getDeviceInfo(): { deviceId: string; deviceName: string } {
   let deviceId = localStorage.getItem('deviceId')
@@ -29,8 +30,22 @@ function getDeviceInfo(): { deviceId: string; deviceName: string } {
   return { deviceId, deviceName: `${browser} on ${os}` }
 }
 
-export async function fetchAuthStatus(username?: string): Promise<{ isRegistered: boolean; hasFingerprint: boolean; registrationOpen: boolean }> {
-  const url = username ? `/auth/status?username=${encodeURIComponent(username)}` : '/auth/status'
+export interface AuthStatus {
+  isRegistered: boolean
+  hasFingerprint: boolean
+  hasFingerprintOnDevice: boolean
+  registrationOpen: boolean
+}
+
+export async function fetchAuthStatus(username?: string): Promise<AuthStatus> {
+  const params = new URLSearchParams()
+  if (username) {
+    params.set('username', username)
+    const deviceCredentialId = getDeviceUnlockRegistrationMarker(username)
+    if (deviceCredentialId) params.set('deviceCredentialId', deviceCredentialId)
+  }
+  const query = params.toString()
+  const url = query ? `/auth/status?${query}` : '/auth/status'
   return request(url, {
     authenticated: false,
     errorMessage: 'Failed to fetch auth status',

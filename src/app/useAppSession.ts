@@ -144,7 +144,7 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
       const status = await api.fetchAuthStatus(username).catch(() => null)
       if (cancelled) return
 
-      const hasFingerprint = !!status?.hasFingerprint
+      const hasFingerprint = !!status?.hasFingerprintOnDevice
       setHasFingerprintSetup(hasFingerprint)
       if (!hasFingerprint) {
         clearCachedFingerprintAssertOptions()

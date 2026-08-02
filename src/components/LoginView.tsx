@@ -81,8 +81,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     setHasFingerprint(false)
     void api.fetchAuthStatus(username.trim()).then(status => {
       if (cancelled) return
-      setHasFingerprint(status.hasFingerprint)
-      if (status.hasFingerprint) {
+      setHasFingerprint(status.hasFingerprintOnDevice)
+      if (status.hasFingerprintOnDevice) {
         void prefetchFingerprintLoginOptions(username.trim()).catch(() => undefined)
       }
     }).catch(() => undefined)
@@ -319,7 +319,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             ? 'Create your account to get started.'
             : loginStep === 1
               ? 'Enter your username to continue.'
-              : 'Enter your password or use device unlock.'}
+              : hasFingerprint && platformAuthAvailable
+                ? 'Enter your password or use device unlock.'
+                : 'Enter your password to continue.'}
         />
 
         {error && (

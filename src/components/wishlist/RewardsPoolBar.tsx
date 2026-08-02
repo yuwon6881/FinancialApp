@@ -1,5 +1,5 @@
 import React from 'react'
-import { AlertTriangle, Coins, History, Loader2 } from 'lucide-react'
+import { AlertTriangle, CalendarClock, CheckCircle2, Coins, History, Loader2 } from 'lucide-react'
 import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import type { GoalPoolSummary } from '../../lib/savingsGoals'
@@ -33,11 +33,26 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
   onFundCycle,
   onViewRewardsHistory,
 }) => {
-  const { rewardsBalance, totalEarmarked, unassigned, outstandingThisCycleTotal, paceShortfall } = summary
+  const {
+    rewardsBalance,
+    totalEarmarked,
+    unassigned,
+    requiredPerCycleTotal,
+    fundedThisCycleTotal,
+    outstandingThisCycleTotal,
+    paceShortfall,
+  } = summary
 
   // Percentages drive only the bar widths; a zero or negative balance collapses to an empty track.
   const committedPct = rewardsBalance > 0 ? Math.min(100, (totalEarmarked / rewardsBalance) * 100) : 0
   const hasGoals = summary.activeGoals.length > 0
+
+  // This cycle's share, as its own meter. The pool bar above answers "how is the balance divided";
+  // this answers "has this cycle's contribution actually been made" — two different questions that
+  // a single line of text underneath was conflating.
+  const cycleTarget = Math.max(requiredPerCycleTotal, fundedThisCycleTotal)
+  const cyclePct = cycleTarget > 0 ? Math.min(100, (fundedThisCycleTotal / cycleTarget) * 100) : 0
+  const cycleDone = outstandingThisCycleTotal <= 0
 
   // Shown while anything is still unfinished, so it does not vanish the moment a cycle is paced --
   // but disabled when there is genuinely nothing to do, with the reason in the tooltip.
@@ -119,8 +134,52 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
         </span>
       </div>
 
-      {/* One status line, not a stack of banners. The budget-level warning wins when present,
-          because an unreachable deadline matters more than this cycle's bookkeeping. */}
+      {/* This cycle's share gets its own inset panel rather than a caption, so "the balance is
+          split like this" and "this cycle is/isn't paid up" stop competing for the same line. */}
+      {hasGoals && cycleTarget > 0 && (
+        <div className="rounded-xl border border-border/50 bg-muted/25 p-3 space-y-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              {cycleDone
+                ? <CheckCircle2 className="size-3 text-emerald-500" aria-hidden />
+                : <CalendarClock className="size-3 text-violet-500" aria-hidden />}
+              This cycle
+            </span>
+            <span className="text-[11px] font-semibold text-muted-foreground">
+              <span className={`font-extrabold ${cycleDone ? 'text-emerald-500' : 'text-foreground'}`}>
+                {formatSensitive(fundedThisCycleTotal)}
+              </span>
+              {' '}of {formatSensitive(requiredPerCycleTotal)} set aside
+            </span>
+          </div>
+
+          <div
+            className="w-full h-1.5 rounded-full bg-muted overflow-hidden"
+            role="img"
+            aria-label={cycleDone
+              ? "Every commitment has its share for this cycle"
+              : `${cyclePct.toFixed(0)}% of this cycle's commitments set aside`}
+          >
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${cycleDone ? 'bg-emerald-500' : 'bg-violet-500'}`}
+              style={{ width: `${cyclePct}%` }}
+            />
+          </div>
+
+          <p className={`text-[11px] font-bold ${cycleDone ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+            {cycleDone
+              ? 'Every commitment has its share for this cycle.'
+              : <>
+                  <span className="text-amber-500">{formatSensitive(outstandingThisCycleTotal)}</span>
+                  {' '}still to set aside across {summary.activeGoals.length}{' '}
+                  {summary.activeGoals.length === 1 ? 'commitment' : 'commitments'}
+                </>}
+          </p>
+        </div>
+      )}
+
+      {/* The budget-level warning still wins over the panel above, because an unreachable deadline
+          matters more than this cycle's bookkeeping. */}
       {paceShortfall > 0 ? (
         <p className="flex items-start gap-2 text-[11px] font-semibold text-amber-500">
           <AlertTriangle className="size-3.5 shrink-0 mt-px" />
@@ -129,10 +188,6 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
             {formatSensitive(paceShortfall)} more than your rewards budget. Push a deadline out, lower a
             target, or raise your rewards allocation.
           </span>
-        </p>
-      ) : hasGoals && outstandingThisCycleTotal <= 0 ? (
-        <p className="text-[11px] font-semibold text-emerald-500">
-          Every goal has its share for this cycle.
         </p>
       ) : null}
     </Card>

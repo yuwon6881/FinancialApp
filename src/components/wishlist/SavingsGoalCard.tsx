@@ -1,5 +1,5 @@
 import React from 'react'
-import { CheckCircle2, Edit2, Minus, Plus, Repeat, Trash2 } from 'lucide-react'
+import { CalendarClock, CheckCircle2, Edit2, Minus, Plus, Repeat, Trash2 } from 'lucide-react'
 import type { SavingsGoal } from '../../types'
 import type { GoalPace, GoalPaceStatus } from '../../lib/savingsGoals'
 import { MONTH_NAMES } from '../../lib/cycle'
@@ -64,6 +64,10 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
     ? Math.max(0, Math.min(100, (goal.earmarkedAmount / goal.targetAmount) * 100))
     : 0
   const style = STATUS[status]
+  // Overfunding a goal by hand fills the meter rather than overflowing it.
+  const cycleTarget = Math.max(pace.requiredPerCycle, pace.fundedThisCycle)
+  const cyclePct = cycleTarget > 0 ? Math.min(100, (pace.fundedThisCycle / cycleTarget) * 100) : 100
+  const cycleDone = pace.outstandingThisCycle <= 0
   const isBusy = isSyncing || isDeleting || goal.isPendingSync === true
 
   return (
@@ -101,14 +105,50 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
         </div>
       </div>
 
-      {/* One line, not a stat grid: either this cycle still owes something or it does not. */}
-      <p className={`text-[11px] font-bold ${style.text}`}>
-        {pace.isFunded
-          ? 'Ready to use'
-          : pace.outstandingThisCycle > 0
-            ? <>Set aside {formatSensitive(pace.outstandingThisCycle)} this cycle</>
-            : <>Done for this cycle · {formatSensitive(pace.requiredPerCycle)}/cycle</>}
-      </p>
+      {/* This cycle's share as its own inset meter. The bar above tracks the whole target, which is
+          a different (and much slower-moving) question than "is this cycle paid up" — a single line
+          of text under the target bar left the two indistinguishable. */}
+      {pace.isFunded ? (
+        <p className="flex items-center gap-1.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-[11px] font-bold text-emerald-500">
+          <CheckCircle2 className="size-3.5 shrink-0" aria-hidden /> Ready to use
+        </p>
+      ) : (
+        <div className="rounded-xl border border-border/50 bg-muted/25 p-2.5 space-y-1.5">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              {cycleDone
+                ? <CheckCircle2 className="size-3 text-emerald-500" aria-hidden />
+                : <CalendarClock className="size-3 text-violet-500" aria-hidden />}
+              This cycle
+            </span>
+            <span className="text-[10px] font-semibold text-muted-foreground">
+              <span className={`font-extrabold ${cycleDone ? 'text-emerald-500' : 'text-foreground'}`}>
+                {formatSensitive(pace.fundedThisCycle)}
+              </span>
+              {' '}of {formatSensitive(pace.requiredPerCycle)}
+            </span>
+          </div>
+
+          <div
+            className="w-full h-1 rounded-full bg-muted overflow-hidden"
+            role="img"
+            aria-label={cycleDone
+              ? "This cycle's share is set aside"
+              : `${cyclePct.toFixed(0)}% of this cycle's share set aside`}
+          >
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${cycleDone ? 'bg-emerald-500' : style.bar}`}
+              style={{ width: `${cyclePct}%` }}
+            />
+          </div>
+
+          <p className={`text-[11px] font-bold ${cycleDone ? 'text-emerald-500' : style.text}`}>
+            {cycleDone
+              ? 'Done for this cycle'
+              : <>{formatSensitive(pace.outstandingThisCycle)} still to set aside</>}
+          </p>
+        </div>
+      )}
 
       <div className="mt-auto flex items-center gap-1 border-t border-border/30 pt-3">
         <div className="flex items-center gap-px rounded-lg overflow-hidden shrink-0 shadow-xs ring-1 ring-border/50">

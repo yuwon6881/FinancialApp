@@ -4,12 +4,16 @@ import * as api from '../../lib/api'
 import type { FingerprintCredentialSummary } from '../../lib/api'
 import { getErrorMessage, getErrorName } from '../../lib/errors'
 import { buildMutationSuccessToast } from '../../lib/mutationToast'
-import { base64UrlToHex, createFingerprintCredential, getFriendlyDeviceLabel, isPlatformAuthenticatorAvailable } from '../../lib/webauthn'
+import { createFingerprintCredential, getFriendlyDeviceLabel, isPlatformAuthenticatorAvailable } from '../../lib/webauthn'
+import {
+  forgetDeviceUnlockCredential,
+  getDeviceUnlockRegistrationMarker,
+  rememberDeviceUnlockCredential,
+  rememberExistingDeviceUnlock,
+} from '../../lib/deviceUnlockRegistration'
 import { useAppPrefs, useAppUi } from '../../contexts/AppContext'
 import { CollapsibleBody } from '../ui/CollapsibleBody'
 import { Button } from '../ui/Button'
-
-const DEVICE_CREDENTIAL_ID_KEY = 'fingerprint_credential_id_on_this_device'
 
 export function FingerprintSection() {
   const { hideSensitive } = useAppPrefs()
@@ -19,6 +23,7 @@ export function FingerprintSection() {
   const [credentialsLoaded, setCredentialsLoaded] = useState(false)
   const [busy, setBusy] = useState(false)
   const [available, setAvailable] = useState(false)
+  const username = localStorage.getItem('auth_username') || ''
   const load = async () => {
     try {
       setCredentials(await api.listFingerprintCredentials())
@@ -31,13 +36,11 @@ export function FingerprintSection() {
     void isPlatformAuthenticatorAvailable().then(setAvailable)
   }, [])
   const enrolledHere = useMemo(() => {
-    const stored = localStorage.getItem(DEVICE_CREDENTIAL_ID_KEY)
+    const stored = getDeviceUnlockRegistrationMarker(username)
     if (!stored || credentials.length === 0) return false
     if (stored === 'already_enrolled') return true
-    let legacyHex: string | null = null
-    try { legacyHex = base64UrlToHex(stored) } catch { /* Legacy value was not base64url. */ }
-    return credentials.some(credential => credential.id.toUpperCase() === stored.toUpperCase() || credential.id.toUpperCase() === legacyHex)
-  }, [credentials])
+    return credentials.some(credential => credential.id.toUpperCase() === stored)
+  }, [credentials, username])
   const enabledOnAccount = credentials.length > 0
   const status = !credentialsLoaded
     ? { label: 'Checking', className: 'text-muted-foreground' }
@@ -54,7 +57,7 @@ export function FingerprintSection() {
       const { challengeId, options } = await api.getFingerprintRegisterOptions()
       const credential = await createFingerprintCredential(options)
       await api.verifyFingerprintRegistration(challengeId, credential, getFriendlyDeviceLabel())
-      localStorage.setItem(DEVICE_CREDENTIAL_ID_KEY, base64UrlToHex(credential.id))
+      rememberDeviceUnlockCredential(username, credential.id)
       await load()
       const copy = buildMutationSuccessToast({
         entity: 'Device Unlock',
@@ -64,7 +67,7 @@ export function FingerprintSection() {
       showToast(copy.message, copy.title, copy.tone)
     } catch (error) {
       if (getErrorName(error) === 'InvalidStateError') {
-        localStorage.setItem(DEVICE_CREDENTIAL_ID_KEY, 'already_enrolled')
+        rememberExistingDeviceUnlock(username)
         await load()
         showToast('This device already has device unlock enabled.', 'Already enabled', 'info')
       } else if (getErrorName(error) !== 'NotAllowedError') {
@@ -78,6 +81,7 @@ export function FingerprintSection() {
     if (hideSensitive) return
     try {
       await api.deleteFingerprintCredential(id)
+      forgetDeviceUnlockCredential(username, id)
       await load()
       const copy = buildMutationSuccessToast({
         entity: 'Device Unlock Credential',

@@ -56,7 +56,7 @@ export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScre
         isPlatformAuthenticatorAvailable(),
         api.fetchAuthStatus(username).catch(() => null),
       ])
-      if (!platformAvailable || cancelled || !status?.hasFingerprint) return
+      if (!platformAvailable || cancelled || !status?.hasFingerprintOnDevice) return
       try {
         setFingerprintAvailable(true)
         void prefetchFingerprintAssertOptions().catch(() => undefined)
@@ -113,7 +113,11 @@ export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScre
         <AppLogo className="size-16 rounded-2xl shadow-xl shadow-primary/20" />
         <div className="text-center">
           <h2 id={titleId} className="text-xl font-bold text-foreground">Session locked</h2>
-          <p id={descriptionId} className="mt-1 text-sm text-muted-foreground">You were inactive for 5 minutes. Use your device unlock or enter your password to continue.</p>
+          <p id={descriptionId} className="mt-1 text-sm text-muted-foreground">
+            {fingerprintAvailable
+              ? 'You were inactive for 5 minutes. Use your device unlock or enter your password to continue.'
+              : 'You were inactive for 5 minutes. Enter your password to continue.'}
+          </p>
         </div>
 
         {lockError && <AlertBanner variant="error" className="w-full">{lockError}</AlertBanner>}
