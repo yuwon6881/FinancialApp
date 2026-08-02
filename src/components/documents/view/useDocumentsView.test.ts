@@ -83,7 +83,10 @@ describe('useDocumentsView', () => {
 
     api.listDocuments.mockResolvedValue({ items: [document], totalCount: 11 })
     act(() => result.current.setPage(2))
-    await waitFor(() => expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, 10, 10, undefined, 'uploaded-desc'))
+    await waitFor(() => {
+      expect(api.listDocuments).toHaveBeenLastCalledWith(2026, undefined, 10, 10, undefined, 'uploaded-desc')
+      expect(result.current.totalCount).toBe(11)
+    })
 
     api.bulkDeleteDocuments.mockResolvedValue([{ id: 1, deleted: true }])
     await act(async () => {

@@ -3,6 +3,11 @@ import type { VaultDocument, DocumentVaultUsage, TaxYearReliefSummary, ExpiredTa
 import * as api from '../../../lib/api/documents'
 import type { DocumentSort } from '../../../lib/documentOrdering'
 
+function clampDocumentPage(totalCount: number, page: number, pageSize: number): number {
+  if (totalCount <= 0) return 1
+  return Math.max(1, Math.min(page, Math.ceil(totalCount / pageSize)))
+}
+
 export function useDocumentsView() {
   const [documents, setDocuments] = useState<VaultDocument[]>([])
   const [totalCount, setTotalCount] = useState(0)
@@ -151,11 +156,9 @@ export function useDocumentsView() {
       const nextTotalCount = Math.max(0, totalCount - 1)
       setDocuments(docs => docs.filter(d => d.id !== id))
       setTotalCount(nextTotalCount)
-      if (nextTotalCount > 0) {
-        const nextPage = Math.max(1, Math.min(page, Math.ceil(nextTotalCount / pageSize)))
-        if (nextPage !== page) setPage(nextPage)
-        else await loadDocuments()
-      }
+      const nextPage = clampDocumentPage(nextTotalCount, page, pageSize)
+      if (nextPage !== page) setPage(nextPage)
+      else if (nextTotalCount > 0) await loadDocuments()
       void loadUsage()
       void loadAvailableYears()
     } catch (err) {
@@ -201,11 +204,9 @@ export function useDocumentsView() {
     const nextTotalCount = Math.max(0, totalCount - deletedIds.size)
     setDocuments(current => current.filter(document => !deletedIds.has(document.id)))
     setTotalCount(nextTotalCount)
-    if (nextTotalCount > 0) {
-      const nextPage = Math.max(1, Math.min(page, Math.ceil(nextTotalCount / pageSize)))
-      if (nextPage !== page) setPage(nextPage)
-      else await loadDocuments()
-    }
+    const nextPage = clampDocumentPage(nextTotalCount, page, pageSize)
+    if (nextPage !== page) setPage(nextPage)
+    else if (nextTotalCount > 0) await loadDocuments()
     await Promise.all([loadUsage(), loadAvailableYears(), loadTaxInsights()])
     return results
   }

@@ -147,7 +147,7 @@ describe('RecurringPaymentsView characterization', () => {
       const insurance = getCard('Insurance')
       expect(within(insurance).getByText('$240.00')).toBeTruthy()
       expect(within(insurance).getByText('/yr')).toBeTruthy()
-      expect(within(insurance).getByText('Every year on the 1st')).toBeTruthy()
+      expect(within(insurance).getByText('Every year on January 1st')).toBeTruthy()
       // End date row only renders when endDate is set
       expect(within(insurance).getByText('End Date')).toBeTruthy()
       expect(within(insurance).getByText('2027-01-01')).toBeTruthy()

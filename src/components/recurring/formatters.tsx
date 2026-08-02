@@ -1,4 +1,5 @@
 import type React from 'react'
+import type { RecurringFrequency } from '../../types'
 import { formatCurrencyVal } from '../../lib/utils'
 import { SensitiveMask } from '../ui/SensitiveAmount'
 
@@ -9,6 +10,30 @@ export const getDayWithSuffix = (day: number) => {
   if (day % 10 === 2) return `${day}nd`
   if (day % 10 === 3) return `${day}rd`
   return `${day}th`
+}
+
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+] as const
+
+function getMonthName(date: string): string | undefined {
+  const month = Number(date.slice(5, 7))
+  return Number.isInteger(month) && month >= 1 && month <= MONTH_NAMES.length
+    ? MONTH_NAMES[month - 1]
+    : undefined
+}
+
+export const getRecurrenceDescription = (
+  frequency: RecurringFrequency,
+  startDate: string,
+  dueDate: number,
+): string => {
+  const day = getDayWithSuffix(dueDate)
+  if (frequency !== 'Annually') return `Every month on the ${day}`
+
+  const month = getMonthName(startDate)
+  return month ? `Every year on ${month} ${day}` : `Every year on the ${day}`
 }
 
 export const formatCurrencyAmount = (val: number, currency: string): string => {

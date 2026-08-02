@@ -8,7 +8,7 @@ import { getCategoryBadgeClass } from '../../lib/categoryColors'
 import { Button } from '../ui/Button'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
 import { ToggleButton } from '../ui/ToggleButton'
-import { getDayWithSuffix } from './formatters'
+import { getRecurrenceDescription } from './formatters'
 import { ReminderControls } from './ReminderControls'
 
 interface RecurringPaymentCardsProps {
@@ -137,7 +137,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                     <Repeat className="size-3.5" /> Recurs
                   </span>
                   <span className="text-foreground font-medium">
-                    Every {normalizeRecurringFrequency(rp.frequency) === 'Annually' ? 'year' : 'month'} on the {getDayWithSuffix(rp.dueDate)}
+                    {getRecurrenceDescription(normalizeRecurringFrequency(rp.frequency), rp.startDate, rp.dueDate)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
