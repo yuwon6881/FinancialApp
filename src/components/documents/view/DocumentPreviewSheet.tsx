@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Download, FileWarning, Loader2 } from 'lucide-react'
 import type { VaultDocument } from '../../../types'
 import { downloadDocument, getDocumentContent } from '../../../lib/api/documents'
@@ -21,11 +21,14 @@ function canPreviewAsImage(contentType: string) {
   return ['image/jpeg', 'image/png', 'image/webp'].includes(contentType)
 }
 
+const PDF_VIEWER_PAINT_GRACE_MS = 1500
+
 export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheetProps) {
   const { hideSensitive } = useAppPrefs()
   const { showToast } = useAppUi()
   const [preview, setPreview] = useState<PreviewState>({ status: 'idle' })
   const [mediaLoaded, setMediaLoaded] = useState(false)
+  const pdfPaintTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (!document || hideSensitive) {
@@ -35,6 +38,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
 
     let active = true
     let objectUrl: string | null = null
+    if (pdfPaintTimerRef.current !== null) window.clearTimeout(pdfPaintTimerRef.current)
     setMediaLoaded(false)
     setPreview({ status: 'loading' })
 
@@ -61,6 +65,10 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
 
     return () => {
       active = false
+      if (pdfPaintTimerRef.current !== null) {
+        window.clearTimeout(pdfPaintTimerRef.current)
+        pdfPaintTimerRef.current = null
+      }
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
   }, [document, hideSensitive, onClose, showToast])
@@ -101,7 +109,13 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
             src={preview.url}
             title={`Preview of ${document?.originalFileName ?? 'document'}`}
             className="h-full min-h-[60vh] w-full border-0 bg-card"
-            onLoad={() => setMediaLoaded(true)}
+            onLoad={() => {
+              if (pdfPaintTimerRef.current !== null) window.clearTimeout(pdfPaintTimerRef.current)
+              pdfPaintTimerRef.current = window.setTimeout(() => {
+                pdfPaintTimerRef.current = null
+                setMediaLoaded(true)
+              }, PDF_VIEWER_PAINT_GRACE_MS)
+            }}
           />
         )}
         {preview.status === 'ready' && canPreviewAsImage(preview.contentType) && (

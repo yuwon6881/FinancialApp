@@ -121,7 +121,7 @@ export const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: Invest
       ))}
     </div>
     <div className="hidden xl:block">
-      <DataTable embedded tableClassName="table-fixed">
+      <DataTable embedded horizontalOverflow="hidden" tableClassName="table-fixed">
         <colgroup>
           <col className="w-[16%]" />
           <col className="w-[9%]" />

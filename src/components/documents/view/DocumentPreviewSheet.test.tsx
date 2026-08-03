@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { VaultDocument } from '../../../types'
 import { DocumentPreviewSheet } from './DocumentPreviewSheet'
@@ -26,6 +26,7 @@ const document: VaultDocument = {
 
 describe('DocumentPreviewSheet', () => {
   afterEach(() => {
+    vi.useRealTimers()
     vi.restoreAllMocks()
     getDocumentContent.mockReset()
   })
@@ -46,7 +47,11 @@ describe('DocumentPreviewSheet', () => {
     expect(createObjectUrl).toHaveBeenCalledOnce()
     expect(screen.getByRole('status').textContent).toContain('Loading preview')
 
+    vi.useFakeTimers()
     fireEvent.load(frame)
+    expect(screen.getByRole('status').textContent).toContain('Loading preview')
+
+    act(() => vi.advanceTimersByTime(1500))
     expect(screen.queryByRole('status')).toBeNull()
 
     unmount()

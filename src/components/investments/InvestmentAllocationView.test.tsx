@@ -52,6 +52,7 @@ describe('investment sleeve allocation view', () => {
     const table = screen.getByRole('table')
     expect(table.className).toContain('table-fixed')
     expect(table.className).not.toContain('min-w-')
+    expect(table.parentElement?.className).toContain('overflow-x-hidden')
     expect(table.querySelectorAll('col')).toHaveLength(10)
   })
 })

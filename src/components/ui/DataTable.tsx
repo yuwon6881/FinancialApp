@@ -8,6 +8,8 @@ export interface DataTableProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode
   /** Use when the surrounding card already owns the border and radius. */
   embedded?: boolean
+  /** Disable horizontal scrolling when a fixed-layout table is designed to fit its frame. */
+  horizontalOverflow?: 'auto' | 'hidden'
   tableClassName?: string
 }
 
@@ -16,7 +18,7 @@ export interface DataTableProps extends HTMLAttributes<HTMLDivElement> {
  * one bordered Ayu surface, a horizontally scrollable table, and the same
  * header/body rhythm wherever a desktop table is used.
  */
-export function DataTable({ children, embedded = false, tableClassName, className, ...props }: DataTableProps) {
+export function DataTable({ children, embedded = false, horizontalOverflow = 'auto', tableClassName, className, ...props }: DataTableProps) {
   return (
     <div
       className={cn(
@@ -26,7 +28,7 @@ export function DataTable({ children, embedded = false, tableClassName, classNam
       )}
       {...props}
     >
-      <div className="overflow-x-auto">
+      <div className={horizontalOverflow === 'hidden' ? 'overflow-x-hidden' : 'overflow-x-auto'}>
         <table className={cn('w-full border-separate border-spacing-0 text-left text-xs', tableClassName)}>
           {children}
         </table>
