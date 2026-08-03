@@ -54,5 +54,6 @@ describe('investment sleeve allocation view', () => {
     expect(table.className).not.toContain('min-w-')
     expect(table.parentElement?.className).toContain('overflow-x-hidden')
     expect(table.querySelectorAll('col')).toHaveLength(10)
+    expect(table.querySelector('col:last-child')?.className).toContain('w-[8%]')
   })
 })

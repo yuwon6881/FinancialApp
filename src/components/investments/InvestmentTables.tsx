@@ -123,16 +123,16 @@ export const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: Invest
     <div className="hidden xl:block">
       <DataTable embedded horizontalOverflow="hidden" tableClassName="table-fixed">
         <colgroup>
-          <col className="w-[16%]" />
+          <col className="w-[15%]" />
           <col className="w-[9%]" />
           <col className="w-[7%]" />
           <col className="w-[10%]" />
           <col className="w-[9%]" />
-          <col className="w-[12%]" />
+          <col className="w-[11%]" />
           <col className="w-[10%]" />
           <col className="w-[11%]" />
           <col className="w-[10%]" />
-          <col className="w-[6%]" />
+          <col className="w-[8%]" />
         </colgroup>
         <DataTableHeader className="text-[10px] uppercase tracking-wide">
           <DataTableHeaderCell>Investment</DataTableHeaderCell>
