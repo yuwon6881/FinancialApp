@@ -417,6 +417,54 @@ describe('optimistic list ordering', () => {
     ])
   })
 
+  it('appends optimistic tax relief categories in the API insertion order', () => {
+    const base: TestItem[] = [
+      { id: 'medical', name: 'Medical' },
+      { id: 'education', name: 'Education' },
+    ]
+    const ops = [
+      makeOp({
+        id: 'op-relief-1',
+        entity: 'taxReliefCategory',
+        type: 'add',
+        targetId: 'relief-local-1',
+        payload: { name: 'Lifestyle', limit: 2500, taxYear: 2026 },
+      }),
+      makeOp({
+        id: 'op-relief-2',
+        entity: 'taxReliefCategory',
+        type: 'add',
+        targetId: 'relief-local-2',
+        payload: { name: 'Childcare', limit: 3000, taxYear: 2026 },
+      }),
+    ]
+
+    expect(applyOpsToList(base, ops, 'taxReliefCategory').map(item => item.name)).toEqual([
+      'Medical',
+      'Education',
+      'Lifestyle',
+      'Childcare',
+    ])
+  })
+
+  it('keeps a tax relief category update in its existing API position', () => {
+    const base: TestItem[] = [
+      { id: 'medical', name: 'Medical' },
+      { id: 'education', name: 'Education' },
+    ]
+    const ops = [makeOp({
+      entity: 'taxReliefCategory',
+      type: 'update',
+      targetId: 'medical',
+      payload: { name: 'Health', limit: 10_000, taxYear: 2026 },
+    })]
+
+    expect(applyOpsToList(base, ops, 'taxReliefCategory').map(item => item.name)).toEqual([
+      'Health',
+      'Education',
+    ])
+  })
+
   it('repositions an optimistic category update using the same shared order', () => {
     const base: TestItem[] = [
       { id: 'cat-a', name: 'Bills' },

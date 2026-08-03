@@ -264,18 +264,43 @@ export const createLocalWishlistId = createLocalNumericId
 type OptimisticListItem = {
   id: string | number
   name?: string
+  symbol?: string
+  isArchived?: boolean
 }
 
-// Canonical API ordering is applied after every projection so adds and ordering-field updates land
-// where the next server refresh will put them. Only entity-wide server orders belong here; views
-// with contextual ordering (ledger sort modes, reward priority, investment filters) keep using
-// their domain comparators on top of this projection.
-const CANONICAL_LIST_COMPARATORS: Partial<Record<EntityKind, (
-  left: OptimisticListItem,
-  right: OptimisticListItem,
-) => number>> = {
-  category: (left, right) => (left.name ?? '').localeCompare(right.name ?? ''),
-  recurringPayment: (left, right) => (left.name ?? '').localeCompare(right.name ?? ''),
+const compareIds = (left: OptimisticListItem, right: OptimisticListItem) =>
+  String(left.id).localeCompare(String(right.id))
+
+type OptimisticListOrderPolicy = {
+  addPlacement?: 'prepend' | 'append'
+  compare?: (left: OptimisticListItem, right: OptimisticListItem) => number
+}
+
+// Canonical API ordering is applied as part of projection so adds and ordering-field updates land
+// where the next server refresh will put them. Some APIs expose a sortable field; others, such as
+// tax relief limits, expose only database insertion order and therefore need append placement.
+// Contextual view orders (ledger modes, reward priority, investment filters) stay in their helpers.
+const OPTIMISTIC_LIST_ORDER_POLICIES: Partial<Record<EntityKind, OptimisticListOrderPolicy>> = {
+  category: {
+    compare: (left, right) => (left.name ?? '').localeCompare(right.name ?? ''),
+  },
+  recurringPayment: {
+    compare: (left, right) =>
+      (left.name ?? '').localeCompare(right.name ?? '') || compareIds(left, right),
+  },
+  investmentAccount: {
+    compare: (left, right) =>
+      Number(left.isArchived === true) - Number(right.isArchived === true) ||
+      (left.name ?? '').localeCompare(right.name ?? '') ||
+      compareIds(left, right),
+  },
+  investmentInstrument: {
+    compare: (left, right) =>
+      (left.symbol ?? '').localeCompare(right.symbol ?? '') || compareIds(left, right),
+  },
+  taxReliefCategory: {
+    addPlacement: 'append',
+  },
 }
 
 function createOpId(): string {
@@ -696,7 +721,9 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
       if (existingIndex >= 0) {
         result[existingIndex] = newItem
       } else {
-        result = [newItem, ...result]
+        result = OPTIMISTIC_LIST_ORDER_POLICIES[entity]?.addPlacement === 'append'
+          ? [...result, newItem]
+          : [newItem, ...result]
       }
     } else if (op.type === 'update') {
       const existingIndex = result.findIndex(item => String(item.id) === targetStr)
@@ -865,7 +892,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
     }
   }
 
-  const comparator = CANONICAL_LIST_COMPARATORS[entity]
+  const comparator = OPTIMISTIC_LIST_ORDER_POLICIES[entity]?.compare
   return comparator ? result.sort(comparator) : result
 }
 
