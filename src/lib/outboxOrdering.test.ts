@@ -79,3 +79,67 @@ describe('application-wide optimistic list policies', () => {
     ])
   })
 })
+
+// Projection is a replay, so it has to run in the order the user acted. Two separate
+// orderings broke that and silently dropped edits; both are pinned here.
+describe('chronological op replay', () => {
+  const at = (
+    entity: QueuedOp['entity'],
+    type: QueuedOp['type'],
+    targetId: string,
+    payload: QueuedOp['payload'],
+    createdAt: number,
+    isCompleted?: boolean,
+  ): QueuedOp => ({
+    id: `op-${type}-${targetId}-${createdAt}`,
+    entity,
+    type,
+    targetId,
+    payload,
+    createdAt,
+    retryCount: 0,
+    isCompleted,
+  })
+
+  // `activeOps` is `[...pendingOps, ...recentlyCompletedOps]`, so an older completed add
+  // arrives *after* a newer pending update. Replayed in array order the add re-applied
+  // last and overwrote the edit with the original payload — the user's change vanished
+  // from the ledger until the next refresh.
+  it('keeps an edit that was queued after a completed add', () => {
+    const add = at('transaction', 'add', 'tx-1', { description: 'Original' }, 1, true)
+    const update = at('transaction', 'update', 'tx-1', { description: 'Edited' }, 2)
+
+    const rows = applyOpsToList<OrderedItem & { description?: string }>(
+      [], [update, add], 'transaction',
+    )
+
+    expect(rows.map(row => row.description)).toEqual(['Edited'])
+  })
+
+  // Cross-entity ops were appended as a block after the entity's own, so an update
+  // targeting the row a wishlist purchase synthesizes ran before that row existed and
+  // was dropped outright rather than merged.
+  it('keeps an edit to the ledger row a queued wishlist purchase creates', () => {
+    const purchase = at('wishlistItem', 'purchase', '42', { name: 'Headphones', price: 300 }, 1)
+    const update = at('transaction', 'update', 'wishlist-purchase-42', { description: 'Edited' }, 2)
+
+    const rows = applyOpsToList<OrderedItem & { description?: string }>(
+      [], [purchase, update], 'transaction',
+    )
+
+    expect(rows.map(row => row.description)).toEqual(['Edited'])
+  })
+
+  // The reverse order must still hold: an edit made *before* the row was replaced is
+  // correctly superseded, so the sort must not be mistaken for "updates always win".
+  it('lets a later add supersede an earlier edit', () => {
+    const update = at('transaction', 'update', 'tx-1', { description: 'Edited' }, 1)
+    const add = at('transaction', 'add', 'tx-1', { description: 'Original' }, 2, true)
+
+    const rows = applyOpsToList<OrderedItem & { description?: string }>(
+      [], [update, add], 'transaction',
+    )
+
+    expect(rows.map(row => row.description)).toEqual(['Original'])
+  })
+})

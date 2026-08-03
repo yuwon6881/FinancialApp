@@ -204,6 +204,27 @@ describe('drainQueue — success path', () => {
     expect(h.queue).toHaveLength(0)
   })
 
+  // Same remap, for savingsGoal. It was omitted from the entity check, so an update
+  // queued while the add was in flight (too late for enqueue to fold it into the add
+  // payload) dispatched against the local placeholder and 404'd every time.
+  it('remaps queued savings-goal ops to the server id after an add', async () => {
+    const dispatchedTargets: Array<{ id: string; targetId: string }> = []
+    const dispatch = vi.fn(async (o: QueuedOp): Promise<DispatchResult> => {
+      dispatchedTargets.push({ id: o.id, targetId: o.targetId })
+      return o.type === 'add' ? ({ id: 77 } as unknown as DispatchResult) : undefined
+    })
+    const h = makeHarness({ resolveDispatch: () => dispatch }, [
+      op({ id: 'add', entity: 'savingsGoal', type: 'add', targetId: '1756000000000123' }),
+      op({ id: 'upd', entity: 'savingsGoal', type: 'update', targetId: '1756000000000123' }),
+    ])
+    await drainQueue(h.deps)
+    expect(dispatchedTargets).toEqual([
+      { id: 'add', targetId: '1756000000000123' },
+      { id: 'upd', targetId: '77' },
+    ])
+    expect(h.queue).toHaveLength(0)
+  })
+
   it('projects a completed wishlist add with its server id while refresh is pending', async () => {
     let resolveRefresh!: () => void
     const refreshPending = new Promise<void>(resolve => { resolveRefresh = resolve })

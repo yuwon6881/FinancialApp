@@ -495,7 +495,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
 ): T[] {
   let result = baseList.map(item => ({ ...item }))
   const entityOps = ops.filter(op => op.entity === entity)
-  const effectiveOps = entity === 'transaction'
+  const unorderedOps = entity === 'transaction'
     ? [
         ...entityOps,
         ...ops.filter(op =>
@@ -515,6 +515,18 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
             ...ops.filter(op => op.entity === 'transaction' && (op.type === 'add' || op.type === 'delete')),
           ]
       : entityOps
+
+  // Projection is a replay, so it must run in the order the user acted — an op that
+  // *creates* a row has to be applied before one that edits it, or the edit finds no
+  // row and is silently dropped. Neither the incoming array nor the grouping above is
+  // chronological: `activeOps` is `[...pendingOps, ...recentlyCompletedOps]`, which puts
+  // an older completed add *after* a newer pending update, and the cross-entity ops are
+  // appended as a block after the entity's own. Both orderings lost edits — a completed
+  // `transaction:add` re-applied after a pending `transaction:update` overwrote the edit
+  // with the original payload, and a `transaction:update` against the row a queued
+  // `wishlistItem:purchase` synthesizes was dropped entirely. Sorting is stable, so ops
+  // sharing a millisecond keep their relative order.
+  const effectiveOps = [...unorderedOps].sort((left, right) => left.createdAt - right.createdAt)
 
   for (const op of effectiveOps) {
     const targetStr = String(op.targetId)

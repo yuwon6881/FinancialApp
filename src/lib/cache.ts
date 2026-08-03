@@ -102,20 +102,35 @@ function decodeCachedAmount(value: unknown): number {
   if (typeof value === 'number') return Number.isFinite(value) ? value : 0
   if (typeof value !== 'string') return 0
 
-  const plain = Number(value)
-  if (Number.isFinite(plain)) return plain
+  // Try the obfuscated form FIRST, and accept it only if it decodes to the exact shape
+  // obfuscateAmount() emits (`toFixed(2)`, so always two decimal places). Testing
+  // `Number(value)` first was ambiguous in the wrong direction: the base64 alphabet
+  // includes digits, so an obfuscated amount whose encoding happens to be all digits
+  // parses as a finite number and was returned raw — a wildly wrong figure rather than
+  // the real one. Deciding on the decoded *shape* removes the ambiguity, because a
+  // legacy plaintext value either fails to base64-decode at all or decodes to bytes
+  // that do not look like money, and so still falls through to the plain branch below.
+  const decoded = decodeObfuscatedMoney(value)
+  if (decoded !== undefined) return decoded
 
+  const plain = Number(value)
+  return Number.isFinite(plain) ? plain : 0
+}
+
+/** `undefined` when `value` is not an obfuscated amount, so the caller can fall back. */
+function decodeObfuscatedMoney(value: string): number | undefined {
   try {
     const binaryString = atob(value)
     const bytes = new Uint8Array(binaryString.length)
     for (let i = 0; i < binaryString.length; i++) {
       bytes[i] = binaryString.charCodeAt(i) ^ OBFUSCATION_KEY.charCodeAt(i % OBFUSCATION_KEY.length)
     }
-    const decoded = new TextDecoder().decode(bytes)
-    const amount = Number(decoded)
-    return Number.isFinite(amount) ? amount : 0
+    const text = new TextDecoder().decode(bytes)
+    if (!/^-?\d+\.\d{2}$/.test(text)) return undefined
+    const amount = Number(text)
+    return Number.isFinite(amount) ? amount : undefined
   } catch {
-    return 0
+    return undefined
   }
 }
 
@@ -161,20 +176,31 @@ export function setCachedJSON(key: string, value: unknown): boolean {
   } catch {
     // Pending/failed operation queues are user data. Only stale-while-revalidate
     // caches may be sacrificed to make room for an outbox write.
+    //
+    // Evict one at a time and retry after each, so a write that overruns the quota by a
+    // few bytes costs one cold panel rather than all of them. Dropping the whole set up
+    // front meant a marginal overrun re-fetched the dashboard, ledger, wishlist,
+    // investments and settings on the next open. The key being written is skipped: it is
+    // about to be overwritten anyway, and if the write ultimately fails, deleting it
+    // would destroy the very data this call was trying to persist — for an outbox write
+    // that means losing queued user mutations, so failing with the old value intact is
+    // strictly better than clearing it.
     for (const disposableKey of DISPOSABLE_CACHE_KEYS) {
+      if (disposableKey === key) continue
       try {
         removeCachedKey(disposableKey)
       } catch {
         // Storage can also reject removals (private mode / disabled storage).
       }
+      try {
+        write()
+        return true
+      } catch {
+        // Still over quota — sacrifice the next one.
+      }
     }
 
-    try {
-      write()
-      return true
-    } catch {
-      return false
-    }
+    return false
   }
 }
 

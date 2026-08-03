@@ -12,7 +12,7 @@
 // backs this with a synchronous ref, not React state) so an op enqueued during
 // an `await dispatch` -- e.g. an Undo tap -- is preserved rather than clobbered.
 
-import type { QueuedOp, DispatchResult, ToastCopy } from './outbox'
+import type { EntityKind, QueuedOp, DispatchResult, ToastCopy } from './outbox'
 import type { PayEarlyResult } from '../types'
 import type { ToastAction } from '../components/ui/ToastViewport'
 import {
@@ -22,6 +22,19 @@ import {
   isLockError,
   JUST_LOGGED_IN_WINDOW_MS,
 } from './errors'
+
+/**
+ * Entities whose primary key the server assigns, so an optimistic row carries only a
+ * local placeholder id until its `add` comes back. Every one of these must have that
+ * placeholder remapped on success or later ops in the queue dispatch against an id the
+ * server has never seen. Client-authored ids (transactions, investments, categories)
+ * are already final and need no remap — do not add them here.
+ */
+export const SERVER_ASSIGNED_ID_ENTITIES: ReadonlySet<EntityKind> = new Set<EntityKind>([
+  'wishlistItem',
+  'savingsGoal',
+  'taxReliefCategory',
+])
 
 export const MAX_RETRIES = 5
 export const AUTH_RACE_BACKOFF_MS = 3000
@@ -212,7 +225,11 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
         }
         deps.mutateQueue(prev => {
           let next = prev.filter(item => item.id !== nextOp.id)
-          if ((nextOp.entity === 'wishlistItem' || nextOp.entity === 'taxReliefCategory') && nextOp.type === 'add' && result && 'id' in result && result.id) {
+          // Every entity whose PK the *server* mints needs this remap, not just some of
+          // them: savingsGoal was missing, so an update or delete queued while its add
+          // was still in flight (too late for enqueue to merge into the add payload)
+          // kept the local placeholder id and dispatched a guaranteed 404.
+          if (SERVER_ASSIGNED_ID_ENTITIES.has(nextOp.entity) && nextOp.type === 'add' && result && 'id' in result && result.id) {
             const realIdStr = String(result.id)
             // The completed add remains in the optimistic projection until refresh
             // finishes. Give that temporary row its server id too, otherwise a user
