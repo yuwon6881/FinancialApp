@@ -204,7 +204,9 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
             Keep receipts, invoices, and tax records in one place. Nothing is deleted automatically.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        {/* Two equal halves on mobile: wrapping left the pair ragged with dead
+            space beside it, and a full-width Download made the pairing unclear. */}
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
           <Button
             variant="outline"
             size="lg"
@@ -217,7 +219,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
                 showToast('The ZIP archive could not be prepared.', 'Download Failed', 'error'))
                 .finally(() => setIsDownloading(false))
             }}
-            className="rounded-xl bg-card text-xs"
+            className="w-full justify-center rounded-xl bg-card text-xs sm:w-auto"
           >
             <Download className="size-4" /> {isDownloading ? 'Preparing ZIP…' : taxYear ? `Download ${taxYear}` : 'Download all'}
           </Button>
@@ -230,7 +232,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
               if (!guardSensitive()) return
               setIsUploadSheetOpen(true)
             }}
-            className="shrink-0 rounded-xl text-xs shadow-md"
+            className="w-full shrink-0 justify-center rounded-xl text-xs shadow-md sm:w-auto"
           >
             <UploadCloud className="size-4" />
             Upload

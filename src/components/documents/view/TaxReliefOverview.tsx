@@ -324,7 +324,10 @@ export function TaxReliefOverview({
                   aria-pressed={selected}
                   aria-label={selected ? `Clear documents filter for ${category.name}` : `Filter documents by ${category.name}`}
                   title={selected ? `Clear ${category.name} document filter` : `Filter documents by ${category.name}`}
-                  className={`group flex min-h-32 w-[22rem] shrink-0 cursor-pointer snap-start flex-col gap-3 rounded-2xl border p-4 text-left transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
+                  // w-full resolves against the rail's own visible width, so one card
+                  // fills the viewport exactly rather than the 80vw that left a
+                  // permanently clipped card beside it.
+                  className={`group flex min-h-32 w-full sm:w-[22rem] shrink-0 cursor-pointer snap-start flex-col gap-3 rounded-2xl border p-4 text-left transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
                     selected
                       ? 'border-primary/70 bg-primary/10 ring-1 ring-primary/25 shadow-md shadow-primary/5'
                       : full
