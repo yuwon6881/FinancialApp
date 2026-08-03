@@ -42,15 +42,115 @@ const CycleHeaderSkeleton: React.FC<{
   </Card>
 )
 
-/** A single stat tile placeholder, matching the small banner cards used on Wishlist/Dashboard. */
-const StatTileSkeleton: React.FC = () => (
-  <Card className="p-5 flex items-center justify-between">
+const PlainHeaderSkeleton: React.FC<{ backButton?: boolean }> = ({ backButton = false }) => (
+  <div className="flex items-start gap-3">
+    {backButton && <Skeleton className="size-9 shrink-0 rounded-xl" />}
     <div className="space-y-2">
-      <Skeleton className="h-2.5 w-24" />
-      <Skeleton className="h-5 w-20" />
+      <Skeleton className="h-6 w-48" />
+      <Skeleton className="h-3 w-72 max-w-full" />
     </div>
-    <Skeleton className="size-10 rounded-xl" />
+  </div>
+)
+
+const SettingsHeaderSkeleton: React.FC = () => (
+  <div className="flex flex-col gap-2 rounded-2xl border border-border/60 bg-card p-4 sm:p-6">
+    <div className="flex items-center gap-2"><Skeleton className="size-5 rounded-md" /><Skeleton className="h-6 w-28" /></div>
+    <Skeleton className="h-3 w-80 max-w-full" />
+  </div>
+)
+
+const ReportsHeaderSkeleton: React.FC = () => (
+  <div className="app-panel rounded-2xl border border-border/60 bg-card/92 p-4 sm:p-6">
+    <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex items-center gap-3"><Skeleton className="size-10 rounded-xl" /><div className="space-y-2"><Skeleton className="h-6 w-28" /><Skeleton className="h-3 w-72 max-w-full" /></div></div>
+      <div className="grid w-full grid-cols-[minmax(0,1fr)_5.5rem_auto] gap-2 sm:grid-cols-[minmax(14rem,1fr)_7rem_auto] lg:w-96"><Skeleton className="h-9 rounded-xl" /><Skeleton className="h-9 rounded-xl" /><Skeleton className="size-9 rounded-lg" /></div>
+    </div>
+  </div>
+)
+
+const DashboardHeaderSkeleton: React.FC = () => (
+  <div className="app-panel overflow-hidden rounded-2xl border border-border/60 bg-card/92">
+    <div className="grid gap-5 rounded-2xl bg-linear-to-br from-blue-500/10 via-transparent to-teal-500/10 p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,25rem)] lg:items-center">
+      <div className="flex items-center gap-3"><Skeleton className="size-11 rounded-xl" /><div className="space-y-2"><Skeleton className="h-6 w-32" /><Skeleton className="h-3 w-48" /></div></div>
+      <div className="space-y-3 rounded-2xl border border-border/60 bg-background/65 p-4"><Skeleton className="h-3 w-28" /><Skeleton className="h-7 w-36" /><Skeleton className="h-3 w-40" /></div>
+    </div>
+  </div>
+)
+
+const RewardsPoolSkeleton: React.FC = () => (
+  <Card data-testid="wishlist-pool-skeleton" className="space-y-4 p-4 sm:p-5">
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="space-y-2"><Skeleton className="h-3 w-24" /><Skeleton className="h-7 w-32" /></div>
+      <div className="flex flex-wrap justify-end gap-2"><Skeleton className="h-8 w-20 rounded-xl" /><Skeleton className="h-8 w-32 rounded-xl" /></div>
+    </div>
+    <Skeleton className="h-2.5 w-full rounded-full" />
+    <div className="flex flex-wrap gap-x-5 gap-y-2"><Skeleton className="h-3 w-32" /><Skeleton className="h-3 w-32" /></div>
+    <div className="space-y-2 rounded-xl border border-border/50 bg-muted/25 p-3">
+      <div className="flex justify-between gap-3"><Skeleton className="h-3 w-24" /><Skeleton className="h-3 w-36" /></div>
+      <Skeleton className="h-1.5 w-full rounded-full" />
+      <Skeleton className="h-3 w-64 max-w-full" />
+    </div>
   </Card>
+)
+
+const HorizontalRailSkeleton: React.FC<{ kind: 'commitments' | 'rewards'; cards?: number }> = ({ kind, cards = 3 }) => (
+  <section className="space-y-3">
+    <div className="flex items-center justify-between gap-3 px-1">
+      <div className="space-y-1.5"><Skeleton className="h-4 w-28" />{kind === 'rewards' && <Skeleton className="h-2.5 w-48" />}</div>
+      <Skeleton className="h-8 w-24 rounded-lg" />
+    </div>
+    <div className="group/horizontal-rail relative min-w-0">
+      <div className="horizontal-rail no-scrollbar flex w-full min-w-0 gap-3 overflow-hidden pb-1">
+      {Array.from({ length: cards }, (_, i) => (
+        <div key={i} className="snap-start flex w-[22rem] shrink-0 flex-col gap-3 rounded-2xl border border-border/60 bg-card p-4 shadow-xs">
+          <div className="space-y-1.5"><Skeleton className="h-4 w-32" /><Skeleton className="h-2.5 w-28" /></div>
+          <div className="space-y-2"><div className="flex justify-between"><Skeleton className="h-5 w-24" /><Skeleton className="h-3 w-20" /></div><Skeleton className="h-1.5 w-full rounded-full" /></div>
+          {kind === 'commitments' ? (
+            <div className="space-y-2 rounded-xl border border-border/50 bg-muted/25 p-2.5"><div className="flex justify-between"><Skeleton className="h-2.5 w-20" /><Skeleton className="h-2.5 w-24" /></div><Skeleton className="h-1 w-full rounded-full" /><Skeleton className="h-3 w-36" /></div>
+          ) : <Skeleton className="h-3 w-36" />}
+          <div className="mt-auto flex items-center gap-1 border-t border-border/30 pt-3"><Skeleton className="h-8 w-20 rounded-lg" /><Skeleton className="h-8 w-8 rounded-lg" /><Skeleton className="ml-auto h-8 w-16 rounded-lg" /><Skeleton className="h-8 w-20 rounded-lg" /></div>
+        </div>
+      ))}
+      </div>
+      <Skeleton className="absolute left-2 top-1/2 size-8 -translate-y-1/2 rounded-full" />
+      <Skeleton className="absolute right-2 top-1/2 size-8 -translate-y-1/2 rounded-full" />
+    </div>
+  </section>
+)
+
+const CompactMetricGridSkeleton: React.FC<{ count: number; className?: string }> = ({ count, className }) => (
+  <div className={cn('grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3', className)}>
+    {Array.from({ length: count }, (_, i) => (
+      <div key={i} className="space-y-2 rounded-xl border border-border/50 bg-muted/25 p-4">
+        <Skeleton className="h-3 w-28" />
+        <Skeleton className="h-6 w-24" />
+        <Skeleton className="h-3 w-3/4" />
+      </div>
+    ))}
+  </div>
+)
+
+const CategoryWatchSkeleton: React.FC = () => (
+  <div className="app-panel space-y-4 rounded-2xl border border-border/60 bg-card/92 p-5">
+    <div className="space-y-2"><Skeleton className="h-4 w-32" /><Skeleton className="h-3 w-56 max-w-full" /></div>
+    <CompactMetricGridSkeleton count={3} className="lg:grid-cols-3" />
+  </div>
+)
+
+const FinancialPlanSkeleton: React.FC = () => (
+  <div className="app-panel space-y-4 rounded-2xl border border-border/60 bg-card/92 p-6">
+    <div className="space-y-2"><Skeleton className="h-5 w-44" /><Skeleton className="h-3 w-80 max-w-full" /></div>
+    <div className="flex gap-4"><Skeleton className="h-2 w-24" /><Skeleton className="h-2 w-32" /></div>
+    <CompactMetricGridSkeleton count={3} className="gap-6 xl:grid-cols-3" />
+  </div>
+)
+
+const InvestmentSummarySkeleton: React.FC = () => (
+  <div className="app-panel flex flex-col rounded-2xl border border-border/60 bg-card/92 p-4">
+    <div className="flex items-center justify-between"><Skeleton className="h-3 w-24" /><Skeleton className="size-8 rounded-lg" /></div>
+    <Skeleton className="mt-3 h-6 w-32" />
+    <div className="mt-3 space-y-2 border-t border-border/40 pt-1"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-3/4" /></div>
+  </div>
 )
 
 /** A single list-row placeholder, matching Ledger's transaction rows. */
@@ -85,16 +185,18 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
   if (variant === 'dashboard') {
     return (
       <div data-testid="dashboard-skeleton" className="space-y-6">
-        <CycleHeaderSkeleton subtitleWidth="w-72" controlWidth="w-60" />
-        <PanelSkeleton height="h-12" />
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-[repeat(2,minmax(0,1fr))]">
+        <DashboardHeaderSkeleton />
+        <div className="app-panel flex items-center gap-3 rounded-2xl border border-border/60 bg-card/92 p-5"><Skeleton className="size-10 rounded-xl" /><div className="flex-1 space-y-2"><Skeleton className="h-4 w-36" /><Skeleton className="h-3 w-2/3" /></div><Skeleton className="hidden h-9 w-28 rounded-xl sm:block" /></div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <CardSkeleton />
           <CardSkeleton />
         </div>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-          <PanelSkeleton height="h-36" />
-          <PanelSkeleton height="h-36" />
+        <div className="app-panel space-y-5 rounded-2xl border border-border/60 bg-card/92 p-5">
+          <div className="space-y-2"><Skeleton className="h-5 w-32" /><Skeleton className="h-3 w-72 max-w-full" /></div>
+          <CompactMetricGridSkeleton count={6} />
+          <div className="flex justify-end"><Skeleton className="h-8 w-32 rounded-lg" /></div>
         </div>
+        <CategoryWatchSkeleton />
       </div>
     )
   }
@@ -102,12 +204,19 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
   if (variant === 'reports') {
     return (
       <div data-testid="reports-skeleton" className="space-y-6">
-        <CycleHeaderSkeleton titleWidth="w-28" subtitleWidth="w-72" controlWidth="w-80" />
-        <PanelSkeleton height="h-28" />
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-[repeat(2,minmax(0,1fr))] xl:grid-cols-[repeat(3,minmax(0,1fr))]">
-          {[1, 2, 3].map(i => <CardSkeleton key={i} />)}
+        <ReportsHeaderSkeleton />
+        <div className="app-panel space-y-4 rounded-2xl border border-border/60 bg-card/92 p-5"><Skeleton className="h-4 w-40" /><Skeleton className="h-10 w-full rounded-xl" /><Skeleton className="h-10 w-full rounded-xl" /></div>
+        <FinancialPlanSkeleton />
+        <div className="app-panel flex items-center justify-between gap-4 rounded-2xl border border-border/60 bg-card/92 p-5"><div className="flex items-center gap-3"><Skeleton className="size-11 rounded-xl" /><div className="space-y-2"><Skeleton className="h-4 w-36" /><Skeleton className="h-3 w-64 max-w-full" /></div></div><Skeleton className="h-6 w-28" /></div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <CardSkeleton />
+          <CardSkeleton />
         </div>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[repeat(2,minmax(0,1fr))]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,2fr)]">
+          <PanelSkeleton height="h-56" />
+          <CategoryWatchSkeleton />
+        </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <PanelSkeleton height="h-56" />
           <PanelSkeleton height="h-56" />
         </div>
@@ -155,17 +264,13 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
 
   if (variant === 'wishlist') {
     return (
-      <div data-testid="wishlist-skeleton" className="space-y-6">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <StatTileSkeleton />
-          <StatTileSkeleton />
-          <StatTileSkeleton />
-        </div>
+      <div data-testid="wishlist-skeleton" className="space-y-5">
+        <RewardsPoolSkeleton />
         {fullPage && (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-            <PanelSkeleton height="h-72" />
-            <PanelSkeleton height="h-72" />
-          </div>
+          <>
+            <HorizontalRailSkeleton kind="commitments" />
+            <HorizontalRailSkeleton kind="rewards" />
+          </>
         )}
       </div>
     )
@@ -174,16 +279,21 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
   if (variant === 'settings') {
     return (
       <div data-testid="settings-skeleton" className="space-y-6">
-        <CycleHeaderSkeleton titleWidth="w-28" subtitleWidth="w-80" controlWidth="w-0" />
+        <SettingsHeaderSkeleton />
         <div className="flex gap-6 border-b border-border/30 pb-3">
           <Skeleton className="h-4 w-28" />
           <Skeleton className="h-4 w-40" />
           <Skeleton className="h-4 w-32" />
         </div>
-        <div className="app-panel space-y-5 rounded-2xl border border-border/60 bg-card/92 p-5">
-          <Skeleton className="h-5 w-36" />
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-[repeat(2,minmax(0,1fr))]">
-            {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
+          <div className="app-panel space-y-5 rounded-2xl border border-border/60 bg-card/92 p-5 lg:col-span-2">
+            <div className="space-y-2"><Skeleton className="h-5 w-36" /><Skeleton className="h-3 w-64" /></div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}</div>
+            <CompactMetricGridSkeleton count={4} className="md:grid-cols-2 lg:grid-cols-2" />
+          </div>
+          <div className="app-panel space-y-4 rounded-2xl border border-border/60 bg-card/92 p-5">
+            <div className="space-y-2"><Skeleton className="h-5 w-32" /><Skeleton className="h-3 w-full" /></div>
+            {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-9 w-full rounded-lg" />)}
           </div>
         </div>
       </div>
@@ -193,10 +303,12 @@ export const CycleSkeleton: React.FC<{ variant: PageSkeletonVariant; fullPage?: 
   if (variant === 'investments') {
     return (
       <div data-testid="investments-skeleton" className="space-y-6">
-        <CycleHeaderSkeleton titleWidth="w-52" subtitleWidth="w-80" controlWidth="w-44" />
+        <PlainHeaderSkeleton backButton />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {[1, 2, 3, 4].map(i => <StatTileSkeleton key={i} />)}
+          {[1, 2, 3, 4].map(i => <InvestmentSummarySkeleton key={i} />)}
         </div>
+        <div className="flex flex-wrap gap-2 rounded-2xl border border-border/60 bg-card/92 p-3">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-9 w-28 rounded-xl" />)}</div>
+        <div className="app-panel space-y-5 rounded-2xl border border-border/60 bg-card/92 p-5"><div className="space-y-2"><Skeleton className="h-5 w-40" /><Skeleton className="h-3 w-72 max-w-full" /></div><CompactMetricGridSkeleton count={3} /></div>
         <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <PanelSkeleton height="h-64" />
           <PanelSkeleton height="h-64" />
