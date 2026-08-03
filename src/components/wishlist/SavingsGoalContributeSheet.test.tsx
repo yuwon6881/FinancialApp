@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { SavingsGoal } from '../../types'
 import { SavingsGoalContributeSheet } from './SavingsGoalContributeSheet'
@@ -24,7 +24,7 @@ const goal: SavingsGoal = {
 }
 
 describe('SavingsGoalContributeSheet', () => {
-  it('defaults a release to one cycle instead of the whole commitment', () => {
+  it('defaults a release to one cycle instead of the whole commitment', async () => {
     const onConfirm = vi.fn()
     render(
       <SavingsGoalContributeSheet
@@ -40,8 +40,11 @@ describe('SavingsGoalContributeSheet', () => {
     )
 
     expect((screen.getByRole('textbox', { name: /amount/i }) as HTMLInputElement).value).toBe('250.00')
-    fireEvent.click(screen.getByRole('button', { name: 'Release' }))
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Release' }))
+    })
 
     expect(onConfirm).toHaveBeenCalledWith(-250)
   })
 })
+

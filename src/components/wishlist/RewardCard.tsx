@@ -45,7 +45,7 @@ export const RewardCard: React.FC<RewardCardProps> = ({
 
   return (
     <Card
-      className={`snap-start shrink-0 w-[22rem] flex flex-col gap-3 p-4 transition-colors duration-300 ${
+      className={`snap-start shrink-0 w-[80vw] sm:w-[22rem] flex flex-col gap-3 p-4 transition-colors duration-300 ${
         isFocused
           ? 'bg-linear-to-br from-blue-500/12 to-card border-blue-500/50 ring-1 ring-blue-500/20 shadow-md shadow-blue-500/5'
           : ''

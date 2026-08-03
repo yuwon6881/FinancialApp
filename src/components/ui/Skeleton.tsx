@@ -102,7 +102,7 @@ const HorizontalRailSkeleton: React.FC<{ kind: 'commitments' | 'rewards'; cards?
     <div className="group/horizontal-rail relative min-w-0">
       <div className="horizontal-rail no-scrollbar flex w-full min-w-0 gap-3 overflow-hidden pb-1">
       {Array.from({ length: cards }, (_, i) => (
-        <div key={i} className="snap-start flex w-[22rem] shrink-0 flex-col gap-3 rounded-2xl border border-border/60 bg-card p-4 shadow-xs">
+        <div key={i} className="snap-start flex w-[80vw] sm:w-[22rem] shrink-0 flex-col gap-3 rounded-2xl border border-border/60 bg-card p-4 shadow-xs">
           <div className="space-y-1.5"><Skeleton className="h-4 w-32" /><Skeleton className="h-2.5 w-28" /></div>
           <div className="space-y-2"><div className="flex justify-between"><Skeleton className="h-5 w-24" /><Skeleton className="h-3 w-20" /></div><Skeleton className="h-1.5 w-full rounded-full" /></div>
           {kind === 'commitments' ? (

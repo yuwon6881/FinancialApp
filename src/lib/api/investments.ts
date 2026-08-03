@@ -10,6 +10,7 @@ import type {
   InvestmentPlan,
   InvestmentRange,
   InvestmentTransactionType,
+  MarketDataReference,
 } from '../../types'
 import { CACHE_KEYS, clearCachedInvestmentPages, getCachedJSON, setCachedJSON } from '../cache'
 import { cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
@@ -25,6 +26,9 @@ export interface InstrumentSearchResult {
   currency: string
   availableOnBasic: boolean
   source: string
+  availability?: 'Available' | 'Unavailable' | 'Unknown'
+  availabilityMessage?: string
+  marketDataReference?: MarketDataReference
 }
 
 export interface InvestmentSearchResponse {
@@ -87,6 +91,7 @@ export interface InstrumentMutation {
   country?: string
   providerSymbol?: string
   providerMic?: string
+  marketDataReference?: MarketDataReference
   isCustom: boolean
   isArchived?: boolean
 }

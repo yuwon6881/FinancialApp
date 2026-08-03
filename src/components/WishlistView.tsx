@@ -319,7 +319,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
             {completedGoals.map(goal => (
               <div
                 key={goal.id}
-                className="snap-start shrink-0 w-40 flex flex-col justify-center gap-1 rounded-2xl border border-dashed border-border/60 bg-muted/20 p-4"
+                className="snap-start shrink-0 w-36 sm:w-40 flex flex-col justify-center gap-1 rounded-2xl border border-dashed border-border/60 bg-muted/20 p-4"
               >
                 <span className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-500">
                   <CheckCircle2 className="size-3 shrink-0" /> Done

@@ -153,6 +153,8 @@ describe('InvestmentsView provider call boundaries', () => {
         currency: 'USD',
         availableOnBasic: true,
         source: 'twelvedata',
+        availability: 'Available',
+        marketDataReference: { providerId: 'twelvedata', externalId: 'VOO|ARCX' },
       }],
       providerConfigured: true,
       providerContacted: true,
@@ -176,11 +178,45 @@ describe('InvestmentsView provider call boundaries', () => {
       'investmentInstrument',
       'add',
       expect.any(String),
-      expect.objectContaining({ symbol: 'VOO', name: 'Vanguard ETF' }),
+      expect.objectContaining({
+        symbol: 'VOO',
+        name: 'Vanguard ETF',
+        marketDataReference: { providerId: 'twelvedata', externalId: 'VOO|ARCX' },
+      }),
     ))
     expect(api.createInvestmentInstrument).not.toHaveBeenCalled()
     expect(api.refreshInvestmentMarketData).not.toHaveBeenCalled()
     expect(context.showToast).not.toHaveBeenCalled()
+  })
+
+  it('renders provider-neutral availability and blocks only unavailable results', async () => {
+    vi.mocked(api.searchInvestmentInstruments).mockResolvedValue({
+      results: [
+        {
+          symbol: 'LOCKED', name: 'Unavailable fund', type: 'ETF', currency: 'USD',
+          availableOnBasic: false, source: 'market-provider', availability: 'Unavailable',
+          availabilityMessage: 'This investment is unavailable from the configured source.',
+          marketDataReference: { providerId: 'market-provider', externalId: 'locked' },
+        },
+        {
+          symbol: 'UNKNOWN', name: 'Unknown fund', type: 'ETF', currency: 'USD',
+          availableOnBasic: true, source: 'market-provider', availability: 'Unknown',
+          marketDataReference: { providerId: 'market-provider', externalId: 'unknown' },
+        },
+      ],
+      providerConfigured: true,
+      providerContacted: true,
+    })
+    renderView()
+    fireEvent.click(await screen.findByRole('button', { name: 'Add investment' }))
+    fireEvent.change(screen.getByPlaceholderText('Search at least 3 characters'), { target: { value: 'fund' } })
+
+    fireEvent.click(await screen.findByRole('button', { name: /LOCKED/ }, { timeout: 1500 }))
+    expect((screen.getByRole('button', { name: 'Save investment' }) as HTMLButtonElement).disabled).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: 'Change' }))
+    expect(screen.getByText('Availability not confirmed')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /UNKNOWN/ }))
+    expect((screen.getByRole('button', { name: 'Save investment' }) as HTMLButtonElement).disabled).toBe(false)
   })
 
   it('derives the missing one of units / unit price / gross and keeps it in sync', async () => {

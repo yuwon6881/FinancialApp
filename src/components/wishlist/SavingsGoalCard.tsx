@@ -72,7 +72,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
 
   return (
     <Card
-      className={`snap-start shrink-0 w-[22rem] flex flex-col gap-3 p-4 transition-colors duration-300 ${
+      className={`snap-start shrink-0 w-[80vw] sm:w-[22rem] flex flex-col gap-3 p-4 transition-colors duration-300 ${
         status === 'overdue' ? 'border-destructive/40' : 'border-border/60'
       }`}
     >

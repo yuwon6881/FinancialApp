@@ -247,8 +247,8 @@ describe('App behaviors', () => {
       expect(screen.getByTestId('dashboard-view')).toBeDefined()
     }, { timeout: 5000 })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open Menu' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Ask AI' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Open Menu' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Ask AI' }))
 
     expect(screen.getByRole('dialog', { name: 'ASK AI' })).toBeDefined()
     await waitFor(() => {
