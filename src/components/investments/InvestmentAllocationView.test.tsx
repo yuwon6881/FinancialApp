@@ -45,7 +45,7 @@ describe('investment sleeve allocation view', () => {
   })
 
   it('filters the holdings table with the same sleeve lookup', () => {
-    render(<HoldingsTable portfolio={portfolio} masked={false} filter={{ mode: 'sleeve', key: 'USEquity' }} />)
+    render(<HoldingsTable portfolio={portfolio} masked={false} filter={{ mode: 'sleeve', key: 'USEquity' }} onSelectHolding={vi.fn()} />)
 
     expect(screen.getAllByText(/Vanguard S&P 500 ETF/).length).toBeGreaterThan(0)
     expect(screen.queryByText('Other ETF')).toBeNull()

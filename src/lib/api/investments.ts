@@ -1,4 +1,5 @@
 import type {
+  InstrumentHistory,
   InvestmentAccount,
   InvestmentActivity,
   InvestmentCashFlow,
@@ -119,6 +120,17 @@ export async function fetchInvestmentPortfolio(
   const portfolio: InvestmentPortfolio = { ...data, activity: [], cashFlows: [] }
   setCachedJSON(CACHE_KEYS.investmentPortfolio, portfolio)
   return portfolio
+}
+
+export function fetchInstrumentHistory(
+  instrumentId: string,
+  range: InvestmentRange,
+  signal?: AbortSignal,
+): Promise<InstrumentHistory> {
+  return request(`/investments/instruments/${instrumentId}/history?range=${range}`, {
+    signal,
+    errorMessage: 'Could not load this fund’s history',
+  })
 }
 
 export function searchInvestmentInstruments(query: string, signal?: AbortSignal): Promise<InvestmentSearchResponse> {

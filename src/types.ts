@@ -1,7 +1,7 @@
 export const APP_TABS = ['dashboard', 'reports', 'recurring', 'ledger', 'wishlist', 'drafts', 'settings', 'investments', 'documents'] as const
 export type AppTab = typeof APP_TABS[number]
 
-export type InvestmentRange = '1m' | '3m' | '6m' | '1y' | 'all'
+export type InvestmentRange = '1m' | '3m' | '6m' | '1y' | '3y' | '5y' | 'all'
 export type InvestmentInstrumentType = 'Stock' | 'ETF' | 'MutualFund'
 export type InvestmentAllocationSleeve = 'USEquity' | 'InternationalExUS' | 'Bonds'
 export type InvestmentAllocationStatus = 'NotStarted' | 'Incomplete' | 'OnTrack' | 'Watch' | 'Alert'
@@ -20,6 +20,19 @@ export interface InvestmentAccount {
   archiveUnavailableReason?: string
   isPendingSync?: boolean
   isPendingDelete?: boolean
+}
+
+/** Price history for one fund, loaded on demand when its detail sheet opens. */
+export interface InstrumentHistory {
+  instrumentId: string
+  symbol: string
+  name: string
+  currency: string
+  points: Array<{ date: string; price: number }>
+  averageCostNative?: number
+  latestPriceNative?: number
+  units: number
+  firstBoughtOn?: string
 }
 
 export interface InvestmentInstrument {

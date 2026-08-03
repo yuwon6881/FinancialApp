@@ -32,12 +32,13 @@ import { applyOpsToList } from '../lib/outbox'
 import { formatCurrencyVal } from '../lib/utils'
 import { InvestmentPlanPanel } from './investments/InvestmentPlanPanel'
 import {
-  AllocationChart,
-  PerformanceBars,
-  ValueChart,
+  AllocationChart,  ValueChart,
   type AllocationFilter,
 } from './investments/InvestmentCharts'
+import { PerformanceBars } from './investments/PerformanceBars'
 import { HoldingsTable, PagedActivityTable } from './investments/InvestmentTables'
+import { HoldingDetailSheet } from './investments/HoldingDetailSheet'
+import { portfolioAnnualReturn } from '../lib/investmentReturn'
 import { AccountForm, ActivityForm, CashForm, InstrumentForm } from './investments/InvestmentForms'
 import { useAutoOpenModal } from '../lib/useAutoOpenModal'
 import type { InvestmentActivityScanResult } from '../lib/api'
@@ -97,6 +98,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
   const [formKey, setFormKey] = useState(0)
   const busy = false
   const [allocationFilter, setAllocationFilter] = useState<AllocationFilter>(null)
+  const [detailHolding, setDetailHolding] = useState<InvestmentPortfolio['holdings'][number] | null>(null)
   const setupPortfolio = useMemo(() => portfolio ? {
     ...portfolio,
     accounts: applyOpsToList(portfolio.accounts, investmentOps, 'investmentAccount'),
@@ -320,8 +322,14 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
             <ValueChart portfolio={portfolio} masked={hideSensitive} range={range} isFetching={loading} onRangeChange={setRange} />
             <AllocationChart portfolio={portfolio} masked={hideSensitive} selected={allocationFilter} onSelect={setAllocationFilter} />
           </div>
-          <PerformanceBars portfolio={portfolio} masked={hideSensitive} />
-          <HoldingsTable portfolio={portfolio} masked={hideSensitive} filter={allocationFilter} />
+          <PerformanceBars portfolio={portfolio} masked={hideSensitive} onSelectHolding={setDetailHolding} />
+          <HoldingsTable portfolio={portfolio} masked={hideSensitive} filter={allocationFilter} onSelectHolding={setDetailHolding} />
+          <HoldingDetailSheet
+            holding={detailHolding}
+            appCurrency={portfolio.appCurrency}
+            masked={hideSensitive}
+            onClose={() => setDetailHolding(null)}
+          />
           <PagedActivityTable
             portfolio={setupPortfolio ?? portfolio}
             masked={hideSensitive}
@@ -419,6 +427,7 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
   const realised = portfolio.summary.realisedProfitLoss
   const daily = portfolio.summary.dailyChange
   const percent = portfolio.summary.unrealisedPercent
+  const annualReturn = portfolioAnnualReturn(portfolio)
 
   const tone = (value?: number) => {
     if (value === undefined) return 'text-amber-500'
@@ -511,6 +520,12 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
       },
       rows: [
         { label: 'Already banked', value: signed(realised), hint: 'Profit or loss locked in on investments you have sold, after fees and taxes.', color: tone(realised) },
+        {
+          label: 'Your yearly return',
+          value: annualReturn === undefined ? 'Not available yet' : masked ? '••••' : `${annualReturn > 0 ? '+' : ''}${(annualReturn * 100).toFixed(1)}% a year`,
+          hint: 'The rate your money has actually earned, counting when each deposit went in. A deposit made last month has not had a year to grow, so this is fairer than comparing your total gain to what you paid.',
+          color: annualReturn === undefined ? undefined : tone(annualReturn),
+        },
       ],
     },
     {

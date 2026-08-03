@@ -36,7 +36,7 @@ const cashFlowAmount = (flow: InvestmentCashFlow, masked: boolean) => {
   return `${amount} → ${money(flow.toAmount, flow.toCurrency)}`
 }
 
-export const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: InvestmentPortfolio; masked: boolean; filter: AllocationFilter }) => {
+export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { portfolio: InvestmentPortfolio; masked: boolean; filter: AllocationFilter; onSelectHolding: (holding: InvestmentPortfolio['holdings'][number]) => void }) => {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState<10 | 25 | 50>(10)
   const sleeveIndex = useMemo(() => buildSleeveIndex(portfolio.instruments), [portfolio.instruments])
@@ -91,7 +91,7 @@ export const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: Invest
       {paginatedHoldings.map(holding => (
         <article key={`${holding.accountId}-${holding.instrumentId}`} className="interactive-card min-w-0 rounded-xl border border-border/50 p-4">
           <div className="flex min-w-0 items-start justify-between gap-3">
-            <div className="min-w-0"><strong className="block truncate text-sm">{holding.symbol} · {holding.name}</strong><span className="text-[10px] text-muted-foreground">{holding.accountName} · {holding.type}</span></div>
+            <div className="min-w-0"><Button variant="unstyled" onClick={() => onSelectHolding(holding)} className="block max-w-full cursor-pointer truncate text-left text-sm font-bold text-foreground underline decoration-dotted underline-offset-4 hover:text-primary">{holding.symbol} · {holding.name}</Button><span className="text-[10px] text-muted-foreground">{holding.accountName} · {holding.type}</span></div>
             <strong className="shrink-0 text-sm">{masked ? '••••' : holding.valueApp === undefined ? 'Exchange rate missing' : money(holding.valueApp, portfolio.appCurrency)}</strong>
           </div>
           <dl className="mt-3 grid grid-cols-2 gap-2 text-[10px]">
@@ -150,7 +150,7 @@ export const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: Invest
         <DataTableBody>
           {paginatedHoldings.map(holding => (
             <tr key={`${holding.accountId}-${holding.instrumentId}`} className="hover:bg-muted/20">
-              <td className="px-4 py-3"><span className="font-bold text-foreground">{holding.symbol}</span><span className="ml-2 text-[10px] text-muted-foreground">{holding.type}</span><span className="block max-w-44 truncate text-[10px] text-muted-foreground">{holding.name}</span><details className="group/valuation mt-1 text-[9px] text-muted-foreground"><summary className="cursor-pointer select-none outline-none">How this was worked out</summary><div className="mt-1">Worth in fund currency {masked || holding.valueNative === undefined ? '—' : money(holding.valueNative, holding.currency)} · {holding.priceDate ?? 'No price date'}</div></details></td>
+              <td className="px-4 py-3"><Button variant="unstyled" onClick={() => onSelectHolding(holding)} className="cursor-pointer font-bold text-foreground underline decoration-dotted underline-offset-4 hover:text-primary">{holding.symbol}</Button><span className="ml-2 text-[10px] text-muted-foreground">{holding.type}</span><span className="block max-w-44 truncate text-[10px] text-muted-foreground">{holding.name}</span><details className="group/valuation mt-1 text-[9px] text-muted-foreground"><summary className="cursor-pointer select-none outline-none">How this was worked out</summary><div className="mt-1">Worth in fund currency {masked || holding.valueNative === undefined ? '—' : money(holding.valueNative, holding.currency)} · {holding.priceDate ?? 'No price date'}</div></details></td>
               <td className="px-4 py-3 text-muted-foreground">{holding.accountName}</td>
               <td className="px-4 py-3 text-right font-medium">{masked ? '••••' : number(holding.units, 8)}</td>
               <td className="px-4 py-3 text-right">{masked ? '••••' : money(holding.averageCostNative, holding.currency)}</td>
