@@ -63,6 +63,19 @@ describe('orderRewardsForRail', () => {
     expect(orderRewardsForRail(items, undefined).map(entry => entry.id)).toEqual([2, 4, 3, 1])
   })
 
+  it('puts a positive local id after persisted ids when every domain field ties', () => {
+    const createdAt = '2026-02-01T00:00:00Z'
+    const items = [
+      item({ id: 1_785_000_000_000_123, priority: 'Medium', createdAt }),
+      item({ id: 42, priority: 'Medium', createdAt }),
+    ]
+
+    expect(orderRewardsForRail(items, undefined).map(entry => entry.id)).toEqual([
+      42,
+      1_785_000_000_000_123,
+    ])
+  })
+
   it('excludes claimed items and leaves the input array untouched', () => {
     const items = [
       item({ id: 1, isPurchased: true }),

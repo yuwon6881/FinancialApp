@@ -25,6 +25,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
   const { hideSensitive } = useAppPrefs()
   const { showToast } = useAppUi()
   const [preview, setPreview] = useState<PreviewState>({ status: 'idle' })
+  const [mediaLoaded, setMediaLoaded] = useState(false)
 
   useEffect(() => {
     if (!document || hideSensitive) {
@@ -34,6 +35,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
 
     let active = true
     let objectUrl: string | null = null
+    setMediaLoaded(false)
     setPreview({ status: 'loading' })
 
     void getDocumentContent(document.id, document.originalFileName)
@@ -63,6 +65,9 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
     }
   }, [document, hideSensitive, onClose, showToast])
 
+  const waitingForMedia = preview.status === 'ready' && preview.text === undefined && !mediaLoaded
+  const isLoading = preview.status === 'idle' || preview.status === 'loading' || waitingForMedia
+
   return (
     <BottomSheet
       isOpen={document !== null && !hideSensitive}
@@ -84,9 +89,9 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
         </Button>
       ) : undefined}
     >
-      <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto rounded-xl border border-border/60 bg-background/70">
-        {(preview.status === 'idle' || preview.status === 'loading') && (
-          <div className="flex items-center gap-2 p-8 text-xs font-semibold text-muted-foreground" role="status">
+      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-background/70" aria-busy={isLoading}>
+        {isLoading && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 bg-background p-8 text-xs font-semibold text-muted-foreground" role="status">
             <Loader2 className="size-4 animate-spin text-accent-ink" aria-hidden="true" />
             Loading preview…
           </div>
@@ -95,7 +100,8 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
           <iframe
             src={preview.url}
             title={`Preview of ${document?.originalFileName ?? 'document'}`}
-            className="h-full min-h-[60vh] w-full rounded-xl bg-card"
+            className="h-full min-h-[60vh] w-full border-0 bg-card"
+            onLoad={() => setMediaLoaded(true)}
           />
         )}
         {preview.status === 'ready' && canPreviewAsImage(preview.contentType) && (
@@ -103,10 +109,11 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
             src={preview.url}
             alt={`Preview of ${document?.originalFileName ?? 'document'}`}
             className="max-h-full max-w-full object-contain p-3"
+            onLoad={() => setMediaLoaded(true)}
           />
         )}
         {preview.status === 'ready' && preview.text !== undefined && (
-          <pre className="min-h-full w-full whitespace-pre-wrap break-words p-4 text-xs leading-relaxed text-foreground">
+          <pre className="max-h-full min-h-full w-full overflow-auto whitespace-pre-wrap break-words p-4 text-xs leading-relaxed text-foreground">
             {preview.text}
           </pre>
         )}

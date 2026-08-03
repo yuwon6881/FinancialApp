@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { VaultDocument } from '../../../types'
 import { DocumentPreviewSheet } from './DocumentPreviewSheet'
@@ -44,6 +44,10 @@ describe('DocumentPreviewSheet', () => {
     const frame = await screen.findByTitle('Preview of tax.pdf')
     expect(frame.getAttribute('src')).toBe('blob:preview')
     expect(createObjectUrl).toHaveBeenCalledOnce()
+    expect(screen.getByRole('status').textContent).toContain('Loading preview')
+
+    fireEvent.load(frame)
+    expect(screen.queryByRole('status')).toBeNull()
 
     unmount()
     expect(revokeObjectUrl).toHaveBeenCalledWith('blob:preview')

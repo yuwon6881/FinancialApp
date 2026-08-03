@@ -120,6 +120,18 @@ describe('orderForFunding', () => {
     expect(orderForFunding(goals).map(goal => goal.id)).toEqual([2, 4, 3, 1])
   })
 
+  it('puts a positive local id after persisted ids when every domain field ties', () => {
+    const goals = [
+      newGoal({ id: 1_785_000_000_000_123 }),
+      newGoal({ id: 42 }),
+    ]
+
+    expect(orderForFunding(goals).map(goal => goal.id)).toEqual([
+      42,
+      1_785_000_000_000_123,
+    ])
+  })
+
   it('does not mutate the input array', () => {
     const goals = [newGoal({ id: 1, priority: 'Low' }), newGoal({ id: 2, priority: 'High' })]
 

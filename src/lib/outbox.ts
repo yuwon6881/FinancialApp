@@ -251,15 +251,32 @@ export function createFinalId(entity: EntityKind): string {
 }
 
 /**
- * Negative placeholder id for a record whose real PK is a server-generated int (wishlist items,
- * savings goals). Negative so it can never collide with a real row, and numeric so list code can
- * treat an optimistic row exactly like a persisted one.
+ * Numeric placeholder for a record whose real PK is a server-generated 32-bit int (wishlist items,
+ * savings goals). Keeping it above that range prevents a collision while making the optimistic row
+ * use the same final-id tie-break direction as a newly inserted server row.
  */
 export function createLocalNumericId(): number {
-  return -Math.floor(Date.now() * 1000 + Math.random() * 1000)
+  return Math.floor(Date.now() * 1000 + Math.random() * 1000)
 }
 
 export const createLocalWishlistId = createLocalNumericId
+
+type OptimisticListItem = {
+  id: string | number
+  name?: string
+}
+
+// Canonical API ordering is applied after every projection so adds and ordering-field updates land
+// where the next server refresh will put them. Only entity-wide server orders belong here; views
+// with contextual ordering (ledger sort modes, reward priority, investment filters) keep using
+// their domain comparators on top of this projection.
+const CANONICAL_LIST_COMPARATORS: Partial<Record<EntityKind, (
+  left: OptimisticListItem,
+  right: OptimisticListItem,
+) => number>> = {
+  category: (left, right) => (left.name ?? '').localeCompare(right.name ?? ''),
+  recurringPayment: (left, right) => (left.name ?? '').localeCompare(right.name ?? ''),
+}
 
 function createOpId(): string {
   return `op-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
@@ -663,8 +680,8 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
 
     if (op.type === 'add') {
       // Wishlist items and savings goals have server-generated int PKs, so an offline add carries
-      // a negative numeric placeholder. Keep it numeric: leaving it a string breaks id comparisons
-      // and the numeric ordering these lists rely on.
+      // a numeric placeholder outside that range. Keep it numeric: leaving it a string breaks id
+      // comparisons and the numeric ordering these lists rely on. Older negative ids remain valid.
       const parsedId = entity === 'wishlistItem' || entity === 'savingsGoal' ? Number(op.targetId) : op.targetId
       const newItem = {
         ...op.payload,
@@ -848,7 +865,8 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
     }
   }
 
-  return result
+  const comparator = CANONICAL_LIST_COMPARATORS[entity]
+  return comparator ? result.sort(comparator) : result
 }
 
 const withoutUndoSnapshot = (payload: OutboxPayload | undefined): OutboxPayload => {

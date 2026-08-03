@@ -28,7 +28,7 @@ vi.mock('./api/documents', () => ({
   deleteTaxReliefCategory: vi.fn(async () => undefined),
 }))
 
-import { applyOpsToList, enqueue, DISPATCH, getSyncSuccessToast, projectFinancialSetting, projectSettingPreference, type QueuedOp } from './outbox'
+import { applyOpsToList, createLocalNumericId, enqueue, DISPATCH, getSyncSuccessToast, projectFinancialSetting, projectSettingPreference, type QueuedOp } from './outbox'
 import * as api from './api'
 import * as savingsGoalsApi from './api/savingsGoals'
 import * as documentsApi from './api/documents'
@@ -42,6 +42,7 @@ interface TestItem {
   category?: string
   ledgerCategory?: string
   amount?: number
+  dueDate?: number
   wishlistItemId?: number
   recurringPaymentId?: string | null
   active?: boolean
@@ -311,8 +312,8 @@ describe('projectFinancialSetting', () => {
 
 describe('applyOpsToList — savings goals', () => {
   it('gives an optimistically added goal a numeric id so pace math still works offline', () => {
-    // The server generates the int PK, so an offline add carries a negative placeholder. Leaving
-    // it a string would break every id comparison and the numeric sort in orderForFunding.
+    // Persisted queues can contain placeholders created by older app versions. Leaving one as a
+    // string would break every id comparison and the numeric sort in orderForFunding.
     const ops = [makeOp({
       entity: 'savingsGoal', type: 'add', targetId: '-42', payload: { name: 'Car service' },
     })]
@@ -370,6 +371,62 @@ describe('applyOpsToList — savings goals', () => {
       title: 'Savings Goal Added',
       message: '"Car service" was added.',
     })
+  })
+})
+
+describe('optimistic list ordering', () => {
+  it('uses positive numeric placeholders beyond the server integer range', () => {
+    const id = createLocalNumericId()
+
+    expect(id).toBeGreaterThan(2_147_483_647)
+    expect(Number.isSafeInteger(id)).toBe(true)
+  })
+
+  it('keeps an optimistic category in the API alphabetical order', () => {
+    const base: TestItem[] = [
+      { id: 'cat-a', name: 'Bills' },
+      { id: 'cat-c', name: 'Transport' },
+    ]
+    const ops = [makeOp({
+      entity: 'category', type: 'add', targetId: 'cat-b', payload: { name: 'Food' },
+    })]
+
+    expect(applyOpsToList(base, ops, 'category').map(item => item.name)).toEqual([
+      'Bills',
+      'Food',
+      'Transport',
+    ])
+  })
+
+  it('keeps recurring payments in the API name order before view-specific sorting', () => {
+    const base: TestItem[] = [
+      { id: 'rec-a', name: 'Cloud storage', amount: 10, dueDate: 20 },
+      { id: 'rec-c', name: 'Streaming', amount: 10, dueDate: 5 },
+    ]
+    const ops = [makeOp({
+      entity: 'recurringPayment',
+      type: 'add',
+      targetId: 'rec-b',
+      payload: { name: 'Music', amount: 10, dueDate: 15 },
+    })]
+
+    expect(applyOpsToList(base, ops, 'recurringPayment').map(item => item.name)).toEqual([
+      'Cloud storage',
+      'Music',
+      'Streaming',
+    ])
+  })
+
+  it('repositions an optimistic category update using the same shared order', () => {
+    const base: TestItem[] = [
+      { id: 'cat-a', name: 'Bills' },
+      { id: 'cat-b', name: 'Food' },
+    ]
+    const ops = [makeOp({
+      entity: 'category', type: 'update', targetId: 'cat-a', payload: { name: 'Transport' },
+    })]
+
+    expect(applyOpsToList(base, ops, 'category').map(item => item.name)).toEqual(['Food', 'Transport'])
   })
 })
 
@@ -639,7 +696,10 @@ describe('applyOpsToList', () => {
     })
     const categories = applyOpsToList([{ id: 'old-id', name: 'Old' }, { id: 'new-id', name: 'New' }], [op], 'category')
     const transactions = applyOpsToList([{ id: 'tx-1', name: 'Lunch', category: 'Old' }], [op], 'transaction')
-    expect(categories[0]).toMatchObject({ name: 'Old', isPendingDelete: true, isPendingSync: true })
+    expect(categories.find(category => category.name === 'Old')).toMatchObject({
+      isPendingDelete: true,
+      isPendingSync: true,
+    })
     expect(transactions[0]).toMatchObject({ category: 'New', isPendingSync: true })
   })
 

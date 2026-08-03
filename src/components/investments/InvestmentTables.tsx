@@ -86,7 +86,7 @@ export const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: Invest
       ))}
       {accountGroups.length === 0 && <p className="text-xs text-muted-foreground">Record a buy or cash movement to populate an account.</p>}
     </div>
-    <div className="space-y-3 px-3 pb-3 lg:hidden">
+    <div className="space-y-3 px-3 pb-3 xl:hidden">
       {paginatedHoldings.map(holding => (
         <article key={`${holding.accountId}-${holding.instrumentId}`} className="interactive-card min-w-0 rounded-xl border border-border/50 p-4">
           <div className="flex min-w-0 items-start justify-between gap-3">
@@ -120,8 +120,8 @@ export const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: Invest
         </article>
       ))}
     </div>
-    <div className="hidden lg:block">
-      <DataTable embedded tableClassName="min-w-[1050px] table-fixed">
+    <div className="hidden xl:block">
+      <DataTable embedded tableClassName="table-fixed">
         <colgroup>
           <col className="w-[16%]" />
           <col className="w-[9%]" />
