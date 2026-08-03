@@ -147,9 +147,13 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         {actions}
       </div>
 
-      {/* Sliding content surface */}
+      {/* Sliding content surface. This must stay opaque: it is what hides the action
+          drawer sitting behind it, so a transparent surface leaves every row looking
+          permanently swiped open. `relative` keeps it above the drawer in paint order
+          even when a consumer's own background is see-through. */}
       <m.div
         data-swipe-content
+        className={cn('relative bg-card', contentClassName)}
         drag={disabled ? false : 'x'}
         dragConstraints={{ left: -actionsWidth, right: 0 }}
         dragElastic={0.1}
