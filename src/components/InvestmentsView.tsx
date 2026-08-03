@@ -31,13 +31,13 @@ import { useInvestmentPortfolio } from './investments/useInvestmentPortfolio'
 import { applyOpsToList } from '../lib/outbox'
 import { formatCurrencyVal } from '../lib/utils'
 import { InvestmentPlanPanel } from './investments/InvestmentPlanPanel'
-import {
-  AllocationChart,  ValueChart,
-  type AllocationFilter,
-} from './investments/InvestmentCharts'
+import { ValueChart } from './investments/InvestmentCharts'
+import { AllocationChart } from './investments/AllocationChart'
+import type { AllocationFilter } from '../lib/investmentHoldingFilter'
 import { PerformanceBars } from './investments/PerformanceBars'
 import { HoldingsTable, PagedActivityTable } from './investments/InvestmentTables'
 import { HoldingDetailSheet } from './investments/HoldingDetailSheet'
+import { InvestmentForecastPanel } from './investments/InvestmentForecastPanel'
 import { portfolioAnnualReturn } from '../lib/investmentReturn'
 import { AccountForm, ActivityForm, CashForm, InstrumentForm } from './investments/InvestmentForms'
 import { useAutoOpenModal } from '../lib/useAutoOpenModal'
@@ -322,6 +322,11 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
             <ValueChart portfolio={portfolio} masked={hideSensitive} range={range} isFetching={loading} onRangeChange={setRange} />
             <AllocationChart portfolio={portfolio} masked={hideSensitive} selected={allocationFilter} onSelect={setAllocationFilter} />
           </div>
+          <InvestmentForecastPanel
+            key={`${portfolio.summary.totalValue ?? 'incomplete'}-${portfolio.allocation.plan.updatedAt ?? 'default'}-${portfolio.allocation.contributionPlan?.amount ?? 0}-${portfolio.allocation.contributionPlan?.isEstimated ?? false}`}
+            portfolio={portfolio}
+            masked={hideSensitive}
+          />
           <PerformanceBars portfolio={portfolio} masked={hideSensitive} onSelectHolding={setDetailHolding} />
           <HoldingsTable portfolio={portfolio} masked={hideSensitive} filter={allocationFilter} onSelectHolding={setDetailHolding} />
           <HoldingDetailSheet

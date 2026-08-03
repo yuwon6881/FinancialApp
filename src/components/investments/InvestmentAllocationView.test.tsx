@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { InvestmentPortfolio } from '../../types'
-import { AllocationChart } from './InvestmentCharts'
+import { AllocationChart } from './AllocationChart'
 import { HoldingsTable } from './InvestmentTables'
 
 const portfolio: InvestmentPortfolio = {

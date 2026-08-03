@@ -35,17 +35,20 @@ export function FundPriceChart({ history, masked }: { history: InstrumentHistory
   const low = Math.min(...prices)
   const high = Math.max(...prices)
   const paidLine = history.averageCostNative === undefined ? undefined : yAt(history.averageCostNative, geometry)
+  const paidComparison = history.averageCostNative === undefined ? undefined : last - history.averageCostNative
   const rising = change >= 0
   const summary = `${history.symbol} moved from ${money(first)} on ${history.points[0].date} to ${money(last)} on ${history.points[prices.length - 1].date}${changePercent === undefined ? '' : `, a change of ${changePercent.toFixed(1)} percent`}.`
 
   return (
     <section aria-labelledby="fund-price-title">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
+      <div className="flex items-end justify-between gap-3">
+        <div className="min-w-0">
           <h3 id="fund-price-title" className="text-xs font-bold text-foreground">Price history</h3>
-          <p className="mt-0.5 text-[10px] text-muted-foreground">What one unit has cost over this period.</p>
+          <p className="mt-0.5 text-[10px] text-muted-foreground">
+            One unit, in {history.currency}.
+          </p>
         </div>
-        <div className="text-right">
+        <div className="shrink-0 text-right">
           <strong className={`block text-sm ${rising ? 'text-emerald-500' : 'text-orange-500'}`}>
             {masked ? '••••' : `${rising ? '+' : '−'}${money(Math.abs(change))}`}
           </strong>
@@ -54,6 +57,19 @@ export function FundPriceChart({ history, masked }: { history: InstrumentHistory
           </span>
         </div>
       </div>
+
+      {/* "Over this period" measures from the start of the window, which is not the
+          question most people are asking — they want the price against what they
+          themselves paid. Both are shown so neither is mistaken for the other. */}
+      {paidComparison !== undefined && (
+        <p className="mt-2 text-[10px] text-muted-foreground">
+          The latest price is{' '}
+          <b className={paidComparison >= 0 ? 'text-emerald-500' : 'text-orange-500'}>
+            {masked ? '••••' : `${money(Math.abs(paidComparison))} ${paidComparison >= 0 ? 'above' : 'below'}`}
+          </b>{' '}
+          what you paid on average.
+        </p>
+      )}
 
       <p className="sr-only">{summary}</p>
       <div className={`mt-3 ${masked ? 'select-none blur-md' : ''}`} aria-hidden={masked}>

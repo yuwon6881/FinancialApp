@@ -5,7 +5,8 @@ import * as api from '../../lib/api'
 import { applyOpsToList, type QueuedOp } from '../../lib/outbox'
 import { sortActivityNewestFirst, sortCashFlowsNewestFirst } from '../../lib/investmentOrdering'
 import { formatCurrencyVal } from '../../lib/utils'
-import { buildSleeveIndex, sleeveLabelFor, sleeveOf } from '../../lib/investmentAllocation'
+import { buildSleeveIndex, sleeveLabelFor } from '../../lib/investmentAllocation'
+import { filterHoldings } from '../../lib/investmentHoldingFilter'
 import { Button } from '../ui/Button'
 import { CustomSelect } from '../ui/CustomSelect'
 import { DatePicker } from '../ui/DatePicker'
@@ -42,12 +43,7 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
   const sleeveIndex = useMemo(() => buildSleeveIndex(portfolio.instruments), [portfolio.instruments])
   const filterLabel = filter?.mode === 'sleeve' ? sleeveLabelFor(filter.key, sleeveIndex) : filter?.key
 
-  const holdings = portfolio.holdings.filter(holding =>
-    !filter ||
-    (filter.mode === 'sleeve' ? sleeveOf(holding, sleeveIndex).key === filter.key :
-      filter.mode === 'asset' ? holding.type === filter.key :
-      filter.mode === 'instrument' ? holding.symbol === filter.key :
-        holding.accountName === filter.key))
+  const holdings = filterHoldings(portfolio.holdings, filter, sleeveIndex)
 
   const total = holdings.length
   const pages = Math.max(1, Math.ceil(total / pageSize))

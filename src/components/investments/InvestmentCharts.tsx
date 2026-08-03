@@ -1,17 +1,13 @@
-import { useMemo, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { m, useReducedMotion } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
 import type { InvestmentPortfolio, InvestmentRange } from '../../types'
-import { buildSleeveIndex, sleeveOf } from '../../lib/investmentAllocation'
 import { polylinePoints, seriesBounds, xAt, yAt } from '../../lib/chartSeries'
 import { chartRanges } from '../../lib/investmentChartRanges'
 import { formatCurrencyVal } from '../../lib/utils'
 import { Button } from '../ui/Button'
-import { CustomSelect } from '../ui/CustomSelect'
-import { InteractiveDoughnutChart } from '../ui/InteractiveDoughnutChart'
 
-export type AllocationMode = 'sleeve' | 'asset' | 'account' | 'instrument'
-export type AllocationFilter = { mode: AllocationMode; key: string } | null
+export type { AllocationMode, AllocationFilter } from '../../lib/investmentHoldingFilter'
 
 
 const money = (value: number, currency: string) =>
@@ -146,111 +142,6 @@ export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange
         <thead><tr><th>Date</th><th>Total value</th><th>Net deposits</th></tr></thead>
         <tbody>{portfolio.chart.map(point => <tr key={point.date}><td>{point.date}</td><td>{masked ? 'Hidden' : point.totalValue}</td><td>{masked ? 'Hidden' : point.netDeposits}</td></tr>)}</tbody>
       </table>
-    </section>
-  )
-}
-
-export function AllocationChart({ portfolio, masked, selected, onSelect }: {
-  portfolio: InvestmentPortfolio
-  masked: boolean
-  selected: AllocationFilter
-  onSelect: (value: AllocationFilter) => void
-}) {
-  const [mode, setMode] = useState<AllocationMode>('sleeve')
-  const sleeveIndex = useMemo(() => buildSleeveIndex(portfolio.instruments), [portfolio.instruments])
-  // Each group carries the string a person reads (`label`) and the one the holdings
-  // filter matches on (`filterKey`) — for funds those differ, so keep them apart
-  // rather than parsing the label back apart later.
-  const groups = useMemo(() => {
-    const map = new Map<string, { label: string; filterKey: string; value: number }>()
-    const add = (label: string, filterKey: string, value: number) => {
-      const existing = map.get(label)
-      map.set(label, { label, filterKey, value: (existing?.value ?? 0) + value })
-    }
-    portfolio.holdings.forEach(holding => {
-      const sleeve = sleeveOf(holding, sleeveIndex)
-      const [label, filterKey] = mode === 'sleeve'
-        ? [sleeve.label, sleeve.key]
-        : mode === 'asset' ? [holding.type, holding.type]
-          : mode === 'account' ? [holding.accountName, holding.accountName]
-            : [`${holding.symbol} · ${holding.name}`, holding.symbol]
-      add(label, filterKey, holding.valueApp ?? 0)
-    })
-    portfolio.cashBalances.forEach(balance => {
-      if (balance.amountApp === undefined || balance.amountApp <= 0) return
-      const label = mode === 'account' ? balance.accountName : 'Cash'
-      add(label, label, balance.amountApp)
-    })
-    return [...map.values()].sort((a, b) => b.value - a.value)
-  }, [portfolio.holdings, portfolio.cashBalances, mode, sleeveIndex])
-  const total = groups.reduce((sum, group) => sum + group.value, 0)
-  const colors = [
-    'var(--ledger-purple-500)',
-    'var(--ledger-sky-500)',
-    'var(--ledger-pending-500)',
-    'var(--ledger-expense-500)',
-    'var(--ledger-income-500)',
-    'var(--ledger-blue-500)',
-    'var(--ledger-wishlist-500)',
-    'var(--ledger-neutral-500)',
-  ]
-  const slices = groups.map((group, index) => ({
-    key: group.label,
-    label: group.label,
-    value: group.value,
-    color: colors[index % colors.length],
-  }))
-  const allocationModeOptions: Array<{ value: AllocationMode; label: string }> = [
-    { value: 'sleeve', label: 'Basket in your plan' },
-    { value: 'instrument', label: 'Individual fund' },
-    { value: 'asset', label: 'Kind of investment' },
-    { value: 'account', label: 'Account' },
-  ]
-  const selectedLabel = selected?.mode === mode
-    ? groups.find(group => group.filterKey === selected.key)?.label
-    : undefined
-  const selectSlice = (label: string) => {
-    if (label === 'Cash' && mode !== 'account') {
-      onSelect(null)
-      return
-    }
-    const filterKey = groups.find(group => group.label === label)?.filterKey ?? label
-    onSelect(selected?.mode === mode && selected.key === filterKey ? null : { mode, key: filterKey })
-  }
-
-  return (
-    <section aria-labelledby="allocation-title" className="app-panel min-w-0 flex flex-col rounded-2xl border border-border/60 bg-card/92 p-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0"><h2 id="allocation-title" className="text-base font-bold text-foreground">Where your money sits</h2><p className="mt-1 text-xs text-muted-foreground">Everything you hold, including cash. Pick a slice to see just those investments below.</p></div>
-        <div className="w-full shrink-0 sm:w-auto">
-          <CustomSelect
-            value={mode}
-            onChange={value => { setMode(value as AllocationMode); onSelect(null) }}
-            options={allocationModeOptions}
-            ariaLabel="Group by"
-            className="w-full sm:w-auto"
-            align="right"
-          />
-        </div>
-      </div>
-      <div className="mt-5 flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-6 overflow-hidden sm:flex-row lg:flex-col lg:justify-start">
-        {groups.length > 0 ? (
-          <InteractiveDoughnutChart
-            key={mode}
-            slices={slices}
-            ariaLabel={groups.map(group => `${group.label} ${total ? (group.value / total * 100).toFixed(1) : 0}%`).join(', ')}
-            centerLabel="Total"
-            centerValue={money(total, portfolio.appCurrency)}
-            formatValue={value => money(value, portfolio.appCurrency)}
-            masked={masked}
-            selectedKey={selectedLabel}
-            onActivate={slice => selectSlice(slice.label)}
-            chartClassName="mx-auto aspect-square w-full max-w-52 sm:mx-0 sm:w-48 lg:mx-auto lg:w-56 lg:max-w-56"
-            legendClassName="w-full min-w-0 flex-1 overflow-hidden space-y-1 lg:flex-none"
-          />
-        ) : <p className="text-xs text-muted-foreground">Add prices to see what you hold.</p>}
-      </div>
-      {selectedLabel && <p className="mt-3 text-[10px] text-muted-foreground">Showing only {selectedLabel} below. Pick the slice again to show everything.</p>}
     </section>
   )
 }
