@@ -51,6 +51,31 @@ describe('DeleteTransactionModal document safety', () => {
     expect(screen.getByText(/cannot delete vault documents while offline/i)).toBeTruthy()
   })
 
+  it('shows a busy state while attached vault documents are being deleted', () => {
+    render(
+      <DeleteTransactionModal
+        isOpen
+        transaction={{
+          id: 'transaction-1',
+          date: '2026-07-29',
+          description: 'Tax payment',
+          category: 'Other',
+          ledgerCategory: 'Essentials',
+          amount: -100,
+        }}
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+        formatSensitive={value => value.toFixed(2)}
+        attachedDocumentCount={1}
+        isConfirming
+      />,
+    )
+
+    expect(screen.getByText('Deleting…')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Cancel' }).hasAttribute('disabled')).toBe(true)
+    expect(screen.getByRole('button', { name: 'Deleting…' }).hasAttribute('disabled')).toBe(true)
+  })
+
   it('explains that deleting a completion restores its commitment snapshot', () => {
     const completion = {
       id: 'savings-goal-completion-7-test',

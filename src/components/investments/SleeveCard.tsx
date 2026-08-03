@@ -35,7 +35,7 @@ export function SleeveCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: reduceMotion ? 0 : animationIndex * 0.07 }}
       whileHover={reduceMotion ? undefined : { y: -4, scale: 1.01 }}
-      className={`group/sleeve rounded-xl border p-4 shadow-sm transition-[border-color,box-shadow] duration-300 hover:border-current/30 hover:shadow-md ${toneClass}`}
+      className={`group/sleeve self-start rounded-xl border p-4 shadow-sm transition-[border-color,box-shadow] duration-300 hover:border-current/30 hover:shadow-md ${toneClass}`}
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-bold">{sleeve.label}</span>
@@ -74,12 +74,12 @@ export function SleeveCard({
       )}
 
       {constituents.length > 0 && (
-        <details className="group/holdings mt-3 border-t border-current/15 pt-3">
-          <summary className="flex cursor-pointer select-none items-center justify-between text-[10px] font-bold text-muted-foreground outline-none">
-            <span>What is in here · {constituents.length} fund{constituents.length === 1 ? '' : 's'}</span>
+        <details className="group/holdings mt-3 rounded-lg border border-current/15 bg-background/20">
+          <summary className="flex cursor-pointer select-none items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-[10px] font-bold text-muted-foreground outline-none transition-colors hover:bg-background/30 focus-visible:ring-2 focus-visible:ring-ring/50">
+            <span>See the {constituents.length} fund{constituents.length === 1 ? '' : 's'} in this basket</span>
             <ChevronDown className="size-3.5 transition-transform duration-200 group-open/holdings:rotate-180" />
           </summary>
-          <ul className="mt-2 space-y-2">
+          <ul className="space-y-2 border-t border-current/15 px-3 py-2.5">
             {constituents.map(holding => (
               <li key={`${holding.accountId}-${holding.instrumentId}`} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 text-[10px]">
                 <span className="truncate font-bold text-foreground">{holding.symbol} · {holding.name}</span>

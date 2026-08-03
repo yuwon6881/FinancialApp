@@ -208,6 +208,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   const [attachedDocumentIds, setAttachedDocumentIds] = useState<number[]>([])
   const [alsoDeleteDocuments, setAlsoDeleteDocuments] = useState(false)
   const [areAttachedDocumentsLoading, setAreAttachedDocumentsLoading] = useState(false)
+  const [deletingAttachedDocumentsTxId, setDeletingAttachedDocumentsTxId] = useState<string | null>(null)
   const deleteDocumentLookupRef = useRef(0)
   const [showEditDisabledModal, setShowEditDisabledModal] = useState(false)
   const [editBlockedTransaction, setEditBlockedTransaction] = useState<Transaction | null>(null)
@@ -634,6 +635,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     }
 
     if (alsoDeleteDocuments) {
+      setDeletingAttachedDocumentsTxId(deleteId)
       try {
         const { deleteDocument } = await import('../../../lib/api/documents')
         for (const documentId of attachedDocumentIds) {
@@ -645,6 +647,8 @@ export function useLedgerView(options: UseLedgerViewOptions) {
           'Delete Failed',
         )
         return
+      } finally {
+        setDeletingAttachedDocumentsTxId(null)
       }
     }
 
@@ -667,12 +671,17 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   const isTxDeleting = useCallback((txId: string) => {
     const txObj = transactions.find(t => t.id === txId)
     if (txObj && txObj.isPendingDelete) return true
+    if (deletingAttachedDocumentsTxId) {
+      if (txId === deletingAttachedDocumentsTxId
+        || txId.startsWith(`${deletingAttachedDocumentsTxId}-split-`)
+        || (txId.includes('-split-') && txId.split('-split-')[0] === deletingAttachedDocumentsTxId)) return true
+    }
     if (!deletingTxId) return false
     if (txId === deletingTxId) return true
     if (txId.startsWith(`${deletingTxId}-split-`)) return true
     if (txId.includes('-split-') && txId.split('-split-')[0] === deletingTxId) return true
     return false
-  }, [deletingTxId, transactions])
+  }, [deletingAttachedDocumentsTxId, deletingTxId, transactions])
 
   const isTxSyncing = useCallback((txId: string) => {
     const syncIds = activeSyncIds?.length ? activeSyncIds : activeSyncId ? [activeSyncId] : []
@@ -1004,6 +1013,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     alsoDeleteDocuments,
     setAlsoDeleteDocuments,
     areAttachedDocumentsLoading,
+    isDeletingAttachedDocuments: deletingAttachedDocumentsTxId !== null,
     showEditDisabledModal,
     setShowEditDisabledModal,
     editBlockedTransaction,

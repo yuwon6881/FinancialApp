@@ -79,7 +79,6 @@ interface InvestmentHolding {
   netDividendsApp?: number
   priceDate?: string
   priceFetchedAt?: string
-  usesManualPrice: boolean
   fxIncomplete: boolean
   fxRate?: number
   fxDate?: string
@@ -135,7 +134,6 @@ export interface InvestmentPortfolio {
   holdings: InvestmentHolding[]
   /** Loaded separately by the paged activity endpoint; retained for cache compatibility. */
   activity: InvestmentActivity[]
-  manualPrices: Array<{ id: string; instrumentId: string; marketDate: string; price: number }>
   chart: Array<{ date: string; totalValue?: number; netDeposits?: number }>
   cashBalances: InvestmentCashBalance[]
   /** Loaded separately by the paged cash-flow endpoint; retained for cache compatibility. */
@@ -576,6 +574,9 @@ export interface TaxReliefCategoryDefinition {
   name: string
   limit: number
   isInherited?: boolean
+  isPendingSync?: boolean
+  isPendingDelete?: boolean
+  pendingSyncOperationId?: string
 }
 
 export interface TaxReliefCategorySummary extends TaxReliefCategoryDefinition {

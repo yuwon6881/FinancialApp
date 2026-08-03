@@ -1,8 +1,8 @@
 import type { ToastAction } from '../components/ui/ToastViewport'
-import type { InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, RecurringPayment, SavingsGoal, Transaction, TransactionCategory, WishlistItem } from '../types'
-import { createLocalNumericId, createLocalWishlistId, type DispatchResult, type EntityKind, type OutboxPayload, type QueuedOp } from './outbox'
+import type { InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, RecurringPayment, SavingsGoal, TaxReliefCategoryDefinition, Transaction, TransactionCategory, WishlistItem } from '../types'
+import { createFinalId, createLocalNumericId, createLocalWishlistId, type DispatchResult, type EntityKind, type OutboxPayload, type QueuedOp } from './outbox'
 
-export type UndoSnapshot = (Transaction | RecurringPayment | TransactionCategory | WishlistItem | SavingsGoal | InvestmentAccount | InvestmentInstrument | InvestmentActivity | InvestmentCashFlow) & {
+export type UndoSnapshot = (Transaction | RecurringPayment | TransactionCategory | WishlistItem | SavingsGoal | InvestmentAccount | InvestmentInstrument | InvestmentActivity | InvestmentCashFlow | TaxReliefCategoryDefinition) & {
   isPendingSync?: boolean
   isPendingDelete?: boolean
 }
@@ -59,14 +59,16 @@ export function buildUndoAction(
       return action('recurringPayment', 'delete', String(op.targetId), op.payload)
     case 'category:add':
       return action('category', 'delete', String(op.targetId), op.payload)
+    case 'taxReliefCategory:add': {
+      const id = result && 'id' in result && result.id != null ? String(result.id) : String(op.targetId)
+      return action('taxReliefCategory', 'delete', id, op.payload)
+    }
     case 'investmentAccount:add':
       return action('investmentAccount', 'delete', String(op.targetId), op.payload)
     case 'investmentInstrument:add':
       return action('investmentInstrument', 'delete', String(op.targetId), op.payload)
     case 'investmentActivity:add':
       return action('investmentActivity', 'delete', String(op.targetId), op.payload)
-    case 'investmentManualPrice:add':
-      return action('investmentManualPrice', 'delete', String(op.targetId), op.payload)
     case 'investmentCashFlow:add':
       return action('investmentCashFlow', 'delete', String(op.targetId), op.payload)
     case 'wishlistItem:add': {
@@ -87,6 +89,12 @@ export function buildUndoAction(
       return !op.payload?.replacementCategoryId && before
         ? action('category', 'add', String(before.id), toPayload(before))
         : undefined
+    case 'taxReliefCategory:delete': {
+      if (!before) return undefined
+      const payload = { ...toPayload(before), taxYear: op.payload?.taxYear }
+      delete payload.id
+      return action('taxReliefCategory', 'add', createFinalId('taxReliefCategory'), payload)
+    }
     case 'wishlistItem:delete': {
       if (!before) return undefined
       const payload = toPayload(before)
@@ -104,10 +112,6 @@ export function buildUndoAction(
       return before ? action('investmentAccount', 'add', String(before.id), toPayload(before)) : undefined
     case 'investmentInstrument:delete':
       return before ? action('investmentInstrument', 'add', String(before.id), toPayload(before)) : undefined
-    case 'investmentManualPrice:delete':
-      return persisted && typeof persisted === 'object'
-        ? action('investmentManualPrice', 'add', String(op.targetId), { ...(persisted as object), id: op.targetId })
-        : undefined
     case 'investmentActivity:delete':
       return result && typeof result === 'object' && 'transactions' in result
         ? action('investmentActivity', 'restore', String(op.targetId), result as unknown as OutboxPayload)
@@ -134,6 +138,11 @@ export function buildUndoAction(
       }) : undefined
     case 'category:update':
       return before ? action('category', 'update', String(op.targetId), toPayload(before)) : undefined
+    case 'taxReliefCategory:update':
+      return before ? action('taxReliefCategory', 'update', String(op.targetId), {
+        ...toPayload(before),
+        taxYear: op.payload?.taxYear,
+      }) : undefined
     case 'wishlistItem:update':
       return before ? action('wishlistItem', 'update', String(op.targetId), toPayload(before)) : undefined
     case 'savingsGoal:update':

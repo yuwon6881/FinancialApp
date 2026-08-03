@@ -7,6 +7,7 @@ import { getErrorMessage } from '../../lib/errors'
 import { buildMutationSuccessToast } from '../../lib/mutationToast'
 import { useAppPrefs, useAppUi } from '../../contexts/AppContext'
 import { CollapsibleBody } from '../ui/CollapsibleBody'
+import { RowSyncStatus } from '../ui/RowSyncBadge'
 
 const relativeTime = (iso: string | null): string => {
   if (!iso) return 'Never'
@@ -23,6 +24,8 @@ export function ActiveDevicesSection() {
   const [open, setOpen] = useState(false)
   const [sessions, setSessions] = useState<SessionSummary[]>([])
   const [loading, setLoading] = useState(true)
+  const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null)
+  const [revokingOthers, setRevokingOthers] = useState(false)
   const load = async () => {
     setLoading(true)
     try {
@@ -34,8 +37,9 @@ export function ActiveDevicesSection() {
   useEffect(() => { void load().catch(console.error) }, [])
 
   const revoke = async (id: string) => {
-    if (hideSensitive) return
+    if (hideSensitive || revokingSessionId !== null || revokingOthers) return
     const session = sessions.find(item => item.id === id)
+    setRevokingSessionId(id)
     try {
       await api.revokeSession(id)
       await load()
@@ -47,10 +51,13 @@ export function ActiveDevicesSection() {
       showToast(copy.message, copy.title, copy.tone)
     } catch (error) {
       showToast(getErrorMessage(error, 'Failed to revoke session.'), 'Error', 'error')
+    } finally {
+      setRevokingSessionId(null)
     }
   }
   const revokeOthers = async () => {
-    if (hideSensitive) return
+    if (hideSensitive || revokingSessionId !== null || revokingOthers) return
+    setRevokingOthers(true)
     try {
       const { revokedCount } = await api.revokeAllSessions(true)
       await load()
@@ -62,8 +69,12 @@ export function ActiveDevicesSection() {
       showToast(copy.message, copy.title, copy.tone)
     } catch (error) {
       showToast(getErrorMessage(error, 'Failed to log out other devices.'), 'Error', 'error')
+    } finally {
+      setRevokingOthers(false)
     }
   }
+
+  const anyRevokeInProgress = revokingSessionId !== null || revokingOthers
 
   return (
     <section className="app-panel rounded-2xl border border-border/60 bg-card/92 shadow-sm overflow-hidden">
@@ -78,18 +89,21 @@ export function ActiveDevicesSection() {
       <CollapsibleBody open={open}>
         <div className="px-5 pb-5 border-t border-border/40 pt-4 space-y-4">
           <div className="space-y-1.5">
-            {sessions.map(session => (
-              <div key={session.id} className="flex items-center justify-between gap-2 bg-muted/20 border border-border/40 px-3 py-2.5 rounded-xl text-xs">
-                <div className="flex flex-col gap-0.5 min-w-0">
-                  <span className="flex items-center gap-2 font-semibold"><MonitorSmartphone className="size-3.5 text-blue-500" />{session.deviceName || 'Unknown Device'}{session.isCurrent && <small className="text-blue-500">Current</small>}</span>
-                  <span className="text-[10px] text-muted-foreground"><CalendarDays className="inline size-3" /> Logged in: {new Date(session.createdAt).toLocaleDateString()} · Last active: {relativeTime(session.lastActiveAt)}</span>
-                  {session.ipAddress && <span className="text-[10px] text-muted-foreground/75">IP: {session.ipAddress}</span>}
+            {sessions.map(session => {
+              const isRevoking = revokingSessionId === session.id || (revokingOthers && !session.isCurrent)
+              return (
+                <div key={session.id} className="flex items-center justify-between gap-2 bg-muted/20 border border-border/40 px-3 py-2.5 rounded-xl text-xs" aria-busy={isRevoking}>
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="flex items-center gap-2 font-semibold"><MonitorSmartphone className="size-3.5 text-blue-500" />{session.deviceName || 'Unknown Device'}{session.isCurrent && <small className="text-blue-500">Current</small>}<RowSyncStatus isDeleting={isRevoking} entityLabel="device session" /></span>
+                    <span className="text-[10px] text-muted-foreground"><CalendarDays className="inline size-3" /> Logged in: {new Date(session.createdAt).toLocaleDateString()} · Last active: {relativeTime(session.lastActiveAt)}</span>
+                    {session.ipAddress && <span className="text-[10px] text-muted-foreground/75">IP: {session.ipAddress}</span>}
+                  </div>
+                  {!session.isCurrent && <Button variant="unstyled" type="button" onClick={() => void revoke(session.id)} disabled={hideSensitive || anyRevokeInProgress} aria-busy={revokingSessionId === session.id} aria-label={`Revoke ${session.deviceName || 'device session'}`} className="p-1.5 text-muted-foreground hover:text-red-500 disabled:opacity-40">{revokingSessionId === session.id ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <Trash2 className="size-3.5" aria-hidden="true" />}</Button>}
                 </div>
-                {!session.isCurrent && <Button variant="unstyled" type="button" onClick={() => void revoke(session.id)} disabled={hideSensitive} className="p-1.5 text-muted-foreground hover:text-red-500 disabled:opacity-40"><Trash2 className="size-3.5" /></Button>}
-              </div>
-            ))}
+              )
+            })}
           </div>
-          {sessions.length > 1 && <Button variant="unstyled" type="button" onClick={() => void revokeOthers()} disabled={hideSensitive} className="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-500 border border-red-500/30 disabled:opacity-40"><LogOut className="size-3.5" /> Log out all other devices</Button>}
+          {sessions.length > 1 && <Button variant="unstyled" type="button" onClick={() => void revokeOthers()} disabled={hideSensitive || anyRevokeInProgress} aria-busy={revokingOthers} className="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-red-500 border border-red-500/30 disabled:opacity-40">{revokingOthers ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <LogOut className="size-3.5" aria-hidden="true" />} {revokingOthers ? 'Revoking…' : 'Log out all other devices'}</Button>}
         </div>
       </CollapsibleBody>
     </section>

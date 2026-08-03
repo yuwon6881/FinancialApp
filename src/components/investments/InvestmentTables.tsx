@@ -121,7 +121,19 @@ export const HoldingsTable = ({ portfolio, masked, filter }: { portfolio: Invest
       ))}
     </div>
     <div className="hidden lg:block">
-      <DataTable embedded tableClassName="min-w-[1050px]">
+      <DataTable embedded tableClassName="min-w-[1050px] table-fixed">
+        <colgroup>
+          <col className="w-[16%]" />
+          <col className="w-[9%]" />
+          <col className="w-[7%]" />
+          <col className="w-[10%]" />
+          <col className="w-[9%]" />
+          <col className="w-[12%]" />
+          <col className="w-[10%]" />
+          <col className="w-[11%]" />
+          <col className="w-[10%]" />
+          <col className="w-[6%]" />
+        </colgroup>
         <DataTableHeader className="text-[10px] uppercase tracking-wide">
           <DataTableHeaderCell>Investment</DataTableHeaderCell>
           <DataTableHeaderCell>Account</DataTableHeaderCell>

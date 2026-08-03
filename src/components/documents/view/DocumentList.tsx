@@ -1,7 +1,7 @@
 import { Input } from '../../ui/Input'
 import { Checkbox } from '../../ui/Checkbox'
 import { useEffect, useRef, useState } from 'react'
-import { Check, Download, ExternalLink, FileArchive, FileCode, FileImage, FileText, Link2, Pencil, Trash2 } from 'lucide-react'
+import { Check, Download, ExternalLink, Eye, FileArchive, FileCode, FileImage, FileText, Link2, Pencil, Trash2 } from 'lucide-react'
 import type { TaxReliefCategoryDefinition, VaultDocument } from '../../../types'
 import { downloadDocument } from '../../../lib/api/documents'
 import { useAppPrefs, useAppUi } from '../../../contexts/AppContext'
@@ -12,6 +12,8 @@ import { CustomSelect } from '../../ui/CustomSelect'
 import { Button } from '../../ui/Button'
 import { DataTable, DataTableBody, DataTableHeader, DataTableHeaderCell } from '../../ui/DataTable'
 import { SensitiveMask } from '../../ui/SensitiveAmount'
+import { DocumentPreviewSheet } from './DocumentPreviewSheet'
+import { RowSyncStatus } from '../../ui/RowSyncBadge'
 
 interface DocumentListProps {
   documents: VaultDocument[]
@@ -25,7 +27,10 @@ interface DocumentListProps {
   isDownloadingSelected: boolean
   onDownloadSelected: () => void
   onDeleteSelected: () => void
+  isDeletingSelected?: boolean
   currency: string
+  syncingDocumentIds?: ReadonlySet<number>
+  deletingDocumentIds?: ReadonlySet<number>
   updateDocument: (
     id: number,
     updates: Pick<Partial<VaultDocument>, 'taxYear' | 'transactionId' | 'reliefCategory' | 'amount' | 'amountCurrency'> & {
@@ -38,7 +43,7 @@ interface DocumentListProps {
   onNavigateToTransaction?: (transactionId: string) => Promise<void> | void
 }
 
-function AmountReview({ document, updateDocument, currency }: { document: VaultDocument; updateDocument: DocumentListProps['updateDocument']; currency?: string }) {
+function AmountReview({ document, updateDocument, currency, disabled = false }: { document: VaultDocument; updateDocument: DocumentListProps['updateDocument']; currency?: string; disabled?: boolean }) {
   const { currency: appCurrency, hideSensitive } = useAppPrefs()
   const activeCurrency = currency ?? appCurrency
   const [editing, setEditing] = useState(document.amountStatus === 'NeedsReview')
@@ -46,6 +51,7 @@ function AmountReview({ document, updateDocument, currency }: { document: VaultD
   const [saving, setSaving] = useState(false)
   useEffect(() => setValue(document.amount?.toFixed(2) ?? ''), [document.amount])
   const save = async () => {
+    if (disabled) return
     const amount = value.trim() === '' ? null : Number(value)
     if (amount !== null && (!Number.isFinite(amount) || amount < 0)) return
     setSaving(true)
@@ -59,12 +65,12 @@ function AmountReview({ document, updateDocument, currency }: { document: VaultD
     } finally { setSaving(false) }
   }
   if (hideSensitive) return <SensitiveMask />
-  if (!editing) return <button type="button" onClick={() => setEditing(true)} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-1 text-[11px] font-bold text-accent-ink transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">
+  if (!editing) return <button type="button" onClick={() => setEditing(true)} disabled={disabled} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-1 text-[11px] font-bold text-accent-ink transition-colors hover:bg-accent/60 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">
     {document.amount != null ? formatCurrencyVal(document.amount, activeCurrency) : 'Add amount'}<Pencil className="size-3.5" />
   </button>
   return <div className="flex items-center gap-1.5"><span className="text-[11px] font-bold text-foreground">{getCurrencySymbol(activeCurrency)}</span>
-    <Input value={value} onChange={event => setValue(event.target.value)} inputMode="decimal" aria-label={`Amount for ${document.originalFileName}`} className="h-9 w-20 rounded-lg border-border bg-background px-2 text-[11px] tabular-nums" />
-    <button type="button" onClick={() => void save()} disabled={saving} aria-label={`Confirm amount for ${document.originalFileName}`} title="Confirm amount" className="inline-grid size-9 shrink-0 place-items-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"><Check className="size-4" strokeWidth={2.5} /></button>
+    <Input value={value} onChange={event => setValue(event.target.value)} disabled={disabled || saving} inputMode="decimal" aria-label={`Amount for ${document.originalFileName}`} className="h-9 w-20 rounded-lg border-border bg-background px-2 text-[11px] tabular-nums" />
+    <button type="button" onClick={() => void save()} disabled={disabled || saving} aria-label={`Confirm amount for ${document.originalFileName}`} title="Confirm amount" className="inline-grid size-9 shrink-0 place-items-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"><Check className="size-4" strokeWidth={2.5} /></button>
   </div>
 }
 
@@ -91,17 +97,31 @@ function DocumentActions({
   document,
   setDocToDelete,
   downloadFailed,
+  onPreview,
+  disabled = false,
 }: {
   document: VaultDocument
   setDocToDelete: (id: number) => void
   downloadFailed: () => void
+  onPreview: (document: VaultDocument) => void
+  disabled?: boolean
 }) {
   const { hideSensitive } = useAppPrefs()
   return (
     <div className="flex items-center justify-end gap-1.5">
+      <Button
+        variant="unstyled"
+        type="button"
+        disabled={hideSensitive || disabled}
+        onClick={() => onPreview(document)}
+        className="cursor-pointer rounded-lg border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        aria-label={`Preview ${document.originalFileName}`}
+      >
+        <Eye className="size-3.5" aria-hidden="true" />
+      </Button>
       <button
         type="button"
-        disabled={hideSensitive}
+        disabled={hideSensitive || disabled}
         onClick={() => void downloadDocument(document.id, document.originalFileName).catch(downloadFailed)}
         className="cursor-pointer rounded-lg border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
         aria-label={`Download ${document.originalFileName}`}
@@ -110,7 +130,7 @@ function DocumentActions({
       </button>
       <button
         type="button"
-        disabled={hideSensitive}
+        disabled={hideSensitive || disabled}
         onClick={() => setDocToDelete(document.id)}
         className="cursor-pointer rounded-lg border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
         aria-label={`Delete ${document.originalFileName}`}
@@ -190,9 +210,10 @@ function SelectAllDocumentsControl({
   )
 }
 
-export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds, toggleSelected, onToggleSelectAll, allVisibleSelected, someVisibleSelected, isDownloadingSelected, onDownloadSelected, onDeleteSelected, currency, updateDocument, reliefCategoriesByTaxYear, pendingReliefCategories, onReliefCategoryChange, onNavigateToTransaction }: DocumentListProps) {
+export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds, toggleSelected, onToggleSelectAll, allVisibleSelected, someVisibleSelected, isDownloadingSelected, onDownloadSelected, onDeleteSelected, isDeletingSelected = false, currency, syncingDocumentIds = new Set<number>(), deletingDocumentIds = new Set<number>(), updateDocument, reliefCategoriesByTaxYear, pendingReliefCategories, onReliefCategoryChange, onNavigateToTransaction }: DocumentListProps) {
   const { showToast } = useAppUi()
   const { hideSensitive } = useAppPrefs()
+  const [previewDocument, setPreviewDocument] = useState<VaultDocument | null>(null)
   const [openingTransactionId, setOpeningTransactionId] = useState<string | null>(null)
   const hasSelection = selectedIds.size > 0
   const exceedsSelectionLimit = selectedIds.size > 100
@@ -250,14 +271,15 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
                 variant="destructive"
                 size="sm"
                 type="button"
-                disabled={hideSensitive || exceedsSelectionLimit}
+                disabled={hideSensitive || isDeletingSelected || exceedsSelectionLimit}
                 onClick={onDeleteSelected}
+                aria-busy={isDeletingSelected}
                 aria-label="Delete selected documents"
                 title="Delete selected"
                 className="size-9 shrink-0 p-0 sm:size-auto sm:px-3"
               >
                 <Trash2 className="size-3.5" aria-hidden="true" />
-                <span className="hidden sm:inline">Delete</span>
+                <span className="hidden sm:inline">{isDeletingSelected ? 'Deleting…' : 'Delete'}</span>
               </Button>
             </>
           )}
@@ -282,21 +304,25 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
           <div className="rounded-xl border border-border/40">
             <EmptyState />
           </div>
-        ) : documents.map(document => {
-          const Icon = iconFor(document.contentType)
-          const documentReliefCategories = reliefCategoriesByTaxYear[document.taxYear] ?? []
-          return (
-            <article key={document.id} className="rounded-2xl border border-border/60 bg-card p-3.5 shadow-sm shadow-black/5">
+         ) : documents.map(document => {
+           const Icon = iconFor(document.contentType)
+           const documentReliefCategories = reliefCategoriesByTaxYear[document.taxYear] ?? []
+           const isDeleting = deletingDocumentIds.has(document.id)
+           const isSyncing = syncingDocumentIds.has(document.id)
+           const isBusy = isDeleting || isSyncing
+           return (
+             <article key={document.id} className="rounded-2xl border border-border/60 bg-card p-3.5 shadow-sm shadow-black/5" aria-busy={isBusy}>
               <div className="flex min-w-0 items-center gap-2.5">
-                <Checkbox disabled={hideSensitive} checked={selectedIds.has(document.id)} onChange={() => toggleSelected(document.id)} aria-label={`Select ${document.originalFileName}`} className="size-4 shrink-0 accent-primary" />
+                <Checkbox disabled={hideSensitive || isBusy} checked={selectedIds.has(document.id)} onChange={() => toggleSelected(document.id)} aria-label={`Select ${document.originalFileName}`} className="size-4 shrink-0 accent-primary" />
                 <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent text-accent-ink">
                   <Icon className="size-4" aria-hidden="true" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex min-w-0 items-center gap-1.5">
-                    <p className="line-clamp-2 min-w-0 text-xs font-bold leading-snug text-foreground" title={document.originalFileName}>
-                      {document.originalFileName}
-                    </p>
+                     <p className="line-clamp-2 min-w-0 text-xs font-bold leading-snug text-foreground" title={document.originalFileName}>
+                       {document.originalFileName}
+                     </p>
+                     <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} entityLabel="document" />
                     <LinkedTransactionButton
                       document={document}
                       openingTransactionId={openingTransactionId}
@@ -305,16 +331,18 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
                   </div>
                 </div>
                 <DocumentActions
-                  document={document}
-                  setDocToDelete={setDocToDelete}
-                  downloadFailed={downloadFailed}
+                   document={document}
+                   setDocToDelete={setDocToDelete}
+                   downloadFailed={downloadFailed}
+                   onPreview={setPreviewDocument}
+                   disabled={isBusy}
                 />
               </div>
 
               <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2.5 border-t border-border/50 pt-3 text-[10px]">
                 <div>
                   <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Tax year</dt>
-                  <dd className="mt-0.5 font-bold text-foreground tabular-nums">{document.taxYear}</dd>
+                 <dd className="mt-0.5 font-bold text-foreground tabular-nums">{document.taxYear}</dd>
                 </div>
                 <div>
                   <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Size</dt>
@@ -330,9 +358,9 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
               </p>
               <div className="mt-3 flex items-center justify-between gap-3 border-t border-border/50 pt-3">
                 <span className="text-[10px] text-muted-foreground">{document.amountStatus === 'NeedsReview' ? 'AI suggestion · please confirm' : document.amountStatus === 'Confirmed' ? 'Confirmed amount' : document.amountExtractionMessage || 'No amount confirmed'}</span>
-                <AmountReview document={document} updateDocument={updateDocument} currency={currency} />
+                 <AmountReview document={document} updateDocument={updateDocument} currency={currency} disabled={isBusy} />
               </div>
-              <div className="mt-3 border-t border-border/50 pt-3"><p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Tax relief category <span className="text-destructive">*</span></p><CustomSelect disabled={hideSensitive} value={pendingReliefCategories.get(document.id) ?? document.reliefCategory ?? ''} onChange={value => onReliefCategoryChange(document.id, String(value))}
+               <div className="mt-3 border-t border-border/50 pt-3"><p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Tax relief category <span className="text-destructive">*</span></p><CustomSelect disabled={hideSensitive || isBusy} value={pendingReliefCategories.get(document.id) ?? document.reliefCategory ?? ''} onChange={value => onReliefCategoryChange(document.id, String(value))}
                 options={[{ value: '', label: 'Uncategorised (legacy)', disabled: true }, ...documentReliefCategories.map(category => ({ value: category.id, label: category.name }))]} ariaLabel={`Tax relief category for ${document.originalFileName}`} className="w-full" /></div>
             </article>
           )
@@ -370,9 +398,12 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
           ) : documents.map(document => {
             const Icon = iconFor(document.contentType)
             const documentReliefCategories = reliefCategoriesByTaxYear[document.taxYear] ?? []
+            const isDeleting = deletingDocumentIds.has(document.id)
+            const isSyncing = syncingDocumentIds.has(document.id)
+            const isBusy = isDeleting || isSyncing
             return (
-              <tr key={document.id} className="transition-colors hover:bg-muted/40">
-                <td className="px-3 py-2.5"><Checkbox disabled={hideSensitive} checked={selectedIds.has(document.id)} onChange={() => toggleSelected(document.id)} aria-label={`Select ${document.originalFileName}`} className="size-4 accent-primary" /></td>
+              <tr key={document.id} className="transition-colors hover:bg-muted/40" aria-busy={isBusy}>
+                <td className="px-3 py-2.5"><Checkbox disabled={hideSensitive || isBusy} checked={selectedIds.has(document.id)} onChange={() => toggleSelected(document.id)} aria-label={`Select ${document.originalFileName}`} className="size-4 accent-primary" /></td>
                 <td className="px-3 py-2.5">
                   <div className="flex items-center gap-2.5">
                     <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent text-accent-ink">
@@ -383,6 +414,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
                         <p className="truncate font-bold text-foreground" title={document.originalFileName}>
                           {document.originalFileName}
                         </p>
+                        <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} entityLabel="document" />
                         <LinkedTransactionButton
                           document={document}
                           openingTransactionId={openingTransactionId}
@@ -393,13 +425,13 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
                   </div>
                 </td>
                 <td className="px-3 py-2.5">
-                  <CustomSelect disabled={hideSensitive} value={pendingReliefCategories.get(document.id) ?? document.reliefCategory ?? ''} onChange={value => onReliefCategoryChange(document.id, String(value))}
+                 <CustomSelect disabled={hideSensitive || isBusy} value={pendingReliefCategories.get(document.id) ?? document.reliefCategory ?? ''} onChange={value => onReliefCategoryChange(document.id, String(value))}
                     options={[{ value: '', label: 'Uncategorised (legacy)', disabled: true }, ...documentReliefCategories.map(category => ({ value: category.id, label: category.name }))]}
                     ariaLabel={`Tax relief category for ${document.originalFileName}`} className="w-40 max-w-40" />
                 </td>
                 <td className="px-3 py-2.5 font-bold text-foreground tabular-nums">{document.taxYear}</td>
                 <td className="px-3 py-2.5 text-muted-foreground tabular-nums">{formatBytes(document.sizeBytes)}</td>
-                <td className="px-3 py-2.5"><AmountReview document={document} updateDocument={updateDocument} currency={currency} />{document.amountStatus === 'NeedsReview' && <p className="mt-0.5 text-[9px] text-amber-600">AI · review</p>}</td>
+                 <td className="px-3 py-2.5"><AmountReview document={document} updateDocument={updateDocument} currency={currency} disabled={isBusy} />{document.amountStatus === 'NeedsReview' && <p className="mt-0.5 text-[9px] text-amber-600">AI · review</p>}</td>
                 <td className="px-3 py-2.5 text-muted-foreground">
                   <div className="whitespace-nowrap">{formatDate(document.uploadedAt)}</div>
                   <div className="whitespace-nowrap text-[10px]">Keep until {formatDate(document.retentionUntil)}</div>
@@ -409,6 +441,8 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
                     document={document}
                     setDocToDelete={setDocToDelete}
                     downloadFailed={downloadFailed}
+                    onPreview={setPreviewDocument}
+                    disabled={isBusy}
                   />
                 </td>
               </tr>
@@ -417,6 +451,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
         </DataTableBody>
       </DataTable>
       </div>
+      <DocumentPreviewSheet document={previewDocument} onClose={() => setPreviewDocument(null)} />
       </div>
     </>
   )

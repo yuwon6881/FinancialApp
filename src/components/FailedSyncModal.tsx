@@ -19,7 +19,6 @@ const ENTITY_LABELS: Record<string, string> = {
   investmentAccount: 'Investment account',
   investmentInstrument: 'Investment',
   investmentActivity: 'Investment activity',
-  investmentManualPrice: 'Manual price',
   investmentCashFlow: 'Cash movement',
   investmentPlan: 'Investment plan',
   investmentAllocation: 'Investment classification',

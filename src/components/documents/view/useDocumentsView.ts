@@ -99,33 +99,6 @@ export function useDocumentsView() {
     }
   }, [taxYear, availableYears])
 
-  const addReliefCategory = useCallback(async (input: { name: string; limit: number }) => {
-    const selectedYear = taxYear ?? availableYears[0]
-    if (selectedYear === undefined) throw new Error('Choose a tax year first.')
-    const result = await api.addTaxReliefCategory(selectedYear, input)
-    await loadTaxInsights()
-    return result
-  }, [taxYear, availableYears, loadTaxInsights])
-
-  const updateReliefCategory = useCallback(async (
-    categoryId: string,
-    input: { name: string; limit: number },
-  ) => {
-    const selectedYear = taxYear ?? availableYears[0]
-    if (selectedYear === undefined) throw new Error('Choose a tax year first.')
-    const result = await api.updateTaxReliefCategory(selectedYear, categoryId, input)
-    await loadTaxInsights()
-    return result
-  }, [taxYear, availableYears, loadTaxInsights])
-
-  const deleteReliefCategory = useCallback(async (categoryId: string) => {
-    const selectedYear = taxYear ?? availableYears[0]
-    if (selectedYear === undefined) throw new Error('Choose a tax year first.')
-    await api.deleteTaxReliefCategory(selectedYear, categoryId)
-    setReliefCategory(current => current === categoryId ? undefined : current)
-    await loadTaxInsights()
-  }, [taxYear, availableYears, loadTaxInsights])
-
   useEffect(() => {
     loadUsage()
     loadAvailableYears()
@@ -245,9 +218,6 @@ export function useDocumentsView() {
     loadUsage,
     loadAvailableYears,
     loadTaxInsights,
-    addReliefCategory,
-    updateReliefCategory,
-    deleteReliefCategory,
     deleteDocument,
     updateDocumentMetadata,
     bulkUpdateDocumentCategories,

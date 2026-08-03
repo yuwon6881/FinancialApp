@@ -1,6 +1,6 @@
 import { Checkbox } from '../ui/Checkbox'
 import type { ReactNode } from 'react'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, Loader2 } from 'lucide-react'
 import type { Transaction } from '../../types'
 import { BottomSheet } from '../ui/BottomSheet'
 import { Button } from '../ui/Button'
@@ -17,6 +17,7 @@ interface DeleteTransactionModalProps {
   onAlsoDeleteDocumentsChange?: (val: boolean) => void
   isOnline?: boolean
   areAttachedDocumentsLoading?: boolean
+  isConfirming?: boolean
 }
 
 // Confirm-deletion bottom sheet. Explains the cascade for Income Auto-Split
@@ -32,6 +33,7 @@ export function DeleteTransactionModal({
   onAlsoDeleteDocumentsChange,
   isOnline = true,
   areAttachedDocumentsLoading = false,
+  isConfirming = false,
 }: DeleteTransactionModalProps) {
   if (!isOpen || !transaction) return null
   const isSplitSubRecord = transaction.id.includes('-split-')
@@ -40,7 +42,7 @@ export function DeleteTransactionModal({
   return (
     <BottomSheet
       isOpen={isOpen}
-      onClose={onCancel}
+      onClose={isConfirming ? () => undefined : onCancel}
       maxWidthClassName="max-w-md"
       title={
         <div className="flex items-center gap-2 text-orange-500">
@@ -52,15 +54,16 @@ export function DeleteTransactionModal({
       }
       footer={
         <ModalActions>
-          <Button variant="outline" onClick={onCancel}>
+          <Button variant="outline" onClick={onCancel} disabled={isConfirming}>
             Cancel
           </Button>
           <Button
             variant="destructive"
             onClick={onConfirm}
-            disabled={areAttachedDocumentsLoading}
+            disabled={areAttachedDocumentsLoading || isConfirming}
           >
-            Confirm Delete
+            {isConfirming && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
+            {isConfirming ? 'Deleting…' : 'Confirm Delete'}
           </Button>
         </ModalActions>
       }

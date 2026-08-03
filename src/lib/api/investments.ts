@@ -271,26 +271,6 @@ export function restoreInvestmentActivity(snapshot: DeletedTransactionsSnapshot)
   }))
 }
 
-export function createManualInvestmentPrice(value: {
-  id?: string
-  instrumentId: string
-  marketDate: string
-  price: number
-}): Promise<{ id: string }> {
-  return invalidateAfter(request('/investments/manual-prices', {
-    method: 'POST',
-    ...jsonBody(value),
-    errorMessage: 'Could not save manual price',
-  }))
-}
-
-export function deleteManualInvestmentPrice(id: string): Promise<void> {
-  return invalidateAfter(requestVoid(`/investments/manual-prices/${id}`, {
-    method: 'DELETE',
-    errorMessage: 'Could not delete manual price',
-  }))
-}
-
 export interface InvestmentCashFlowInput {
   id?: string
   accountId: string

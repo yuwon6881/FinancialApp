@@ -406,6 +406,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         onAlsoDeleteDocumentsChange={ledger.setAlsoDeleteDocuments}
         isOnline={!app.isOffline && navigator.onLine}
         areAttachedDocumentsLoading={ledger.areAttachedDocumentsLoading}
+        isConfirming={ledger.isDeletingAttachedDocuments}
       />
 
       <EditDisabledModal

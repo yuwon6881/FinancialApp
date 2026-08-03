@@ -6,6 +6,7 @@ import {
   deleteDocument,
   downloadDocument,
   downloadSelectedDocumentArchive,
+  getDocumentContent,
   getTaxReliefCategories,
   listDocuments,
   updateDocument,
@@ -178,6 +179,26 @@ describe('documents API', () => {
     expect(String(fetchMock.mock.calls[0][0])).toContain('/api/documents/9/content')
     expect(createObjectUrl).toHaveBeenCalledOnce()
     expect(revokeObjectUrl).toHaveBeenCalledWith('blob:test')
+  })
+
+  it('returns authenticated document content for an inline preview', async () => {
+    const blob = new Blob(['vault bytes'], { type: 'application/pdf' })
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: (name: string) => {
+        if (name.toLowerCase() === 'content-disposition') return "attachment; filename*=UTF-8''filed%20return.pdf"
+        if (name.toLowerCase() === 'content-type') return 'application/pdf'
+        return null
+      } },
+      blob: async () => blob,
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const content = await getDocumentContent(9, 'fallback.pdf')
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/api/documents/9/content')
+    expect(content).toEqual({ blob, fileName: 'filed return.pdf', contentType: 'application/pdf' })
   })
 
   it('downloads a ZIP archive for the selected documents', async () => {

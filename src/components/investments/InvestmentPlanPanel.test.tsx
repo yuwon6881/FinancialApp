@@ -118,8 +118,8 @@ describe('InvestmentPlanPanel sleeve holdings', () => {
     { id: 'other', symbol: 'OTHER', name: 'Unclassified ETF', type: 'ETF', currency: 'USD', isCustom: true, isArchived: false },
   ]
   const holdings: InvestmentPortfolio['holdings'] = [
-    { accountId: 'a1', accountName: 'Broker', instrumentId: 'voo', symbol: 'VOO', name: 'Vanguard S&P 500 ETF', type: 'ETF', currency: 'USD', units: 1, averageCostNative: 400, valueApp: 500, unrealisedProfitLossApp: 100, usesManualPrice: false, fxIncomplete: false },
-    { accountId: 'a1', accountName: 'Broker', instrumentId: 'other', symbol: 'OTHER', name: 'Unclassified ETF', type: 'ETF', currency: 'USD', units: 1, averageCostNative: 20, usesManualPrice: false, fxIncomplete: false },
+    { accountId: 'a1', accountName: 'Broker', instrumentId: 'voo', symbol: 'VOO', name: 'Vanguard S&P 500 ETF', type: 'ETF', currency: 'USD', units: 1, averageCostNative: 400, valueApp: 500, unrealisedProfitLossApp: 100, fxIncomplete: false },
+    { accountId: 'a1', accountName: 'Broker', instrumentId: 'other', symbol: 'OTHER', name: 'Unclassified ETF', type: 'ETF', currency: 'USD', units: 1, averageCostNative: 20, fxIncomplete: false },
   ]
 
   it('shows assigned and unassigned funds without inventing missing values', () => {
@@ -130,5 +130,9 @@ describe('InvestmentPlanPanel sleeve holdings', () => {
     expect(screen.getByText('OTHER · Unclassified ETF')).toBeTruthy()
     expect(screen.getByText('Share unavailable')).toBeTruthy()
     expect(screen.getByText('Gain unavailable')).toBeTruthy()
+    const disclosures = screen.getAllByText(/See the 1 fund in this basket/)
+    expect(disclosures.length).toBe(2)
+    expect(disclosures[0].closest('article')?.className).toContain('self-start')
+    expect(disclosures[0].closest('article')?.parentElement?.className).toContain('items-start')
   })
 })

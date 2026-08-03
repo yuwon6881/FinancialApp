@@ -1,5 +1,5 @@
 import React from 'react'
-import { AlertCircle, Info } from 'lucide-react'
+import { AlertCircle, Info, Loader2 } from 'lucide-react'
 import { BottomSheet } from './BottomSheet'
 import { Button } from './Button'
 import { ModalActions } from './ModalActions'
@@ -11,6 +11,8 @@ interface CustomConfirmModalProps {
   confirmText?: string
   cancelText?: string
   confirmDisabled?: boolean
+  isConfirming?: boolean
+  confirmingText?: string
   variant?: 'danger' | 'primary'
   onConfirm: () => void
   onCancel: () => void
@@ -23,6 +25,8 @@ export const CustomConfirmModal: React.FC<CustomConfirmModalProps> = ({
   confirmText = 'Confirm',
   cancelText = 'Cancel',
   confirmDisabled = false,
+  isConfirming = false,
+  confirmingText = 'Working…',
   variant = 'danger',
   onConfirm,
   onCancel
@@ -34,7 +38,7 @@ export const CustomConfirmModal: React.FC<CustomConfirmModalProps> = ({
   return (
     <BottomSheet
       isOpen={isOpen}
-      onClose={onCancel}
+      onClose={isConfirming ? () => undefined : onCancel}
       maxWidthClassName="max-w-md"
       title={
         <div className={`flex items-center gap-2 ${colorClass}`}>
@@ -46,16 +50,18 @@ export const CustomConfirmModal: React.FC<CustomConfirmModalProps> = ({
       }
       footer={
         <ModalActions>
-          <Button variant="outline" onClick={onCancel} className="rounded-xl px-4">
+          <Button variant="outline" onClick={onCancel} disabled={isConfirming} className="rounded-xl px-4">
             {cancelText}
           </Button>
           <Button
             variant={isPrimary ? 'primary' : 'destructive'}
             onClick={onConfirm}
-            disabled={confirmDisabled}
+            disabled={confirmDisabled || isConfirming}
+            aria-busy={isConfirming}
             className="rounded-xl px-5 shadow-md"
           >
-            {confirmText}
+            {isConfirming && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
+            {isConfirming ? confirmingText : confirmText}
           </Button>
         </ModalActions>
       }

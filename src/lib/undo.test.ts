@@ -138,6 +138,37 @@ describe('undo helpers', () => {
     expect(enqueue).toHaveBeenCalledWith('settings', 'update', 'darkMode', { darkMode: false })
   })
 
+  it('restores a deleted savings goal from its persisted outbox snapshot', () => {
+    const enqueue = vi.fn()
+    const deletedGoal = {
+      id: 7,
+      name: 'Car service',
+      targetAmount: 1200,
+      earmarkedAmount: 300,
+      targetDate: '2026-12-20',
+      priority: 'Medium',
+      status: 'active',
+      isRecurring: false,
+      recurrenceMonths: 12,
+      cycleFundedAmount: 0,
+      createdAt: '2026-01-01T00:00:00.000Z',
+    }
+    const action = buildUndoAction(
+      new Map(),
+      op('savingsGoal', 'delete', '7', { undoSnapshot: deletedGoal }),
+      undefined,
+      enqueue,
+    )
+
+    action?.onAction()
+    expect(enqueue).toHaveBeenCalledWith(
+      'savingsGoal',
+      'add',
+      expect.any(String),
+      expect.objectContaining({ name: 'Car service', earmarkedAmount: 300 }),
+    )
+  })
+
   it('opens the sensitive reveal prompt when undoing sensitive mode', () => {
     const enqueue = vi.fn()
     const requestSensitiveReveal = vi.fn()

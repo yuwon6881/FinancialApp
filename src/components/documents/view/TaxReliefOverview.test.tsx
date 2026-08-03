@@ -149,3 +149,25 @@ describe('TaxReliefOverview category deletion', () => {
     expect(await screen.findByText('Move the documents filed under this category to another one before deleting it.')).toBeTruthy()
   })
 })
+
+describe('TaxReliefOverview sync status', () => {
+  it('shows the shared action wording for queued category mutations', () => {
+    render(
+      <TaxReliefOverview
+        summary={null}
+        categories={[{ ...category, isPendingSync: true, pendingSyncOperationId: 'op-sync' }]}
+        taxYear={CURRENT_YEAR}
+        currency="MYR"
+        isLoading={false}
+        onSelectReliefCategory={vi.fn()}
+        onAddCategory={vi.fn(async () => undefined)}
+        onUpdateCategory={vi.fn(async () => undefined)}
+        onDeleteCategory={vi.fn(async () => undefined)}
+        activeSyncIds={['op-sync']}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Manage limits' }))
+    expect(screen.getByText('Syncing...')).toBeTruthy()
+  })
+})

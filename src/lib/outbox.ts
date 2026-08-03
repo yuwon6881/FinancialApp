@@ -1,11 +1,11 @@
 import * as api from './api'
-import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentAllocationSleeve, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, PayEarlyResult, RecurringPayment, SavingsGoal, Transaction, TransactionCategory, WishlistItem } from '../types'
+import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentAllocationSleeve, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, PayEarlyResult, RecurringPayment, SavingsGoal, TaxReliefCategoryDefinition, Transaction, TransactionCategory, WishlistItem } from '../types'
 import { buildMutationSuccessToast, buildUndoSuccessToast } from './mutationToast'
 
 export type EntityKind = 'transaction' | 'recurringPayment' | 'wishlistItem' | 'savingsGoal' | 'category' | 'settings'
-  | 'investmentAccount' | 'investmentInstrument' | 'investmentActivity' | 'investmentManualPrice' | 'investmentCashFlow'
+  | 'investmentAccount' | 'investmentInstrument' | 'investmentActivity' | 'investmentCashFlow'
   | 'investmentPlan' | 'investmentAllocation'
-  | 'investmentAllocationOrder'
+  | 'investmentAllocationOrder' | 'taxReliefCategory'
 export type OpType = 'add' | 'update' | 'delete' | 'restore' | 'toggle' | 'purchase' | 'unpurchase'
   | 'reminder' | 'payEarly' | 'cleanup'
 export interface OutboxPayload {
@@ -36,6 +36,7 @@ export interface OutboxPayload {
   optimisticTransaction?: unknown
   resultTransaction?: unknown
   actions?: unknown
+  taxYear?: number
 }
 export type DispatchResult =
   | Transaction
@@ -48,6 +49,7 @@ export type DispatchResult =
   | InvestmentActivity
   | InvestmentCashFlow
   | InvestmentPlan
+  | TaxReliefCategoryDefinition
   | api.DeletedTransactionsSnapshot
   | api.CategoryCleanupApplyResult
   | PayEarlyResult
@@ -137,11 +139,11 @@ const ENTITY_LABELS: Record<EntityKind, string> = {
   , investmentAccount: 'Investment account'
   , investmentInstrument: 'Investment'
   , investmentActivity: 'Investment activity'
-  , investmentManualPrice: 'Manual price'
   , investmentCashFlow: 'Cash movement'
   , investmentPlan: 'Investment plan'
   , investmentAllocation: 'Investment classification'
   , investmentAllocationOrder: 'Investment classification order'
+  , taxReliefCategory: 'Tax relief category'
 }
 
 const TYPE_COPY: Record<OpType, { title: string; messageVerb: string }> = {
@@ -243,6 +245,7 @@ export function createFinalId(entity: EntityKind): string {
   const prefix = entity === 'transaction' ? 'tx'
     : entity === 'recurringPayment' ? 'rec'
     : entity === 'category' ? 'cat'
+    : entity === 'taxReliefCategory' ? 'relief'
     : 'op'
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
 }
@@ -301,15 +304,9 @@ export function enqueue(
       return queue
     }
     if (queuedAddNotInFlight) {
-      // Delete against a target with an unsent add: drop the add & cascade-remove all ops for that target
-      // Also if entity === 'recurringPayment', drop any unsent transaction ops generated from this recurring payment
-      return queue.filter(op => {
-        if (sameTarget(op)) return false
-        if (entity === 'recurringPayment' && op.entity === 'transaction' && op.payload?.recurringPaymentId === targetIdStr) {
-          return false
-        }
-        return true
-      })
+      // Delete against a target with an unsent add: drop every op for that target. Historical
+      // ledger transactions are independent records, including rows linked to recurring payments.
+      return queue.filter(op => !sameTarget(op))
     } else {
       // Delete against existing entity: drop queued update/toggle/purchase/unpurchase (not in-flight) for that target & append delete
       const filtered = queue.filter(op => !(sameTarget(op) && (op.type === 'update' || op.type === 'toggle' || op.type === 'purchase' || op.type === 'unpurchase') && op.id !== activeSyncOpId))
@@ -461,7 +458,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         ...entityOps,
         ...ops.filter(op =>
           (op.entity === 'wishlistItem' && (op.type === 'purchase' || op.type === 'unpurchase' || op.type === 'delete')) ||
-          (op.entity === 'recurringPayment' && (op.type === 'delete' || op.type === 'payEarly')) ||
+          (op.entity === 'recurringPayment' && op.type === 'payEarly') ||
           (op.entity === 'category' && (op.type === 'delete' || op.type === 'cleanup'))
         )
       ]
@@ -470,10 +467,47 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
           ...entityOps,
           ...ops.filter(op => op.entity === 'category' && (op.type === 'delete' || op.type === 'cleanup'))
         ]
+      : entity === 'wishlistItem'
+        ? [
+            ...entityOps,
+            ...ops.filter(op => op.entity === 'transaction' && (op.type === 'add' || op.type === 'delete')),
+          ]
       : entityOps
 
   for (const op of effectiveOps) {
     const targetStr = String(op.targetId)
+
+    if (entity === 'wishlistItem' && op.entity === 'transaction' && (op.type === 'add' || op.type === 'delete')) {
+      const nestedSnapshot = op.payload?.undoSnapshot && typeof op.payload.undoSnapshot === 'object'
+        ? op.payload.undoSnapshot as Record<string, unknown>
+        : undefined
+      const rawWishlistItemId = op.payload?.wishlistItemId ?? nestedSnapshot?.wishlistItemId
+      const wishlistItemId = rawWishlistItemId == null ? '' : String(rawWishlistItemId)
+      const existingIndex = wishlistItemId
+        ? result.findIndex(item => String(item.id) === wishlistItemId)
+        : -1
+      if (existingIndex >= 0) {
+        result[existingIndex] = op.type === 'delete'
+          ? {
+              ...result[existingIndex],
+              isPurchased: false,
+              purchasedAt: null,
+              purchaseTransactionId: null,
+              isPendingSync: !op.isCompleted,
+              pendingSyncOperationId: op.isCompleted ? undefined : op.id,
+            } as unknown as T
+          : {
+              ...result[existingIndex],
+              isPurchased: true,
+              isActive: false,
+              purchasedAt: typeof op.payload?.date === 'string' ? op.payload.date : undefined,
+              purchaseTransactionId: op.targetId,
+              isPendingSync: !op.isCompleted,
+              pendingSyncOperationId: op.isCompleted ? undefined : op.id,
+            } as unknown as T
+      }
+      continue
+    }
 
     if (op.entity === 'recurringPayment' && op.type === 'reminder' && entity === 'recurringPayment') {
       const existingIndex = result.findIndex(item => String(item.id) === targetStr)
@@ -687,22 +721,6 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
           result = result.map(item => {
             const wishlistItemId = (item as T & { wishlistItemId?: number | null }).wishlistItemId
             return wishlistItemId != null && String(wishlistItemId) === targetStr
-              ? { ...item, isPendingDelete: true, isPendingSync: true }
-              : item
-          })
-        }
-      } else if (entity === 'transaction' && op.entity === 'recurringPayment') {
-        // Deleting or undoing a recurring payment subscription marks any ledger transaction
-        // created from it as pending delete in optimistic FE state.
-        if (op.isCompleted) {
-          result = result.filter(item => {
-            const recurringPaymentId = (item as T & { recurringPaymentId?: string | null }).recurringPaymentId
-            return !(recurringPaymentId != null && String(recurringPaymentId) === targetStr)
-          })
-        } else {
-          result = result.map(item => {
-            const recurringPaymentId = (item as T & { recurringPaymentId?: string | null }).recurringPaymentId
-            return recurringPaymentId != null && String(recurringPaymentId) === targetStr
               ? { ...item, isPendingDelete: true, isPendingSync: true }
               : item
           })
@@ -925,12 +943,6 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
   'investmentActivity:delete': (op) => api.deleteInvestmentActivity(op.targetId),
   'investmentActivity:restore': (op) => api.restoreInvestmentActivity(op.payload as unknown as api.DeletedTransactionsSnapshot),
 
-  'investmentManualPrice:add': (op) => api.createManualInvestmentPrice({
-    ...(op.payload as unknown as Parameters<typeof api.createManualInvestmentPrice>[0]),
-    id: op.targetId,
-  }),
-  'investmentManualPrice:delete': (op) => api.deleteManualInvestmentPrice(op.targetId),
-
   'investmentCashFlow:add': (op) => api.createInvestmentCashFlow({
     ...(op.payload as unknown as Parameters<typeof api.createInvestmentCashFlow>[0]),
     id: op.targetId,
@@ -951,6 +963,24 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
       ? op.payload.instrumentIds.filter((value): value is string => typeof value === 'string')
       : [],
   ),
+  'taxReliefCategory:add': async (op) => {
+    const documents = await import('./api/documents')
+    return documents.addTaxReliefCategory(Number(op.payload?.taxYear), {
+      name: String(op.payload?.name ?? ''),
+      limit: Number(op.payload?.limit),
+    })
+  },
+  'taxReliefCategory:update': async (op) => {
+    const documents = await import('./api/documents')
+    return documents.updateTaxReliefCategory(Number(op.payload?.taxYear), op.targetId, {
+      name: String(op.payload?.name ?? ''),
+      limit: Number(op.payload?.limit),
+    })
+  },
+  'taxReliefCategory:delete': async (op) => {
+    const documents = await import('./api/documents')
+    return documents.deleteTaxReliefCategory(Number(op.payload?.taxYear), op.targetId)
+  },
 }
 
 function isWellFormedOp(op: unknown): op is QueuedOp {
@@ -959,7 +989,7 @@ function isWellFormedOp(op: unknown): op is QueuedOp {
   return (
     typeof o.id === 'string' &&
     typeof o.entity === 'string' &&
-    ['transaction', 'recurringPayment', 'wishlistItem', 'savingsGoal', 'category', 'settings', 'investmentAccount', 'investmentInstrument', 'investmentActivity', 'investmentManualPrice', 'investmentCashFlow', 'investmentPlan', 'investmentAllocation', 'investmentAllocationOrder'].includes(o.entity as string) &&
+    ['transaction', 'recurringPayment', 'wishlistItem', 'savingsGoal', 'category', 'settings', 'investmentAccount', 'investmentInstrument', 'investmentActivity', 'investmentCashFlow', 'investmentPlan', 'investmentAllocation', 'investmentAllocationOrder', 'taxReliefCategory'].includes(o.entity as string) &&
     typeof o.type === 'string' &&
     ['add', 'update', 'delete', 'restore', 'toggle', 'purchase', 'unpurchase', 'reminder', 'payEarly', 'cleanup'].includes(o.type as string) &&
     (typeof o.targetId === 'string' || typeof o.targetId === 'number') &&

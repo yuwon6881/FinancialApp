@@ -151,7 +151,6 @@ const emptyInvestmentPortfolio = {
   accounts: [],
   instruments: [],
   holdings: [],
-  manualPrices: [],
   chart: [],
   cashBalances: [],
   activityCount: 0,

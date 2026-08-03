@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { Dispatch, SetStateAction } from 'react'
 import { AlertTriangle, Download, Loader2, ShieldCheck, UploadCloud } from 'lucide-react'
 import { DocumentUploadSheet } from './documents/DocumentUploadSheet'
 import { useDocumentsView } from './documents/view/useDocumentsView'
@@ -6,7 +7,7 @@ import { CustomConfirmModal } from './ui/CustomConfirmModal'
 import { DocumentFilterBar } from './documents/view/DocumentFilterBar'
 import { StorageUsageMeter } from './documents/view/StorageUsageMeter'
 import { DocumentList } from './documents/view/DocumentList'
-import { useAppPrefs, useAppUi } from '../contexts/AppContext'
+import { useAppPrefs, useAppSync, useAppUi } from '../contexts/AppContext'
 import { TaxReliefOverview } from './documents/view/TaxReliefOverview'
 import * as documentsApi from '../lib/api/documents'
 import { getErrorMessage } from '../lib/errors'
@@ -14,6 +15,8 @@ import { buildMutationSuccessToast } from '../lib/mutationToast'
 import { Button } from './ui/Button'
 import { DataTableFooter, DataTablePagination } from './ui/DataTable'
 import { CycleSkeleton } from './ui/Skeleton'
+import { createFinalId } from '../lib/outbox'
+import { useOptimisticList } from '../lib/useOptimisticList'
 
 interface DocumentsViewProps {
   onNavigateToTransaction?: (transactionId: string) => Promise<void> | void
@@ -46,9 +49,6 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     loadUsage,
     loadAvailableYears,
     loadTaxInsights,
-    addReliefCategory,
-    updateReliefCategory,
-    deleteReliefCategory,
     deleteDocument,
     updateDocumentMetadata,
     bulkUpdateDocumentCategories,
@@ -57,13 +57,35 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
 
   const { showToast, guardSensitive } = useAppUi()
   const { currency, hideSensitive } = useAppPrefs()
+  const { operations = [], activeSyncIds = [], deletingId, queueMutation } = useAppSync()
   const [isUploadSheetOpen, setIsUploadSheetOpen] = useState(false)
   const [docToDelete, setDocToDelete] = useState<number | null>(null)
+  const [deletingDocumentId, setDeletingDocumentId] = useState<number | null>(null)
+  const [syncingDocumentIds, setSyncingDocumentIds] = useState<Set<number>>(new Set())
+  const [deletingDocumentIds, setDeletingDocumentIds] = useState<Set<number>>(new Set())
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false)
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
   const [pendingReliefCategories, setPendingReliefCategories] = useState<Map<number, string>>(new Map())
   const [isSavingReliefCategories, setIsSavingReliefCategories] = useState(false)
+  const refreshedCategoryOpsRef = useRef(new Set<string>())
+
+  const selectedReliefYear = taxYear ?? availableYears[0]
+  const taxReliefOperations = useMemo(() => operations.filter(operation =>
+    operation.entity === 'taxReliefCategory'
+    && operation.payload?.taxYear === selectedReliefYear,
+  ), [operations, selectedReliefYear])
+  const optimisticReliefCategories = useOptimisticList(reliefCategories, taxReliefOperations, 'taxReliefCategory')
+
+  useEffect(() => {
+    const newlyCompleted = taxReliefOperations.filter(operation =>
+      operation.isCompleted && !refreshedCategoryOpsRef.current.has(operation.id),
+    )
+    if (newlyCompleted.length === 0) return
+    newlyCompleted.forEach(operation => refreshedCategoryOpsRef.current.add(operation.id))
+    void loadTaxInsights()
+  }, [loadTaxInsights, taxReliefOperations])
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
   const visibleIds = documents.map(document => document.id)
@@ -108,11 +130,29 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     })
   }
 
+  const addDocumentIds = (setter: Dispatch<SetStateAction<Set<number>>>, ids: number[]) => {
+    setter(current => {
+      const next = new Set(current)
+      ids.forEach(id => next.add(id))
+      return next
+    })
+  }
+
+  const removeDocumentIds = (setter: Dispatch<SetStateAction<Set<number>>>, ids: number[]) => {
+    setter(current => {
+      const next = new Set(current)
+      ids.forEach(id => next.delete(id))
+      return next
+    })
+  }
+
   const saveReliefCategories = async () => {
     if (!guardSensitive()) return
     if (pendingReliefCategories.size === 0 || isSavingReliefCategories) return
     const staged = Array.from(pendingReliefCategories.entries())
+    const stagedIds = staged.map(([id]) => id)
     setIsSavingReliefCategories(true)
+    addDocumentIds(setSyncingDocumentIds, stagedIds)
     try {
       const results = await bulkUpdateDocumentCategories(staged.map(([id, reliefCategory]) => ({ id, reliefCategory })))
       const resultsById = new Map(results.map(result => [result.id, result]))
@@ -144,6 +184,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     } catch (error) {
       showToast(getErrorMessage(error, 'The document categories could not be saved.'), 'Category update failed', 'error')
     } finally {
+      removeDocumentIds(setSyncingDocumentIds, stagedIds)
       setIsSavingReliefCategories(false)
     }
   }
@@ -217,7 +258,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
 
         <TaxReliefOverview
           summary={summary}
-          categories={reliefCategories}
+          categories={optimisticReliefCategories}
           taxYear={taxYear}
           currency={currency}
           isLoading={isTaxInsightsLoading}
@@ -225,16 +266,35 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
           onSelectReliefCategory={setReliefCategory}
           onAddCategory={async input => {
             if (!guardSensitive()) return
-            return addReliefCategory(input)
+            if (selectedReliefYear === undefined) throw new Error('Choose a tax year first.')
+            queueMutation?.('taxReliefCategory', 'add', createFinalId('taxReliefCategory'), {
+              ...input,
+              taxYear: selectedReliefYear,
+            })
           }}
           onUpdateCategory={async (categoryId, input) => {
             if (!guardSensitive()) return
-            return updateReliefCategory(categoryId, input)
+            if (selectedReliefYear === undefined) throw new Error('Choose a tax year first.')
+            const category = optimisticReliefCategories.find(item => item.id === categoryId)
+            queueMutation?.('taxReliefCategory', 'update', categoryId, {
+              ...input,
+              taxYear: selectedReliefYear,
+              undoSnapshot: category,
+            })
           }}
           onDeleteCategory={async categoryId => {
             if (!guardSensitive()) return
-            return deleteReliefCategory(categoryId)
+            if (selectedReliefYear === undefined) throw new Error('Choose a tax year first.')
+            const category = optimisticReliefCategories.find(item => item.id === categoryId)
+            queueMutation?.('taxReliefCategory', 'delete', categoryId, {
+              name: category?.name,
+              taxYear: selectedReliefYear,
+              undoSnapshot: category,
+            })
+            setReliefCategory(current => current === categoryId ? undefined : current)
           }}
+          activeSyncIds={activeSyncIds}
+          deletingId={deletingId}
         />
       </div>
 
@@ -280,6 +340,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
                 variant="unstyled"
                 type="button"
                 disabled={isSavingReliefCategories}
+                aria-busy={isSavingReliefCategories}
                 onClick={() => void saveReliefCategories()}
                 className="rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-50"
               >
@@ -339,13 +400,21 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
                 if (!guardSensitive()) return
                 setIsBulkDeleteOpen(true)
               }}
+              isDeletingSelected={isBulkDeleting}
+              syncingDocumentIds={syncingDocumentIds}
+              deletingDocumentIds={deletingDocumentIds}
               currency={currency}
               pendingReliefCategories={pendingReliefCategories}
               onReliefCategoryChange={stageReliefCategory}
               updateDocument={async (id, updates) => {
                 if (!guardSensitive()) return
-                await updateDocumentMetadata(id, updates)
-                void loadTaxInsights()
+                addDocumentIds(setSyncingDocumentIds, [id])
+                try {
+                  await updateDocumentMetadata(id, updates)
+                  void loadTaxInsights()
+                } finally {
+                  removeDocumentIds(setSyncingDocumentIds, [id])
+                }
               }}
               reliefCategoriesByTaxYear={reliefCategoriesByTaxYear}
               onNavigateToTransaction={onNavigateToTransaction}
@@ -386,6 +455,8 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
         title="Delete Document"
         message="This permanently removes the file from your vault and cannot be undone. If you still need it as tax evidence, download a copy first."
         confirmText="Delete"
+        isConfirming={deletingDocumentId !== null}
+        confirmingText="Deleting…"
         cancelText="Cancel"
         variant="danger"
         onConfirm={async () => {
@@ -395,6 +466,8 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
             return
           }
           const document = documents.find(item => item.id === docToDelete)
+          setDeletingDocumentId(docToDelete)
+          addDocumentIds(setDeletingDocumentIds, [docToDelete])
           try {
             await deleteDocument(docToDelete)
             setSelectedIds(current => {
@@ -413,6 +486,8 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
             // leaving the modal open on an unhandled rejection.
             showToast('The document could not be deleted.', 'Delete Failed', 'error')
           } finally {
+            setDeletingDocumentId(null)
+            removeDocumentIds(setDeletingDocumentIds, [docToDelete])
             setDocToDelete(null)
           }
         }}
@@ -424,6 +499,8 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
         title={`Delete ${selectedIds.size} documents?`}
         message="This permanently removes every selected original file. Successful deletions cannot be undone; any storage failure will be reported and left in the Vault."
         confirmText="Delete selected"
+        isConfirming={isBulkDeleting}
+        confirmingText="Deleting…"
         cancelText="Cancel"
         variant="danger"
         onConfirm={async () => {
@@ -432,6 +509,8 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
             return
           }
           const idsToDelete = [...selectedIds]
+          setIsBulkDeleting(true)
+          addDocumentIds(setDeletingDocumentIds, idsToDelete)
           try {
             const results = await bulkDelete(idsToDelete)
             const failed = results.filter(result => !result.deleted)
@@ -458,6 +537,8 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
           } catch {
             showToast('The selected documents could not be deleted.', 'Delete Failed', 'error')
           } finally {
+            setIsBulkDeleting(false)
+            removeDocumentIds(setDeletingDocumentIds, idsToDelete)
             setIsBulkDeleteOpen(false)
           }
         }}

@@ -128,7 +128,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
 
             if (usingAllPayments) {
               const freq = (p as RecurringPayment).frequency
-              if (freq && (freq === 'Annually' || freq.toLowerCase() === 'yearly')) {
+              if (freq === 'Annually') {
                 if (pStart) {
                   const startMonthStr = pStart.split('-')[1]
                   if (startMonthStr) {

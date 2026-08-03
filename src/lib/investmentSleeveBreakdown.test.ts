@@ -7,7 +7,7 @@ type Holding = InvestmentPortfolio['holdings'][number]
 const holding = (instrumentId: string, valueApp?: number): Holding => ({
   accountId: 'account-1', accountName: 'Broker', instrumentId, symbol: instrumentId.toUpperCase(),
   name: instrumentId, type: 'ETF', currency: 'USD', units: 1, averageCostNative: 10, valueApp,
-  usesManualPrice: false, fxIncomplete: false,
+  fxIncomplete: false,
 })
 const instruments: InvestmentPortfolio['instruments'] = [
   { id: 'voo', symbol: 'VOO', name: 'VOO', type: 'ETF', currency: 'USD', allocationSleeve: 'USEquity', isCustom: false, isArchived: false },

@@ -17,11 +17,10 @@ const portfolio = {
     currency: 'USD',
     units: 4,
     averageCostNative: 100,
-    usesManualPrice: false,
+   
     fxIncomplete: false,
   }],
   activity: [],
-  manualPrices: [],
   chart: [],
   cashBalances: [{ accountId: 'a1', accountName: 'Moomoo', currency: 'USD', amount: 500 }],
   cashFlows: [],

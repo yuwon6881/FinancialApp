@@ -121,7 +121,10 @@ export async function completeGoal(deps: SavingsGoalActionDeps, id: number): Pro
       deps.replacePendingLedgerTransaction?.(pendingTransaction.id, result.transaction)
     }
     await deps.refreshAll()
-    if (pendingTransaction) deps.removePendingLedgerTransaction?.(pendingTransaction.id)
+    // replacePendingLedgerTransaction swaps the local placeholder id for the server id.
+    // Remove that server-shaped projection after the authoritative refresh; removing the old
+    // placeholder would leave a hidden duplicate that resurfaces after the real row is deleted.
+    if (pendingTransaction) deps.removePendingLedgerTransaction?.(result.transaction.id)
     const spent = formatCurrencyVal(Math.abs(result.transaction.amount), deps.currency)
     const copy = buildMutationSuccessToast({
       entity: 'Savings Goal',
@@ -144,6 +147,8 @@ export async function completeGoal(deps: SavingsGoalActionDeps, id: number): Pro
             const { deleteTransaction } = await import('../lib/api/transactions')
             await deleteTransaction(result.transaction.id)
             await deps.refreshAll()
+            deps.removePendingLedgerTransaction?.(result.transaction.id)
+            if (goal) deps.commitGoal(goal)
             const undoCopy = buildUndoSuccessToast(result.goal.name, 'savings goal')
             deps.showToast(undoCopy.message, undoCopy.title, undoCopy.tone)
           } catch (error: unknown) {

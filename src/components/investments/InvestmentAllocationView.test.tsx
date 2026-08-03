@@ -13,10 +13,10 @@ const portfolio: InvestmentPortfolio = {
     { id: 'other', symbol: 'OTHER', name: 'Other ETF', type: 'ETF', currency: 'USD', isCustom: true, isArchived: false },
   ],
   holdings: [
-    { accountId: 'account-1', accountName: 'Broker', instrumentId: 'voo', symbol: 'VOO', name: 'Vanguard S&P 500 ETF', type: 'ETF', currency: 'USD', units: 1, averageCostNative: 90, valueNative: 100, valueApp: 100, usesManualPrice: false, fxIncomplete: false },
-    { accountId: 'account-1', accountName: 'Broker', instrumentId: 'other', symbol: 'OTHER', name: 'Other ETF', type: 'ETF', currency: 'USD', units: 1, averageCostNative: 40, valueNative: 50, valueApp: 50, usesManualPrice: false, fxIncomplete: false },
+    { accountId: 'account-1', accountName: 'Broker', instrumentId: 'voo', symbol: 'VOO', name: 'Vanguard S&P 500 ETF', type: 'ETF', currency: 'USD', units: 1, averageCostNative: 90, valueNative: 100, valueApp: 100, fxIncomplete: false },
+    { accountId: 'account-1', accountName: 'Broker', instrumentId: 'other', symbol: 'OTHER', name: 'Other ETF', type: 'ETF', currency: 'USD', units: 1, averageCostNative: 40, valueNative: 50, valueApp: 50, fxIncomplete: false },
   ],
-  activity: [], manualPrices: [], chart: [], cashBalances: [], cashFlows: [],
+  activity: [], chart: [], cashBalances: [], cashFlows: [],
   activityCount: 0, cashFlowCount: 0, insights: [], warnings: [], marketDataConfigured: false,
   allocation: {
     status: 'Incomplete', appCurrency: 'USD',
@@ -49,5 +49,8 @@ describe('investment sleeve allocation view', () => {
 
     expect(screen.getAllByText(/Vanguard S&P 500 ETF/).length).toBeGreaterThan(0)
     expect(screen.queryByText('Other ETF')).toBeNull()
+    const table = screen.getByRole('table')
+    expect(table.className).toContain('table-fixed')
+    expect(table.querySelectorAll('col')).toHaveLength(10)
   })
 })

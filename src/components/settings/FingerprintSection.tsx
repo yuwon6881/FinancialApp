@@ -1,4 +1,4 @@
-import { CheckCircle2, KeyRound, ShieldCheck, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { CheckCircle2, KeyRound, Loader2, ShieldCheck, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import * as api from '../../lib/api'
 import type { FingerprintCredentialSummary } from '../../lib/api'
@@ -14,6 +14,7 @@ import {
 import { useAppPrefs, useAppUi } from '../../contexts/AppContext'
 import { CollapsibleBody } from '../ui/CollapsibleBody'
 import { Button } from '../ui/Button'
+import { RowSyncStatus } from '../ui/RowSyncBadge'
 
 export function FingerprintSection() {
   const { hideSensitive } = useAppPrefs()
@@ -22,6 +23,7 @@ export function FingerprintSection() {
   const [credentials, setCredentials] = useState<FingerprintCredentialSummary[]>([])
   const [credentialsLoaded, setCredentialsLoaded] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [removingCredentialId, setRemovingCredentialId] = useState<string | null>(null)
   const [available, setAvailable] = useState(false)
   const username = localStorage.getItem('auth_username') || ''
   const load = async () => {
@@ -78,7 +80,8 @@ export function FingerprintSection() {
     }
   }
   const remove = async (id: string) => {
-    if (hideSensitive) return
+    if (hideSensitive || busy || removingCredentialId !== null) return
+    setRemovingCredentialId(id)
     try {
       await api.deleteFingerprintCredential(id)
       forgetDeviceUnlockCredential(username, id)
@@ -91,6 +94,8 @@ export function FingerprintSection() {
       showToast(copy.message, copy.title, copy.tone)
     } catch (error) {
       showToast(getErrorMessage(error, 'Failed to remove device unlock credential.'), 'Device unlock error', 'error')
+    } finally {
+      setRemovingCredentialId(null)
     }
   }
 
@@ -122,24 +127,39 @@ export function FingerprintSection() {
 
       <CollapsibleBody open={open}>
         <div className="px-5 pb-5 space-y-4 border-t border-border/40 pt-4">
-          {credentials.map(credential => (
-            <div key={credential.id} className="flex items-center justify-between bg-muted/20 border px-3 py-2.5 rounded-xl text-xs">
-              <span className="flex items-center gap-2 font-semibold">
-                <KeyRound className="size-4 text-emerald-500" />
-                {credential.deviceLabel || 'Registered device'}
-              </span>
-              <Button variant="ghost" size="icon" type="button" onClick={() => void remove(credential.id)} disabled={hideSensitive} className="size-8 text-muted-foreground hover:text-orange-500">
-                <Trash2 className="size-3.5" />
-              </Button>
-            </div>
-          ))}
+          {credentials.map(credential => {
+            const isRemoving = removingCredentialId === credential.id
+            return (
+              <div key={credential.id} className="flex items-center justify-between bg-muted/20 border px-3 py-2.5 rounded-xl text-xs" aria-busy={isRemoving}>
+                <span className="flex items-center gap-2 font-semibold">
+                  <KeyRound className="size-4 text-emerald-500" />
+                  {credential.deviceLabel || 'Registered device'}
+                  <RowSyncStatus isDeleting={isRemoving} entityLabel="device unlock credential" />
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  type="button"
+                  onClick={() => void remove(credential.id)}
+                  disabled={hideSensitive || busy || removingCredentialId !== null}
+                  aria-busy={isRemoving}
+                  aria-label={`Remove ${credential.deviceLabel || 'registered device'}`}
+                  className="size-8 text-muted-foreground hover:text-orange-500"
+                >
+                  {isRemoving
+                    ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                    : <Trash2 className="size-3.5" aria-hidden="true" />}
+                </Button>
+              </div>
+            )
+          })}
           {enrolledHere ? (
             <div className="flex justify-center gap-1.5 text-[11px] font-semibold text-emerald-500">
               <CheckCircle2 className="size-3.5" /> Enabled on this device
             </div>
           ) : (
-            <Button variant="success" type="button" onClick={() => void enroll()} disabled={busy || hideSensitive} aria-busy={busy} className="w-full rounded-xl py-2.5">
-              {busy ? <span className="size-3.5 rounded-full border-2 border-t-transparent animate-spin" /> : <KeyRound className="size-3.5" />}
+            <Button variant="success" type="button" onClick={() => void enroll()} disabled={busy || removingCredentialId !== null || hideSensitive} aria-busy={busy} className="w-full rounded-xl py-2.5">
+              {busy ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <KeyRound className="size-3.5" />}
               {enabledOnAccount ? 'Set up this device' : 'Enable on this device'}
             </Button>
           )}

@@ -29,7 +29,6 @@ const emptyPortfolio: InvestmentPortfolio = {
   instruments: [],
   holdings: [],
   activity: [],
-  manualPrices: [],
   chart: [],
   cashBalances: [],
   cashFlows: [],
@@ -112,13 +111,11 @@ describe('InvestmentsView provider call boundaries', () => {
     expect(api.refreshInvestmentMarketData).not.toHaveBeenCalled()
   })
 
-  it('omits manual-price controls and explains investment archive eligibility', async () => {
+  it('explains investment archive eligibility', async () => {
     vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(tradablePortfolio)
     renderView()
 
     expect(await screen.findByText('Manage portfolio')).toBeTruthy()
-    expect(screen.queryByText(/Manual prices/)).toBeNull()
-    expect(screen.queryByRole('button', { name: /Manual price/i })).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: /Manage portfolio/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Investments (1)' }))

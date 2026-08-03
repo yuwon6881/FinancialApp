@@ -22,9 +22,16 @@ vi.mock('./api/savingsGoals', () => ({
   deleteSavingsGoal: vi.fn(async () => undefined),
 }))
 
+vi.mock('./api/documents', () => ({
+  addTaxReliefCategory: vi.fn(async () => ({ id: 'server-relief', name: 'Education', limit: 1000 })),
+  updateTaxReliefCategory: vi.fn(async () => ({ id: 'education', name: 'Learning', limit: 1200 })),
+  deleteTaxReliefCategory: vi.fn(async () => undefined),
+}))
+
 import { applyOpsToList, enqueue, DISPATCH, getSyncSuccessToast, projectFinancialSetting, projectSettingPreference, type QueuedOp } from './outbox'
 import * as api from './api'
 import * as savingsGoalsApi from './api/savingsGoals'
+import * as documentsApi from './api/documents'
 
 interface TestItem {
   id: string | number
@@ -144,6 +151,24 @@ describe('DISPATCH idempotency wiring', () => {
       entity: 'category', type: 'cleanup', targetId: 'suggestion-1', payload: { actions },
     }))
     expect(api.applyCategoryCleanup).toHaveBeenCalledWith(actions)
+  })
+
+  it('dispatches tax relief category CRUD with the tax year kept in the queued payload', async () => {
+    await DISPATCH['taxReliefCategory:add'](makeOp({
+      entity: 'taxReliefCategory', type: 'add', targetId: 'local-relief',
+      payload: { taxYear: 2026, name: 'Education', limit: 1000 },
+    }))
+    await DISPATCH['taxReliefCategory:update'](makeOp({
+      entity: 'taxReliefCategory', type: 'update', targetId: 'education',
+      payload: { taxYear: 2026, name: 'Learning', limit: 1200 },
+    }))
+    await DISPATCH['taxReliefCategory:delete'](makeOp({
+      entity: 'taxReliefCategory', type: 'delete', targetId: 'education', payload: { taxYear: 2026 },
+    }))
+
+    expect(documentsApi.addTaxReliefCategory).toHaveBeenCalledWith(2026, { name: 'Education', limit: 1000 })
+    expect(documentsApi.updateTaxReliefCategory).toHaveBeenCalledWith(2026, 'education', { name: 'Learning', limit: 1200 })
+    expect(documentsApi.deleteTaxReliefCategory).toHaveBeenCalledWith(2026, 'education')
   })
 })
 
@@ -504,16 +529,57 @@ describe('applyOpsToList', () => {
     expect(result[1].isPendingDelete).toBeUndefined()
   })
 
-  it('marks a transaction pending delete for a recurring payment delete op', () => {
+  it('keeps historical ledger rows unchanged when deleting a recurring payment', () => {
     const base: TestItem[] = [
       { id: 'tx-1', name: 'Netflix', description: 'Netflix Payment', recurringPaymentId: 'rec-1' },
       { id: 'tx-2', name: 'Groceries' },
     ]
     const ops = [makeOp({ entity: 'recurringPayment', type: 'delete', targetId: 'rec-1' })]
     const result = applyOpsToList(base, ops, 'transaction')
-    expect(result[0]).toMatchObject({ id: 'tx-1', isPendingDelete: true, isPendingSync: true })
+    expect(result[0]).toEqual(base[0])
     expect(result[1]).toMatchObject({ id: 'tx-2' })
     expect(result[1].isPendingDelete).toBeUndefined()
+  })
+
+  it('unmarks the linked wishlist item when its purchase transaction is deleted', () => {
+    const base: TestItem[] = [{
+      id: 5,
+      name: 'Headphones',
+      isPurchased: true,
+      purchaseTransactionId: 'tx-guid',
+    }]
+    const ops = [makeOp({
+      entity: 'transaction',
+      type: 'delete',
+      targetId: 'tx-guid',
+      payload: { undoSnapshot: { id: 'tx-guid', wishlistItemId: 5 } },
+    })]
+
+    expect(applyOpsToList(base, ops, 'wishlistItem')[0]).toMatchObject({
+      id: 5,
+      isPurchased: false,
+      purchaseTransactionId: null,
+      isPendingSync: true,
+    })
+  })
+
+  it('relinks the wishlist item when a deleted purchase transaction is restored', () => {
+    const base: TestItem[] = [{ id: 5, name: 'Headphones', isPurchased: false }]
+    const ops = [makeOp({
+      entity: 'transaction',
+      type: 'add',
+      targetId: 'tx-guid',
+      payload: { wishlistItemId: 5, date: '2026-08-01' },
+      isUndo: true,
+    })]
+
+    expect(applyOpsToList(base, ops, 'wishlistItem')[0]).toMatchObject({
+      id: 5,
+      isPurchased: true,
+      purchaseTransactionId: 'tx-guid',
+      purchasedAt: '2026-08-01',
+      isPendingSync: true,
+    })
   })
 
   it('moves category-dependent ledger rows optimistically during a category replacement', () => {
@@ -625,13 +691,13 @@ describe('enqueue', () => {
     expect(next).toEqual([])
   })
 
-  it('cascade removes unsent transactions linked to an unsent recurring payment when undoing/deleting recurring payment', () => {
+  it('keeps independent unsent transactions when removing an unsent recurring payment', () => {
     const queue = [
       makeOp({ id: 'op-rec-add', entity: 'recurringPayment', type: 'add', targetId: 'rec-1', payload: { name: 'Netflix' } }),
       makeOp({ id: 'op-tx-add', entity: 'transaction', type: 'add', targetId: 'tx-1', payload: { name: 'Netflix Payment', recurringPaymentId: 'rec-1' } }),
     ]
     const next = enqueue(queue, 'recurringPayment', 'delete', 'rec-1')
-    expect(next).toEqual([])
+    expect(next).toEqual([queue[1]])
   })
 
   it('does not collapse a delete against an add that is currently in flight', () => {

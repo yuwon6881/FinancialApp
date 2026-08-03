@@ -6,13 +6,14 @@ import { Button } from '../../ui/Button'
 import { BottomSheet } from '../../ui/BottomSheet'
 import { useAppPrefs, useAppUi } from '../../../contexts/AppContext'
 import { getErrorMessage } from '../../../lib/errors'
-import { buildMutationSuccessToast } from '../../../lib/mutationToast'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../../../lib/utils'
 import { HorizontalRail } from '../../ui/HorizontalRail'
 import { FormField } from '../../ui/FormField'
 import { orderTaxReliefCategories } from '../../../lib/taxReliefOrdering'
 import { mapServerErrorToField, type ServerFieldRule } from '../../../lib/formErrors'
 import { revealFirstFieldError } from '../../ui/formValidation'
+import { RowSyncStatus } from '../../ui/RowSyncBadge'
+import { useSyncStatus } from '../../../lib/useOptimisticList'
 
 type CategoryInput = { name: string; limit: number }
 type CategoryDraft = { name: string; limit: string }
@@ -59,6 +60,8 @@ interface TaxReliefOverviewProps {
   onAddCategory: (input: CategoryInput) => Promise<unknown>
   onUpdateCategory: (categoryId: string, input: CategoryInput) => Promise<unknown>
   onDeleteCategory: (categoryId: string) => Promise<unknown>
+  activeSyncIds?: ReadonlyArray<string | number>
+  deletingId?: string | number | null
 }
 
 /**
@@ -94,6 +97,8 @@ export function TaxReliefOverview({
   onAddCategory,
   onUpdateCategory,
   onDeleteCategory,
+  activeSyncIds = [],
+  deletingId: activeDeletingId,
 }: TaxReliefOverviewProps) {
   const { showToast } = useAppUi()
   const { hideSensitive } = useAppPrefs()
@@ -128,8 +133,18 @@ export function TaxReliefOverview({
   const isEditableTaxYear = selectedYear !== undefined
     && selectedYear <= currentYear
     && selectedYear >= currentYear - TAX_YEAR_LOOKBACK
-  const trackerCategories = summary?.categories ?? categories.map(zeroSummary)
+  const summaryByCategory = new Map((summary?.categories ?? []).map(category => [category.id, category]))
+  const trackerCategories = categories.map(category => ({
+    ...zeroSummary(category),
+    ...summaryByCategory.get(category.id),
+    ...category,
+  }))
   const orderedTrackerCategories = orderTaxReliefCategories(trackerCategories)
+  const { isSyncing: isCategorySyncing, isDeleting: isCategoryDeleting } = useSyncStatus(
+    categories,
+    activeSyncIds,
+    activeDeletingId,
+  )
   // The summary already knows how many documents sit in each category, so the
   // server's "still in use" refusal can be prevented rather than reported.
   const documentCountByCategory = new Map(
@@ -183,13 +198,6 @@ export function TaxReliefOverview({
     try {
       await onUpdateCategory(categoryId, input)
       setEditingId(null)
-      const copy = buildMutationSuccessToast({
-        entity: 'Tax Relief Category',
-        action: 'Updated',
-        recordName: input.name,
-        messageSuffix: `For YA ${selectedYear}.`,
-      })
-      showToast(copy.message, copy.title, copy.tone)
     } catch (error) {
       const mapped = mapServerErrorToField(error, SAVE_ERROR_RULES)
       if (mapped) {
@@ -216,13 +224,6 @@ export function TaxReliefOverview({
     try {
       await onAddCategory(input)
       setNewCategory(EMPTY_CATEGORY_DRAFT)
-      const copy = buildMutationSuccessToast({
-        entity: 'Tax Relief Category',
-        action: 'Added',
-        recordName: input.name,
-        messageSuffix: `For YA ${selectedYear}.`,
-      })
-      showToast(copy.message, copy.title, copy.tone)
     } catch (error) {
       const mapped = mapServerErrorToField(error, SAVE_ERROR_RULES)
       if (mapped) {
@@ -248,13 +249,6 @@ export function TaxReliefOverview({
       await onDeleteCategory(category.id)
       setConfirmingDeleteId(null)
       if (editingId === category.id) setEditingId(null)
-      const copy = buildMutationSuccessToast({
-        entity: 'Tax Relief Category',
-        action: 'Deleted',
-        recordName: category.name,
-        messageSuffix: `For YA ${selectedYear}.`,
-      })
-      showToast(copy.message, copy.title, copy.tone)
     } catch (error) {
       // "Still in use" and "already gone" are both answers about this row, so
       // they belong next to it rather than in a notification over the sheet.
@@ -433,7 +427,18 @@ export function TaxReliefOverview({
                   </div>
                 ) : (
                   <div className="flex items-start gap-2">
-                    <div className="min-w-0 flex-1"><p className="truncate text-[11px] font-bold">{category.name}</p><p className="mt-0.5 text-[10px] text-muted-foreground">{money(category.limit)} limit{category.isInherited ? ' · inherited default' : ''}</p></div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <p className="truncate text-[11px] font-bold">{category.name}</p>
+                        <RowSyncStatus
+                          entityLabel="tax relief category"
+                          isDeleting={isCategoryDeleting(category.id)}
+                          isSyncing={isCategorySyncing(category.id)}
+                          isPending={category.isPendingSync && !isCategorySyncing(category.id)}
+                        />
+                      </div>
+                      <p className="mt-0.5 text-[10px] text-muted-foreground">{money(category.limit)} limit{category.isInherited ? ' · inherited default' : ''}</p>
+                    </div>
                     <div className="flex shrink-0 gap-1.5">
                       <Button variant="outline" size="sm" type="button" onClick={() => beginEdit(category)} className="text-muted-foreground hover:bg-muted hover:text-foreground"><Pencil className="size-3" /> Edit</Button>
                       <Button variant="unstyled" type="button" onClick={() => { setEditingId(null); setDeleteError(null); setConfirmingDeleteId(category.id) }} aria-label={`Delete ${category.name}`} title={`Delete ${category.name}`} className="rounded-lg border border-border p-2 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-3" /></Button>

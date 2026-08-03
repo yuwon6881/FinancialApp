@@ -1102,8 +1102,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       ? transactionHint
       : allTransactions.find(t => String(t.id) === deleteId)
     if (transaction?.savingsGoalId != null) {
-      // A completion delete is an authoritative rollback of both the ledger row and its goal
-      // snapshot, so it cannot use the offline outbox's transaction-only optimistic projection.
+      // Completion deletion rolls back both the ledger row and goal, so it cannot use the transaction-only outbox.
       if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         setDeletingTxId(null)
         showToast('Undoing a completed savings goal needs a live connection so the linked ledger row and goal snapshot stay consistent.', 'Available online only', 'warning')
@@ -1114,7 +1113,8 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       void (async () => {
         try {
           await api.deleteTransaction(deleteId)
-          await loadAll(selectedMonth || undefined, selectedYear || undefined, true)
+          await loadAll(selectedMonth || undefined, selectedYear || undefined, true, false, () => true)
+          removePendingLedgerTransaction(deleteId)
           const goalName = allSavingsGoals.find(goal => goal.id === transaction.savingsGoalId)?.name
           const fallbackName = transaction.description.replace(/^Completed commitment:\s*/i, '')
           const undoCopy = buildUndoSuccessToast(goalName || fallbackName, 'savings goal')
@@ -1323,7 +1323,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     replacePendingLedgerTransaction,
     removePendingLedgerTransaction,
     setDeletingTransactionId: setDeletingTxId,
-    refreshAll: () => loadAll(selectedMonth || undefined, selectedYear || undefined, true),
+    refreshAll: () => loadAll(selectedMonth || undefined, selectedYear || undefined, true, false, () => true),
   })
 
   return {

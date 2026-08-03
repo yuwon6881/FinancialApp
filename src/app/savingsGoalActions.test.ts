@@ -47,12 +47,15 @@ describe('completeGoal', () => {
     const commitGoal = vi.fn()
     const refreshAll = vi.fn().mockResolvedValue(undefined)
     const showToast = vi.fn()
+    const removePendingLedgerTransaction = vi.fn()
 
     await completeGoal({
       currency: 'MYR',
       commitGoals: vi.fn(),
       commitGoal,
       getGoalName: id => id === goal.id ? goal.name : undefined,
+      getGoal: id => id === goal.id ? goal : undefined,
+      removePendingLedgerTransaction,
       refreshAll,
       showToast,
     }, goal.id)
@@ -71,6 +74,8 @@ describe('completeGoal', () => {
     action?.onAction()
     await vi.waitFor(() => expect(deleteTransaction).toHaveBeenCalledWith(transaction.id))
     await vi.waitFor(() => expect(refreshAll).toHaveBeenCalledTimes(2))
+    expect(removePendingLedgerTransaction).toHaveBeenCalledWith(transaction.id)
+    expect(commitGoal).toHaveBeenLastCalledWith(goal)
     expect(showToast).toHaveBeenLastCalledWith(
       'The change to "Car service" was undone.',
       'Undo successful',
@@ -119,7 +124,7 @@ describe('completeGoal', () => {
     })
     expect(beginDirectSync).toHaveBeenCalledWith([String(goal.id), pending.id])
     expect(replacePendingLedgerTransaction).toHaveBeenCalledWith(pending.id, committedTransaction)
-    expect(removePendingLedgerTransaction).toHaveBeenCalledWith(pending.id)
+    expect(removePendingLedgerTransaction).toHaveBeenCalledWith(committedTransaction.id)
     expect(endDirectSync).toHaveBeenCalledWith([String(goal.id), pending.id])
 
     const action = showToast.mock.calls[0]?.[3]

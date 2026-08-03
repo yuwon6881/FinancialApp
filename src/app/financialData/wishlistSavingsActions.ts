@@ -173,7 +173,10 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
     void triggerHaptic(30)
     const goal = allSavingsGoals.find(item => String(item.id) === String(id))
     snapshotForUndo('savingsGoal', String(id), goal)
-    mutateQueue(previous => enqueue(previous, 'savingsGoal', 'delete', String(id), { name: goal?.name }))
+    mutateQueue(previous => enqueue(previous, 'savingsGoal', 'delete', String(id), {
+      name: goal?.name,
+      undoSnapshot: goal,
+    }))
   }
 
   const requestDeleteSavingsGoal = async (id: number) => {

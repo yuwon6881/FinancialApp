@@ -1,0 +1,127 @@
+import { useEffect, useState } from 'react'
+import { Download, FileWarning, Loader2 } from 'lucide-react'
+import type { VaultDocument } from '../../../types'
+import { downloadDocument, getDocumentContent } from '../../../lib/api/documents'
+import { useAppPrefs, useAppUi } from '../../../contexts/AppContext'
+import { BottomSheet } from '../../ui/BottomSheet'
+import { Button } from '../../ui/Button'
+
+interface DocumentPreviewSheetProps {
+  document: VaultDocument | null
+  onClose: () => void
+}
+
+type PreviewState =
+  | { status: 'idle' | 'loading' }
+  | { status: 'ready'; url: string; text?: string; contentType: string }
+  | { status: 'unsupported' }
+  | { status: 'error' }
+
+function canPreviewAsImage(contentType: string) {
+  return ['image/jpeg', 'image/png', 'image/webp'].includes(contentType)
+}
+
+export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheetProps) {
+  const { hideSensitive } = useAppPrefs()
+  const { showToast } = useAppUi()
+  const [preview, setPreview] = useState<PreviewState>({ status: 'idle' })
+
+  useEffect(() => {
+    if (!document || hideSensitive) {
+      if (document && hideSensitive) onClose()
+      return
+    }
+
+    let active = true
+    let objectUrl: string | null = null
+    setPreview({ status: 'loading' })
+
+    void getDocumentContent(document.id, document.originalFileName)
+      .then(async content => {
+        if (!active) return
+        if (content.contentType === 'application/json' || content.contentType === 'application/xml') {
+          const text = await content.blob.text()
+          if (active) setPreview({ status: 'ready', url: '', text, contentType: content.contentType })
+          return
+        }
+        if (content.contentType === 'application/pdf' || canPreviewAsImage(content.contentType)) {
+          objectUrl = URL.createObjectURL(content.blob)
+          setPreview({ status: 'ready', url: objectUrl, contentType: content.contentType })
+          return
+        }
+        setPreview({ status: 'unsupported' })
+      })
+      .catch(() => {
+        if (!active) return
+        setPreview({ status: 'error' })
+        showToast('The document preview could not be loaded.', 'Preview Failed', 'error')
+      })
+
+    return () => {
+      active = false
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [document, hideSensitive, onClose, showToast])
+
+  return (
+    <BottomSheet
+      isOpen={document !== null && !hideSensitive}
+      title={document?.originalFileName ?? 'Document preview'}
+      description="Preview the stored original without downloading a separate copy."
+      onClose={onClose}
+      maxWidthClassName="max-w-5xl"
+      panelClassName="h-[90vh]"
+      headerActions={document ? (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => void downloadDocument(document.id, document.originalFileName)
+            .catch(() => showToast('The document could not be downloaded.', 'Download Failed', 'error'))}
+          aria-label={`Download ${document.originalFileName} from preview`}
+        >
+          <Download className="size-3.5" aria-hidden="true" />
+          <span className="hidden sm:inline">Download</span>
+        </Button>
+      ) : undefined}
+    >
+      <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto rounded-xl border border-border/60 bg-background/70">
+        {(preview.status === 'idle' || preview.status === 'loading') && (
+          <div className="flex items-center gap-2 p-8 text-xs font-semibold text-muted-foreground" role="status">
+            <Loader2 className="size-4 animate-spin text-accent-ink" aria-hidden="true" />
+            Loading preview…
+          </div>
+        )}
+        {preview.status === 'ready' && preview.contentType === 'application/pdf' && (
+          <iframe
+            src={preview.url}
+            title={`Preview of ${document?.originalFileName ?? 'document'}`}
+            className="h-full min-h-[60vh] w-full rounded-xl bg-card"
+          />
+        )}
+        {preview.status === 'ready' && canPreviewAsImage(preview.contentType) && (
+          <img
+            src={preview.url}
+            alt={`Preview of ${document?.originalFileName ?? 'document'}`}
+            className="max-h-full max-w-full object-contain p-3"
+          />
+        )}
+        {preview.status === 'ready' && preview.text !== undefined && (
+          <pre className="min-h-full w-full whitespace-pre-wrap break-words p-4 text-xs leading-relaxed text-foreground">
+            {preview.text}
+          </pre>
+        )}
+        {(preview.status === 'unsupported' || preview.status === 'error') && (
+          <div className="max-w-sm p-8 text-center">
+            <FileWarning className="mx-auto size-8 text-muted-foreground" aria-hidden="true" />
+            <p className="mt-3 text-sm font-bold text-foreground">Preview unavailable</p>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              {preview.status === 'unsupported'
+                ? 'This file format is not supported by the preview. Download it to open it with another app.'
+                : 'The stored file could not be shown. You can try downloading it instead.'}
+            </p>
+          </div>
+        )}
+      </div>
+    </BottomSheet>
+  )
+}

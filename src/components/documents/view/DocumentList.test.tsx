@@ -78,9 +78,34 @@ describe('DocumentList selection toolbar', () => {
 
     expect(screen.getAllByText(SENSITIVE_AMOUNT_MASK).length).toBeGreaterThan(0)
     expect(screen.queryByText('MYR 125.50')).toBeNull()
+    expect(screen.getAllByRole('button', { name: 'Preview tax.pdf' }).every(button => button.hasAttribute('disabled'))).toBe(true)
     expect(screen.getAllByRole('button', { name: 'Download tax.pdf' }).every(button => button.hasAttribute('disabled'))).toBe(true)
     expect(screen.getAllByRole('button', { name: 'Delete tax.pdf' }).every(button => button.hasAttribute('disabled'))).toBe(true)
     expect(screen.getByRole('button', { name: 'Download selected documents' }).hasAttribute('disabled')).toBe(true)
     expect(screen.getByRole('button', { name: 'Delete selected documents' }).hasAttribute('disabled')).toBe(true)
+  })
+
+  it('shows direct document mutation state on each rendered row', () => {
+    const { rerender } = render(
+      <DocumentList
+        {...baseProps}
+        selectedIds={new Set()}
+        syncingDocumentIds={new Set([document.id])}
+      />,
+    )
+
+    expect(screen.getAllByText('Syncing...').length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('button', { name: 'Delete tax.pdf' }).every(button => button.hasAttribute('disabled'))).toBe(true)
+
+    rerender(
+      <DocumentList
+        {...baseProps}
+        selectedIds={new Set()}
+        deletingDocumentIds={new Set([document.id])}
+      />,
+    )
+
+    expect(screen.getAllByText('Deleting...').length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('button', { name: 'Delete tax.pdf' }).every(button => button.hasAttribute('disabled'))).toBe(true)
   })
 })

@@ -287,7 +287,18 @@ export function getAvailableDocumentYears(): Promise<number[]> {
 }
 
 export async function downloadDocument(id: number, fileName: string): Promise<void> {
-  const response = await apiFetch(`/documents/${id}/content`)
+  const { blob, fileName: responseFileName } = await getDocumentContent(id, fileName)
+  downloadCsvBlob(blob, responseFileName)
+}
+
+export interface DocumentContent {
+  blob: Blob
+  fileName: string
+  contentType: string
+}
+
+export async function getDocumentContent(id: number, fileName: string): Promise<DocumentContent> {
+  const response = await apiFetch(getDocumentContentUrl(id))
   if (!response.ok) await throwApiError(response, 'Failed to download document')
   const blob = await response.blob()
   const contentDisposition = response.headers.get('content-disposition')
@@ -296,5 +307,9 @@ export async function downloadDocument(id: number, fileName: string): Promise<vo
   const resolvedName = encodedName
     ? decodeURIComponent(encodedName)
     : quotedName || fileName
-  downloadCsvBlob(blob, resolvedName)
+  return {
+    blob,
+    fileName: resolvedName,
+    contentType: response.headers.get('content-type') || blob.type || 'application/octet-stream',
+  }
 }
