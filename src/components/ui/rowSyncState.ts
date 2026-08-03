@@ -22,3 +22,42 @@ export function resolveRowSyncState(flags: RowSyncFlags): RowSyncState | null {
   if (flags.isPending) return 'pending'
   return null
 }
+
+/**
+ * The two extra states a list-level summary can report that a single row cannot:
+ * an add is "Saving…" and an undo of a delete is "Undoing…". Rows never need these
+ * because a queued add renders as its own optimistic row.
+ */
+export type MutationBusyState = RowSyncState | 'saving' | 'undoing'
+
+/**
+ * Every user-visible busy word in the mutation vocabulary, in one place. The row
+ * badge and any list-level summary read from this map so they cannot drift apart
+ * in wording or in punctuation — the ellipsis is the single `…` character used
+ * throughout the app, not three periods.
+ */
+const MUTATION_BUSY_LABELS: Record<MutationBusyState, string> = {
+  deleting: 'Deleting…',
+  syncing: 'Syncing…',
+  pending: 'Pending',
+  saving: 'Saving…',
+  undoing: 'Undoing…',
+}
+
+export function mutationBusyLabel(state: MutationBusyState): string {
+  return MUTATION_BUSY_LABELS[state]
+}
+
+/**
+ * Maps an in-flight outbox op type onto the same vocabulary, for surfaces that
+ * report one aggregate status for a whole list (Investments' activity header) as
+ * opposed to a per-row badge. Kept here rather than inlined at the call site so a
+ * new op type gets its wording decided once.
+ */
+export function resolveMutationBusyLabel(opType: string | undefined): string | null {
+  if (!opType) return null
+  if (opType === 'delete') return MUTATION_BUSY_LABELS.deleting
+  if (opType === 'restore') return MUTATION_BUSY_LABELS.undoing
+  if (opType === 'add') return MUTATION_BUSY_LABELS.saving
+  return MUTATION_BUSY_LABELS.syncing
+}

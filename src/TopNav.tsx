@@ -30,6 +30,7 @@ import {
 } from 'lucide-react'
 import { triggerHaptic } from './lib/haptics'
 import { AppLogo } from './components/ui/AppLogo'
+import { mutationBusyLabel } from './components/ui/rowSyncState'
 import type { AppTab, PendingNotification } from './types'
 import type { SensitivePreferenceStatus } from './app/useAppPreferences'
 
@@ -174,7 +175,7 @@ const TopNav: React.FC<TopNavProps> = ({
           ) : (isSyncing || syncLabel) && (
             <div className="ml-2.5 flex items-center gap-1.5 px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-md text-[10px] font-bold text-blue-500 animate-pulse select-none shrink-0">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-              {syncLabel || 'Syncing...'}
+              {syncLabel || mutationBusyLabel('syncing')}
             </div>
           )}
           {failedOpsCount > 0 && (

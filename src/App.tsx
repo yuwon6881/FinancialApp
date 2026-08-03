@@ -40,6 +40,7 @@ import { hideNativeSplashAfterPaint } from './app/launchHandoff'
 import { buildAppContextValue } from './app/buildAppContextValue'
 import { prefetchFingerprintAssertOptions } from './lib/fingerprintOptionsCache'
 import { readAppLocation, updateAppSearch } from './lib/appLocation'
+import { mutationBusyLabel } from './components/ui/rowSyncState'
 
 // Instant, flash-free placeholder while a lazily-loaded chunk is fetched at the root level.
 const ViewFallback = () => <div className="app-shell min-h-screen" />
@@ -484,7 +485,7 @@ function App() {
             financial.syncCountdownMs > 0
               ? `Retrying ${Math.ceil(financial.syncCountdownMs / 1000)}s`
               : financial.activeSyncId
-                ? 'Syncing...'
+                ? mutationBusyLabel('syncing')
                 : financial.pendingOps.length > 0
                   ? `${financial.pendingOps.length} queued`
                   : financial.isBackgroundSyncing

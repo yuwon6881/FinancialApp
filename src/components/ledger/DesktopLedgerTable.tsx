@@ -107,7 +107,7 @@ export function DesktopLedgerTable({
             {!hasRows && (
               <tr className="list-row-enter">
                 <td colSpan={7} className="p-8 text-center text-muted-foreground text-sm">
-                  {serverIsFetching ? 'Loading...' : 'No transactions match your search or filter criteria.'}
+                  {serverIsFetching ? 'Loading…' : 'No transactions match your search or filter criteria.'}
                 </td>
               </tr>
             )}

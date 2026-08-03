@@ -80,7 +80,7 @@ export function MobileLedgerList({
 
       {!hasRows && (
         <div className="list-row-enter p-8 text-center text-muted-foreground text-sm border rounded-xl bg-card">
-          {serverIsFetching ? 'Loading...' : 'No transactions match your criteria.'}
+          {serverIsFetching ? 'Loading…' : 'No transactions match your criteria.'}
         </div>
       )}
     </div>

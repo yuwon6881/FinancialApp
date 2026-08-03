@@ -10,6 +10,7 @@ import { Button } from '../ui/Button'
 import { CustomSelect } from '../ui/CustomSelect'
 import { DatePicker } from '../ui/DatePicker'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
+import { resolveMutationBusyLabel } from '../ui/rowSyncState'
 import { DataTable, DataTableBody, DataTableFooter, DataTableHeader, DataTableHeaderCell, DataTablePagination } from '../ui/DataTable'
 import type { AllocationFilter } from './InvestmentCharts'
 
@@ -280,10 +281,7 @@ export const PagedActivityTable = ({
   const rows = mode === 'investments' ? displayTransactions : displayCashFlows
   const activeOperation = [...projectedOperations].reverse().find(operation =>
     operation.targetId === activeSyncId && !operation.isCompleted)
-  const activeLabel = activeOperation?.type === 'delete' ? 'Deleting…'
-    : activeOperation?.type === 'restore' ? 'Undoing…'
-    : activeOperation?.type === 'add' ? 'Saving…'
-    : activeOperation ? 'Syncing…' : null
+  const activeLabel = resolveMutationBusyLabel(activeOperation?.type)
   const isActiveRecord = (id: string, entity: 'investmentActivity' | 'investmentCashFlow') => {
     if (!activeSyncId) return false
     const operation = activeOperation

@@ -66,7 +66,7 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified, onTryFingerpr
           ) : (
             <ShieldCheck className="size-3.5" />
           )}
-          {fingerprintBusy ? 'Verifying...' : 'Unlock with device'}
+          {fingerprintBusy ? 'Verifying…' : 'Unlock with device'}
         </Button>
       )}
 
@@ -123,7 +123,7 @@ export function PasswordPromptModal({ isOpen, onClose, onVerified, onTryFingerpr
             disabled={promptVerifying}
             className="rounded-xl px-4 shadow-md shadow-primary/10"
           >
-            {promptVerifying ? 'Verifying...' : 'Verify'}
+            {promptVerifying ? 'Verifying…' : 'Verify'}
           </Button>
         </ModalActions>
       </form>

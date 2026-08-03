@@ -1,7 +1,7 @@
 import React from 'react'
 import { m, AnimatePresence } from 'framer-motion'
 import { Loader2, Clock } from 'lucide-react'
-import { resolveRowSyncState, type RowSyncFlags, type RowSyncState } from './rowSyncState'
+import { mutationBusyLabel, resolveRowSyncState, type RowSyncFlags, type RowSyncState } from './rowSyncState'
 
 export interface RowSyncStatusProps extends RowSyncFlags {
   entityLabel: string
@@ -27,12 +27,6 @@ const STATE_STYLE: Record<RowSyncState, string> = {
   pending: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
 }
 
-const STATE_LABEL: Record<RowSyncState, string> = {
-  deleting: 'Deleting...',
-  syncing: 'Syncing...',
-  pending: 'Pending',
-}
-
 /**
  * Inline per-row status badge for optimistic mutations (delete/update/queued).
  * Shared across Ledger/Wishlist/Settings/RecurringPayments so the three sync
@@ -52,7 +46,7 @@ const RowSyncBadge: React.FC<{ state: RowSyncState; entityLabel: string }> = ({ 
       className={`inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-md border shrink-0 select-none ${STATE_STYLE[state]}`}
     >
       <Icon className={`size-2.5 shrink-0 mr-1 ${state === 'pending' ? '' : 'animate-spin'}`} />
-      {STATE_LABEL[state]}
+      {mutationBusyLabel(state)}
     </m.span>
   )
 }

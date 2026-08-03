@@ -53,7 +53,7 @@ describe('TopNav mobile primary navigation', () => {
       />,
     )
 
-    expect(screen.getByText('Syncing...')).toBeTruthy()
+    expect(screen.getByText('Syncing…')).toBeTruthy()
   })
 
   it('renders privacy resolution as a floating overlay that does not take layout space', () => {

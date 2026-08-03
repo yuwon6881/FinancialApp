@@ -193,7 +193,7 @@ export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScre
             disabled={passwordVerifying || fingerprintVerifying || !lockPassword}
             className="w-full rounded-xl py-3 shadow-lg shadow-primary/20"
           >
-            {passwordVerifying ? 'Unlocking...' : 'Unlock with Password'}
+            {passwordVerifying ? 'Unlocking…' : 'Unlock with Password'}
           </Button>
         </form>
         <Button

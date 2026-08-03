@@ -88,11 +88,11 @@ describe('ActiveDevicesSection', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Revoke Pixel phone' }))
 
-    expect(screen.getByText('Deleting...')).toBeTruthy()
+    expect(screen.getByText('Deleting…')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Revoke Pixel phone' }).hasAttribute('disabled')).toBe(true)
 
     await act(async () => resolveRevoke())
-    await waitFor(() => expect(screen.queryByText('Deleting...')).toBeNull())
+    await waitFor(() => expect(screen.queryByText('Deleting…')).toBeNull())
   })
 
   it('shows a busy state while revoking all other devices', async () => {
@@ -132,7 +132,7 @@ describe('ActiveDevicesSection', () => {
     fireEvent.click(revokeAll)
 
     expect(screen.getByRole('button', { name: /Revoking/i }).hasAttribute('disabled')).toBe(true)
-    expect(screen.getByText('Deleting...')).toBeTruthy()
+    expect(screen.getByText('Deleting…')).toBeTruthy()
 
     await act(async () => resolveRevokeAll({ revokedCount: 1 }))
     await waitFor(() => expect(screen.queryByRole('button', { name: /Revoking/i })).toBeNull())

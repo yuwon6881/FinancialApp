@@ -168,6 +168,6 @@ describe('TaxReliefOverview sync status', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Manage limits' }))
-    expect(screen.getByText('Syncing...')).toBeTruthy()
+    expect(screen.getByText('Syncing…')).toBeTruthy()
   })
 })

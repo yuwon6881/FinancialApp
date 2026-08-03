@@ -228,7 +228,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
               aria-busy={disableBusy}
               className="press-scale flex-1 rounded-xl py-2.5"
             >
-              {disableBusy ? 'Disabling...' : 'Confirm disable'}
+              {disableBusy ? 'Disabling…' : 'Confirm disable'}
             </Button>
           </ModalActions>
         </form>
@@ -299,7 +299,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
                 aria-busy={setupBusy}
                 className="press-scale flex-1 rounded-xl py-2.5"
               >
-                {setupBusy ? 'Verifying...' : 'Confirm'}
+                {setupBusy ? 'Verifying…' : 'Confirm'}
               </Button>
             </ModalActions>
           </form>

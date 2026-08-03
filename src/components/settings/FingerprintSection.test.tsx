@@ -56,10 +56,10 @@ describe('FingerprintSection', () => {
     const remove = screen.getByRole('button', { name: 'Remove Other phone' })
     fireEvent.click(remove)
 
-    expect(screen.getByText('Deleting...')).toBeTruthy()
+    expect(screen.getByText('Deleting…')).toBeTruthy()
     expect(remove.hasAttribute('disabled')).toBe(true)
 
     await act(async () => resolveDelete())
-    await waitFor(() => expect(screen.queryByText('Deleting...')).toBeNull())
+    await waitFor(() => expect(screen.queryByText('Deleting…')).toBeNull())
   })
 })
