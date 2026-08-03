@@ -46,6 +46,7 @@ export interface InvestmentInstrument {
   currency: string
   providerSymbol?: string
   providerMic?: string
+  marketDataReference?: MarketDataReference
   isCustom: boolean
   isArchived: boolean
   allocationSleeve?: InvestmentAllocationSleeve
@@ -54,6 +55,11 @@ export interface InvestmentInstrument {
   archiveUnavailableReason?: string
   isPendingSync?: boolean
   isPendingDelete?: boolean
+}
+
+export interface MarketDataReference {
+  providerId: string
+  externalId: string
 }
 
 export interface InvestmentActivity {
@@ -127,6 +133,11 @@ export interface InvestmentCashFlow {
 
 export interface InvestmentPortfolio {
   appCurrency: string
+  /** Rate and code of the second currency the plan can be read in; supplied by the API, never assumed. */
+  referenceRate?: number
+  referenceCurrency?: string
+  /** @deprecated Pre-reference-currency name for {@link referenceRate}. Only still read so
+   *  a cached payload, or a client running ahead of the API, keeps its currency toggle. */
   usdRate?: number
   summary: {
     growthLedgerBalance: number

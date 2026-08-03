@@ -29,7 +29,7 @@ const allocation: InvestmentAllocationOverview = {
 
 describe('InvestmentPlanPanel guidance', () => {
   it('omits the guidance section when every sleeve is within its configured drift', () => {
-    render(<InvestmentPlanPanel allocation={allocation} holdings={[]} instruments={[]} usdRate={0.25} masked={false} onNavigate={vi.fn()} />)
+    render(<InvestmentPlanPanel allocation={allocation} holdings={[]} instruments={[]} reference={{ currency: 'USD', rate: 0.25 }} masked={false} onNavigate={vi.fn()} />)
 
     expect(screen.getByText('What you hold vs your target')).toBeTruthy()
     expect(screen.queryByText('What to do next')).toBeNull()
@@ -46,7 +46,7 @@ describe('InvestmentPlanPanel guidance', () => {
         { priority: 4, kind: 'TransferBuy', sleeve: 'Bonds', amount: 20, message: 'reinvest' },
       ],
     }
-    render(<InvestmentPlanPanel allocation={watch} holdings={[]} instruments={[]} usdRate={0.25} masked={false} onNavigate={vi.fn()} />)
+    render(<InvestmentPlanPanel allocation={watch} holdings={[]} instruments={[]} reference={{ currency: 'USD', rate: 0.25 }} masked={false} onNavigate={vi.fn()} />)
 
     expect(screen.getByText('What to do next')).toBeTruthy()
     expect(screen.getByText(/usual completed-cycle Growth deposit/).textContent).toContain('RM')

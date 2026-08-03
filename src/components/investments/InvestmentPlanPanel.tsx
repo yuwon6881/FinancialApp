@@ -23,26 +23,28 @@ export function InvestmentPlanPanel({
   allocation,
   holdings,
   instruments,
-  usdRate,
+  reference,
   masked,
   onNavigate,
 }: {
   allocation: InvestmentAllocationOverview
   holdings: InvestmentPortfolio['holdings']
   instruments: InvestmentPortfolio['instruments']
-  usdRate?: number
+  /** The optional second currency this plan can also be read in. Absent means no toggle. */
+  reference?: { currency: string; rate: number }
   masked: boolean
   onNavigate: (tab: AppTab) => void
 }) {
-  const [showUsd, setShowUsd] = useState(false)
+  const [showReference, setShowReference] = useState(false)
   const reduceMotion = useReducedMotion()
-  const isUsd = showUsd && usdRate !== undefined
-  const rate = isUsd ? usdRate : 1
-  const currency = isUsd ? 'USD' : allocation.appCurrency
+  const canToggle = reference !== undefined && reference.currency !== allocation.appCurrency
+  const inReference = showReference && canToggle
+  const rate = inReference ? reference!.rate : 1
+  const currency = inReference ? reference!.currency : allocation.appCurrency
 
   const money = (value?: number) => value === undefined
     ? 'Incomplete'
-    : masked ? '••••' : formatCurrencyVal(isUsd ? value / rate : value, currency)
+    : masked ? '••••' : formatCurrencyVal(inReference ? value / rate : value, currency)
   const configure = () => {
     const next = new URL(window.location.href)
     next.searchParams.set('section', 'investment-plan')
@@ -212,10 +214,10 @@ export function InvestmentPlanPanel({
                 text="Steps in order, cheapest first: add new money before selling anything."
               />
             </h3>
-            {usdRate !== undefined && allocation.appCurrency !== 'USD' && (
+            {canToggle && (
               <div className="flex rounded-xl bg-muted/40 p-1">
-                <Button variant="unstyled" type="button" onClick={() => setShowUsd(true)} aria-pressed={showUsd} className={`cursor-pointer rounded-lg px-2 py-1 text-[10px] font-bold transition-all duration-200 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${showUsd ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}>USD</Button>
-                <Button variant="unstyled" type="button" onClick={() => setShowUsd(false)} aria-pressed={!showUsd} className={`cursor-pointer rounded-lg px-2 py-1 text-[10px] font-bold transition-all duration-200 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${!showUsd ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}>{allocation.appCurrency}</Button>
+                <Button variant="unstyled" type="button" onClick={() => setShowReference(true)} aria-pressed={showReference} className={`cursor-pointer rounded-lg px-2 py-1 text-[10px] font-bold transition-all duration-200 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${showReference ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}>{reference!.currency}</Button>
+                <Button variant="unstyled" type="button" onClick={() => setShowReference(false)} aria-pressed={!showReference} className={`cursor-pointer rounded-lg px-2 py-1 text-[10px] font-bold transition-all duration-200 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${!showReference ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}>{allocation.appCurrency}</Button>
               </div>
             )}
           </div>

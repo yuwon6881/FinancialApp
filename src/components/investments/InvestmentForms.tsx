@@ -8,6 +8,7 @@ import type {
 } from '../../types'
 import type { InvestmentActivityScanResult } from '../../lib/api'
 import * as api from '../../lib/api'
+import { FALLBACK_CURRENCY } from '../../lib/currency'
 import type { InstrumentSearchResult } from '../../lib/api/investments'
 import {
   availableActivityCash,
@@ -16,6 +17,9 @@ import {
   validateActivityBalances,
   validateCashFlowBalances,
 } from '../../lib/investmentValidation'
+
+const marketAvailability = (result: InstrumentSearchResult) =>
+  result.availability ?? (result.availableOnBasic ? 'Available' : 'Unavailable')
 import { getErrorMessage } from '../../lib/errors'
 import { formatCurrencyVal } from '../../lib/utils'
 import { Button } from '../ui/Button'
@@ -82,7 +86,7 @@ const FormActions = ({ busy, onCancel, submitLabel, disabled }: { busy: boolean;
   </div>
 )
 
-export const AccountForm = ({ appCurrency = 'USD', existingAccounts = [], busy, onCancel, onSave }: { appCurrency?: string; existingAccounts?: { name: string }[]; busy: boolean; onCancel: () => void; onSave: (value: api.AccountMutation) => Promise<boolean> }) => {
+export const AccountForm = ({ appCurrency = FALLBACK_CURRENCY, existingAccounts = [], busy, onCancel, onSave }: { appCurrency?: string; existingAccounts?: { name: string }[]; busy: boolean; onCancel: () => void; onSave: (value: api.AccountMutation) => Promise<boolean> }) => {
   const [name, setName] = useState('')
   const [currency, setCurrency] = useState(appCurrency)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -113,7 +117,7 @@ export const AccountForm = ({ appCurrency = 'USD', existingAccounts = [], busy, 
   </form>
 }
 
-export const InstrumentForm = ({ busy, offline, existingInstruments = [], onCancel, onSave }: { busy: boolean; offline: boolean; existingInstruments?: { symbol: string; providerMic?: string }[]; onCancel: () => void; onSave: (value: api.InstrumentMutation) => Promise<boolean> }) => {
+export const InstrumentForm = ({ busy, offline, existingInstruments = [], onCancel, onSave }: { busy: boolean; offline: boolean; existingInstruments?: { symbol: string; providerMic?: string; marketDataReference?: { providerId: string; externalId: string } }[]; onCancel: () => void; onSave: (value: api.InstrumentMutation) => Promise<boolean> }) => {
   const [query, setQuery] = useState('')
   const [searching, setSearching] = useState(false)
   const [results, setResults] = useState<InstrumentSearchResult[]>([])
@@ -137,10 +141,13 @@ export const InstrumentForm = ({ busy, offline, existingInstruments = [], onCanc
     }, 600)
     return () => { window.clearTimeout(timer); abort.abort() }
   }, [query, offline])
-  // Mirrors the unique (Symbol, ProviderMic) index behind the API's
-  // "This instrument is already saved." conflict.
+  // Prefer the provider-neutral identity; legacy fields remain only for the staggered rollout.
   const alreadySaved = Boolean(selected) && existingInstruments.some(instrument =>
-    instrument.symbol === selected?.symbol && (instrument.providerMic ?? '') === (selected?.mic ?? ''))
+    instrument.marketDataReference && selected?.marketDataReference
+      ? instrument.marketDataReference.providerId === selected.marketDataReference.providerId &&
+        instrument.marketDataReference.externalId === selected.marketDataReference.externalId
+      : instrument.symbol === selected?.symbol && (instrument.providerMic ?? '') === (selected?.mic ?? ''))
+  const selectedUnavailable = selected ? marketAvailability(selected) === 'Unavailable' : false
   return <div className="space-y-4">
     <>
       <Field label="Symbol or company / fund name"><span className="relative block"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input value={query} onChange={event => { setQuery(event.target.value); setSelected(null) }} placeholder="Search at least 3 characters" className="pl-9" />{searching && <Loader2 className="absolute right-3 top-3 size-4 animate-spin text-blue-500" />}</span></Field>
@@ -151,15 +158,16 @@ export const InstrumentForm = ({ busy, offline, existingInstruments = [], onCanc
         </div>
       ) : <div className="grid max-h-64 gap-2 overflow-y-auto pr-1">
         {results.map(result => <Button type="button" variant="unstyled" key={`${result.symbol}-${result.mic ?? result.exchange}`} onClick={() => setSelected(result)} className="block w-full cursor-pointer rounded-xl border border-border/50 p-3 text-left transition-colors hover:bg-muted/30">
-          <span className="flex flex-wrap items-center gap-2"><strong className="text-sm text-foreground">{result.symbol}</strong><span className="rounded bg-muted px-1.5 py-0.5 text-[9px] font-bold">{result.type}</span><span className={`rounded px-1.5 py-0.5 text-[9px] font-bold ${result.availableOnBasic ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>{result.availableOnBasic ? 'Basic available' : 'Plan unavailable'}</span></span>
+          <span className="flex flex-wrap items-center gap-2"><strong className="text-sm text-foreground">{result.symbol}</strong><span className="rounded bg-muted px-1.5 py-0.5 text-[9px] font-bold">{result.type}</span><span className={`rounded px-1.5 py-0.5 text-[9px] font-bold ${marketAvailability(result) === 'Available' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>{marketAvailability(result) === 'Available' ? 'Market data available' : marketAvailability(result) === 'Unavailable' ? 'Market data unavailable' : 'Availability not confirmed'}</span></span>
           <span className="mt-1 block text-xs text-muted-foreground">{result.name}</span>
           <span className="mt-1 block text-[10px] text-muted-foreground">{[result.exchange, result.mic, result.currency, result.country].filter(Boolean).join(' · ')}</span>
+          {result.availabilityMessage && <span className="mt-1 block text-[10px] text-muted-foreground">{result.availabilityMessage}</span>}
         </Button>)}
       </div>}
       {alreadySaved && <p role="alert" className="text-xs font-semibold text-destructive">This investment is already saved. Pick a different one, or record activity against the existing entry.</p>}
       <div className="sticky bottom-0 flex justify-end gap-2 border-t border-border/40 bg-card py-3">
         <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
-        <Button disabled={busy || !selected || !selected.availableOnBasic || alreadySaved} onClick={() => selected && !alreadySaved && void onSave({ symbol: selected.symbol, name: selected.name, type: selected.type, currency: selected.currency, exchange: selected.exchange, mic: selected.mic, country: selected.country, providerSymbol: selected.symbol, providerMic: selected.mic, isCustom: false })}>{busy && <Loader2 className="size-4 animate-spin" />} Save investment</Button>
+        <Button disabled={busy || !selected || selectedUnavailable || alreadySaved} onClick={() => selected && !selectedUnavailable && !alreadySaved && void onSave({ symbol: selected.symbol, name: selected.name, type: selected.type, currency: selected.currency, exchange: selected.exchange, mic: selected.mic, country: selected.country, providerSymbol: selected.symbol, providerMic: selected.mic, marketDataReference: selected.marketDataReference, isCustom: false })}>{busy && <Loader2 className="size-4 animate-spin" />} Save investment</Button>
       </div>
     </>
   </div>
@@ -402,7 +410,7 @@ export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft
   const accounts = portfolio?.accounts.filter(value => !value.isArchived) ?? []
   const [accountId, setAccountId] = useState(initial?.accountId ?? accounts[0]?.id ?? '')
   const [type, setType] = useState<'Deposit' | 'Withdrawal' | 'Conversion'>(initial?.type ?? 'Deposit')
-  const [currency, setCurrency] = useState(initial?.currency ?? accounts[0]?.baseCurrency ?? portfolio?.appCurrency ?? 'USD')
+  const [currency, setCurrency] = useState(initial?.currency ?? accounts[0]?.baseCurrency ?? portfolio?.appCurrency ?? FALLBACK_CURRENCY)
   const [amount, setAmount] = useState(initial?.amount ? String(Math.abs(initial.amount)) : '')
   const [toCurrency, setToCurrency] = useState(initial?.toCurrency ?? currency)
   const [toAmount, setToAmount] = useState(initial?.toAmount ? String(initial.toAmount) : '')
