@@ -6,7 +6,7 @@ import type {
   TaxYearReliefSummary,
   ExpiredTaxYearSummary,
 } from '../../types'
-import { request, requestVoid, cachedGet, apiFetch, throwApiError } from './client'
+import { API_BASE_URL, request, requestVoid, cachedGet, apiFetch, throwApiError } from './client'
 import {
   DOCUMENT_CACHE_KEYS,
   DOCUMENT_CACHE_TTL,
@@ -117,6 +117,11 @@ export async function listAllDocumentsForTransaction(transactionId: string): Pro
 
 export function getDocumentContentUrl(id: number): string {
   return `/documents/${id}/content`
+}
+
+/** Same-origin URL for browser PDF/image viewers, which can send the auth cookie themselves. */
+export function getDocumentPreviewUrl(id: number): string {
+  return `${API_BASE_URL}${getDocumentContentUrl(id)}`
 }
 
 export async function updateDocument(

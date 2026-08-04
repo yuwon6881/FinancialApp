@@ -21,6 +21,7 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
   masked: boolean
 }) {
   const triggerRef = useRef<HTMLButtonElement>(null)
+  const initialFocusRef = useRef<HTMLDivElement>(null)
   const [isOpen, setIsOpen] = useState(false)
   // The 10,000-path model is only worth building once the panel is close to view.
   const [nearViewport, setNearViewport] = useState(false)
@@ -78,8 +79,9 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
         title="Investment forecast"
         description="Explore possible long-term outcomes without changing any money or recorded activity."
         maxWidthClassName="max-w-4xl"
+        initialFocusRef={initialFocusRef}
       >
-        <div className="min-w-0">
+        <div ref={initialFocusRef} tabIndex={-1} className="min-w-0 outline-none">
           <ForecastSummary
             years={view.years}
             ending={view.displayedEnding}

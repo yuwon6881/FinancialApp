@@ -8,7 +8,6 @@ import type {
 } from '../../types'
 import type { InvestmentActivityScanResult } from '../../lib/api'
 import * as api from '../../lib/api'
-import { FALLBACK_CURRENCY } from '../../lib/currency'
 import type { InstrumentSearchResult } from '../../lib/api/investments'
 import {
   availableActivityCash,
@@ -88,14 +87,19 @@ const FormActions = ({ busy, onCancel, submitLabel, disabled }: { busy: boolean;
   </div>
 )
 
-export const AccountForm = ({ appCurrency = FALLBACK_CURRENCY, existingAccounts = [], busy, onCancel, onSave }: { appCurrency?: string; existingAccounts?: { name: string }[]; busy: boolean; onCancel: () => void; onSave: (value: api.AccountMutation) => Promise<boolean> }) => {
+export const AccountForm = ({ appCurrency, existingAccounts = [], busy, onCancel, onSave }: { appCurrency?: string; existingAccounts?: { name: string }[]; busy: boolean; onCancel: () => void; onSave: (value: api.AccountMutation) => Promise<boolean> }) => {
   const [name, setName] = useState('')
-  const [currency, setCurrency] = useState(appCurrency)
+  const [currency, setCurrency] = useState(appCurrency ?? '')
   const [errors, setErrors] = useState<Record<string, string>>({})
   return <form noValidate className="space-y-4" onSubmit={(event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!name.trim()) {
       setErrors({ name: 'Account name is required.' })
+      focusFirstInvalidField(event.currentTarget)
+      return
+    }
+    if (!currency) {
+      setErrors({ currency: 'Choose a base currency.' })
       focusFirstInvalidField(event.currentTarget)
       return
     }
@@ -112,7 +116,7 @@ export const AccountForm = ({ appCurrency = FALLBACK_CURRENCY, existingAccounts 
   }}>
     <div className={formGridClass}>
       <Field label="Account name" required error={errors.name}><Input maxLength={120} value={name} onChange={event => { setName(event.target.value); setErrors({}) }} placeholder="e.g. Moomoo" /></Field>
-      <Field label="Base currency" plain><CurrencySelect value={currency} onChange={setCurrency} className="w-full" ariaLabel="Base currency" /></Field>
+      <Field label="Base currency" required error={errors.currency}><CurrencySelect value={currency} onChange={value => { setCurrency(value); setErrors(previous => ({ ...previous, currency: '' })) }} className="w-full" ariaLabel="Base currency" required /></Field>
     </div>
     <p className="text-[10px] text-muted-foreground">A display name only — no broker login is stored.</p>
     <FormActions busy={busy} onCancel={onCancel} submitLabel="Add account" />
@@ -303,7 +307,7 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
     else if (derive === 'units' && c && p) setUnits(fmt(c / p))
     else if (derive === 'price' && c && u) setUnitPrice(fmt(c / u))
   }, [units, unitPrice, cashAmount, type])
-  if (!accounts.length || !instruments.length) return <div><p className="text-sm text-muted-foreground">Add both an account and an investment before recording activity.</p><div className="mt-4 flex gap-2">{!accounts.length && <Button onClick={onNeedAccount}>Add account</Button>}{!instruments.length && <Button variant="ghost" onClick={onNeedInstrument}>Add investment</Button>}</div></div>
+  if (!accounts.length || !instruments.length) return <div><p className="text-sm text-muted-foreground">Add both an account and an investment before recording activity.</p><div className="mt-4 flex justify-end gap-2">{!accounts.length && <Button onClick={onNeedAccount}>Add account</Button>}{!instruments.length && <Button variant="ghost" onClick={onNeedInstrument}>Add investment</Button>}</div></div>
   const needsUnits = !['Dividend', 'FeeTax'].includes(type)
   const trade = ['Buy', 'Sell'].includes(type)
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -412,7 +416,7 @@ export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft
   const accounts = portfolio?.accounts.filter(value => !value.isArchived) ?? []
   const [accountId, setAccountId] = useState(initial?.accountId ?? accounts[0]?.id ?? '')
   const [type, setType] = useState<'Deposit' | 'Withdrawal' | 'Conversion'>(initial?.type ?? 'Deposit')
-  const [currency, setCurrency] = useState(initial?.currency ?? accounts[0]?.baseCurrency ?? portfolio?.appCurrency ?? FALLBACK_CURRENCY)
+  const [currency, setCurrency] = useState(initial?.currency ?? accounts[0]?.baseCurrency ?? portfolio?.appCurrency ?? '')
   const [amount, setAmount] = useState(initial?.amount ? String(Math.abs(initial.amount)) : '')
   const [toCurrency, setToCurrency] = useState(initial?.toCurrency ?? currency)
   const [toAmount, setToAmount] = useState(initial?.toAmount ? String(initial.toAmount) : '')
@@ -488,10 +492,20 @@ export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft
     setIsScanning(false)
     setActiveScanJobId(null)
   }, [activeScanJobId, activeScanJobIds, scanDraft])
-  if (!accounts.length) return <div><p className="text-sm text-muted-foreground">Add an investment account before recording cash.</p><div className="mt-4"><Button onClick={onNeedAccount}>Add account</Button></div></div>
+  if (!accounts.length) return <div><p className="text-sm text-muted-foreground">Add an investment account before recording cash.</p><div className="mt-4 flex justify-end"><Button onClick={onNeedAccount}>Add account</Button></div></div>
   const heldCash = availableCashFlow(portfolio, accountId, currency, pendingCashFlows ?? [], initial)
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (!currency) {
+      setErrors({ currency: 'Choose a currency.' })
+      focusFirstInvalidField(event.currentTarget)
+      return
+    }
+    if (type === 'Conversion' && !toCurrency) {
+      setErrors({ toCurrency: 'Choose the currency to receive.' })
+      focusFirstInvalidField(event.currentTarget)
+      return
+    }
     if (type === 'Conversion') {
       if (!(numberOrUndefined(amount)! > 0)) {
         setErrors({ amount: 'Enter a positive from amount.' })
@@ -564,14 +578,14 @@ export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft
       {type === 'Conversion' ? (
         <>
           <Field label="From amount" required error={errors.amount} hint={`${money(Math.max(heldCash, 0), currency.toUpperCase())} available`}><Input type="number" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => { setAmount(event.target.value); setErrors(prev => ({ ...prev, amount: '' })) }} /></Field>
-          <Field label="From currency" plain><CurrencySelect value={currency} onChange={setCurrency} className="w-full" ariaLabel="From currency" /></Field>
+          <Field label="From currency" required error={errors.currency}><CurrencySelect value={currency} onChange={value => { setCurrency(value); setErrors(previous => ({ ...previous, currency: '' })) }} className="w-full" ariaLabel="From currency" /></Field>
           <Field label="To amount" required error={errors.toAmount}><Input type="number" min="0.0000000001" step="0.0000000001" value={toAmount} onChange={event => { setToAmount(event.target.value); setErrors(prev => ({ ...prev, toAmount: '' })) }} /></Field>
           <Field label="To currency" required error={errors.toCurrency} plain><CurrencySelect value={toCurrency} onChange={value => { setToCurrency(value); setErrors(prev => ({ ...prev, toCurrency: '' })) }} className="w-full" ariaLabel="To currency" /></Field>
         </>
       ) : (
         <>
           <Field label={`Amount (${currency})`} required error={errors.amount} hint={type === 'Withdrawal' ? `${money(Math.max(heldCash, 0), currency.toUpperCase())} available` : undefined}><Input type="number" min="0.0000000001" step="0.0000000001" value={amount} onChange={event => { setAmount(event.target.value); setErrors(prev => ({ ...prev, amount: '' })) }} /></Field>
-          <Field label="Currency" plain><CurrencySelect value={currency} onChange={setCurrency} className="w-full" ariaLabel="Cash currency" /></Field>
+          <Field label="Currency" required error={errors.currency}><CurrencySelect value={currency} onChange={value => { setCurrency(value); setErrors(previous => ({ ...previous, currency: '' })) }} className="w-full" ariaLabel="Cash currency" /></Field>
         </>
       )}
       <Field label="Date" plain><DatePicker value={date} onChange={setDate} max={today()} className="w-full" /></Field>

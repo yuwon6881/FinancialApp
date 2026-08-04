@@ -129,7 +129,11 @@ export function AppOverlays({
           session.setShowPasswordPrompt(false)
           financial.handleUpdateHideSensitivePreference(false)
         }}
-        onTryFingerprint={session.hasFingerprintSetup ? session.revealSensitiveWithFingerprint : undefined}
+        onTryFingerprint={session.hasFingerprintSetup ? async () => {
+          const verified = await session.revealSensitiveWithFingerprint()
+          if (verified) financial.handleUpdateHideSensitivePreference(false)
+          return verified
+        } : undefined}
       />
 
       <LockScreen

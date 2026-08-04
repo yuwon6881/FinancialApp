@@ -43,7 +43,7 @@ export function ForecastTargetSection({
           <p className="text-xs font-bold text-foreground">Want to aim for a number?</p>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Add a target and this will show your chances of reaching it, and the monthly amount that would get you there.</p>
         </div>
-        <Button variant="outline" size="sm" disabled={masked} onClick={onAdd} className="shrink-0">Add a target</Button>
+        <Button variant="outline" size="sm" disabled={masked} onClick={onAdd} className="shrink-0 self-end sm:self-auto">Add a target</Button>
       </div>
     )
   }
@@ -85,12 +85,14 @@ export function ForecastTargetSection({
               <strong className="block text-xl text-foreground">{isCalculating || !canUseRequired ? 'Calculating…' : money(requiredContribution)}</strong>
               <span className="text-[10px] text-muted-foreground">Middle estimate · {canUseRequired ? money(requiredContribution * 12) : '—'} a year</span>
             </div>
-            <Button variant="outline" size="sm" disabled={masked || !canUseRequired} onClick={onUseRequiredAmount}>Use this amount</Button>
+            <Button variant="outline" size="sm" disabled={masked || !canUseRequired} onClick={onUseRequiredAmount} className="self-end sm:self-auto">Use this amount</Button>
           </div>
         </article>
       </div>
 
-      <Button variant="ghost" size="sm" onClick={onRemove}>Remove target</Button>
+      <div className="flex justify-end">
+        <Button variant="ghost" size="sm" onClick={onRemove}>Remove target</Button>
+      </div>
     </div>
   )
 }

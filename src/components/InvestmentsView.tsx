@@ -42,7 +42,6 @@ import { HoldingsTable, PagedActivityTable } from './investments/InvestmentTable
 import { HoldingDetailSheet } from './investments/HoldingDetailSheet'
 import { InvestmentForecastPanel } from './investments/forecast/InvestmentForecastPanel'
 import { portfolioAnnualReturn } from '../lib/investmentReturn'
-import { FALLBACK_CURRENCY } from '../lib/currency'
 import { AccountForm, ActivityForm, CashForm, InstrumentForm } from './investments/InvestmentForms'
 import { useAutoOpenModal } from '../lib/useAutoOpenModal'
 import type { InvestmentActivityScanResult } from '../lib/api'
@@ -105,13 +104,11 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
   const busy = false
   const [allocationFilter, setAllocationFilter] = useState<AllocationFilter>(null)
   const [detailHolding, setDetailHolding] = useState<InvestmentPortfolio['holdings'][number] | null>(null)
-  // The API names this pair; the app never assumes which currency it is. usdRate is the
-  // pre-rename field, still read so a cached payload — or a browser running this build
-  // against an API that has not deployed yet — keeps the toggle it had before.
-  const referenceRate = portfolio?.referenceRate ?? portfolio?.usdRate
-  const referenceCurrency = referenceRate === undefined
-    ? undefined
-    : { currency: portfolio?.referenceCurrency ?? FALLBACK_CURRENCY, rate: referenceRate }
+  // The API supplies both halves of the optional reference-currency pair. An incomplete
+  // cached payload must not invent a currency or render a misleading toggle.
+  const referenceCurrency = portfolio?.referenceRate !== undefined && portfolio.referenceCurrency
+    ? { currency: portfolio.referenceCurrency, rate: portfolio.referenceRate }
+    : undefined
   const setupPortfolio = useMemo(() => portfolio ? {
     ...portfolio,
     accounts: applyOpsToList(portfolio.accounts, investmentOps, 'investmentAccount'),

@@ -33,6 +33,8 @@ interface UseDialogOptions {
   onClose: () => void
   /** Ref to the dialog panel that should trap focus. */
   ref: React.RefObject<HTMLElement | null>
+  /** Optional safe focus target for dialogs whose first control opens a popover on focus. */
+  initialFocusRef?: React.RefObject<HTMLElement | null>
   /**
    * Guard for the Escape key. Return false to swallow this Escape (e.g. an
    * open autocomplete inside the dialog should consume the first Escape).
@@ -54,7 +56,7 @@ interface UseDialogOptions {
  * The keydown listener runs on `document` in the bubble phase, so React's own
  * onKeyDown handlers inside the dialog run first and can pre-empt the Escape.
  */
-export function useDialog({ isOpen, onClose, ref, canClose, autoFocus = true, isActive }: UseDialogOptions) {
+export function useDialog({ isOpen, onClose, ref, initialFocusRef, canClose, autoFocus = true, isActive }: UseDialogOptions) {
   const previouslyFocused = useRef<HTMLElement | null>(null)
   const onCloseRef = useRef(onClose)
   const canCloseRef = useRef(canClose)
@@ -78,7 +80,7 @@ export function useDialog({ isOpen, onClose, ref, canClose, autoFocus = true, is
       // Respect an element that already grabbed focus (e.g. autoFocus input).
       if (panel.contains(document.activeElement) && document.activeElement !== panel) return
       const focusables = getDialogFocusables(panel)
-      const target = focusables[0] ?? panel
+      const target = initialFocusRef?.current ?? focusables[0] ?? panel
       // On mobile, focusing a text field pops the on-screen keyboard immediately,
       // while the sheet is still mid-entrance-animation and the body scroll-lock
       // is still settling. The viewport resize this triggers races the CSS
@@ -136,5 +138,5 @@ export function useDialog({ isOpen, onClose, ref, canClose, autoFocus = true, is
         prev.focus()
       }
     }
-  }, [isOpen, ref, autoFocus])
+  }, [isOpen, ref, initialFocusRef, autoFocus])
 }

@@ -9,6 +9,7 @@ const getDocumentContent = vi.fn()
 
 vi.mock('../../../lib/api/documents', () => ({
   getDocumentContent: (...args: unknown[]) => getDocumentContent(...args),
+  getDocumentPreviewUrl: (id: number) => `/api/documents/${id}/content`,
   downloadDocument: vi.fn(),
 }))
 
@@ -31,7 +32,7 @@ describe('DocumentPreviewSheet', () => {
     getDocumentContent.mockReset()
   })
 
-  it('renders PDF content from an authenticated blob and releases its URL', async () => {
+  it('renders PDF content through the authenticated same-origin viewer URL', async () => {
     const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:preview')
     const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
     getDocumentContent.mockResolvedValue({
@@ -43,8 +44,8 @@ describe('DocumentPreviewSheet', () => {
     const { unmount } = render(<DocumentPreviewSheet document={document} onClose={vi.fn()} />)
 
     const frame = await screen.findByTitle('Preview of tax.pdf')
-    expect(frame.getAttribute('src')).toBe('blob:preview')
-    expect(createObjectUrl).toHaveBeenCalledOnce()
+    expect(frame.getAttribute('src')).toContain('/api/documents/1/content')
+    expect(createObjectUrl).not.toHaveBeenCalled()
     expect(screen.getByRole('status').textContent).toContain('Loading preview')
 
     vi.useFakeTimers()
@@ -55,7 +56,7 @@ describe('DocumentPreviewSheet', () => {
     expect(screen.queryByRole('status')).toBeNull()
 
     unmount()
-    expect(revokeObjectUrl).toHaveBeenCalledWith('blob:preview')
+    expect(revokeObjectUrl).not.toHaveBeenCalled()
   })
 
   it('renders XML as escaped text instead of executable markup', async () => {

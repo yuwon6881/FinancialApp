@@ -136,9 +136,6 @@ export interface InvestmentPortfolio {
   /** Rate and code of the second currency the plan can be read in; supplied by the API, never assumed. */
   referenceRate?: number
   referenceCurrency?: string
-  /** @deprecated Pre-reference-currency name for {@link referenceRate}. Only still read so
-   *  a cached payload, or a client running ahead of the API, keeps its currency toggle. */
-  usdRate?: number
   summary: {
     growthLedgerBalance: number
     growthContributions?: number

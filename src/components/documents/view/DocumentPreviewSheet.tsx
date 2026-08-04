@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Download, FileWarning, Loader2 } from 'lucide-react'
 import type { VaultDocument } from '../../../types'
-import { downloadDocument, getDocumentContent } from '../../../lib/api/documents'
+import { downloadDocument, getDocumentContent, getDocumentPreviewUrl } from '../../../lib/api/documents'
+import { usesCookieAuth } from '../../../lib/auth'
 import { useAppPrefs, useAppUi } from '../../../contexts/AppContext'
 import { BottomSheet } from '../../ui/BottomSheet'
 import { Button } from '../../ui/Button'
@@ -21,6 +22,10 @@ function canPreviewAsImage(contentType: string) {
   return ['image/jpeg', 'image/png', 'image/webp'].includes(contentType)
 }
 
+function normalizedContentType(contentType: string) {
+  return contentType.split(';', 1)[0].trim().toLowerCase()
+}
+
 const PDF_VIEWER_PAINT_GRACE_MS = 1500
 
 export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheetProps) {
@@ -29,10 +34,15 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
   const [preview, setPreview] = useState<PreviewState>({ status: 'idle' })
   const [mediaLoaded, setMediaLoaded] = useState(false)
   const pdfPaintTimerRef = useRef<number | null>(null)
+  const onCloseRef = useRef(onClose)
+  const showToastRef = useRef(showToast)
+
+  useEffect(() => { onCloseRef.current = onClose }, [onClose])
+  useEffect(() => { showToastRef.current = showToast }, [showToast])
 
   useEffect(() => {
     if (!document || hideSensitive) {
-      if (document && hideSensitive) onClose()
+      if (document && hideSensitive) onCloseRef.current()
       return
     }
 
@@ -42,17 +52,36 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
     setMediaLoaded(false)
     setPreview({ status: 'loading' })
 
+    // Browser PWAs can send the authenticated cookie from an iframe/image request,
+    // while a Capacitor WebView cannot attach its bearer token there. Use the direct
+    // same-origin response for the browser PDF viewer (and images) so mobile Chrome
+    // does not have to open a PDF from a blob URL. Native clients keep the fetched
+    // object-URL path below.
+    const storedContentType = normalizedContentType(document.contentType)
+    const directPreviewUrl = getDocumentPreviewUrl(document.id)
+    if (usesCookieAuth && directPreviewUrl.startsWith('/') && (storedContentType === 'application/pdf' || canPreviewAsImage(storedContentType))) {
+      setPreview({ status: 'ready', url: directPreviewUrl, contentType: storedContentType })
+      return () => {
+        active = false
+        if (pdfPaintTimerRef.current !== null) {
+          window.clearTimeout(pdfPaintTimerRef.current)
+          pdfPaintTimerRef.current = null
+        }
+      }
+    }
+
     void getDocumentContent(document.id, document.originalFileName)
       .then(async content => {
         if (!active) return
-        if (content.contentType === 'application/json' || content.contentType === 'application/xml') {
+        const contentType = normalizedContentType(content.contentType)
+        if (contentType === 'application/json' || contentType === 'application/xml') {
           const text = await content.blob.text()
-          if (active) setPreview({ status: 'ready', url: '', text, contentType: content.contentType })
+          if (active) setPreview({ status: 'ready', url: '', text, contentType })
           return
         }
-        if (content.contentType === 'application/pdf' || canPreviewAsImage(content.contentType)) {
+        if (contentType === 'application/pdf' || canPreviewAsImage(contentType)) {
           objectUrl = URL.createObjectURL(content.blob)
-          setPreview({ status: 'ready', url: objectUrl, contentType: content.contentType })
+          setPreview({ status: 'ready', url: objectUrl, contentType })
           return
         }
         setPreview({ status: 'unsupported' })
@@ -60,7 +89,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
       .catch(() => {
         if (!active) return
         setPreview({ status: 'error' })
-        showToast('The document preview could not be loaded.', 'Preview Failed', 'error')
+        showToastRef.current('The document preview could not be loaded.', 'Preview Failed', 'error')
       })
 
     return () => {
@@ -71,10 +100,19 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
       }
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [document, hideSensitive, onClose, showToast])
+  }, [document, hideSensitive])
 
   const waitingForMedia = preview.status === 'ready' && preview.text === undefined && !mediaLoaded
   const isLoading = preview.status === 'idle' || preview.status === 'loading' || waitingForMedia
+  const handleMediaError = () => {
+    if (pdfPaintTimerRef.current !== null) {
+      window.clearTimeout(pdfPaintTimerRef.current)
+      pdfPaintTimerRef.current = null
+    }
+    setMediaLoaded(true)
+    setPreview({ status: 'error' })
+    showToastRef.current('The document preview could not be loaded.', 'Preview Failed', 'error')
+  }
 
   return (
     <BottomSheet
@@ -116,6 +154,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
                 setMediaLoaded(true)
               }, PDF_VIEWER_PAINT_GRACE_MS)
             }}
+            onError={handleMediaError}
           />
         )}
         {preview.status === 'ready' && canPreviewAsImage(preview.contentType) && (
@@ -124,6 +163,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
             alt={`Preview of ${document?.originalFileName ?? 'document'}`}
             className="max-h-full max-w-full object-contain p-3"
             onLoad={() => setMediaLoaded(true)}
+            onError={handleMediaError}
           />
         )}
         {preview.status === 'ready' && preview.text !== undefined && (

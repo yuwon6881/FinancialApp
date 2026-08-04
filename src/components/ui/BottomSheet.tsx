@@ -12,6 +12,8 @@ interface BottomSheetProps {
   headerActions?: React.ReactNode
   children: React.ReactNode
   onClose: () => void
+  /** Optional safe focus target for sheets whose first control opens a popover on focus. */
+  initialFocusRef?: React.RefObject<HTMLElement | null>
   maxWidthClassName?: string
   footer?: React.ReactNode
   description?: React.ReactNode
@@ -32,6 +34,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   headerActions,
   children,
   onClose,
+  initialFocusRef,
   maxWidthClassName = 'max-w-md',
   footer,
   description,
@@ -138,6 +141,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     isOpen,
     onClose,
     ref: panelRef,
+    initialFocusRef,
     isActive: () => openModalIds.at(-1) === activeModalIdRef.current,
   })
 

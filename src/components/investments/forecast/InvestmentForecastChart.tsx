@@ -81,7 +81,6 @@ export function InvestmentForecastChart({
           )}
         </svg>
         <span className="pointer-events-none absolute left-0 top-0 rounded bg-card/70 px-1 text-[10px] font-semibold text-muted-foreground">{masked ? '••••' : money(bounds.max)}</span>
-        <span className="pointer-events-none absolute bottom-0 left-0 rounded bg-card/70 px-1 text-[10px] font-semibold text-muted-foreground">{masked ? '••••' : money(bounds.min)}</span>
         {hovered && (
           <div
             aria-hidden="true"

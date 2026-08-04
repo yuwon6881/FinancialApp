@@ -257,9 +257,11 @@ export function InvestmentPlanPanel({
             </p>
           )}
           {allocation.status === 'Incomplete' && (
-            <Button variant="ghost" size="sm" onClick={configure} className="mt-3">
-              Finish classification <ArrowRight className="size-4" />
-            </Button>
+            <div className="mt-3 flex justify-end">
+              <Button variant="ghost" size="sm" onClick={configure}>
+                Finish classification <ArrowRight className="size-4" />
+              </Button>
+            </div>
           )}
         </div>}
       </div>

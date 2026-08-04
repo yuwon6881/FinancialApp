@@ -121,6 +121,36 @@ describe('InvestmentForecastPanel', () => {
     expect(screen.getByText('5 years')).toBeTruthy()
   })
 
+  it('does not add a zero-value label at the bottom of the chart', () => {
+    vi.mocked(useInvestmentForecast).mockReturnValue({
+      error: '',
+      initializationMs: 12,
+      ready: true,
+      result: {
+        ...result,
+        points: [
+          { year: 0, lower: 0, median: 0, upper: 0 },
+          ...result.points.slice(1),
+        ],
+      },
+    })
+
+    render(<InvestmentForecastPanel portfolio={portfolio()} masked={false} />)
+    fireEvent.click(screen.getByRole('button', { name: /Investment forecast/ }))
+
+    const chart = document.querySelector('.cursor-crosshair')
+    expect(chart).toBeTruthy()
+    expect(chart?.textContent).not.toContain('$0.00')
+  })
+
+  it('does not open an explanation popover just because the sheet opens', async () => {
+    render(<InvestmentForecastPanel portfolio={portfolio()} masked={false} />)
+    fireEvent.click(screen.getByRole('button', { name: /Investment forecast/ }))
+
+    await new Promise(resolve => setTimeout(resolve, 60))
+    expect(screen.queryByText(/Half of the 10,000 simulated outcomes ended above this amount/)).toBeNull()
+  })
+
   it('does not treat uninvested cash as an observed monthly pace', () => {
     render(<InvestmentForecastPanel portfolio={portfolio(true)} masked={false} />)
     fireEvent.click(screen.getByRole('button', { name: /Investment forecast/ }))
