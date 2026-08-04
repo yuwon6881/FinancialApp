@@ -250,7 +250,7 @@ describe('App behaviors', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Open Menu' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Ask AI' }))
 
-    expect(screen.getByRole('dialog', { name: 'ASK AI' })).toBeDefined()
+    expect(await screen.findByRole('dialog', { name: 'ASK AI' })).toBeDefined()
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: 'Ask AI' })).toBeNull()
     })
