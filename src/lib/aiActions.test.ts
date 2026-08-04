@@ -46,6 +46,8 @@ function makeDeps(overrides: Partial<AiActionsDeps> = {}): AiActionsDeps {
     setAiLedgerEditDraft: vi.fn(),
     setAiRecurringEditDraft: vi.fn(),
     setAiWishlistEditDraft: vi.fn(),
+    setAiSavingsGoalDraft: vi.fn(),
+    setAiSavingsGoalEditDraft: vi.fn(),
     setAiLedgerExportRequest: vi.fn(),
     requestDeleteLedger: vi.fn(),
     requestDeletePayment: vi.fn(),
@@ -70,6 +72,33 @@ describe('dispatchAiActions — navigation', () => {
     const d = makeDeps()
     await dispatchAiActions([{ type: 'openDashboard', payload: {} }], d)
     expect(d.navigate).toHaveBeenCalledWith({ tab: 'dashboard' })
+  })
+
+  it('keeps a report cycle and portfolio navigation in the existing views', async () => {
+    const d = makeDeps()
+    await dispatchAiActions([
+      { type: 'openReports', payload: { cycleKey: '2026-06' } },
+      { type: 'openInvestments', payload: {} },
+    ], d)
+
+    expect(d.handleSelectPeriod).toHaveBeenCalledWith('Jun', 2026)
+    expect(d.navigate).toHaveBeenCalledWith({ tab: 'investments' })
+  })
+
+  it('opens Savings Goal drafts without saving or funding them', async () => {
+    const d = makeDeps()
+    await dispatchAiActions([
+      {
+        type: 'openAddSavingsGoalDraft',
+        payload: { name: 'Emergency fund', targetAmount: 1000, targetDate: '2027-01-01', priority: 'high', isRecurring: false, recurrenceMonths: 12 },
+      },
+      { type: 'openEditSavingsGoalDraft', payload: { id: 3, changes: { targetAmount: 1200 } } },
+    ], d)
+
+    expect(d.setAiSavingsGoalDraft).toHaveBeenCalledWith(expect.objectContaining({ fields: expect.objectContaining({ name: 'Emergency Fund' }) }))
+    expect(d.setAiSavingsGoalEditDraft).toHaveBeenCalledWith(expect.objectContaining({ id: 3 }))
+    expect(d.handlePurchaseWishlistItem).not.toHaveBeenCalled()
+    expect(d.navigate).toHaveBeenCalledWith({ tab: 'wishlist' })
   })
 
   it('processes at most the first three actions and navigates exactly once', async () => {

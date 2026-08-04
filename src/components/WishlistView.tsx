@@ -24,6 +24,7 @@ import {
   CheckCircle2,
   Flag,
   Trophy,
+  Sparkles,
 } from 'lucide-react'
 
 interface WishlistViewProps {
@@ -72,6 +73,11 @@ interface WishlistViewProps {
   aiEditDraft?: { nonce: number; id: number; changes: Record<string, unknown> } | null
   onAiDraftConsumed?: () => void
   onAiEditDraftConsumed?: () => void
+  onExplainWithAi?: () => void
+  aiSavingsGoalDraft?: { nonce: number; fields: Record<string, unknown> } | null
+  aiSavingsGoalEditDraft?: { nonce: number; id: number; changes: Record<string, unknown> } | null
+  onAiSavingsGoalDraftConsumed?: () => void
+  onAiSavingsGoalEditDraftConsumed?: () => void
 }
 
 export const WishlistView: React.FC<WishlistViewProps> = ({
@@ -107,7 +113,12 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   aiDraft = null,
   aiEditDraft = null,
   onAiDraftConsumed,
-  onAiEditDraftConsumed
+  onAiEditDraftConsumed,
+  onExplainWithAi,
+  aiSavingsGoalDraft,
+  aiSavingsGoalEditDraft,
+  onAiSavingsGoalDraftConsumed,
+  onAiSavingsGoalEditDraftConsumed,
 }) => {
   const app = useAppContext()
   const currency = currencyProp ?? app.currency
@@ -174,6 +185,10 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     onAddGoal,
     onUpdateGoal,
     onStartEditPending,
+    aiDraft: aiSavingsGoalDraft,
+    aiEditDraft: aiSavingsGoalEditDraft,
+    onAiDraftConsumed: onAiSavingsGoalDraftConsumed,
+    onAiEditDraftConsumed: onAiSavingsGoalEditDraftConsumed,
   })
 
   const { isSyncing: isGoalSyncing, isDeleting: isGoalDeleting } = useSyncStatus(savingsGoals, activeSyncIds, deletingId)
@@ -259,18 +274,32 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
       {isSwitchingCycle ? (
         <CycleSkeleton variant="wishlist" />
       ) : (
-        <RewardsPoolBar
-          summary={pool}
-          expectedInflow={rewardsTarget}
-          formatSensitive={formatSensitive}
-          hideSensitive={hideSensitive}
-          isOffline={isOffline}
-          isFunding={isFunding}
-          onFundCycle={() => { void onFundGoalsForCycle() }}
-          onViewRewardsHistory={onNavigateToLedger
-            ? () => onNavigateToLedger({ category: 'Rewards', showAllCycles: true })
-            : undefined}
-        />
+        <>
+          <header className="app-panel flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/92 p-4 sm:p-5">
+            <div>
+              <h2 className="text-xl font-bold tracking-tight text-foreground">Rewards plan</h2>
+              <p className="mt-1 text-xs text-muted-foreground">See what is free now and what your commitments need next.</p>
+            </div>
+            {onExplainWithAi && (
+              <Button variant="secondary" size="sm" type="button" onClick={onExplainWithAi}>
+                <Sparkles className="size-3.5" />
+                <span className="hidden sm:inline">Explain my plan</span>
+              </Button>
+            )}
+          </header>
+          <RewardsPoolBar
+            summary={pool}
+            expectedInflow={rewardsTarget}
+            formatSensitive={formatSensitive}
+            hideSensitive={hideSensitive}
+            isOffline={isOffline}
+            isFunding={isFunding}
+            onFundCycle={() => { void onFundGoalsForCycle() }}
+            onViewRewardsHistory={onNavigateToLedger
+              ? () => onNavigateToLedger({ category: 'Rewards', showAllCycles: true })
+              : undefined}
+          />
+        </>
       )}
 
       {/* Two rows over one pool. Each grows sideways rather than pushing the page down, so however

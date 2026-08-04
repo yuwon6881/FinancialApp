@@ -1,4 +1,5 @@
 import { ApiError, jsonBody, request, requestVoid } from './client'
+import type { AppTab } from '../../types'
 
 // The backend can chain several provider calls (classification, answer, then up to a
 // few ledger-draft enrichment calls) with a 30s budget each, so a stuck turn could
@@ -46,6 +47,24 @@ export interface AiConversationState {
   lastRecurringStatus?: string | null
   lastWishlistStatus?: string | null
   lastTargetAmount?: number | null
+  lastRewardsTopic?: string | null
+  lastSavingsGoalId?: number | null
+  lastInvestmentTopic?: string | null
+  lastInvestmentRange?: string | null
+  lastInvestmentInstrumentId?: string | null
+  lastReportCycleKey?: string | null
+}
+
+export type AiInvocationPreset = 'report-review' | 'investment-explain' | 'rewards-plan'
+export type AiInvestmentRange = '1m' | '3m' | '6m' | '1y' | '3y' | '5y' | 'all'
+
+export interface AiInvocationContext {
+  surface: AppTab
+  preset?: AiInvocationPreset
+  cycleKey?: string
+  investmentRange?: AiInvestmentRange
+  savingsGoalId?: number
+  hasPendingLocalChanges: boolean
 }
 
 export interface AiChatResponse {
@@ -55,6 +74,7 @@ export interface AiChatResponse {
   state?: AiConversationState | null
   conversationId?: string | null
   conversationVersion?: number
+  historyRedacted?: boolean
 }
 
 export interface AiConversationSnapshot {
@@ -62,6 +82,7 @@ export interface AiConversationSnapshot {
   conversationVersion: number
   messages: AiChatMessage[]
   state: AiConversationState | null
+  historyRedacted?: boolean
 }
 
 export interface AiConversationRequest {
@@ -108,11 +129,20 @@ function normalizeAiConversationState(value: unknown): AiConversationState | nul
     'lastIntent', 'lastSearchText', 'lastCycleHint', 'lastWishlistReference',
     'lastResolvedCycle', 'lastCategory', 'lastLedgerCategory', 'lastTransactionType',
     'lastExactDate', 'lastRecurringReference', 'lastRecurringStatus', 'lastWishlistStatus',
+    'lastRewardsTopic', 'lastInvestmentTopic', 'lastInvestmentRange', 'lastInvestmentInstrumentId',
+    'lastReportCycleKey',
   ] as const) {
     if (Object.prototype.hasOwnProperty.call(candidate, key)) state[key] = text(key)
   }
   if (Object.prototype.hasOwnProperty.call(candidate, 'lastMatchedTransactionIds')) state.lastMatchedTransactionIds = ids
   if (Object.prototype.hasOwnProperty.call(candidate, 'lastWishlistItemId')) state.lastWishlistItemId = itemId
+  if (Object.prototype.hasOwnProperty.call(candidate, 'lastSavingsGoalId')) {
+    state.lastSavingsGoalId = typeof candidate.lastSavingsGoalId === 'number'
+      && Number.isInteger(candidate.lastSavingsGoalId)
+      && candidate.lastSavingsGoalId > 0
+      ? candidate.lastSavingsGoalId
+      : null
+  }
   if (Object.prototype.hasOwnProperty.call(candidate, 'lastResolvedCycleKeys')) state.lastResolvedCycleKeys = stringArray('lastResolvedCycleKeys')
   if (Object.prototype.hasOwnProperty.call(candidate, 'lastExcludedCategories')) state.lastExcludedCategories = stringArray('lastExcludedCategories')
   if (Object.prototype.hasOwnProperty.call(candidate, 'lastIncludedCategories')) state.lastIncludedCategories = stringArray('lastIncludedCategories')
@@ -144,6 +174,7 @@ export async function chatWithAi(
   state?: AiConversationState | null,
   signal?: AbortSignal,
   conversation?: AiConversationRequest,
+  context?: AiInvocationContext,
 ): Promise<AiChatResponse> {
   // Linked controller rather than AbortSignal.any(): the Android WebView we ship
   // through Capacitor can predate it.
@@ -165,6 +196,7 @@ export async function chatWithAi(
         conversationId: conversation?.conversationId ?? null,
         conversationVersion: conversation?.conversationVersion,
         clientTurnId: conversation?.clientTurnId,
+        context: context ?? null,
       }),
       signal: controller.signal,
       errorMessage: 'AI is unavailable. Please try again.',
@@ -186,6 +218,7 @@ export async function chatWithAi(
     state: normalizeAiConversationState(data.state),
     conversationId: typeof data.conversationId === 'string' ? data.conversationId : null,
     conversationVersion: typeof data.conversationVersion === 'number' ? data.conversationVersion : 0,
+    historyRedacted: data.historyRedacted === true,
   }
 }
 
@@ -206,6 +239,7 @@ export async function fetchAiConversation(signal?: AbortSignal): Promise<AiConve
     conversationVersion: typeof data.conversationVersion === 'number' ? data.conversationVersion : 0,
     messages,
     state: normalizeAiConversationState(data.state),
+    historyRedacted: data.historyRedacted === true,
   }
 }
 

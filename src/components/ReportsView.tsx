@@ -1,6 +1,6 @@
 import { Button } from './ui/Button'
 import React from 'react'
-import { BarChart3, ChartNoAxesCombined, ChevronRight, TrendingUp } from 'lucide-react'
+import { BarChart3, ChartNoAxesCombined, ChevronRight, Sparkles, TrendingUp } from 'lucide-react'
 import type { AppTab, DashboardData, Transaction, WishlistItem } from '../types'
 import { useAppPrefs } from '../contexts/AppContext'
 import { getCycleLabelForDropdown } from '../lib/cycleLabels'
@@ -37,6 +37,7 @@ interface ReportsViewProps {
   onAddBalanceAdjustment?: (newTx: Omit<Transaction, 'id'>) => Promise<void> | void
   isSwitchingCycle?: boolean
   onViewCycleSummary?: (monthIndex: number, year: number) => void
+  onExplainWithAi?: (cycleKey: string) => void
 }
 
 const REPORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -53,6 +54,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   onAddBalanceAdjustment,
   isSwitchingCycle = false,
   onViewCycleSummary,
+  onExplainWithAi,
 }) => {
   const { hideSensitive } = useAppPrefs()
   const view = useDashboardView({
@@ -113,6 +115,18 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               >
                 <ChartNoAxesCombined className="size-3.5" />
                 <span className="hidden whitespace-nowrap text-xs font-bold sm:inline">Summary</span>
+              </Button>
+            )}
+            {onExplainWithAi && (
+              <Button
+                variant="secondary"
+                size="sm"
+                type="button"
+                onClick={() => onExplainWithAi(`${view.activeSettings.selectedYear}-${String(selectedMonthIndex).padStart(2, '0')}`)}
+                aria-label="Explain this cycle with Ask AI"
+              >
+                <Sparkles className="size-3.5" />
+                <span className="hidden sm:inline">Explain this cycle</span>
               </Button>
             )}
           </div>

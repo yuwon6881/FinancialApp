@@ -129,15 +129,17 @@ export function FundPriceChart({ history, masked }: { history: InstrumentHistory
         <span>Highest {masked ? '••••' : money(high)}</span>
       </div>
 
-      <table className="sr-only">
-        <caption>Price history for {history.symbol}</caption>
-        <thead><tr><th>Date</th><th>Price</th></tr></thead>
-        <tbody>
-          {history.points.map(point => (
-            <tr key={point.date}><td>{point.date}</td><td>{masked ? 'Hidden' : point.price}</td></tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="sr-only">
+        <table>
+          <caption>Price history for {history.symbol}</caption>
+          <thead><tr><th>Date</th><th>Price</th></tr></thead>
+          <tbody>
+            {history.points.map(point => (
+              <tr key={point.date}><td>{point.date}</td><td>{masked ? 'Hidden' : point.price}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </section>
   )
 }

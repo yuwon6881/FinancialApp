@@ -1,4 +1,4 @@
-import { useCallback, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import type { SavingsGoal } from '../../types'
 import { maskCurrencyInput } from '../../lib/utils'
 import { useFormDraft } from '../../lib/useFormDraft'
@@ -10,6 +10,10 @@ interface UseSavingsGoalFormOptions {
   onAddGoal: (goal: Partial<SavingsGoal>) => Promise<void> | void
   onUpdateGoal: (id: number, goal: SavingsGoal) => Promise<void> | void
   onStartEditPending?: (id: string | null) => void
+  aiDraft?: { nonce: number; fields: Record<string, unknown> } | null
+  aiEditDraft?: { nonce: number; id: number; changes: Record<string, unknown> } | null
+  onAiDraftConsumed?: () => void
+  onAiEditDraftConsumed?: () => void
 }
 
 // Six years out is a reasonable default horizon for a "someday" fund and keeps the date picker
@@ -36,6 +40,17 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
   const [recurrenceMonthsInput, setRecurrenceMonthsInput] = useState('12')
   const showAddModal = mode === 'add'
   const showEditModal = mode === 'edit'
+
+  const readText = (fields: Record<string, unknown>, key: string, fallback: string) =>
+    typeof fields[key] === 'string' && fields[key].trim() ? fields[key].trim() : fallback
+  const readNumber = (fields: Record<string, unknown>, key: string, fallback: string) =>
+    typeof fields[key] === 'number' && Number.isFinite(fields[key]) ? String(fields[key]) : readText(fields, key, fallback)
+  const readBoolean = (fields: Record<string, unknown>, key: string, fallback: boolean) =>
+    typeof fields[key] === 'boolean' ? fields[key] as boolean : fallback
+  const normalizePriority = (value: string) => {
+    const lower = value.toLowerCase()
+    return lower === 'high' ? 'High' : lower === 'low' ? 'Low' : 'Medium'
+  }
 
   const resetFields = useCallback(() => {
     setNameInput('')
@@ -66,6 +81,41 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
     options.onStartEditPending?.(String(goal.id))
     setMode('edit')
   }, [options.hideSensitive, options.onStartEditPending])
+
+  useEffect(() => {
+    if (!options.aiDraft) return
+    const fields = options.aiDraft.fields
+    resetFields()
+    setNameInput(readText(fields, 'name', ''))
+    setTargetInput(readNumber(fields, 'targetAmount', ''))
+    setDateInput(readText(fields, 'targetDate', defaultTargetDate()))
+    setPriorityInput(normalizePriority(readText(fields, 'priority', 'Medium')))
+    setIsRecurringInput(readBoolean(fields, 'isRecurring', false))
+    setRecurrenceMonthsInput(readNumber(fields, 'recurrenceMonths', '12'))
+    setMode('add')
+    options.onAiDraftConsumed?.()
+  }, [options.aiDraft, options.onAiDraftConsumed, resetFields])
+
+  useEffect(() => {
+    if (!options.aiEditDraft || options.hideSensitive) return
+    const goal = options.goals.find(candidate => candidate.id === options.aiEditDraft?.id)
+    if (!goal) {
+      options.onAiEditDraftConsumed?.()
+      return
+    }
+    const changes = options.aiEditDraft.changes
+    setEditingGoal(goal)
+    setNameInput(readText(changes, 'name', goal.name))
+    setTargetInput(readNumber(changes, 'targetAmount', goal.targetAmount.toFixed(2)))
+    setDateInput(readText(changes, 'targetDate', goal.targetDate))
+    setPriorityInput(normalizePriority(readText(changes, 'priority', goal.priority)))
+    setIsRecurringInput(readBoolean(changes, 'isRecurring', goal.isRecurring))
+    setRecurrenceMonthsInput(readNumber(changes, 'recurrenceMonths', String(goal.recurrenceMonths || 12)))
+    setErrors({})
+    options.onStartEditPending?.(String(goal.id))
+    setMode('edit')
+    options.onAiEditDraftConsumed?.()
+  }, [options.aiEditDraft, options.goals, options.hideSensitive, options.onAiEditDraftConsumed, options.onStartEditPending])
 
   const close = useCallback(() => {
     if (mode === 'edit') options.onStartEditPending?.(null)

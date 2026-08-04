@@ -32,6 +32,7 @@ import { useAppDialogs } from './app/useAppDialogs'
 import { useCycleSummary } from './app/useCycleSummary'
 import { usePushNotifications } from './app/usePushNotifications'
 import { useInvestmentRefreshCoordinator } from './app/useInvestmentRefreshCoordinator'
+import { useAiEntryPoint } from './app/useAiEntryPoint'
 import { useFabMenu } from './app/useFabMenu'
 import { useCurrentCycleDashboard } from './app/useCurrentCycleDashboard'
 import { AuthenticatedView } from './app/AuthenticatedView'
@@ -41,10 +42,46 @@ import { buildAppContextValue } from './app/buildAppContextValue'
 import { prefetchFingerprintAssertOptions } from './lib/fingerprintOptionsCache'
 import { readAppLocation, updateAppSearch } from './lib/appLocation'
 import { mutationBusyLabel } from './components/ui/rowSyncState'
+import type { AiInvocationContext } from './lib/api/ai'
 
 // Instant, flash-free placeholder while a lazily-loaded chunk is fetched at the root level.
 const ViewFallback = () => <div className="app-shell min-h-screen" />
 const AppOverlays = lazy(() => import('./app/AppOverlays').then(module => ({ default: module.AppOverlays })))
+
+const AppOverlaysFallback = ({
+  isOpen,
+  onToggle,
+  onAskAi,
+}: {
+  isOpen: boolean
+  onToggle: () => void
+  onAskAi: () => void
+}) => (
+  <>
+    {isOpen && (
+      <Button
+        variant="secondary"
+        type="button"
+        onClick={onAskAi}
+        className="fixed right-8 z-40 flex items-center gap-2.5 cursor-pointer"
+        style={{ bottom: 'calc(164px + env(safe-area-inset-bottom, 0px))' }}
+      >
+        <span>Ask AI</span>
+      </Button>
+    )}
+    <Button
+      variant="unstyled"
+      type="button"
+      aria-label={isOpen ? 'Close Menu' : 'Open Menu'}
+      title={isOpen ? 'Close Menu' : 'Open Menu'}
+      onClick={onToggle}
+      className="fixed right-6 z-40 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/25 cursor-pointer lg:hidden"
+      style={{ bottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }}
+    >
+      <Loader2 className="size-6 opacity-0" aria-hidden="true" />
+    </Button>
+  </>
+)
 
 // Skeleton placeholder for tab navigation to prevent empty squares in the main content area.
 const getPageSkeletonVariant = (tab: AppTab): PageSkeletonVariant => tab
@@ -241,6 +278,11 @@ function App() {
   useVisualViewportVars()
 
   const [isAiOpen, setIsAiOpen] = useState(false)
+  const aiEntryPoint = useAiEntryPoint()
+  const launchAiExplanation = useCallback((context: AiInvocationContext, prompt: string) => {
+    aiEntryPoint.launch(context, prompt)
+    setIsAiOpen(true)
+  }, [aiEntryPoint.launch])
   const fabMenu = useFabMenu(prefs.activeTab)
 
   // Apply the destination the AI action router settled on. Keyed on the intent's nonce, so this
@@ -256,6 +298,8 @@ function App() {
     } else if (aiNavigation.tab === 'ledger' && aiNavigation.ledgerTxId) {
       nav.setHighlightedTxId(aiNavigation.ledgerTxId)
       prefs.setActiveTab('ledger')
+    } else if (aiNavigation.tab === 'reports' && aiNavigation.cycleKey) {
+      prefs.setActiveTab('reports')
     } else {
       prefs.setActiveTab(aiNavigation.tab)
     }
@@ -503,6 +547,10 @@ function App() {
           onActions={aiRouter.handleAiActions}
           sensitiveMode={prefs.hideSensitive}
           isOffline={financial.isOffline}
+          hasPendingLocalChanges={financial.pendingOps.length > 0}
+          invocation={aiEntryPoint.invocation}
+          onInvocationConsumed={aiEntryPoint.consume}
+          surface={prefs.activeTab}
         />
 
         {financial.error && (
@@ -550,9 +598,17 @@ function App() {
           handleToggleHideSensitive={handleToggleHideSensitive}
           handleToggleBalanceAmounts={handleToggleBalanceAmounts}
           alert={alert}
+          onExplainWithAi={launchAiExplanation}
         />
 
-        <Suspense fallback={null}>
+        <Suspense fallback={<AppOverlaysFallback
+          isOpen={fabMenu.isOpen}
+          onToggle={fabMenu.toggle}
+          onAskAi={() => {
+            setIsAiOpen(true)
+            fabMenu.close()
+          }}
+        />}>
           <AppOverlays
             dialogs={dialogs}
             financial={financial}

@@ -1,6 +1,7 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { AiChatResponse, AiConversationState } from '../lib/api/ai'
+import type { AiInvocationRequest } from './useAiConversation'
 
 // Mock the API module so no network happens and we can assert on call arguments.
 // Declared inside the factory: vi.mock is hoisted, so a module-scope class would
@@ -98,6 +99,51 @@ describe('AiAssistantPanel', () => {
     expect(await screen.findByText('Saved question')).not.toBeNull()
     expect(screen.getByText('Saved answer')).not.toBeNull()
     expect(fetchAiConversation).toHaveBeenCalledTimes(1)
+  })
+
+  it('opens generically without sending an AI request', async () => {
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+
+    await waitFor(() => expect(fetchAiConversation).toHaveBeenCalledTimes(1))
+    expect(chatWithAi).not.toHaveBeenCalled()
+  })
+
+  it('sends one contextual launch after hydration and preserves its references', async () => {
+    chatWithAi.mockResolvedValue(reply())
+    const onInvocationConsumed = vi.fn()
+    const invocation: AiInvocationRequest = {
+      nonce: 7,
+      prompt: 'Explain this cycle',
+      context: {
+        surface: 'reports',
+        preset: 'report-review',
+        cycleKey: '2026-06',
+        hasPendingLocalChanges: true,
+      },
+      clientTurnId: 'launch-turn-7',
+    }
+
+    render(
+      <AiAssistantPanel
+        isOpen
+        onClose={vi.fn()}
+        onActions={vi.fn()}
+        invocation={invocation}
+        onInvocationConsumed={onInvocationConsumed}
+        hasPendingLocalChanges
+      />,
+    )
+
+    await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(1))
+    expect(chatWithAi.mock.calls[0]?.[0]).toBe('Explain this cycle')
+    expect(chatWithAi.mock.calls[0]?.[4]).toEqual({
+      conversationId: null,
+      conversationVersion: 0,
+      clientTurnId: 'launch-turn-7',
+    })
+    expect(chatWithAi.mock.calls[0]?.[5]).toEqual(invocation.context)
+    expect(onInvocationConsumed).toHaveBeenCalledTimes(1)
+    expect(screen.getByText(/saved server data/)).not.toBeNull()
   })
 
   it('uses hidden overflow when empty and scrollable overflow once messages exist', async () => {

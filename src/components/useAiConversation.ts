@@ -6,20 +6,26 @@ import {
   fetchAiConversation,
   type AiChatMessage,
   type AiConversationState,
+  type AiInvocationContext,
   type AiUiAction,
 } from '../lib/api/ai'
+import type { AiInvocationRequest } from '../app/useAiEntryPoint'
 
 interface UseAiConversationOptions {
   isOpen: boolean
   onClose: () => void
   onActions: (actions: AiUiAction[]) => void | Promise<void>
   isOffline: boolean
+  invocation: AiInvocationRequest | null
+  onInvocationConsumed: () => void
 }
 
 interface FailedTurn {
   text: string
   clientTurnId: string
+  context?: AiInvocationContext
 }
+
 
 const nextFrame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
 
@@ -44,6 +50,8 @@ export function useAiConversation({
   onClose,
   onActions,
   isOffline,
+  invocation,
+  onInvocationConsumed,
 }: UseAiConversationOptions) {
   const [messages, setMessages] = useState<AiChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -52,6 +60,7 @@ export function useAiConversation({
   const [isResetting, setIsResetting] = useState(false)
   const [lastFailedTurn, setLastFailedTurn] = useState<FailedTurn | null>(null)
   const [resetError, setResetError] = useState<string | null>(null)
+  const [historyRedacted, setHistoryRedacted] = useState(false)
   const conversationIdRef = useRef<string | null>(null)
   const conversationVersionRef = useRef(0)
   const conversationStateRef = useRef<AiConversationState | null>(null)
@@ -60,12 +69,14 @@ export function useAiConversation({
   const hydrationRequestRef = useRef<AbortController | null>(null)
   const requestGenerationRef = useRef(0)
   const pendingTurnRef = useRef<FailedTurn | null>(null)
+  const consumedInvocationRef = useRef<number | null>(null)
 
   const applySnapshot = useCallback((snapshot: Awaited<ReturnType<typeof fetchAiConversation>>) => {
     conversationIdRef.current = snapshot.conversationId
     conversationVersionRef.current = snapshot.conversationVersion
     conversationStateRef.current = snapshot.state
     setMessages(snapshot.messages)
+    setHistoryRedacted(snapshot.historyRedacted === true)
     hydratedRef.current = true
   }, [])
 
@@ -141,6 +152,7 @@ export function useAiConversation({
       conversationStateRef.current = null
       hydratedRef.current = true
       setMessages([])
+      setHistoryRedacted(false)
       setInput('')
       setLastFailedTurn(null)
     } catch (error) {
@@ -180,12 +192,14 @@ export function useAiConversation({
           conversationVersion: conversationVersionRef.current,
           clientTurnId: failedTurn.clientTurnId,
         },
+        failedTurn.context,
       )
       if (generation !== requestGenerationRef.current) return
       pendingTurnRef.current = null
       conversationIdRef.current = result.conversationId ?? conversationIdRef.current
       conversationVersionRef.current = result.conversationVersion ?? conversationVersionRef.current
       conversationStateRef.current = result.state ?? null
+      setHistoryRedacted(result.historyRedacted === true)
       setMessages([...nextMessages, { role: 'assistant', content: result.reply || 'Done.' }])
       if (result.actions.length > 0) {
         const requiresPanelClose = result.actions.some(action =>
@@ -244,6 +258,18 @@ export function useAiConversation({
     onClose,
   ])
 
+  useEffect(() => {
+    if (!invocation || !isOpen || isOffline || isHydrating || isResetting || !hydratedRef.current) return
+    if (consumedInvocationRef.current === invocation.nonce) return
+    consumedInvocationRef.current = invocation.nonce
+    onInvocationConsumed()
+    void sendMessage({
+      text: invocation.prompt,
+      clientTurnId: invocation.clientTurnId ?? newClientTurnId(),
+      context: invocation.context,
+    })
+  }, [invocation, isHydrating, isOffline, isOpen, isResetting, onInvocationConsumed, sendMessage])
+
   return {
     messages,
     input,
@@ -253,6 +279,7 @@ export function useAiConversation({
     isResetting,
     lastFailedTurn,
     resetError,
+    historyRedacted,
     sendMessage,
     newChat,
     cancelInFlight,

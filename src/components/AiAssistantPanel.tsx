@@ -4,7 +4,8 @@ import { Send, Sparkles, X, RotateCcw, SquarePen, Square } from 'lucide-react'
 import { BottomSheet } from './ui/BottomSheet'
 import { PerimeterBeam } from './ui/PerimeterBeam'
 import type { AiUiAction } from '../lib/api/ai'
-import { useAiConversation } from './useAiConversation'
+import type { AppTab } from '../types'
+import { useAiConversation, type AiInvocationRequest } from './useAiConversation'
 
 interface AiAssistantPanelProps {
   isOpen: boolean
@@ -12,6 +13,10 @@ interface AiAssistantPanelProps {
   onActions: (actions: AiUiAction[]) => void | Promise<void>
   sensitiveMode?: boolean
   isOffline?: boolean
+  hasPendingLocalChanges?: boolean
+  invocation?: AiInvocationRequest | null
+  onInvocationConsumed?: () => void
+  surface?: AppTab
 }
 
 // Keep discovery prompts local: static UI copy does not justify an AI round trip.
@@ -37,8 +42,14 @@ const SENSITIVE_SUGGESTED_PROMPTS = [
   'Show my transfer transactions this cycle',
 ]
 
-const pickSuggestedPrompts = (sensitiveMode: boolean) => {
-  const prompts = [...(sensitiveMode ? SENSITIVE_SUGGESTED_PROMPTS : SUGGESTED_PROMPTS)]
+const SURFACE_SUGGESTED_PROMPTS: Partial<Record<AppTab, string[]>> = {
+  reports: ['Compare this cycle with the previous one', 'What unusual spending happened this cycle?', 'Review this cycle'],
+  investments: ['Explain my portfolio', 'What is On paper versus Already banked?', 'Which holdings have incomplete prices?'],
+  wishlist: ['Explain my plan', 'Which wishlist items can I afford now?', 'How are my Savings Goals pacing?'],
+}
+
+const pickSuggestedPrompts = (sensitiveMode: boolean, surface?: AppTab) => {
+  const prompts = [...(sensitiveMode ? SENSITIVE_SUGGESTED_PROMPTS : SURFACE_SUGGESTED_PROMPTS[surface] ?? SUGGESTED_PROMPTS)]
   for (let index = prompts.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(Math.random() * (index + 1))
     ;[prompts[index], prompts[swapIndex]] = [prompts[swapIndex], prompts[index]]
@@ -46,8 +57,18 @@ const pickSuggestedPrompts = (sensitiveMode: boolean) => {
   return prompts.slice(0, 3)
 }
 
-export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onClose, onActions, sensitiveMode = true, isOffline = false }) => {
-  const [suggestedPrompts, setSuggestedPrompts] = useState(() => pickSuggestedPrompts(sensitiveMode))
+export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
+  isOpen,
+  onClose,
+  onActions,
+  sensitiveMode = true,
+  isOffline = false,
+  hasPendingLocalChanges = false,
+  invocation = null,
+  onInvocationConsumed = () => undefined,
+  surface,
+}) => {
+  const [suggestedPrompts, setSuggestedPrompts] = useState(() => pickSuggestedPrompts(sensitiveMode, surface))
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const {
@@ -62,11 +83,12 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
     sendMessage,
     newChat,
     cancelInFlight,
-  } = useAiConversation({ isOpen, onClose, onActions, isOffline })
+    historyRedacted,
+  } = useAiConversation({ isOpen, onClose, onActions, isOffline, invocation, onInvocationConsumed })
 
   useEffect(() => {
-    if (isOpen && messages.length === 0) setSuggestedPrompts(pickSuggestedPrompts(sensitiveMode))
-  }, [isOpen, messages.length, sensitiveMode])
+    if (isOpen && messages.length === 0) setSuggestedPrompts(pickSuggestedPrompts(sensitiveMode, surface))
+  }, [isOpen, messages.length, sensitiveMode, surface])
 
   useEffect(() => {
     if (isOpen) {
@@ -94,7 +116,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
 
   const handleNewChat = async () => {
     await newChat()
-    setSuggestedPrompts(pickSuggestedPrompts(sensitiveMode))
+    setSuggestedPrompts(pickSuggestedPrompts(sensitiveMode, surface))
   }
 
   if (!isOpen) return null
@@ -138,6 +160,16 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({ isOpen, onCl
       }
     >
       <div className="flex h-[55vh] sm:h-[480px] flex-col gap-3">
+        {hasPendingLocalChanges && (
+          <p className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+            Ask AI uses saved server data and does not include changes still syncing.
+          </p>
+        )}
+        {historyRedacted && (
+          <p className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+            Earlier replies are hidden while sensitive mode is active.
+          </p>
+        )}
         {/* The non-scrolling wrapper owns a subtle perimeter-only activity trace. */}
         <div className={`relative min-h-0 flex-1 rounded-xl ${isSending ? 'perimeter-beam-host' : ''}`}>
           {isSending && <PerimeterBeam size={132} duration={7} />}

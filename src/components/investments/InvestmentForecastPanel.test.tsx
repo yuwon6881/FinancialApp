@@ -73,6 +73,8 @@ describe('InvestmentForecastPanel', () => {
 
   it('defaults to the observed completed-cycle pace and keeps target changes independent', () => {
     render(<InvestmentForecastPanel portfolio={portfolio()} masked={false} />)
+    fireEvent.click(screen.getByRole('button', { name: /Investment forecast/ }))
+    
     const contribution = screen.getByLabelText('Hypothetical monthly contribution') as HTMLInputElement
     const target = screen.getByLabelText('Forecast target amount')
     expect(contribution.value).toBe('100')
@@ -83,17 +85,20 @@ describe('InvestmentForecastPanel', () => {
 
   it('does not treat uninvested cash as an observed monthly pace', () => {
     render(<InvestmentForecastPanel portfolio={portfolio(true)} masked={false} />)
+    fireEvent.click(screen.getByRole('button', { name: /Investment forecast/ }))
     expect((screen.getByLabelText('Hypothetical monthly contribution') as HTMLInputElement).value).toBe('0')
   })
 
   it('copies the required amount into local forecast state only', () => {
     render(<InvestmentForecastPanel portfolio={portfolio()} masked={false} />)
+    fireEvent.click(screen.getByRole('button', { name: /Investment forecast/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Try this amount' }))
     expect((screen.getByLabelText('Hypothetical monthly contribution') as HTMLInputElement).value).toBe('125')
   })
 
   it('supports today-money display and warns beyond 30 years', () => {
     render(<InvestmentForecastPanel portfolio={portfolio()} masked={false} />)
+    fireEvent.click(screen.getByRole('button', { name: /Investment forecast/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Today’s money' }))
     expect(screen.getByRole('button', { name: 'Today’s money' }).getAttribute('aria-pressed')).toBe('true')
     fireEvent.change(screen.getByLabelText('Forecast years'), { target: { value: '40' } })
@@ -102,6 +107,7 @@ describe('InvestmentForecastPanel', () => {
 
   it('masks values, disables controls, and keeps an accessible data table', () => {
     render(<InvestmentForecastPanel portfolio={portfolio()} masked />)
+    fireEvent.click(screen.getByRole('button', { name: /Investment forecast/ }))
     expect(screen.getAllByText('••••').length).toBeGreaterThan(0)
     expect((screen.getByLabelText('Forecast years') as HTMLInputElement).disabled).toBe(true)
     expect(screen.getByText('Investment forecast data')).toBeTruthy()

@@ -13,12 +13,14 @@ import {
   Search,
   TrendingUp,
   Wallet,
+  Sparkles,
 } from 'lucide-react'
 import type {
   AppTab,
   InvestmentActivity,
   InvestmentCashFlow,
   InvestmentPortfolio,
+  InvestmentRange,
 } from '../types'
 import { useAppContext } from '../contexts/AppContext'
 import { Button } from './ui/Button'
@@ -54,6 +56,7 @@ interface InvestmentsViewProps {
   activeScanJobIds?: string[]
   onInvestmentScanStarted?: (scanId: string) => void
   onInvestmentScanCleared?: (scanId: string) => void | Promise<void>
+  onExplainWithAi?: (range: InvestmentRange) => void
 }
 
 type Panel = 'account' | 'instrument' | 'activity' | 'cash' | null
@@ -74,6 +77,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
   activeScanJobIds,
   onInvestmentScanStarted,
   onInvestmentScanCleared,
+  onExplainWithAi,
 }) => {
   const { hideSensitive, isOffline, confirm, activeSyncId, activeSyncIds = [], operations = [], queueMutation = () => undefined } = useAppContext()
   const investmentOps = useMemo(
@@ -190,6 +194,18 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
           <h1 className="text-2xl font-black tracking-tight text-foreground">Growth Investments</h1>
           <p className="mt-1 text-xs text-muted-foreground">Track what you own, across any broker.</p>
         </div>
+        {onExplainWithAi && (
+          <Button
+            variant="secondary"
+            size="sm"
+            type="button"
+            className="ml-auto shrink-0"
+            onClick={() => onExplainWithAi(range)}
+          >
+            <Sparkles className="size-3.5" />
+            <span className="hidden sm:inline">Explain my portfolio</span>
+          </Button>
+        )}
       </header>
 
       {(isOffline || loadError) && (

@@ -19,6 +19,7 @@ import type { useReceiptScanPolling } from '../lib/useReceiptScanPolling'
 import type { useReceiptSplitPolling } from '../lib/useReceiptSplitPolling'
 import { getCycleYearAndMonthForDate, MONTH_NAMES } from '../lib/cycle'
 import { buildMutationSuccessToast, buildUndoSuccessToast } from '../lib/mutationToast'
+import type { AiInvocationContext } from '../lib/api/ai'
 
 const DashboardView = lazy(() => import('../components/DashboardView').then(module => ({ default: module.DashboardView })))
 const ReportsView = lazy(() => import('../components/ReportsView').then(module => ({ default: module.ReportsView })))
@@ -68,6 +69,7 @@ interface AuthenticatedViewProps {
   handleToggleHideSensitive: () => void
   handleToggleBalanceAmounts: () => void
   alert: (message: string) => void
+  onExplainWithAi: (context: AiInvocationContext, prompt: string) => void
 }
 
 export function AuthenticatedView({
@@ -100,6 +102,7 @@ export function AuthenticatedView({
   handleToggleHideSensitive,
   handleToggleBalanceAmounts,
   alert,
+  onExplainWithAi,
 }: AuthenticatedViewProps) {
   const {
     activeReceiptScanDraft,
@@ -204,6 +207,12 @@ export function AuthenticatedView({
                       onAddBalanceAdjustment={financial.handleAddBalanceAdjustment}
                       isSwitchingCycle={nav.isSwitchingCycle}
                       onViewCycleSummary={cycleSummary.openManual}
+                      onExplainWithAi={cycleKey => onExplainWithAi({
+                        surface: 'reports',
+                        preset: 'report-review',
+                        cycleKey,
+                        hasPendingLocalChanges: financial.pendingOps.length > 0,
+                      }, 'Explain this cycle')}
                     />
                   )}
 
@@ -388,6 +397,15 @@ export function AuthenticatedView({
                       aiEditDraft={aiRouter.state.aiWishlistEditDraft}
                       onAiDraftConsumed={() => aiRouter.dispatch({ aiWishlistDraft: null })}
                       onAiEditDraftConsumed={() => aiRouter.dispatch({ aiWishlistEditDraft: null })}
+                      aiSavingsGoalDraft={aiRouter.state.aiSavingsGoalDraft}
+                      aiSavingsGoalEditDraft={aiRouter.state.aiSavingsGoalEditDraft}
+                      onAiSavingsGoalDraftConsumed={() => aiRouter.dispatch({ aiSavingsGoalDraft: null })}
+                      onAiSavingsGoalEditDraftConsumed={() => aiRouter.dispatch({ aiSavingsGoalEditDraft: null })}
+                      onExplainWithAi={() => onExplainWithAi({
+                        surface: 'wishlist',
+                        preset: 'rewards-plan',
+                        hasPendingLocalChanges: financial.pendingOps.length > 0,
+                      }, 'Explain my plan')}
                     />
                   )}
 
@@ -418,6 +436,12 @@ export function AuthenticatedView({
                       activeScanJobIds={investmentScanJobIds}
                       onInvestmentScanStarted={handleInvestmentScanStarted}
                       onInvestmentScanCleared={clearInvestmentScanJob}
+                      onExplainWithAi={range => onExplainWithAi({
+                        surface: 'investments',
+                        preset: 'investment-explain',
+                        investmentRange: range,
+                        hasPendingLocalChanges: financial.pendingOps.length > 0,
+                      }, 'Explain my portfolio')}
                     />
                   )}
 

@@ -12,6 +12,8 @@ export interface AiActionRouterState {
   aiRecurringEditDraft: { nonce: number; id: string; changes: Record<string, unknown> } | null
   aiWishlistDraft: { nonce: number; fields: Record<string, unknown> } | null
   aiWishlistEditDraft: { nonce: number; id: number; changes: Record<string, unknown> } | null
+  aiSavingsGoalDraft: { nonce: number; fields: Record<string, unknown> } | null
+  aiSavingsGoalEditDraft: { nonce: number; id: number; changes: Record<string, unknown> } | null
   aiLedgerExportRequest: { nonce: number } | null
   // The batch's final destination. Carried as state with a nonce rather than applied inline so
   // App performs the navigation in a commit of its own, after the mutations it follows have
@@ -28,6 +30,8 @@ const initialState: AiActionRouterState = {
   aiRecurringEditDraft: null,
   aiWishlistDraft: null,
   aiWishlistEditDraft: null,
+  aiSavingsGoalDraft: null,
+  aiSavingsGoalEditDraft: null,
   aiLedgerExportRequest: null,
   aiNavigation: null,
 }

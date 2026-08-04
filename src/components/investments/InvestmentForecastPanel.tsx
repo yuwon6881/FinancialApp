@@ -13,7 +13,9 @@ import {
   toTodayMoney,
 } from '../../lib/investmentForecast'
 import { formatCurrencyVal } from '../../lib/utils'
+import { BottomSheet } from '../ui/BottomSheet'
 import { Button } from '../ui/Button'
+import { ChevronDown } from 'lucide-react'
 import { FormField } from '../ui/FormField'
 import { RangeInput } from '../ui/RangeInput'
 import { InvestmentForecastChart } from './InvestmentForecastChart'
@@ -130,20 +132,38 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
     )
   }
 
+  const [isOpen, setIsOpen] = useState(false)
+
   return (
-    <section ref={sectionRef} aria-labelledby="forecast-title" className="app-panel min-w-0 rounded-2xl border border-border/60 bg-card/92 p-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <>
+      <Button
+        variant="unstyled"
+        onClick={() => setIsOpen(true)}
+        aria-expanded={isOpen}
+        className="app-panel group flex w-full cursor-pointer items-center justify-between rounded-2xl border border-border/60 bg-card/92 p-5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
         <div>
           <h2 id="forecast-title" className="text-base font-bold text-foreground">Investment forecast</h2>
-          <p className="mt-1 max-w-2xl text-xs text-muted-foreground">Explore possible long-term outcomes without changing any money or recorded activity.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Explore possible long-term outcomes without changing any money or recorded activity.</p>
         </div>
-        <div className="flex shrink-0 rounded-xl bg-muted/40 p-1" role="group" aria-label="Forecast money view">
-          <Button variant="unstyled" onClick={() => setTodayMoney(false)} aria-pressed={!todayMoney} className={`cursor-pointer rounded-lg px-2.5 py-1.5 text-[10px] font-bold ${!todayMoney ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}>Future money</Button>
-          <Button variant="unstyled" onClick={() => setTodayMoney(true)} aria-pressed={todayMoney} className={`cursor-pointer rounded-lg px-2.5 py-1.5 text-[10px] font-bold ${todayMoney ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}>Today’s money</Button>
-        </div>
-      </div>
+        <ChevronDown className="size-4 -rotate-90 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-foreground" />
+      </Button>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-2">
+      <BottomSheet
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        title="Investment forecast"
+        description="Explore possible long-term outcomes without changing any money or recorded activity."
+        maxWidthClassName="max-w-4xl"
+      >
+        <div ref={sectionRef} className="min-w-0">
+          <div className="flex shrink-0 justify-end rounded-xl bg-muted/40 p-1 sm:w-max" role="group" aria-label="Forecast money view">
+
+            <Button variant="unstyled" onClick={() => setTodayMoney(false)} aria-pressed={!todayMoney} className={`cursor-pointer rounded-lg px-2.5 py-1.5 text-[10px] font-bold ${!todayMoney ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}>Future money</Button>
+            <Button variant="unstyled" onClick={() => setTodayMoney(true)} aria-pressed={todayMoney} className={`cursor-pointer rounded-lg px-2.5 py-1.5 text-[10px] font-bold ${todayMoney ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}>Today’s money</Button>
+          </div>
+
+          <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <div className="space-y-5 rounded-2xl border border-border/50 bg-muted/15 p-4">
           <FormField label={<span className="flex justify-between gap-3"><span>Years ahead</span><strong className="text-foreground">{years} years</strong></span>} hint="Longer forecasts have a wider range of possible outcomes.">
             <RangeInput aria-label="Forecast years" min={FORECAST_MIN_YEARS} max={FORECAST_MAX_YEARS} step={1} value={years} disabled={masked} onChange={event => setYears(Number(event.target.value))} />
@@ -198,15 +218,17 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
         <div role="status" className="mt-5 flex h-48 items-center justify-center text-xs text-muted-foreground">Preparing possible paths…</div>
       )}
 
-      <details className="mt-5 rounded-xl border border-border/50 bg-muted/15 p-3">
-        <summary className="cursor-pointer text-xs font-bold text-foreground">How this forecast was worked out</summary>
-        <div className="mt-3 space-y-2 text-[11px] leading-relaxed text-muted-foreground">
-          <p>It tests 10,000 possible monthly paths using your investment-plan mix. The return assumptions are {percentage(model.annualReturn)} a year with a conservative {percentage(model.annualVolatility)} fluctuation estimate. Your personal yearly return is historical context and is not reused as a promise about the future.</p>
-          <p>The assumptions use the midpoints and volatility figures in the <a className="font-semibold text-primary underline underline-offset-2" href={FORECAST_ASSUMPTIONS.sourceUrl} target="_blank" rel="noreferrer">{FORECAST_ASSUMPTIONS.sourceName}</a>, dated {FORECAST_ASSUMPTIONS.asOf}. The model assumes today’s portfolio and future deposits are invested to your plan, with fixed monthly deposits added at month-end.</p>
-          <p>These results are hypothetical, may change over time, and are not guaranteed. They exclude future tax, investment expenses, and exchange-rate changes. Read the <a className="font-semibold text-primary underline underline-offset-2" href="https://www.finra.org/rules-guidance/rulebooks/finra-rules/2214" target="_blank" rel="noreferrer">investment-analysis disclosure principles</a>.</p>
-          {forecast.initializationMs !== null && <p className="sr-only">The forecast paths were prepared in {Math.round(forecast.initializationMs)} milliseconds.</p>}
+        <details className="mt-5 rounded-xl border border-border/50 bg-muted/15 p-3">
+          <summary className="cursor-pointer text-xs font-bold text-foreground">How this forecast was worked out</summary>
+          <div className="mt-3 space-y-2 text-[11px] leading-relaxed text-muted-foreground">
+            <p>It tests 10,000 possible monthly paths using your investment-plan mix. The return assumptions are {percentage(model.annualReturn)} a year with a conservative {percentage(model.annualVolatility)} fluctuation estimate. Your personal yearly return is historical context and is not reused as a promise about the future.</p>
+            <p>The assumptions use the midpoints and volatility figures in the <span className="font-semibold text-primary">{FORECAST_ASSUMPTIONS.sourceName}</span>, dated {FORECAST_ASSUMPTIONS.asOf}. The model assumes today’s portfolio and future deposits are invested to your plan, with fixed monthly deposits added at month-end.</p>
+            <p>These results are hypothetical, may change over time, and are not guaranteed. They exclude future tax, investment expenses, and exchange-rate changes. Read the <span className="font-semibold text-primary">investment-analysis disclosure principles</span>.</p>
+            {forecast.initializationMs !== null && <p className="sr-only">The forecast paths were prepared in {Math.round(forecast.initializationMs)} milliseconds.</p>}
+          </div>
+        </details>
         </div>
-      </details>
-    </section>
+      </BottomSheet>
+    </>
   )
 }

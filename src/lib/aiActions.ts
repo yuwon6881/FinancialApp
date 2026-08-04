@@ -35,6 +35,15 @@ function capitalizePayloadField(payload: Record<string, unknown>, key: string): 
   return { ...payload, [key]: capitalizeWords(value) }
 }
 
+const CYCLE_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+function parseCycleKey(value: string | null): { month: string; year: number } | null {
+  if (!value) return null
+  const match = /^(19|20)(\d{2})-(0[1-9]|1[0-2])$/.exec(value)
+  if (!match) return null
+  return { year: Number(`${match[1]}${match[2]}`), month: CYCLE_MONTHS[Number(match[3]) - 1] }
+}
+
 /** Coerce a numeric payload field (number or numeric string), or null. */
 export function getPayloadNumber(payload: Record<string, unknown>, key: string): number | null {
   const value = payload[key]
@@ -49,6 +58,7 @@ export function getPayloadNumber(payload: Record<string, unknown>, key: string):
 /** Action types that mutate records — blocked while sensitive mode is active. */
 export const AI_MUTATION_TYPES = new Set<string>([
   'openAddLedgerDraft', 'openAddRecurringDraft', 'openAddWishlistDraft', 'openEditLedgerDraft', 'openEditRecurringDraft', 'openEditWishlistDraft',
+  'openAddSavingsGoalDraft', 'openEditSavingsGoalDraft',
   'requestDeleteLedger', 'requestDeleteRecurring', 'requestDeleteWishlist',
   'requestConfirmRecurringBill', 'requestDiscardRecurringBill',
   'requestPurchaseWishlist', 'requestUnpurchaseWishlist', 'toggleRecurring', 'updateRecurringReminder',
@@ -62,11 +72,12 @@ export const AI_MUTATION_TYPES = new Set<string>([
  * than on the tab changing value).
  */
 export interface AiNavigationTarget {
-  tab: 'dashboard' | 'recurring' | 'wishlist' | 'ledger' | 'drafts'
+  tab: 'dashboard' | 'reports' | 'investments' | 'recurring' | 'wishlist' | 'ledger' | 'drafts'
   /** Recurring payment to scroll to and highlight on the Recurring tab. */
   recurringId?: string | null
   /** Transaction to scroll to and highlight in the ledger list. */
   ledgerTxId?: string | null
+  cycleKey?: string | null
 }
 
 /**
@@ -93,6 +104,8 @@ export function dispatchAiActionsForApp(
     setAiLedgerEditDraft: value => dispatch({ aiLedgerEditDraft: value }),
     setAiRecurringEditDraft: value => dispatch({ aiRecurringEditDraft: value }),
     setAiWishlistEditDraft: value => dispatch({ aiWishlistEditDraft: value }),
+    setAiSavingsGoalDraft: value => dispatch({ aiSavingsGoalDraft: value }),
+    setAiSavingsGoalEditDraft: value => dispatch({ aiSavingsGoalEditDraft: value }),
     setAiLedgerExportRequest: value => dispatch({ aiLedgerExportRequest: value }),
     requestDeleteLedger: id => requestAiLedgerDelete(id, {
       showToast: options.showToast,
@@ -157,6 +170,8 @@ export interface AiActionsDeps {
   setAiLedgerEditDraft: (v: NonceEditDraft<string>) => void
   setAiRecurringEditDraft: (v: NonceEditDraft<string>) => void
   setAiWishlistEditDraft: (v: NonceEditDraft<number>) => void
+  setAiSavingsGoalDraft: (v: NonceDraft) => void
+  setAiSavingsGoalEditDraft: (v: NonceEditDraft<number>) => void
   setAiLedgerExportRequest: (v: { nonce: number }) => void
   requestDeleteLedger: (id: string) => Promise<void> | void
   requestDeletePayment: (id: string) => void
@@ -268,6 +283,12 @@ export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDe
     }
     if (action.type === 'openDashboard') {
       setDestination({ tab: 'dashboard' })
+    } else if (action.type === 'openReports') {
+      const cycle = parseCycleKey(getPayloadString(payload, 'cycleKey'))
+      if (cycle) await deps.handleSelectPeriod(cycle.month, cycle.year)
+      setDestination({ tab: 'reports', cycleKey: cycle ? `${cycle.year}-${String(CYCLE_MONTHS.indexOf(cycle.month) + 1).padStart(2, '0')}` : null })
+    } else if (action.type === 'openInvestments') {
+      setDestination({ tab: 'investments' })
     } else if (action.type === 'openRecurring') {
       setDestination({ tab: 'recurring' })
     } else if (action.type === 'openWishlist') {
@@ -319,6 +340,9 @@ export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDe
     } else if (action.type === 'openAddWishlistDraft') {
       deps.setAiWishlistDraft({ nonce: deps.nextNonce(), fields: capitalizePayloadField(payload, 'name') })
       setDestination({ tab: 'wishlist' })
+    } else if (action.type === 'openAddSavingsGoalDraft') {
+      deps.setAiSavingsGoalDraft({ nonce: deps.nextNonce(), fields: capitalizePayloadField(payload, 'name') })
+      setDestination({ tab: 'wishlist' })
     } else if (action.type === 'openEditLedgerDraft') {
       if (deps.hideSensitive) {
         deps.showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning')
@@ -350,6 +374,17 @@ export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDe
       const changes = payload.changes && typeof payload.changes === 'object' ? payload.changes as Record<string, unknown> : {}
       if (id != null) {
         deps.setAiWishlistEditDraft({ nonce: deps.nextNonce(), id, changes })
+        setDestination({ tab: 'wishlist' })
+      }
+    } else if (action.type === 'openEditSavingsGoalDraft') {
+      if (deps.hideSensitive) {
+        deps.showToast('Unhide balances to make changes.', 'Sensitive mode active', 'warning')
+        continue
+      }
+      const id = getPayloadNumber(payload, 'id')
+      const changes = payload.changes && typeof payload.changes === 'object' ? payload.changes as Record<string, unknown> : {}
+      if (id != null && Object.keys(changes).length > 0) {
+        deps.setAiSavingsGoalEditDraft({ nonce: deps.nextNonce(), id, changes })
         setDestination({ tab: 'wishlist' })
       }
     } else if (action.type === 'requestDeleteLedger') {
