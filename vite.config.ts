@@ -44,7 +44,6 @@ function cspMetaPlugin(apiUrl: string | undefined): Plugin {
         `connect-src ${connectSrc}`,
         "worker-src 'self'",
         "manifest-src 'self'",
-        "frame-src 'self' blob:",
         "object-src 'none'",
         "base-uri 'self'",
         "form-action 'self'",

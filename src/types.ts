@@ -218,20 +218,22 @@ export interface InvestmentAllocationOverview {
   availableCash: number
   minimumContribution?: number
   /**
-   * How to split the next routine Growth deposit across the sleeves. Present even
-   * when the plan is on track — see InvestmentAllocationService.BuildContributionPlan.
+   * How to split all uninvested broker cash plus the next routine Growth deposit.
+   * Large deviations raise the amount to the no-sale total required to restore target.
    */
   contributionPlan?: InvestmentContributionPlan
 }
 
 export interface InvestmentContributionPlan {
-  /** The deposit being split, in the app currency. */
+  /** Total cash and new money being split, in the app currency. */
   amount: number
+  /** Observed completed-cycle contribution, excluding broker cash and one-time catch-up money. */
+  routineContribution?: number
   /** Plain-language explanation of where `amount` came from. */
   basis: string
   /** Completed cycles the median was taken over; 0 when falling back to idle cash. */
   cyclesObserved: number
-  /** True when `amount` is uninvested cash rather than an observed deposit rhythm. */
+  /** True when no completed-cycle deposit rhythm was available. */
   isEstimated: boolean
   sleeves: Array<{
     sleeve: InvestmentAllocationSleeve

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { VaultDocument } from '../../../types'
 import { DocumentPreviewSheet } from './DocumentPreviewSheet'
@@ -11,6 +11,12 @@ vi.mock('../../../lib/api/documents', () => ({
   getDocumentContent: (...args: unknown[]) => getDocumentContent(...args),
   getDocumentPreviewUrl: (id: number) => `/api/documents/${id}/content`,
   downloadDocument: vi.fn(),
+}))
+
+vi.mock('./PdfDocumentPreview', () => ({
+  PdfDocumentPreview: ({ onReady }: { onReady: () => void }) => (
+    <button type="button" onClick={onReady}>Rendered PDF pages</button>
+  ),
 }))
 
 const document: VaultDocument = {
@@ -32,7 +38,7 @@ describe('DocumentPreviewSheet', () => {
     getDocumentContent.mockReset()
   })
 
-  it('renders PDF content through the authenticated same-origin viewer URL', async () => {
+  it('renders fetched PDF bytes with the app-owned viewer', async () => {
     const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:preview')
     const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
     getDocumentContent.mockResolvedValue({
@@ -43,16 +49,10 @@ describe('DocumentPreviewSheet', () => {
 
     const { unmount } = render(<DocumentPreviewSheet document={document} onClose={vi.fn()} />)
 
-    const frame = await screen.findByTitle('Preview of tax.pdf')
-    expect(frame.getAttribute('src')).toContain('/api/documents/1/content')
-    expect(createObjectUrl).not.toHaveBeenCalled()
-    expect(screen.getByRole('status').textContent).toContain('Loading preview')
-
-    vi.useFakeTimers()
-    fireEvent.load(frame)
-    expect(screen.getByRole('status').textContent).toContain('Loading preview')
-
-    act(() => vi.advanceTimersByTime(1500))
+    expect(await screen.findByText('Rendered PDF pages')).toBeTruthy()
+    expect(getDocumentContent).toHaveBeenCalledWith(1, 'tax.pdf')
+    expect(globalThis.document.querySelector('iframe')).toBeNull()
+    fireEvent.click(screen.getByText('Rendered PDF pages'))
     expect(screen.queryByRole('status')).toBeNull()
 
     unmount()
@@ -106,7 +106,7 @@ describe('DocumentPreviewSheet', () => {
         <DocumentPreviewSheet document={document} onClose={onClose} />
       </AppPrefsContext.Provider>,
     )
-    await screen.findByTitle('Preview of tax.pdf')
+    await screen.findByText('Rendered PDF pages')
 
     rerender(
       <AppPrefsContext.Provider value={{ ...visiblePrefs, hideSensitive: true }}>

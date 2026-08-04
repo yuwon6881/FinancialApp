@@ -6,6 +6,7 @@ import { usesCookieAuth } from '../../../lib/auth'
 import { useAppPrefs, useAppUi } from '../../../contexts/AppContext'
 import { BottomSheet } from '../../ui/BottomSheet'
 import { Button } from '../../ui/Button'
+import { PdfDocumentPreview } from './PdfDocumentPreview'
 
 interface DocumentPreviewSheetProps {
   document: VaultDocument | null
@@ -14,7 +15,7 @@ interface DocumentPreviewSheetProps {
 
 type PreviewState =
   | { status: 'idle' | 'loading' }
-  | { status: 'ready'; url: string; text?: string; contentType: string }
+  | { status: 'ready'; url: string; blob?: Blob; text?: string; contentType: string }
   | { status: 'unsupported' }
   | { status: 'error' }
 
@@ -26,14 +27,11 @@ function normalizedContentType(contentType: string) {
   return contentType.split(';', 1)[0].trim().toLowerCase()
 }
 
-const PDF_VIEWER_PAINT_GRACE_MS = 1500
-
 export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheetProps) {
   const { hideSensitive } = useAppPrefs()
   const { showToast } = useAppUi()
   const [preview, setPreview] = useState<PreviewState>({ status: 'idle' })
   const [mediaLoaded, setMediaLoaded] = useState(false)
-  const pdfPaintTimerRef = useRef<number | null>(null)
   const onCloseRef = useRef(onClose)
   const showToastRef = useRef(showToast)
 
@@ -48,26 +46,17 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
 
     let active = true
     let objectUrl: string | null = null
-    if (pdfPaintTimerRef.current !== null) window.clearTimeout(pdfPaintTimerRef.current)
     setMediaLoaded(false)
     setPreview({ status: 'loading' })
 
-    // Browser PWAs can send the authenticated cookie from an iframe/image request,
-    // while a Capacitor WebView cannot attach its bearer token there. Use the direct
-    // same-origin response for the browser PDF viewer (and images) so mobile Chrome
-    // does not have to open a PDF from a blob URL. Native clients keep the fetched
-    // object-URL path below.
+    // Browser images can use the authenticated same-origin response directly. PDFs are
+    // always fetched so the app-owned canvas renderer behaves consistently in installed
+    // Brave/Chrome PWAs and Capacitor instead of delegating to a browser PDF plug-in.
     const storedContentType = normalizedContentType(document.contentType)
     const directPreviewUrl = getDocumentPreviewUrl(document.id)
-    if (usesCookieAuth && directPreviewUrl.startsWith('/') && (storedContentType === 'application/pdf' || canPreviewAsImage(storedContentType))) {
+    if (usesCookieAuth && directPreviewUrl.startsWith('/') && canPreviewAsImage(storedContentType)) {
       setPreview({ status: 'ready', url: directPreviewUrl, contentType: storedContentType })
-      return () => {
-        active = false
-        if (pdfPaintTimerRef.current !== null) {
-          window.clearTimeout(pdfPaintTimerRef.current)
-          pdfPaintTimerRef.current = null
-        }
-      }
+      return () => { active = false }
     }
 
     void getDocumentContent(document.id, document.originalFileName)
@@ -79,7 +68,11 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
           if (active) setPreview({ status: 'ready', url: '', text, contentType })
           return
         }
-        if (contentType === 'application/pdf' || canPreviewAsImage(contentType)) {
+        if (contentType === 'application/pdf') {
+          setPreview({ status: 'ready', url: '', blob: content.blob, contentType })
+          return
+        }
+        if (canPreviewAsImage(contentType)) {
           objectUrl = URL.createObjectURL(content.blob)
           setPreview({ status: 'ready', url: objectUrl, contentType })
           return
@@ -94,10 +87,6 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
 
     return () => {
       active = false
-      if (pdfPaintTimerRef.current !== null) {
-        window.clearTimeout(pdfPaintTimerRef.current)
-        pdfPaintTimerRef.current = null
-      }
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
   }, [document, hideSensitive])
@@ -105,10 +94,6 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
   const waitingForMedia = preview.status === 'ready' && preview.text === undefined && !mediaLoaded
   const isLoading = preview.status === 'idle' || preview.status === 'loading' || waitingForMedia
   const handleMediaError = () => {
-    if (pdfPaintTimerRef.current !== null) {
-      window.clearTimeout(pdfPaintTimerRef.current)
-      pdfPaintTimerRef.current = null
-    }
     setMediaLoaded(true)
     setPreview({ status: 'error' })
     showToastRef.current('The document preview could not be loaded.', 'Preview Failed', 'error')
@@ -142,18 +127,11 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
             Loading preview…
           </div>
         )}
-        {preview.status === 'ready' && preview.contentType === 'application/pdf' && (
-          <iframe
-            src={preview.url}
-            title={`Preview of ${document?.originalFileName ?? 'document'}`}
-            className="h-full min-h-[60vh] w-full border-0 bg-card"
-            onLoad={() => {
-              if (pdfPaintTimerRef.current !== null) window.clearTimeout(pdfPaintTimerRef.current)
-              pdfPaintTimerRef.current = window.setTimeout(() => {
-                pdfPaintTimerRef.current = null
-                setMediaLoaded(true)
-              }, PDF_VIEWER_PAINT_GRACE_MS)
-            }}
+        {preview.status === 'ready' && preview.contentType === 'application/pdf' && preview.blob && (
+          <PdfDocumentPreview
+            blob={preview.blob}
+            fileName={document?.originalFileName ?? 'document.pdf'}
+            onReady={() => setMediaLoaded(true)}
             onError={handleMediaError}
           />
         )}

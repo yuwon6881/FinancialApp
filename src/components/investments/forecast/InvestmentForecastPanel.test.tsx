@@ -53,6 +53,7 @@ const portfolio = (isEstimated = false): InvestmentPortfolio => ({
     availableCash: 0,
     contributionPlan: {
       amount: 100,
+      routineContribution: isEstimated ? undefined : 100,
       basis: isEstimated ? 'Uninvested cash.' : 'Completed cycles.',
       cyclesObserved: isEstimated ? 0 : 3,
       isEstimated,

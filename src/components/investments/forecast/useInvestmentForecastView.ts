@@ -22,9 +22,10 @@ import { useInvestmentForecast } from './useInvestmentForecast'
  */
 export function useInvestmentForecastView(portfolio: InvestmentPortfolio, nearViewport: boolean) {
   const startValue = Math.max(0, portfolio.summary.totalValue ?? 0)
-  const observedContribution = portfolio.allocation.contributionPlan?.isEstimated
-    ? 0
-    : Math.max(0, portfolio.allocation.contributionPlan?.amount ?? 0)
+  const observedContribution = Math.max(
+    0,
+    portfolio.allocation.contributionPlan?.routineContribution ?? 0,
+  )
   const model = useMemo(
     () => buildForecastModel(portfolio.allocation.plan),
     [

@@ -35,7 +35,7 @@ describe('InvestmentPlanPanel guidance', () => {
     expect(screen.queryByText('What to do next')).toBeNull()
   })
 
-  it('shows every ordered scenario step and defaults to reporting currency', () => {
+  it('uses the same three-card split instead of ordered steps when off target', () => {
     const watch: InvestmentAllocationOverview = {
       ...allocation,
       status: 'Watch',
@@ -45,29 +45,38 @@ describe('InvestmentPlanPanel guidance', () => {
         { priority: 3, kind: 'Sell', sleeve: 'USEquity', amount: 20, message: 'sell' },
         { priority: 4, kind: 'TransferBuy', sleeve: 'Bonds', amount: 20, message: 'reinvest' },
       ],
+      contributionPlan: {
+        amount: 120,
+        basis: 'The total needed to restore your target without selling. It includes RM 20.00 of uninvested cash already in your brokerage accounts; the remaining RM 100.00 is new money.',
+        cyclesObserved: 1,
+        isEstimated: false,
+        sleeves: [
+          { sleeve: 'USEquity', label: 'US Equity', amount: 0, percentageOfContribution: 0, projectedPercentage: 66, projectedDriftPercentagePoints: 0 },
+          { sleeve: 'InternationalExUS', label: 'International ex-US', amount: 20, percentageOfContribution: 16.7, projectedPercentage: 10, projectedDriftPercentagePoints: 0 },
+          { sleeve: 'Bonds', label: 'Bonds', amount: 100, percentageOfContribution: 83.3, projectedPercentage: 24, projectedDriftPercentagePoints: 0 },
+        ],
+      },
     }
     render(<InvestmentPlanPanel allocation={watch} holdings={[]} instruments={[]} reference={{ currency: 'USD', rate: 0.25 }} masked={false} onNavigate={vi.fn()} />)
 
-    expect(screen.getByText('What to do next')).toBeTruthy()
-    expect(screen.getByText(/usual completed-cycle Growth deposit/).textContent).toContain('RM')
-    expect(screen.getByText(/Only after investing new money/)).toBeTruthy()
-    expect(screen.getByText(/Reinvest/)).toBeTruthy()
+    expect(screen.queryByText('What to do next')).toBeNull()
+    expect(screen.getByText('Your next investment, split three ways')).toBeTruthy()
+    expect(screen.getByText('RM 120.00 to invest')).toBeTruthy()
+    expect(screen.getByText('RM 100.00')).toBeTruthy()
+    expect(screen.getByText(/cash already.*remaining.*new money/i)).toBeTruthy()
   })
 
-  it('omits available-cash guidance and renumbers the useful steps', () => {
+  it('keeps incomplete setup guidance available', () => {
     const watch: InvestmentAllocationOverview = {
       ...allocation,
-      status: 'Watch',
-      recommendations: [
-        { priority: 1, kind: 'UseCash', amount: 2.12, message: 'invest available cash' },
-        { priority: 2, kind: 'Buy', sleeve: 'Bonds', amount: 100, message: 'buy' },
-      ],
+      status: 'Incomplete',
+      recommendations: [],
+      incompleteReasons: ['Assign VTI to a basket.'],
     }
     render(<InvestmentPlanPanel allocation={watch} holdings={[]} instruments={[]} masked={false} onNavigate={vi.fn()} />)
 
-    expect(screen.queryByText(/available cash/i)).toBeNull()
-    expect(screen.getByText('1.')).toBeTruthy()
-    expect(screen.queryByText('2.')).toBeNull()
+    expect(screen.getByText('What to do next')).toBeTruthy()
+    expect(screen.getByText(/Assign VTI/)).toBeTruthy()
   })
 })
 
@@ -92,9 +101,9 @@ describe('InvestmentPlanPanel contribution split', () => {
 
     // The rebalancing guidance stays hidden; the routine split does not.
     expect(screen.queryByText('What to do next')).toBeNull()
-    expect(screen.getByText('Your next deposit, split three ways')).toBeTruthy()
+    expect(screen.getByText('Your next investment, split three ways')).toBeTruthy()
     expect(screen.getByText('RM 660.00')).toBeTruthy()
-    expect(screen.getByText(/66.0% of this deposit/)).toBeTruthy()
+    expect(screen.getByText(/66.0% of this amount/)).toBeTruthy()
     expect(screen.getByText(/median of your Growth deposits/)).toBeTruthy()
   })
 
@@ -108,7 +117,7 @@ describe('InvestmentPlanPanel contribution split', () => {
   it('omits the section when there is nothing ready to invest', () => {
     render(<InvestmentPlanPanel allocation={allocation} holdings={[]} instruments={[]} masked={false} onNavigate={vi.fn()} />)
 
-    expect(screen.queryByText('Your next deposit, split three ways')).toBeNull()
+    expect(screen.queryByText('Your next investment, split three ways')).toBeNull()
   })
 })
 

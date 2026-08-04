@@ -4,7 +4,7 @@ import type { AppTab, InvestmentAllocationOverview, InvestmentAllocationStatus, 
 import { Button } from '../ui/Button'
 import { InfoHint } from '../ui/InfoHint'
 import { formatCurrencyVal } from '../../lib/utils'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { allocationStatusLabel, buildSleeveIndex, UNASSIGNED_SLEEVE_KEY } from '../../lib/investmentAllocation'
 import { breakdownBySleeve } from '../../lib/investmentSleeveBreakdown'
 import { SleeveCard } from './SleeveCard'
@@ -23,7 +23,6 @@ export function InvestmentPlanPanel({
   allocation,
   holdings,
   instruments,
-  reference,
   masked,
   onNavigate,
 }: {
@@ -35,16 +34,12 @@ export function InvestmentPlanPanel({
   masked: boolean
   onNavigate: (tab: AppTab) => void
 }) {
-  const [showReference, setShowReference] = useState(false)
   const reduceMotion = useReducedMotion()
-  const canToggle = reference !== undefined && reference.currency !== allocation.appCurrency
-  const inReference = showReference && canToggle
-  const rate = inReference ? reference!.rate : 1
-  const currency = inReference ? reference!.currency : allocation.appCurrency
+  const currency = allocation.appCurrency
 
   const money = (value?: number) => value === undefined
     ? 'Incomplete'
-    : masked ? '••••' : formatCurrencyVal(inReference ? value / rate : value, currency)
+    : masked ? '••••' : formatCurrencyVal(value, currency)
   const configure = () => {
     const next = new URL(window.location.href)
     next.searchParams.set('section', 'investment-plan')
@@ -54,11 +49,7 @@ export function InvestmentPlanPanel({
   const StatusIcon = allocation.status === 'OnTrack'
     ? CheckCircle2
     : allocation.status === 'Incomplete' || allocation.status === 'NotStarted' ? CircleHelp : AlertTriangle
-  const actionableRecommendations = allocation.recommendations.filter(
-    recommendation => recommendation.kind !== 'UseCash',
-  )
-  const showGuidance = allocation.status !== 'OnTrack' &&
-    (allocation.incompleteReasons.length > 0 || actionableRecommendations.length > 0)
+  const showGuidance = allocation.incompleteReasons.length > 0
   const contributionPlan = allocation.contributionPlan
   // Grouped once here, not per card — every card needs a different slice of the
   // same single pass over the holdings.
@@ -130,11 +121,11 @@ export function InvestmentPlanPanel({
         <div className="mt-5 rounded-xl border border-border/50 bg-muted/20 p-4 transition-all duration-300 hover:border-primary/20 hover:bg-muted/30 hover:shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <h3 className="flex items-center gap-1 text-xs font-bold text-foreground">
-              Your next deposit, split three ways
+              Your next investment, split three ways
               <InfoHint
-                label="how your next deposit is split"
+                label="how your next investment is split"
                 align="left"
-                text="Your routine Growth money, divided so the mix you hold keeps matching your target. On target, this is simply your target percentages. If a basket has drifted low, more of the deposit goes there so the mix corrects itself without you selling anything."
+                text="All uninvested cash already in your brokerage accounts, plus your routine Growth money when available. If a basket has drifted low, more goes there. For a large gap, the total rises to the amount needed to restore your target without selling."
               />
             </h3>
             <span className="rounded-full border border-border/60 bg-background/60 px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
@@ -153,7 +144,7 @@ export function InvestmentPlanPanel({
                 </div>
                 <strong className="mt-2 block text-lg text-foreground">{money(sleeve.amount)}</strong>
                 <p className="mt-0.5 text-[10px] text-muted-foreground">
-                  {sleeve.percentageOfContribution.toFixed(1)}% of this deposit · leaves you at {sleeve.projectedPercentage.toFixed(1)}%
+                  {sleeve.percentageOfContribution.toFixed(1)}% of this amount · leaves you at {sleeve.projectedPercentage.toFixed(1)}%
                   {Math.abs(sleeve.projectedDriftPercentagePoints) >= 0.05
                     ? ` (${sleeve.projectedDriftPercentagePoints > 0 ? '+' : ''}${sleeve.projectedDriftPercentagePoints.toFixed(1)} off target)`
                     : ' (on target)'}
@@ -163,7 +154,6 @@ export function InvestmentPlanPanel({
           </ul>
           <p className="mt-3 text-[10px] text-muted-foreground">
             {contributionPlan.basis} Buying in these proportions keeps your mix on target without selling anything.
-            {contributionPlan.isEstimated ? ' Record a Growth deposit and this will follow your own rhythm instead.' : ''}
           </p>
         </div>
       )}
@@ -211,51 +201,13 @@ export function InvestmentPlanPanel({
               <InfoHint
                 label="what to do next"
                 align="left"
-                text="Steps in order, cheapest first: add new money before selling anything."
+                text="Complete the missing setup so every holding can be included in your three-fund plan."
               />
             </h3>
-            {canToggle && (
-              <div className="flex rounded-xl bg-muted/40 p-1">
-                <Button variant="unstyled" type="button" onClick={() => setShowReference(true)} aria-pressed={showReference} className={`cursor-pointer rounded-lg px-2 py-1 text-[10px] font-bold transition-all duration-200 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${showReference ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}>{reference!.currency}</Button>
-                <Button variant="unstyled" type="button" onClick={() => setShowReference(false)} aria-pressed={!showReference} className={`cursor-pointer rounded-lg px-2 py-1 text-[10px] font-bold transition-all duration-200 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${!showReference ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}>{allocation.appCurrency}</Button>
-              </div>
-            )}
           </div>
-          {allocation.incompleteReasons.length > 0 ? (
-            <ul className="mt-3 space-y-2 text-xs text-muted-foreground">
-              {allocation.incompleteReasons.map(reason => <li key={reason}>• {reason}</li>)}
-            </ul>
-          ) : actionableRecommendations.length > 0 ? (
-            <ol className="mt-3 space-y-2">
-              {actionableRecommendations.map((recommendation, index) => {
-                const amountStr = money(recommendation.amount)
-                const sleeve = recommendation.sleeve ? allocation.sleeves.find(s => s.sleeve === recommendation.sleeve)?.label : ''
-                let customMessage = masked ? recommendation.message.replace(/[A-Z]{3} [\d,.]+/g, '••••') : recommendation.message
-                switch(recommendation.kind) {
-                  case 'TopUp': customMessage = `Use your usual completed-cycle Growth deposit of ${amountStr} before considering any sale.`; break
-                  case 'Buy': customMessage = `Buy ${amountStr} of ${sleeve} with new money.`; break
-                  case 'Sell': customMessage = `Only after investing new money, sell ${amountStr} of ${sleeve}.`; break
-                  case 'TransferBuy': customMessage = `Reinvest ${amountStr} of sale proceeds into ${sleeve}.`; break
-                }
-                return (
-                  <m.li
-                    key={`${recommendation.kind}-${recommendation.sleeve ?? index}`}
-                    initial={reduceMotion ? false : { opacity: 0, x: -6 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.25, delay: reduceMotion ? 0 : index * 0.05 }}
-                    className="group/guidance flex gap-2 rounded-lg px-2 py-1.5 text-xs text-muted-foreground transition-colors duration-200 hover:bg-background/70 hover:text-foreground"
-                  >
-                    <span className="font-bold text-foreground transition-transform duration-200 group-hover/guidance:translate-x-0.5">{index + 1}.</span>
-                    <span>{customMessage}</span>
-                  </m.li>
-                )
-              })}
-            </ol>
-          ) : (
-            <p className="mt-3 text-xs text-muted-foreground">
-              {allocation.status === 'OnTrack' ? 'No rebalancing action is needed.' : 'Complete your holdings to begin allocation guidance.'}
-            </p>
-          )}
+          <ul className="mt-3 space-y-2 text-xs text-muted-foreground">
+            {allocation.incompleteReasons.map(reason => <li key={reason}>• {reason}</li>)}
+          </ul>
           {allocation.status === 'Incomplete' && (
             <div className="mt-3 flex justify-end">
               <Button variant="ghost" size="sm" onClick={configure}>
