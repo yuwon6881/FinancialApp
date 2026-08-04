@@ -48,6 +48,15 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
   formatSensitive,
   onNavigateToLedger,
 }) => {
+  const renderProjected = (pending: number, value: number) => {
+    if (pending <= 0) return null
+    return (
+      <span className="block mt-1 text-orange-500 font-semibold">
+        Projected after pending: {formatSensitive(value)}
+      </span>
+    )
+  }
+
   return (
     <div className="app-panel p-6 bg-card/92 border border-border/60 rounded-2xl">
       <h3 className="text-base font-bold text-foreground mb-1">Financial Plan Metrics</h3>
@@ -99,7 +108,7 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
           </div>
           <span className="text-[10px] text-muted-foreground block leading-relaxed">
             Plan Target: Deposit <strong>{(growthAlloc * 100).toFixed(0)}%</strong> of income ({formatSensitive(growthMetric.target)}) into savings this cycle.
-            {growthMetric.pending > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(growthMetric.projectedRemaining)}</span>}
+            {renderProjected(growthMetric.pending, growthMetric.projectedRemaining)}
           </span>
         </div>
 
@@ -137,7 +146,7 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
           </div>
           <span className="text-[10px] text-muted-foreground block leading-relaxed">
             Available budget: <strong>{formatSensitive(essentialsMetric.totalAvailable)}</strong>.
-            {essentialsMetric.pending > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(essentialsMetric.projectedRemaining)}</span>}
+            {renderProjected(essentialsMetric.pending, essentialsMetric.projectedRemaining)}
           </span>
         </div>
 
@@ -175,7 +184,7 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
           </div>
           <span className="text-[10px] text-muted-foreground block leading-relaxed">
             Target Stability Fund goal is <strong>{formatSensitive(targetStabilityFund)}</strong>. Currently at {formatSensitive(stabilityMetric.currentBalance)}.
-            {stabilityMetric.pending > 0 && <span className="text-orange-500 font-semibold"> Projected after pending: {formatSensitive(stabilityMetric.projectedBalance)}</span>}
+            {renderProjected(stabilityMetric.pending, stabilityMetric.projectedBalance)}
           </span>
         </div>
       </div>
