@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  DEVICE_UNLOCK_REGISTRATION_EVENT,
   forgetDeviceUnlockCredential,
   getDeviceUnlockRegistrationMarker,
   getRegisteredDeviceCredentialId,
@@ -41,5 +42,26 @@ describe('device unlock registration', () => {
     forgetDeviceUnlockCredential('alice', '010203')
 
     expect(getDeviceUnlockRegistrationMarker('alice')).toBeNull()
+  })
+
+  it('announces every marker change so a live session can re-ask for its device status', () => {
+    const listener = vi.fn()
+    window.addEventListener(DEVICE_UNLOCK_REGISTRATION_EVENT, listener)
+    try {
+      rememberDeviceUnlockCredential('alice', 'AQID')
+      expect(listener).toHaveBeenCalledTimes(1)
+
+      forgetDeviceUnlockCredential('alice', '010203')
+      expect(listener).toHaveBeenCalledTimes(2)
+
+      // Removing a credential this browser never enrolled changes nothing to announce.
+      forgetDeviceUnlockCredential('alice', '040506')
+      expect(listener).toHaveBeenCalledTimes(2)
+
+      rememberExistingDeviceUnlock('alice')
+      expect(listener).toHaveBeenCalledTimes(3)
+    } finally {
+      window.removeEventListener(DEVICE_UNLOCK_REGISTRATION_EVENT, listener)
+    }
   })
 })

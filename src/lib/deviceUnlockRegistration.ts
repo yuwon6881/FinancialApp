@@ -7,6 +7,20 @@ function storageKey(username: string): string {
   return `${DEVICE_CREDENTIAL_ID_KEY_PREFIX}${username.trim().toUpperCase()}`
 }
 
+/**
+ * Fired whenever this browser's enrollment marker changes. `fetchAuthStatus` answers
+ * `hasFingerprintOnDevice` from that marker, so a live session's cached answer goes
+ * stale the moment Settings enrolls or removes a credential — the sensitive-reveal
+ * prompt would keep demanding a password until the next cold launch. Every writer
+ * below announces the change so listeners can re-ask instead of waiting for a reload.
+ */
+export const DEVICE_UNLOCK_REGISTRATION_EVENT = 'device-unlock-registration-changed'
+
+function announceRegistrationChange(): void {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new Event(DEVICE_UNLOCK_REGISTRATION_EVENT))
+}
+
 function normalizeCredentialId(value: string | null): string | null {
   if (!value || value === 'already_enrolled') return null
   if (/^(?:[0-9a-f]{2})+$/i.test(value)) return value.toUpperCase()
@@ -42,11 +56,13 @@ export function rememberDeviceUnlockCredential(username: string, credentialId: s
   localStorage.setItem(storageKey(username), normalized)
   // Keep the old key during the compatibility window for existing installations.
   localStorage.setItem(LEGACY_DEVICE_CREDENTIAL_ID_KEY, normalized)
+  announceRegistrationChange()
 }
 
 export function rememberExistingDeviceUnlock(username: string): void {
   if (!username.trim()) return
   localStorage.setItem(storageKey(username), 'already_enrolled')
+  announceRegistrationChange()
 }
 
 export function forgetDeviceUnlockCredential(username: string, credentialId: string): void {
@@ -55,10 +71,14 @@ export function forgetDeviceUnlockCredential(username: string, credentialId: str
 
   const accountKey = storageKey(username)
   const accountValue = localStorage.getItem(accountKey)
+  let changed = false
   if (accountValue === 'already_enrolled' || normalizeCredentialId(accountValue) === normalized) {
     localStorage.removeItem(accountKey)
+    changed = true
   }
   if (normalizeCredentialId(localStorage.getItem(LEGACY_DEVICE_CREDENTIAL_ID_KEY)) === normalized) {
     localStorage.removeItem(LEGACY_DEVICE_CREDENTIAL_ID_KEY)
+    changed = true
   }
+  if (changed) announceRegistrationChange()
 }

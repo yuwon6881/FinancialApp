@@ -213,7 +213,7 @@
        line or a legend swatch at 2.2:1 is not readable. All ≥3.5:1. */
     --chart-line: #966200;
     --chart-1: #b57a00;
-    --chart-2: #517a00;
+    --chart-2: #457f28;
     --chart-3: #176fad;
     --chart-4: #7c4fb2;
     --chart-5: #c0392f;
@@ -240,12 +240,16 @@
     --ledger-sky-400: #1d7a5e;
     --ledger-sky-500: #1d7a5e;
     --ledger-sky-600: #176249;
-    /* Green — Ayu string/vcs-added. Positive cash flow & credits. */
-    --ledger-income-300: #4d7400;
-    --ledger-income-400: #4d7400;
-    --ledger-income-500: #4d7400; /* the lightest step that still clears AA on its own 10% chip (4.69:1) */
-    --ledger-income-600: #446600;
-    --ledger-income-700: #3a5600;
+    /* Green — Ayu Light's vcs-added #6cbf43, not its string olive #86b300. Positive
+       cash flow & credits. Darkening the olive landed the whole family at hue ~80°,
+       which reads as mustard rather than green on solid fills ("Set up this device")
+       and on the queue's credit amounts. vcs-added darkens to the same hue ~101° the
+       dark theme already uses, so one number reads as the same colour in both. */
+    --ledger-income-300: #3f7a26;
+    --ledger-income-400: #3f7a26;
+    --ledger-income-500: #3f7a26; /* the lightest step that still clears AA on its own 10% chip (4.58:1) */
+    --ledger-income-600: #3d7524; /* solid fill under white `--on-vivid` (5.57:1) */
+    --ledger-income-700: #33621d;
     /* Red — Ayu error/vcs-removed. Debits, expenses, destructive. */
     --ledger-expense-300: #c0392f;
     --ledger-expense-400: #c0392f;
@@ -391,8 +395,13 @@
     --ledger-income-300: #cbeda7;
     --ledger-income-400: #a8e07d;
     --ledger-income-500: #7fd962;
-    --ledger-income-600: #3d8129; /* darker than the 500 on purpose: this step is a solid fill under `text-white` (TwoFactorSection CTA), where Ayu's bright green leaves white at 3.3:1 */
-    --ledger-income-700: #3d7d2b;
+    /* 600/700 back solid fills (the `success` Button, the FAB) whose ink is
+       `--on-vivid` — near-black here, as on the gold primary. So they stay in Ayu's
+       bright green rather than the muddy forest green a white-ink era needed: white
+       forced them below the 500, which read as a dead olive slab on the dark page.
+       Dark ink over these clears 9.8:1 (600) and 8.1:1 (700). */
+    --ledger-income-600: #6fce4e;
+    --ledger-income-700: #5cbd3c;
     /* Red — Ayu diffRemoved. Debits, expenses, destructive. */
     --ledger-expense-300: #f7b8bc;
     --ledger-expense-400: #f2949a;

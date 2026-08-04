@@ -7,6 +7,7 @@ import {
   getCachedFingerprintAssertOptions,
   prefetchFingerprintAssertOptions,
 } from '../lib/fingerprintOptionsCache'
+import { DEVICE_UNLOCK_REGISTRATION_EVENT } from '../lib/deviceUnlockRegistration'
 import { useAutoLock } from '../lib/useAutoLock'
 import { getExistingDeviceId } from '../lib/push/deviceId'
 
@@ -123,6 +124,17 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
   const [showPasswordPrompt, setShowPasswordPrompt] = useState<boolean>(false)
   const [hasFingerprintSetup, setHasFingerprintSetup] = useState<boolean>(false)
 
+  // Settings can enroll or remove this device's unlock credential while the session is
+  // live. `hasFingerprintOnDevice` is answered from the local enrollment marker, so the
+  // status below has to be re-asked when that marker moves; otherwise the sensitive
+  // reveal keeps falling back to the password prompt until the next cold launch.
+  const [deviceUnlockRevision, setDeviceUnlockRevision] = useState(0)
+  useEffect(() => {
+    const onRegistrationChange = () => setDeviceUnlockRevision(revision => revision + 1)
+    window.addEventListener(DEVICE_UNLOCK_REGISTRATION_EVENT, onRegistrationChange)
+    return () => window.removeEventListener(DEVICE_UNLOCK_REGISTRATION_EVENT, onRegistrationChange)
+  }, [])
+
   useEffect(() => {
     if (!token) {
       setHasFingerprintSetup(false)
@@ -154,7 +166,7 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
     return () => {
       cancelled = true
     }
-  }, [token, username])
+  }, [token, username, deviceUnlockRevision])
 
   useEffect(() => {
     if (!token || isLocked || !hideSensitive || !hasFingerprintSetup) return
