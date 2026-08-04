@@ -14,9 +14,6 @@ export interface ForecastAssetAssumption {
 
 export interface ForecastAssumptionSet {
   id: string
-  asOf: string
-  sourceName: string
-  sourceUrl: string
   defaultInflation: number
   assets: ForecastAssetAssumption[]
 }
@@ -53,9 +50,6 @@ export interface ForecastResult {
 
 export const FORECAST_ASSUMPTIONS: ForecastAssumptionSet = {
   id: 'vanguard-vcmm-2026-q2',
-  asOf: '2026-06-30',
-  sourceName: 'Vanguard Capital Markets Model',
-  sourceUrl: 'https://www.vanguardmexico.com/es/inicio/perspectivas/economia-y-mercados/vanguard-capital-markets-model-forecasts-2026',
   defaultInflation: 0.02,
   assets: [
     { key: 'USEquity', label: 'U.S. shares', annualReturn: 0.052, annualVolatility: 0.151 },

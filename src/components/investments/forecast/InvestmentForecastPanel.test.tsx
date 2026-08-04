@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { InvestmentPortfolio } from '../../types'
-import type { ForecastResult } from '../../lib/investmentForecast'
+import type { InvestmentPortfolio } from '../../../types'
+import type { ForecastResult } from '../../../lib/investmentForecast'
 import { InvestmentForecastPanel } from './InvestmentForecastPanel'
 import { useInvestmentForecast } from './useInvestmentForecast'
 
@@ -74,13 +74,51 @@ describe('InvestmentForecastPanel', () => {
   it('defaults to the observed completed-cycle pace and keeps target changes independent', () => {
     render(<InvestmentForecastPanel portfolio={portfolio()} masked={false} />)
     fireEvent.click(screen.getByRole('button', { name: /Investment forecast/ }))
-    
+
     const contribution = screen.getByLabelText('Hypothetical monthly contribution') as HTMLInputElement
-    const target = screen.getByLabelText('Forecast target amount')
     expect(contribution.value).toBe('100')
 
-    fireEvent.change(target, { target: { value: '50000' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add a target' }))
+    fireEvent.change(screen.getByLabelText('Forecast target amount'), { target: { value: '50000' } })
     expect(contribution.value).toBe('100')
+  })
+
+  it('draws no target until one is asked for, and drops it again on removal', () => {
+    render(<InvestmentForecastPanel portfolio={portfolio()} masked={false} />)
+    fireEvent.click(screen.getByRole('button', { name: /Investment forecast/ }))
+
+    expect(screen.queryByLabelText('Forecast target amount')).toBeNull()
+    expect(screen.queryByText('Chance of reaching your target')).toBeNull()
+    expect(screen.queryByText('Your target')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add a target' }))
+    expect(screen.getByLabelText('Forecast target amount')).toBeTruthy()
+    expect(screen.getByText('Chance of reaching your target')).toBeTruthy()
+    expect(screen.getByText(/Your target/)).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove target' }))
+    expect(screen.queryByLabelText('Forecast target amount')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Add a target' })).toBeTruthy()
+  })
+
+  it('reveals the inflation slider only alongside the today-money view', () => {
+    render(<InvestmentForecastPanel portfolio={portfolio()} masked={false} />)
+    fireEvent.click(screen.getByRole('button', { name: /Investment forecast/ }))
+
+    expect(screen.queryByLabelText(/Forecast inflation estimate/)).toBeNull()
+    fireEvent.click(screen.getByRole('switch', { name: /Show in today/ }))
+    expect(screen.getByLabelText('Forecast inflation estimate')).toBeTruthy()
+    fireEvent.click(screen.getByRole('switch', { name: /Show in today/ }))
+    expect(screen.queryByLabelText(/Forecast inflation estimate/)).toBeNull()
+  })
+
+  it('labels the chart scale and its span in years', () => {
+    render(<InvestmentForecastPanel portfolio={portfolio()} masked={false} />)
+    fireEvent.click(screen.getByRole('button', { name: /Investment forecast/ }))
+
+    expect(screen.getByText('Today')).toBeTruthy()
+    expect(screen.getByText('In 10 years')).toBeTruthy()
+    expect(screen.getByText('5 years')).toBeTruthy()
   })
 
   it('does not treat uninvested cash as an observed monthly pace', () => {
@@ -107,15 +145,16 @@ describe('InvestmentForecastPanel', () => {
   it('copies the required amount into local forecast state only', () => {
     render(<InvestmentForecastPanel portfolio={portfolio()} masked={false} />)
     fireEvent.click(screen.getByRole('button', { name: /Investment forecast/ }))
-    fireEvent.click(screen.getByRole('button', { name: 'Try this amount' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add a target' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Use this amount' }))
     expect((screen.getByLabelText('Hypothetical monthly contribution') as HTMLInputElement).value).toBe('125')
   })
 
   it('supports today-money display and warns beyond 30 years', () => {
     render(<InvestmentForecastPanel portfolio={portfolio()} masked={false} />)
     fireEvent.click(screen.getByRole('button', { name: /Investment forecast/ }))
-    fireEvent.click(screen.getByRole('button', { name: 'Today’s money' }))
-    expect(screen.getByRole('button', { name: 'Today’s money' }).getAttribute('aria-pressed')).toBe('true')
+    fireEvent.click(screen.getByRole('switch', { name: /Show in today/ }))
+    expect(screen.getByRole('switch', { name: /Show in today/ }).getAttribute('aria-checked')).toBe('true')
     fireEvent.change(screen.getByLabelText('Forecast years'), { target: { value: '40' } })
     expect(screen.getByText(/Years 31–50 extend beyond/)).toBeTruthy()
   })

@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ForecastModel, ForecastResult } from '../../lib/investmentForecast'
+import type { ForecastModel, ForecastResult } from '../../../lib/investmentForecast'
 import type {
   ForecastWorkerRequest,
   ForecastWorkerResponse,
-} from '../../lib/investmentForecast.worker'
+} from '../../../lib/investmentForecast.worker'
 
 interface ForecastRequest {
   startValue: number
@@ -28,7 +28,7 @@ export function useInvestmentForecast(model: ForecastModel, request: ForecastReq
     }
 
     const worker = new Worker(
-      new URL('../../lib/investmentForecast.worker.ts', import.meta.url),
+      new URL('../../../lib/investmentForecast.worker.ts', import.meta.url),
       { type: 'module' },
     )
     workerRef.current = worker

@@ -32,6 +32,17 @@ export function yAt(value: number, { height, padding = 10, min, max }: SeriesGeo
   return height - ((value - min) / (max - min || 1)) * (height - padding * 2) - padding
 }
 
+/**
+ * SVG `points` for a filled confidence band: the upper edge left-to-right, then
+ * the lower edge back right-to-left so the shape closes on itself.
+ */
+export function bandPolygon(upper: number[], lower: number[], geometry: SeriesGeometry) {
+  const count = Math.min(upper.length, lower.length)
+  const top = upper.slice(0, count).map((value, index) => `${xAt(index, count, geometry.width)},${yAt(value, geometry)}`)
+  const bottom = lower.slice(0, count).map((value, index) => `${xAt(index, count, geometry.width)},${yAt(value, geometry)}`).reverse()
+  return [...top, ...bottom].join(' ')
+}
+
 /** SVG `points` for a polyline, skipping entries with no value. */
 export function polylinePoints(values: Array<number | undefined>, geometry: SeriesGeometry) {
   return values

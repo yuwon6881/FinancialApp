@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { polylinePoints, seriesBounds, xAt, yAt } from './chartSeries'
+import { bandPolygon, polylinePoints, seriesBounds, xAt, yAt } from './chartSeries'
 
 describe('seriesBounds', () => {
   it('ignores gaps and anchors to zero so gains read against a stable floor', () => {
@@ -36,5 +36,17 @@ describe('polylinePoints', () => {
 
   it('keeps a flat line off the edges', () => {
     expect(yAt(50, geometry)).toBe(50)
+  })
+})
+
+describe('bandPolygon', () => {
+  const geometry = { width: 100, height: 100, padding: 10, min: 0, max: 100 }
+
+  it('walks the upper edge forward and the lower edge back so the shape closes', () => {
+    expect(bandPolygon([50, 100], [0, 25], geometry)).toBe('0,50 100,10 100,70 0,90')
+  })
+
+  it('stops at the shorter edge rather than drawing a half-open shape', () => {
+    expect(bandPolygon([50, 100], [0], geometry)).toBe('50,50 50,90')
   })
 })
