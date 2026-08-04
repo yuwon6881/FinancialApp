@@ -39,7 +39,7 @@ describe('DocumentPreviewSheet', () => {
   })
 
   it('renders fetched PDF bytes with the app-owned viewer', async () => {
-    const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:preview')
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:preview')
     const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
     getDocumentContent.mockResolvedValue({
       blob: new Blob(['pdf'], { type: 'application/pdf' }),

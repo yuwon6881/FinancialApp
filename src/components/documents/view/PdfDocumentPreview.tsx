@@ -22,7 +22,7 @@ export function PdfDocumentPreview({ blob, fileName, onReady, onError }: PdfDocu
 
     let active = true
     let loadingTask: { destroy: () => Promise<void> } | undefined
-    let loadedDocument: { destroy: () => Promise<void> } | undefined
+    let loadedDocument: { cleanup?: () => Promise<unknown>; destroy?: () => Promise<void> } | undefined
     const renderTasks: Array<{ cancel: () => void }> = []
 
     void (async () => {
@@ -37,7 +37,6 @@ export function PdfDocumentPreview({ blob, fileName, onReady, onError }: PdfDocu
         if (!active) return
         const task = pdfjs.getDocument({
           data,
-          isEvalSupported: false,
           useWasm: false,
         })
         loadingTask = task
@@ -82,7 +81,7 @@ export function PdfDocumentPreview({ blob, fileName, onReady, onError }: PdfDocu
       active = false
       renderTasks.forEach(task => task.cancel())
       canvasHost.replaceChildren()
-      void loadedDocument?.destroy()
+      void loadedDocument?.cleanup?.()
       void loadingTask?.destroy()
     }
   }, [blob])
