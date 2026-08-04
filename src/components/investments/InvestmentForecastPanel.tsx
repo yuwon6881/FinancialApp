@@ -31,7 +31,7 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
   portfolio: InvestmentPortfolio
   masked: boolean
 }) {
-  const sectionRef = useRef<HTMLElement>(null)
+  const sectionRef = useRef<HTMLDivElement>(null)
   const startValue = Math.max(0, portfolio.summary.totalValue ?? 0)
   const observedContribution = portfolio.allocation.contributionPlan?.isEstimated
     ? 0
@@ -123,6 +123,8 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
     setMonthlyContribution(Math.max(0, requiredContribution))
   }
 
+  const [isOpen, setIsOpen] = useState(false)
+
   if (startValue <= 0) {
     return (
       <section ref={sectionRef} aria-labelledby="forecast-title" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
@@ -131,8 +133,6 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
       </section>
     )
   }
-
-  const [isOpen, setIsOpen] = useState(false)
 
   return (
     <>

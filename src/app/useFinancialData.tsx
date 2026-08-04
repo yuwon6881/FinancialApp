@@ -1300,6 +1300,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     })
   }
 
+  // eslint-disable-next-line react-hooks/refs
   const wishlistSavingsActions = createWishlistSavingsActions({
     wishlist,
     savingsGoals,

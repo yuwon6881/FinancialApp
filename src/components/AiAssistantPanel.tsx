@@ -49,7 +49,7 @@ const SURFACE_SUGGESTED_PROMPTS: Partial<Record<AppTab, string[]>> = {
 }
 
 const pickSuggestedPrompts = (sensitiveMode: boolean, surface?: AppTab) => {
-  const prompts = [...(sensitiveMode ? SENSITIVE_SUGGESTED_PROMPTS : SURFACE_SUGGESTED_PROMPTS[surface] ?? SUGGESTED_PROMPTS)]
+  const prompts = [...(sensitiveMode ? SENSITIVE_SUGGESTED_PROMPTS : (surface ? SURFACE_SUGGESTED_PROMPTS[surface] : undefined) ?? SUGGESTED_PROMPTS)]
   for (let index = prompts.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(Math.random() * (index + 1))
     ;[prompts[index], prompts[swapIndex]] = [prompts[swapIndex], prompts[index]]

@@ -10,6 +10,7 @@ import {
   type AiUiAction,
 } from '../lib/api/ai'
 import type { AiInvocationRequest } from '../app/useAiEntryPoint'
+export type { AiInvocationRequest }
 
 interface UseAiConversationOptions {
   isOpen: boolean
