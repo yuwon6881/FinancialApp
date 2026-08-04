@@ -39,7 +39,7 @@ const renderOverview = ({ onAddCategory, onDeleteCategory, summary = null }: Ren
     taxYear={CURRENT_YEAR}
     currency="MYR"
     isLoading={false}
-    onSelectReliefCategory={vi.fn()}
+    onToggleReliefCategory={vi.fn()}
     onAddCategory={onAddCategory ?? vi.fn(async () => undefined)}
     onUpdateCategory={vi.fn(async () => undefined)}
     onDeleteCategory={onDeleteCategory ?? vi.fn(async () => undefined)}
@@ -159,7 +159,7 @@ describe('TaxReliefOverview sync status', () => {
         taxYear={CURRENT_YEAR}
         currency="MYR"
         isLoading={false}
-        onSelectReliefCategory={vi.fn()}
+        onToggleReliefCategory={vi.fn()}
         onAddCategory={vi.fn(async () => undefined)}
         onUpdateCategory={vi.fn(async () => undefined)}
         onDeleteCategory={vi.fn(async () => undefined)}

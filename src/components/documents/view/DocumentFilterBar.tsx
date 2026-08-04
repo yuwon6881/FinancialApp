@@ -3,14 +3,20 @@ import { CustomSelect } from '../../ui/CustomSelect'
 import { Button } from '../../ui/Button'
 import { DOCUMENT_SORT_OPTIONS, type DocumentSort } from '../../../lib/documentOrdering'
 
+interface SelectedReliefCategory {
+  id: string
+  name: string
+}
+
 interface DocumentFilterBarProps {
   taxYear: number | undefined
   setTaxYear: (year: number | undefined) => void
   availableYears: number[]
   sortOrder: DocumentSort
   setSortOrder: (sort: DocumentSort) => void
-  reliefCategoryLabel?: string
-  onClearReliefCategory: () => void
+  selectedReliefCategories?: SelectedReliefCategory[]
+  onClearReliefCategory: (categoryId: string) => void
+  onClearAllReliefCategories: () => void
 }
 
 export function DocumentFilterBar({
@@ -19,8 +25,9 @@ export function DocumentFilterBar({
   availableYears,
   sortOrder,
   setSortOrder,
-  reliefCategoryLabel,
+  selectedReliefCategories = [],
   onClearReliefCategory,
+  onClearAllReliefCategories,
 }: DocumentFilterBarProps) {
   return (
     <div data-testid="document-filter-bar" className="mb-3 rounded-xl border border-border/60 bg-muted/20 p-2.5 sm:p-3">
@@ -50,17 +57,32 @@ export function DocumentFilterBar({
         </div>
       </div>
 
-      {reliefCategoryLabel && (
-        <Button
-          variant="unstyled"
-          type="button"
-          onClick={onClearReliefCategory}
-          aria-label={`Clear ${reliefCategoryLabel} relief filter`}
-          className="mt-2.5 inline-flex min-h-9 w-full shrink-0 cursor-pointer items-center justify-between gap-2 rounded-xl border border-primary/35 bg-primary/10 px-3 py-2 text-left text-xs font-semibold text-primary transition hover:border-primary/60 hover:bg-primary/15 sm:w-auto sm:max-w-64"
-        >
-          <span className="flex min-w-0 items-center gap-1.5 truncate"><Filter className="size-3.5 shrink-0" /> {reliefCategoryLabel}</span>
-          <X className="size-3.5 shrink-0" />
-        </Button>
+      {selectedReliefCategories.length > 0 && (
+        <div className="mt-2.5 flex flex-wrap items-center gap-2">
+          {selectedReliefCategories.map(category => (
+            <Button
+              key={category.id}
+              variant="unstyled"
+              type="button"
+              onClick={() => onClearReliefCategory(category.id)}
+              aria-label={`Clear ${category.name} relief filter`}
+              className="inline-flex min-h-9 w-full shrink-0 cursor-pointer items-center justify-between gap-2 rounded-xl border border-primary/35 bg-primary/10 px-3 py-2 text-left text-xs font-semibold text-primary transition hover:border-primary/60 hover:bg-primary/15 sm:w-auto sm:max-w-64"
+            >
+              <span className="flex min-w-0 items-center gap-1.5 truncate"><Filter className="size-3.5 shrink-0" /> {category.name}</span>
+              <X className="size-3.5 shrink-0" />
+            </Button>
+          ))}
+          {selectedReliefCategories.length > 1 && (
+            <Button
+              variant="unstyled"
+              type="button"
+              onClick={onClearAllReliefCategories}
+              className="inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-1 rounded-xl border border-border/60 px-3 py-2 text-xs font-semibold text-muted-foreground transition hover:bg-muted"
+            >
+              Clear all
+            </Button>
+          )}
+        </div>
       )}
     </div>
   )

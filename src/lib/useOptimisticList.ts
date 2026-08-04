@@ -21,22 +21,32 @@ export function useSyncStatus<T extends { id: string | number; isPendingDelete?:
   activeSyncId: string | number | ReadonlyArray<string | number> | null | undefined,
   deletingId: string | number | null | undefined
 ) {
-  const activeSyncIds = useMemo(() => {
-    if (Array.isArray(activeSyncId)) return activeSyncId.map(String)
-    return activeSyncId === null || activeSyncId === undefined ? [] : [String(activeSyncId)]
-  }, [activeSyncId])
+  const { syncingIds, deletingIds } = useMemo(() => {
+    const activeSyncIds = new Set(
+      Array.isArray(activeSyncId)
+        ? activeSyncId.map(String)
+        : activeSyncId === null || activeSyncId === undefined ? [] : [String(activeSyncId)],
+    )
+    const syncingIds = new Set(activeSyncIds)
+    const deletingIds = new Set<string>()
+
+    if (deletingId !== null && deletingId !== undefined) deletingIds.add(String(deletingId))
+    for (const item of list) {
+      const itemId = String(item.id)
+      if (item.isPendingDelete) deletingIds.add(itemId)
+      if (item.pendingSyncOperationId && activeSyncIds.has(item.pendingSyncOperationId)) syncingIds.add(itemId)
+    }
+
+    return { syncingIds, deletingIds }
+  }, [activeSyncId, deletingId, list])
 
   const isSyncing = useCallback((id: string | number) => {
-    if (activeSyncIds.includes(String(id))) return true
-    const found = list.find(item => String(item.id) === String(id))
-    return Boolean(found?.pendingSyncOperationId && activeSyncIds.includes(found.pendingSyncOperationId))
-  }, [activeSyncIds, list])
+    return syncingIds.has(String(id))
+  }, [syncingIds])
 
   const isDeleting = useCallback((id: string | number) => {
-    if (deletingId && String(deletingId) === String(id)) return true
-    const found = list.find(item => String(item.id) === String(id))
-    return Boolean(found?.isPendingDelete)
-  }, [deletingId, list])
+    return deletingIds.has(String(id))
+  }, [deletingIds])
 
   return { isSyncing, isDeleting }
 }

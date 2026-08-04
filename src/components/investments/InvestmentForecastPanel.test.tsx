@@ -89,6 +89,21 @@ describe('InvestmentForecastPanel', () => {
     expect((screen.getByLabelText('Hypothetical monthly contribution') as HTMLInputElement).value).toBe('0')
   })
 
+  it('does not show zero as a forecast result while the worker is preparing', () => {
+    vi.mocked(useInvestmentForecast).mockReturnValue({
+      error: '',
+      initializationMs: null,
+      ready: false,
+      result: null,
+    })
+
+    render(<InvestmentForecastPanel portfolio={portfolio()} masked={false} />)
+    fireEvent.click(screen.getByRole('button', { name: /Investment forecast/ }))
+
+    expect(screen.getAllByText('Calculating…').length).toBeGreaterThan(0)
+    expect(screen.queryByText('$0.00')).toBeNull()
+  })
+
   it('copies the required amount into local forecast state only', () => {
     render(<InvestmentForecastPanel portfolio={portfolio()} masked={false} />)
     fireEvent.click(screen.getByRole('button', { name: /Investment forecast/ }))

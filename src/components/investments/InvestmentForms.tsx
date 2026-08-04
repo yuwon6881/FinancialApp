@@ -13,7 +13,9 @@ import type { InstrumentSearchResult } from '../../lib/api/investments'
 import {
   availableActivityCash,
   availableActivityUnits,
-  availableCash,
+  availableCashFlow,
+  type PendingInvestmentActivity,
+  type PendingInvestmentCashFlow,
   validateActivityBalances,
   validateCashFlowBalances,
 } from '../../lib/investmentValidation'
@@ -176,7 +178,7 @@ export const InstrumentForm = ({ busy, offline, existingInstruments = [], onCanc
 export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scanDraft, failedScanJob, activeScanJobIds = [], onScanStarted, onScanCleared, onCancel, onSave, onNeedAccount, onNeedInstrument }: {
   portfolio: InvestmentPortfolio | null
   initial: InvestmentActivity | null
-  pendingActivities: InvestmentActivity[]
+  pendingActivities: PendingInvestmentActivity[]
   busy: boolean
   scanDraft?: { jobId: string; result: InvestmentActivityScanResult } | null
   failedScanJob?: { jobId: string; errorMessage: string } | null
@@ -351,8 +353,8 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
     })
   }
   const feesLabelSuffix = selectedInstrument ? ` (${selectedInstrument.currency})` : ''
-  const heldUnits = availableActivityUnits(portfolio, accountId, instrumentId, pendingActivities)
-  const heldCash = selectedInstrument ? availableActivityCash(portfolio, accountId, selectedInstrument.currency, pendingActivities) : 0
+  const heldUnits = availableActivityUnits(portfolio, accountId, instrumentId, pendingActivities, initial)
+  const heldCash = selectedInstrument ? availableActivityCash(portfolio, accountId, selectedInstrument.currency, pendingActivities, initial) : 0
   return <form noValidate onSubmit={submit} className="space-y-4">
     {!initial && <>
       <ReceiptScanPicker
@@ -396,7 +398,7 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
 export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft, failedScanJob, activeScanJobIds = [], onScanStarted, onScanCleared, onCancel, onSave, onNeedAccount }: {
   portfolio: InvestmentPortfolio | null
   initial?: InvestmentCashFlow | null
-  pendingCashFlows?: InvestmentCashFlow[]
+  pendingCashFlows?: PendingInvestmentCashFlow[]
   busy: boolean
   scanDraft?: { jobId: string; result: InvestmentActivityScanResult } | null
   failedScanJob?: { jobId: string; errorMessage: string } | null
@@ -487,9 +489,7 @@ export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft
     setActiveScanJobId(null)
   }, [activeScanJobId, activeScanJobIds, scanDraft])
   if (!accounts.length) return <div><p className="text-sm text-muted-foreground">Add an investment account before recording cash.</p><div className="mt-4"><Button onClick={onNeedAccount}>Add account</Button></div></div>
-  const heldCash = availableCash(portfolio, accountId, currency) + (pendingCashFlows ?? [])
-    .filter(flow => flow.accountId === accountId && flow.currency.toUpperCase() === currency.toUpperCase() && flow.id !== initial?.id)
-    .reduce((total, flow) => total + (flow.type === 'Deposit' ? Math.abs(flow.amount) : flow.type === 'Withdrawal' ? -Math.abs(flow.amount) : -Math.abs(flow.amount)), 0)
+  const heldCash = availableCashFlow(portfolio, accountId, currency, pendingCashFlows ?? [], initial)
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (type === 'Conversion') {

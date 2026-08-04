@@ -8,6 +8,7 @@ interface TestItem {
   name: string
   isPendingSync?: boolean
   isPendingDelete?: boolean
+  pendingSyncOperationId?: string
 }
 
 function makeOp(overrides: Partial<QueuedOp>): QueuedOp {
@@ -63,6 +64,12 @@ describe('useSyncStatus', () => {
     expect(result.current.isSyncing('1')).toBe(true)
     expect(result.current.isSyncing('2')).toBe(true)
     expect(result.current.isSyncing('3')).toBe(false)
+  })
+
+  it('reports syncing when an active operation id is attached to a row', () => {
+    const operationList = [{ id: '1', name: 'A', pendingSyncOperationId: 'op-1' }]
+    const { result } = renderHook(() => useSyncStatus(operationList, ['op-1'], null))
+    expect(result.current.isSyncing('1')).toBe(true)
   })
 
   it('reports deleting for either the explicit deletingId or an isPendingDelete item', () => {

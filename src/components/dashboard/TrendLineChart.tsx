@@ -127,20 +127,22 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
               })()}
               {/* Screen-reader-only data table: the SVG scrubber is pointer-only, so expose the
                   underlying points as a real table for assistive tech and keyboard users. */}
-              <table className="sr-only">
-                <caption>{chartSummary}</caption>
-                <thead>
-                  <tr><th scope="col">Cycle</th><th scope="col">Growth balance</th></tr>
-                </thead>
-                <tbody>
-                  {points.map((point, index) => (
-                    <tr key={index}>
-                      <th scope="row">{point.month}</th>
-                      <td>{formatSensitive(point.balance)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="sr-only">
+                <table>
+                  <caption>{chartSummary}</caption>
+                  <thead>
+                    <tr><th scope="col">Cycle</th><th scope="col">Growth balance</th></tr>
+                  </thead>
+                  <tbody>
+                    {points.map((point, index) => (
+                      <tr key={index}>
+                        <th scope="row">{point.month}</th>
+                        <td>{formatSensitive(point.balance)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </>
           ) : <div className="text-xs text-muted-foreground pb-12 text-center">Calculating trend points...</div>}
         </div>

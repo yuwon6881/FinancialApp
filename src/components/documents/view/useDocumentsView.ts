@@ -19,7 +19,7 @@ export function useDocumentsView() {
   const [reliefCategoriesByTaxYear, setReliefCategoriesByTaxYear] = useState<Record<number, TaxReliefCategoryDefinition[]>>({})
   
   const [taxYear, setTaxYear] = useState<number | undefined>(undefined)
-  const [reliefCategory, setReliefCategory] = useState<string | undefined>(undefined)
+  const [selectedReliefCategories, setSelectedReliefCategories] = useState<string[]>([])
   const [sortOrder, setSortOrder] = useState<DocumentSort>('uploaded-desc')
   
   const [isLoading, setIsLoading] = useState(true)
@@ -38,8 +38,8 @@ export function useDocumentsView() {
       setIsLoading(true)
       const currentPage = isRefresh ? 1 : page
       const skip = (currentPage - 1) * pageSize
-      const res = await api.listDocuments(taxYear, undefined, skip, pageSize, reliefCategory, sortOrder)
-      
+      const res = await api.listDocuments(taxYear, undefined, skip, pageSize, selectedReliefCategories, sortOrder)
+
       if (requestId !== requestIdRef.current) return
       setDocuments(res.items)
       setTotalCount(res.totalCount)
@@ -52,7 +52,7 @@ export function useDocumentsView() {
         setHasLoadedDocuments(true)
       }
     }
-  }, [page, pageSize, taxYear, reliefCategory, sortOrder])
+  }, [page, pageSize, taxYear, selectedReliefCategories, sortOrder])
 
   const loadUsage = useCallback(async () => {
     try {
@@ -107,7 +107,7 @@ export function useDocumentsView() {
   useEffect(() => {
     if (!hasLoadedYears) return
 
-    const queryKey = JSON.stringify([taxYear ?? 'all', pageSize, reliefCategory ?? '', sortOrder])
+    const queryKey = JSON.stringify([taxYear ?? 'all', pageSize, [...selectedReliefCategories].sort(), sortOrder])
     const queryChanged = queryKeyRef.current !== queryKey
     queryKeyRef.current = queryKey
 
@@ -121,15 +121,27 @@ export function useDocumentsView() {
     }
 
     void loadDocuments()
-  }, [hasLoadedYears, page, pageSize, taxYear, reliefCategory, sortOrder, loadDocuments])
+  }, [hasLoadedYears, page, pageSize, taxYear, selectedReliefCategories, sortOrder, loadDocuments])
 
   useEffect(() => {
     void loadTaxInsights()
   }, [loadTaxInsights])
 
   useEffect(() => {
-    setReliefCategory(undefined)
+    setSelectedReliefCategories([])
   }, [taxYear])
+
+  const toggleReliefCategory = useCallback((categoryId: string) => {
+    setSelectedReliefCategories(current => current.includes(categoryId)
+      ? current.filter(id => id !== categoryId)
+      : [...current, categoryId])
+  }, [])
+
+  const clearReliefCategory = useCallback((categoryId: string) => {
+    setSelectedReliefCategories(current => current.filter(id => id !== categoryId))
+  }, [])
+
+  const clearAllReliefCategories = useCallback(() => setSelectedReliefCategories([]), [])
 
   const deleteDocument = async (id: number) => {
     try {
@@ -173,11 +185,11 @@ export function useDocumentsView() {
       ? { ...document, reliefCategory: categoryById.get(document.id) ?? document.reliefCategory }
       : document))
     await Promise.all([
-      reliefCategory === undefined ? Promise.resolve() : loadDocuments(),
+      selectedReliefCategories.length === 0 ? Promise.resolve() : loadDocuments(),
       loadTaxInsights(),
     ])
     return results
-  }, [loadDocuments, loadTaxInsights, reliefCategory])
+  }, [loadDocuments, loadTaxInsights, selectedReliefCategories])
 
   const bulkDelete = async (ids: number[]) => {
     const results = await api.bulkDeleteDocuments(ids)
@@ -210,8 +222,10 @@ export function useDocumentsView() {
     setPageSize,
     taxYear,
     setTaxYear,
-    reliefCategory,
-    setReliefCategory,
+    selectedReliefCategories,
+    toggleReliefCategory,
+    clearReliefCategory,
+    clearAllReliefCategories,
     sortOrder,
     setSortOrder,
     loadDocuments,

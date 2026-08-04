@@ -144,7 +144,7 @@ describe('documents API', () => {
       .mockResolvedValueOnce({ ...okJson(undefined), status: 204 })
     vi.stubGlobal('fetch', fetchMock)
 
-    await listDocuments(2026, 'tx-1', 50, 25, 'education', 'name-asc')
+    await listDocuments(2026, 'tx-1', 50, 25, ['education'], 'name-asc')
     await updateDocument(4, { transactionId: null })
     await deleteDocument(4)
 

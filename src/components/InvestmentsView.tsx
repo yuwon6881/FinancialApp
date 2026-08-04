@@ -32,6 +32,7 @@ import { InfoHint } from './ui/InfoHint'
 import { useInvestmentPortfolio } from './investments/useInvestmentPortfolio'
 import { applyOpsToList } from '../lib/outbox'
 import { formatCurrencyVal } from '../lib/utils'
+import type { PendingInvestmentActivity, PendingInvestmentCashFlow } from '../lib/investmentValidation'
 import { InvestmentPlanPanel } from './investments/InvestmentPlanPanel'
 import { ValueChart } from './investments/InvestmentCharts'
 import { AllocationChart } from './investments/AllocationChart'
@@ -116,20 +117,32 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
     accounts: applyOpsToList(portfolio.accounts, investmentOps, 'investmentAccount'),
     instruments: applyOpsToList(portfolio.instruments, investmentOps, 'investmentInstrument'),
   } : null, [portfolio, investmentOps])
-  const pendingCashFlows = useMemo(() => investmentOps
-    .filter(operation => operation.entity === 'investmentCashFlow' && operation.type === 'add' && operation.payload)
-    .map(operation => ({
-      ...(operation.payload as unknown as InvestmentCashFlow),
-      id: operation.targetId,
-      isPendingSync: true,
-    })), [investmentOps])
-  const pendingActivities = useMemo(() => investmentOps
-    .filter(operation => operation.entity === 'investmentActivity' && operation.type === 'add' && operation.payload)
-    .map(operation => ({
-      ...(operation.payload as unknown as InvestmentActivity),
-      id: operation.targetId,
-      isPendingSync: true,
-    })), [investmentOps])
+  const pendingCashFlows = useMemo<PendingInvestmentCashFlow[]>(() => investmentOps
+    .filter(operation => operation.entity === 'investmentCashFlow' && ['add', 'update'].includes(operation.type) && operation.payload)
+    .map(operation => {
+      const current = {
+        ...(operation.payload as unknown as InvestmentCashFlow),
+        id: operation.targetId,
+        isPendingSync: true,
+      }
+      const original = operation.type === 'update' && operation.payload?.undoSnapshot && typeof operation.payload.undoSnapshot === 'object'
+        ? operation.payload.undoSnapshot as unknown as InvestmentCashFlow
+        : undefined
+      return original ? { ...current, pendingOriginal: original } : current
+    }), [investmentOps])
+  const pendingActivities = useMemo<PendingInvestmentActivity[]>(() => investmentOps
+    .filter(operation => operation.entity === 'investmentActivity' && ['add', 'update'].includes(operation.type) && operation.payload)
+    .map(operation => {
+      const current = {
+        ...(operation.payload as unknown as InvestmentActivity),
+        id: operation.targetId,
+        isPendingSync: true,
+      }
+      const original = operation.type === 'update' && operation.payload?.undoSnapshot && typeof operation.payload.undoSnapshot === 'object'
+        ? operation.payload.undoSnapshot as unknown as InvestmentActivity
+        : undefined
+      return original ? { ...current, pendingOriginal: original } : current
+    }), [investmentOps])
   const queueInvestment = async (
     entity: 'investmentAccount' | 'investmentInstrument' | 'investmentActivity' | 'investmentCashFlow',
     type: 'add' | 'update' | 'delete' | 'restore',

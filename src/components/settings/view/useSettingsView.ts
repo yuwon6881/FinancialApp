@@ -6,6 +6,7 @@ import * as api from '../../../lib/api'
 import type { CategoryCleanupSuggestion } from '../../../lib/api'
 import { getErrorMessage } from '../../../lib/errors'
 import { focusFirstInvalidField } from '../../ui/formValidation'
+import { useSyncStatus } from '../../../lib/useOptimisticList'
 
 export interface UseSettingsViewOptions {
   dashboardData: DashboardData | null
@@ -44,18 +45,11 @@ export function useSettingsView(options: UseSettingsViewOptions) {
     deletingId,
   } = options
 
-  const isCatSyncing = (catId: string) => {
-    const syncIds = activeSyncIds?.length ? activeSyncIds : activeSyncId ? [activeSyncId] : []
-    if (syncIds.includes(String(catId))) return true
-    const category = categoriesList.find(value => String(value.id) === String(catId))
-    return Boolean(category?.pendingSyncOperationId && syncIds.includes(category.pendingSyncOperationId))
-  }
-
-  const isCatDeleting = (catId: string) => {
-    if (deletingId && String(deletingId) === String(catId)) return true
-    const found = categoriesList.find(c => String(c.id) === String(catId))
-    return Boolean(found?.isPendingDelete)
-  }
+  const { isSyncing: isCatSyncing, isDeleting: isCatDeleting } = useSyncStatus(
+    categoriesList,
+    activeSyncIds?.length ? activeSyncIds : activeSyncId,
+    deletingId,
+  )
 
   const activeSettings = dashboardData?.setting || {
     targetStabilityFund: 10000,

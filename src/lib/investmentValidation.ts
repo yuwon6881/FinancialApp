@@ -27,6 +27,19 @@ export interface ActivityBalanceDraft {
   taxes?: number
 }
 
+/**
+ * A locally queued row plus the server row it replaces, when the queue entry is
+ * an edit. The original is needed because the portfolio cash/units already
+ * include the server row.
+ */
+export interface PendingInvestmentActivity extends InvestmentActivity {
+  pendingOriginal?: InvestmentActivity | null
+}
+
+export interface PendingInvestmentCashFlow extends InvestmentCashFlow {
+  pendingOriginal?: InvestmentCashFlow | null
+}
+
 export interface CashFlowBalanceDraft {
   accountId: string
   type: InvestmentCashFlow['type']
@@ -83,29 +96,6 @@ const activityCashEffect = (draft: ActivityBalanceDraft) => {
   }
 }
 
-/** Cash and units after applying activity records that have been queued locally. */
-export const availableActivityCash = (
-  portfolio: InvestmentPortfolio | null,
-  accountId: string,
-  currency: string,
-  pendingActivities: InvestmentActivity[] = [],
-) => availableCash(portfolio, accountId, currency) + pendingActivities
-  .filter(activity => activity.accountId === accountId)
-  .filter(activity => {
-    const instrument = portfolio?.instruments.find(value => value.id === activity.instrumentId)
-    return instrument && same(instrument.currency, currency)
-  })
-  .reduce((total, activity) => total + activityCashEffect(activity), 0)
-
-export const availableActivityUnits = (
-  portfolio: InvestmentPortfolio | null,
-  accountId: string,
-  instrumentId: string,
-  pendingActivities: InvestmentActivity[] = [],
-) => availableUnits(portfolio, accountId, instrumentId) + pendingActivities
-  .filter(activity => activity.accountId === accountId && activity.instrumentId === instrumentId)
-  .reduce((total, activity) => total + activityUnitsEffect(activity), 0)
-
 /** Signed effect of an activity on the units held. */
 const activityUnitsEffect = (draft: ActivityBalanceDraft) => {
   switch (draft.type) {
@@ -116,6 +106,66 @@ const activityUnitsEffect = (draft: ActivityBalanceDraft) => {
     default:
       return 0
   }
+}
+
+const activityCashEffectFor = (
+  portfolio: InvestmentPortfolio | null,
+  activity: InvestmentActivity | null | undefined,
+  accountId: string,
+  currency: string,
+) => {
+  if (!activity || activity.accountId !== accountId) return 0
+  const instrument = portfolio?.instruments.find(value => value.id === activity.instrumentId)
+  return instrument && same(instrument.currency, currency) ? activityCashEffect(activity) : 0
+}
+
+const activityUnitsEffectFor = (
+  activity: InvestmentActivity | null | undefined,
+  accountId: string,
+  instrumentId: string,
+) => activity && activity.accountId === accountId && activity.instrumentId === instrumentId
+  ? activityUnitsEffect(activity)
+  : 0
+
+const originalActivity = (
+  pendingActivities: PendingInvestmentActivity[],
+  initial?: InvestmentActivity | null,
+) => {
+  const queuedReplacement = pendingActivities.find(activity => activity.id === initial?.id)
+  return queuedReplacement
+    ? queuedReplacement.pendingOriginal ?? null
+    : initial?.isPendingSync ? null : initial ?? null
+}
+
+/** Cash and units after applying the net changes from locally queued activity. */
+export const availableActivityCash = (
+  portfolio: InvestmentPortfolio | null,
+  accountId: string,
+  currency: string,
+  pendingActivities: PendingInvestmentActivity[] = [],
+  initial?: InvestmentActivity | null,
+) => {
+  const replacement = originalActivity(pendingActivities, initial)
+  const pending = pendingActivities.filter(activity => activity.id !== initial?.id)
+  return availableCash(portfolio, accountId, currency) + pending.reduce((total, activity) => total +
+    activityCashEffectFor(portfolio, activity, accountId, currency) -
+    activityCashEffectFor(portfolio, activity.pendingOriginal ?? undefined, accountId, currency), 0) -
+    (replacement ? activityCashEffectFor(portfolio, replacement, accountId, currency) : 0)
+}
+
+export const availableActivityUnits = (
+  portfolio: InvestmentPortfolio | null,
+  accountId: string,
+  instrumentId: string,
+  pendingActivities: PendingInvestmentActivity[] = [],
+  initial?: InvestmentActivity | null,
+) => {
+  const replacement = originalActivity(pendingActivities, initial)
+  const pending = pendingActivities.filter(activity => activity.id !== initial?.id)
+  return availableUnits(portfolio, accountId, instrumentId) + pending.reduce((total, activity) => total +
+    activityUnitsEffectFor(activity, accountId, instrumentId) -
+    activityUnitsEffectFor(activity.pendingOriginal ?? undefined, accountId, instrumentId), 0) -
+    (replacement ? activityUnitsEffectFor(replacement, accountId, instrumentId) : 0)
 }
 
 /**
@@ -134,14 +184,9 @@ export function validateActivityBalances(
   const instrument = portfolio.instruments.find(value => value.id === draft.instrumentId)
   if (!account || !instrument) return null
 
-  const replaced = initial && initial.accountId === draft.accountId ? initial : null
-  const sameInstrument = replaced && replaced.instrumentId === draft.instrumentId ? replaced : null
-  const pending = pendingActivities.filter(activity => activity.id !== initial?.id)
-
   const needed = -activityCashEffect(draft)
   if (needed > tolerance) {
-    const heldCash = availableActivityCash(portfolio, draft.accountId, instrument.currency, pending) -
-      (sameInstrument && !initial?.isPendingSync ? activityCashEffect(sameInstrument) : 0)
+    const heldCash = availableActivityCash(portfolio, draft.accountId, instrument.currency, pendingActivities, initial)
     if (needed > heldCash + tolerance) {
       return {
         field: 'cashAmount',
@@ -154,8 +199,7 @@ export function validateActivityBalances(
 
   const removed = -activityUnitsEffect(draft)
   if (removed > tolerance) {
-    const heldUnits = availableActivityUnits(portfolio, draft.accountId, draft.instrumentId, pending) -
-      (sameInstrument && !initial?.isPendingSync ? activityUnitsEffect(sameInstrument) : 0)
+    const heldUnits = availableActivityUnits(portfolio, draft.accountId, draft.instrumentId, pendingActivities, initial)
     if (removed > heldUnits + tolerance) {
       return {
         field: 'units',
@@ -182,15 +226,38 @@ const cashFlowEffects = (draft: CashFlowBalanceDraft): Array<{ currency: string;
   ]
 }
 
-/** Existing records store the debited leg as a negative amount already. */
-const storedCashFlowEffects = (flow: InvestmentCashFlow) => cashFlowEffects({
-  accountId: flow.accountId,
-  type: flow.type,
-  currency: flow.currency,
-  amount: flow.amount,
-  toCurrency: flow.toCurrency,
-  toAmount: flow.toAmount,
-})
+const cashFlowEffectFor = (flow: InvestmentCashFlow | null | undefined, accountId: string, currency: string) => {
+  if (!flow || flow.accountId !== accountId) return 0
+  return cashFlowEffects(flow)
+    .filter(effect => same(effect.currency, currency))
+    .reduce((total, effect) => total + effect.amount, 0)
+}
+
+const originalCashFlow = (
+  pendingCashFlows: PendingInvestmentCashFlow[],
+  initial?: InvestmentCashFlow | null,
+) => {
+  const queuedReplacement = pendingCashFlows.find(flow => flow.id === initial?.id)
+  return queuedReplacement
+    ? queuedReplacement.pendingOriginal ?? null
+    : initial?.isPendingSync ? null : initial ?? null
+}
+
+/** Cash after applying net changes from locally queued cash movements. */
+export const availableCashFlow = (
+  portfolio: InvestmentPortfolio | null,
+  accountId: string,
+  currency: string,
+  pendingCashFlows: PendingInvestmentCashFlow[] = [],
+  initial?: InvestmentCashFlow | null,
+) => {
+  const replacement = originalCashFlow(pendingCashFlows, initial)
+  const pending = pendingCashFlows.filter(flow => flow.id !== initial?.id)
+  return availableCash(portfolio, accountId, currency) + pending.reduce((total, flow) => total +
+    cashFlowEffectFor(flow, accountId, currency) -
+    cashFlowEffectFor(flow.pendingOriginal ?? undefined, accountId, currency), 0) -
+    (replacement ? cashFlowEffectFor(replacement, accountId, currency) : 0)
+}
 
 /**
  * Checks a withdrawal or conversion against the cash actually sitting in the
@@ -210,22 +277,12 @@ export function validateCashFlowBalances(
   }
   if (draft.type === 'Deposit') return null
 
-  const replaced = initial && initial.accountId === draft.accountId ? initial : null
-  const initialIsPending = replaced && pendingCashFlows.some(flow => flow.id === replaced.id)
-  const restored = replaced && !initialIsPending ? storedCashFlowEffects(replaced) : []
-  const pending = pendingCashFlows
-    .filter(flow => !replaced || flow.id !== replaced.id)
-    .flatMap(storedCashFlowEffects)
   const spent = -cashFlowEffects(draft)
     .filter(effect => same(effect.currency, draft.currency))
     .reduce((total, effect) => total + effect.amount, 0)
   if (spent <= tolerance) return null
 
-  const held = availableCash(portfolio, draft.accountId, draft.currency) -
-    restored.filter(effect => same(effect.currency, draft.currency))
-      .reduce((total, effect) => total + effect.amount, 0) +
-    pending.filter(effect => same(effect.currency, draft.currency))
-      .reduce((total, effect) => total + effect.amount, 0)
+  const held = availableCashFlow(portfolio, draft.accountId, draft.currency, pendingCashFlows, initial)
   if (spent <= held + tolerance) return null
 
   const currency = draft.currency.toUpperCase()

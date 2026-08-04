@@ -55,8 +55,8 @@ interface TaxReliefOverviewProps {
   taxYear?: number
   currency: string
   isLoading: boolean
-  selectedReliefCategory?: string
-  onSelectReliefCategory: (categoryId: string | undefined) => void
+  selectedReliefCategories?: string[]
+  onToggleReliefCategory: (categoryId: string) => void
   onAddCategory: (input: CategoryInput) => Promise<unknown>
   onUpdateCategory: (categoryId: string, input: CategoryInput) => Promise<unknown>
   onDeleteCategory: (categoryId: string) => Promise<unknown>
@@ -92,8 +92,8 @@ export function TaxReliefOverview({
   taxYear,
   currency,
   isLoading,
-  selectedReliefCategory,
-  onSelectReliefCategory,
+  selectedReliefCategories = [],
+  onToggleReliefCategory,
   onAddCategory,
   onUpdateCategory,
   onDeleteCategory,
@@ -314,16 +314,16 @@ export function TaxReliefOverview({
             {orderedTrackerCategories.map(category => {
               const progress = category.limit > 0 ? Math.min(100, category.confirmedAmount / category.limit * 100) : 0
               const full = category.limit > 0 && progress >= 100
-              const selected = selectedReliefCategory === category.id
+              const selected = selectedReliefCategories.includes(category.id)
               return (
                 <Button
                   variant="unstyled"
                   key={category.id}
                   type="button"
-                  onClick={() => onSelectReliefCategory(selected ? undefined : category.id)}
+                  onClick={() => onToggleReliefCategory(category.id)}
                   aria-pressed={selected}
-                  aria-label={selected ? `Clear documents filter for ${category.name}` : `Filter documents by ${category.name}`}
-                  title={selected ? `Clear ${category.name} document filter` : `Filter documents by ${category.name}`}
+                  aria-label={selected ? `Remove ${category.name} from the documents filter` : `Add ${category.name} to the documents filter`}
+                  title={selected ? `Remove ${category.name} from the document filter` : `Filter documents by ${category.name}`}
                   // w-full resolves against the rail's own visible width, so one card
                   // fills the viewport exactly rather than the 80vw that left a
                   // permanently clipped card beside it.

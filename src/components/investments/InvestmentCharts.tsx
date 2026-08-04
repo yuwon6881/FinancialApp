@@ -137,11 +137,13 @@ export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange
         <span><i className="mr-1 inline-block size-2 rounded-full bg-violet-500" /> Total value</span>
         <span><i className="mr-1 inline-block w-4 border-t-2 border-dashed border-amber-500 align-middle" /> Net deposits</span>
       </div>
-      <table className="sr-only">
-        <caption>Portfolio value chart data</caption>
-        <thead><tr><th>Date</th><th>Total value</th><th>Net deposits</th></tr></thead>
-        <tbody>{portfolio.chart.map(point => <tr key={point.date}><td>{point.date}</td><td>{masked ? 'Hidden' : point.totalValue}</td><td>{masked ? 'Hidden' : point.netDeposits}</td></tr>)}</tbody>
-      </table>
+      <div className="sr-only">
+        <table>
+          <caption>Portfolio value chart data</caption>
+          <thead><tr><th>Date</th><th>Total value</th><th>Net deposits</th></tr></thead>
+          <tbody>{portfolio.chart.map(point => <tr key={point.date}><td>{point.date}</td><td>{masked ? 'Hidden' : point.totalValue}</td><td>{masked ? 'Hidden' : point.netDeposits}</td></tr>)}</tbody>
+        </table>
+      </div>
     </section>
   )
 }

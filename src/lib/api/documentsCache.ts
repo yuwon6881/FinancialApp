@@ -29,7 +29,7 @@ export function documentListCacheKey(
   transactionId: string | undefined,
   skip: number,
   take: number,
-  reliefCategory?: string,
+  reliefCategories?: string[],
   sort: DocumentSort = 'uploaded-desc',
 ): string {
   return DOCUMENT_CACHE_KEYS.listPrefix + JSON.stringify([
@@ -37,7 +37,8 @@ export function documentListCacheKey(
     transactionId ?? 'none',
     skip,
     take,
-    reliefCategory ?? '',
+    // Sorted so selection order never changes the cache key for the same set of categories.
+    [...(reliefCategories ?? [])].sort(),
     sort,
   ])
 }

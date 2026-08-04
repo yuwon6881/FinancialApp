@@ -36,8 +36,10 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     isInitialLoading,
     taxYear,
     setTaxYear,
-    reliefCategory,
-    setReliefCategory,
+    selectedReliefCategories,
+    toggleReliefCategory,
+    clearReliefCategory,
+    clearAllReliefCategories,
     sortOrder,
     setSortOrder,
     page,
@@ -95,7 +97,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
 
   useEffect(() => {
     setSelectedIds(new Set())
-  }, [taxYear, reliefCategory, sortOrder, pageSize])
+  }, [taxYear, selectedReliefCategories, sortOrder, pageSize])
 
   useEffect(() => {
     if (!hideSensitive) return
@@ -264,8 +266,8 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
           taxYear={taxYear}
           currency={currency}
           isLoading={isTaxInsightsLoading}
-          selectedReliefCategory={reliefCategory}
-          onSelectReliefCategory={setReliefCategory}
+          selectedReliefCategories={selectedReliefCategories}
+          onToggleReliefCategory={toggleReliefCategory}
           onAddCategory={async input => {
             if (!guardSensitive()) return
             if (selectedReliefYear === undefined) throw new Error('Choose a tax year first.')
@@ -293,7 +295,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
               taxYear: selectedReliefYear,
               undoSnapshot: category,
             })
-            setReliefCategory(current => current === categoryId ? undefined : current)
+            clearReliefCategory(categoryId)
           }}
           activeSyncIds={activeSyncIds}
           deletingId={deletingId}
@@ -318,8 +320,12 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
           availableYears={availableYears}
           sortOrder={sortOrder}
           setSortOrder={setSortOrder}
-          reliefCategoryLabel={reliefCategories.find(category => category.id === reliefCategory)?.name}
-          onClearReliefCategory={() => setReliefCategory(undefined)}
+          selectedReliefCategories={selectedReliefCategories
+            .map(id => reliefCategories.find(category => category.id === id))
+            .filter((category): category is NonNullable<typeof category> => Boolean(category))
+            .map(category => ({ id: category.id, name: category.name }))}
+          onClearReliefCategory={clearReliefCategory}
+          onClearAllReliefCategories={clearAllReliefCategories}
         />
 
         {pendingReliefCategories.size > 0 && (

@@ -54,18 +54,20 @@ export function InvestmentForecastChart({
         <span><i className="mr-1 inline-block w-4 border-t border-dashed border-primary align-middle opacity-60" /> Broad range</span>
         <span><i className="mr-1 inline-block w-4 border-t-2 border-dashed align-middle" style={{ borderColor: 'var(--ledger-pending-500)' }} /> Your target</span>
       </div>
-      <table className="sr-only">
-        <caption>Investment forecast data</caption>
-        <thead><tr><th>Year</th><th>Lower outcome</th><th>Middle estimate</th><th>Upper outcome</th></tr></thead>
-        <tbody>{points.map(point => (
-          <tr key={point.year}>
-            <td>{point.year}</td>
-            <td>{masked ? 'Hidden' : point.lower}</td>
-            <td>{masked ? 'Hidden' : point.median}</td>
-            <td>{masked ? 'Hidden' : point.upper}</td>
-          </tr>
-        ))}</tbody>
-      </table>
+      <div className="sr-only">
+        <table>
+          <caption>Investment forecast data</caption>
+          <thead><tr><th>Year</th><th>Lower outcome</th><th>Middle estimate</th><th>Upper outcome</th></tr></thead>
+          <tbody>{points.map(point => (
+            <tr key={point.year}>
+              <td>{point.year}</td>
+              <td>{masked ? 'Hidden' : point.lower}</td>
+              <td>{masked ? 'Hidden' : point.median}</td>
+              <td>{masked ? 'Hidden' : point.upper}</td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>
     </div>
   )
 }

@@ -8,6 +8,7 @@ import { downloadCsvBlob, downloadCsvRows, toFilename } from '../../../lib/csvEx
 import { compareTransactions, mergeTransactions, type TransactionSort } from '../../../lib/transactionOrdering'
 import { ledgerRouteSearch, updateAppSearch } from '../../../lib/appLocation'
 import { getLedgerTransactionRowElement } from '../../../lib/ledgerTransactionTarget'
+import { createLedgerSyncStatus } from './ledgerSyncStatus'
 
 export interface UseLedgerViewOptions {
   transactions: Transaction[]
@@ -668,32 +669,13 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     setAreAttachedDocumentsLoading(false)
   }
 
-  const isTxDeleting = useCallback((txId: string) => {
-    const txObj = transactions.find(t => t.id === txId)
-    if (txObj && txObj.isPendingDelete) return true
-    if (deletingAttachedDocumentsTxId) {
-      if (txId === deletingAttachedDocumentsTxId
-        || txId.startsWith(`${deletingAttachedDocumentsTxId}-split-`)
-        || (txId.includes('-split-') && txId.split('-split-')[0] === deletingAttachedDocumentsTxId)) return true
-    }
-    if (!deletingTxId) return false
-    if (txId === deletingTxId) return true
-    if (txId.startsWith(`${deletingTxId}-split-`)) return true
-    if (txId.includes('-split-') && txId.split('-split-')[0] === deletingTxId) return true
-    return false
-  }, [deletingAttachedDocumentsTxId, deletingTxId, transactions])
-
-  const isTxSyncing = useCallback((txId: string) => {
-    const syncIds = activeSyncIds?.length ? activeSyncIds : activeSyncId ? [activeSyncId] : []
-    const transaction = transactions.find(value => String(value.id) === String(txId))
-    if (transaction?.pendingSyncOperationId && syncIds.includes(transaction.pendingSyncOperationId)) return true
-    return syncIds.some(syncId => {
-      if (txId === syncId) return true
-      if (txId === `wishlist-purchase-${syncId}`) return true
-      if (txId.startsWith(`${syncId}-split-`)) return true
-      return txId.includes('-split-') && txId.split('-split-')[0] === syncId
-    })
-  }, [activeSyncId, activeSyncIds, transactions])
+  const { isDeleting: isTxDeleting, isSyncing: isTxSyncing } = useMemo(() => createLedgerSyncStatus({
+    transactions,
+    activeSyncId,
+    activeSyncIds,
+    deletingTxId,
+    deletingAttachedDocumentsTxId,
+  }), [activeSyncId, activeSyncIds, deletingAttachedDocumentsTxId, deletingTxId, transactions])
 
   const pendingTransactions = useMemo(() => {
     return transactions.filter(t => t.isPendingSync || recentlySyncedIds.has(String(t.id)))

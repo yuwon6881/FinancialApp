@@ -75,6 +75,44 @@ describe('validateActivityBalances', () => {
     expect(issue?.message).toMatch(/needs (?:US)?\$101\.00/)
   })
 
+  it('applies only the net effect of an offline edit', () => {
+    const pendingEdit = {
+      id: 'edited-buy',
+      accountId: 'a1',
+      instrumentId: 'i1',
+      type: 'Buy' as const,
+      tradeDate: '2026-06-01',
+      units: 1,
+      unitPrice: 400,
+      cashAmount: 400,
+      fees: 0,
+      taxes: 0,
+      createdAt: '',
+      isPendingSync: true,
+      pendingOriginal: {
+        id: 'edited-buy',
+        accountId: 'a1',
+        instrumentId: 'i1',
+        type: 'Buy' as const,
+        tradeDate: '2026-01-01',
+        units: 3,
+        unitPrice: 333.33,
+        cashAmount: 1_000,
+        fees: 0,
+        taxes: 0,
+        createdAt: '',
+      },
+    }
+
+    // The server's 500 cash and 4 units include the original buy. The queued
+    // edit releases 600 cash and 2 units, so the projected availability is
+    // 1,100 cash and 2 units—not the current edited row applied on top again.
+    expect(validateActivityBalances(portfolio, buy(1_100), undefined, [pendingEdit])).toBeNull()
+    expect(validateActivityBalances(portfolio, buy(1_101), undefined, [pendingEdit])?.field).toBe('cashAmount')
+    expect(validateActivityBalances(portfolio, sell(2), undefined, [pendingEdit])).toBeNull()
+    expect(validateActivityBalances(portfolio, sell(3), undefined, [pendingEdit])?.field).toBe('units')
+  })
+
   it('allows selling the units held and rejects selling more', () => {
     expect(validateActivityBalances(portfolio, sell(4))).toBeNull()
     const issue = validateActivityBalances(portfolio, sell(4.5))
@@ -127,6 +165,38 @@ describe('validateCashFlowBalances', () => {
       undefined,
       [pendingDeposit],
     )).toBeNull()
+  })
+
+  it('applies only the net effect of an offline cash-movement edit', () => {
+    const pendingEdit = {
+      id: 'withdrawal-1',
+      accountId: 'a1',
+      currency: 'USD',
+      type: 'Withdrawal' as const,
+      amount: 100,
+      date: '2026-06-01',
+      pendingOriginal: {
+        id: 'withdrawal-1',
+        accountId: 'a1',
+        currency: 'USD',
+        type: 'Withdrawal' as const,
+        amount: -400,
+        date: '2026-01-01',
+      },
+    }
+
+    expect(validateCashFlowBalances(
+      portfolio,
+      { accountId: 'a1', type: 'Withdrawal', currency: 'USD', amount: 800 },
+      undefined,
+      [pendingEdit],
+    )).toBeNull()
+    expect(validateCashFlowBalances(
+      portfolio,
+      { accountId: 'a1', type: 'Withdrawal', currency: 'USD', amount: 801 },
+      undefined,
+      [pendingEdit],
+    )?.field).toBe('amount')
   })
 
   it('rejects a conversion between the same currency', () => {
