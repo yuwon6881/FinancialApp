@@ -406,6 +406,7 @@ test('rewards rail responds to a desktop mouse wheel and releases page scrolling
   }))
   expect(dimensions.scrollWidth).toBeGreaterThan(dimensions.clientWidth)
 
+  await rail.scrollIntoViewIfNeeded()
   const box = await rail.boundingBox()
   if (!box) throw new Error('Rewards rail did not have a layout box')
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
