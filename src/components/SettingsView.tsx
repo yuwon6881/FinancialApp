@@ -163,7 +163,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       </div>
 
       {/* Tabs Control */}
-      <div role="tablist" aria-label="Settings sections" className="grid grid-cols-2 gap-x-3 border-b border-border/30 select-none sm:flex sm:flex-wrap sm:gap-x-6">
+      <div role="tablist" aria-label="Settings sections" className="grid grid-cols-2 gap-x-3 gap-y-3.5 pb-1 border-b border-border/30 select-none sm:flex sm:flex-wrap sm:gap-x-6 sm:gap-y-3">
         {([
           ['financial-model', 'Plan & Preferences'],
           ['investment-plan', 'Investment Plan'],

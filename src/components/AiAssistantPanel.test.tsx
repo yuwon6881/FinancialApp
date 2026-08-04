@@ -83,6 +83,15 @@ describe('AiAssistantPanel', () => {
     expect(screen.getAllByRole('button').filter(button => !button.getAttribute('title'))).toHaveLength(3)
   })
 
+  it('keeps each prompt suggestion on its own full-width row', () => {
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+    const suggestions = screen.getByRole('group', { name: 'Suggested questions' })
+
+    expect(suggestions.className).toContain('grid-cols-1')
+    expect(suggestions.querySelectorAll('button')).toHaveLength(3)
+    expect(Array.from(suggestions.querySelectorAll('button')).every(button => button.className.includes('w-full'))).toBe(true)
+  })
+
   it('hydrates the active server conversation on first open', async () => {
     fetchAiConversation.mockResolvedValueOnce({
       conversationId: 'saved-conversation',
@@ -156,6 +165,17 @@ describe('AiAssistantPanel', () => {
     await typeAndSend('hi')
     await waitFor(() => expect(container.querySelector('.overflow-y-auto')).not.toBeNull())
     expect(container.querySelector('.overflow-y-hidden')).toBeNull()
+  })
+
+  it('renders assistant Markdown emphasis without showing raw asterisks', async () => {
+    chatWithAi.mockResolvedValue(reply({ reply: 'Coverage: **MYR 2,970.08** with **cash**.' }))
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+
+    await typeAndSend('show my coverage')
+
+    const amount = await screen.findByText('MYR 2,970.08')
+    expect(amount.tagName).toBe('STRONG')
+    expect(screen.queryByText('**MYR 2,970.08**')).toBeNull()
   })
 
   it('disables the send button for empty input', async () => {

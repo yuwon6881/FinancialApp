@@ -1,5 +1,5 @@
 import { Textarea } from './ui/Textarea'
-import { useEffect, useState, useRef } from 'react'
+import { Fragment, useEffect, useState, useRef } from 'react'
 import { Send, Sparkles, X, RotateCcw, SquarePen, Square } from 'lucide-react'
 import { BottomSheet } from './ui/BottomSheet'
 import { PerimeterBeam } from './ui/PerimeterBeam'
@@ -47,6 +47,22 @@ const SURFACE_SUGGESTED_PROMPTS: Partial<Record<AppTab, string[]>> = {
   investments: ['Explain my portfolio', 'What is On paper versus Already banked?', 'Which holdings have incomplete prices?'],
   wishlist: ['Explain my plan', 'Which wishlist items can I afford now?', 'How are my Savings Goals pacing?'],
 }
+
+// AI replies commonly use Markdown emphasis. Render the supported safe subset as React
+// nodes so the notation is useful without evaluating arbitrary HTML from the provider.
+const AI_MARKDOWN_TOKEN = /(\*\*[^*\r\n]+?\*\*|__[^_\r\n]+?__)/g
+
+const AiMessageContent: React.FC<{ content: string }> = ({ content }) => (
+  <>
+    {content.split(AI_MARKDOWN_TOKEN).map((part, index) => {
+      const isBold = (part.startsWith('**') && part.endsWith('**'))
+        || (part.startsWith('__') && part.endsWith('__'))
+      return isBold
+        ? <strong key={index}>{part.slice(2, -2)}</strong>
+        : <Fragment key={index}>{part}</Fragment>
+    })}
+  </>
+)
 
 const pickSuggestedPrompts = (sensitiveMode: boolean, surface?: AppTab) => {
   const prompts = [...(sensitiveMode ? SENSITIVE_SUGGESTED_PROMPTS : (surface ? SURFACE_SUGGESTED_PROMPTS[surface] : undefined) ?? SUGGESTED_PROMPTS)]
@@ -194,14 +210,14 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
               </div>
               <p className="font-medium text-foreground">Ready.</p>
               {isOffline && <p className="mt-2 text-[11px] font-medium text-orange-500">Ask AI requires an internet connection.</p>}
-              <div className="mt-4 flex max-w-md flex-wrap justify-center gap-2">
+              <div role="group" aria-label="Suggested questions" className="mt-4 grid w-full max-w-md grid-cols-1 gap-2">
                 {suggestedPrompts.map(prompt => (
                   <button
                     key={prompt}
                     type="button"
                     disabled={isOffline}
                     onClick={() => setInput(prompt)}
-                    className="rounded-full border border-border/60 bg-background px-3 py-1.5 text-[11px] text-muted-foreground transition hover:border-primary/50 hover:text-foreground cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
+                    className="w-full rounded-xl border border-border/60 bg-background px-3 py-2 text-left text-[11px] leading-4 text-muted-foreground transition hover:border-primary/50 hover:text-foreground cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
                   >
                     {prompt}
                   </button>
@@ -226,7 +242,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
                         : 'border border-border/50 bg-card text-foreground shadow-xs'
                     }`}
                   >
-                    {message.content}
+                    {message.role === 'assistant' ? <AiMessageContent content={message.content} /> : message.content}
                   </div>
                   {message.role === 'assistant' && index === messages.length - 1 && lastFailedTurn && (
                     <button

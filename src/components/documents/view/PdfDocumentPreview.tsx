@@ -5,9 +5,10 @@ interface PdfDocumentPreviewProps {
   fileName: string
   onReady: () => void
   onError: () => void
+  zoomScale?: number
 }
 
-export function PdfDocumentPreview({ blob, fileName, onReady, onError }: PdfDocumentPreviewProps) {
+export function PdfDocumentPreview({ blob, fileName, onReady, onError, zoomScale = 1.0 }: PdfDocumentPreviewProps) {
   const canvasHostRef = useRef<HTMLDivElement>(null)
   const onReadyRef = useRef(onReady)
   const onErrorRef = useRef(onError)
@@ -45,12 +46,22 @@ export function PdfDocumentPreview({ blob, fileName, onReady, onError }: PdfDocu
         if (!active) return
 
         setPageCount(pdf.numPages)
-        const availableWidth = Math.max(280, canvasHost.clientWidth)
+        const viewportEl = canvasHost.closest<HTMLElement>('.overflow-auto') || canvasHost.parentElement
+        const availableWidth = Math.max(280, (viewportEl?.clientWidth || canvasHost.clientWidth || 600) - 32)
+        const availableHeight = Math.max(280, (viewportEl?.clientHeight || 600) - 32)
+
+        canvasHost.replaceChildren()
+
         for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
           if (!active) return
           const page = await pdf.getPage(pageNumber)
           const baseViewport = page.getViewport({ scale: 1 })
-          const cssScale = Math.min(1.5, availableWidth / baseViewport.width)
+
+          const scaleW = availableWidth / baseViewport.width
+          const scaleH = availableHeight / baseViewport.height
+          const fitScale = Math.min(scaleW, scaleH)
+          const cssScale = Math.max(0.2, fitScale * zoomScale)
+
           const viewport = page.getViewport({ scale: cssScale })
           const outputScale = Math.min(window.devicePixelRatio || 1, 2)
           const canvas = globalThis.document.createElement('canvas')
@@ -58,7 +69,9 @@ export function PdfDocumentPreview({ blob, fileName, onReady, onError }: PdfDocu
           canvas.height = Math.ceil(viewport.height * outputScale)
           canvas.style.width = `${Math.round(viewport.width)}px`
           canvas.style.height = `${Math.round(viewport.height)}px`
-          canvas.className = 'block max-w-full rounded-lg bg-card shadow-sm'
+          canvas.style.maxWidth = 'none'
+          canvas.style.maxHeight = 'none'
+          canvas.className = 'block rounded bg-card shadow-sm'
           canvas.setAttribute('aria-hidden', 'true')
           canvasHost.appendChild(canvas)
 
@@ -84,18 +97,18 @@ export function PdfDocumentPreview({ blob, fileName, onReady, onError }: PdfDocu
       void loadedDocument?.cleanup?.()
       void loadingTask?.destroy()
     }
-  }, [blob])
+  }, [blob, zoomScale])
 
   return (
     <div
       role="document"
       aria-label={`Preview of ${fileName}`}
-      className="min-h-full w-full overflow-auto p-3"
+      className="m-auto flex min-h-full min-w-full flex-col items-center justify-center p-4"
     >
       <p className="sr-only">
         {pageCount > 0 ? `${fileName}, ${pageCount} PDF ${pageCount === 1 ? 'page' : 'pages'}.` : `Loading ${fileName}.`}
       </p>
-      <div ref={canvasHostRef} className="flex w-full flex-col items-center gap-3" />
+      <div ref={canvasHostRef} className="flex flex-col items-center gap-3" />
     </div>
   )
 }
