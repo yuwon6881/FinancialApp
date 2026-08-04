@@ -32,7 +32,12 @@ self.addEventListener('activate', event => {
   })())
 })
 
-registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html')))
+// API content can also be opened as a navigation by a PDF/image iframe. Keep it
+// on the network so the SPA fallback cannot turn an authenticated document response
+// into index.html rendered inside the preview sheet.
+registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html'), {
+  denylist: [/^\/api(?:\/|$)/],
+}))
 
 // Same-origin static assets that the precache manifest does not cover — chiefly the
 // hashed lazy-view chunks, which are fetched on demand and so are not in the manifest.
