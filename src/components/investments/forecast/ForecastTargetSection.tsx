@@ -17,6 +17,7 @@ export function ForecastTargetSection({
   years,
   targetChance,
   requiredContribution,
+  maxMonthlyContribution,
   onUseRequiredAmount,
   isCalculating,
   masked,
@@ -31,6 +32,7 @@ export function ForecastTargetSection({
   years: number
   targetChance: number | undefined
   requiredContribution: number | undefined
+  maxMonthlyContribution: number
   onUseRequiredAmount: () => void
   isCalculating: boolean
   masked: boolean
@@ -48,7 +50,8 @@ export function ForecastTargetSection({
     )
   }
 
-  const canUseRequired = requiredContribution !== undefined && Number.isFinite(requiredContribution)
+  const hasRequired = requiredContribution !== undefined && Number.isFinite(requiredContribution)
+  const canUseRequired = hasRequired && requiredContribution <= maxMonthlyContribution
 
   return (
     <div className="mt-5 space-y-4 rounded-2xl border border-border/50 bg-muted/15 p-4">
@@ -82,10 +85,14 @@ export function ForecastTargetSection({
           </div>
           <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <strong className="block text-xl text-foreground">{isCalculating || !canUseRequired ? 'Calculating…' : money(requiredContribution)}</strong>
-              <span className="text-[10px] text-muted-foreground">Middle estimate · {canUseRequired ? money(requiredContribution * 12) : '—'} a year</span>
+              <strong className="block text-xl text-foreground">{isCalculating || !hasRequired ? 'Calculating…' : money(requiredContribution)}</strong>
+              <span className="text-[10px] text-muted-foreground">Middle estimate · {hasRequired ? money(requiredContribution * 12) : '—'} a year</span>
             </div>
-            <Button variant="outline" size="sm" disabled={masked || !canUseRequired} onClick={onUseRequiredAmount} className="self-end sm:self-auto">Use this amount</Button>
+            <Button variant="outline" size="sm" disabled={masked || !canUseRequired} onClick={onUseRequiredAmount} className="self-end sm:self-auto">
+              {requiredContribution !== undefined && requiredContribution > maxMonthlyContribution
+                ? 'Above slider limit'
+                : 'Use this amount'}
+            </Button>
           </div>
         </article>
       </div>

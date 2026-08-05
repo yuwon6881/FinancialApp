@@ -49,8 +49,8 @@ export function WithdrawalGuide({ allocation, constituentsBySleeve, money, color
 
   return (
     <div className="mt-5 rounded-xl border border-border/50 bg-muted/20 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="flex items-center gap-1 text-xs font-bold text-foreground">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="hidden items-center gap-1 text-xs font-bold text-foreground sm:flex">
           <HandCoins className="size-3.5 text-muted-foreground" /> Taking money out
           <InfoHint
             label="taking money out"
@@ -64,6 +64,7 @@ export function WithdrawalGuide({ allocation, constituentsBySleeve, money, color
           aria-expanded={open}
           onClick={() => setOpen(value => !value)}
           disabled={!canPlan}
+          className="w-full justify-between sm:w-auto"
         >
           {open ? 'Hide' : 'Plan a withdrawal'}
           <ChevronDown className={`size-3.5 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />

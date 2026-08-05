@@ -71,6 +71,8 @@ describe('WithdrawalGuide', () => {
 
   it('stays folded away until asked for', () => {
     renderGuide()
+    expect(screen.getByText('Taking money out').className).toContain('hidden')
+    expect(screen.getByRole('button', { name: /Plan a withdrawal/ }).className).toContain('w-full')
     expect(screen.queryByLabelText('Amount to withdraw in MYR')).toBeNull()
     open()
     expect(screen.getByLabelText('Amount to withdraw in MYR')).toBeTruthy()

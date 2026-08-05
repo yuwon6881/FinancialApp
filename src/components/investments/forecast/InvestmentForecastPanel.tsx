@@ -129,6 +129,7 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
             years={view.years}
             targetChance={forecast.result?.targetChance}
             requiredContribution={forecast.result ? view.requiredContribution : undefined}
+            maxMonthlyContribution={view.contributionMax}
             onUseRequiredAmount={view.tryRequiredAmount}
             isCalculating={!forecast.result}
             masked={masked}

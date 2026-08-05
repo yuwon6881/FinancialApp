@@ -41,7 +41,6 @@ import { PerformanceBars } from './investments/PerformanceBars'
 import { HoldingsTable, PagedActivityTable } from './investments/InvestmentTables'
 import { HoldingDetailSheet } from './investments/HoldingDetailSheet'
 import { InvestmentForecastPanel } from './investments/forecast/InvestmentForecastPanel'
-import { portfolioAnnualReturn } from '../lib/investmentReturn'
 import { AccountForm, ActivityForm, CashForm, InstrumentForm } from './investments/InvestmentForms'
 import { useAutoOpenModal } from '../lib/useAutoOpenModal'
 import type { InvestmentActivityScanResult } from '../lib/api'
@@ -466,7 +465,7 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
   const realised = portfolio.summary.realisedProfitLoss
   const daily = portfolio.summary.dailyChange
   const percent = portfolio.summary.unrealisedPercent
-  const annualReturn = portfolioAnnualReturn(portfolio)
+  const annualReturn = portfolio.summary.annualReturn
 
   const tone = (value?: number) => {
     if (value === undefined) return 'text-amber-500'
@@ -490,7 +489,7 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
   const undeployed = sentToBroker === undefined ? undefined : earmarked - sentToBroker
   const deployedPercent = sentToBroker === undefined || earmarked <= 0
     ? undefined
-    : Math.min(999, sentToBroker / earmarked * 100)
+    : Math.max(0, Math.min(999, sentToBroker / earmarked * 100))
   const moneyInRows: SummaryMetric[] = [
     {
       label: 'Set aside to invest',

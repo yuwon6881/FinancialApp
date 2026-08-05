@@ -78,10 +78,29 @@ describe('InvestmentForecastPanel', () => {
 
     const contribution = screen.getByLabelText('Hypothetical monthly contribution') as HTMLInputElement
     expect(contribution.value).toBe('100')
+    expect(contribution.max).toBe('10000')
 
     fireEvent.click(screen.getByRole('button', { name: 'Add a target' }))
-    fireEvent.change(screen.getByLabelText('Forecast target amount'), { target: { value: '50000' } })
+    const target = screen.getByLabelText('Forecast target amount') as HTMLInputElement
+    expect(target.max).toBe('10000000')
+    fireEvent.change(target, { target: { value: '50000' } })
     expect(contribution.value).toBe('100')
+  })
+
+  it('does not copy a required contribution above the ten-thousand slider limit', () => {
+    vi.mocked(useInvestmentForecast).mockReturnValue({
+      error: '',
+      initializationMs: 12,
+      ready: true,
+      result: { ...result, requiredMonthlyContribution: 25_000 },
+    })
+    render(<InvestmentForecastPanel portfolio={portfolio()} masked={false} />)
+    fireEvent.click(screen.getByRole('button', { name: /Investment forecast/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add a target' }))
+    const overLimit = screen.getByRole('button', { name: 'Above slider limit' }) as HTMLButtonElement
+
+    expect(overLimit.disabled).toBe(true)
+    expect((screen.getByLabelText('Hypothetical monthly contribution') as HTMLInputElement).value).toBe('100')
   })
 
   it('draws no target until one is asked for, and drops it again on removal', () => {

@@ -384,4 +384,16 @@ describe('InvestmentsView money-you-put-in card', () => {
     expect(await screen.findByText('Sent beyond earmark')).toBeTruthy()
     expect(screen.getByText('$250.00')).toBeTruthy()
   })
+
+  it('never reports a negative put-to-work percentage after net withdrawals', async () => {
+    vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(withSummary({
+      growthLedgerBalance: 1000,
+      growthContributions: 1000,
+      netDeposits: -250,
+    }))
+    renderView()
+
+    expect(await screen.findByText('Put to work')).toBeTruthy()
+    expect(screen.getByText('0%')).toBeTruthy()
+  })
 })

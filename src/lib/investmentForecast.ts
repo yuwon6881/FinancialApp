@@ -4,6 +4,8 @@ export const FORECAST_MIN_YEARS = 5
 export const FORECAST_MAX_YEARS = 50
 export const FORECAST_DEFAULT_YEARS = 10
 export const FORECAST_PATHS = 10_000
+export const FORECAST_MAX_TARGET = 10_000_000
+export const FORECAST_MAX_MONTHLY_CONTRIBUTION = 10_000
 
 export interface ForecastAssetAssumption {
   key: 'USEquity' | 'InternationalExUS' | 'Bonds'
@@ -117,8 +119,11 @@ export function generateForecastCoefficients(
   const growth = new Float64Array(safePaths * safeYears)
   const contribution = new Float64Array(safePaths * safeYears)
   const random = mulberry32(seed)
-  const monthlyDrift = Math.log1p(model.annualReturn) / 12
   const monthlyVolatility = model.annualVolatility / Math.sqrt(12)
+  // The published return assumption is an arithmetic expectation. A lognormal
+  // path needs the variance correction or volatility silently raises its mean
+  // above that assumption.
+  const monthlyDrift = Math.log1p(model.annualReturn) / 12 - monthlyVolatility ** 2 / 2
 
   for (let path = 0; path < safePaths; path += 1) {
     let growthFactor = 1
@@ -246,6 +251,19 @@ export const inflationFactor = (annualInflation: number, years: number) =>
 
 export const toTodayMoney = (value: number, annualInflation: number, years: number) =>
   value / inflationFactor(annualInflation, years)
+
+/** Present purchasing power of fixed nominal deposits made at each month end. */
+export function contributionsInTodayMoney(
+  monthlyContribution: number,
+  annualInflation: number,
+  years: number,
+) {
+  const months = Math.max(0, Math.floor(years * 12))
+  const contribution = Math.max(0, monthlyContribution)
+  if (annualInflation <= 0) return contribution * months
+  const monthlyInflation = Math.expm1(Math.log1p(annualInflation) / 12)
+  return contribution * (1 - (1 + monthlyInflation) ** -months) / monthlyInflation
+}
 
 export function niceCeiling(value: number) {
   if (!Number.isFinite(value) || value <= 0) return 1

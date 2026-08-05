@@ -147,6 +147,7 @@ export interface InvestmentPortfolio {
     realisedProfitLoss?: number
     netDividends?: number
     dailyChange?: number
+    annualReturn?: number
     cashValue?: number
     totalValue?: number
   }

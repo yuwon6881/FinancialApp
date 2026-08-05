@@ -3,6 +3,7 @@ import {
   FORECAST_MAX_YEARS,
   buildForecastModel,
   calculateForecast,
+  contributionsInTodayMoney,
   generateForecastCoefficients,
   inflationFactor,
   medianCompoundValue,
@@ -56,6 +57,13 @@ describe('investment forecast model', () => {
     expect(first.contribution).toHaveLength(8 * FORECAST_MAX_YEARS)
   })
 
+  it('keeps the simulated arithmetic mean aligned with the published return assumption', () => {
+    const coefficients = generateForecastCoefficients(model(0.05, 0.2), 20_000, 1, 42)
+    const mean = [...coefficients.growth].reduce((sum, value) => sum + value, 0) / coefficients.paths
+
+    expect(mean).toBeCloseTo(1.05, 2)
+  })
+
   it('compounds the existing value and adds deposits at each month end', () => {
     const coefficients = generateForecastCoefficients(model(0.12), 1, 1, 1)
     const result = calculateForecast(coefficients, 1_000, 100, 1, 3_000)
@@ -105,6 +113,9 @@ describe('investment forecast model', () => {
     expect(inflationFactor(0.02, 10)).toBeGreaterThan(1)
     expect(toTodayMoney(1_000, 0.02, 0)).toBe(1_000)
     expect(toTodayMoney(1_000, 0.02, 10)).toBeLessThan(1_000)
+    expect(contributionsInTodayMoney(100, 0, 1)).toBe(1_200)
+    expect(contributionsInTodayMoney(100, 0.12, 1)).toBeLessThan(1_200)
+    expect(contributionsInTodayMoney(100, 0.12, 1)).toBeGreaterThan(1_100)
   })
 
   it('selects percentiles and rounded slider ceilings without sorting inputs first', () => {

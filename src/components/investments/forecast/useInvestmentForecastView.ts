@@ -1,13 +1,15 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { InvestmentPortfolio } from '../../../types'
 import {
   FORECAST_ASSUMPTIONS,
   FORECAST_DEFAULT_YEARS,
+  FORECAST_MAX_MONTHLY_CONTRIBUTION,
+  FORECAST_MAX_TARGET,
   buildForecastModel,
+  contributionsInTodayMoney,
   inflationFactor,
   medianCompoundValue,
   niceCeiling,
-  niceStep,
   toTodayMoney,
 } from '../../../lib/investmentForecast'
 import { useInvestmentForecast } from './useInvestmentForecast'
@@ -36,14 +38,21 @@ export function useInvestmentForecastView(portfolio: InvestmentPortfolio, nearVi
   )
 
   const [years, setYears] = useState(FORECAST_DEFAULT_YEARS)
-  const [monthlyContribution, setMonthlyContribution] = useState(observedContribution)
+  const [monthlyContribution, setMonthlyContributionState] = useState(
+    Math.min(observedContribution, FORECAST_MAX_MONTHLY_CONTRIBUTION),
+  )
   const [inflationPercent, setInflationPercent] = useState(FORECAST_ASSUMPTIONS.defaultInflation * 100)
   const [todayMoney, setTodayMoney] = useState(false)
   const [targetToday, setTargetToday] = useState<number | null>(null)
 
   const inflation = inflationPercent / 100
   const targetFactor = inflationFactor(inflation, years)
-  const targetNominal = targetToday === null ? null : targetToday * targetFactor
+  const targetMaxToday = FORECAST_MAX_TARGET / targetFactor
+  const targetNominal = targetToday === null ? null : Math.min(targetToday, targetMaxToday) * targetFactor
+
+  useEffect(() => {
+    setTargetToday(current => current === null ? null : Math.min(current, targetMaxToday))
+  }, [targetMaxToday])
 
   const request = useMemo(() => ({
     startValue,
@@ -61,11 +70,13 @@ export function useInvestmentForecastView(portfolio: InvestmentPortfolio, nearVi
     median: toTodayMoney(point.median, inflation, point.year),
     upper: toTodayMoney(point.upper, inflation, point.year),
   } : point) ?? [], [forecast.result, inflation, todayMoney])
-  const displayedTarget = targetToday === null ? null : todayMoney ? targetToday : targetNominal
+  const displayedTarget = targetToday === null ? null : todayMoney ? Math.min(targetToday, targetMaxToday) : targetNominal
   const endingFactor = todayMoney ? targetFactor : 1
   const displayedEnding = forecast.result ? forecast.result.ending.median / endingFactor : undefined
   const displayedFutureContributions = forecast.result
-    ? forecast.result.futureContributions / endingFactor
+    ? todayMoney
+      ? contributionsInTodayMoney(monthlyContribution, inflation, years)
+      : forecast.result.futureContributions
     : undefined
   const displayedGrowth = displayedEnding === undefined || displayedFutureContributions === undefined
     ? undefined
@@ -78,22 +89,14 @@ export function useInvestmentForecastView(portfolio: InvestmentPortfolio, nearVi
     : undefined
 
   const suggestedTargetToday = () => {
-    const nominal = niceCeiling(medianCompoundValue(startValue, monthlyContribution, years, model.annualReturn))
+    const nominal = niceCeiling(forecast.result?.ending.median
+      ?? medianCompoundValue(startValue, monthlyContribution, years, model.annualReturn))
     return nominal / targetFactor
   }
-  const resultMedianToday = forecast.result
-    ? toTodayMoney(forecast.result.ending.median, inflation, years)
-    : toTodayMoney(suggestedTargetToday() * targetFactor, inflation, years)
-  const targetMaxToday = niceCeiling(Math.max(startValue * 10, resultMedianToday * 2, (targetToday ?? 0) * 1.25))
-  const targetMax = todayMoney ? targetMaxToday : targetMaxToday * targetFactor
-  const targetStep = niceStep(targetMax, 200)
+  const targetMax = todayMoney ? targetMaxToday : FORECAST_MAX_TARGET
+  const targetStep = 50_000
   const requiredContribution = forecast.result?.requiredMonthlyContribution ?? 0
-  const contributionMax = niceCeiling(Math.max(
-    observedContribution * 3,
-    startValue / 12,
-    monthlyContribution,
-    requiredContribution * 1.25,
-  ))
+  const contributionMax = FORECAST_MAX_MONTHLY_CONTRIBUTION
 
   return {
     model,
@@ -102,9 +105,11 @@ export function useInvestmentForecastView(portfolio: InvestmentPortfolio, nearVi
     years,
     setYears,
     monthlyContribution,
-    setMonthlyContribution,
+    setMonthlyContribution: (value: number) => setMonthlyContributionState(
+      Math.max(0, Math.min(FORECAST_MAX_MONTHLY_CONTRIBUTION, value)),
+    ),
     contributionMax,
-    contributionStep: niceStep(contributionMax),
+    contributionStep: 100,
     inflationPercent,
     setInflationPercent,
     todayMoney,
@@ -120,13 +125,19 @@ export function useInvestmentForecastView(portfolio: InvestmentPortfolio, nearVi
     targetMax,
     targetStep,
     requiredContribution,
-    addTarget: () => setTargetToday(suggestedTargetToday()),
+    addTarget: () => setTargetToday(Math.min(suggestedTargetToday(), targetMaxToday)),
     removeTarget: () => setTargetToday(null),
     /** Slider values are in whichever money view is showing; state stays in today's money. */
-    setDisplayedTarget: (value: number) => setTargetToday(todayMoney ? value : value / targetFactor),
+    setDisplayedTarget: (value: number) => setTargetToday(Math.max(
+      0,
+      Math.min(targetMaxToday, todayMoney ? value : value / targetFactor),
+    )),
     tryRequiredAmount: () => {
       if (!Number.isFinite(requiredContribution)) return
-      setMonthlyContribution(Math.max(0, requiredContribution))
+      setMonthlyContributionState(Math.max(
+        0,
+        Math.min(FORECAST_MAX_MONTHLY_CONTRIBUTION, requiredContribution),
+      ))
     },
   }
 }
