@@ -35,8 +35,16 @@ export function getDeviceUnlockRegistrationMarker(username: string): string | nu
   if (!username.trim()) return null
   const accountValue = localStorage.getItem(storageKey(username))
   if (accountValue === 'already_enrolled') return accountValue
-  return normalizeCredentialId(accountValue)
-    ?? normalizeCredentialId(localStorage.getItem(LEGACY_DEVICE_CREDENTIAL_ID_KEY))
+  const normalized = normalizeCredentialId(accountValue)
+  if (normalized) return normalized
+
+  // Fall back to the legacy non-account-scoped key. The old code stored both
+  // hex credential ids and the 'already_enrolled' sentinel here; the latter
+  // must be checked explicitly because normalizeCredentialId treats it as an
+  // unrecognised value and returns null.
+  const legacyValue = localStorage.getItem(LEGACY_DEVICE_CREDENTIAL_ID_KEY)
+  if (legacyValue === 'already_enrolled') return legacyValue
+  return normalizeCredentialId(legacyValue)
 }
 
 /** Returns the credential this browser recorded for this account at enrollment time. */
@@ -72,7 +80,12 @@ export function forgetDeviceUnlockCredential(username: string, credentialId: str
   const accountKey = storageKey(username)
   const accountValue = localStorage.getItem(accountKey)
   let changed = false
-  if (accountValue === 'already_enrolled' || normalizeCredentialId(accountValue) === normalized) {
+  // Only clear the per-account key when it stores the exact credential being
+  // removed. The 'already_enrolled' marker is imprecise — it does not name a
+  // specific credential — so deleting any individual credential must not erase
+  // the device's enrollment state. The backend credential list and the
+  // enrolledHere guard in Settings are the authoritative checks.
+  if (normalizeCredentialId(accountValue) === normalized) {
     localStorage.removeItem(accountKey)
     changed = true
   }

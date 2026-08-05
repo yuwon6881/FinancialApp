@@ -37,11 +37,25 @@ describe('device unlock registration', () => {
     expect(getRegisteredDeviceCredentialId('alice')).toBeNull()
   })
 
-  it('clears an unidentifiable existing-authenticator marker when a credential is removed', () => {
+  it('preserves the already_enrolled marker when a specific credential is removed', () => {
     rememberExistingDeviceUnlock('alice')
     forgetDeviceUnlockCredential('alice', '010203')
 
-    expect(getDeviceUnlockRegistrationMarker('alice')).toBeNull()
+    // The 'already_enrolled' marker is imprecise — it does not name a specific
+    // credential — so deleting any individual credential must not erase the
+    // device's enrollment state.
+    expect(getDeviceUnlockRegistrationMarker('alice')).toBe('already_enrolled')
+  })
+
+  it('falls back to a legacy already_enrolled marker stored before account-scoped keys', () => {
+    // Simulate a pre-migration installation that stored 'already_enrolled'
+    // under the old non-account-scoped key.
+    localStorage.setItem('fingerprint_credential_id_on_this_device', 'already_enrolled')
+
+    expect(getDeviceUnlockRegistrationMarker('alice')).toBe('already_enrolled')
+    // A different account on the same browser also sees the legacy marker,
+    // mirroring the pre-migration behaviour.
+    expect(getDeviceUnlockRegistrationMarker('bob')).toBe('already_enrolled')
   })
 
   it('announces every marker change so a live session can re-ask for its device status', () => {
@@ -59,6 +73,11 @@ describe('device unlock registration', () => {
       expect(listener).toHaveBeenCalledTimes(2)
 
       rememberExistingDeviceUnlock('alice')
+      expect(listener).toHaveBeenCalledTimes(3)
+
+      // Removing a credential when only 'already_enrolled' is stored does not
+      // fire because the imprecise marker is deliberately preserved.
+      forgetDeviceUnlockCredential('alice', '070809')
       expect(listener).toHaveBeenCalledTimes(3)
     } finally {
       window.removeEventListener(DEVICE_UNLOCK_REGISTRATION_EVENT, listener)

@@ -37,12 +37,40 @@ export function FingerprintSection() {
     void load().catch(console.error)
     void isPlatformAuthenticatorAvailable().then(setAvailable)
   }, [])
+
   const enrolledHere = useMemo(() => {
     const stored = getDeviceUnlockRegistrationMarker(username)
     if (!stored || credentials.length === 0) return false
     if (stored === 'already_enrolled') return true
     return credentials.some(credential => credential.id.toUpperCase() === stored)
   }, [credentials, username])
+
+  useEffect(() => {
+    if (!credentialsLoaded || credentials.length === 0 || enrolledHere || !available || !username) return
+    let active = true
+    const probe = async () => {
+      try {
+        const { options } = await api.getFingerprintRegisterOptions()
+        if (!active) return
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 100)
+        try {
+          await createFingerprintCredential(options, controller.signal)
+        } finally {
+          clearTimeout(timer)
+        }
+      } catch (error) {
+        if (!active) return
+        if (getErrorName(error) === 'InvalidStateError') {
+          rememberExistingDeviceUnlock(username)
+          await load()
+        }
+      }
+    }
+    void probe().catch(() => undefined)
+    return () => { active = false }
+  }, [credentialsLoaded, credentials.length, enrolledHere, available, username])
+
   const enabledOnAccount = credentials.length > 0
   const status = !credentialsLoaded
     ? { label: 'Checking', className: 'text-muted-foreground' }
@@ -119,49 +147,101 @@ export function FingerprintSection() {
                 : "Use this device's screen lock, PIN, fingerprint, or face recognition."}
           </p>
         </div>
-        <span className={`shrink-0 text-[10px] font-bold uppercase tracking-wider ${status.className}`}>
-          {status.label}
-        </span>
-        {open ? <ChevronUp className="size-4 text-muted-foreground shrink-0" /> : <ChevronDown className="size-4 text-muted-foreground shrink-0" />}
+        <div className="flex items-center gap-2">
+          <span className={`text-xs font-medium ${status.className}`}>{status.label}</span>
+          {open ? <ChevronUp className="size-4 text-muted-foreground shrink-0" /> : <ChevronDown className="size-4 text-muted-foreground shrink-0" />}
+        </div>
       </Button>
 
       <CollapsibleBody open={open}>
-        <div className="px-5 pb-5 space-y-4 border-t border-border/40 pt-4">
-          {credentials.map(credential => {
-            const isRemoving = removingCredentialId === credential.id
-            return (
-              <div key={credential.id} className="flex items-center justify-between bg-muted/20 border px-3 py-2.5 rounded-xl text-xs" aria-busy={isRemoving}>
-                <span className="flex items-center gap-2 font-semibold">
-                  <KeyRound className="size-4 text-emerald-500" />
-                  {credential.deviceLabel || 'Registered device'}
-                  <RowSyncStatus isDeleting={isRemoving} entityLabel="device unlock credential" />
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  type="button"
-                  onClick={() => void remove(credential.id)}
-                  disabled={hideSensitive || busy || removingCredentialId !== null}
-                  aria-busy={isRemoving}
-                  aria-label={`Remove ${credential.deviceLabel || 'registered device'}`}
-                  className="size-8 text-muted-foreground hover:text-orange-500"
-                >
-                  {isRemoving
-                    ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-                    : <Trash2 className="size-3.5" aria-hidden="true" />}
-                </Button>
+        <div className="px-5 pb-5 pt-0 space-y-4 border-t border-border/40">
+          <div className="pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <KeyRound className="size-3.5 text-muted-foreground" />
+                <span>Device Authentication</span>
               </div>
-            )
-          })}
-          {enrolledHere ? (
-            <div className="flex justify-center gap-1.5 text-[11px] font-semibold text-emerald-500">
-              <CheckCircle2 className="size-3.5" /> Enabled on this device
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {enrolledHere
+                  ? 'This device can unlock your account using biometrics or screen lock.'
+                  : 'Register this device to allow fast biometric or PIN unlock on the login screen.'}
+              </p>
             </div>
-          ) : (
-            <Button variant="success" type="button" onClick={() => void enroll()} disabled={busy || removingCredentialId !== null || hideSensitive} aria-busy={busy} className="w-full rounded-xl py-2.5">
-              {busy ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <KeyRound className="size-3.5" />}
-              {enabledOnAccount ? 'Set up this device' : 'Enable on this device'}
+            <Button
+              type="button"
+              variant={enrolledHere ? 'outline' : 'primary'}
+              size="sm"
+              disabled={busy || hideSensitive}
+              onClick={enroll}
+              className="shrink-0"
+            >
+              {busy ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin" />
+                  <span>Setting up…</span>
+                </>
+              ) : enrolledHere ? (
+                <span>Add another credential</span>
+              ) : (
+                <span>Enable on this device</span>
+              )}
             </Button>
+          </div>
+
+          {credentials.length > 0 && (
+            <div className="space-y-2 pt-2 border-t border-border/40">
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                Registered Credentials ({credentials.length})
+              </span>
+              <div className="space-y-1.5">
+                {credentials.map(c => {
+                  const isRemoving = removingCredentialId === c.id
+                  const isCurrent = getDeviceUnlockRegistrationMarker(username) === c.id.toUpperCase()
+                  return (
+                    <div
+                      key={c.id}
+                      className="flex items-center justify-between p-2.5 rounded-xl border border-border/50 bg-background/50 text-xs"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        {isCurrent ? (
+                          <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
+                        ) : (
+                          <KeyRound className="size-4 text-muted-foreground shrink-0" />
+                        )}
+                        <div className="min-w-0">
+                          <div className="font-medium text-foreground truncate flex items-center gap-1.5">
+                            <span>{c.deviceLabel || 'Unnamed credential'}</span>
+                            {isCurrent && (
+                              <span className="text-[10px] bg-emerald-500/10 text-emerald-500 font-semibold px-1.5 py-0.5 rounded-full">
+                                This device
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">
+                            Added {new Date(c.createdAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        disabled={busy || removingCredentialId !== null || hideSensitive}
+                        onClick={() => remove(c.id)}
+                        className="size-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        title="Remove credential"
+                      >
+                        {isRemoving ? (
+                          <RowSyncStatus isDeleting entityLabel="Credential" />
+                        ) : (
+                          <Trash2 className="size-3.5" />
+                        )}
+                      </Button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           )}
         </div>
       </CollapsibleBody>

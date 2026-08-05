@@ -94,7 +94,7 @@ export interface AssertionOptionsJson {
   userVerification?: string
 }
 
-export async function createFingerprintCredential(options: CreateOptionsJson) {
+export async function createFingerprintCredential(options: CreateOptionsJson, signal?: AbortSignal) {
   const publicKey: PublicKeyCredentialCreationOptions = {
     rp: options.rp,
     user: {
@@ -114,7 +114,7 @@ export async function createFingerprintCredential(options: CreateOptionsJson) {
     })),
   }
 
-  const credential = (await navigator.credentials.create({ publicKey })) as PublicKeyCredential | null
+  const credential = (await navigator.credentials.create({ publicKey, signal })) as PublicKeyCredential | null
   if (!credential) throw new Error('No credential returned by the authenticator.')
 
   const response = credential.response as AuthenticatorAttestationResponse

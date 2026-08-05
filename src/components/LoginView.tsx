@@ -10,6 +10,7 @@ import {
   prefetchFingerprintLoginOptions,
 } from '../lib/fingerprintOptionsCache'
 import { getErrorMessage, getErrorName } from '../lib/errors'
+import { rememberDeviceUnlockCredential } from '../lib/deviceUnlockRegistration'
 import { SecurityQuestionSetup } from './SecurityQuestionSetup'
 import { ForgotPassword } from './ForgotPassword'
 import { AlertBanner } from './ui/AlertBanner'
@@ -81,8 +82,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     setHasFingerprint(false)
     void api.fetchAuthStatus(username.trim()).then(status => {
       if (cancelled) return
-      setHasFingerprint(status.hasFingerprintOnDevice)
-      if (status.hasFingerprintOnDevice) {
+      const available = status.hasFingerprintOnDevice || status.hasFingerprint
+      setHasFingerprint(available)
+      if (available) {
         void prefetchFingerprintLoginOptions(username.trim()).catch(() => undefined)
       }
     }).catch(() => undefined)
@@ -210,6 +212,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       const { challengeId, options } = await getCachedFingerprintLoginOptions(username.trim())
       const credential = await getFingerprintAssertion(options)
       const res = await api.verifyFingerprintLogin(challengeId, credential)
+      rememberDeviceUnlockCredential(res.username || username.trim(), credential.id)
       if (res.hasSetupSecurityQuestions === false) {
         setLoginResData({ token: res.token, username: res.username })
         setNeedsSecuritySetup(true)
