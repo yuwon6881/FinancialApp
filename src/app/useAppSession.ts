@@ -9,7 +9,6 @@ import {
 } from '../lib/fingerprintOptionsCache'
 import { DEVICE_UNLOCK_REGISTRATION_EVENT } from '../lib/deviceUnlockRegistration'
 import { useAutoLock } from '../lib/useAutoLock'
-import { getExistingDeviceId } from '../lib/push/deviceId'
 
 export interface UseAppSessionOptions {
   onLogoutBackupAndCleanup: (username: string) => void | Promise<void>
@@ -176,6 +175,7 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
   async function handleLogout() {
     const currentOwner = usernameRef.current
     onPreferenceOwnerChange(null)
+    const { getExistingDeviceId } = await import('../lib/push/deviceId')
     const pushDeviceId = getExistingDeviceId()
     if (pushDeviceId) {
       try {

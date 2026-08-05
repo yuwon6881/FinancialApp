@@ -219,6 +219,16 @@ export default defineConfig(({ mode }) => {
           // the app shell. Keep the orchestration helpers in their own cacheable chunk; the
           // much larger Firebase SDK is additionally loaded on demand by firebaseMessaging.
           if (id.includes('/src/lib/push/') || id.includes('\\src\\lib\\push\\')) return 'push-client'
+          // The hook itself is still statically imported by App.tsx (push status must be
+          // known at boot), so it stays on the eager critical path — but keeping it out of
+          // the index chunk lets it change without invalidating the whole app-shell chunk.
+          if (id.includes('/src/app/usePushNotifications') || id.includes('\\src\\app\\usePushNotifications')) return 'push-hook'
+          // The fetch/auth wrapper is a shared dependency of every hook that calls the API
+          // (useAppSession, usePushNotifications, ...); giving it a stable name of its own
+          // lets Rollup share one copy across those callers instead of anchoring it to
+          // whichever caller's manual chunk it happens to be reached through first.
+          if (id.includes('/src/lib/api/client') || id.includes('\\src\\lib\\api\\client') ||
+              id.includes('/src/lib/auth/') || id.includes('\\src\\lib\\auth\\')) return 'api-client'
           // DatePicker is shared between the eager app shell (TopNav bell) and
           // several lazy views; keep it in its own parallel-loaded chunk instead
           // of pinning it into the main bundle (mirrors CustomSelect/SearchableSelect).
