@@ -156,7 +156,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
           )}
 
           {preview.status === 'ready' && canPreviewAsImage(preview.contentType) && (
-            <div className="m-auto flex min-h-full min-w-full items-center justify-center p-4">
+            <div className="m-auto flex min-h-full min-w-full w-max items-center justify-center p-4">
               <img
                 src={preview.url}
                 alt={`Preview of ${document?.originalFileName ?? 'document'}`}

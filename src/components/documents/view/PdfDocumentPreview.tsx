@@ -103,12 +103,12 @@ export function PdfDocumentPreview({ blob, fileName, onReady, onError, zoomScale
     <div
       role="document"
       aria-label={`Preview of ${fileName}`}
-      className="m-auto flex min-h-full min-w-full flex-col items-center justify-center p-4"
+      className="m-auto flex min-h-full min-w-full w-max flex-col items-center justify-center p-4"
     >
       <p className="sr-only">
         {pageCount > 0 ? `${fileName}, ${pageCount} PDF ${pageCount === 1 ? 'page' : 'pages'}.` : `Loading ${fileName}.`}
       </p>
-      <div ref={canvasHostRef} className="flex flex-col items-center gap-3" />
+      <div ref={canvasHostRef} className="flex flex-col items-center gap-3 w-max min-w-full" />
     </div>
   )
 }
