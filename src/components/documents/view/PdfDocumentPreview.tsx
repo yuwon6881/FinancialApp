@@ -17,14 +17,16 @@ export function PdfDocumentPreview({ blob, fileName, onReady, onError, zoomScale
   useEffect(() => { onReadyRef.current = onReady }, [onReady])
   useEffect(() => { onErrorRef.current = onError }, [onError])
 
-  useEffect(() => {
-    const canvasHost = canvasHostRef.current
-    if (!canvasHost) return
+  const pdfDocRef = useRef<unknown>(null)
+  const [pdfReady, setPdfReady] = useState(false)
 
+  // 1. Parse and cache PDF document proxy ONCE per blob
+  useEffect(() => {
     let active = true
     let loadingTask: { destroy: () => Promise<void> } | undefined
-    let loadedDocument: { cleanup?: () => Promise<unknown>; destroy?: () => Promise<void> } | undefined
-    const renderTasks: Array<{ cancel: () => void }> = []
+
+    setPdfReady(false)
+    pdfDocRef.current = null
 
     void (async () => {
       try {
@@ -36,27 +38,57 @@ export function PdfDocumentPreview({ blob, fileName, onReady, onError, zoomScale
 
         const data = new Uint8Array(await blob.arrayBuffer())
         if (!active) return
+
         const task = pdfjs.getDocument({
           data,
           useWasm: false,
         })
         loadingTask = task
         const pdf = await task.promise
-        loadedDocument = pdf
         if (!active) return
 
+        pdfDocRef.current = pdf
         setPageCount(pdf.numPages)
+        setPdfReady(true)
+      } catch {
+        if (!active) return
+        onErrorRef.current()
+      }
+    })()
+
+    return () => {
+      active = false
+      void loadingTask?.destroy()
+      pdfDocRef.current = null
+      setPdfReady(false)
+    }
+  }, [blob])
+
+  // 2. Render or scale pages whenever pdfReady or zoomScale changes
+  useEffect(() => {
+    const pdf = pdfDocRef.current as { numPages: number; getPage: (n: number) => Promise<unknown> } | null
+    const canvasHost = canvasHostRef.current
+    if (!pdfReady || !pdf || !canvasHost) return
+
+    let active = true
+    const renderTasks: Array<{ cancel: () => void }> = []
+
+    void (async () => {
+      try {
         const viewportEl = canvasHost.closest<HTMLElement>('.overflow-auto') || canvasHost.parentElement
         const availableWidth = Math.max(280, (viewportEl?.clientWidth || canvasHost.clientWidth || 600) - 32)
         const availableHeight = Math.max(280, (viewportEl?.clientHeight || 600) - 32)
 
-        canvasHost.replaceChildren()
+        const existingCanvases = Array.from(canvasHost.querySelectorAll<HTMLCanvasElement>('canvas'))
 
         for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
           if (!active) return
-          const page = await pdf.getPage(pageNumber)
-          const baseViewport = page.getViewport({ scale: 1 })
+          const page = (await pdf.getPage(pageNumber)) as {
+            getViewport: (opts: { scale: number }) => { width: number; height: number }
+            render: (opts: { canvas: HTMLCanvasElement; viewport: unknown; transform?: number[] }) => { promise: Promise<void>; cancel: () => void }
+          }
 
+          const baseViewport = page.getViewport({ scale: 1 })
           const scaleW = availableWidth / baseViewport.width
           const scaleH = availableHeight / baseViewport.height
           const fitScale = Math.min(scaleW, scaleH)
@@ -64,16 +96,29 @@ export function PdfDocumentPreview({ blob, fileName, onReady, onError, zoomScale
 
           const viewport = page.getViewport({ scale: cssScale })
           const outputScale = Math.min(window.devicePixelRatio || 1, 2)
-          const canvas = globalThis.document.createElement('canvas')
-          canvas.width = Math.ceil(viewport.width * outputScale)
-          canvas.height = Math.ceil(viewport.height * outputScale)
+
+          let canvas = existingCanvases[pageNumber - 1]
+          if (!canvas) {
+            canvas = globalThis.document.createElement('canvas')
+            canvas.className = 'block rounded bg-card shadow-sm'
+            canvas.setAttribute('aria-hidden', 'true')
+            canvasHost.appendChild(canvas)
+          }
+
+          // Instant CSS display scaling (0ms delay, zero blank screen flash)
           canvas.style.width = `${Math.round(viewport.width)}px`
           canvas.style.height = `${Math.round(viewport.height)}px`
           canvas.style.maxWidth = 'none'
           canvas.style.maxHeight = 'none'
-          canvas.className = 'block rounded bg-card shadow-sm'
-          canvas.setAttribute('aria-hidden', 'true')
-          canvasHost.appendChild(canvas)
+
+          // Set high-DPI backing resolution
+          const targetWidth = Math.ceil(viewport.width * outputScale)
+          const targetHeight = Math.ceil(viewport.height * outputScale)
+
+          if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+            canvas.width = targetWidth
+            canvas.height = targetHeight
+          }
 
           const renderTask = page.render({
             canvas,
@@ -83,6 +128,7 @@ export function PdfDocumentPreview({ blob, fileName, onReady, onError, zoomScale
           renderTasks.push(renderTask)
           await renderTask.promise
         }
+
         if (active) onReadyRef.current()
       } catch (error) {
         if (!active || (error instanceof Error && error.name === 'RenderingCancelledException')) return
@@ -93,11 +139,8 @@ export function PdfDocumentPreview({ blob, fileName, onReady, onError, zoomScale
     return () => {
       active = false
       renderTasks.forEach(task => task.cancel())
-      canvasHost.replaceChildren()
-      void loadedDocument?.cleanup?.()
-      void loadingTask?.destroy()
     }
-  }, [blob, zoomScale])
+  }, [pdfReady, zoomScale])
 
   return (
     <div

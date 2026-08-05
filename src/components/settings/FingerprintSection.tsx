@@ -182,6 +182,8 @@ export function FingerprintSection() {
                 </>
               ) : enrolledHere ? (
                 <span>Add another credential</span>
+              ) : enabledOnAccount ? (
+                <span>Set up this device</span>
               ) : (
                 <span>Enable on this device</span>
               )}
@@ -229,7 +231,8 @@ export function FingerprintSection() {
                         disabled={busy || removingCredentialId !== null || hideSensitive}
                         onClick={() => remove(c.id)}
                         className="size-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                        title="Remove credential"
+                        title={`Remove ${c.deviceLabel || 'credential'}`}
+                        aria-label={`Remove ${c.deviceLabel || 'credential'}`}
                       >
                         {isRemoving ? (
                           <RowSyncStatus isDeleting entityLabel="Credential" />
