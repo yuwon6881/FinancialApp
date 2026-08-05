@@ -338,6 +338,13 @@ function App() {
     }
   }, [prefs.activeTab, nav.highlightedRecurringId, nav.clearHighlightedRecurring])
 
+  // Same reasoning for the Reports section focus (`?focus=`).
+  useEffect(() => {
+    if (prefs.activeTab !== 'reports' && nav.highlightedReportSection) {
+      nav.clearHighlightedReportSection()
+    }
+  }, [prefs.activeTab, nav.highlightedReportSection, nav.clearHighlightedReportSection])
+
   useEffect(() => {
     if (nav.selectedMonth && nav.selectedYear) {
       updateAppSearch({ month: nav.selectedMonth, year: nav.selectedYear })

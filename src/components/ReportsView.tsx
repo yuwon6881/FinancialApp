@@ -17,6 +17,7 @@ import { CycleCalendar } from './dashboard/CycleCalendar'
 import { BalanceAdjustmentModals } from './dashboard/BalanceAdjustmentModals'
 import { CategoryLimitPerformance } from './dashboard/CategoryLimitPerformance'
 import { SubscriptionsTimelineCard } from './dashboard/SubscriptionsTimelineCard'
+import { useHighlightedElement } from './ui/useHighlightedElement'
 
 interface ReportsViewProps {
   dashboardData: DashboardData | null
@@ -38,6 +39,9 @@ interface ReportsViewProps {
   isSwitchingCycle?: boolean
   onViewCycleSummary?: (monthIndex: number, year: number) => void
   onExplainWithAi?: (cycleKey: string) => void
+  /** Section id arrived at from another tab; scrolled to and briefly highlighted. */
+  highlightedSection?: string | null
+  onClearHighlightedSection?: () => void
 }
 
 const REPORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -55,8 +59,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   isSwitchingCycle = false,
   onViewCycleSummary,
   onExplainWithAi,
+  highlightedSection = null,
+  onClearHighlightedSection,
 }) => {
   const { hideSensitive } = useAppPrefs()
+  useHighlightedElement(highlightedSection ? `report-section-${highlightedSection}` : null, onClearHighlightedSection)
   const view = useDashboardView({
     dashboardData,
     wishlist,
@@ -195,12 +202,14 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           onNavigateToRecurring={onNavigateToRecurring}
           cycleKey={`${view.activeSettings.selectedMonth}-${view.activeSettings.selectedYear}`}
         />
-        <CategoryLimitPerformance
-          items={view.categoryLimitProgress}
-          formatSensitive={view.formatSensitive}
-          onNavigateToLedger={onNavigateToLedger}
-          onNavigate={onNavigate}
-        />
+        <div id="report-section-category-limits" className="min-w-0 rounded-2xl">
+          <CategoryLimitPerformance
+            items={view.categoryLimitProgress}
+            formatSensitive={view.formatSensitive}
+            onNavigateToLedger={onNavigateToLedger}
+            onNavigate={onNavigate}
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

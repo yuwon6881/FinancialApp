@@ -4,9 +4,9 @@ import { CycleSkeleton } from './ui/Skeleton'
 import { useAppPrefs } from '../contexts/AppContext'
 import { DashboardHeader } from './dashboard/DashboardHeader'
 import { TodayFocusCards } from './dashboard/TodayFocusCards'
-import { CategoryLimitPerformance } from './dashboard/CategoryLimitPerformance'
+import { CategoryWatchExceptionCard } from './dashboard/CategoryWatchExceptionCard'
 import { useDashboardView } from './dashboard/useDashboardView'
-import { AlertCircle, BarChart3, CheckCircle2, ShieldCheck } from 'lucide-react'
+import { AlertCircle, BarChart3, ShieldCheck } from 'lucide-react'
 import { Button } from './ui/Button'
 import { getCycleProgress, MONTH_NAMES } from '../lib/cycle'
 import { InvestmentPlanExceptionCard } from './dashboard/InvestmentPlanExceptionCard'
@@ -33,6 +33,8 @@ interface DashboardViewProps {
   wishlist?: WishlistItem[]
   isSwitchingCycle?: boolean
   investmentAllocation?: InvestmentAllocationOverview | null
+  /** Opens Reports focused on the category limit breakdown. Falls back to plain Reports. */
+  onNavigateToCategoryLimits?: () => void
 }
 export const DashboardView: React.FC<DashboardViewProps> = ({
   dashboardData,
@@ -47,6 +49,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   wishlist = [],
   isSwitchingCycle = false,
   investmentAllocation = null,
+  onNavigateToCategoryLimits,
 }) => {
   const [expiredTaxYears, setExpiredTaxYears] = React.useState<ExpiredTaxYearSummary[]>([])
   React.useEffect(() => {
@@ -93,30 +96,30 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         onToggleBalanceAmounts={onToggleBalanceAmounts}
       />
 
-      <section aria-labelledby="attention-heading" className={`app-panel rounded-2xl border p-5 ${pendingNotificationCount > 0 ? 'border-amber-500/25 bg-amber-500/8' : 'border-emerald-500/20 bg-emerald-500/5'}`}>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${pendingNotificationCount > 0 ? 'bg-amber-500/12 text-amber-600 dark:text-amber-400' : 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-400'}`}>
-              {pendingNotificationCount > 0 ? <AlertCircle className="size-5" /> : <CheckCircle2 className="size-5" />}
+      {/* Attention panels are exception-only: a clear day should show nothing here rather
+          than a card whose whole message is that it has no message. */}
+      {pendingNotificationCount > 0 && (
+        <section aria-labelledby="attention-heading" className="app-panel rounded-2xl border border-amber-500/25 bg-amber-500/8 p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/12 text-amber-600 dark:text-amber-400">
+                <AlertCircle className="size-5" />
+              </div>
+              <div>
+                <h3 id="attention-heading" className="text-sm font-bold text-amber-600 dark:text-amber-400">
+                  {pendingNotificationCount} bill{pendingNotificationCount === 1 ? '' : 's'} need review
+                </h3>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  Confirm paid bills, skip this cycle, or remove subscriptions from one review queue.
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 id="attention-heading" className={`text-sm font-bold ${pendingNotificationCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                {pendingNotificationCount > 0 ? `${pendingNotificationCount} bill${pendingNotificationCount === 1 ? '' : 's'} need review` : 'You are all caught up'}
-              </h3>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                {pendingNotificationCount > 0
-                  ? 'Confirm paid bills, skip this cycle, or remove subscriptions from one review queue.'
-                  : 'There are no subscription payments waiting for confirmation.'}
-              </p>
-            </div>
-          </div>
-          {pendingNotificationCount > 0 && (
             <Button variant="primary" onClick={onOpenNotifications} className="w-full justify-center sm:w-auto">
               Review bills
             </Button>
-          )}
-        </div>
-      </section>
+          </div>
+        </section>
+      )}
 
       {expiredTaxYears.length > 0 && (
         <section className="rounded-2xl border border-amber-500/30 bg-amber-500/8 p-5" aria-labelledby="vault-retention-heading">
@@ -140,6 +143,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       )}
 
       <InvestmentPlanExceptionCard allocation={investmentAllocation} onNavigate={onNavigate} />
+
+      <CategoryWatchExceptionCard
+        items={view.categoryLimitProgress}
+        formatSensitive={view.formatSensitive}
+        onOpenCategoryLimits={() => (onNavigateToCategoryLimits ? onNavigateToCategoryLimits() : onNavigate('reports'))}
+      />
 
       {/* Today-focused metric cards: cycle progress, safe-to-spend, and the active wish goal */}
       <TodayFocusCards
@@ -245,14 +254,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </section>
       </div>
-
-      <CategoryLimitPerformance
-        items={view.categoryLimitProgress}
-        formatSensitive={view.formatSensitive}
-        onNavigateToLedger={onNavigateToLedger}
-        onNavigate={onNavigate}
-        compact
-      />
     </div>
   )
 }

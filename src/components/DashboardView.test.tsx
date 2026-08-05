@@ -105,7 +105,6 @@ describe('DashboardView focused Today experience', () => {
     expect(screen.getByText('Unpaid recurring bills')).toBeTruthy()
     expect(screen.getByText('Essentials spending pace')).toBeTruthy()
     expect(screen.getByText('Projected cycle finish')).toBeTruthy()
-    expect(screen.getByText('Category watch')).toBeTruthy()
     expect(screen.getByText(/Current cycle/)).toBeTruthy()
     expect(screen.queryByText('Subscriptions')).toBeNull()
     expect(screen.queryByText('Financial Plan Metrics')).toBeNull()
@@ -126,10 +125,35 @@ describe('DashboardView focused Today experience', () => {
     expect(props.onOpenNotifications).toHaveBeenCalledOnce()
   })
 
-  it('shows a calm caught-up state when no bills need action', () => {
+  it('drops the bill review panel entirely when no bills need action', () => {
     render(<DashboardView {...makeProps({ pendingNotificationCount: 0 })} />)
-    expect(screen.getByText('You are all caught up')).toBeTruthy()
+    expect(screen.queryByText('You are all caught up')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Review bills' })).toBeNull()
+    expect(screen.queryByText(/bills? need review/)).toBeNull()
+  })
+
+  it('raises a category only when it needs attention, and opens the Reports breakdown', () => {
+    const props = makeProps({ onNavigateToCategoryLimits: vi.fn() })
+    render(<DashboardView {...props} />)
+
+    // The seeded Transport limit is on Watch.
+    expect(screen.getByText('Transport is close to its budget')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'See categories' }))
+    expect(props.onNavigateToCategoryLimits).toHaveBeenCalledOnce()
+  })
+
+  it('says nothing about categories when every tracked limit is on plan', () => {
+    render(<DashboardView {...makeProps({
+      dashboardData: {
+        ...dashboardData,
+        categoryLimitProgress: [
+          { category: 'Transport', limit: 400, spent: 80, remaining: 320, pendingCommitted: 0, projectedSpend: 200, percentUsed: 0.2, status: 'OnTrack' },
+        ],
+      },
+    })} />)
+
+    expect(screen.queryByText(/is close to its budget/)).toBeNull()
+    expect(screen.queryByText(/is over its budget/)).toBeNull()
   })
 
   it('renders the today focus cards and the active wish goal', () => {

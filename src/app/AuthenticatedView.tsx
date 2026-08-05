@@ -191,6 +191,7 @@ export function AuthenticatedView({
                       wishlist={financial.allWishlist}
                       isSwitchingCycle={isCurrentCycleLoading || !todayDashboardData}
                       investmentAllocation={investmentAllocation}
+                      onNavigateToCategoryLimits={() => nav.handleNavigateToReportSection('category-limits')}
                     />
                   )}
 
@@ -206,6 +207,8 @@ export function AuthenticatedView({
                       onNavigateToLedger={nav.handleNavigateToLedger}
                       onAddBalanceAdjustment={financial.handleAddBalanceAdjustment}
                       isSwitchingCycle={nav.isSwitchingCycle}
+                      highlightedSection={nav.highlightedReportSection}
+                      onClearHighlightedSection={nav.clearHighlightedReportSection}
                       onViewCycleSummary={cycleSummary.openManual}
                       onExplainWithAi={cycleKey => onExplainWithAi({
                         surface: 'reports',

@@ -55,6 +55,10 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     if (typeof window === 'undefined') return null
     return new URLSearchParams(window.location.search).get('subscription')
   })
+  const [highlightedReportSection, setHighlightedReportSection] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null
+    return new URLSearchParams(window.location.search).get('focus')
+  })
 
   const selectPeriodSeqRef = useRef(0)
   const selectPeriodQueueRef = useRef<Promise<void>>(Promise.resolve())
@@ -176,6 +180,18 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     updateAppSearch({ subscription: null })
   }, [])
 
+  // Same arrival cue as a subscription jump, for the Reports sections the Today
+  // exception cards point at.
+  const handleNavigateToReportSection = useCallback((section: string) => {
+    setHighlightedReportSection(section)
+    setActiveTab('reports', { search: { focus: section } })
+  }, [setActiveTab])
+
+  const clearHighlightedReportSection = useCallback(() => {
+    setHighlightedReportSection(null)
+    updateAppSearch({ focus: null })
+  }, [])
+
   // Receipt splitting is deliberately absent: it is not something to *open*, it
   // starts from the transaction form's scan picker. setAutoOpenReceiptSplit still
   // exists for the poller, which re-opens the editor for a background scan.
@@ -233,6 +249,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
       setLedgerCyclesRange(location.ledger.range)
       setHighlightedTxId(location.ledger.highlightedTxId)
       setHighlightedRecurringId(new URLSearchParams(window.location.search).get('subscription'))
+      setHighlightedReportSection(new URLSearchParams(window.location.search).get('focus'))
 
       const period = selectedPeriodRef.current
       if (location.month && location.year && (location.month !== period.month || location.year !== period.year)) {
@@ -281,6 +298,9 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     setHighlightedTxId,
     highlightedRecurringId,
     setHighlightedRecurringId,
+    highlightedReportSection,
+    handleNavigateToReportSection,
+    clearHighlightedReportSection,
     ledgerIncomingSearch,
     setLedgerIncomingSearch,
     handleSelectPeriod,

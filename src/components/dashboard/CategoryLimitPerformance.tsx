@@ -2,6 +2,7 @@ import React from 'react'
 import { AlertTriangle, ArrowRight, CheckCircle2, Gauge, SlidersHorizontal, TrendingUp } from 'lucide-react'
 import type { CategoryLimitProgress, AppTab } from '../../types'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
+import { InfoHint } from '../ui/InfoHint'
 import type { NavigateToLedgerOptions } from './types'
 
 interface CategoryLimitPerformanceProps {
@@ -9,7 +10,6 @@ interface CategoryLimitPerformanceProps {
   formatSensitive: (value: number) => React.ReactNode
   onNavigateToLedger?: (options: NavigateToLedgerOptions) => void
   onNavigate?: (tab: AppTab) => void
-  compact?: boolean
 }
 
 const statusRank = { Exceeded: 0, Watch: 1, OnTrack: 2 } as const
@@ -19,10 +19,8 @@ export function CategoryLimitPerformance({
   formatSensitive,
   onNavigateToLedger,
   onNavigate,
-  compact = false,
 }: CategoryLimitPerformanceProps) {
   if (items.length === 0) {
-    if (compact) return null
     return (
       <section className="app-panel flex h-full flex-col justify-between rounded-2xl border border-border/60 bg-card/92 p-5">
         <div className="flex items-center justify-between gap-3">
@@ -69,15 +67,20 @@ export function CategoryLimitPerformance({
     if (statusDelta !== 0) return statusDelta
     return (b.limit > 0 ? b.projectedSpend / b.limit : 0) - (a.limit > 0 ? a.projectedSpend / a.limit : 0)
   })
-  const visibleItems = compact ? sorted.slice(0, 3) : sorted
   const exceptionCount = items.filter(item => item.status !== 'OnTrack').length
+  const anyProjectionMarker = items.some(item =>
+    item.status !== 'Exceeded' && item.limit > 0 && item.projectedSpend / item.limit > Math.max(0, item.percentUsed))
 
   return (
-    <section className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
+    <section className="app-panel h-full rounded-2xl border border-border/60 bg-card/92 p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-            <Gauge className="size-4 text-blue-500" /> {compact ? 'Category watch' : 'Category limit performance'}
+            <Gauge className="size-4 text-blue-500" /> Category limit performance
+            <InfoHint
+              label="category limit performance"
+              text="Each bar shows what you have spent so far against the budget you set for that category. The small vertical marker shows where the bar is heading by the end of this cycle if you keep spending at the same pace."
+            />
           </h3>
           <p className="mt-1 text-[11px] text-muted-foreground">
             {exceptionCount > 0
@@ -92,8 +95,8 @@ export function CategoryLimitPerformance({
         )}
       </div>
 
-      <div className={`mt-4 grid gap-3 ${compact ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2 xl:grid-cols-3'}`}>
-        {visibleItems.map(item => {
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {sorted.map(item => {
           const exceeded = item.status === 'Exceeded'
           const watch = item.status === 'Watch'
           const usedPct = Math.max(0, item.percentUsed * 100)
@@ -134,7 +137,7 @@ export function CategoryLimitPerformance({
                   <div
                     className="absolute inset-y-0 border-r-2 border-amber-500/90"
                     style={{ left: `${Math.min(100, projectedPct)}%` }}
-                    title="Projected cycle position"
+                    title="Where this bar is heading by the end of the cycle at the current pace"
                   />
                 )}
               </div>
@@ -157,9 +160,10 @@ export function CategoryLimitPerformance({
         })}
       </div>
 
-      {compact && items.length > visibleItems.length && (
-        <p className="mt-3 text-right text-[10px] font-semibold text-muted-foreground">
-          {items.length - visibleItems.length} more tracked in Reports
+      {anyProjectionMarker && (
+        <p className="mt-3 flex items-center gap-2 text-[10px] text-muted-foreground">
+          <span aria-hidden className="inline-block h-3 w-0 border-r-2 border-amber-500/90" />
+          Marks where a bar ends up by the close of this cycle if spending keeps to the same pace.
         </p>
       )}
     </section>

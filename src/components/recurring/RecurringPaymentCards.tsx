@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import { m, AnimatePresence } from 'framer-motion'
 import { Calendar, CreditCard, Edit, FastForward, Repeat, Trash2 } from 'lucide-react'
 import type { RecurringPayment, RecurringReminderSettings } from '../../types'
@@ -10,6 +10,7 @@ import { RowSyncStatus } from '../ui/RowSyncBadge'
 import { ToggleButton } from '../ui/ToggleButton'
 import { getRecurrenceDescription } from './formatters'
 import { ReminderControls } from './ReminderControls'
+import { useHighlightedElement } from '../ui/useHighlightedElement'
 
 interface RecurringPaymentCardsProps {
   payments: RecurringPayment[]
@@ -27,8 +28,6 @@ interface RecurringPaymentCardsProps {
   onUpdateReminder?: (id: string, settings: RecurringReminderSettings) => void
   onRequestPayEarly?: (id: string) => void
 }
-
-const HIGHLIGHT_CLASSES = ['ring-2', 'ring-blue-500/60', 'ring-offset-2', 'ring-offset-background', 'bg-blue-500/[0.06]', 'shadow-lg']
 
 // Subscriptions Cards Grid
 export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
@@ -49,29 +48,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
 }) => {
   // When navigated here from the dashboard subscription card, scroll the target
   // card into view and apply a highlight ring that fades out on its own.
-  useEffect(() => {
-    if (!highlightedId) return
-    let clearTimer: ReturnType<typeof setTimeout> | undefined
-    const timer = setTimeout(() => {
-      const el = document.getElementById(`recur-card-${highlightedId}`)
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        el.classList.add(...HIGHLIGHT_CLASSES)
-        clearTimer = setTimeout(() => {
-          el.classList.remove(...HIGHLIGHT_CLASSES)
-          onClearHighlight?.()
-        }, 2600)
-      } else {
-        // Target not rendered (e.g. filtered out) — drop the highlight state.
-        onClearHighlight?.()
-      }
-    }, 350)
-    return () => {
-      clearTimeout(timer)
-      if (clearTimer) clearTimeout(clearTimer)
-      document.getElementById(`recur-card-${highlightedId}`)?.classList.remove(...HIGHLIGHT_CLASSES)
-    }
-  }, [highlightedId, onClearHighlight])
+  useHighlightedElement(highlightedId ? `recur-card-${highlightedId}` : null, onClearHighlight)
 
   return (
     <m.div
