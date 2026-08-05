@@ -218,8 +218,7 @@ export default defineConfig(({ mode }) => {
           // Web-push support is used only after authentication and changes independently of
           // the app shell. Keep the orchestration helpers in their own cacheable chunk; the
           // much larger Firebase SDK is additionally loaded on demand by firebaseMessaging.
-          if (id.includes('/src/lib/push/') || id.includes('\\src\\lib\\push\\') ||
-              id.includes('/src/app/usePushNotifications') || id.includes('\\src\\app\\usePushNotifications')) return 'push-client'
+          if (id.includes('/src/lib/push/') || id.includes('\\src\\lib\\push\\')) return 'push-client'
           // DatePicker is shared between the eager app shell (TopNav bell) and
           // several lazy views; keep it in its own parallel-loaded chunk instead
           // of pinning it into the main bundle (mirrors CustomSelect/SearchableSelect).

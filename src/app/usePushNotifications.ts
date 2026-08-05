@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import * as api from '../lib/api'
 import type { PushStatus } from '../types'
-import { getOrCreateDeviceId } from '../lib/push/deviceId'
-import { isPushSupported } from '../lib/push/support'
-import { getFcmToken, onForegroundMessage } from '../lib/push/firebaseMessaging'
-import { PUSH_DENIED_GUIDANCE, PUSH_ENABLED_ELSEWHERE_MESSAGE, PUSH_UNSUPPORTED_GUIDANCE } from '../lib/push/messages'
 
 export interface UsePushNotificationsResult {
   supported: boolean
@@ -22,26 +18,34 @@ export interface UsePushNotificationsResult {
   refresh: () => Promise<PushStatus | null>
 }
 
+let pushModulePromise: Promise<typeof import('../lib/push')> | null = null
+function loadPushModule() {
+  if (!pushModulePromise) {
+    pushModulePromise = import('../lib/push')
+  }
+  return pushModulePromise
+}
+
 export function usePushNotifications(
   active = true,
   onForegroundNotification?: (message: string, title?: string) => void,
 ): UsePushNotificationsResult {
-  const [supported] = useState(() => isPushSupported())
-  const [deviceId] = useState(() => (isPushSupported() ? getOrCreateDeviceId() : null))
+  const [supported, setSupported] = useState(true)
+  const [deviceId, setDeviceId] = useState<string | null>(null)
   const [status, setStatus] = useState<PushStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
-  const [guidance, setGuidance] = useState<string | null>(supported ? null : PUSH_UNSUPPORTED_GUIDANCE)
+  const [guidance, setGuidance] = useState<string | null>(null)
 
-  const refresh = useCallback(async () => {
-    if (!active || !supported || !deviceId) {
+  const refreshInternal = useCallback(async (pushModule: typeof import('../lib/push'), devId: string | null) => {
+    if (!active || !pushModule.isPushSupported() || !devId) {
       setLoading(false)
       return null
     }
     try {
-      const next = await api.fetchPushStatus(deviceId)
+      const next = await api.fetchPushStatus(devId)
       setStatus(next)
-      setGuidance(next.enabled && !next.deviceRegistered ? PUSH_ENABLED_ELSEWHERE_MESSAGE : null)
+      setGuidance(next.enabled && !next.deviceRegistered ? pushModule.PUSH_ENABLED_ELSEWHERE_MESSAGE : null)
       return next
     } catch (err) {
       console.error('Could not fetch push notification status.', err)
@@ -49,7 +53,18 @@ export function usePushNotifications(
       setLoading(false)
     }
     return null
-  }, [active, supported, deviceId])
+  }, [active])
+
+  const refresh = useCallback(async () => {
+    if (!active) {
+      setLoading(false)
+      return null
+    }
+    const push = await loadPushModule()
+    const devId = deviceId || (push.isPushSupported() ? push.getOrCreateDeviceId() : null)
+    if (devId && !deviceId) setDeviceId(devId)
+    return refreshInternal(push, devId)
+  }, [active, deviceId, refreshInternal])
 
   useEffect(() => {
     if (!active) {
@@ -57,24 +72,42 @@ export function usePushNotifications(
       setLoading(false)
       return
     }
+    let cancelled = false
     setLoading(true)
-    void refresh().then(async next => {
+    void loadPushModule().then(async push => {
+      if (cancelled) return
+      const isSupp = push.isPushSupported()
+      setSupported(isSupp)
+      if (!isSupp) {
+        setGuidance(push.PUSH_UNSUPPORTED_GUIDANCE)
+        setLoading(false)
+        return
+      }
+      const devId = push.getOrCreateDeviceId()
+      setDeviceId(devId)
+      const next = await refreshInternal(push, devId)
+      if (cancelled) return
       if (!next?.enabled || !next.deviceRegistered || Notification.permission !== 'granted') return
       try {
         const registration = await navigator.serviceWorker.ready
-        const token = await getFcmToken(registration)
-        if (token && deviceId) await api.upsertPushSubscription(deviceId, token)
+        const token = await push.getFcmToken(registration)
+        if (token && devId) await api.upsertPushSubscription(devId, token)
       } catch (err) {
         console.warn('Could not refresh this device push token.', err)
       }
     })
-  }, [active, deviceId, refresh])
+    return () => {
+      cancelled = true
+    }
+  }, [active, refreshInternal])
 
   useEffect(() => {
-    if (!active || !supported || !onForegroundNotification) return
+    if (!active || !onForegroundNotification) return
     let disposed = false
     let unsubscribe: (() => void) | undefined
-    void onForegroundMessage(payload => {
+    void loadPushModule().then(push => {
+      if (disposed || !push.isPushSupported()) return
+      return push.onForegroundMessage(payload => {
         const title = payload.data?.title || payload.notification?.title || 'Payment reminder'
         const message = payload.data?.body || payload.notification?.body || 'A recurring payment is approaching.'
         onForegroundNotification(message, title)
@@ -84,15 +117,17 @@ export function usePushNotifications(
         else unsubscribe = cleanup
       })
       .catch(err => console.warn('Could not start foreground push handling.', err))
+    })
     return () => {
       disposed = true
       unsubscribe?.()
     }
-  }, [active, supported, onForegroundNotification])
+  }, [active, onForegroundNotification])
 
   const enable = useCallback(async (): Promise<boolean> => {
-    if (!supported || !deviceId) {
-      setGuidance(PUSH_UNSUPPORTED_GUIDANCE)
+    const push = await loadPushModule()
+    if (!push.isPushSupported() || !deviceId) {
+      setGuidance(push.PUSH_UNSUPPORTED_GUIDANCE)
       return false
     }
     const previousStatus = status
@@ -104,14 +139,14 @@ export function usePushNotifications(
       // visual state, matching "not enabled until every step succeeds".
       const permission = await Notification.requestPermission()
       if (permission !== 'granted') {
-        setGuidance(PUSH_DENIED_GUIDANCE)
+        setGuidance(push.PUSH_DENIED_GUIDANCE)
         return false
       }
 
       const registration = await navigator.serviceWorker.ready
-      const token = await getFcmToken(registration)
+      const token = await push.getFcmToken(registration)
       if (!token) {
-        setGuidance(PUSH_UNSUPPORTED_GUIDANCE)
+        setGuidance(push.PUSH_UNSUPPORTED_GUIDANCE)
         return false
       }
 
@@ -119,20 +154,21 @@ export function usePushNotifications(
       // should react immediately. Reconcile with the server afterward and roll back on failure.
       setStatus({ enabled: true, deviceRegistered: true })
       await api.upsertPushSubscription(deviceId, token)
-      await refresh()
+      await refreshInternal(push, deviceId)
       return true
     } catch (err) {
       console.error('Could not enable push notifications.', err)
       setStatus(previousStatus)
-      setGuidance(PUSH_UNSUPPORTED_GUIDANCE)
+      setGuidance(push.PUSH_UNSUPPORTED_GUIDANCE)
       return false
     } finally {
       setBusy(false)
     }
-  }, [supported, deviceId, refresh, status])
+  }, [deviceId, refreshInternal, status])
 
   const disable = useCallback(async () => {
-    if (!supported || !deviceId) return
+    const push = await loadPushModule()
+    if (!push.isPushSupported() || !deviceId) return
     const previousStatus = status
     setBusy(true)
     // We know this device is turning off immediately, but we do not yet know whether it is the
@@ -147,17 +183,17 @@ export function usePushNotifications(
       // Push opt-in is per device. Removing this subscription leaves every other device alone;
       // the server clears the account gate only when this was the last enabled device.
       await api.deletePushSubscription(deviceId)
-      await refresh()
+      await refreshInternal(push, deviceId)
     } catch (err) {
       console.error('Could not disable push notifications.', err)
       setStatus(previousStatus)
       setGuidance(previousStatus?.enabled && !previousStatus.deviceRegistered
-        ? PUSH_ENABLED_ELSEWHERE_MESSAGE
+        ? push.PUSH_ENABLED_ELSEWHERE_MESSAGE
         : null)
     } finally {
       setBusy(false)
     }
-  }, [supported, deviceId, refresh, status])
+  }, [deviceId, refreshInternal, status])
 
   return {
     supported,
