@@ -8,6 +8,7 @@ import { useMemo } from 'react'
 import { allocationStatusLabel, buildSleeveIndex, UNASSIGNED_SLEEVE_KEY } from '../../lib/investmentAllocation'
 import { breakdownBySleeve } from '../../lib/investmentSleeveBreakdown'
 import { SleeveCard } from './SleeveCard'
+import { WithdrawalGuide } from './WithdrawalGuide'
 
 const tone: Record<InvestmentAllocationStatus, string> = {
   NotStarted: 'border-border/60 bg-muted/20 text-muted-foreground',
@@ -156,6 +157,17 @@ export function InvestmentPlanPanel({
             {contributionPlan.basis} Buying in these proportions keeps your mix on target without selling anything.
           </p>
         </div>
+      )}
+
+      {/* Only offered once the plan can actually be valued: an unpriced or unsorted
+          portfolio cannot say which basket is overweight, so it cannot answer this. */}
+      {(allocation.status === 'OnTrack' || allocation.status === 'Watch' || allocation.status === 'Alert') && (
+        <WithdrawalGuide
+          allocation={allocation}
+          constituentsBySleeve={constituentsBySleeve}
+          money={money}
+          colors={colors}
+        />
       )}
 
       <div className={`mt-5 grid gap-4 ${showGuidance ? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]' : ''}`}>
