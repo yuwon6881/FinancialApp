@@ -227,6 +227,24 @@ async function mockApi(page: Page, options: { registered?: boolean; failStatus?:
   })
 }
 
+/**
+ * Waits until the document stops growing.
+ *
+ * `toHaveScreenshot` stabilises by comparing consecutive captures, which is not the same as waiting
+ * for the page to finish settling: the dashboard reaches its first quiet moment ~137px short of its
+ * final height, and two captures taken inside that window agree with each other. The baseline was
+ * pinned to that pre-settled frame, so any change to load timing — a padding change was enough —
+ * flipped the capture to the settled height and read as a 137px regression that no diff explained.
+ */
+async function waitForStableLayout(page: Page) {
+  await expect.poll(async () => {
+    const first = await page.evaluate(() => document.documentElement.scrollHeight)
+    await page.waitForTimeout(150)
+    const second = await page.evaluate(() => document.documentElement.scrollHeight)
+    return first === second ? second : -1
+  }, { timeout: 10_000 }).toBeGreaterThan(0)
+}
+
 async function establishSession(page: Page) {
   await page.addInitScript(({ dark }) => {
     localStorage.setItem('auth_session', '1')
@@ -264,6 +282,7 @@ test('representative dashboard', async ({ page }) => {
   await mockApi(page)
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
+  await waitForStableLayout(page)
   await expect(page).toHaveScreenshot('dashboard.png', { fullPage: true })
 })
 
@@ -344,7 +363,15 @@ test('vault controls stay beside the results and selection actions do not shift 
   const filterBar = documentsRegion.getByTestId('document-filter-bar')
   const toolbar = documentsRegion.getByTestId('document-selection-toolbar')
   const results = documentsRegion.getByTestId('document-results')
+
+  // Selection is opt-in, so the reserved-slot invariant this test guards is scoped to *within* the
+  // mode: entering it is a deliberate tap that may reshape the toolbar, but ticking a box afterwards
+  // must not shift the results by a pixel. Measuring from before the mode existed would be asserting
+  // that a mode switch is invisible, which is not the promise.
+  await expect(documentsRegion.getByRole('checkbox', { name: 'Select all documents on this page' })).toHaveCount(0)
+  await documentsRegion.getByRole('button', { name: 'Select' }).click()
   const selectAll = documentsRegion.getByRole('checkbox', { name: 'Select all documents on this page' })
+  await expect(selectAll).toBeVisible()
   const before = await page.evaluate(() => {
     const filter = document.querySelector<HTMLElement>('[data-testid="document-filter-bar"]')!
     const selection = document.querySelector<HTMLElement>('[data-testid="document-selection-toolbar"]')!
@@ -420,3 +447,4 @@ test('rewards rail responds to a desktop mouse wheel and releases page scrolling
   await page.mouse.wheel(0, 240)
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(pageOffsetBeforeEdgeWheel)
 })
+
