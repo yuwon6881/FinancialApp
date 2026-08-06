@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { VaultDocument } from '../../../types'
 import { DocumentList } from './DocumentList'
@@ -41,23 +41,42 @@ const baseProps = {
 }
 
 describe('DocumentList selection toolbar', () => {
-  it('keeps a fixed action slot when selection actions appear', () => {
-    const { rerender } = render(<DocumentList {...baseProps} selectedIds={new Set()} />)
-    const toolbar = screen.getByTestId('document-selection-toolbar')
-    const actionSlot = screen.getByTestId('document-selection-actions')
+  it('stays out of selection mode until asked, then offers the bulk actions', () => {
+    render(<DocumentList {...baseProps} selectedIds={new Set()} />)
 
-    expect(toolbar.className).toContain('min-h-14')
-    expect(actionSlot.className).toContain('w-20')
-    expect(actionSlot.className).toContain('sm:w-60')
+    // Reading the list is the common visit, so nothing about bulk selection is on screen for it —
+    // no select-all, no reserved action slot, and no per-row checkbox.
     expect(screen.queryByRole('button', { name: 'Download selected documents' })).toBeNull()
+    expect(screen.queryByLabelText('Select all documents on this page')).toBeNull()
+    expect(screen.queryAllByLabelText('Select tax.pdf')).toHaveLength(0)
+    expect(screen.getByText('1 on this page')).not.toBeNull()
 
-    rerender(<DocumentList {...baseProps} selectedIds={new Set([document.id])} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
 
-    expect(screen.getByTestId('document-selection-toolbar')).toBe(toolbar)
-    expect(screen.getByTestId('document-selection-actions')).toBe(actionSlot)
-    expect(screen.getByRole('button', { name: 'Download selected documents' })).not.toBeNull()
-    expect(screen.getByRole('button', { name: 'Delete selected documents' })).not.toBeNull()
+    // Both layouts are mounted under jsdom, so the row checkbox appears once per layout.
+    expect(screen.getByLabelText('Select all documents on this page')).not.toBeNull()
+    expect(screen.queryAllByLabelText('Select tax.pdf').length).toBeGreaterThan(0)
+    // Present but inert until something is actually selected.
+    expect(screen.getByRole('button', { name: 'Download selected documents' }).hasAttribute('disabled')).toBe(true)
+    expect(screen.getByRole('button', { name: 'Delete selected documents' }).hasAttribute('disabled')).toBe(true)
+  })
+
+  it('forces selection mode on, and clears on leaving, so a live selection is never hidden', () => {
+    const onClearSelection = vi.fn()
+    render(
+      <DocumentList
+        {...baseProps}
+        selectedIds={new Set([document.id])}
+        onClearSelection={onClearSelection}
+      />,
+    )
+
     expect(screen.getByText('1 selected')).not.toBeNull()
+    expect(screen.queryByRole('button', { name: 'Select' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Download selected documents' }).hasAttribute('disabled')).toBe(false)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Leave selection mode' }))
+    expect(onClearSelection).toHaveBeenCalledTimes(1)
   })
 
   it('masks amounts and disables document actions in sensitive mode', () => {

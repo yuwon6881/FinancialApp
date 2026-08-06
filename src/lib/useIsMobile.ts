@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react'
 
 /**
- * Returns true when the viewport is below the given breakpoint (default: Tailwind's `md` = 768px).
+ * Returns true when the viewport is below the given breakpoint (default: Tailwind's `lg` = 1024px).
  * Used to enable touch-only affordances (e.g. swipe-to-reveal) on the mobile PWA while
  * keeping the full desktop layout intact.
  */
 export function useIsMobile(breakpoint = 1024): boolean {
-  // Phrased as the negation of Tailwind's own `md:` query (`min-width: 768px`) rather
-  // than `max-width: 767px`, so the two agree at fractional viewport widths. At 767.5px
-  // `max-width: 767px` is false while Tailwind still applies the mobile branch — using
-  // that form made JS render the desktop tree while CSS displayed the mobile one.
+  // Phrased as the negation of Tailwind's own `min-width` query rather than as
+  // `max-width: <breakpoint - 1>px`, so the two agree at fractional viewport widths. At 1023.5px the
+  // `max-width: 1023px` form is false while Tailwind still applies the mobile branch — using it made
+  // JS render the desktop tree while CSS displayed the mobile one.
   const query = `(min-width: ${breakpoint}px)`
 
   const [isMobile, setIsMobile] = useState<boolean>(() => {

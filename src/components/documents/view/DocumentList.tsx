@@ -34,6 +34,8 @@ interface DocumentListProps {
   pendingReliefCategories: ReadonlyMap<number, string>
   onReliefCategoryChange: (id: number, reliefCategory: string) => void
   onNavigateToTransaction?: (transactionId: string) => Promise<void> | void
+  /** Drops every selection, so leaving selection mode leaves nothing selected behind it. */
+  onClearSelection?: () => void
 }
 
 function SelectAllDocumentsControl({
@@ -69,12 +71,23 @@ function SelectAllDocumentsControl({
   )
 }
 
-export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds, toggleSelected, onToggleSelectAll, allVisibleSelected, someVisibleSelected, isDownloadingSelected, onDownloadSelected, onDeleteSelected, isDeletingSelected = false, currency, syncingDocumentIds = new Set<number>(), deletingDocumentIds = new Set<number>(), updateDocument, reliefCategoriesByTaxYear, pendingReliefCategories, onReliefCategoryChange, onNavigateToTransaction }: DocumentListProps) {
+export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds, toggleSelected, onToggleSelectAll, allVisibleSelected, someVisibleSelected, isDownloadingSelected, onDownloadSelected, onDeleteSelected, isDeletingSelected = false, currency, syncingDocumentIds = new Set<number>(), deletingDocumentIds = new Set<number>(), updateDocument, reliefCategoriesByTaxYear, pendingReliefCategories, onReliefCategoryChange, onNavigateToTransaction, onClearSelection }: DocumentListProps) {
   const { showToast } = useAppUi()
   const { hideSensitive } = useAppPrefs()
   const [previewDocument, setPreviewDocument] = useState<VaultDocument | null>(null)
   const [openingTransactionId, setOpeningTransactionId] = useState<string | null>(null)
   const hasSelection = selectedIds.size > 0
+
+  // Bulk download and delete are the rare visit; reading the list is the common one. The toolbar
+  // used to stand permanently at min-h-14 with an empty action slot reserved beside it, and every
+  // row carried a checkbox, for a mode most visits never enter. An existing selection forces the
+  // mode on so a selection can never be live with no way to see or clear it.
+  const [selectionRequested, setSelectionRequested] = useState(false)
+  const isSelecting = selectionRequested || hasSelection
+  const leaveSelectionMode = () => {
+    setSelectionRequested(false)
+    onClearSelection?.()
+  }
   const exceedsSelectionLimit = selectedIds.size > 100
   const downloadFailed = () =>
     showToast('The document could not be downloaded.', 'Download Failed', 'error')
@@ -93,16 +106,20 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
 
   return (
     <>
-      <div data-testid="document-selection-toolbar" className={`mb-3 grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-xl border px-2.5 py-2 transition-colors sm:px-3 ${hasSelection ? 'border-primary/30 bg-primary/5' : 'border-border/60 bg-muted/20'}`}>
+      <div data-testid="document-selection-toolbar" className={`mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border px-2.5 py-2 transition-colors sm:px-3 ${hasSelection ? 'border-primary/30 bg-primary/5' : 'border-border/60 bg-muted/20'}`}>
         <div className="flex min-w-0 items-center gap-1.5 sm:gap-2.5">
-          <SelectAllDocumentsControl
-            count={documents.length}
-            allSelected={allVisibleSelected}
-            someSelected={someVisibleSelected}
-            onToggle={onToggleSelectAll}
-            disabled={hideSensitive}
-          />
-          <span className="hidden h-5 w-px shrink-0 bg-border sm:block" aria-hidden="true" />
+          {isSelecting && (
+            <>
+              <SelectAllDocumentsControl
+                count={documents.length}
+                allSelected={allVisibleSelected}
+                someSelected={someVisibleSelected}
+                onToggle={onToggleSelectAll}
+                disabled={hideSensitive}
+              />
+              <span className="hidden h-5 w-px shrink-0 bg-border sm:block" aria-hidden="true" />
+            </>
+          )}
           <p
             className={`truncate text-[10px] font-semibold sm:text-xs ${exceedsSelectionLimit ? 'text-destructive' : hasSelection ? 'text-primary' : 'text-muted-foreground'}`}
             aria-live="polite"
@@ -113,14 +130,34 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
           </p>
         </div>
 
-        <div data-testid="document-selection-actions" className="flex w-20 shrink-0 items-center justify-end gap-1.5 sm:w-60">
-          {hasSelection && (
+        <div data-testid="document-selection-actions" className="flex shrink-0 items-center justify-end gap-1.5">
+          {!isSelecting ? (
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              disabled={hideSensitive || documents.length === 0}
+              onClick={() => setSelectionRequested(true)}
+              className="bg-card"
+            >
+              Select
+            </Button>
+          ) : (
             <>
+              <Button
+                variant="ghost"
+                size="sm"
+                type="button"
+                onClick={leaveSelectionMode}
+                aria-label="Leave selection mode"
+              >
+                Done
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
                 type="button"
-                disabled={hideSensitive || isDownloadingSelected || exceedsSelectionLimit}
+                disabled={hideSensitive || !hasSelection || isDownloadingSelected || exceedsSelectionLimit}
                 onClick={onDownloadSelected}
                 aria-label={isDownloadingSelected ? 'Preparing selected document download' : 'Download selected documents'}
                 title="Download selected"
@@ -133,7 +170,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
                 variant="destructive"
                 size="sm"
                 type="button"
-                disabled={hideSensitive || isDeletingSelected || exceedsSelectionLimit}
+                disabled={hideSensitive || !hasSelection || isDeletingSelected || exceedsSelectionLimit}
                 onClick={onDeleteSelected}
                 aria-busy={isDeletingSelected}
                 aria-label="Delete selected documents"
@@ -173,6 +210,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
             isSelected={selectedIds.has(document.id)}
             isSyncing={syncingDocumentIds.has(document.id)}
             isDeleting={deletingDocumentIds.has(document.id)}
+            isSelecting={isSelecting}
             reliefCategories={reliefCategoriesByTaxYear[document.taxYear] ?? []}
             pendingReliefCategory={pendingReliefCategories.get(document.id)}
             openingTransactionId={openingTransactionId}
@@ -191,7 +229,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
       <div className="hidden w-full lg:block">
         <DataTable>
         <DataTableHeader className="text-[10px] uppercase tracking-wider">
-            <DataTableHeaderCell className="w-8 font-bold"><span className="sr-only">Select</span></DataTableHeaderCell>
+            {isSelecting && <DataTableHeaderCell className="w-8 font-bold"><span className="sr-only">Select</span></DataTableHeaderCell>}
             <DataTableHeaderCell className="font-bold">Document</DataTableHeaderCell>
             <DataTableHeaderCell className="font-bold">Tax relief</DataTableHeaderCell>
             <DataTableHeaderCell className="font-bold">Tax Year</DataTableHeaderCell>
@@ -204,7 +242,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
           {isLoading && documents.length === 0 ? (
             Array.from({ length: 5 }).map((_, index) => (
               <tr key={index}>
-                <td className="px-3 py-3"><Skeleton className="size-4" /></td>
+                {isSelecting && <td className="px-3 py-3"><Skeleton className="size-4" /></td>}
                 <td className="px-3 py-3"><Skeleton className="h-4 w-56" /></td>
                 <td className="px-3 py-3"><Skeleton className="h-4 w-12" /></td>
                 <td className="px-3 py-3"><Skeleton className="h-4 w-14" /></td>
@@ -215,7 +253,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
               </tr>
             ))
           ) : documents.length === 0 ? (
-            <tr><td colSpan={8}><EmptyState /></td></tr>
+            <tr><td colSpan={isSelecting ? 8 : 7}><EmptyState /></td></tr>
           ) : documents.map(document => {
             const documentReliefCategories = reliefCategoriesByTaxYear[document.taxYear] ?? []
             const isDeleting = deletingDocumentIds.has(document.id)
@@ -223,7 +261,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
             const isBusy = isDeleting || isSyncing
             return (
               <tr key={document.id} className="transition-colors hover:bg-muted/40" aria-busy={isBusy}>
-                <td className="px-3 py-2.5"><Checkbox disabled={hideSensitive || isBusy} checked={selectedIds.has(document.id)} onChange={() => toggleSelected(document.id)} aria-label={`Select ${document.originalFileName}`} className="size-4 accent-primary" /></td>
+                {isSelecting && <td className="px-3 py-2.5"><Checkbox disabled={hideSensitive || isBusy} checked={selectedIds.has(document.id)} onChange={() => toggleSelected(document.id)} aria-label={`Select ${document.originalFileName}`} className="size-4 accent-primary" /></td>}
                 <td className="px-3 py-2.5">
                   <div className="flex items-center gap-2.5">
                     <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent text-accent-ink">

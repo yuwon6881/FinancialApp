@@ -75,6 +75,63 @@ export function AmountReview({ document, updateDocument, currency, disabled = fa
   </div>
 }
 
+const ACTION_CLASS = 'cursor-pointer rounded-lg border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50'
+
+/**
+ * The three row actions, each exported on its own so the phone card can keep Preview on its face and
+ * hand Download and Delete to a swipe drawer, while the desktop table still shows all three inline.
+ */
+
+export function PreviewDocumentButton({ document, onPreview, disabled = false }: { document: VaultDocument; onPreview: (document: VaultDocument) => void; disabled?: boolean }) {
+  const { hideSensitive } = useAppPrefs()
+  return (
+    <Button
+      variant="unstyled"
+      type="button"
+      disabled={hideSensitive || disabled}
+      onClick={() => onPreview(document)}
+      className={ACTION_CLASS}
+      aria-label={`Preview ${document.originalFileName}`}
+    >
+      <Eye className="size-3.5" aria-hidden="true" />
+    </Button>
+  )
+}
+
+export function DownloadDocumentButton({ document, downloadFailed, disabled = false, className }: { document: VaultDocument; downloadFailed: () => void; disabled?: boolean; className?: string }) {
+  const { hideSensitive } = useAppPrefs()
+  return (
+    <Button
+      variant="unstyled"
+      type="button"
+      disabled={hideSensitive || disabled}
+      onClick={() => void downloadDocument(document.id, document.originalFileName).catch(downloadFailed)}
+      className={className ?? ACTION_CLASS}
+      aria-label={`Download ${document.originalFileName}`}
+    >
+      <Download className="size-3.5" />
+      {className ? <span className="text-[10px] font-bold">Download</span> : null}
+    </Button>
+  )
+}
+
+export function DeleteDocumentButton({ document, setDocToDelete, disabled = false, className }: { document: VaultDocument; setDocToDelete: (id: number) => void; disabled?: boolean; className?: string }) {
+  const { hideSensitive } = useAppPrefs()
+  return (
+    <Button
+      variant="unstyled"
+      type="button"
+      disabled={hideSensitive || disabled}
+      onClick={() => setDocToDelete(document.id)}
+      className={className ?? 'cursor-pointer rounded-lg border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50'}
+      aria-label={`Delete ${document.originalFileName}`}
+    >
+      <Trash2 className="size-3.5" />
+      {className ? <span className="text-[10px] font-bold">Delete</span> : null}
+    </Button>
+  )
+}
+
 export function DocumentActions({
   document,
   setDocToDelete,
@@ -88,40 +145,11 @@ export function DocumentActions({
   onPreview: (document: VaultDocument) => void
   disabled?: boolean
 }) {
-  const { hideSensitive } = useAppPrefs()
-  const actionClass = 'cursor-pointer rounded-lg border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50'
   return (
     <div className="flex items-center justify-end gap-1.5">
-      <Button
-        variant="unstyled"
-        type="button"
-        disabled={hideSensitive || disabled}
-        onClick={() => onPreview(document)}
-        className={actionClass}
-        aria-label={`Preview ${document.originalFileName}`}
-      >
-        <Eye className="size-3.5" aria-hidden="true" />
-      </Button>
-      <Button
-        variant="unstyled"
-        type="button"
-        disabled={hideSensitive || disabled}
-        onClick={() => void downloadDocument(document.id, document.originalFileName).catch(downloadFailed)}
-        className={actionClass}
-        aria-label={`Download ${document.originalFileName}`}
-      >
-        <Download className="size-3.5" />
-      </Button>
-      <Button
-        variant="unstyled"
-        type="button"
-        disabled={hideSensitive || disabled}
-        onClick={() => setDocToDelete(document.id)}
-        className="cursor-pointer rounded-lg border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
-        aria-label={`Delete ${document.originalFileName}`}
-      >
-        <Trash2 className="size-3.5" />
-      </Button>
+      <PreviewDocumentButton document={document} onPreview={onPreview} disabled={disabled} />
+      <DownloadDocumentButton document={document} downloadFailed={downloadFailed} disabled={disabled} />
+      <DeleteDocumentButton document={document} setDocToDelete={setDocToDelete} disabled={disabled} />
     </div>
   )
 }

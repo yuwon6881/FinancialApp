@@ -1,5 +1,5 @@
 import React from 'react'
-import { CalendarClock, CheckCircle2, Edit2, Minus, Plus, Repeat, Trash2 } from 'lucide-react'
+import { CalendarClock, CheckCircle2, Edit2, Minus, MoreHorizontal, Plus, Repeat, Trash2, X } from 'lucide-react'
 import type { SavingsGoal } from '../../types'
 import type { GoalPace, GoalPaceStatus } from '../../lib/savingsGoals'
 import { MONTH_NAMES } from '../../lib/cycle'
@@ -75,6 +75,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
   const cyclePct = cycleTarget > 0 ? Math.min(100, (pace.fundedThisCycle / cycleTarget) * 100) : 100
   const cycleDone = pace.outstandingThisCycle <= 0
   const isBusy = isSyncing || isDeleting || goal.isPendingSync === true
+  const [showManage, setShowManage] = React.useState(false)
 
   return (
     <Card
@@ -196,27 +197,47 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
         >
           <CheckCircle2 className="size-3.5" />
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="ml-auto"
-          onClick={() => onEdit(goal)}
-          disabled={isBusy || hideSensitive}
-          aria-label={`Edit ${goal.name}`}
-          title={hideSensitive ? 'Unhide balances to edit' : 'Edit goal'}
-        >
-          <Edit2 className="size-3.5 shrink-0" /> Edit
-        </Button>
-        <Button
-          variant="danger"
-          size="sm"
-          onClick={() => onDelete(goal.id)}
-          disabled={isBusy || hideSensitive}
-          aria-label={`Delete ${goal.name}`}
-          title={hideSensitive ? 'Unhide balances to delete' : 'Delete goal'}
-        >
-          <Trash2 className="size-3.5 shrink-0" /> Delete
-        </Button>
+        {/* Edit and Delete sit behind one toggle rather than on the face of the card. Five controls
+            on one row at the rail's 80vw pushed Delete off the edge, and a destructive button does
+            not need to be permanently within a thumb's reach of the three money actions. Swipe-to-
+            reveal is not an option here: the card lives in a horizontally scrolling rail, so a
+            horizontal drag on it belongs to the rail. */}
+        <div className="ml-auto flex items-center gap-1">
+          {showManage ? (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onEdit(goal)}
+                disabled={isBusy || hideSensitive}
+                aria-label={`Edit ${goal.name}`}
+                title={hideSensitive ? 'Unhide balances to edit' : 'Edit goal'}
+              >
+                <Edit2 className="size-3.5 shrink-0" /> Edit
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => onDelete(goal.id)}
+                disabled={isBusy || hideSensitive}
+                aria-label={`Delete ${goal.name}`}
+                title={hideSensitive ? 'Unhide balances to delete' : 'Delete goal'}
+              >
+                <Trash2 className="size-3.5 shrink-0" /> Delete
+              </Button>
+            </>
+          ) : null}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowManage(current => !current)}
+            aria-expanded={showManage}
+            aria-label={showManage ? `Hide edit and delete for ${goal.name}` : `Edit or delete ${goal.name}`}
+            title={showManage ? 'Hide' : 'Edit or delete'}
+          >
+            {showManage ? <X className="size-3.5" /> : <MoreHorizontal className="size-3.5" />}
+          </Button>
+        </div>
       </div>
     </Card>
   )

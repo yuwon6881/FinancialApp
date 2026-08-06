@@ -380,6 +380,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
                 return next
               })}
               onToggleSelectAll={toggleSelectAllVisible}
+              onClearSelection={() => setSelectedIds(new Set())}
               allVisibleSelected={allVisibleSelected}
               someVisibleSelected={someVisibleSelected}
               isDownloadingSelected={isDownloading}

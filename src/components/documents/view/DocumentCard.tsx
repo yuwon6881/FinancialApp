@@ -1,17 +1,30 @@
-import { ChevronDown } from 'lucide-react'
+import { useState } from 'react'
+import { ChevronDown, Pencil } from 'lucide-react'
 import type { TaxReliefCategoryDefinition, VaultDocument } from '../../../types'
 import { useAppPrefs } from '../../../contexts/AppContext'
+import { Button } from '../../ui/Button'
 import { Checkbox } from '../../ui/Checkbox'
 import { CustomSelect } from '../../ui/CustomSelect'
 import { RowSyncStatus } from '../../ui/RowSyncBadge'
+import { SwipeableRow } from '../../ui/SwipeableRow'
 import { formatBytes, formatDate } from './formatters'
-import { AmountReview, DocumentActions, DocumentTypeIcon, LinkedTransactionButton, type UpdateDocumentFn } from './documentRowParts'
+import {
+  AmountReview,
+  DeleteDocumentButton,
+  DocumentTypeIcon,
+  DownloadDocumentButton,
+  LinkedTransactionButton,
+  PreviewDocumentButton,
+  type UpdateDocumentFn,
+} from './documentRowParts'
 
 interface DocumentCardProps {
   document: VaultDocument
   isSelected: boolean
   isSyncing: boolean
   isDeleting: boolean
+  /** Checkboxes appear only once the list is in selection mode; see DocumentList. */
+  isSelecting: boolean
   reliefCategories: TaxReliefCategoryDefinition[]
   pendingReliefCategory: string | undefined
   openingTransactionId: string | null
@@ -25,20 +38,27 @@ interface DocumentCardProps {
   updateDocument: UpdateDocumentFn
 }
 
+const DRAWER_ACTION_CLASS = 'flex-1 flex flex-col items-center justify-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
+
 /**
  * One vault document on a phone.
  *
- * The filing facts — tax year, size, upload date, retention — sit behind a disclosure rather than
- * on the face of the card. Expanded, each row ran to five stanzas separated by four hairlines, so a
- * page of ten documents was some 3,300px of scrolling to find one file. None of that detail is
- * dropped: what a scan is *for* is the name, the amount and whether it is filed under a relief
- * category, and those three stay on the face.
+ * The filing facts — tax year, size, upload date, retention — sit behind a disclosure rather than on
+ * the face of the card. Expanded, each row ran to five stanzas separated by four hairlines, so a page
+ * of ten documents was some 3,300px of scrolling to find one file. None of that detail is dropped:
+ * what a scan is *for* is the name, the amount and whether it is filed under a relief category, and
+ * those three stay on the face.
+ *
+ * Preview stays as a visible button — it is the primary action and the only one a keyboard can reach
+ * without a gesture — while Download and Delete move into the swipe drawer. Three icon buttons per
+ * row put thirty tap targets on a page of ten, with a destructive one among them at all times.
  */
 export function DocumentCard({
   document,
   isSelected,
   isSyncing,
   isDeleting,
+  isSelecting,
   reliefCategories,
   pendingReliefCategory,
   openingTransactionId,
@@ -59,93 +79,157 @@ export function DocumentCard({
       ? 'Confirmed amount'
       : document.amountExtractionMessage || 'No amount confirmed'
 
+  // A document that already has a category shows it as a chip. Leaving every row's picker expanded
+  // turned the list into a form: ten required selects, nine of them already answered.
+  const reliefId = pendingReliefCategory ?? document.reliefCategory ?? ''
+  const reliefName = reliefCategories.find(category => category.id === reliefId)?.name
+  const [editingRelief, setEditingRelief] = useState(false)
+  const showReliefPicker = editingRelief || !reliefName
+
+  // Tapping the card previews, so the common case costs no aim. Anything the user could have meant
+  // to press instead — the checkbox, the amount editor, the picker, the disclosure — wins the tap.
+  const previewOnBodyTap = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (hideSensitive || isBusy || isSelecting) return
+    const target = event.target as HTMLElement | null
+    if (target?.closest('button, a, input, select, summary, label, [role="button"], [role="combobox"], [role="listbox"]')) return
+    onPreview(document)
+  }
+
   return (
-    <article className="rounded-2xl border border-border/60 bg-card p-3.5 shadow-sm shadow-black/5" aria-busy={isBusy}>
-      {/* The name gets the full width of its own line. Sharing a flex row with three action buttons
-          and two badges is what clipped it to "Official Receipt [REP-…". */}
-      <div className="flex min-w-0 items-start gap-2.5">
-        <Checkbox
-          disabled={hideSensitive || isBusy}
-          checked={isSelected}
-          onChange={() => toggleSelected(document.id)}
-          aria-label={`Select ${document.originalFileName}`}
-          className="mt-0.5 size-4 shrink-0 accent-primary"
-        />
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent text-accent-ink">
-          <DocumentTypeIcon contentType={document.contentType} className="size-4" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 text-xs font-bold leading-snug text-foreground" title={document.originalFileName}>
-            {document.originalFileName}
-          </p>
-          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 empty:hidden">
-            <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} entityLabel="document" />
-            <LinkedTransactionButton
+    <div aria-busy={isBusy}>
+      <SwipeableRow
+        className="rounded-2xl border border-border/60 shadow-sm shadow-black/5"
+        contentClassName="p-3.5"
+        disabled={isBusy || hideSensitive}
+        actionsWidth={128}
+        actions={
+          <>
+            <DownloadDocumentButton
               document={document}
-              openingTransactionId={openingTransactionId}
-              onOpen={onOpenLinkedTransaction}
+              downloadFailed={downloadFailed}
+              disabled={isBusy}
+              className={`${DRAWER_ACTION_CLASS} bg-primary text-primary-foreground`}
             />
+            <DeleteDocumentButton
+              document={document}
+              setDocToDelete={setDocToDelete}
+              disabled={isBusy}
+              className={`${DRAWER_ACTION_CLASS} bg-destructive text-destructive-foreground`}
+            />
+          </>
+        }
+        // Between md and lg the card is still what renders but there is no swipe drawer, so the two
+        // actions come back inline — as the compact icon buttons, not the drawer's full-colour blocks.
+        desktopActions={
+          <>
+            <DownloadDocumentButton document={document} downloadFailed={downloadFailed} disabled={isBusy} />
+            <DeleteDocumentButton document={document} setDocToDelete={setDocToDelete} disabled={isBusy} />
+          </>
+        }
+      >
+        <div onClick={previewOnBodyTap}>
+          {/* The name gets the full width of its own line. Sharing a flex row with three action
+              buttons and two badges is what clipped it to "Official Receipt [REP-…". */}
+          <div className="flex min-w-0 items-start gap-2.5">
+            {isSelecting && (
+              <Checkbox
+                disabled={hideSensitive || isBusy}
+                checked={isSelected}
+                onChange={() => toggleSelected(document.id)}
+                aria-label={`Select ${document.originalFileName}`}
+                className="mt-0.5 size-4 shrink-0 accent-primary"
+              />
+            )}
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent text-accent-ink">
+              <DocumentTypeIcon contentType={document.contentType} className="size-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="line-clamp-2 text-xs font-bold leading-snug text-foreground" title={document.originalFileName}>
+                {document.originalFileName}
+              </p>
+              <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 empty:hidden">
+                <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} entityLabel="document" />
+                <LinkedTransactionButton
+                  document={document}
+                  openingTransactionId={openingTransactionId}
+                  onOpen={onOpenLinkedTransaction}
+                />
+              </div>
+            </div>
+            <PreviewDocumentButton document={document} onPreview={onPreview} disabled={isBusy} />
           </div>
+
+          <div className="mt-3 flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <AmountReview document={document} updateDocument={updateDocument} currency={currency} disabled={isBusy} />
+              <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{amountCaption}</p>
+            </div>
+            {!showReliefPicker && (
+              <Button
+                variant="unstyled"
+                type="button"
+                disabled={hideSensitive || isBusy}
+                onClick={() => setEditingRelief(true)}
+                aria-label={`Change tax relief category for ${document.originalFileName}`}
+                className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg border border-border/60 bg-muted/40 px-2 py-1 text-[10px] font-bold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <span className="max-w-32 truncate">{reliefName}</span>
+                <Pencil className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+              </Button>
+            )}
+          </div>
+
+          {showReliefPicker && (
+            <div className="mt-3">
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Tax relief category <span className="text-destructive">*</span>
+              </p>
+              <CustomSelect
+                disabled={hideSensitive || isBusy}
+                value={reliefId}
+                onChange={value => {
+                  onReliefCategoryChange(document.id, String(value))
+                  setEditingRelief(false)
+                }}
+                options={[
+                  { value: '', label: 'Uncategorised (legacy)', disabled: true },
+                  ...reliefCategories.map(category => ({ value: category.id, label: category.name })),
+                ]}
+                ariaLabel={`Tax relief category for ${document.originalFileName}`}
+                className="w-full"
+              />
+            </div>
+          )}
+
+          <details className="group/filing mt-3 rounded-lg border border-border/50 bg-muted/20">
+            <summary className="flex cursor-pointer select-none items-center justify-between gap-3 rounded-lg px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/50">
+              <span>Filing details</span>
+              <ChevronDown className="size-3.5 transition-transform duration-200 group-open/filing:rotate-180" aria-hidden="true" />
+            </summary>
+            {/* Four items in two columns. The same grid held three and always left an empty cell,
+                which is the hole that used to sit under "Uploaded"; keep-until was a stray line
+                below it. */}
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-2.5 border-t border-border/50 px-3 py-2.5 text-[10px]">
+              <div>
+                <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Tax year</dt>
+                <dd className="mt-0.5 font-bold text-foreground tabular-nums">{document.taxYear}</dd>
+              </div>
+              <div>
+                <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Size</dt>
+                <dd className="mt-0.5 font-semibold text-foreground tabular-nums">{formatBytes(document.sizeBytes)}</dd>
+              </div>
+              <div>
+                <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Uploaded</dt>
+                <dd className="mt-0.5 font-semibold text-foreground">{formatDate(document.uploadedAt)}</dd>
+              </div>
+              <div>
+                <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Keep until</dt>
+                <dd className="mt-0.5 font-semibold text-foreground">{formatDate(document.retentionUntil)}</dd>
+              </div>
+            </dl>
+          </details>
         </div>
-      </div>
-
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <AmountReview document={document} updateDocument={updateDocument} currency={currency} disabled={isBusy} />
-          <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{amountCaption}</p>
-        </div>
-        <DocumentActions
-          document={document}
-          setDocToDelete={setDocToDelete}
-          downloadFailed={downloadFailed}
-          onPreview={onPreview}
-          disabled={isBusy}
-        />
-      </div>
-
-      <div className="mt-3">
-        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Tax relief category <span className="text-destructive">*</span>
-        </p>
-        <CustomSelect
-          disabled={hideSensitive || isBusy}
-          value={pendingReliefCategory ?? document.reliefCategory ?? ''}
-          onChange={value => onReliefCategoryChange(document.id, String(value))}
-          options={[
-            { value: '', label: 'Uncategorised (legacy)', disabled: true },
-            ...reliefCategories.map(category => ({ value: category.id, label: category.name })),
-          ]}
-          ariaLabel={`Tax relief category for ${document.originalFileName}`}
-          className="w-full"
-        />
-      </div>
-
-      <details className="group/filing mt-3 rounded-lg border border-border/50 bg-muted/20">
-        <summary className="flex cursor-pointer select-none items-center justify-between gap-3 rounded-lg px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/50">
-          <span>Filing details</span>
-          <ChevronDown className="size-3.5 transition-transform duration-200 group-open/filing:rotate-180" aria-hidden="true" />
-        </summary>
-        {/* Four items in two columns. The same grid held three and always left an empty cell, which
-            is the hole that used to sit under "Uploaded"; keep-until was a stray line below it. */}
-        <dl className="grid grid-cols-2 gap-x-3 gap-y-2.5 border-t border-border/50 px-3 py-2.5 text-[10px]">
-          <div>
-            <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Tax year</dt>
-            <dd className="mt-0.5 font-bold text-foreground tabular-nums">{document.taxYear}</dd>
-          </div>
-          <div>
-            <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Size</dt>
-            <dd className="mt-0.5 font-semibold text-foreground tabular-nums">{formatBytes(document.sizeBytes)}</dd>
-          </div>
-          <div>
-            <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Uploaded</dt>
-            <dd className="mt-0.5 font-semibold text-foreground">{formatDate(document.uploadedAt)}</dd>
-          </div>
-          <div>
-            <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Keep until</dt>
-            <dd className="mt-0.5 font-semibold text-foreground">{formatDate(document.retentionUntil)}</dd>
-          </div>
-        </dl>
-      </details>
-    </article>
+      </SwipeableRow>
+    </div>
   )
 }
