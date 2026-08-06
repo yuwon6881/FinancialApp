@@ -65,7 +65,7 @@ export const RewardCard: React.FC<RewardCardProps> = ({
       <div>
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-lg font-extrabold text-foreground">{formatSensitive(item.price)}</span>
-          <span className={`text-[11px] font-bold ${canAfford ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+          <span className={`text-xs font-bold ${canAfford ? 'text-emerald-500' : 'text-muted-foreground'}`}>
             {pct.toFixed(0)}%
           </span>
         </div>
@@ -77,7 +77,7 @@ export const RewardCard: React.FC<RewardCardProps> = ({
         </div>
       </div>
 
-      <p className={`text-[11px] font-bold ${canAfford ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+      <p className={`text-xs font-bold ${canAfford ? 'text-emerald-500' : 'text-muted-foreground'}`}>
         {canAfford
           ? 'Ready to claim'
           : <>Need {formatSensitive(item.price - claimableBalance)} more</>}

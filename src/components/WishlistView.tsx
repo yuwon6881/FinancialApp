@@ -14,15 +14,14 @@ import { useWishlistForm } from './wishlist/useWishlistForm'
 import { WishlistItemForm } from './wishlist/WishlistItemForm'
 import { useSavingsGoalForm } from './wishlist/useSavingsGoalForm'
 import { SavingsGoalForm } from './wishlist/SavingsGoalForm'
-import { SavingsGoalCard } from './wishlist/SavingsGoalCard'
+import { CommitmentsSection } from './wishlist/CommitmentsSection'
 import { RewardCard } from './wishlist/RewardCard'
 import { RewardsPoolBar } from './wishlist/RewardsPoolBar'
 import { SavingsGoalContributeSheet, type ContributeMode } from './wishlist/SavingsGoalContributeSheet'
-import { getPaceStatus, summarizePool } from '../lib/savingsGoals'
+import { InfoHint } from './ui/InfoHint'
+import { summarizePool } from '../lib/savingsGoals'
 import {
   Plus,
-  CheckCircle2,
-  Flag,
   Trophy,
   Sparkles,
 } from 'lucide-react'
@@ -284,9 +283,19 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
       ) : (
         <>
           <header className="app-panel flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/92 p-4 sm:p-5">
-            <div>
-              <h2 className="text-xl font-bold tracking-tight text-foreground">Rewards plan</h2>
-              <p className="mt-1 text-xs text-muted-foreground">See what is free now and what your commitments need next.</p>
+            {/* The subtitle costs a phone a whole line above the first number on the page, so on
+                mobile it moves into the hint instead of being dropped — the explanation is still
+                one tap away for anyone who wants it. */}
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <h2 className="text-xl font-bold tracking-tight text-foreground">Rewards plan</h2>
+                <InfoHint
+                  label="What the Rewards plan shows"
+                  text="See what is free to spend now and what your commitments need next."
+                  className="sm:hidden"
+                />
+              </div>
+              <p className="mt-1 hidden text-xs text-muted-foreground sm:block">See what is free now and what your commitments need next.</p>
             </div>
             {onExplainWithAi && (
               <Button variant="secondary" size="sm" type="button" onClick={onExplainWithAi}>
@@ -312,68 +321,20 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
 
       {/* Two rows over one pool. Each grows sideways rather than pushing the page down, so however
           many items exist the whole picture stays on one screen. */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between gap-3 px-1">
-          <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-            <Flag className="size-4 text-violet-500" />
-            Commitments
-            {pool.activeGoals.length > 0 && (
-              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                {pool.activeGoals.length}
-              </span>
-            )}
-          </h3>
-          <Button variant="secondary" size="sm" onClick={goalForm.handleOpenAddModal}>
-            <Plus className="size-3" /> Add goal
-          </Button>
-        </div>
-
-        {pool.activeGoals.length > 0 ? (
-          <HorizontalRail label="Commitments" showControls>
-            {pool.activeGoals.map(goal => {
-              const pace = pool.paces.get(goal.id)
-              if (!pace) return null
-              return (
-                <SavingsGoalCard
-                  key={goal.id}
-                  goal={goal}
-                  pace={pace}
-                  status={getPaceStatus(pace)}
-                  formatSensitive={formatSensitive}
-                  hideSensitive={hideSensitive}
-                  isSyncing={isGoalSyncing(goal.id)}
-                  isDeleting={isGoalDeleting(goal.id)}
-                  onEdit={goalForm.handleOpenEditModal}
-                  onDelete={onDeleteGoal}
-                  onComplete={onCompleteGoal}
-                  onTopUp={target => setContributeTarget({ goal: target, mode: 'topUp' })}
-                  onRelease={target => setContributeTarget({ goal: target, mode: 'release' })}
-                />
-              )
-            })}
-            {/* Completed goals ride along as compact chips rather than a second card below: they are
-                history, but throwing them away entirely would lose the record. */}
-            {completedGoals.map(goal => (
-              <div
-                key={goal.id}
-                className="snap-start shrink-0 w-36 sm:w-40 flex flex-col justify-center gap-1 rounded-2xl border border-dashed border-border/60 bg-muted/20 p-4"
-              >
-                <span className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-500">
-                  <CheckCircle2 className="size-3 shrink-0" /> Done
-                </span>
-                <span className="text-xs font-bold text-foreground truncate">{goal.name}</span>
-                <span className="text-[10px] font-semibold text-muted-foreground">
-                  {formatSensitive(goal.targetAmount)}
-                </span>
-              </div>
-            ))}
-          </HorizontalRail>
-        ) : (
-          <Card className="p-5 border-dashed text-center">
-            <p className="text-xs text-muted-foreground">No commitments yet. Add a goal and we’ll work out what to set aside each cycle.</p>
-          </Card>
-        )}
-      </section>
+      <CommitmentsSection
+        pool={pool}
+        completedGoals={completedGoals}
+        formatSensitive={formatSensitive}
+        hideSensitive={hideSensitive}
+        isGoalSyncing={isGoalSyncing}
+        isGoalDeleting={isGoalDeleting}
+        onAddGoal={goalForm.handleOpenAddModal}
+        onEditGoal={goalForm.handleOpenEditModal}
+        onDeleteGoal={onDeleteGoal}
+        onCompleteGoal={onCompleteGoal}
+        onTopUp={target => setContributeTarget({ goal: target, mode: 'topUp' })}
+        onRelease={target => setContributeTarget({ goal: target, mode: 'release' })}
+      />
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3 px-1">
@@ -387,7 +348,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                 </span>
               )}
             </h3>
-            <p className="mt-0.5 text-[10px] font-medium text-muted-foreground">
+            <p className="mt-0.5 text-xs font-medium text-muted-foreground">
               From your {formatSensitive(claimableBalance)} free rewards
               {!activeItem || claimableBalance >= activeItem.price ? null : (
                 <> · {activeItem.name} in {getTimelineString(activeItem.price, freeInflowPerCycle)}</>

@@ -50,23 +50,28 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
   // This cycle's share, as its own meter. The pool bar above answers "how is the balance divided";
   // this answers "has this cycle's contribution actually been made" — two different questions that
   // a single line of text underneath was conflating.
+  //
+  // With a single commitment the panel is pure duplication: every figure in it is already on that
+  // goal's own card a short scroll below, down to the wording, so the page said the same thing twice
+  // and buried the difference between "the pool" and "this goal" in the repetition. It earns its
+  // space only once it is summing more than one commitment.
   const cycleTarget = Math.max(requiredPerCycleTotal, fundedThisCycleTotal)
   const cyclePct = cycleTarget > 0 ? Math.min(100, (fundedThisCycleTotal / cycleTarget) * 100) : 0
   const cycleDone = outstandingThisCycleTotal <= 0
+  const showCyclePanel = summary.activeGoals.length > 1 && cycleTarget > 0
 
   // Shown while anything is still unfinished, so it does not vanish the moment a cycle is paced --
-  // but disabled when there is genuinely nothing to do, with the reason in the tooltip.
+  // but a paced cycle reports as a quiet pill rather than a disabled primary button: a filled button
+  // is the loudest thing on the card, and pointing it at a no-op teaches the eye to ignore it.
   const showFundAction = hasGoals && summary.hasUnfinishedGoals
-  const canFund = outstandingThisCycleTotal > 0 && unassigned > 0
+  const canFund = unassigned > 0
   const fundTitle = isOffline
     ? 'Funding needs a connection — it splits your real rewards balance'
     : hideSensitive
       ? 'Unhide balances to fund your goals'
-      : outstandingThisCycleTotal <= 0
-        ? 'Every goal already has its share for this cycle'
-        : unassigned <= 0
-          ? 'No free rewards left to set aside'
-          : 'Set aside what your goals still need this cycle'
+      : unassigned <= 0
+        ? 'No free rewards left to set aside'
+        : 'Set aside what your goals still need this cycle'
 
   return (
     <Card className="space-y-4 p-4 sm:p-5">
@@ -78,7 +83,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
           <div className="mt-1 flex items-baseline gap-2">
             <span className="text-2xl font-black text-foreground">{formatSensitive(rewardsBalance)}</span>
             {expectedInflow > 0 && (
-              <span className="text-[11px] font-semibold text-muted-foreground">
+              <span className="text-xs font-semibold text-muted-foreground">
                 +{formatSensitive(expectedInflow)}/cycle
               </span>
             )}
@@ -90,7 +95,11 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
               <History className="size-3" /> History
             </Button>
           )}
-          {showFundAction && (
+          {showFundAction && (cycleDone && !isFunding ? (
+            <span className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-bold text-emerald-500">
+              <CheckCircle2 className="size-3.5 shrink-0" aria-hidden /> Funded this cycle
+            </span>
+          ) : (
             <Button
               size="sm"
               onClick={onFundCycle}
@@ -99,13 +108,9 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
               title={fundTitle}
             >
               {isFunding ? <Loader2 className="size-3 animate-spin" /> : <Coins className="size-3" />}
-              {isFunding
-                ? 'Setting aside…'
-                : outstandingThisCycleTotal > 0
-                ? <>Set aside {formatSensitive(outstandingThisCycleTotal)}</>
-                : 'Funded this cycle'}
+              {isFunding ? 'Setting aside…' : <>Set aside {formatSensitive(outstandingThisCycleTotal)}</>}
             </Button>
-          )}
+          ))}
         </div>
       </div>
 
@@ -121,7 +126,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
         <div className="h-full bg-violet-500 transition-all duration-500" style={{ width: `${committedPct}%` }} />
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11px] font-semibold">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs font-semibold">
         <span className="flex items-center gap-1.5">
           <span className="size-2 rounded-full bg-violet-500" aria-hidden />
           <span className="text-muted-foreground">Committed</span>
@@ -136,7 +141,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
 
       {/* This cycle's share gets its own inset panel rather than a caption, so "the balance is
           split like this" and "this cycle is/isn't paid up" stop competing for the same line. */}
-      {hasGoals && cycleTarget > 0 && (
+      {showCyclePanel && (
         <div className="rounded-xl border border-border/50 bg-muted/25 p-3 space-y-2">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
             <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -145,7 +150,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
                 : <CalendarClock className="size-3 text-violet-500" aria-hidden />}
               This cycle
             </span>
-            <span className="text-[11px] font-semibold text-muted-foreground">
+            <span className="text-xs font-semibold text-muted-foreground">
               <span className={`font-extrabold ${cycleDone ? 'text-emerald-500' : 'text-foreground'}`}>
                 {formatSensitive(fundedThisCycleTotal)}
               </span>
@@ -166,7 +171,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
             />
           </div>
 
-          <p className={`text-[11px] font-bold ${cycleDone ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+          <p className={`text-xs font-bold ${cycleDone ? 'text-emerald-500' : 'text-muted-foreground'}`}>
             {cycleDone
               ? 'Every commitment has its share for this cycle.'
               : <>
@@ -181,7 +186,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
       {/* The budget-level warning still wins over the panel above, because an unreachable deadline
           matters more than this cycle's bookkeeping. */}
       {paceShortfall > 0 ? (
-        <p className="flex items-start gap-2 text-[11px] font-semibold text-amber-500">
+        <p className="flex items-start gap-2 text-xs font-semibold text-amber-500">
           <AlertTriangle className="size-3.5 shrink-0 mt-px" />
           <span>
             Your goals need {formatSensitive(summary.requiredPerCycleTotal)} a cycle —{' '}

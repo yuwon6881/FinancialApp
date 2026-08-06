@@ -16,6 +16,11 @@ interface SavingsGoalCardProps {
   hideSensitive: boolean
   isSyncing: boolean
   isDeleting: boolean
+  /**
+   * Set when the card is the only thing in its row and so is rendered outside the rail. The peek-cut
+   * `80vw` is a scroll affordance, and with nothing to scroll to it reads as a clipped card instead.
+   */
+  fullWidth?: boolean
   onEdit: (goal: SavingsGoal) => void
   onDelete: (id: number) => void
   onComplete: (id: number) => void
@@ -54,6 +59,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
   hideSensitive,
   isSyncing,
   isDeleting,
+  fullWidth = false,
   onEdit,
   onDelete,
   onComplete,
@@ -72,9 +78,9 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
 
   return (
     <Card
-      className={`snap-start shrink-0 w-[80vw] sm:w-[22rem] flex flex-col gap-3 p-4 transition-colors duration-300 ${
-        status === 'overdue' ? 'border-destructive/40' : 'border-border/60'
-      }`}
+      className={`flex flex-col gap-3 p-4 transition-colors duration-300 ${
+        fullWidth ? 'w-full' : 'snap-start shrink-0 w-[80vw] sm:w-[22rem]'
+      } ${status === 'overdue' ? 'border-destructive/40' : 'border-border/60'}`}
     >
       <div className="min-w-0">
         <div className="flex items-center gap-1.5">
@@ -96,7 +102,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
       <div>
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-lg font-extrabold text-foreground">{formatSensitive(goal.earmarkedAmount)}</span>
-          <span className="text-[11px] font-semibold text-muted-foreground">
+          <span className="text-xs font-semibold text-muted-foreground">
             of {formatSensitive(goal.targetAmount)}
           </span>
         </div>
@@ -109,7 +115,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
           a different (and much slower-moving) question than "is this cycle paid up" — a single line
           of text under the target bar left the two indistinguishable. */}
       {pace.isFunded ? (
-        <p className="flex items-center gap-1.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-[11px] font-bold text-emerald-500">
+        <p className="flex items-center gap-1.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-500">
           <CheckCircle2 className="size-3.5 shrink-0" aria-hidden /> Ready to use
         </p>
       ) : (
@@ -142,7 +148,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
             />
           </div>
 
-          <p className={`text-[11px] font-bold ${cycleDone ? 'text-emerald-500' : style.text}`}>
+          <p className={`text-xs font-bold ${cycleDone ? 'text-emerald-500' : style.text}`}>
             {cycleDone
               ? 'Done for this cycle'
               : <>{formatSensitive(pace.outstandingThisCycle)} still to set aside</>}

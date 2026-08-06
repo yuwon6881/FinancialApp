@@ -34,6 +34,11 @@ const pace = (over: Partial<GoalPace> = {}): GoalPace => ({
   ...over,
 })
 
+// A second commitment, because the pool's own cycle panel is what *summing* looks like: with one
+// goal every figure in it already appears verbatim on that goal's card, so the panel is suppressed
+// and there would be nothing to assert against.
+const secondGoal: SavingsGoal = { ...goal, id: 8, name: 'Laptop' }
+
 const summary = (over: Partial<GoalPoolSummary> = {}): GoalPoolSummary => ({
   rewardsBalance: 550.4,
   totalEarmarked: 175,
@@ -43,8 +48,8 @@ const summary = (over: Partial<GoalPoolSummary> = {}): GoalPoolSummary => ({
   outstandingThisCycleTotal: 0,
   paceShortfall: 0,
   hasUnfinishedGoals: true,
-  activeGoals: [goal],
-  paces: new Map([[7, pace()]]),
+  activeGoals: [goal, secondGoal],
+  paces: new Map([[7, pace()], [8, pace({ goalId: 8 })]]),
   currentCycleKey: '2026-08',
   ...over,
 })
@@ -97,12 +102,31 @@ describe('RewardsPoolBar cycle share', () => {
     renderBar({ fundedThisCycleTotal: 70, outstandingThisCycleTotal: 105 })
     const meter = screen.getByLabelText("40% of this cycle's commitments set aside")
     expect((meter.firstElementChild as HTMLElement).style.width).toBe('40%')
-    expect(screen.getByText(/still to set aside across 1 commitment/)).toBeTruthy()
+    expect(screen.getByText(/still to set aside across 2 commitments/)).toBeTruthy()
   })
 
   it('drops the panel entirely when there is nothing committed', () => {
     renderBar({ activeGoals: [], paces: new Map(), requiredPerCycleTotal: 0, fundedThisCycleTotal: 0 })
     expect(screen.queryByText('This cycle')).toBeNull()
+  })
+
+  it('drops the panel for a single commitment, whose own card already carries every figure in it', () => {
+    renderBar({ activeGoals: [goal], paces: new Map([[7, pace()]]) })
+    expect(screen.queryByText('This cycle')).toBeNull()
+    expect(screen.queryByText(/of RM 175\.00 set aside/)).toBeNull()
+  })
+
+  it('reports a paced cycle as a status pill, never as a disabled button', () => {
+    renderBar()
+    const funded = screen.getByText('Funded this cycle')
+    expect(funded.closest('button')).toBeNull()
+    expect(screen.queryByRole('button', { name: /set aside/i })).toBeNull()
+  })
+
+  it('offers the funding button, with the outstanding amount on it, while the cycle is short', () => {
+    renderBar({ fundedThisCycleTotal: 70, outstandingThisCycleTotal: 105 })
+    expect(screen.getByRole('button', { name: /Set aside RM 105\.00/ })).toBeTruthy()
+    expect(screen.queryByText('Funded this cycle')).toBeNull()
   })
 })
 
