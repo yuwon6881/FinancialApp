@@ -32,11 +32,13 @@ export function DocumentFilterBar({
   return (
     <div data-testid="document-filter-bar" className="mb-3 rounded-xl border border-border/60 bg-muted/20 p-2.5 sm:p-3">
       <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+        {/* Hidden below sm, where it spent a whole line telling a phone what two labelled selects
+            already say. The group keeps the name for screen readers either way. */}
+        <span className="hidden items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground sm:flex">
           <Filter className="size-3.5" aria-hidden="true" />
           Document filters
         </span>
-        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto" role="group" aria-label="Document filters">
           <CustomSelect
             value={sortOrder}
             onChange={value => setSortOrder(value as DocumentSort)}

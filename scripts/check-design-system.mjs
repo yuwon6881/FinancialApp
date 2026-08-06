@@ -32,7 +32,7 @@ const RAW_BUTTON_BASELINE = {
   'src/components/dashboard/DashboardHeader.tsx': 1,
   'src/components/dashboard/TrendLineChart.tsx': 1,
   'src/components/dashboard/SubscriptionsTimelineCard.tsx': 1,
-  'src/components/documents/view/DocumentList.tsx': 4,
+  'src/components/documents/view/DocumentList.tsx': 0,
   'src/components/investments/InvestmentPlanPanel.tsx': 2,
   'src/components/LedgerView.tsx': 1,
   'src/components/InvestmentsView.tsx': 7,

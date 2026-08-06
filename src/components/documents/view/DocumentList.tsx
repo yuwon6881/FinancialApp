@@ -1,19 +1,17 @@
-import { Input } from '../../ui/Input'
 import { Checkbox } from '../../ui/Checkbox'
 import { useEffect, useRef, useState } from 'react'
-import { Check, Download, ExternalLink, Eye, FileArchive, FileCode, FileImage, FileText, Link2, Pencil, Trash2 } from 'lucide-react'
+import { Download, Trash2 } from 'lucide-react'
 import type { TaxReliefCategoryDefinition, VaultDocument } from '../../../types'
-import { downloadDocument } from '../../../lib/api/documents'
 import { useAppPrefs, useAppUi } from '../../../contexts/AppContext'
-import { formatCurrencyVal, getCurrencySymbol } from '../../../lib/utils'
 import { Skeleton } from '../../ui/Skeleton'
 import { formatBytes, formatDate } from './formatters'
 import { CustomSelect } from '../../ui/CustomSelect'
 import { Button } from '../../ui/Button'
 import { DataTable, DataTableBody, DataTableHeader, DataTableHeaderCell } from '../../ui/DataTable'
-import { SensitiveMask } from '../../ui/SensitiveAmount'
 import { DocumentPreviewSheet } from './DocumentPreviewSheet'
 import { RowSyncStatus } from '../../ui/RowSyncBadge'
+import { DocumentCard } from './DocumentCard'
+import { AmountReview, DocumentActions, DocumentTypeIcon, EmptyState, LinkedTransactionButton, type UpdateDocumentFn } from './documentRowParts'
 
 interface DocumentListProps {
   documents: VaultDocument[]
@@ -31,150 +29,11 @@ interface DocumentListProps {
   currency: string
   syncingDocumentIds?: ReadonlySet<number>
   deletingDocumentIds?: ReadonlySet<number>
-  updateDocument: (
-    id: number,
-    updates: Pick<Partial<VaultDocument>, 'taxYear' | 'transactionId' | 'reliefCategory' | 'amount' | 'amountCurrency'> & {
-      amountStatus?: 'Confirmed' | 'NeedsReview'
-    },
-  ) => Promise<void>
+  updateDocument: UpdateDocumentFn
   reliefCategoriesByTaxYear: Readonly<Record<number, TaxReliefCategoryDefinition[]>>
   pendingReliefCategories: ReadonlyMap<number, string>
   onReliefCategoryChange: (id: number, reliefCategory: string) => void
   onNavigateToTransaction?: (transactionId: string) => Promise<void> | void
-}
-
-function AmountReview({ document, updateDocument, currency, disabled = false }: { document: VaultDocument; updateDocument: DocumentListProps['updateDocument']; currency?: string; disabled?: boolean }) {
-  const { currency: appCurrency, hideSensitive } = useAppPrefs()
-  const activeCurrency = currency ?? appCurrency
-  const [editing, setEditing] = useState(document.amountStatus === 'NeedsReview')
-  const [value, setValue] = useState(document.amount?.toFixed(2) ?? '')
-  const [saving, setSaving] = useState(false)
-  useEffect(() => setValue(document.amount?.toFixed(2) ?? ''), [document.amount])
-  const save = async () => {
-    if (disabled) return
-    const amount = value.trim() === '' ? null : Number(value)
-    if (amount !== null && (!Number.isFinite(amount) || amount < 0)) return
-    setSaving(true)
-    try {
-      await updateDocument(document.id, {
-        amount,
-        amountCurrency: activeCurrency.toUpperCase() === 'MYR' ? 'MYR' : 'OTHER',
-        amountStatus: 'Confirmed',
-      })
-      setEditing(false)
-    } finally { setSaving(false) }
-  }
-  if (hideSensitive) return <SensitiveMask />
-  if (!editing) return <button type="button" onClick={() => setEditing(true)} disabled={disabled} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-1 text-[11px] font-bold text-accent-ink transition-colors hover:bg-accent/60 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">
-    {document.amount != null ? formatCurrencyVal(document.amount, activeCurrency) : 'Add amount'}<Pencil className="size-3.5" />
-  </button>
-  return <div className="flex items-center gap-1.5"><span className="text-[11px] font-bold text-foreground">{getCurrencySymbol(activeCurrency)}</span>
-    <Input value={value} onChange={event => setValue(event.target.value)} disabled={disabled || saving} inputMode="decimal" aria-label={`Amount for ${document.originalFileName}`} className="h-9 w-20 rounded-lg border-border bg-background px-2 text-[11px] tabular-nums" />
-    <button type="button" onClick={() => void save()} disabled={disabled || saving} aria-label={`Confirm amount for ${document.originalFileName}`} title="Confirm amount" className="inline-grid size-9 shrink-0 place-items-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"><Check className="size-4" strokeWidth={2.5} /></button>
-  </div>
-}
-
-function iconFor(contentType: string) {
-  if (contentType.startsWith('image/')) return FileImage
-  if (contentType === 'application/pdf') return FileText
-  if (contentType.includes('xml') || contentType.includes('json')) return FileCode
-  return FileArchive
-}
-
-function EmptyState() {
-  return (
-    <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
-      <FileArchive className="mb-3 size-10 text-muted-foreground/30" aria-hidden="true" />
-      <p className="text-xs font-bold text-foreground">No documents yet</p>
-      <p className="mt-1 text-[11px] text-muted-foreground">
-        Upload receipts, invoices or statements to keep them for your tax records.
-      </p>
-    </div>
-  )
-}
-
-function DocumentActions({
-  document,
-  setDocToDelete,
-  downloadFailed,
-  onPreview,
-  disabled = false,
-}: {
-  document: VaultDocument
-  setDocToDelete: (id: number) => void
-  downloadFailed: () => void
-  onPreview: (document: VaultDocument) => void
-  disabled?: boolean
-}) {
-  const { hideSensitive } = useAppPrefs()
-  return (
-    <div className="flex items-center justify-end gap-1.5">
-      <Button
-        variant="unstyled"
-        type="button"
-        disabled={hideSensitive || disabled}
-        onClick={() => onPreview(document)}
-        className="cursor-pointer rounded-lg border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-        aria-label={`Preview ${document.originalFileName}`}
-      >
-        <Eye className="size-3.5" aria-hidden="true" />
-      </Button>
-      <button
-        type="button"
-        disabled={hideSensitive || disabled}
-        onClick={() => void downloadDocument(document.id, document.originalFileName).catch(downloadFailed)}
-        className="cursor-pointer rounded-lg border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-        aria-label={`Download ${document.originalFileName}`}
-      >
-        <Download className="size-3.5" />
-      </button>
-      <button
-        type="button"
-        disabled={hideSensitive || disabled}
-        onClick={() => setDocToDelete(document.id)}
-        className="cursor-pointer rounded-lg border border-border/60 bg-muted/40 p-2 text-muted-foreground transition hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
-        aria-label={`Delete ${document.originalFileName}`}
-      >
-        <Trash2 className="size-3.5" />
-      </button>
-    </div>
-  )
-}
-
-function LinkedTransactionButton({
-  document,
-  openingTransactionId,
-  onOpen,
-}: {
-  document: VaultDocument
-  openingTransactionId: string | null
-  onOpen?: (transactionId: string) => void
-}) {
-  if (!document.transactionId) return null
-  const isOpening = openingTransactionId === document.transactionId
-  if (!onOpen) {
-    return (
-      <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-accent/30 bg-accent/10 px-1.5 py-1 text-[9px] font-bold text-accent-ink" title="Attached to a ledger record">
-        <Link2 className="size-3" aria-hidden="true" />
-        <span className="hidden sm:inline">Linked</span>
-      </span>
-    )
-  }
-  return (
-    <Button
-      variant="outline"
-      size="xs"
-      type="button"
-      onClick={() => onOpen(document.transactionId!)}
-      disabled={isOpening}
-      className="shrink-0 border-accent/30 bg-accent/10 px-1.5 py-1 text-[9px] text-accent-ink hover:border-accent/50 hover:bg-accent/20"
-      title="Open linked ledger transaction"
-      aria-label={`Open linked transaction for ${document.originalFileName}`}
-    >
-      <ExternalLink className="size-3" aria-hidden="true" />
-      <span className="hidden sm:inline">Ledger</span>
-    </Button>
-  )
 }
 
 function SelectAllDocumentsControl({
@@ -228,6 +87,9 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
       setOpeningTransactionId(current => current === transactionId ? null : current)
     }
   }
+  const onOpenLinkedTransaction = onNavigateToTransaction
+    ? (transactionId: string) => void openLinkedTransaction(transactionId)
+    : undefined
 
   return (
     <>
@@ -304,67 +166,26 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
           <div className="rounded-xl border border-border/40">
             <EmptyState />
           </div>
-         ) : documents.map(document => {
-           const Icon = iconFor(document.contentType)
-           const documentReliefCategories = reliefCategoriesByTaxYear[document.taxYear] ?? []
-           const isDeleting = deletingDocumentIds.has(document.id)
-           const isSyncing = syncingDocumentIds.has(document.id)
-           const isBusy = isDeleting || isSyncing
-           return (
-             <article key={document.id} className="rounded-2xl border border-border/60 bg-card p-3.5 shadow-sm shadow-black/5" aria-busy={isBusy}>
-              <div className="flex min-w-0 items-center gap-2.5">
-                <Checkbox disabled={hideSensitive || isBusy} checked={selectedIds.has(document.id)} onChange={() => toggleSelected(document.id)} aria-label={`Select ${document.originalFileName}`} className="size-4 shrink-0 accent-primary" />
-                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent text-accent-ink">
-                  <Icon className="size-4" aria-hidden="true" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex min-w-0 items-center gap-1.5">
-                     <p className="line-clamp-2 min-w-0 text-xs font-bold leading-snug text-foreground" title={document.originalFileName}>
-                       {document.originalFileName}
-                     </p>
-                     <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} entityLabel="document" />
-                    <LinkedTransactionButton
-                      document={document}
-                      openingTransactionId={openingTransactionId}
-                      onOpen={onNavigateToTransaction ? transactionId => void openLinkedTransaction(transactionId) : undefined}
-                    />
-                  </div>
-                </div>
-                <DocumentActions
-                   document={document}
-                   setDocToDelete={setDocToDelete}
-                   downloadFailed={downloadFailed}
-                   onPreview={setPreviewDocument}
-                   disabled={isBusy}
-                />
-              </div>
-
-              <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2.5 border-t border-border/50 pt-3 text-[10px]">
-                <div>
-                  <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Tax year</dt>
-                 <dd className="mt-0.5 font-bold text-foreground tabular-nums">{document.taxYear}</dd>
-                </div>
-                <div>
-                  <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Size</dt>
-                  <dd className="mt-0.5 font-semibold text-foreground tabular-nums">{formatBytes(document.sizeBytes)}</dd>
-                </div>
-                <div>
-                  <dt className="font-semibold uppercase tracking-wide text-muted-foreground">Uploaded</dt>
-                  <dd className="mt-0.5 font-semibold text-foreground">{formatDate(document.uploadedAt)}</dd>
-                </div>
-              </dl>
-              <p className="mt-2 text-[10px] text-muted-foreground">
-                Keep until {formatDate(document.retentionUntil)}
-              </p>
-              <div className="mt-3 flex items-center justify-between gap-3 border-t border-border/50 pt-3">
-                <span className="text-[10px] text-muted-foreground">{document.amountStatus === 'NeedsReview' ? 'AI suggestion · please confirm' : document.amountStatus === 'Confirmed' ? 'Confirmed amount' : document.amountExtractionMessage || 'No amount confirmed'}</span>
-                 <AmountReview document={document} updateDocument={updateDocument} currency={currency} disabled={isBusy} />
-              </div>
-               <div className="mt-3 border-t border-border/50 pt-3"><p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Tax relief category <span className="text-destructive">*</span></p><CustomSelect disabled={hideSensitive || isBusy} value={pendingReliefCategories.get(document.id) ?? document.reliefCategory ?? ''} onChange={value => onReliefCategoryChange(document.id, String(value))}
-                options={[{ value: '', label: 'Uncategorised (legacy)', disabled: true }, ...documentReliefCategories.map(category => ({ value: category.id, label: category.name }))]} ariaLabel={`Tax relief category for ${document.originalFileName}`} className="w-full" /></div>
-            </article>
-          )
-        })}
+        ) : documents.map(document => (
+          <DocumentCard
+            key={document.id}
+            document={document}
+            isSelected={selectedIds.has(document.id)}
+            isSyncing={syncingDocumentIds.has(document.id)}
+            isDeleting={deletingDocumentIds.has(document.id)}
+            reliefCategories={reliefCategoriesByTaxYear[document.taxYear] ?? []}
+            pendingReliefCategory={pendingReliefCategories.get(document.id)}
+            openingTransactionId={openingTransactionId}
+            currency={currency}
+            toggleSelected={toggleSelected}
+            setDocToDelete={setDocToDelete}
+            downloadFailed={downloadFailed}
+            onPreview={setPreviewDocument}
+            onReliefCategoryChange={onReliefCategoryChange}
+            onOpenLinkedTransaction={onOpenLinkedTransaction}
+            updateDocument={updateDocument}
+          />
+        ))}
       </div>
 
       <div className="hidden w-full lg:block">
@@ -396,7 +217,6 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
           ) : documents.length === 0 ? (
             <tr><td colSpan={8}><EmptyState /></td></tr>
           ) : documents.map(document => {
-            const Icon = iconFor(document.contentType)
             const documentReliefCategories = reliefCategoriesByTaxYear[document.taxYear] ?? []
             const isDeleting = deletingDocumentIds.has(document.id)
             const isSyncing = syncingDocumentIds.has(document.id)
@@ -407,7 +227,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
                 <td className="px-3 py-2.5">
                   <div className="flex items-center gap-2.5">
                     <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-accent text-accent-ink">
-                      <Icon className="size-4" aria-hidden="true" />
+                      <DocumentTypeIcon contentType={document.contentType} className="size-4" />
                     </span>
                     <div className="min-w-0 max-w-[22rem]">
                       <div className="flex items-center gap-1.5">
@@ -418,7 +238,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
                         <LinkedTransactionButton
                           document={document}
                           openingTransactionId={openingTransactionId}
-                          onOpen={onNavigateToTransaction ? transactionId => void openLinkedTransaction(transactionId) : undefined}
+                          onOpen={onOpenLinkedTransaction}
                         />
                       </div>
                     </div>
@@ -431,7 +251,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
                 </td>
                 <td className="px-3 py-2.5 font-bold text-foreground tabular-nums">{document.taxYear}</td>
                 <td className="px-3 py-2.5 text-muted-foreground tabular-nums">{formatBytes(document.sizeBytes)}</td>
-                 <td className="px-3 py-2.5"><AmountReview document={document} updateDocument={updateDocument} currency={currency} disabled={isBusy} />{document.amountStatus === 'NeedsReview' && <p className="mt-0.5 text-[9px] text-amber-600">AI · review</p>}</td>
+                 <td className="px-3 py-2.5"><AmountReview document={document} updateDocument={updateDocument} currency={currency} disabled={isBusy} />{document.amountStatus === 'NeedsReview' && <p className="mt-0.5 text-[10px] text-amber-600">AI · review</p>}</td>
                 <td className="px-3 py-2.5 text-muted-foreground">
                   <div className="whitespace-nowrap">{formatDate(document.uploadedAt)}</div>
                   <div className="whitespace-nowrap text-[10px]">Keep until {formatDate(document.retentionUntil)}</div>

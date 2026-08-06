@@ -85,6 +85,17 @@ describe('DocumentList selection toolbar', () => {
     expect(screen.getByRole('button', { name: 'Delete selected documents' }).hasAttribute('disabled')).toBe(true)
   })
 
+  it('keeps the filing facts behind a closed disclosure on the mobile card', () => {
+    render(<DocumentList {...baseProps} selectedIds={new Set()} />)
+
+    // The card is what a phone gets, and its filing block is collapsed by default: expanded, ten
+    // documents ran to roughly 3,300px of scrolling. The detail is still present, not dropped.
+    const filing = screen.getByText('Filing details').closest('details')
+    expect(filing).not.toBeNull()
+    expect(filing!.open).toBe(false)
+    expect(filing!.querySelector('dl')?.textContent).toContain('Keep until')
+  })
+
   it('shows direct document mutation state on each rendered row', () => {
     const { rerender } = render(
       <DocumentList
