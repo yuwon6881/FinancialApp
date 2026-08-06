@@ -164,7 +164,7 @@ export function AuthenticatedView({
             used to have, while `clip` contains a rogue-width view without ever
             creating a scroll container. */}
         <main
-          className="relative mx-auto w-full min-w-0 max-w-[1440px] flex-1 overflow-x-clip px-4 py-6 pb-24 sm:px-6 sm:py-8 md:pb-8 lg:px-8"
+          className="pb-fab-safe relative mx-auto w-full min-w-0 max-w-[1440px] flex-1 overflow-x-clip px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
           aria-busy={prefs.sensitivePreferenceStatus === 'pending' || financial.loading}
         >
           <ErrorBoundary variant="inline" resetKey={prefs.activeTab}>

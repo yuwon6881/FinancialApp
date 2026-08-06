@@ -199,7 +199,12 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   // One Rewards balance, two kinds of claim on it. Everything below is derived from this single
   // summary so the pool bar, the goal cards and the wishlist progress cannot disagree about how
   // the same money is divided.
-  const today = React.useMemo(() => new Date(), [])
+  // Keyed on the local calendar day rather than memoised once on mount. This is an installed PWA
+  // that is routinely left open across midnight, and a `today` frozen at mount kept reporting a
+  // commitment as on pace into the day its deadline had already passed. `today` only ever resolves
+  // a cycle and a calendar day downstream, so local midnight is the honest instant to hand it.
+  const todayKey = new Date().toLocaleDateString('en-CA')
+  const today = React.useMemo(() => new Date(`${todayKey}T00:00:00`), [todayKey])
   const pool = useMemo(
     () => summarizePool(savingsGoals, rewardsBalance, rewardsTarget, today, cycleDay),
     [savingsGoals, rewardsBalance, rewardsTarget, today, cycleDay],
@@ -247,8 +252,11 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
     const months = remaining / rate
     const days = Math.ceil(months * 30)
 
-    const today = new Date()
-    const targetDate = new Date(today.setDate(today.getDate() + days))
+    // Derived from the day-keyed `today` above rather than a fresh mutated Date: `setDate` returns a
+    // timestamp *and* mutates its receiver, so the old form shadowed the outer `today` with a value
+    // it then moved months into the future — one call away from reading as the current date.
+    const targetDate = new Date(today)
+    targetDate.setDate(targetDate.getDate() + days)
     const formattedDate = targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
     if (days < 30) {

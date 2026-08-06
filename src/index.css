@@ -498,6 +498,22 @@
     background-clip: padding-box;
 }
 
+/* Bottom padding for any scroll container that sits under the floating action
+   button. The FAB is fixed at 96px + safe-area above the viewport bottom and is
+   56px tall, so a container padded to 96px still leaves its last row *behind*
+   the button — which is how the Rewards delete action and the Vault amount
+   pencil ended up unreachable. 160px clears the button with a small gap.
+   Capped at lg, where the FAB gives way to the desktop rail. */
+.pb-fab-safe {
+    padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 1024px) {
+    .pb-fab-safe {
+        padding-bottom: 2rem;
+    }
+}
+
 .interactive-card {
     transform: translateZ(0);
     transition: border-color 150ms ease-in-out, box-shadow 150ms ease-in-out,
