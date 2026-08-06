@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { ChevronDown, Pencil } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ChevronDown, Pencil, X } from 'lucide-react'
 import type { TaxReliefCategoryDefinition, VaultDocument } from '../../../types'
 import { useAppPrefs } from '../../../contexts/AppContext'
 import { Button } from '../../ui/Button'
@@ -84,14 +84,29 @@ export function DocumentCard({
   const reliefId = pendingReliefCategory ?? document.reliefCategory ?? ''
   const reliefName = reliefCategories.find(category => category.id === reliefId)?.name
   const [editingRelief, setEditingRelief] = useState(false)
+  // An unset category has nothing to fall back to, so the picker stays open and there is no cancel —
+  // the field is genuinely required. Once a category exists, opening the picker is reversible.
   const showReliefPicker = editingRelief || !reliefName
+  const canCancelRelief = editingRelief && !!reliefName
+  // Collapse anything open if the row starts syncing or deleting out from under it.
+  useEffect(() => {
+    if (isBusy) setEditingRelief(false)
+  }, [isBusy])
 
-  // Tapping the card previews, so the common case costs no aim. Anything the user could have meant
-  // to press instead — the checkbox, the amount editor, the picker, the disclosure — wins the tap.
+  // Tapping the card previews, so the common case costs no aim. Anything the user could have meant to
+  // press instead — the checkbox, the amount editor, the picker, the disclosure — wins the tap.
+  //
+  // But tap-to-preview also took away the gesture people reach for to back out of a half-finished
+  // edit: tapping empty space. So an open sub-state absorbs the first tap and closes, and only a card
+  // at rest opens the preview. Without this, every escape hatch on the card is a preview instead.
   const previewOnBodyTap = (event: React.MouseEvent<HTMLDivElement>) => {
     if (hideSensitive || isBusy || isSelecting) return
     const target = event.target as HTMLElement | null
     if (target?.closest('button, a, input, select, summary, label, [role="button"], [role="combobox"], [role="listbox"]')) return
+    if (canCancelRelief) {
+      setEditingRelief(false)
+      return
+    }
     onPreview(document)
   }
 
@@ -180,10 +195,24 @@ export function DocumentCard({
           </div>
 
           {showReliefPicker && (
-            <div className="mt-3">
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Tax relief category <span className="text-destructive">*</span>
-              </p>
+            <div className="mt-3" onKeyDown={event => { if (event.key === 'Escape' && canCancelRelief) { event.stopPropagation(); setEditingRelief(false) } }}>
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Tax relief category <span className="text-destructive">*</span>
+                </p>
+                {canCancelRelief && (
+                  <Button
+                    variant="unstyled"
+                    type="button"
+                    onClick={() => setEditingRelief(false)}
+                    aria-label={`Keep ${reliefName} as the tax relief category for ${document.originalFileName}`}
+                    title="Keep the current category"
+                    className="inline-grid size-7 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                  >
+                    <X className="size-3.5" />
+                  </Button>
+                )}
+              </div>
               <CustomSelect
                 disabled={hideSensitive || isBusy}
                 value={reliefId}

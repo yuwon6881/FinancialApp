@@ -56,9 +56,18 @@ describe('DocumentList selection toolbar', () => {
     // Both layouts are mounted under jsdom, so the row checkbox appears once per layout.
     expect(screen.getByLabelText('Select all documents on this page')).not.toBeNull()
     expect(screen.queryAllByLabelText('Select tax.pdf').length).toBeGreaterThan(0)
-    // Present but inert until something is actually selected.
-    expect(screen.getByRole('button', { name: 'Download selected documents' }).hasAttribute('disabled')).toBe(true)
-    expect(screen.getByRole('button', { name: 'Delete selected documents' }).hasAttribute('disabled')).toBe(true)
+    // Absent, not disabled: a greyed destructive button still reads as red and dangerous, so it looked
+    // broken rather than waiting. Its slot holds width regardless, so nothing shifts when it arrives.
+    expect(screen.queryByRole('button', { name: 'Download selected documents' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Delete selected documents' })).toBeNull()
+    expect(screen.getByTestId('document-bulk-action-slot').className).toContain('w-20')
+
+    // The toolbar must stay one row. As `flex flex-wrap` it fit the actions on one line beside
+    // "10 selected" and two lines beside "10 on this page", so ticking a box changed its height and
+    // shoved the list up — at widths between the visual-test viewports, which is how it got through.
+    const toolbar = screen.getByTestId('document-selection-toolbar')
+    expect(toolbar.className).toContain('grid-cols-[minmax(0,1fr)_auto]')
+    expect(toolbar.className).not.toContain('flex-wrap')
   })
 
   it('forces selection mode on, and clears on leaving, so a live selection is never hidden', () => {
@@ -102,6 +111,59 @@ describe('DocumentList selection toolbar', () => {
     expect(screen.getAllByRole('button', { name: 'Delete tax.pdf' }).every(button => button.hasAttribute('disabled'))).toBe(true)
     expect(screen.getByRole('button', { name: 'Download selected documents' }).hasAttribute('disabled')).toBe(true)
     expect(screen.getByRole('button', { name: 'Delete selected documents' }).hasAttribute('disabled')).toBe(true)
+  })
+
+  it('lets the amount editor be left without writing, and refuses an empty or negative figure', () => {
+    const updateDocument = vi.fn().mockResolvedValue(undefined)
+    render(
+      <DocumentList
+        {...baseProps}
+        updateDocument={updateDocument}
+        documents={[{ ...document, amount: 125.5, amountStatus: 'Confirmed' }]}
+        selectedIds={new Set()}
+      />,
+    )
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Add amount|125\.50/ })[0])
+    const input = screen.getAllByLabelText('Amount for tax.pdf')[0] as HTMLInputElement
+
+    // Emptying the field used to save `null` as Confirmed — "there is definitively no amount" — from
+    // what is almost always a cleared field on the way to typing a new one.
+    fireEvent.change(input, { target: { value: '' } })
+    fireEvent.click(screen.getAllByRole('button', { name: 'Confirm amount for tax.pdf' })[0])
+    expect(screen.getByRole('alert').textContent).toContain('Enter an amount')
+    expect(updateDocument).not.toHaveBeenCalled()
+
+    // A negative figure used to make the tick a silent no-op, so it just looked broken.
+    fireEvent.change(input, { target: { value: '-4' } })
+    fireEvent.click(screen.getAllByRole('button', { name: 'Confirm amount for tax.pdf' })[0])
+    expect(screen.getByRole('alert').textContent).toContain('zero or more')
+    expect(updateDocument).not.toHaveBeenCalled()
+
+    // Leaving must cost nothing: the only exit used to be the tick, which writes straight to the
+    // server rather than through the outbox, so a mis-tap was a real edit with no undo.
+    fireEvent.click(screen.getAllByRole('button', { name: 'Stop editing the amount for tax.pdf' })[0])
+    expect(screen.queryAllByLabelText('Amount for tax.pdf')).toHaveLength(0)
+    expect(updateDocument).not.toHaveBeenCalled()
+  })
+
+  it('does not open an editor for every AI-suggested amount on the page', () => {
+    render(
+      <DocumentList
+        {...baseProps}
+        documents={[
+          { ...document, id: 1, amount: 340, amountStatus: 'NeedsReview' },
+          { ...document, id: 2, originalFileName: 'two.pdf', amount: 56, amountStatus: 'NeedsReview' },
+        ]}
+        selectedIds={new Set()}
+      />,
+    )
+
+    // Seeding the editor from NeedsReview put one live, uncancellable input on screen per suggested
+    // row, so a batch scan landed on a page of them.
+    expect(screen.queryAllByLabelText('Amount for tax.pdf')).toHaveLength(0)
+    expect(screen.queryAllByLabelText('Amount for two.pdf')).toHaveLength(0)
+    expect(screen.getAllByRole('button', { name: 'Review the suggested amount for tax.pdf' }).length).toBeGreaterThan(0)
   })
 
   it('keeps the filing facts behind a closed disclosure on the mobile card', () => {

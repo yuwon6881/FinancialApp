@@ -106,7 +106,12 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
 
   return (
     <>
-      <div data-testid="document-selection-toolbar" className={`mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border px-2.5 py-2 transition-colors sm:px-3 ${hasSelection ? 'border-primary/30 bg-primary/5' : 'border-border/60 bg-muted/20'}`}>
+      {/* A grid with a reserved trailing slot, never `flex-wrap`. The two states of the count read at
+          different widths ("10 on this page" vs "10 selected"), so a wrapping row fits the actions on
+          one line in one state and two in the other — ticking a box then changed the toolbar's height
+          and shoved the whole list up. The left cell truncates; the right cell keeps its width whether
+          or not the bulk actions are in it, so they appear in place instead of pushing anything. */}
+      <div data-testid="document-selection-toolbar" className={`mb-3 grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-xl border px-2.5 py-2 transition-colors sm:px-3 ${hasSelection ? 'border-primary/30 bg-primary/5' : 'border-border/60 bg-muted/20'}`}>
         <div className="flex min-w-0 items-center gap-1.5 sm:gap-2.5">
           {isSelecting && (
             <>
@@ -153,33 +158,42 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
               >
                 Done
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                type="button"
-                disabled={hideSensitive || !hasSelection || isDownloadingSelected || exceedsSelectionLimit}
-                onClick={onDownloadSelected}
-                aria-label={isDownloadingSelected ? 'Preparing selected document download' : 'Download selected documents'}
-                title="Download selected"
-                className="size-9 shrink-0 bg-card p-0 sm:size-auto sm:px-3"
-              >
-                <Download className={`size-3.5 ${isDownloadingSelected ? 'animate-pulse' : ''}`} aria-hidden="true" />
-                <span className="hidden sm:inline">{isDownloadingSelected ? 'Preparing…' : 'Download'}</span>
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                type="button"
-                disabled={hideSensitive || !hasSelection || isDeletingSelected || exceedsSelectionLimit}
-                onClick={onDeleteSelected}
-                aria-busy={isDeletingSelected}
-                aria-label="Delete selected documents"
-                title="Delete selected"
-                className="size-9 shrink-0 p-0 sm:size-auto sm:px-3"
-              >
-                <Trash2 className="size-3.5" aria-hidden="true" />
-                <span className="hidden sm:inline">{isDeletingSelected ? 'Deleting…' : 'Delete'}</span>
-              </Button>
+              {/* The bulk actions are absent, not disabled, until something is selected: a greyed
+                  destructive button still reads as red and dangerous, so it looked broken rather than
+                  waiting. The slot holds its width either way, so they arrive in place. */}
+              <div data-testid="document-bulk-action-slot" className="flex w-20 shrink-0 items-center justify-end gap-1.5 sm:w-60">
+                {hasSelection && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      disabled={hideSensitive || isDownloadingSelected || exceedsSelectionLimit}
+                      onClick={onDownloadSelected}
+                      aria-label={isDownloadingSelected ? 'Preparing selected document download' : 'Download selected documents'}
+                      title="Download selected"
+                      className="size-9 shrink-0 bg-card p-0 sm:size-auto sm:px-3"
+                    >
+                      <Download className={`size-3.5 ${isDownloadingSelected ? 'animate-pulse' : ''}`} aria-hidden="true" />
+                      <span className="hidden sm:inline">{isDownloadingSelected ? 'Preparing…' : 'Download'}</span>
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      type="button"
+                      disabled={hideSensitive || isDeletingSelected || exceedsSelectionLimit}
+                      onClick={onDeleteSelected}
+                      aria-busy={isDeletingSelected}
+                      aria-label="Delete selected documents"
+                      title="Delete selected"
+                      className="size-9 shrink-0 p-0 sm:size-auto sm:px-3"
+                    >
+                      <Trash2 className="size-3.5" aria-hidden="true" />
+                      <span className="hidden sm:inline">{isDeletingSelected ? 'Deleting…' : 'Delete'}</span>
+                    </Button>
+                  </>
+                )}
+              </div>
             </>
           )}
         </div>

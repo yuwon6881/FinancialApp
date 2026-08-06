@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Check, Download, ExternalLink, Eye, FileArchive, FileCode, FileImage, FileText, Link2, Pencil, Trash2 } from 'lucide-react'
+import { Check, Download, ExternalLink, Eye, FileArchive, FileCode, FileImage, FileText, Link2, Pencil, Trash2, X } from 'lucide-react'
 import type { VaultDocument } from '../../../types'
 import { downloadDocument } from '../../../lib/api/documents'
 import { useAppPrefs } from '../../../contexts/AppContext'
@@ -47,14 +47,42 @@ export function EmptyState() {
 export function AmountReview({ document, updateDocument, currency, disabled = false }: { document: VaultDocument; updateDocument: UpdateDocumentFn; currency?: string; disabled?: boolean }) {
   const { currency: appCurrency, hideSensitive } = useAppPrefs()
   const activeCurrency = currency ?? appCurrency
-  const [editing, setEditing] = useState(document.amountStatus === 'NeedsReview')
+  // Never seeded from `NeedsReview`. Doing so opened one live input per suggested row, so a batch scan
+  // landed on a page of ten simultaneous editors, none of them cancellable. The suggestion is shown on
+  // the closed control and called out by the row's caption; confirming it is a deliberate two taps,
+  // which is the right price for a write that goes straight to the server.
+  const [editing, setEditing] = useState(false)
+  const needsReview = document.amountStatus === 'NeedsReview'
   const [value, setValue] = useState(document.amount?.toFixed(2) ?? '')
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   useEffect(() => setValue(document.amount?.toFixed(2) ?? ''), [document.amount])
+
+  // Leaving the editor must cost nothing. The only way out used to be the tick, and that writes to
+  // the server directly rather than through the outbox, so a mis-tap was a real edit with no undo.
+  const cancel = () => {
+    setValue(document.amount?.toFixed(2) ?? '')
+    setError(null)
+    setEditing(false)
+  }
+
   const save = async () => {
     if (disabled) return
-    const amount = value.trim() === '' ? null : Number(value)
-    if (amount !== null && (!Number.isFinite(amount) || amount < 0)) return
+    const trimmed = value.trim()
+    // Both of these used to `return` in silence, so the tick looked broken rather than refusing.
+    // An empty field is refused outright: it used to save `null` *with* `Confirmed`, recording "there
+    // is definitively no amount here" from what is almost always a cleared field on the way to typing
+    // a new one. A document with no amount stays `Unavailable` and reads "No amount confirmed".
+    if (trimmed === '') {
+      setError('Enter an amount, or press ✕ to leave this unchanged.')
+      return
+    }
+    const amount = Number(trimmed)
+    if (!Number.isFinite(amount) || amount < 0) {
+      setError('Enter an amount of zero or more.')
+      return
+    }
+    setError(null)
     setSaving(true)
     try {
       await updateDocument(document.id, {
@@ -66,12 +94,19 @@ export function AmountReview({ document, updateDocument, currency, disabled = fa
     } finally { setSaving(false) }
   }
   if (hideSensitive) return <SensitiveMask />
-  if (!editing) return <Button variant="unstyled" type="button" onClick={() => setEditing(true)} disabled={disabled} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-1 text-xs font-bold text-accent-ink transition-colors hover:bg-accent/60 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">
+  // An unreviewed suggestion is outlined rather than left as plain text, because it no longer opens by
+  // itself: something has to say "this figure is a guess and still needs you".
+  if (!editing) return <Button variant="unstyled" type="button" onClick={() => setEditing(true)} disabled={disabled} aria-label={needsReview ? `Review the suggested amount for ${document.originalFileName}` : undefined} className={`inline-flex min-h-8 items-center gap-1.5 rounded-lg px-1 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${needsReview ? 'border border-amber-500/40 bg-amber-500/10 px-2 text-amber-600 hover:bg-amber-500/20' : 'text-accent-ink hover:bg-accent/60'}`}>
     {document.amount != null ? formatCurrencyVal(document.amount, activeCurrency) : 'Add amount'}<Pencil className="size-3.5" />
   </Button>
-  return <div className="flex items-center gap-1.5"><span className="text-xs font-bold text-foreground">{getCurrencySymbol(activeCurrency)}</span>
-    <Input value={value} onChange={event => setValue(event.target.value)} disabled={disabled || saving} inputMode="decimal" aria-label={`Amount for ${document.originalFileName}`} className="h-9 w-20 rounded-lg border-border bg-background px-2 text-xs tabular-nums" />
-    <Button variant="unstyled" type="button" onClick={() => void save()} disabled={disabled || saving} aria-label={`Confirm amount for ${document.originalFileName}`} title="Confirm amount" className="inline-grid size-9 shrink-0 place-items-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"><Check className="size-4" strokeWidth={2.5} /></Button>
+  return <div>
+    <div className="flex items-center gap-1.5" onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); cancel() } }}>
+      <span className="text-xs font-bold text-foreground">{getCurrencySymbol(activeCurrency)}</span>
+      <Input value={value} onChange={event => { setValue(event.target.value); setError(null) }} disabled={disabled || saving} inputMode="decimal" aria-label={`Amount for ${document.originalFileName}`} aria-invalid={error ? true : undefined} className="h-9 w-20 rounded-lg border-border bg-background px-2 text-xs tabular-nums" />
+      <Button variant="unstyled" type="button" onClick={() => void save()} disabled={disabled || saving} aria-label={`Confirm amount for ${document.originalFileName}`} title="Confirm amount" className="inline-grid size-9 shrink-0 place-items-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"><Check className="size-4" strokeWidth={2.5} /></Button>
+      <Button variant="unstyled" type="button" onClick={cancel} disabled={saving} aria-label={`Stop editing the amount for ${document.originalFileName}`} title="Discard this edit" className="inline-grid size-9 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"><X className="size-4" /></Button>
+    </div>
+    {error && <p className="mt-1 text-[10px] font-semibold text-destructive" role="alert">{error}</p>}
   </div>
 }
 
