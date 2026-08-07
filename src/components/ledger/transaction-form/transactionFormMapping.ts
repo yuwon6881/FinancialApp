@@ -19,6 +19,8 @@ export function mapFormToTransaction(
     stabilityBalance: number
     stabilityTarget: number
     stabilityOverflowRedirect: string
+    /** Accepted emergency-fund top-up, already capped. Zero when the offer was left unticked. */
+    recoveryTopUp?: number
   }
 ) {
   const parsedAmount = parseFloat(state.amount)
@@ -46,6 +48,7 @@ export function mapFormToTransaction(
       stabilityBalance: options.stabilityBalance,
       stabilityTarget: options.stabilityTarget,
       stabilityOverflowRedirect: options.stabilityOverflowRedirect,
+      recoveryTopUp: options.recoveryTopUp,
     })
   }
 

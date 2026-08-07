@@ -428,6 +428,41 @@ export interface DashboardData {
   cycleSummaryInsights?: CycleSummaryInsights
   todayPlanInsights?: TodayPlanInsights
   categoryLimitProgress?: CategoryLimitProgress[]
+  // Optional for the same reason todayPlanInsights is: a cached payload written before this
+  // shipped must still parse.
+  stabilityRecovery?: StabilityRecovery
+}
+
+export interface StabilityRecoveryDraw {
+  bucket: string
+  /** Fraction of a top-up this bucket contributes. The three sum to exactly 1. */
+  share: number
+}
+
+/**
+ * How far the emergency fund has fallen from the highest point it ever reached, and how much of
+ * that to ask back this cycle. Measured against the fund's own high-water mark rather than the
+ * target, so it only ever asks for money that was really in there — someone still building the
+ * fund for the first time is never asked to "put back" anything.
+ */
+export interface StabilityRecovery {
+  isActive: boolean
+  highWaterMark: number
+  target: number
+  recoverableCeiling: number
+  currentBalance: number
+  outstandingShortfall: number
+  cyclesRemaining: number
+  requiredThisCycle: number
+  toppedUpThisCycle: number
+  outstandingThisCycle: number
+  lastDrawdownCycleKey?: string
+  lastDrawdownAmount: number
+  /** Bills this cycle still owes, which the proposed draw must stay above. */
+  essentialsCommitted: number
+  /** Savings-goal funding this cycle still owes, likewise protected. */
+  rewardsCommitted: number
+  suggestedDraws: StabilityRecoveryDraw[]
 }
 
 export interface TodayPlanInsights {

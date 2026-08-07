@@ -97,6 +97,25 @@ export function mapDashboardCore(data: WireDashboardData, month?: string, year?:
         nonRecurringEssentialsDailyAverage: deobfuscateAmount(data.todayPlanInsights?.nonRecurringEssentialsDailyAverage),
         projectedEssentialsEndingBalance: deobfuscateAmount(data.todayPlanInsights?.projectedEssentialsEndingBalance),
       },
+      stabilityRecovery: data.stabilityRecovery
+        ? {
+          isActive: Boolean(data.stabilityRecovery.isActive),
+          highWaterMark: deobfuscateAmount(data.stabilityRecovery.highWaterMark),
+          target: deobfuscateAmount(data.stabilityRecovery.target),
+          recoverableCeiling: deobfuscateAmount(data.stabilityRecovery.recoverableCeiling),
+          currentBalance: deobfuscateAmount(data.stabilityRecovery.currentBalance),
+          outstandingShortfall: deobfuscateAmount(data.stabilityRecovery.outstandingShortfall),
+          cyclesRemaining: data.stabilityRecovery.cyclesRemaining || 0,
+          requiredThisCycle: deobfuscateAmount(data.stabilityRecovery.requiredThisCycle),
+          toppedUpThisCycle: deobfuscateAmount(data.stabilityRecovery.toppedUpThisCycle),
+          outstandingThisCycle: deobfuscateAmount(data.stabilityRecovery.outstandingThisCycle),
+          lastDrawdownCycleKey: data.stabilityRecovery.lastDrawdownCycleKey,
+          lastDrawdownAmount: deobfuscateAmount(data.stabilityRecovery.lastDrawdownAmount),
+          essentialsCommitted: deobfuscateAmount(data.stabilityRecovery.essentialsCommitted),
+          rewardsCommitted: deobfuscateAmount(data.stabilityRecovery.rewardsCommitted),
+          suggestedDraws: data.stabilityRecovery.suggestedDraws || [],
+        }
+        : undefined,
       categoryLimitProgress: (data.categoryLimitProgress || []).map(progress => ({
         ...progress,
         limit: deobfuscateAmount(progress.limit),

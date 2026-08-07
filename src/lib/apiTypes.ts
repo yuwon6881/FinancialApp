@@ -12,6 +12,7 @@ import type {
   TrendPoint,
   TodayPlanInsights,
   CategoryLimitProgress,
+  StabilityRecovery,
   WishlistItem,
   SavingsGoal,
 } from '../types'
@@ -134,6 +135,33 @@ type WireTodayPlanInsights = Omit<
   projectedEssentialsEndingBalance: WireAmount
 }
 
+type WireStabilityRecovery = Omit<
+  StabilityRecovery,
+  | 'highWaterMark'
+  | 'target'
+  | 'recoverableCeiling'
+  | 'currentBalance'
+  | 'outstandingShortfall'
+  | 'requiredThisCycle'
+  | 'toppedUpThisCycle'
+  | 'outstandingThisCycle'
+  | 'lastDrawdownAmount'
+  | 'essentialsCommitted'
+  | 'rewardsCommitted'
+> & {
+  highWaterMark: WireAmount
+  target: WireAmount
+  recoverableCeiling: WireAmount
+  currentBalance: WireAmount
+  outstandingShortfall: WireAmount
+  requiredThisCycle: WireAmount
+  toppedUpThisCycle: WireAmount
+  outstandingThisCycle: WireAmount
+  lastDrawdownAmount: WireAmount
+  essentialsCommitted: WireAmount
+  rewardsCommitted: WireAmount
+}
+
 type WireCategoryLimitProgress = Omit<
   CategoryLimitProgress,
   'limit' | 'spent' | 'remaining' | 'pendingCommitted' | 'projectedSpend'
@@ -162,6 +190,7 @@ export type WireDashboardData = Omit<
   | 'availableYears'
   | 'todayPlanInsights'
   | 'categoryLimitProgress'
+  | 'stabilityRecovery'
 > & {
   setting: WireDashboardSetting
   categories: WireCategorySummary[]
@@ -175,6 +204,7 @@ export type WireDashboardData = Omit<
   todayPlanInsights?: WireTodayPlanInsights
   categoryLimitProgress?: WireCategoryLimitProgress[]
   cycleSummaryInsights?: WireCycleSummaryInsights
+  stabilityRecovery?: WireStabilityRecovery
 }
 
 // The expensive historical aggregates split out of /dashboard into /dashboard/insights (see

@@ -117,6 +117,13 @@ export function AuthenticatedView({
     handleReceiptSplitStarted,
     clearReceiptSplitJob,
   } = receiptSplit
+  // Compared on month AND year, unlike useCurrentCycleDashboard's own month-only check: an
+  // emergency-fund offer attached to a same-month cycle a year back would draw from balances that
+  // have nothing to do with it.
+  const isSelectedCycleCurrent =
+    financial.optimisticDashboardData?.setting?.selectedMonth === currentCycleMonth &&
+    financial.optimisticDashboardData?.setting?.selectedYear === currentCycleYear
+
   const {
     activeInvestmentScanDraft,
     failedInvestmentScanJob,
@@ -192,6 +199,7 @@ export function AuthenticatedView({
                       isSwitchingCycle={isCurrentCycleLoading || !todayDashboardData}
                       investmentAllocation={investmentAllocation}
                       onNavigateToCategoryLimits={() => nav.handleNavigateToReportSection('category-limits')}
+                      onAddIncome={() => nav.handleQuickAction('transaction')}
                     />
                   )}
 
@@ -346,6 +354,13 @@ export function AuthenticatedView({
                       stabilityAlloc={financial.optimisticDashboardData?.setting?.stabilityAlloc ?? 0.15}
                       rewardsAlloc={financial.optimisticDashboardData?.setting?.rewardsAlloc ?? 0.1}
                       stabilityOverflowRedirect={financial.optimisticDashboardData?.setting?.stabilityOverflowRedirect}
+                      // Only offered while the selected cycle IS the current one. Browsing a past
+                      // cycle would otherwise compute an offer from today's figures and attach it
+                      // to a backdated salary.
+                      stabilityRecovery={isSelectedCycleCurrent ? financial.optimisticDashboardData?.stabilityRecovery : undefined}
+                      essentialsBalance={financial.optimisticDashboardData?.categories?.find(c => c.name === 'Essentials')?.remaining ?? 0}
+                      growthBalance={financial.optimisticDashboardData?.categories?.find(c => c.name === 'Growth')?.remaining ?? 0}
+                      rewardsBalance={financial.optimisticDashboardData?.categories?.find(c => c.name === 'Rewards')?.remaining ?? 0}
                       onFetchPagedTransactions={apiClient.fetchPagedTransactions}
                       onFetchTransactionById={apiClient.fetchTransactionById}
                       onExportTransactions={apiClient.exportTransactionsCsv}

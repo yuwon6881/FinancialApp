@@ -5,6 +5,7 @@ import type {
   TransactionCategory,
   AutocompleteSuggestion,
   TransactionDocumentChanges,
+  StabilityRecovery,
 } from '../types'
 import type { PagedTransactionResult, ReceiptScanResult } from '../lib/api'
 import { CycleSkeleton } from './ui/Skeleton'
@@ -77,6 +78,11 @@ interface LedgerViewProps {
   stabilityAlloc?: number
   rewardsAlloc?: number
   stabilityOverflowRedirect?: string
+  /** Absent when the selected cycle is not the current one — a backdated salary gets no offer. */
+  stabilityRecovery?: StabilityRecovery
+  essentialsBalance?: number
+  growthBalance?: number
+  rewardsBalance?: number
   onFetchPagedTransactions?: (params: any) => Promise<PagedTransactionResult>
   onFetchTransactionById?: (id: string) => Promise<Transaction>
   onExportTransactions?: (params: any) => Promise<{ blob: Blob; filename: string }>
@@ -286,6 +292,10 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         stabilityBalance={props.stabilityBalance ?? 0}
         stabilityTarget={props.stabilityTarget ?? 10000}
         stabilityOverflowRedirect={props.stabilityOverflowRedirect || ''}
+        stabilityRecovery={props.stabilityRecovery}
+        essentialsBalance={props.essentialsBalance ?? 0}
+        growthBalance={props.growthBalance ?? 0}
+        rewardsBalance={props.rewardsBalance ?? 0}
         onAddTransaction={props.onAddTransaction}
         onUpdateTransaction={props.onUpdateTransaction}
         onStartEditPending={props.onStartEditPending}

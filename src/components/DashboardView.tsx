@@ -10,6 +10,7 @@ import { AlertCircle, BarChart3, ShieldCheck } from 'lucide-react'
 import { Button } from './ui/Button'
 import { getCycleProgress, MONTH_NAMES } from '../lib/cycle'
 import { InvestmentPlanExceptionCard } from './dashboard/InvestmentPlanExceptionCard'
+import { StabilityRecoveryExceptionCard } from './dashboard/StabilityRecoveryExceptionCard'
 import { getExpiredTaxYears } from '../lib/api/documents'
 import type { ExpiredTaxYearSummary } from '../types'
 
@@ -35,6 +36,8 @@ interface DashboardViewProps {
   investmentAllocation?: InvestmentAllocationOverview | null
   /** Opens Reports focused on the category limit breakdown. Falls back to plain Reports. */
   onNavigateToCategoryLimits?: () => void
+  /** Opens the ledger with the add-transaction form already up. Falls back to the plain ledger. */
+  onAddIncome?: () => void
 }
 export const DashboardView: React.FC<DashboardViewProps> = ({
   dashboardData,
@@ -50,6 +53,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   isSwitchingCycle = false,
   investmentAllocation = null,
   onNavigateToCategoryLimits,
+  onAddIncome,
 }) => {
   const [expiredTaxYears, setExpiredTaxYears] = React.useState<ExpiredTaxYearSummary[]>([])
   React.useEffect(() => {
@@ -148,6 +152,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         items={view.categoryLimitProgress}
         formatSensitive={view.formatSensitive}
         onOpenCategoryLimits={() => (onNavigateToCategoryLimits ? onNavigateToCategoryLimits() : onNavigate('reports'))}
+      />
+
+      <StabilityRecoveryExceptionCard
+        recovery={dashboardData?.stabilityRecovery}
+        formatSensitive={view.formatSensitive}
+        onAddIncome={() => (onAddIncome ? onAddIncome() : onNavigate('ledger'))}
       />
 
       {/* Today-focused metric cards: cycle progress, safe-to-spend, and the active wish goal */}

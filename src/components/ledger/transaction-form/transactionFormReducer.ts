@@ -14,6 +14,14 @@ export interface TransactionFormState {
   transferSource: TransferBucket
   transferTarget: TransferBucket
   date: string
+  /**
+   * Whether the user opted this salary into putting money back into the emergency fund.
+   *
+   * Reset by every action that opens or repopulates the form, never carried between openings and
+   * never persisted with the draft: the offer is a per-salary decision, and an AI draft or a
+   * scanned receipt must not arrive with it already ticked.
+   */
+  stabilityTopUpAccepted: boolean
   errors: Record<string, string>
 }
 
@@ -39,6 +47,7 @@ export const getInitialState = (todayDate: string, defaultCategory: string): Tra
   transferSource: 'Essentials',
   transferTarget: 'Rewards',
   date: todayDate,
+  stabilityTopUpAccepted: false,
   errors: {},
 })
 
@@ -58,6 +67,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         transferTarget: 'Rewards',
         date: action.payload?.todayDate ?? state.date,
         category: action.payload?.defaultCategory ?? state.category,
+        stabilityTopUpAccepted: false,
         errors: {},
       }
     case 'OPEN_EDIT':
@@ -74,6 +84,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         ledgerCategory: action.payload.ledgerCategory as SelectableLedgerCategory,
         transferSource: action.payload.transferSource ?? state.transferSource,
         transferTarget: action.payload.transferTarget ?? state.transferTarget,
+        stabilityTopUpAccepted: false,
         errors: {},
       }
     case 'SET_FIELD':
@@ -92,6 +103,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         transactionType: txType ?? state.transactionType,
         ledgerCategory: ledgerCategory ?? state.ledgerCategory,
         category: category ?? state.category,
+        stabilityTopUpAccepted: false,
         errors: {},
       }
     }
@@ -138,6 +150,9 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         transferTarget: (nextTransferTarget && ['Essentials', 'Growth', 'Stability', 'Rewards'].includes(nextTransferTarget))
           ? (nextTransferTarget as TransferBucket)
           : state.transferTarget,
+        // The assistant does not know how much the user can spare this cycle, so a draft never
+        // arrives pre-accepted.
+        stabilityTopUpAccepted: false,
         errors: {},
       }
     }

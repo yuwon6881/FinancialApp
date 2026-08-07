@@ -14,6 +14,7 @@ import type {
   TransactionCategory,
   AutocompleteSuggestion,
   TransactionDocumentChanges,
+  StabilityRecovery,
 } from '../../types'
 import type { ReceiptSplitDraft, ReceiptSplitFailure } from '../../lib/useReceiptSplitPolling'
 import { Button } from '../ui/Button'
@@ -32,6 +33,11 @@ export interface TransactionFormSheetProps {
   stabilityBalance: number
   stabilityTarget: number
   stabilityOverflowRedirect: string
+  /** Absent when the selected cycle is not the current one — a backdated salary gets no offer. */
+  stabilityRecovery?: StabilityRecovery
+  essentialsBalance?: number
+  growthBalance?: number
+  rewardsBalance?: number
   onAddTransaction: (
     transaction: Omit<Transaction, 'id'>,
     documentChanges?: TransactionDocumentChanges,
@@ -151,6 +157,10 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
             filteredSuggestions={form.filteredSuggestions}
             quickSuggestionEntries={form.quickSuggestionEntries}
             suggestions={form.suggestions}
+            topUpOffer={form.topUpOffer}
+            hideSensitive={props.hideSensitive}
+            stabilityAlloc={props.stabilityAlloc}
+            essentialsCommitted={props.stabilityRecovery?.essentialsCommitted ?? 0}
           />
 
           {form.state.transactionType === 'outflow' && (

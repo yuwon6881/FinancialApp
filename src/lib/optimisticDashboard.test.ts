@@ -138,4 +138,66 @@ describe('computeOptimisticDashboard', () => {
     expect(result!.stats.totalBalance).toBe(970)
     expect(result!.stats.monthlyExpenses).toBe(50)
   })
+
+  describe('emergency fund recovery', () => {
+    function withRecovery(outstanding: number): DashboardData {
+      const data = makeDashboard()
+      data.setting = { ...data.setting, stabilityAlloc: 0.15 }
+      data.stabilityRecovery = {
+        isActive: true,
+        highWaterMark: 10000,
+        target: 10000,
+        recoverableCeiling: 10000,
+        currentBalance: 10000 - outstanding,
+        outstandingShortfall: outstanding,
+        cyclesRemaining: 3,
+        requiredThisCycle: outstanding / 3,
+        toppedUpThisCycle: 0,
+        outstandingThisCycle: outstanding / 3,
+        lastDrawdownAmount: outstanding,
+        essentialsCommitted: 0,
+        rewardsCommitted: 0,
+        suggestedDraws: [],
+      }
+      return data
+    }
+
+    // A queued salary carrying 24% to stability against a 15% baseline puts 90 back.
+    const acceptedTopUp = op({
+      type: 'add',
+      payload: { amount: 1000, ledgerCategory: 'IncomeSplit:47.5,19,24,9.5' },
+    })
+
+    it('credits an accepted top-up so the card stops asking twice', () => {
+      const result = computeOptimisticDashboard(withRecovery(300), {
+        activeOps: [acceptedTopUp],
+        transactions: [],
+      })
+
+      expect(result!.stabilityRecovery!.outstandingShortfall).toBe(210)
+      expect(result!.stabilityRecovery!.outstandingThisCycle).toBe(10)
+      expect(result!.stabilityRecovery!.toppedUpThisCycle).toBe(90)
+      expect(result!.stabilityRecovery!.isActive).toBe(true)
+    })
+
+    it('closes the recovery once the queued top-up covers the whole shortfall', () => {
+      const result = computeOptimisticDashboard(withRecovery(90), {
+        activeOps: [acceptedTopUp],
+        transactions: [],
+      })
+
+      expect(result!.stabilityRecovery!.outstandingShortfall).toBe(0)
+      expect(result!.stabilityRecovery!.isActive).toBe(false)
+    })
+
+    it('ignores a salary split at the plain percentage', () => {
+      const result = computeOptimisticDashboard(withRecovery(300), {
+        activeOps: [op({ type: 'add', payload: { amount: 1000, ledgerCategory: 'IncomeSplit:50,25,15,10' } })],
+        transactions: [],
+      })
+
+      expect(result!.stabilityRecovery!.outstandingShortfall).toBe(300)
+      expect(result!.stabilityRecovery!.toppedUpThisCycle).toBe(0)
+    })
+  })
 })

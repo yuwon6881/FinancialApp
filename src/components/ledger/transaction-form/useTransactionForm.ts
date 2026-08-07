@@ -13,6 +13,8 @@ import type {
   TransactionDocumentChanges,
   VaultDocument,
 } from '../../../types'
+import type { StabilityRecovery } from '../../../types'
+import { proposeTopUp } from '../../../lib/stabilityRecovery'
 import type { TransactionPrefillDraft } from '../TransactionFormSheet'
 import type { TransactionDocumentsFieldRef } from './TransactionDocumentsField'
 import { focusFirstInvalidField } from '../../ui/formValidation'
@@ -29,6 +31,11 @@ export interface UseTransactionFormOptions {
   stabilityBalance: number
   stabilityTarget: number
   stabilityOverflowRedirect: string
+  /** Absent when the selected cycle is not the current one — a backdated salary gets no offer. */
+  stabilityRecovery?: StabilityRecovery
+  essentialsBalance?: number
+  growthBalance?: number
+  rewardsBalance?: number
   onAddTransaction: (
     transaction: Omit<Transaction, 'id'>,
     documentChanges?: TransactionDocumentChanges,
@@ -64,6 +71,10 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     stabilityBalance,
     stabilityTarget,
     stabilityOverflowRedirect,
+    stabilityRecovery,
+    essentialsBalance = 0,
+    growthBalance = 0,
+    rewardsBalance = 0,
     onAddTransaction,
     onUpdateTransaction,
     onStartEditPending,
@@ -102,6 +113,31 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   const openTransactionForm = useCallback(() => {
     dispatch({ type: 'SET_FIELD', field: 'showAddForm', value: true })
   }, [])
+
+  // Only income can carry a top-up: it is the one entry that divides money four ways. All the
+  // arithmetic lives in lib/stabilityRecovery so it stays testable without rendering.
+  const topUpOffer = useMemo(() => {
+    if (state.transactionType !== 'inflow' || state.ledgerCategory !== 'Income') return null
+    const amount = parseFloat(state.amount)
+    if (!Number.isFinite(amount) || amount <= 0) return null
+
+    return proposeTopUp(stabilityRecovery, Math.abs(amount), [
+      { bucket: 'Essentials', alloc: essentialsAlloc, balance: essentialsBalance, committed: stabilityRecovery?.essentialsCommitted ?? 0 },
+      { bucket: 'Growth', alloc: growthAlloc, balance: growthBalance, committed: 0 },
+      { bucket: 'Rewards', alloc: rewardsAlloc, balance: rewardsBalance, committed: stabilityRecovery?.rewardsCommitted ?? 0 },
+    ])
+  }, [
+    state.transactionType,
+    state.ledgerCategory,
+    state.amount,
+    stabilityRecovery,
+    essentialsAlloc,
+    growthAlloc,
+    rewardsAlloc,
+    essentialsBalance,
+    growthBalance,
+    rewardsBalance,
+  ])
 
   const { clearDraft: clearFormDraft } = useFormDraft(
     'ledger-tx-form',
@@ -397,6 +433,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       stabilityBalance,
       stabilityTarget,
       stabilityOverflowRedirect,
+      recoveryTopUp: state.stabilityTopUpAccepted ? (topUpOffer?.proposedTopUp ?? 0) : 0,
     })
 
     const documentChanges = documentsFieldRef.current?.getChanges()
@@ -436,5 +473,6 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     handleSelectSuggestion,
     documentsFieldRef,
     existingDocuments,
+    topUpOffer,
   }
 }
