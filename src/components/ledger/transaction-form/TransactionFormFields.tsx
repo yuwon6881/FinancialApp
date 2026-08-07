@@ -416,6 +416,16 @@ export function TransactionFormFields({
             />
           </FormField>
 
+          <FormField label="Posting date" required error={errors.date}>
+            <DatePicker
+              value={state.date}
+              onChange={value => {
+                onSetField('date', value)
+              }}
+              className="w-full"
+            />
+          </FormField>
+
           <StabilityTopUpOffer
             offer={topUpOffer}
             accepted={state.stabilityTopUpAccepted}
@@ -428,17 +438,17 @@ export function TransactionFormFields({
             stabilityAlloc={stabilityAlloc}
           />
         </>
+      ) : (
+        <FormField label="Posting date" className="sm:col-span-2" required error={errors.date}>
+          <DatePicker
+            value={state.date}
+            onChange={value => {
+              onSetField('date', value)
+            }}
+            className="w-full"
+          />
+        </FormField>
       )}
-
-      <FormField label="Posting date" required error={errors.date}>
-        <DatePicker
-          value={state.date}
-          onChange={value => {
-            onSetField('date', value)
-          }}
-          className="w-full"
-        />
-      </FormField>
     </>
   )
 }
