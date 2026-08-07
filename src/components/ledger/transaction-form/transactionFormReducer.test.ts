@@ -8,6 +8,7 @@ import { getInitialState, transactionFormReducer, type TransactionFormAction } f
 const accepted = () => ({
   ...getInitialState('2026-07-09', 'Other'),
   stabilityTopUpAccepted: true,
+  stabilityTopUpAmount: '250.00',
 })
 
 const openingActions: [string, TransactionFormAction][] = [
@@ -34,8 +35,15 @@ describe('transactionFormReducer stabilityTopUpAccepted', () => {
     expect(getInitialState('2026-07-09', 'Other').stabilityTopUpAccepted).toBe(false)
   })
 
-  it.each(openingActions)('is cleared by %s', (_label, action) => {
-    expect(transactionFormReducer(accepted(), action).stabilityTopUpAccepted).toBe(false)
+  it.each(openingActions)('is cleared by %s, amount included', (_label, action) => {
+    const next = transactionFormReducer(accepted(), action)
+    expect(next.stabilityTopUpAccepted).toBe(false)
+    // An amount left over from a previous entry would silently move money on the next one.
+    expect(next.stabilityTopUpAmount).toBe('')
+  })
+
+  it('starts with an empty amount so the offer supplies the default', () => {
+    expect(getInitialState('2026-07-09', 'Other').stabilityTopUpAmount).toBe('')
   })
 
   it('is set only by an explicit field change', () => {

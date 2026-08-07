@@ -1,19 +1,22 @@
 import { useId } from 'react'
-import type { RecoveryOffer } from '../../../lib/stabilityRecovery'
-import { formatCurrencyVal } from '../../../lib/utils'
+import { drawsFor, type RecoveryBucketState, type RecoveryOffer } from '../../../lib/stabilityRecovery'
+import { formatCurrencyVal, maskCurrencyInput } from '../../../lib/utils'
 import { Checkbox } from '../../ui/Checkbox'
 import { InfoHint } from '../../ui/InfoHint'
+import { Input } from '../../ui/Input'
 
 interface StabilityTopUpOfferProps {
   offer: RecoveryOffer | null
   accepted: boolean
   onToggle: (accepted: boolean) => void
+  /** Empty string means "follow the offer's default", so it tracks a changing salary. */
+  amount: string
+  onAmountChange: (amount: string) => void
+  buckets: RecoveryBucketState[]
   currency: string
   hideSensitive: boolean
-  /** The usual share this bucket receives, as a fraction of 1, for the "on top of" wording. */
+  /** The usual share the fund receives, as a fraction of 1, for the "on top of" wording. */
   stabilityAlloc: number
-  /** Bills still to pay this cycle, quoted when they are what held the offer back. */
-  essentialsCommitted: number
 }
 
 /**
@@ -21,25 +24,34 @@ interface StabilityTopUpOfferProps {
  *
  * A decision, never a default: it renders unticked every time the form opens, because how much a
  * person can spare varies cycle to cycle and a pre-ticked box would move money they did not
- * choose to move.
+ * choose to move. The amount is editable up to the whole outstanding shortfall — the paced
+ * instalment is a suggestion, not a limit, and a small dip should not need three cycles.
  */
 export function StabilityTopUpOffer({
   offer,
   accepted,
   onToggle,
+  amount,
+  onAmountChange,
+  buckets,
   currency,
   hideSensitive,
   stabilityAlloc,
-  essentialsCommitted,
 }: StabilityTopUpOfferProps) {
   const checkboxId = useId()
-  if (!offer || offer.proposedTopUp <= 0) return null
+  const amountId = useId()
+  if (!offer || offer.maxTopUp <= 0) return null
 
-  // Masked amounts are decoration for a screen reader; the checkbox label carries the meaning.
+  const typed = parseFloat(amount)
+  const chosen = amount.trim() === '' || !Number.isFinite(typed) ? offer.proposedTopUp : typed
+  const overMax = chosen > offer.maxTopUp
+  const overSafe = !overMax && chosen > offer.safeCap
+  const invalid = chosen <= 0 || overMax
+  const draws = invalid ? [] : drawsFor(chosen, buckets)
+
+  // Masked amounts are decoration for a screen reader; the labels carry the meaning.
   const money = (value: number) =>
-    hideSensitive
-      ? <span aria-hidden="true">•••</span>
-      : formatCurrencyVal(value, currency)
+    hideSensitive ? <span aria-hidden="true">•••</span> : formatCurrencyVal(value, currency)
 
   return (
     <div className="rounded-xl border border-border/60 bg-muted/25 p-3">
@@ -52,45 +64,77 @@ export function StabilityTopUpOffer({
         />
         <div className="min-w-0 flex-1">
           <label htmlFor={checkboxId} className="flex cursor-pointer items-center gap-1.5 text-sm font-medium">
-            <span>Put {money(offer.proposedTopUp)} back into your emergency fund</span>
+            <span>Put money back into your emergency fund</span>
             <InfoHint
               label="What putting money back means"
-              text="Your emergency fund is money set aside for surprises. When you spend some of it, the app offers to put it back a little at a time instead of all at once. You choose every time — nothing changes unless you tick this box."
+              text="Your emergency fund is money set aside for surprises. When you spend some of it, the app offers to put it back. You choose the amount and you choose every time — nothing changes unless you tick this box."
             />
           </label>
 
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            {offer.isReduced ? (
-              <>
-                We lowered this so your Essentials money still covers the {money(essentialsCommitted)} of
-                bills left this cycle, and your savings goals still get what they need.
-              </>
-            ) : (
-              <>
-                On top of the usual {Math.round(stabilityAlloc * 100)}% share. It comes out of Essentials,
-                Growth and Rewards in the same proportions you already set, so no single pot takes the
-                whole hit.
-              </>
-            )}
-          </p>
+          {!accepted && (
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              {offer.proposedTopUp >= offer.maxTopUp
+                ? <>Suggested: {money(offer.proposedTopUp)}, which clears what is left.</>
+                : <>Suggested: {money(offer.proposedTopUp)} of the {money(offer.maxTopUp)} still to go.</>}
+            </p>
+          )}
 
-          <details className="mt-2">
-            <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
-              Where it comes from
-            </summary>
-            <ul className="mt-1.5 space-y-1">
-              {offer.draws.map(draw => (
-                <li key={draw.bucket} className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{draw.bucket}</span>
-                  <span className="tabular-nums">{money(draw.amount)}</span>
-                </li>
-              ))}
-            </ul>
-          </details>
+          {accepted && (
+            <div className="mt-2 space-y-2">
+              <div>
+                <label htmlFor={amountId} className="mb-1 block text-xs font-medium text-muted-foreground">
+                  Amount to put back (up to {money(offer.maxTopUp)})
+                </label>
+                <Input
+                  id={amountId}
+                  inputMode="decimal"
+                  value={amount}
+                  placeholder={offer.proposedTopUp.toFixed(2)}
+                  invalid={invalid}
+                  onChange={event => onAmountChange(maskCurrencyInput(event.target.value, amount))}
+                  className="w-full"
+                />
+              </div>
 
-          <p className="mt-2 text-xs text-muted-foreground">
-            Leave this off and your money splits the usual way.
-          </p>
+              {overMax && (
+                <p className="text-xs text-destructive">
+                  That is more than the {money(offer.maxTopUp)} this pay packet can put back.
+                </p>
+              )}
+
+              {overSafe && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  Above {money(offer.safeCap)} this starts eating money already promised to bills or
+                  savings goals this cycle. Still your call.
+                </p>
+              )}
+
+              {!invalid && !overSafe && offer.isReduced && (
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  We suggested less than the full amount so your bills and savings goals still get
+                  what they need this cycle.
+                </p>
+              )}
+
+              <details>
+                <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+                  Where it comes from
+                </summary>
+                <ul className="mt-1.5 space-y-1">
+                  {draws.map(draw => (
+                    <li key={draw.bucket} className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{draw.bucket}</span>
+                      <span className="tabular-nums">{money(draw.amount)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  On top of the usual {Math.round(stabilityAlloc * 100)}% share, taken from Essentials,
+                  Growth and Rewards in the proportions you already set.
+                </p>
+              </details>
+            </div>
+          )}
         </div>
       </div>
     </div>

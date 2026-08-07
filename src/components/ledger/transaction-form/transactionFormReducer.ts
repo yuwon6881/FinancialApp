@@ -22,6 +22,11 @@ export interface TransactionFormState {
    * scanned receipt must not arrive with it already ticked.
    */
   stabilityTopUpAccepted: boolean
+  /**
+   * How much to put back, as typed. Empty means "use the offer's default", so the amount tracks a
+   * changing salary until the user overrides it and then stops moving under them.
+   */
+  stabilityTopUpAmount: string
   errors: Record<string, string>
 }
 
@@ -48,6 +53,7 @@ export const getInitialState = (todayDate: string, defaultCategory: string): Tra
   transferTarget: 'Rewards',
   date: todayDate,
   stabilityTopUpAccepted: false,
+  stabilityTopUpAmount: '',
   errors: {},
 })
 
@@ -68,6 +74,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         date: action.payload?.todayDate ?? state.date,
         category: action.payload?.defaultCategory ?? state.category,
         stabilityTopUpAccepted: false,
+        stabilityTopUpAmount: '',
         errors: {},
       }
     case 'OPEN_EDIT':
@@ -85,6 +92,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         transferSource: action.payload.transferSource ?? state.transferSource,
         transferTarget: action.payload.transferTarget ?? state.transferTarget,
         stabilityTopUpAccepted: false,
+        stabilityTopUpAmount: '',
         errors: {},
       }
     case 'SET_FIELD':
@@ -104,6 +112,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         ledgerCategory: ledgerCategory ?? state.ledgerCategory,
         category: category ?? state.category,
         stabilityTopUpAccepted: false,
+        stabilityTopUpAmount: '',
         errors: {},
       }
     }
@@ -153,6 +162,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         // The assistant does not know how much the user can spare this cycle, so a draft never
         // arrives pre-accepted.
         stabilityTopUpAccepted: false,
+        stabilityTopUpAmount: '',
         errors: {},
       }
     }

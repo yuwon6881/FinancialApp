@@ -114,6 +114,28 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     dispatch({ type: 'SET_FIELD', field: 'showAddForm', value: true })
   }, [])
 
+  /**
+   * The top-up actually applied on submit. An empty amount field means "use the suggestion", and
+   * whatever is typed is clamped to what this pay packet can move — the field can hold an
+   * over-max value while being edited, and that must never reach the ledger.
+   */
+  const resolveAcceptedTopUp = () => {
+    if (!state.stabilityTopUpAccepted || !topUpOffer) return 0
+    const typed = parseFloat(state.stabilityTopUpAmount)
+    const chosen = state.stabilityTopUpAmount.trim() === '' || !Number.isFinite(typed)
+      ? topUpOffer.proposedTopUp
+      : typed
+    return Math.max(0, Math.min(chosen, topUpOffer.maxTopUp))
+  }
+
+  // Growth carries no committed money: unlike bills and savings goals it has no hard per-cycle
+  // obligation, so nothing there needs protecting from the draw.
+  const topUpBuckets = useMemo(() => [
+    { bucket: 'Essentials', alloc: essentialsAlloc, balance: essentialsBalance, committed: stabilityRecovery?.essentialsCommitted ?? 0 },
+    { bucket: 'Growth', alloc: growthAlloc, balance: growthBalance, committed: 0 },
+    { bucket: 'Rewards', alloc: rewardsAlloc, balance: rewardsBalance, committed: stabilityRecovery?.rewardsCommitted ?? 0 },
+  ], [essentialsAlloc, growthAlloc, rewardsAlloc, essentialsBalance, growthBalance, rewardsBalance, stabilityRecovery])
+
   // Only income can carry a top-up: it is the one entry that divides money four ways. All the
   // arithmetic lives in lib/stabilityRecovery so it stays testable without rendering.
   const topUpOffer = useMemo(() => {
@@ -121,16 +143,14 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     const amount = parseFloat(state.amount)
     if (!Number.isFinite(amount) || amount <= 0) return null
 
-    return proposeTopUp(stabilityRecovery, Math.abs(amount), [
-      { bucket: 'Essentials', alloc: essentialsAlloc, balance: essentialsBalance, committed: stabilityRecovery?.essentialsCommitted ?? 0 },
-      { bucket: 'Growth', alloc: growthAlloc, balance: growthBalance, committed: 0 },
-      { bucket: 'Rewards', alloc: rewardsAlloc, balance: rewardsBalance, committed: stabilityRecovery?.rewardsCommitted ?? 0 },
-    ])
+    return proposeTopUp(stabilityRecovery, Math.abs(amount), topUpBuckets, stabilityAlloc)
   }, [
+    stabilityAlloc,
     state.transactionType,
     state.ledgerCategory,
     state.amount,
     stabilityRecovery,
+    topUpBuckets,
     essentialsAlloc,
     growthAlloc,
     rewardsAlloc,
@@ -433,7 +453,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       stabilityBalance,
       stabilityTarget,
       stabilityOverflowRedirect,
-      recoveryTopUp: state.stabilityTopUpAccepted ? (topUpOffer?.proposedTopUp ?? 0) : 0,
+      recoveryTopUp: resolveAcceptedTopUp(),
     })
 
     const documentChanges = documentsFieldRef.current?.getChanges()
@@ -474,5 +494,6 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     documentsFieldRef,
     existingDocuments,
     topUpOffer,
+    topUpBuckets,
   }
 }

@@ -62,6 +62,7 @@ export function StabilityRecoveryExceptionCard({
               {isFinalCycle
                 ? <>That leaves {formatSensitive(recovery.outstandingThisCycle)} to go, and this is the last cycle of the plan.</>
                 : <>Spread over {recovery.cyclesRemaining} cycles that is about {formatSensitive(recovery.requiredThisCycle)} each time — next time money comes in we can add that on top of the usual share.</>}
+              {' '}You can put back more than that, up to the whole amount, whenever you can spare it.
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
               Emergency fund progress: {percentReached}% of {formatSensitive(recovery.target)}.

@@ -158,9 +158,9 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
             quickSuggestionEntries={form.quickSuggestionEntries}
             suggestions={form.suggestions}
             topUpOffer={form.topUpOffer}
+            topUpBuckets={form.topUpBuckets}
             hideSensitive={props.hideSensitive}
             stabilityAlloc={props.stabilityAlloc}
-            essentialsCommitted={props.stabilityRecovery?.essentialsCommitted ?? 0}
           />
 
           {form.state.transactionType === 'outflow' && (

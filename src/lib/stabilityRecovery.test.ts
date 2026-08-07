@@ -51,13 +51,58 @@ describe('isRecoveryActive', () => {
 
 describe('proposeTopUp', () => {
   it('splits the draw across the three buckets in proportion', () => {
-    const offer = proposeTopUp(recovery({ outstandingThisCycle: 170 }), 1000, buckets())!
+    const offer = proposeTopUp(
+      recovery({ outstandingShortfall: 3000, outstandingThisCycle: 170 }), 1000, buckets()
+    )!
 
     expect(offer.proposedTopUp).toBe(170)
     expect(offer.isReduced).toBe(false)
     expect(drawFor(offer.draws, 'Essentials')).toBe(100)
     expect(drawFor(offer.draws, 'Growth')).toBe(50)
     expect(drawFor(offer.draws, 'Rewards')).toBe(20)
+  })
+
+  // A small dip should not need three instalments; the spread exists for real raids.
+  it('offers the whole shortfall when it is no bigger than the usual share', () => {
+    // 70 against the 150 this pay packet was sending the fund anyway.
+    const offer = proposeTopUp(
+      recovery({ outstandingShortfall: 70, outstandingThisCycle: 23.34 }), 1000, buckets(), 0.15
+    )!
+
+    expect(offer.proposedTopUp).toBe(70)
+    expect(offer.maxTopUp).toBe(70)
+    expect(offer.isReduced).toBe(false)
+  })
+
+  // The spread exists for real raids, so a big one must not default to being cleared at once just
+  // because no bills happen to be recorded this cycle.
+  it('keeps the paced default on a big raid but lets the user raise it', () => {
+    const offer = proposeTopUp(
+      recovery({ outstandingShortfall: 3000, outstandingThisCycle: 1000 }), 10000, buckets(), 0.15
+    )!
+
+    expect(offer.proposedTopUp).toBe(1000)
+    expect(offer.maxTopUp).toBe(3000)
+  })
+
+  it('never lets the ceiling exceed what the three buckets receive', () => {
+    const offer = proposeTopUp(
+      recovery({ outstandingShortfall: 3000, outstandingThisCycle: 1000 }), 100, buckets()
+    )!
+
+    expect(offer.maxTopUp).toBe(85)
+  })
+
+  it('reports a safe cap below the ceiling when money is already committed', () => {
+    const offer = proposeTopUp(
+      recovery({ outstandingShortfall: 3000, outstandingThisCycle: 1000 }),
+      1000,
+      buckets({ Essentials: { balance: 200, committed: 600 } })
+    )!
+
+    expect(offer.safeCap).toBe(170)
+    expect(offer.maxTopUp).toBe(850)
+    expect(offer.limitedBy).toBe('Essentials')
   })
 
   it('never draws more than the three buckets actually receive', () => {

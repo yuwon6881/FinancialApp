@@ -19,16 +19,17 @@ const budgets = [
   // the critical-path budget below, which is the number that actually matters — the
   // feature bundle is now fetched after mount rather than before first paint.
   { name: 'vendor-radix-*.js', pattern: /^vendor-radix-.*\.js$/, limitKb: 28.0 },
-  // 34.75: the transfer-volume summary, addressable ledger filters, and shared
+  // 35.5: the transfer-volume summary, addressable ledger filters, and shared
   // sorting controls, plus the shared-receipt scan picker that moved into the
   // transaction form (the split *editor* is still a lazy chunk of its own). Raised
   // from 33.75 for the emergency-fund top-up offer, which has to live here: it is
   // decided while an income amount is being typed, so it cannot be deferred past the
-  // form it belongs to. Its math sits in lib/stabilityRecovery.ts and the Today card
-  // shares none of it, importing only the type. This
+  // form it belongs to, and its editable amount needs the validation and per-bucket
+  // breakdown in the same place. Its math sits in lib/stabilityRecovery.ts and the
+  // Today card shares none of it, importing only the type. This
   // view is interaction-heavy, so its compiler memo caches are retained; the eager
   // critical-path budget still guards cold-launch cost.
-  { name: 'LedgerView-*.js', pattern: /^LedgerView-.*\.js$/, limitKb: 34.75 },
+  { name: 'LedgerView-*.js', pattern: /^LedgerView-.*\.js$/, limitKb: 35.5 },
   { name: 'SettingsView-*.js', pattern: /^SettingsView-.*\.js$/, limitKb: 21.5 }
 ]
 

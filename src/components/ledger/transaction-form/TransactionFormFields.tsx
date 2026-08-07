@@ -12,7 +12,7 @@ import { FormField } from '../../ui/FormField'
 import { Button } from '../../ui/Button'
 import { HorizontalRail } from '../../ui/HorizontalRail'
 import { StabilityTopUpOffer } from './StabilityTopUpOffer'
-import type { RecoveryOffer } from '../../../lib/stabilityRecovery'
+import type { RecoveryBucketState, RecoveryOffer } from '../../../lib/stabilityRecovery'
 
 interface TransactionFormFieldsProps {
   state: TransactionFormState
@@ -42,9 +42,9 @@ interface TransactionFormFieldsProps {
   }
   /** Null unless this is income with an amount and the emergency fund is genuinely short. */
   topUpOffer?: RecoveryOffer | null
+  topUpBuckets?: RecoveryBucketState[]
   hideSensitive?: boolean
   stabilityAlloc?: number
-  essentialsCommitted?: number
 }
 
 export function TransactionFormFields({
@@ -63,9 +63,9 @@ export function TransactionFormFields({
   quickSuggestionEntries,
   suggestions,
   topUpOffer = null,
+  topUpBuckets = [],
   hideSensitive = false,
   stabilityAlloc = 0,
-  essentialsCommitted = 0,
 }: TransactionFormFieldsProps) {
   const [showSuggestions, setShowSuggestions] = React.useState(false)
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = React.useState(-1)
@@ -413,10 +413,12 @@ export function TransactionFormFields({
             offer={topUpOffer}
             accepted={state.stabilityTopUpAccepted}
             onToggle={value => onSetField('stabilityTopUpAccepted', value)}
+            amount={state.stabilityTopUpAmount}
+            onAmountChange={value => onSetField('stabilityTopUpAmount', value)}
+            buckets={topUpBuckets}
             currency={currency}
             hideSensitive={hideSensitive}
             stabilityAlloc={stabilityAlloc}
-            essentialsCommitted={essentialsCommitted}
           />
         </>
       )}
