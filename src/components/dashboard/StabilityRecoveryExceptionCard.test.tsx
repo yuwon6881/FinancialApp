@@ -14,6 +14,7 @@ const recovery = (overrides: Partial<StabilityRecovery> = {}): StabilityRecovery
   requiredThisCycle: 1000,
   toppedUpThisCycle: 0,
   outstandingThisCycle: 1000,
+  isOverdue: false,
   lastDrawdownCycleKey: '2026-06',
   lastDrawdownAmount: 3000,
   essentialsCommitted: 0,
@@ -68,6 +69,21 @@ describe('StabilityRecoveryExceptionCard', () => {
     )
 
     expect(screen.getByText(/this is the last cycle of the plan/)).toBeTruthy()
+  })
+
+  // Past the window cyclesRemaining sits at 1 forever, so without the overdue flag the card
+  // announced "the last cycle of the plan" every cycle from then on.
+  it('stops calling every cycle the last one once the window has passed', () => {
+    render(
+      <StabilityRecoveryExceptionCard
+        recovery={recovery({ isOverdue: true, cyclesRemaining: 1, outstandingShortfall: 746.8 })}
+        formatSensitive={format}
+        onAddIncome={vi.fn()}
+      />
+    )
+
+    expect(screen.queryByText(/last cycle of the plan/)).toBeNull()
+    expect(screen.getByText(/\$746\.80 is still to go/)).toBeTruthy()
   })
 
   it('sends the user to add income', () => {

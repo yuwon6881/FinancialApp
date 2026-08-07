@@ -54,89 +54,87 @@ export function StabilityTopUpOffer({
     hideSensitive ? <span aria-hidden="true">•••</span> : formatCurrencyVal(value, currency)
 
   return (
-    <div className="rounded-xl border border-border/60 bg-muted/25 p-3">
-      <div className="flex items-start gap-2.5">
+    <div className="rounded-xl border border-border/60 bg-muted/25 p-3.5 sm:col-span-2">
+      <div className="flex items-center gap-3">
         <Checkbox
           id={checkboxId}
           checked={accepted}
           onChange={event => onToggle(event.target.checked)}
-          className="mt-0.5"
+          className="shrink-0"
         />
-        <div className="min-w-0 flex-1">
-          <label htmlFor={checkboxId} className="flex cursor-pointer items-center gap-1.5 text-sm font-medium">
-            <span>Put money back into your emergency fund</span>
-            <InfoHint
-              label="What putting money back means"
-              text="Your emergency fund is money set aside for surprises. When you spend some of it, the app offers to put it back. You choose the amount and you choose every time — nothing changes unless you tick this box."
-            />
-          </label>
+        <label htmlFor={checkboxId} className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 text-sm font-semibold text-foreground select-none">
+          <span>Put money back into your emergency fund</span>
+          <InfoHint
+            label="What putting money back means"
+            text="Your emergency fund is money set aside for surprises. When you spend some of it, the app offers to put it back. You choose the amount and you choose every time — nothing changes unless you tick this box."
+          />
+        </label>
+      </div>
 
-          {!accepted && (
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              {offer.proposedTopUp >= offer.maxTopUp
-                ? <>Suggested: {money(offer.proposedTopUp)}, which clears what is left.</>
-                : <>Suggested: {money(offer.proposedTopUp)} of the {money(offer.maxTopUp)} still to go.</>}
+      {!accepted && (
+        <p className="mt-1.5 pl-7 text-xs leading-relaxed text-muted-foreground">
+          {offer.proposedTopUp >= offer.maxTopUp
+            ? <>Suggested: {money(offer.proposedTopUp)}, which clears what is left.</>
+            : <>Suggested: {money(offer.proposedTopUp)} of the {money(offer.maxTopUp)} still to go.</>}
+        </p>
+      )}
+
+      {accepted && (
+        <div className="mt-3 pl-7 space-y-3">
+          <div>
+            <label htmlFor={amountId} className="mb-1 block text-xs font-medium text-muted-foreground">
+              Amount to put back (up to {money(offer.maxTopUp)})
+            </label>
+            <Input
+              id={amountId}
+              inputMode="decimal"
+              value={amount}
+              placeholder={offer.proposedTopUp.toFixed(2)}
+              invalid={invalid}
+              onChange={event => onAmountChange(maskCurrencyInput(event.target.value, amount))}
+              className="w-full"
+            />
+          </div>
+
+          {overMax && (
+            <p className="text-xs text-destructive">
+              That is more than the {money(offer.maxTopUp)} this pay packet can put back.
             </p>
           )}
 
-          {accepted && (
-            <div className="mt-2 space-y-2">
-              <div>
-                <label htmlFor={amountId} className="mb-1 block text-xs font-medium text-muted-foreground">
-                  Amount to put back (up to {money(offer.maxTopUp)})
-                </label>
-                <Input
-                  id={amountId}
-                  inputMode="decimal"
-                  value={amount}
-                  placeholder={offer.proposedTopUp.toFixed(2)}
-                  invalid={invalid}
-                  onChange={event => onAmountChange(maskCurrencyInput(event.target.value, amount))}
-                  className="w-full"
-                />
-              </div>
-
-              {overMax && (
-                <p className="text-xs text-destructive">
-                  That is more than the {money(offer.maxTopUp)} this pay packet can put back.
-                </p>
-              )}
-
-              {overSafe && (
-                <p className="text-xs text-amber-600 dark:text-amber-400">
-                  Above {money(offer.safeCap)} this starts eating money already promised to bills or
-                  savings goals this cycle. Still your call.
-                </p>
-              )}
-
-              {!invalid && !overSafe && offer.isReduced && (
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  We suggested less than the full amount so your bills and savings goals still get
-                  what they need this cycle.
-                </p>
-              )}
-
-              <details>
-                <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
-                  Where it comes from
-                </summary>
-                <ul className="mt-1.5 space-y-1">
-                  {draws.map(draw => (
-                    <li key={draw.bucket} className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{draw.bucket}</span>
-                      <span className="tabular-nums">{money(draw.amount)}</span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-1.5 text-xs text-muted-foreground">
-                  On top of the usual {Math.round(stabilityAlloc * 100)}% share, taken from Essentials,
-                  Growth and Rewards in the proportions you already set.
-                </p>
-              </details>
-            </div>
+          {overSafe && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              Above {money(offer.safeCap)} this starts eating money already promised to bills or
+              savings goals this cycle. Still your call.
+            </p>
           )}
+
+          {!invalid && !overSafe && offer.isReduced && (
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              We suggested less than the full amount so your bills and savings goals still get
+              what they need this cycle.
+            </p>
+          )}
+
+          <details className="rounded-lg border border-border/40 bg-card/50 p-2.5">
+            <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+              Where it comes from
+            </summary>
+            <ul className="mt-2 space-y-1">
+              {draws.map(draw => (
+                <li key={draw.bucket} className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{draw.bucket}</span>
+                  <span className="tabular-nums font-semibold">{money(draw.amount)}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-xs text-muted-foreground border-t border-border/30 pt-1.5">
+              On top of the usual {Math.round(stabilityAlloc * 100)}% share, taken from Essentials,
+              Growth and Rewards in the proportions you already set.
+            </p>
+          </details>
         </div>
-      </div>
+      )}
     </div>
   )
 }

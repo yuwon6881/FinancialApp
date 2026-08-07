@@ -47,6 +47,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
   const [ledgerIncomingTxType, setLedgerIncomingTxType] = useState<'inflow' | 'outflow' | 'transfer' | null>(initialLocation.ledger.txType)
   const [ledgerShowAllCycles, setLedgerShowAllCycles] = useState(initialLocation.ledger.showAllCycles)
   const [autoOpenLedgerAdd, setAutoOpenLedgerAdd] = useState(false)
+  const [autoOpenLedgerTxType, setAutoOpenLedgerTxType] = useState<'inflow' | 'outflow' | 'transfer' | null>(null)
   const [autoOpenReceiptSplit, setAutoOpenReceiptSplit] = useState(false)
   const [autoOpenSubscriptionAdd, setAutoOpenSubscriptionAdd] = useState(false)
   const [autoOpenWishlistAdd, setAutoOpenWishlistAdd] = useState(false)
@@ -195,10 +196,11 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
   // Receipt splitting is deliberately absent: it is not something to *open*, it
   // starts from the transaction form's scan picker. setAutoOpenReceiptSplit still
   // exists for the poller, which re-opens the editor for a background scan.
-  const handleQuickAction = useCallback((action: 'transaction' | 'subscription' | 'wishlist') => {
+  const handleQuickAction = useCallback((action: 'transaction' | 'subscription' | 'wishlist', options?: { txType?: 'inflow' | 'outflow' | 'transfer' }) => {
     if (action === 'transaction') {
       setActiveTab('ledger')
       setAutoOpenLedgerAdd(true)
+      setAutoOpenLedgerTxType(options?.txType || null)
     } else if (action === 'subscription') {
       setActiveTab('recurring')
       setAutoOpenSubscriptionAdd(true)
@@ -288,6 +290,8 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     setLedgerShowAllCycles,
     autoOpenLedgerAdd,
     setAutoOpenLedgerAdd,
+    autoOpenLedgerTxType,
+    setAutoOpenLedgerTxType,
     autoOpenReceiptSplit,
     setAutoOpenReceiptSplit,
     autoOpenSubscriptionAdd,

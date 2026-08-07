@@ -117,9 +117,11 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
         <FormField label="Budget category">
           <CustomSelect
             ariaLabel="Budget category"
-            value={category || (categories[0]?.name || '')}
+            value={category || (categories.find(c => !c.type || c.type === 'both' || c.type === 'outflow')?.name || categories[0]?.name || '')}
             onChange={val => onCategoryChange(val)}
-            options={categories.map(c => ({ value: c.name, label: c.name }))}
+            options={categories
+              .filter(c => !c.isPendingDelete && (!c.type || c.type === 'both' || c.type === 'outflow'))
+              .map(c => ({ value: c.name, label: c.name }))}
             className="w-full"
           />
         </FormField>

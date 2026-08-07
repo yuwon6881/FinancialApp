@@ -118,7 +118,15 @@ export function TransactionFormFields({
   }
 
   const categorySelectOptions = React.useMemo(() => {
-    const categoryByName = new Map(categories.map(cat => [cat.name.toLowerCase(), cat.name]))
+    const activeTxType = state.transactionType
+    const availableCategories = categories.filter(cat => {
+      if (cat.isPendingDelete) return false
+      if (activeTxType === 'inflow' || activeTxType === 'outflow') {
+        return !cat.type || cat.type === 'both' || cat.type === activeTxType
+      }
+      return true
+    })
+    const categoryByName = new Map(availableCategories.map(cat => [cat.name.toLowerCase(), cat.name]))
     const suggestedNames = new Set<string>()
     const suggestedOptions = suggestions.categorySuggestions.map((suggestion: any) => {
       const canonicalName = categoryByName.get(String(suggestion.category).toLowerCase())
@@ -131,8 +139,7 @@ export function TransactionFormFields({
     }).filter((option): option is { value: string; label: string; badge: string } => option !== null)
     return [
       ...suggestedOptions,
-      ...categories
-      .filter(cat => !cat.isPendingDelete)
+      ...availableCategories
       .filter(cat => !suggestedNames.has(cat.name.toLowerCase()))
       .map(cat => {
         return {
@@ -141,7 +148,7 @@ export function TransactionFormFields({
         }
       }),
     ]
-  }, [categories, suggestions.categorySuggestions])
+  }, [categories, suggestions.categorySuggestions, state.transactionType])
 
   return (
     <>

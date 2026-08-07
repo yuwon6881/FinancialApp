@@ -199,7 +199,7 @@ export function AuthenticatedView({
                       isSwitchingCycle={isCurrentCycleLoading || !todayDashboardData}
                       investmentAllocation={investmentAllocation}
                       onNavigateToCategoryLimits={() => nav.handleNavigateToReportSection('category-limits')}
-                      onAddIncome={() => nav.handleQuickAction('transaction')}
+                      onAddIncome={() => nav.handleQuickAction('transaction', { txType: 'inflow' })}
                     />
                   )}
 
@@ -237,6 +237,7 @@ export function AuthenticatedView({
                       onUpdateSettings={financial.handleUpdateSettings}
                       onAddCategory={financial.handleAddCategory}
                       onUpdateCategoryCycleLimit={financial.handleUpdateCategoryCycleLimit}
+                      onUpdateCategoryType={financial.handleUpdateCategoryType}
                       onDeleteCategory={financial.requestDeleteCategory}
                       onApplyCategoryCleanupSuggestion={financial.handleApplyCategoryCleanupSuggestion}
                       notifyOnLoginEnabled={prefs.notifyOnLogin}
@@ -345,7 +346,11 @@ export function AuthenticatedView({
                       onClearAllCycles={() => { nav.setLedgerShowAllCycles(false) }}
                       cyclesRange={prefs.ledgerCyclesRange}
                       autoOpenAddForm={nav.autoOpenLedgerAdd}
-                      onResetAutoOpen={() => nav.setAutoOpenLedgerAdd(false)}
+                      autoOpenTxType={nav.autoOpenLedgerTxType}
+                      onResetAutoOpen={() => {
+                        nav.setAutoOpenLedgerAdd(false)
+                        nav.setAutoOpenLedgerTxType(null)
+                      }}
                       stabilityBalance={financial.optimisticDashboardData?.categories?.find(c => c.name === 'Stability')?.remaining ?? 0}
                       isSwitchingCycle={nav.isSwitchingCycle}
                       stabilityTarget={financial.optimisticDashboardData?.setting?.targetStabilityFund ?? 10000}

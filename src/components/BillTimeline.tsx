@@ -214,10 +214,9 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
         const descLower = (t.description || '').toLowerCase().trim()
         const catLower = (t.category || '').toLowerCase().trim()
         const pNameLower = p.name.toLowerCase().trim()
-        const pCatLower = (p.category || '').toLowerCase().trim()
 
         const nameMatch = descLower === pNameLower || (pNameLower.length > 2 && descLower.includes(pNameLower)) || (descLower.length > 2 && pNameLower.includes(descLower))
-        const categoryMatch = catLower !== '' && (catLower === pNameLower || catLower === pCatLower)
+        const categoryMatch = catLower !== '' && catLower === pNameLower
 
         return nameMatch || categoryMatch
       })
@@ -643,36 +642,39 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
           }
         >
           <div className="text-xs space-y-3 font-semibold text-foreground">
-            <div className="grid grid-cols-2 gap-3.5 bg-muted/30 p-3 rounded-xl">
-              <div>
-                <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-0.5">Amount</span>
-                <span className="text-base font-extrabold text-foreground">{formatSensitive(Math.abs(selectedBill.amount))}</span>
+            <div className="grid grid-cols-2 gap-3.5 bg-muted/30 p-3.5 rounded-xl border border-border/40">
+              <div className="flex flex-col justify-between">
+                <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-1">Amount</span>
+                <div className="flex items-center min-h-[22px]">
+                  <span className="text-base font-extrabold text-foreground leading-none">{formatSensitive(Math.abs(selectedBill.amount))}</span>
+                </div>
               </div>
-              <div>
-                <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-0.5">Status</span>
-                <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold mt-1 ${
-                  selectedBill.status === 'Paid' 
-                    ? 'bg-green-500/10 text-green-500' 
-                    : selectedBill.status === 'Discarded' 
-                      ? 'bg-slate-500/10 text-slate-400 line-through' 
-                      : 'bg-amber-500/10 text-amber-500'
-                }`}>{selectedBill.status}</span>
+              <div className="flex flex-col justify-between">
+                <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-1">Status</span>
+                <div className="flex items-center min-h-[22px]">
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold leading-none ${
+                    selectedBill.status === 'Paid' 
+                      ? 'bg-green-500/10 text-green-500' 
+                      : selectedBill.status === 'Discarded' 
+                        ? 'bg-slate-500/10 text-slate-400 line-through' 
+                        : 'bg-amber-500/10 text-amber-500'
+                  }`}>{selectedBill.status}</span>
+                </div>
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 pb-1">
-              <div>
-                <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-0.5">Due Date</span>
-                <span className="text-foreground">{selectedBill.dueDate}</span>
+              <div className="flex flex-col justify-between pt-2.5 border-t border-border/30">
+                <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-1">Due Date</span>
+                <div className="flex items-center min-h-[22px]">
+                  <span className="text-xs font-semibold text-foreground leading-none">{selectedBill.dueDate}</span>
+                </div>
               </div>
-              <div>
-                <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-0.5">Categories</span>
-                <div className="flex flex-wrap gap-1 mt-0.5">
-                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[9px] font-semibold ${getCategoryBadgeClass(selectedBill.ledgerCategory)}`}>
+              <div className="flex flex-col justify-between pt-2.5 border-t border-border/30">
+                <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-1">Categories</span>
+                <div className="flex flex-wrap items-center gap-1 min-h-[22px]">
+                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[9px] font-semibold leading-none ${getCategoryBadgeClass(selectedBill.ledgerCategory)}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${getCategoryDotClass(selectedBill.ledgerCategory)}`} />
                     {selectedBill.ledgerCategory}
                   </span>
-                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[9px] font-semibold ${getCategoryBadgeClass(selectedBill.category)}`}>
+                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[9px] font-semibold leading-none ${getCategoryBadgeClass(selectedBill.category)}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${getCategoryDotClass(selectedBill.category)}`} />
                     {selectedBill.category}
                   </span>

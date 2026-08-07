@@ -1,9 +1,9 @@
 import { Input } from './ui/Input'
 import { RangeInput } from './ui/RangeInput'
 import React from 'react'
-import { Save, Settings, AlertCircle, CheckCircle2, Bell, BellRing, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap, Moon, Sun, Eye, EyeOff, HardDrive } from 'lucide-react'
+import { Save, Settings, AlertCircle, CheckCircle2, Bell, BellRing, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap, Moon, Sun, Eye, EyeOff, HardDrive, ArrowDownLeft, ArrowUpRight, ArrowLeftRight } from 'lucide-react'
 import { m } from 'framer-motion'
-import type { DashboardData, TransactionCategory } from '../types'
+import type { DashboardData, TransactionCategory, CategoryFlowType } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { CurrencySelect } from './ui/CurrencySelect'
 import { RowSyncStatus } from './ui/RowSyncBadge'
@@ -48,6 +48,7 @@ interface SettingsViewProps {
   }) => void
   onAddCategory: (category: Omit<TransactionCategory, 'id'>) => void
   onUpdateCategoryCycleLimit: (id: string, cycleLimit: number | null) => void
+  onUpdateCategoryType?: (id: string, type: CategoryFlowType) => void
   onDeleteCategory: (id: string) => void | Promise<void>
   onApplyCategoryCleanupSuggestion?: (suggestion: CategoryCleanupSuggestion, targetCategoryOverride?: string) => Promise<void> | void
   notifyOnLoginEnabled?: boolean
@@ -108,6 +109,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
     onToast,
   })
 
+  const [newCatType, setNewCatType] = React.useState<CategoryFlowType>('both')
   const [activeTab, setActiveTab] = React.useState<'financial-model' | 'investment-plan' | 'categories-preferences' | 'security'>(() => {
     if (typeof window !== 'undefined') {
       const search = window.location.search
@@ -624,6 +626,30 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   </div>
                 )}
 
+                <div className="flex items-center justify-between pb-1.5 px-0.5">
+                  <span className="text-[11px] font-medium text-muted-foreground">New category flow type:</span>
+                  <div className="inline-flex rounded-lg border border-border/60 bg-muted/30 p-0.5 gap-0.5">
+                    {(['both', 'inflow', 'outflow'] as const).map(type => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setNewCatType(type)}
+                        className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition cursor-pointer capitalize ${
+                          newCatType === type
+                            ? type === 'inflow'
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shadow-sm border border-emerald-500/30'
+                              : type === 'outflow'
+                                ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 shadow-sm border border-amber-500/30'
+                                : 'bg-primary/15 text-primary shadow-sm border border-primary/30'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <ManageableNameList
                   items={categoryRows.map(({ category, count }) => ({ ...category, count }))}
                   itemLabel="Category"
@@ -631,12 +657,36 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   disabled={hideSensitive}
                   isLoading={isCategoryListLoading}
                   validateName={name => ['transfer', 'adjustment'].includes(name.toLowerCase()) ? 'Name is a reserved word.' : null}
-                  onAdd={name => props.onAddCategory({ name })}
+                  onAdd={name => props.onAddCategory({ name, type: newCatType })}
                   onDelete={item => view.handleDeleteCategory(item.id)}
                   renderName={item => (
-                    <span className={`inline-flex shrink-0 items-center rounded border px-2 py-0.5 font-semibold ${getCategoryBadgeClass(item.name)}`}>
-                      {item.name}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex shrink-0 items-center rounded border px-2 py-0.5 font-semibold ${getCategoryBadgeClass(item.name)}`}>
+                        {item.name}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={hideSensitive}
+                        onClick={() => {
+                          const current = item.type || 'both'
+                          const next: CategoryFlowType = current === 'both' ? 'inflow' : current === 'inflow' ? 'outflow' : 'both'
+                          props.onUpdateCategoryType?.(item.id, next)
+                        }}
+                        title="Click to toggle flow restriction (Both → Inflow → Outflow)"
+                        className={`inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold transition hover:scale-105 active:scale-95 disabled:opacity-50 ${
+                          (item.type || 'both') === 'inflow'
+                            ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                            : (item.type || 'both') === 'outflow'
+                              ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                              : 'border-border/60 bg-muted/40 text-muted-foreground'
+                        }`}
+                      >
+                        {(item.type || 'both') === 'inflow' && <ArrowDownLeft className="size-2.5" />}
+                        {(item.type || 'both') === 'outflow' && <ArrowUpRight className="size-2.5" />}
+                        {(item.type || 'both') === 'both' && <ArrowLeftRight className="size-2.5" />}
+                        <span className="capitalize">{item.type || 'both'}</span>
+                      </button>
+                    </div>
                   )}
                   renderMeta={item => item.count === 0
                     ? <span className="truncate text-[10px] font-semibold text-orange-500">Unused</span>

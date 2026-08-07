@@ -154,6 +154,7 @@ describe('computeOptimisticDashboard', () => {
         requiredThisCycle: outstanding / 3,
         toppedUpThisCycle: 0,
         outstandingThisCycle: outstanding / 3,
+        isOverdue: false,
         lastDrawdownAmount: outstanding,
         essentialsCommitted: 0,
         rewardsCommitted: 0,

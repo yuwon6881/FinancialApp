@@ -16,6 +16,7 @@ const recovery = (overrides: Partial<StabilityRecovery> = {}): StabilityRecovery
   requiredThisCycle: 1000,
   toppedUpThisCycle: 0,
   outstandingThisCycle: 1000,
+  isOverdue: false,
   lastDrawdownCycleKey: '2026-06',
   lastDrawdownAmount: 3000,
   essentialsCommitted: 0,

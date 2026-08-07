@@ -456,6 +456,8 @@ export interface StabilityRecovery {
   requiredThisCycle: number
   toppedUpThisCycle: number
   outstandingThisCycle: number
+  /** The three-cycle window has passed and money is still owed. Distinct from the final cycle. */
+  isOverdue: boolean
   lastDrawdownCycleKey?: string
   lastDrawdownAmount: number
   /** Bills this cycle still owes, which the proposed draw must stay above. */
@@ -520,9 +522,12 @@ export interface DashboardInsights {
   availableYears: number[]
 }
 
+export type CategoryFlowType = 'both' | 'inflow' | 'outflow'
+
 export interface TransactionCategory {
   id: string
   name: string
+  type?: CategoryFlowType
   cycleLimit?: number | null
   isPendingSync?: boolean
   /** Internal optimistic projection marker for a queue op that changes this row indirectly. */

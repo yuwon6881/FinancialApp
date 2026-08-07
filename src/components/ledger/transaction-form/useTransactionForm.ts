@@ -48,6 +48,7 @@ export interface UseTransactionFormOptions {
   onStartEditPending?: (id: string | null) => void
   onAddFormOpenChange?: (open: boolean) => void
   autoOpenAddForm?: boolean
+  autoOpenTxType?: 'inflow' | 'outflow' | 'transfer' | null
   onResetAutoOpen?: () => void
   receiptScanDraft?: any
   onReceiptScanStarted?: (scanId: string) => void
@@ -80,6 +81,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     onStartEditPending,
     onAddFormOpenChange,
     autoOpenAddForm,
+    autoOpenTxType,
     onResetAutoOpen,
     receiptScanDraft,
     onReceiptScanStarted,
@@ -109,6 +111,18 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   useEffect(() => {
     descriptionRef.current = state.description
   }, [state.description])
+
+  useEffect(() => {
+    if (state.transactionType !== 'inflow' && state.transactionType !== 'outflow') return
+    const currentCategory = categories.find(c => c.name.toLowerCase() === state.category.toLowerCase())
+    if (!currentCategory) return
+    if (currentCategory.type && currentCategory.type !== 'both' && currentCategory.type !== state.transactionType) {
+      const validCategories = categories.filter(c => !c.isPendingDelete && (!c.type || c.type === 'both' || c.type === state.transactionType))
+      if (validCategories.length > 0) {
+        dispatch({ type: 'SET_FIELD', field: 'category', value: validCategories[0].name })
+      }
+    }
+  }, [categories, state.transactionType, state.category])
 
   const openTransactionForm = useCallback(() => {
     dispatch({ type: 'SET_FIELD', field: 'showAddForm', value: true })
@@ -363,17 +377,21 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     }
   }, [categories, state.category, defaultCategory])
 
-  useAutoOpenModal(autoOpenAddForm, openTransactionForm, onResetAutoOpen)
-
-  const openFresh = () => {
+  const openFresh = useCallback((initialTxType?: 'inflow' | 'outflow' | 'transfer') => {
     setExistingDocuments([])
     documentsFieldRef.current?.reset()
     dispatch({ type: 'OPEN_CREATE', payload: { defaultCategory, todayDate } })
+    const targetTxType = initialTxType || autoOpenTxType
+    if (targetTxType) {
+      dispatch({ type: 'SET_FIELD', field: 'transactionType', value: targetTxType })
+    }
     descriptionRef.current = ''
     autocompletedDescriptionRef.current = null
     suggestions.clearSuggestions()
     openTransactionForm()
-  }
+  }, [defaultCategory, todayDate, autoOpenTxType, suggestions, openTransactionForm])
+
+  useAutoOpenModal(autoOpenAddForm, () => openFresh(autoOpenTxType || undefined), onResetAutoOpen)
 
   const openWithDraft = (draft: TransactionPrefillDraft) => {
     setExistingDocuments([])

@@ -13,12 +13,14 @@ export interface UseTransactionSuggestionsOptions {
 
 interface CategoryLike {
   name?: string
+  type?: 'both' | 'inflow' | 'outflow'
   isPendingDelete?: boolean
 }
 
-export function getSelectableCategoryNames(categories: CategoryLike[]): string[] {
+export function getSelectableCategoryNames(categories: CategoryLike[], txType?: 'inflow' | 'outflow'): string[] {
   return categories
     .filter(category => !category.isPendingDelete)
+    .filter(category => !txType || !category.type || category.type === 'both' || category.type === txType)
     .map(category => category.name?.trim())
     .filter((name): name is string => !!name)
     .filter(name => name.toLowerCase() !== 'transfer' && name.toLowerCase() !== 'adjustment')
@@ -72,13 +74,12 @@ export function useTransactionSuggestions(options: UseTransactionSuggestionsOpti
       return []
     }
 
-    const categoryNames = getSelectableCategoryNames(categories)
+    const categoryNames = getSelectableCategoryNames(categories, requestedTxType)
     if (categoryNames.length === 0) return []
     const requestKey = JSON.stringify([trimmedDescription.toLowerCase(), requestedTxType, categoryNames])
     if (lastCategorySuggestionKeyRef.current === requestKey && categorySuggestions.length > 0) return categorySuggestions
     if (lastCategorySuggestionKeyRef.current === requestKey) return []
     lastCategorySuggestionKeyRef.current = requestKey
-
     categorySuggestionAbortRef.current?.abort()
     const controller = new AbortController()
     categorySuggestionAbortRef.current = controller

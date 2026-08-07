@@ -50,6 +50,7 @@ export interface TransactionFormSheetProps {
   onStartEditPending?: (id: string | null) => void
   onAddFormOpenChange?: (open: boolean) => void
   autoOpenAddForm?: boolean
+  autoOpenTxType?: 'inflow' | 'outflow' | 'transfer' | null
   onResetAutoOpen?: () => void
   receiptScanDraft?: any
   onReceiptScanStarted?: (scanId: string) => void

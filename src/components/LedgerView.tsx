@@ -70,6 +70,7 @@ interface LedgerViewProps {
   cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly'
   currency?: string
   autoOpenAddForm?: boolean
+  autoOpenTxType?: 'inflow' | 'outflow' | 'transfer' | null
   onResetAutoOpen?: () => void
   stabilityBalance?: number
   stabilityTarget?: number
@@ -301,6 +302,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         onStartEditPending={props.onStartEditPending}
         onAddFormOpenChange={handleAddFormOpenChange}
         autoOpenAddForm={props.autoOpenAddForm}
+        autoOpenTxType={props.autoOpenTxType}
         onResetAutoOpen={props.onResetAutoOpen}
         receiptScanDraft={props.receiptScanDraft}
         onReceiptScanStarted={props.onReceiptScanStarted}

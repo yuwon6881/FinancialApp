@@ -1,0 +1,109 @@
+import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import React from 'react'
+import { BillTimeline } from './BillTimeline'
+import type { ActiveRecurringPayment, Transaction } from '../types'
+
+vi.mock('./ui/BottomSheet', () => ({
+  BottomSheet: ({ isOpen, children, title }: { isOpen: boolean; children: React.ReactNode; title?: React.ReactNode }) =>
+    isOpen ? (
+      <div data-testid="bottom-sheet">
+        <div data-testid="sheet-title">{title}</div>
+        {children}
+      </div>
+    ) : null,
+}))
+
+vi.mock('./ui/Card', () => ({
+  Card: ({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) => (
+    <div className={className} onClick={onClick}>{children}</div>
+  ),
+}))
+
+describe('BillTimeline', () => {
+  const sampleActiveRecurring: ActiveRecurringPayment[] = [
+    {
+      id: 'sub-chatgpt',
+      recurringPaymentId: 'rp-chatgpt',
+      name: 'ChatGPT Plus',
+      amount: 95.99,
+      category: 'Entertainment',
+      ledgerCategory: 'Essentials',
+      dueDate: '2026-08-27',
+      dueDay: 27,
+      isPaid: false,
+      isDiscarded: false,
+      status: 'Pending',
+    },
+  ]
+
+  const unrelatedTxInSameCategory: Transaction = {
+    id: 'tx-ktv',
+    date: '2026-08-29',
+    description: 'KTV',
+    amount: 150,
+    category: 'Entertainment',
+    ledgerCategory: 'Rewards',
+  }
+
+  const matchingTxByDescription: Transaction = {
+    id: 'tx-chatgpt',
+    date: '2026-08-29',
+    description: 'ChatGPT Plus',
+    amount: 95.99,
+    category: 'Entertainment',
+    ledgerCategory: 'Essentials',
+  }
+
+  it('does not mark subscription as paid when an unrelated transaction shares the category', () => {
+    render(
+      <BillTimeline
+        activeRecurringPayments={sampleActiveRecurring}
+        transactions={[unrelatedTxInSameCategory]}
+        selectedMonth="Aug"
+        selectedYear={2026}
+        cycleDay={28}
+        currency="MYR"
+        hideSensitive={false}
+      />
+    )
+
+    // Expand accordion
+    fireEvent.click(screen.getByText('Subscriptions Billing Timeline'))
+
+    // Open the bill details by clicking the node or badge
+    const badgeButton = screen.getAllByText('ChatGPT Plus')[0]
+    fireEvent.click(badgeButton)
+
+    // Status should be Pending, NOT Paid
+    const statusElement = screen.getAllByText('ChatGPT Plus')[0]
+    expect(statusElement).toBeTruthy()
+    expect(screen.queryByText('Paid')).toBeNull()
+    expect(screen.queryByText('Paid On')).toBeNull()
+  })
+
+  it('marks subscription as paid when a transaction matches description', () => {
+    render(
+      <BillTimeline
+        activeRecurringPayments={sampleActiveRecurring}
+        transactions={[matchingTxByDescription]}
+        selectedMonth="Aug"
+        selectedYear={2026}
+        cycleDay={28}
+        currency="MYR"
+        hideSensitive={false}
+      />
+    )
+
+    // Expand accordion
+    fireEvent.click(screen.getByText('Subscriptions Billing Timeline'))
+
+    const badgeButton = screen.getAllByText('ChatGPT Plus')[0]
+    fireEvent.click(badgeButton)
+
+    // 'Paid' shows on both the timeline badge and the open detail sheet.
+    expect(screen.getAllByText('Paid').length).toBeGreaterThan(0)
+    expect(screen.getByText('Paid On')).toBeTruthy()
+    expect(screen.getByText('2026-08-29')).toBeTruthy()
+  })
+})
