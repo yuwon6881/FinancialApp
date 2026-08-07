@@ -169,11 +169,15 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
           the ones that visibly compressed. */}
       <div className="mt-auto flex items-center gap-1 border-t border-border/30 pt-3">
         {showManage ? (
+          /* Edit and Delete share the row rather than huddling at the left edge with dead space
+             beside them. `flex-1` on a pair of actions with a trailing icon is the same shape the
+             sheet footers already use, so the panel reads as part of the system instead of a row
+             that lost its other buttons. */
           <>
             <Button
               variant="ghost"
               size="sm"
-              className="shrink-0"
+              className="flex-1"
               onClick={() => onEdit(goal)}
               disabled={isBusy || hideSensitive}
               aria-label={`Edit ${goal.name}`}
@@ -184,7 +188,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
             <Button
               variant="danger"
               size="sm"
-              className="shrink-0"
+              className="flex-1"
               onClick={() => onDelete(goal.id)}
               disabled={isBusy || hideSensitive}
               aria-label={`Delete ${goal.name}`}
@@ -195,7 +199,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
             <Button
               variant="ghost"
               size="icon"
-              className="ml-auto shrink-0"
+              className="shrink-0"
               onClick={() => setShowManage(false)}
               aria-expanded
               aria-label={`Hide edit and delete for ${goal.name}`}

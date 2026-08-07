@@ -19,6 +19,10 @@ type PreviewState =
   | { status: 'unsupported' }
   | { status: 'error' }
 
+/** 1.0 *is* the fitted view, not one image pixel per screen pixel — see the image frame below. */
+const MIN_ZOOM = 1.0
+const MAX_ZOOM = 3.0
+
 function canPreviewAsImage(contentType: string) {
   return ['image/jpeg', 'image/png', 'image/webp'].includes(contentType)
 }
@@ -32,7 +36,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
   const { showToast } = useAppUi()
   const [preview, setPreview] = useState<PreviewState>({ status: 'idle' })
   const [mediaLoaded, setMediaLoaded] = useState(false)
-  const [zoomScale, setZoomScale] = useState(1.0)
+  const [zoomScale, setZoomScale] = useState(MIN_ZOOM)
   const onCloseRef = useRef(onClose)
   const showToastRef = useRef(showToast)
 
@@ -40,7 +44,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
   useEffect(() => { showToastRef.current = showToast }, [showToast])
 
   useEffect(() => {
-    setZoomScale(1.0)
+    setZoomScale(MIN_ZOOM)
     if (!document || hideSensitive) {
       if (document && hideSensitive) onCloseRef.current()
       return
@@ -98,9 +102,11 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
     showToastRef.current('The document preview could not be loaded.', 'Preview Failed', 'error')
   }
 
-  const handleZoomIn = () => setZoomScale(prev => Math.min(3.0, Number((prev + 0.25).toFixed(2))))
-  const handleZoomOut = () => setZoomScale(prev => Math.max(0.5, Number((prev - 0.25).toFixed(2))))
-  const handleResetZoom = () => setZoomScale(1.0)
+  // 100% is the fit, so it is also the floor: once the whole page is on screen there is nothing below
+  // it worth offering, and the old 0.5 minimum only looked useful because 100% was not actually a fit.
+  const handleZoomIn = () => setZoomScale(prev => Math.min(MAX_ZOOM, Number((prev + 0.25).toFixed(2))))
+  const handleZoomOut = () => setZoomScale(prev => Math.max(MIN_ZOOM, Number((prev - 0.25).toFixed(2))))
+  const handleResetZoom = () => setZoomScale(MIN_ZOOM)
 
   const isZoomable = preview.status === 'ready' && (canPreviewAsImage(preview.contentType) || preview.contentType === 'application/pdf')
 
@@ -140,7 +146,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
               e.preventDefault()
               setZoomScale(prev => {
                 const delta = e.deltaY < 0 ? 0.1 : -0.1
-                return Math.min(3.0, Math.max(0.5, Number((prev + delta).toFixed(2))))
+                return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number((prev + delta).toFixed(2))))
               })
             }
           }}
@@ -155,17 +161,21 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
             />
           )}
 
+          {/* Zoom scales the *frame*, and the image is contained inside it, so 100% means "the whole
+              page fits" rather than "one image pixel per screen pixel". The frame previously sized to
+              `w-max` — the image's intrinsic width — which made the `maxWidth: 100%` at 100% resolve
+              against the image's own width and therefore constrain nothing: a phone photo opened at
+              full sensor resolution, and 50% was the first step that happened to fit. Growing the
+              frame rather than transforming the image also keeps real scroll area to pan into. */}
           {preview.status === 'ready' && canPreviewAsImage(preview.contentType) && (
-            <div className="m-auto flex min-h-full min-w-full w-max items-center justify-center p-4">
+            <div
+              className="flex items-center justify-center p-4"
+              style={{ width: `${zoomScale * 100}%`, height: `${zoomScale * 100}%` }}
+            >
               <img
                 src={preview.url}
                 alt={`Preview of ${document?.originalFileName ?? 'document'}`}
-                className="block rounded shadow-md transition-all duration-150"
-                style={
-                  zoomScale === 1.0
-                    ? { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }
-                    : { width: `${zoomScale * 100}%`, maxWidth: 'none', maxHeight: 'none' }
-                }
+                className="block h-auto w-auto max-h-full max-w-full rounded shadow-md transition-all duration-150"
                 onLoad={() => setMediaLoaded(true)}
                 onError={handleMediaError}
               />
@@ -198,7 +208,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
               size="icon"
               className="size-7 rounded-full text-muted-foreground hover:text-foreground disabled:opacity-40"
               onClick={handleZoomOut}
-              disabled={zoomScale <= 0.5}
+              disabled={zoomScale <= MIN_ZOOM}
               aria-label="Zoom out preview"
             >
               <ZoomOut className="size-4" />
@@ -219,7 +229,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
               size="icon"
               className="size-7 rounded-full text-muted-foreground hover:text-foreground disabled:opacity-40"
               onClick={handleZoomIn}
-              disabled={zoomScale >= 3.0}
+              disabled={zoomScale >= MAX_ZOOM}
               aria-label="Zoom in preview"
             >
               <ZoomIn className="size-4" />

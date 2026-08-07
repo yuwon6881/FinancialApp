@@ -2,6 +2,7 @@ import { Textarea } from './ui/Textarea'
 import { Fragment, useEffect, useState, useRef } from 'react'
 import { Send, Sparkles, X, RotateCcw, SquarePen, Square } from 'lucide-react'
 import { BottomSheet } from './ui/BottomSheet'
+import { Button } from './ui/Button'
 import { PerimeterBeam } from './ui/PerimeterBeam'
 import type { AiUiAction } from '../lib/api/ai'
 import type { AppTab } from '../types'
@@ -95,6 +96,9 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
     isHydrating,
     isResetting,
     lastFailedTurn,
+    recoverableTurn,
+    recoverStoppedTurn,
+    dismissStoppedTurn,
     resetError,
     sendMessage,
     newChat,
@@ -185,6 +189,36 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
           <p className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
             Earlier replies are hidden while sensitive mode is active.
           </p>
+        )}
+        {/* A stopped question may still have been answered and saved on the server. Asking again
+            replays it, which is the only way to get back anything it prepared -- so keep the offer
+            available even after later questions, with a free way out of it. */}
+        {recoverableTurn && (
+          <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+            <span className="min-w-0 flex-1">
+              A stopped question may already have been answered. Ask it again to get anything it prepared.
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              disabled={isSending || isOffline || isHydrating || isResetting}
+              onClick={recoverStoppedTurn}
+            >
+              <RotateCcw className="size-3" />
+              Ask again
+            </Button>
+            <Button
+              variant="ghost"
+              size="xs"
+              className="size-7 shrink-0 p-0"
+              onClick={dismissStoppedTurn}
+              title="Dismiss"
+              aria-label="Dismiss the stopped question"
+            >
+              <X className="size-3.5" />
+            </Button>
+          </div>
         )}
         {/* The non-scrolling wrapper owns a subtle perimeter-only activity trace. */}
         <div className={`relative min-h-0 flex-1 rounded-xl ${isSending ? 'perimeter-beam-host' : ''}`}>

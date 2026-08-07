@@ -114,7 +114,7 @@ export function DocumentCard({
     <div aria-busy={isBusy}>
       <SwipeableRow
         className="rounded-2xl border border-border/60 shadow-sm shadow-black/5"
-        contentClassName="p-3.5"
+        contentClassName="p-3"
         disabled={isBusy || hideSensitive}
         actionsWidth={128}
         actions={
@@ -145,14 +145,17 @@ export function DocumentCard({
         <div onClick={previewOnBodyTap}>
           {/* The name gets the full width of its own line. Sharing a flex row with three action
               buttons and two badges is what clipped it to "Official Receipt [REP-…". */}
-          <div className="flex min-w-0 items-start gap-2.5">
+          {/* `items-center`, not `items-start`: a 16px checkbox top-aligned beside a 40px icon tile
+              reads as misaligned with both the tile and the filename next to it. Centred, the
+              checkbox, the tile, the name block and the preview button all sit on one axis. */}
+          <div className="flex min-w-0 items-center gap-2.5">
             {isSelecting && (
               <Checkbox
                 disabled={hideSensitive || isBusy}
                 checked={isSelected}
                 onChange={() => toggleSelected(document.id)}
                 aria-label={`Select ${document.originalFileName}`}
-                className="mt-0.5 size-4 shrink-0 accent-primary"
+                className="size-4 shrink-0 accent-primary"
               />
             )}
             <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent text-accent-ink">

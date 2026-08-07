@@ -59,6 +59,40 @@ describe('DocumentPreviewSheet', () => {
     expect(revokeObjectUrl).not.toHaveBeenCalled()
   })
 
+  it('opens an image fitted to the sheet, not at one image pixel per screen pixel', async () => {
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:preview')
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
+    getDocumentContent.mockResolvedValue({
+      blob: new Blob(['webp'], { type: 'image/webp' }),
+      fileName: 'receipt.webp',
+      contentType: 'image/webp',
+    })
+
+    render(
+      <DocumentPreviewSheet
+        document={{ ...document, originalFileName: 'receipt.webp', contentType: 'image/webp' }}
+        onClose={vi.fn()}
+      />,
+    )
+
+    const image = await screen.findByAltText('Preview of receipt.webp')
+
+    // The frame is exactly the viewport at 100%, and the image is contained inside it. The frame used
+    // to size to `w-max` — the image's own intrinsic width — so `max-width: 100%` resolved against the
+    // image itself and constrained nothing: a phone photo opened at full sensor resolution.
+    const frame = image.parentElement as HTMLElement
+    expect(frame.style.width).toBe('100%')
+    expect(frame.style.height).toBe('100%')
+    expect(frame.className).not.toContain('w-max')
+    expect(image.className).toContain('max-w-full')
+    expect(image.className).toContain('max-h-full')
+
+    // 100% being the fit makes it the floor too, so there is no zooming out below a fully visible page.
+    fireEvent.load(image)
+    expect(screen.getByText('100%')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Zoom out preview' }).hasAttribute('disabled')).toBe(true)
+  })
+
   it('renders XML as escaped text instead of executable markup', async () => {
     getDocumentContent.mockResolvedValue({
       blob: new Blob(['<invoice><script>unsafe()</script></invoice>'], { type: 'application/xml' }),

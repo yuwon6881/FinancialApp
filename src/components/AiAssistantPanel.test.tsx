@@ -147,7 +147,9 @@ describe('AiAssistantPanel', () => {
     expect(chatWithAi.mock.calls[0]?.[0]).toBe('Explain this cycle')
     expect(chatWithAi.mock.calls[0]?.[4]).toEqual({
       conversationId: null,
-      conversationVersion: 0,
+      // No id means no version claim: sending the default 0 made the server answer "changed on
+      // another device" whenever it held a turn this client had never received.
+      conversationVersion: null,
       clientTurnId: 'launch-turn-7',
     })
     expect(chatWithAi.mock.calls[0]?.[5]).toEqual(invocation.context)
@@ -564,6 +566,61 @@ describe('AiAssistantPanel', () => {
     })
     expect(screen.getByText('Retry')).not.toBeNull()
     expect(screen.getByLabelText('Send message')).not.toBeNull()
+  })
+
+  it('sends the known conversation version once an id exists', async () => {
+    chatWithAi.mockResolvedValue(reply({ conversationId: 'conversation-1', conversationVersion: 3 }))
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+
+    await typeAndSend('first')
+    await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(1))
+    await typeAndSend('second')
+    await waitFor(() => expect(chatWithAi).toHaveBeenCalledTimes(2))
+
+    expect(chatWithAi.mock.calls[1][4].conversationId).toBe('conversation-1')
+    expect(chatWithAi.mock.calls[1][4].conversationVersion).toBe(3)
+  })
+
+  it('keeps a stopped turn recoverable after a later question and appends its replay', async () => {
+    chatWithAi.mockImplementationOnce(() => new Promise(() => {}))
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+
+    await typeAndSend('Badminton 17')
+    fireEvent.click(await screen.findByLabelText('Stop generating'))
+    await waitFor(() => expect(screen.getByText(/Cancelled before the AI answered/)).not.toBeNull())
+
+    chatWithAi.mockResolvedValueOnce(reply({ reply: 'second answer' }))
+    await typeAndSend('And Mamak 18+2.30')
+    await waitFor(() => expect(screen.getByText('second answer')).not.toBeNull())
+
+    // Retry belongs to the last exchange and is gone, but the stopped turn may still have been
+    // committed server-side, so its recovery offer must outlive the next question.
+    expect(screen.queryByText('Retry')).toBeNull()
+    const askAgain = screen.getByRole('button', { name: /Ask again/ })
+
+    chatWithAi.mockResolvedValueOnce(reply({ reply: 'recovered badminton' }))
+    fireEvent.click(askAgain)
+
+    await waitFor(() => expect(screen.getByText('recovered badminton')).not.toBeNull())
+    // Same clientTurnId, so the server replays the committed turn and hands back its actions.
+    expect(chatWithAi.mock.calls[2][4].clientTurnId).toBe(chatWithAi.mock.calls[0][4].clientTurnId)
+    // Recovering an older turn appends; it must not swallow the completed exchange after it.
+    expect(screen.getByText('second answer')).not.toBeNull()
+    expect(screen.queryByRole('button', { name: /Ask again/ })).toBeNull()
+  })
+
+  it('lets a stopped turn be dismissed without asking it again', async () => {
+    chatWithAi.mockImplementationOnce(() => new Promise(() => {}))
+    render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
+
+    await typeAndSend('a slow question')
+    fireEvent.click(await screen.findByLabelText('Stop generating'))
+    await waitFor(() => expect(screen.getByRole('button', { name: /Ask again/ })).not.toBeNull())
+
+    fireEvent.click(screen.getByLabelText('Dismiss the stopped question'))
+
+    expect(screen.queryByRole('button', { name: /Ask again/ })).toBeNull()
+    expect(chatWithAi).toHaveBeenCalledTimes(1)
   })
 
   it('path where requiresPanelClose is true executes onClose before onActions', async () => {

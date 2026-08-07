@@ -30,7 +30,7 @@ export function DocumentFilterBar({
   onClearAllReliefCategories,
 }: DocumentFilterBarProps) {
   return (
-    <div data-testid="document-filter-bar" className="mb-3 rounded-xl border border-border/60 bg-muted/20 p-2.5 sm:p-3">
+    <div data-testid="document-filter-bar" className="mb-3 rounded-xl border border-border/60 bg-muted/20 p-3">
       <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
         {/* Hidden below sm, where it spent a whole line telling a phone what two labelled selects
             already say. The group keeps the name for screen readers either way. */}

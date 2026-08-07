@@ -103,7 +103,6 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const [recurringPayments, setRecurringPayments] = useState<RecurringPayment[]>(() => getCachedJSON(CACHE_KEYS.recurringPayments, []))
   const [categoriesList, setCategoriesList] = useState<TransactionCategory[]>(() => getCachedJSON(CACHE_KEYS.categories, []))
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(() => getCachedJSON(CACHE_KEYS.dashboardData, null))
-  const [currentCycleDashboardData, setCurrentCycleDashboardData] = useState<DashboardData | null>(null)
   const [walletBalance, setWalletBalance] = useState<number | null>(() => getCachedJSON<number | null>(CACHE_KEYS.walletBalance, null))
   const [wishlist, setWishlist] = useState<WishlistItem[]>(() => getCachedWishlist(CACHE_KEYS.wishlist))
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>(() => getCachedJSON(CACHE_KEYS.savingsGoals, []))
@@ -1340,8 +1339,6 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     allSavingsGoals,
     dashboardData,
     optimisticDashboardData,
-    currentCycleDashboardData,
-    setCurrentCycleDashboardData,
     walletBalance,
     totalBalance,
     autocompleteSuggestions,

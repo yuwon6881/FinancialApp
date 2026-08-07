@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Check, Download, ExternalLink, Eye, FileArchive, FileCode, FileImage, FileText, Link2, Pencil, Trash2, X } from 'lucide-react'
+import { Check, Download, ExternalLink, Eye, FileArchive, FileCode, FileImage, FileText, Link2, Loader2, Pencil, Trash2, X } from 'lucide-react'
 import type { VaultDocument } from '../../../types'
 import { downloadDocument } from '../../../lib/api/documents'
 import { useAppPrefs } from '../../../contexts/AppContext'
@@ -200,11 +200,16 @@ export function LinkedTransactionButton({
 }) {
   if (!document.transactionId) return null
   const isOpening = openingTransactionId === document.transactionId
+  // The label is unconditional. `hidden sm:inline` never did anything for the desktop table — that
+  // only renders from `lg` up, where `sm:` is always satisfied — so the one surface it stripped the
+  // word from was the phone card, leaving a bare 12px glyph in a row of status badges: no indication
+  // it was a button, no indication where it went, and a tap target well under 44px. The card is also
+  // the surface with the most room for it.
   if (!onOpen) {
     return (
-      <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-accent/30 bg-accent/10 px-1.5 py-1 text-[10px] font-bold text-accent-ink" title="Attached to a ledger record">
-        <Link2 className="size-3" aria-hidden="true" />
-        <span className="hidden sm:inline">Linked</span>
+      <span className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded-lg border border-accent/30 bg-accent/10 px-2 py-1 text-[10px] font-bold text-accent-ink" title="Attached to a ledger record">
+        <Link2 className="size-3 shrink-0" aria-hidden="true" />
+        Linked
       </span>
     )
   }
@@ -215,12 +220,17 @@ export function LinkedTransactionButton({
       type="button"
       onClick={() => onOpen(document.transactionId!)}
       disabled={isOpening}
-      className="shrink-0 border-accent/30 bg-accent/10 px-1.5 py-1 text-[10px] text-accent-ink hover:border-accent/50 hover:bg-accent/20"
+      aria-busy={isOpening}
+      className="min-h-8 shrink-0 border-accent/30 bg-accent/10 px-2 text-[10px] text-accent-ink hover:border-accent/50 hover:bg-accent/20"
       title="Open linked ledger transaction"
       aria-label={`Open linked transaction for ${document.originalFileName}`}
     >
-      <ExternalLink className="size-3" aria-hidden="true" />
-      <span className="hidden sm:inline">Ledger</span>
+      {/* Opening fetches the transaction before it can navigate, and the button only went disabled —
+          on a phone that is indistinguishable from a tap that missed. */}
+      {isOpening
+        ? <Loader2 className="size-3 shrink-0 animate-spin" aria-hidden="true" />
+        : <ExternalLink className="size-3 shrink-0" aria-hidden="true" />}
+      {isOpening ? 'Opening…' : 'Ledger'}
     </Button>
   )
 }

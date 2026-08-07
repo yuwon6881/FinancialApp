@@ -56,8 +56,10 @@ function SelectAllDocumentsControl({
     if (checkboxRef.current) checkboxRef.current.indeterminate = someSelected
   }, [someSelected])
 
+  // `-mx-1.5` cancels the padding that gives the hover state its breathing room, so the box itself
+  // still lines up with the per-row checkboxes below rather than sitting 6px inside them.
   return (
-    <label className={`inline-flex min-h-9 min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 transition ${count > 0 ? 'cursor-pointer hover:bg-muted' : 'opacity-60'}`}>
+    <label className={`-mx-1.5 inline-flex min-h-9 min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 transition ${count > 0 ? 'cursor-pointer hover:bg-muted' : 'opacity-60'}`}>
       <Checkbox
         ref={checkboxRef}
         checked={allSelected}
@@ -106,12 +108,13 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
 
   return (
     <>
-      {/* A grid with a reserved trailing slot, never `flex-wrap`. The two states of the count read at
-          different widths ("10 on this page" vs "10 selected"), so a wrapping row fits the actions on
-          one line in one state and two in the other — ticking a box then changed the toolbar's height
-          and shoved the whole list up. The left cell truncates; the right cell keeps its width whether
-          or not the bulk actions are in it, so they appear in place instead of pushing anything. */}
-      <div data-testid="document-selection-toolbar" className={`mb-3 grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-xl border px-2.5 py-2 transition-colors sm:px-3 ${hasSelection ? 'border-primary/30 bg-primary/5' : 'border-border/60 bg-muted/20'}`}>
+      {/* A grid, never `flex-wrap`. The two states of the count read at different widths ("10 on this
+          page" vs "10 selected"), so a wrapping row fit the actions on one line in one state and two
+          in the other — ticking a box then changed the toolbar's height and shoved the whole list up.
+          One row with a truncating left cell keeps the height fixed without reserving empty space:
+          Done is the last child, so it stays pinned to the right edge and the bulk actions grow
+          leftward into the flexible cell as they appear. */}
+      <div data-testid="document-selection-toolbar" className={`mb-3 grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-xl border px-3 py-2 transition-colors ${hasSelection ? 'border-primary/30 bg-primary/5' : 'border-border/60 bg-muted/20'}`}>
         <div className="flex min-w-0 items-center gap-1.5 sm:gap-2.5">
           {isSelecting && (
             <>
@@ -149,51 +152,52 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
             </Button>
           ) : (
             <>
+              {/* Absent, not disabled, until something is selected: a greyed destructive button still
+                  reads as red and dangerous, so it looked broken rather than waiting. They insert to
+                  the *left* of Done, which is why nothing needs a reserved gap holding empty space. */}
+              {hasSelection && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    disabled={hideSensitive || isDownloadingSelected || exceedsSelectionLimit}
+                    onClick={onDownloadSelected}
+                    aria-label={isDownloadingSelected ? 'Preparing selected document download' : 'Download selected documents'}
+                    title="Download selected"
+                    className="size-9 shrink-0 bg-card p-0 sm:size-auto sm:px-3"
+                  >
+                    <Download className={`size-3.5 ${isDownloadingSelected ? 'animate-pulse' : ''}`} aria-hidden="true" />
+                    <span className="hidden sm:inline">{isDownloadingSelected ? 'Preparing…' : 'Download'}</span>
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    type="button"
+                    disabled={hideSensitive || isDeletingSelected || exceedsSelectionLimit}
+                    onClick={onDeleteSelected}
+                    aria-busy={isDeletingSelected}
+                    aria-label="Delete selected documents"
+                    title="Delete selected"
+                    className="size-9 shrink-0 p-0 sm:size-auto sm:px-3"
+                  >
+                    <Trash2 className="size-3.5" aria-hidden="true" />
+                    <span className="hidden sm:inline">{isDeletingSelected ? 'Deleting…' : 'Delete'}</span>
+                  </Button>
+                </>
+              )}
+              {/* Last child, so it stays flush with the right edge whatever appears beside it — the
+                  one control in this row that must never move under a reaching thumb. */}
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 type="button"
                 onClick={leaveSelectionMode}
                 aria-label="Leave selection mode"
+                className="shrink-0 bg-card"
               >
                 Done
               </Button>
-              {/* The bulk actions are absent, not disabled, until something is selected: a greyed
-                  destructive button still reads as red and dangerous, so it looked broken rather than
-                  waiting. The slot holds its width either way, so they arrive in place. */}
-              <div data-testid="document-bulk-action-slot" className="flex w-20 shrink-0 items-center justify-end gap-1.5 sm:w-60">
-                {hasSelection && (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      type="button"
-                      disabled={hideSensitive || isDownloadingSelected || exceedsSelectionLimit}
-                      onClick={onDownloadSelected}
-                      aria-label={isDownloadingSelected ? 'Preparing selected document download' : 'Download selected documents'}
-                      title="Download selected"
-                      className="size-9 shrink-0 bg-card p-0 sm:size-auto sm:px-3"
-                    >
-                      <Download className={`size-3.5 ${isDownloadingSelected ? 'animate-pulse' : ''}`} aria-hidden="true" />
-                      <span className="hidden sm:inline">{isDownloadingSelected ? 'Preparing…' : 'Download'}</span>
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      type="button"
-                      disabled={hideSensitive || isDeletingSelected || exceedsSelectionLimit}
-                      onClick={onDeleteSelected}
-                      aria-busy={isDeletingSelected}
-                      aria-label="Delete selected documents"
-                      title="Delete selected"
-                      className="size-9 shrink-0 p-0 sm:size-auto sm:px-3"
-                    >
-                      <Trash2 className="size-3.5" aria-hidden="true" />
-                      <span className="hidden sm:inline">{isDeletingSelected ? 'Deleting…' : 'Delete'}</span>
-                    </Button>
-                  </>
-                )}
-              </div>
             </>
           )}
         </div>

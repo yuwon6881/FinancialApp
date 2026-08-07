@@ -359,6 +359,7 @@ function App() {
   } = useCurrentCycleDashboard({
     token: session.token,
     optimisticDashboardData: financial.optimisticDashboardData,
+    hasQueuedWrites: financial.pendingOps.length > 0,
   })
   const currentPendingNotifications = todayDashboardData?.pendingNotifications || []
   const wishlistDashboardData = todayDashboardData || financial.optimisticDashboardData

@@ -60,7 +60,6 @@ describe('DocumentList selection toolbar', () => {
     // broken rather than waiting. Its slot holds width regardless, so nothing shifts when it arrives.
     expect(screen.queryByRole('button', { name: 'Download selected documents' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Delete selected documents' })).toBeNull()
-    expect(screen.getByTestId('document-bulk-action-slot').className).toContain('w-20')
 
     // The toolbar must stay one row. As `flex flex-wrap` it fit the actions on one line beside
     // "10 selected" and two lines beside "10 on this page", so ticking a box changed its height and
@@ -68,6 +67,12 @@ describe('DocumentList selection toolbar', () => {
     const toolbar = screen.getByTestId('document-selection-toolbar')
     expect(toolbar.className).toContain('grid-cols-[minmax(0,1fr)_auto]')
     expect(toolbar.className).not.toContain('flex-wrap')
+
+    // Done is the trailing child so it stays pinned to the right edge as the bulk actions come and go.
+    // A reserved fixed-width slot achieved that too, but by holding visibly empty space.
+    const actions = screen.getByTestId('document-selection-actions')
+    expect(actions.lastElementChild?.textContent).toBe('Done')
+    expect(actions.className).not.toContain('w-20')
   })
 
   it('forces selection mode on, and clears on leaving, so a live selection is never hidden', () => {
@@ -83,6 +88,8 @@ describe('DocumentList selection toolbar', () => {
     expect(screen.getByText('1 selected')).not.toBeNull()
     expect(screen.queryByRole('button', { name: 'Select' })).toBeNull()
     expect(screen.getByRole('button', { name: 'Download selected documents' }).hasAttribute('disabled')).toBe(false)
+    // Still trailing once the bulk actions are beside it, so it has not moved under the thumb.
+    expect(screen.getByTestId('document-selection-actions').lastElementChild?.textContent).toBe('Done')
 
     fireEvent.click(screen.getByRole('button', { name: 'Leave selection mode' }))
     expect(onClearSelection).toHaveBeenCalledTimes(1)
@@ -164,6 +171,28 @@ describe('DocumentList selection toolbar', () => {
     expect(screen.queryAllByLabelText('Amount for tax.pdf')).toHaveLength(0)
     expect(screen.queryAllByLabelText('Amount for two.pdf')).toHaveLength(0)
     expect(screen.getAllByRole('button', { name: 'Review the suggested amount for tax.pdf' }).length).toBeGreaterThan(0)
+  })
+
+  it('labels the linked-transaction control rather than leaving a bare glyph', () => {
+    const onNavigateToTransaction = vi.fn().mockResolvedValue(undefined)
+    render(
+      <DocumentList
+        {...baseProps}
+        documents={[{ ...document, transactionId: 'tx-1' }]}
+        selectedIds={new Set()}
+        onNavigateToTransaction={onNavigateToTransaction}
+      />,
+    )
+
+    // `hidden sm:inline` on the label did nothing for the desktop table, which only renders from lg
+    // up — it stripped the word only from the phone card, leaving a 12px glyph among status badges
+    // with nothing to say it was a button or where it led.
+    const linked = screen.getAllByRole('button', { name: 'Open linked transaction for tax.pdf' })
+    expect(linked.length).toBeGreaterThan(0)
+    expect(linked.every(button => button.textContent?.includes('Ledger'))).toBe(true)
+
+    fireEvent.click(linked[0])
+    expect(onNavigateToTransaction).toHaveBeenCalledWith('tx-1')
   })
 
   it('keeps the filing facts behind a closed disclosure on the mobile card', () => {

@@ -60,6 +60,12 @@ export function useAiConversation({
   const [isHydrating, setIsHydrating] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
   const [lastFailedTurn, setLastFailedTurn] = useState<FailedTurn | null>(null)
+  // A stopped turn is not necessarily an abandoned one: the server may have finished and
+  // committed it after we stopped listening, and replaying its clientTurnId is the only way to
+  // get back the actions it produced -- the drafts it staged included, since a rehydrated
+  // conversation carries messages but never actions. lastFailedTurn cannot hold this, because
+  // it is bound to the last message on screen and the next question clears it.
+  const [recoverableTurn, setRecoverableTurn] = useState<FailedTurn | null>(null)
   const [resetError, setResetError] = useState<string | null>(null)
   const [historyRedacted, setHistoryRedacted] = useState(false)
   const conversationIdRef = useRef<string | null>(null)
@@ -109,6 +115,7 @@ export function useAiConversation({
     pendingTurnRef.current = null
     if (!wasSending || !options.recoverable || !pending) return
     setLastFailedTurn(pending)
+    setRecoverableTurn(pending)
     setMessages(current => [
       ...current,
       { role: 'assistant', content: 'Cancelled before the AI answered. Tap Retry to ask again.' },
@@ -156,6 +163,7 @@ export function useAiConversation({
       setHistoryRedacted(false)
       setInput('')
       setLastFailedTurn(null)
+      setRecoverableTurn(null)
     } catch (error) {
       setResetError(`${describeChatError(error)} Your current conversation was kept.`)
     } finally {
@@ -167,7 +175,14 @@ export function useAiConversation({
     const trimmed = (retry?.text ?? input).trim()
     if (!trimmed || isSending || isOffline || isHydrating || isResetting) return
 
-    const baseMessages = retry ? messages.slice(0, -2) : messages
+    // Retrying the exchange still on screen replaces it. Recovering an older stopped turn, or
+    // running a contextual invocation against a hydrated history, must append instead -- both
+    // arrive as a prepared turn too, and blindly dropping the last two messages would delete a
+    // completed exchange from the transcript.
+    const tail = messages.slice(-2)
+    const replacesLastExchange = retry != null && tail.length === 2 &&
+      tail[0].role === 'user' && tail[0].content === trimmed && tail[1].role === 'assistant'
+    const baseMessages = replacesLastExchange ? messages.slice(0, -2) : messages
     const nextMessages: AiChatMessage[] = [...baseMessages, { role: 'user', content: trimmed }]
     const failedTurn = retry ?? { text: trimmed, clientTurnId: newClientTurnId() }
     setResetError(null)
@@ -190,13 +205,16 @@ export function useAiConversation({
         controller.signal,
         {
           conversationId: conversationIdRef.current,
-          conversationVersion: conversationVersionRef.current,
+          conversationVersion: conversationIdRef.current ? conversationVersionRef.current : null,
           clientTurnId: failedTurn.clientTurnId,
         },
         failedTurn.context,
       )
       if (generation !== requestGenerationRef.current) return
       pendingTurnRef.current = null
+      // This turn is answered, so it is no longer waiting to be recovered. A failure leaves the
+      // handle in place instead, so a failed recovery can be tried again.
+      setRecoverableTurn(current => current?.clientTurnId === failedTurn.clientTurnId ? null : current)
       conversationIdRef.current = result.conversationId ?? conversationIdRef.current
       conversationVersionRef.current = result.conversationVersion ?? conversationVersionRef.current
       conversationStateRef.current = result.state ?? null
@@ -271,6 +289,12 @@ export function useAiConversation({
     })
   }, [invocation, isHydrating, isOffline, isOpen, isResetting, onInvocationConsumed, sendMessage])
 
+  const recoverStoppedTurn = useCallback(() => {
+    if (recoverableTurn) void sendMessage(recoverableTurn)
+  }, [recoverableTurn, sendMessage])
+
+  const dismissStoppedTurn = useCallback(() => setRecoverableTurn(null), [])
+
   return {
     messages,
     input,
@@ -279,6 +303,9 @@ export function useAiConversation({
     isHydrating,
     isResetting,
     lastFailedTurn,
+    recoverableTurn,
+    recoverStoppedTurn,
+    dismissStoppedTurn,
     resetError,
     historyRedacted,
     sendMessage,

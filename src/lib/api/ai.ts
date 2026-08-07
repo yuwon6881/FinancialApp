@@ -87,7 +87,10 @@ export interface AiConversationSnapshot {
 
 export interface AiConversationRequest {
   conversationId: string | null
-  conversationVersion: number
+  // Null while this client holds no conversation id: it has never been told a version, so it
+  // must not assert one. Sending the default 0 made the server read it as a claim and answer
+  // "changed on another device" for any turn the client never received.
+  conversationVersion: number | null
   clientTurnId: string
 }
 
@@ -194,7 +197,7 @@ export async function chatWithAi(
         history: history.slice(-6),
         state: state ?? null,
         conversationId: conversation?.conversationId ?? null,
-        conversationVersion: conversation?.conversationVersion,
+        conversationVersion: conversation?.conversationVersion ?? null,
         clientTurnId: conversation?.clientTurnId,
         context: context ?? null,
       }),
