@@ -114,18 +114,18 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
   const [isSavingFlowTypes, setIsSavingFlowTypes] = React.useState(false)
 
   React.useEffect(() => {
-    if (props.categories) {
-      setFlowTypeDrafts(Object.fromEntries(props.categories.map(c => [c.id, c.type || 'both'])))
+    if (props.categoriesList) {
+      setFlowTypeDrafts(Object.fromEntries(props.categoriesList.map((c: TransactionCategory) => [c.id, c.type || 'both'])))
     }
-  }, [props.categories])
+  }, [props.categoriesList])
 
   const changedFlowTypeCategories = React.useMemo(() => {
-    return (props.categories || []).filter(c => {
+    return (props.categoriesList || []).filter((c: TransactionCategory) => {
       const draft = flowTypeDrafts[c.id]
       const current = c.type || 'both'
       return draft != null && draft !== current
     })
-  }, [props.categories, flowTypeDrafts])
+  }, [props.categoriesList, flowTypeDrafts])
 
   const [activeTab, setActiveTab] = React.useState<'financial-model' | 'investment-plan' | 'categories-preferences' | 'security'>(() => {
     if (typeof window !== 'undefined') {

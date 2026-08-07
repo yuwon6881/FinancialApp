@@ -1,7 +1,7 @@
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
 import { Checkbox } from '../ui/Checkbox'
-import { useRef } from 'react'
+import { useRef, useMemo } from 'react'
 import { Search, Filter, X, Loader2, CalendarDays, Banknote, ChevronDown } from 'lucide-react'
 import type { TransactionCategory } from '../../types'
 import { BottomSheet } from '../ui/BottomSheet'
@@ -120,7 +120,7 @@ export function LedgerFilterBar({
   const hasInvalidDateRange = !!startDate && !!endDate && startDate > endDate
   const hasInvalidRange = hasInvalidAmountRange || hasInvalidDateRange
 
-  const availableCategories = React.useMemo(() => {
+  const availableCategories = useMemo(() => {
     return categories.filter(c => {
       if (c.isPendingDelete) return false
       if (txType === 'inflow' || txType === 'outflow') {
