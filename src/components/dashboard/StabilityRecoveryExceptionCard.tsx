@@ -2,13 +2,11 @@ import React from 'react'
 import { m, useReducedMotion } from 'framer-motion'
 import { ShieldAlert } from 'lucide-react'
 import type { StabilityRecovery } from '../../types'
-import { Button } from '../ui/Button'
 import { InfoHint } from '../ui/InfoHint'
 
 interface StabilityRecoveryExceptionCardProps {
   recovery: StabilityRecovery | undefined
   formatSensitive: (value: number) => React.ReactNode
-  onAddIncome: () => void
 }
 
 /**
@@ -16,11 +14,14 @@ interface StabilityRecoveryExceptionCardProps {
  * and only while this cycle's share of putting it back is still owed. Those are two separate
  * gates on purpose: the fund can still be short overall after this cycle's share is already back,
  * which is a perfectly healthy state that deserves no card.
+ *
+ * The card is purely informative and carries no action. Putting money back happens by ticking the
+ * top-up offer on a salary, so an "Add income" button here pointed at a blank transaction form that
+ * could not do the thing the card was asking for.
  */
 export function StabilityRecoveryExceptionCard({
   recovery,
   formatSensitive,
-  onAddIncome,
 }: StabilityRecoveryExceptionCardProps) {
   const reduceMotion = useReducedMotion()
 
@@ -41,8 +42,8 @@ export function StabilityRecoveryExceptionCard({
       aria-labelledby="stability-recovery-exception"
       className="app-panel rounded-2xl border border-amber-500/30 bg-amber-500/8 p-5 sm:p-6"
     >
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="space-y-3 min-w-0 flex-1">
+      <div className="flex flex-col gap-4">
+        <div className="space-y-3 min-w-0">
           <div className="flex items-center gap-3">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
               <ShieldAlert className="size-5" />
@@ -82,11 +83,6 @@ export function StabilityRecoveryExceptionCard({
               />
             </div>
           </div>
-        </div>
-        <div className="shrink-0 pt-1 lg:pt-0">
-          <Button variant="primary" onClick={onAddIncome} className="w-full justify-center sm:w-auto">
-            Add income
-          </Button>
         </div>
       </div>
     </m.section>

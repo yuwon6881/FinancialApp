@@ -199,7 +199,6 @@ export function AuthenticatedView({
                       isSwitchingCycle={isCurrentCycleLoading || !todayDashboardData}
                       investmentAllocation={investmentAllocation}
                       onNavigateToCategoryLimits={() => nav.handleNavigateToReportSection('category-limits')}
-                      onAddIncome={() => nav.handleQuickAction('transaction', { txType: 'inflow' })}
                     />
                   )}
 

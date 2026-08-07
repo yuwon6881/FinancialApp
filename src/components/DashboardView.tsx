@@ -36,8 +36,6 @@ interface DashboardViewProps {
   investmentAllocation?: InvestmentAllocationOverview | null
   /** Opens Reports focused on the category limit breakdown. Falls back to plain Reports. */
   onNavigateToCategoryLimits?: () => void
-  /** Opens the ledger with the add-transaction form already up. Falls back to the plain ledger. */
-  onAddIncome?: () => void
 }
 export const DashboardView: React.FC<DashboardViewProps> = ({
   dashboardData,
@@ -53,7 +51,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   isSwitchingCycle = false,
   investmentAllocation = null,
   onNavigateToCategoryLimits,
-  onAddIncome,
 }) => {
   const [expiredTaxYears, setExpiredTaxYears] = React.useState<ExpiredTaxYearSummary[]>([])
   React.useEffect(() => {
@@ -157,7 +154,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <StabilityRecoveryExceptionCard
         recovery={dashboardData?.stabilityRecovery}
         formatSensitive={view.formatSensitive}
-        onAddIncome={() => (onAddIncome ? onAddIncome() : onNavigate('ledger'))}
       />
 
       {/* Today-focused metric cards: cycle progress, safe-to-spend, and the active wish goal */}

@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import type { StabilityRecovery } from '../../types'
 import { StabilityRecoveryExceptionCard } from './StabilityRecoveryExceptionCard'
 
@@ -28,7 +28,7 @@ const format = (value: number) => `$${value.toFixed(2)}`
 describe('StabilityRecoveryExceptionCard', () => {
   it('stays hidden when there is no recovery block at all', () => {
     const { container } = render(
-      <StabilityRecoveryExceptionCard recovery={undefined} formatSensitive={format} onAddIncome={vi.fn()} />
+      <StabilityRecoveryExceptionCard recovery={undefined} formatSensitive={format} />
     )
     expect(container.innerHTML).toBe('')
   })
@@ -44,14 +44,14 @@ describe('StabilityRecoveryExceptionCard', () => {
       <StabilityRecoveryExceptionCard
         recovery={recovery(overrides as Partial<StabilityRecovery>)}
         formatSensitive={format}
-        onAddIncome={vi.fn()}
+       
       />
     )
     expect(container.innerHTML).toBe('')
   })
 
   it('says what was used and what putting it back looks like', () => {
-    render(<StabilityRecoveryExceptionCard recovery={recovery()} formatSensitive={format} onAddIncome={vi.fn()} />)
+    render(<StabilityRecoveryExceptionCard recovery={recovery()} formatSensitive={format} />)
 
     expect(screen.getByText('Your emergency fund is below where it was')).toBeTruthy()
     expect(screen.getByText(/You used \$3000\.00 from your emergency fund/)).toBeTruthy()
@@ -65,7 +65,7 @@ describe('StabilityRecoveryExceptionCard', () => {
       <StabilityRecoveryExceptionCard
         recovery={recovery({ cyclesRemaining: 1, outstandingThisCycle: 400 })}
         formatSensitive={format}
-        onAddIncome={vi.fn()}
+       
       />
     )
 
@@ -79,7 +79,7 @@ describe('StabilityRecoveryExceptionCard', () => {
       <StabilityRecoveryExceptionCard
         recovery={recovery({ isOverdue: true, cyclesRemaining: 1, outstandingShortfall: 746.8 })}
         formatSensitive={format}
-        onAddIncome={vi.fn()}
+       
       />
     )
 
@@ -87,11 +87,11 @@ describe('StabilityRecoveryExceptionCard', () => {
     expect(screen.getByText(/\$746\.80 is still to go/)).toBeTruthy()
   })
 
-  it('sends the user to add income', () => {
-    const onAddIncome = vi.fn()
-    render(<StabilityRecoveryExceptionCard recovery={recovery()} formatSensitive={format} onAddIncome={onAddIncome} />)
+  // The card is informative only: putting money back happens by ticking the top-up offer on a
+  // salary, so an action here would have pointed at a form that could not do it.
+  it('offers no action at all', () => {
+    render(<StabilityRecoveryExceptionCard recovery={recovery()} formatSensitive={format} />)
 
-    screen.getByRole('button', { name: 'Add income' }).click()
-    expect(onAddIncome).toHaveBeenCalledTimes(1)
+    expect(screen.queryAllByRole('button').filter(b => b.textContent?.trim())).toHaveLength(0)
   })
 })

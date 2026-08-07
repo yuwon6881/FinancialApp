@@ -126,4 +126,28 @@ describe('ReceiptSplitSheet', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Decrease quantity for item 1' }))
     expect(screen.getByLabelText('Quantity for item 1').textContent).toBe('2')
   })
+
+  // 0 has to be reachable, and it has to mean something different from deleting the line: the line
+  // stays on the receipt, so the printed charges keep being spread over the whole bill.
+  it('lets an item go down to nobody-of-mine without dropping it from the receipt', () => {
+    const { onUseResult } = renderSheet()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Decrease quantity for item 1' }))
+    expect(screen.getByLabelText('Quantity for item 1').textContent).toBe('0')
+    expect((screen.getByRole('button', { name: 'Decrease quantity for item 1' }) as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.getByText('Not yours')).toBeTruthy()
+
+    // Water alone: 4.00 plus its own 10% tax and 6% service, not the whole bill's charges.
+    fireEvent.click(screen.getByRole('button', { name: 'Use This Amount' }))
+    expect(onUseResult).toHaveBeenCalledWith(expect.objectContaining({ amount: 4.64 }))
+  })
+
+  it('cannot save a receipt where nothing is yours', () => {
+    renderSheet()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Decrease quantity for item 1' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Decrease quantity for item 2' }))
+
+    expect((screen.getByRole('button', { name: 'Use This Amount' }) as HTMLButtonElement).disabled).toBe(true)
+  })
 })

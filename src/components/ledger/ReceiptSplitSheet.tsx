@@ -1,15 +1,15 @@
 import { Input } from '../ui/Input'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, ChevronDown, Lock, Minus, Plus, Trash2, Unlock } from 'lucide-react'
+import { AlertTriangle, ChevronDown } from 'lucide-react'
 import type { ReceiptSplitItem, ReceiptSplitScanResult } from '../../lib/api'
 import type { ReceiptSplitDraft } from '../../lib/useReceiptSplitPolling'
 import { calculateReceiptShare } from '../../lib/receiptSplitCalculator'
 import { formatCurrencyVal } from '../../lib/utils'
 import { BottomSheet } from '../ui/BottomSheet'
 import { DatePicker } from '../ui/DatePicker'
-import { SwipeableRow } from '../ui/SwipeableRow'
 import { Button } from '../ui/Button'
 import { FormField } from '../ui/FormField'
+import { ReceiptSplitItemRow } from './ReceiptSplitItemRow'
 import type { TransactionPrefillDraft } from './TransactionFormSheet'
 
 interface Props {
@@ -33,9 +33,6 @@ function editableUnitPrice(item: ReceiptSplitItem): number | null {
   return null
 }
 
-function inputNumber(value: number | null): string {
-  return value == null ? '' : String(Number(value.toFixed(6)))
-}
 
 function parsedPrice(value: string): number | null {
   if (!value.trim()) return null
@@ -150,8 +147,11 @@ export function ReceiptSplitSheet({
   const changeQuantity = (index: number, delta: number) => {
     if (!receipt) return
     const maximum = receiptQuantity(receipt.items[index])
+    // Down to 0, not 1: "none of this one is mine" is the common case on a shared bill, and the
+    // only way to say it used to be deleting the line — which also drops it from the base a
+    // printed charge is spread over, silently growing your share of that charge.
     setSelectedQuantities(current => current.map((quantity, itemIndex) =>
-      itemIndex === index ? Math.max(1, Math.min(maximum, quantity + delta)) : quantity))
+      itemIndex === index ? Math.max(0, Math.min(maximum, quantity + delta)) : quantity))
   }
 
   const togglePriceLock = (index: number) => {
@@ -188,8 +188,8 @@ export function ReceiptSplitSheet({
     >
       {receipt && calculation && (
         <div className="space-y-5">
-          <section className="rounded-2xl border border-blue-500/25 bg-blue-500/8 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-300">Your share</p>
+          <section className="rounded-2xl border border-primary/25 bg-primary/10 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-accent-ink">Your share</p>
             <div className="mt-1 flex items-end justify-between gap-4">
               <strong className="text-2xl font-black tracking-tight text-foreground">
                 {formatCurrencyVal(calculation.total, currency)}
@@ -244,167 +244,48 @@ export function ReceiptSplitSheet({
             <div>
               <h3 className="text-sm font-bold">Items</h3>
               <p className="text-[11px] text-muted-foreground">
-                Adjust your quantity with − and +. Swipe an item left on mobile to delete it.
+                Use − and + to say how many are yours, or take it down to 0 if none of it is.
+                Delete a line only if it was never on the receipt — swipe it left on a phone.
               </p>
             </div>
 
-            {receipt.items.map((item, index) => {
-              const maximum = receiptQuantity(item)
-              const selected = selectedQuantities[index] ?? maximum
-              const priceUnlocked = unlockedPriceIndexes.has(index)
-              const itemCalculation = itemCalculations[index]
-              const unitPrice = editableUnitPrice(item)
-              const chargeAmount = itemCalculation ? itemCalculation.total - itemCalculation.itemSubtotal : 0
-              const chargePercent = itemCalculation && itemCalculation.itemSubtotal > 0
-                ? (chargeAmount / itemCalculation.itemSubtotal) * 100
-                : 0
-              const deleteButton = (
-                <Button variant="unstyled"
-                  type="button"
-                  onClick={() => removeItem(index)}
-                  className="flex h-full w-full items-center justify-center gap-1 bg-destructive px-3 text-[11px] font-bold text-destructive-foreground cursor-pointer rounded-r-2xl"
-                  aria-label={`Delete ${item.name || `item ${index + 1}`}`}
-                >
-                  <Trash2 className="size-4" /> Delete
-                </Button>
-              )
-
-              return (
-                <SwipeableRow
-                  key={index}
-                  actionsWidth={88}
-                  actions={deleteButton}
-                  desktopActions={(
-                    <Button variant="unstyled"
-                      type="button"
-                      onClick={() => removeItem(index)}
-                      className="rounded-lg p-2 text-destructive hover:bg-destructive/10 cursor-pointer"
-                      aria-label={`Delete ${item.name || `item ${index + 1}`}`}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  )}
-                  className={`rounded-2xl border shadow-xs ${item.confidence < 0.65 ? 'border-amber-500/40' : 'border-border'}`}
-                  contentClassName={`rounded-2xl p-3 sm:p-4 bg-card ${item.confidence < 0.65 ? 'before:absolute before:inset-0 before:bg-amber-500/10 before:rounded-2xl before:pointer-events-none relative' : ''}`}
-                >
-                  <div className="relative space-y-3">
-                    <h4 className="min-w-0 px-1 text-sm font-bold text-foreground">
-                      {item.name.trim() || `Item ${index + 1}`}
-                    </h4>
-
-                    <div className="flex items-center justify-between gap-3 rounded-xl bg-blue-500/6 px-3 py-2.5">
-                      <div className="min-w-0">
-                        <span className="block text-[9px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-300">Your share for this item</span>
-                        <strong className="mt-0.5 block truncate text-sm font-extrabold text-foreground">
-                          {formatCurrencyVal(itemCalculation?.total ?? 0, currency)}
-                        </strong>
-                      </div>
-                      <span className="shrink-0 text-[10px] text-muted-foreground">{selected} of {maximum}</span>
-                    </div>
-
-                    <details className="group rounded-xl border border-border/50 bg-muted/15">
-                      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-[11px] font-bold text-muted-foreground">
-                        Price and charge breakdown
-                        <ChevronDown className="size-3.5 shrink-0 transition-transform group-open:rotate-180" />
-                      </summary>
-                      <div className="grid min-w-0 grid-cols-2 gap-2 border-t border-border/40 p-2.5 sm:grid-cols-3">
-                      <div className="min-w-0 rounded-xl border border-border/60 bg-muted/25 p-2.5">
-                        <span className="block text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Price</span>
-                        <div className="mt-1 flex min-w-0 items-center gap-1">
-                          <Input
-                            aria-label={`Item ${index + 1} price`}
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={inputNumber(unitPrice)}
-                            onChange={event => updatePrice(index, event.target.value)}
-                            disabled={!priceUnlocked}
-                            controlSize="sm"
-                            className="min-w-0 flex-1 font-bold"
-                          />
-                          <Button variant="unstyled"
-                            type="button"
-                            onClick={() => togglePriceLock(index)}
-                            className="p-1 inline-flex shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer"
-                            title={priceUnlocked ? 'Lock' : 'Unlock'}
-                            aria-label={`${priceUnlocked ? 'Lock' : 'Unlock'} price for item ${index + 1}`}
-                          >
-                            {priceUnlocked ? <Unlock className="size-3.5" /> : <Lock className="size-3.5 text-blue-500" />}
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="min-w-0 rounded-xl border border-border/60 bg-muted/25 p-2.5">
-                        <span className="block text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
-                          Charges{Math.abs(chargePercent) >= 0.01 ? ` (${Math.abs(chargePercent).toFixed(2).replace(/\.?0+$/, '')}%)` : ''}
-                        </span>
-                        <span className={`mt-2 block truncate text-xs font-bold ${chargeAmount < 0 ? 'text-emerald-500' : 'text-muted-foreground'}`}>
-                          {chargeAmount < 0 ? '−' : '+'}{formatCurrencyVal(Math.abs(chargeAmount), currency)}
-                        </span>
-                      </div>
-
-                      <div className="col-span-2 min-w-0 rounded-xl border border-blue-500/20 bg-blue-500/5 p-2.5 sm:col-span-1">
-                        <span className="block text-[9px] font-bold uppercase tracking-wider text-blue-500">After charges</span>
-                        <span className="mt-2 block truncate text-xs font-extrabold text-blue-500">
-                          {formatCurrencyVal(itemCalculation?.total ?? 0, currency)}
-                        </span>
-                      </div>
-                      </div>
-                    </details>
-
-                    <div className="flex items-center justify-between gap-3 border-t border-border/40 pt-3">
-                      <div>
-                        <span className="block text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Your quantity</span>
-                        <span className="text-[10px] text-muted-foreground">Receipt quantity: {maximum}</span>
-                      </div>
-                      <div className="flex items-center rounded-xl border border-border bg-background p-1 shadow-xs">
-                        <Button variant="unstyled"
-                          type="button"
-                          onClick={() => changeQuantity(index, -1)}
-                          disabled={selected <= 1}
-                          className="flex size-8 items-center justify-center rounded-lg text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer"
-                          aria-label={`Decrease quantity for item ${index + 1}`}
-                        >
-                          <Minus className="size-3.5" />
-                        </Button>
-                        <span className="min-w-9 text-center text-sm font-extrabold text-foreground" aria-label={`Quantity for item ${index + 1}`}>
-                          {selected}
-                        </span>
-                        <Button variant="unstyled"
-                          type="button"
-                          onClick={() => changeQuantity(index, 1)}
-                          disabled={selected >= maximum}
-                          className="flex size-8 items-center justify-center rounded-lg text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer"
-                          aria-label={`Increase quantity for item ${index + 1}`}
-                        >
-                          <Plus className="size-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </SwipeableRow>
-              )
-            })}
+            {receipt.items.map((item, index) => (
+              <ReceiptSplitItemRow
+                key={index}
+                item={item}
+                index={index}
+                currency={currency}
+                maximum={receiptQuantity(item)}
+                selected={selectedQuantities[index] ?? receiptQuantity(item)}
+                priceUnlocked={unlockedPriceIndexes.has(index)}
+                unitPrice={editableUnitPrice(item)}
+                itemCalculation={itemCalculations[index]}
+                onChangeQuantity={changeQuantity}
+                onTogglePriceLock={togglePriceLock}
+                onUpdatePrice={updatePrice}
+                onRemove={removeItem}
+              />
+            ))}
           </section>
 
-          <details className="group rounded-2xl border border-blue-500/20 bg-blue-500/5">
+          <details className="group rounded-2xl border border-primary/20 bg-primary/5">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-xs font-bold text-foreground">
               How your total was calculated
               <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
             </summary>
-            <div className="space-y-2 border-t border-blue-500/20 p-4 text-xs">
+            <div className="space-y-2 border-t border-primary/20 p-4 text-xs">
               <div className="flex justify-between gap-4 text-muted-foreground">
-                <span>Selected subtotal</span>
+                <span>The items you picked</span>
                 <span className="font-semibold text-foreground">{formatCurrencyVal(calculation.itemSubtotal, currency)}</span>
               </div>
               <div className="flex justify-between gap-4 text-muted-foreground">
-                <span>Combined charges and adjustments</span>
+                <span>Your share of tax, service and discounts</span>
                 <span className="font-semibold text-foreground">
                   {formatCurrencyVal(calculation.total - calculation.itemSubtotal, currency)}
                 </span>
               </div>
-              <div className="flex justify-between gap-4 border-t border-blue-500/20 pt-3 text-sm font-extrabold text-blue-500">
-                <span>Total after charges</span>
+              <div className="flex justify-between gap-4 border-t border-primary/20 pt-3 text-sm font-extrabold text-accent-ink">
+                <span>What you pay</span>
                 <span>{formatCurrencyVal(calculation.total, currency)}</span>
               </div>
             </div>
