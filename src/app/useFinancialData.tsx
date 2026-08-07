@@ -6,6 +6,7 @@ import type {
   RecurringPayment,
   RecurringReminderSettings,
   TransactionCategory,
+  CategoryFlowType,
   WishlistItem,
   SavingsGoal,
   DashboardData,
@@ -798,7 +799,24 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     }
   }, [token, wakeUpAndSync])
 
-  const queuedTransactions = useOptimisticList(transactions, activeOps, 'transaction')
+  // A queued salary generates four bucket rows server-side; projecting them needs the plan
+  // percentages whenever the row was saved as plain `Income` (see incomeSplitProjection.ts).
+  const incomeSplitOptions = useMemo(() => ({
+    incomeAllocations: dashboardData?.setting
+      ? {
+          essentialsAlloc: dashboardData.setting.essentialsAlloc,
+          growthAlloc: dashboardData.setting.growthAlloc,
+          stabilityAlloc: dashboardData.setting.stabilityAlloc,
+          rewardsAlloc: dashboardData.setting.rewardsAlloc,
+        }
+      : undefined,
+  }), [
+    dashboardData?.setting?.essentialsAlloc,
+    dashboardData?.setting?.growthAlloc,
+    dashboardData?.setting?.stabilityAlloc,
+    dashboardData?.setting?.rewardsAlloc,
+  ])
+  const queuedTransactions = useOptimisticList(transactions, activeOps, 'transaction', incomeSplitOptions)
   const allTransactions = useMemo(() => {
     // Direct server actions can create a ledger row before the next bootstrap response arrives.
     // Keep that row in the same collection consumed by LedgerView so changing tabs immediately
@@ -901,16 +919,21 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     mutateQueue(prev => enqueue(prev, 'category', 'add', finalId, { ...newCat, id: finalId }))
   }
 
-  const handleUpdateCategoryCycleLimit = (id: string, cycleLimit: number | null) => {
+  const updateCatMeta = (id: string, patch: { cycleLimit?: number | null; type?: CategoryFlowType }) => {
     if (!guardSensitive()) return
     const category = allCategories.find(cat => String(cat.id) === String(id))
     snapshotForUndo('category', String(id), category)
     mutateQueue(prev => enqueue(prev, 'category', 'update', id, {
-      cycleLimit,
       name: category?.name,
+      cycleLimit: category?.cycleLimit,
+      type: category?.type,
+      ...patch,
       undoSnapshot: category,
     }))
   }
+
+  const handleUpdateCategoryCycleLimit = (id: string, cycleLimit: number | null) => updateCatMeta(id, { cycleLimit })
+  const handleUpdateCategoryType = (id: string, type: CategoryFlowType) => updateCatMeta(id, { type })
 
   const handleDeleteCategory = (id: string, replacementCategoryId?: string) => {
     const category = allCategories.find(cat => String(cat.id) === String(id))
@@ -1380,6 +1403,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     handleMarkSummarySeen,
     handleAddCategory,
     handleUpdateCategoryCycleLimit,
+    handleUpdateCategoryType,
     handleDeleteCategory,
     requestDeleteCategory,
     handleApplyCategoryCleanupSuggestion,

@@ -17,6 +17,7 @@ import type { PayEarlyResult } from '../types'
 import type { ToastAction } from '../components/ui/ToastViewport'
 import {
   getErrorMessage,
+  getErrorName,
   getStatus,
   isAuthError,
   isLockError,
@@ -353,12 +354,20 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
           await deps.refresh(completedOps)
           refreshSucceeded = true
         } catch (refreshErr) {
-          console.error('Post-sync dashboard refresh failed:', refreshErr)
-          const isRefreshAuthError = isAuthError(refreshErr)
-          const isRefreshLockError = isLockError(refreshErr)
+          const isSuperseded = getErrorName(refreshErr) === 'AbortError'
+          const isRefreshAuthError = !isSuperseded && isAuthError(refreshErr)
+          const isRefreshLockError = !isSuperseded && isLockError(refreshErr)
           const isJustLoggedIn = deps.now() - deps.getLastUnlockedTime() < JUST_LOGGED_IN_WINDOW_MS
+          if (!isSuperseded) console.error('Post-sync dashboard refresh failed:', refreshErr)
 
-          if (isRefreshAuthError && !isJustLoggedIn) {
+          if (isSuperseded) {
+            // Not a failure: `loadAll` aborts the in-flight request before starting its own,
+            // so any newer load (a cycle change, a later drain, session teardown) supersedes
+            // this reconciliation and commits fresher data than it would have. Backing off
+            // here charged the healthy case a 15s stall plus an "offline" banner, and logged
+            // a console error for a routine race. The completed ops stay projected until the
+            // superseding load lands or they expire.
+          } else if (isRefreshAuthError && !isJustLoggedIn) {
             if (deps.clearRecentlyCompleted) deps.clearRecentlyCompleted()
             else deps.removeRecentlyCompleted(new Set(completedOps.map(({ op }) => op.id)))
             deps.onAuthError()

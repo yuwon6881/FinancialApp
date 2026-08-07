@@ -528,6 +528,24 @@ describe('drainQueue — settle', () => {
     spy.mockRestore()
   })
 
+  it('treats an aborted post-sync refresh as superseded, not failed', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const aborted = Object.assign(new Error('signal is aborted without reason'), { name: 'AbortError' })
+    const h = makeHarness({ refresh: async () => { throw aborted } }, [op({ id: 'committed' })])
+
+    await drainQueue(h.deps)
+
+    // The superseding load commits fresher data; the projection is kept meanwhile.
+    expect(h.recentlyCompleted).toEqual([
+      expect.objectContaining({ id: 'committed', isCompleted: true }),
+    ])
+    expect(h.backoffSetTo).toEqual([])
+    expect(h.calls.onAuthError).toBe(0)
+    expect(h.calls.onLockError).toBe(0)
+    expect(spy).not.toHaveBeenCalled()
+    spy.mockRestore()
+  })
+
   it('does not re-trigger when queue is blocked by editing lock', async () => {
     const h = makeHarness({ getEditingPendingId: () => 't1' }, [op({ targetId: 't1' })])
     await drainQueue(h.deps)

@@ -507,6 +507,62 @@ describe('optimistic list ordering', () => {
   })
 })
 
+describe('applyOpsToList — income splits', () => {
+  const incomeAllocations = {
+    essentialsAlloc: 0.5,
+    growthAlloc: 0.2,
+    stabilityAlloc: 0.1,
+    rewardsAlloc: 0.2,
+  }
+  const salary = { description: 'Salary', date: '2026-08-07', amount: 1000, ledgerCategory: 'Income' }
+
+  it('projects the four bucket rows beside a queued salary', () => {
+    const ops = [makeOp({ type: 'add', targetId: 'tx-1', payload: salary })]
+
+    const result = applyOpsToList([] as TestItem[], ops, 'transaction', { incomeAllocations })
+
+    expect(result.map(item => String(item.id))).toEqual([
+      'tx-1',
+      'tx-1-split-Essentials',
+      'tx-1-split-Growth',
+      'tx-1-split-Stability',
+      'tx-1-split-Rewards',
+    ])
+    expect(result[1]).toMatchObject({ amount: 500, isPendingSync: true, pendingSyncOperationId: ops[0].id })
+  })
+
+  it('re-derives the bucket rows when the salary is edited, and drops them once it is not income', () => {
+    const base = applyOpsToList(
+      [] as TestItem[],
+      [makeOp({ type: 'add', targetId: 'tx-1', payload: salary, isCompleted: true })],
+      'transaction',
+      { incomeAllocations },
+    )
+
+    const halved = applyOpsToList(
+      base,
+      [makeOp({ type: 'update', targetId: 'tx-1', payload: { ...salary, amount: 500 } })],
+      'transaction',
+      { incomeAllocations },
+    )
+    expect(halved.find(item => String(item.id) === 'tx-1-split-Essentials')).toMatchObject({ amount: 250 })
+
+    const expense = applyOpsToList(
+      base,
+      [makeOp({ type: 'update', targetId: 'tx-1', payload: { ...salary, amount: -40, ledgerCategory: 'Essentials' } })],
+      'transaction',
+      { incomeAllocations },
+    )
+    expect(expense.map(item => String(item.id))).toEqual(['tx-1'])
+  })
+
+  it('leaves the salary alone when no allocations are known', () => {
+    const ops = [makeOp({ type: 'add', targetId: 'tx-1', payload: salary })]
+
+    expect(applyOpsToList([] as TestItem[], ops, 'transaction').map(item => String(item.id))).toEqual(['tx-1'])
+  })
+})
+
 describe('applyOpsToList', () => {
   it('prepends a new item for an add op and marks it pending while uncompleted', () => {
     const base: TestItem[] = []

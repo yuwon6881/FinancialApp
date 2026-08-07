@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react'
-import { applyOpsToList, type QueuedOp, type EntityKind } from './outbox'
+import { applyOpsToList, type ApplyOpsOptions, type QueuedOp, type EntityKind } from './outbox'
 
 // Applies the pending/recently-completed sync queue on top of a server-fetched
 // list so optimistic adds/updates/deletes show immediately. Same useMemo shape
@@ -8,9 +8,10 @@ import { applyOpsToList, type QueuedOp, type EntityKind } from './outbox'
 export function useOptimisticList<T extends { id: string | number; isPendingSync?: boolean; isPendingDelete?: boolean }>(
   list: T[],
   activeOps: QueuedOp[],
-  entity: EntityKind
+  entity: EntityKind,
+  options?: ApplyOpsOptions
 ): T[] {
-  return useMemo(() => applyOpsToList(list, activeOps, entity), [activeOps, list])
+  return useMemo(() => applyOpsToList(list, activeOps, entity, options), [activeOps, list, options])
 }
 
 // Shared isSyncing/isDeleting row-status predicates, previously copy-pasted per

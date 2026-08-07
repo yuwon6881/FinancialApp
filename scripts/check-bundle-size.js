@@ -56,7 +56,10 @@ if (!fs.existsSync(distAssetsPath)) {
 // AnchoredPopover / DatePicker chunk onto this path for a modal most launches never open. For
 // reference it was ~219 kB before LazyMotion: framer-motion's 42 kB feature bundle sat on the
 // critical path and now does not.
-const CRITICAL_PATH_LIMIT_KB = 188.0
+// 188.5: raised from 188.0 for the optimistic income-split projection (lib/incomeSplitProjection.ts).
+// It has to sit here — the rows are generated in applyOpsToList, which the eager data hook runs on
+// every render — and without it a salary was the one mutation with no offline preview at all.
+const CRITICAL_PATH_LIMIT_KB = 188.5
 
 function criticalPathChunks(files) {
   const entry = files.find(f => /^index-.*\.js$/.test(f))

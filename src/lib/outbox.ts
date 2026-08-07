@@ -1,6 +1,7 @@
 import * as api from './api'
-import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentAllocationSleeve, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, PayEarlyResult, RecurringPayment, SavingsGoal, TaxReliefCategoryDefinition, Transaction, TransactionCategory, WishlistItem } from '../types'
+import type { CategoryFlowType, FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentAllocationSleeve, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, PayEarlyResult, RecurringPayment, SavingsGoal, TaxReliefCategoryDefinition, Transaction, TransactionCategory, WishlistItem } from '../types'
 import { buildMutationSuccessToast, buildUndoSuccessToast } from './mutationToast'
+import { projectIncomeSplitRows, type IncomeAllocations } from './incomeSplitProjection'
 
 export type EntityKind = 'transaction' | 'recurringPayment' | 'wishlistItem' | 'savingsGoal' | 'category' | 'settings'
   | 'investmentAccount' | 'investmentInstrument' | 'investmentActivity' | 'investmentCashFlow'
@@ -489,10 +490,26 @@ export function enqueue(
   return [...queue, newOp]
 }
 
+/** Generated bucket rows share their parent's sync state; nothing dispatches them on their own. */
+const splitRowState = (op: QueuedOp) => ({
+  isPendingSync: !op.isCompleted,
+  pendingSyncOperationId: op.isCompleted ? undefined : op.id,
+})
+
+export interface ApplyOpsOptions {
+  /**
+   * The stability-plan percentages, used only to project the bucket rows the server generates
+   * for a plain `Income` save (an `IncomeSplit:` row carries its own). Omitted, an income row
+   * still projects itself; only its four generated siblings wait for the refresh.
+   */
+  incomeAllocations?: IncomeAllocations
+}
+
 export function applyOpsToList<T extends { id: string | number; isPendingSync?: boolean; isPendingDelete?: boolean }>(
   baseList: T[],
   ops: QueuedOp[],
-  entity: EntityKind
+  entity: EntityKind,
+  options?: ApplyOpsOptions
 ): T[] {
   let result = baseList.map(item => ({ ...item }))
   const entityOps = ops.filter(op => op.entity === entity)
@@ -738,6 +755,9 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
           ? [...result, newItem]
           : [newItem, ...result]
       }
+      if (entity === 'transaction') {
+        result = projectIncomeSplitRows(result, targetStr, options?.incomeAllocations, splitRowState(op))
+      }
     } else if (op.type === 'update') {
       const existingIndex = result.findIndex(item => String(item.id) === targetStr)
       if (existingIndex >= 0) {
@@ -762,6 +782,11 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
             isPendingSync: !op.isCompleted
           }
         }
+      }
+      if (entity === 'transaction') {
+        // Editing a salary rewrites its bucket rows server-side, and editing income into an
+        // expense removes them, so re-derive rather than leaving the old set beside the new row.
+        result = projectIncomeSplitRows(result, targetStr, options?.incomeAllocations, splitRowState(op))
       }
     } else if (op.type === 'delete') {
       if (entity === 'transaction' && op.entity === 'wishlistItem') {
@@ -972,9 +997,12 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
   },
 
   'category:add': (op) => api.addCategory({ ...(op.payload as Partial<TransactionCategory>), id: op.targetId } as Omit<TransactionCategory, 'id'> & { id?: string }),
-  'category:update': (op) => api.updateCategoryCycleLimit(
+  'category:update': (op) => api.updateCategory(
     op.targetId,
-    typeof op.payload?.cycleLimit === 'number' ? op.payload.cycleLimit : null,
+    {
+      cycleLimit: typeof op.payload?.cycleLimit === 'number' ? op.payload.cycleLimit : (op.payload?.cycleLimit === null ? null : undefined),
+      type: typeof op.payload?.type === 'string' ? op.payload.type as CategoryFlowType : undefined,
+    },
   ),
   'category:delete': (op) => api.deleteCategory(op.targetId, typeof op.payload?.replacementCategoryId === 'string' ? op.payload.replacementCategoryId : undefined),
   'category:cleanup': (op) => api.applyCategoryCleanup(
