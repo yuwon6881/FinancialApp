@@ -85,7 +85,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
   return (
     <Card
       className={`flex flex-col gap-3 p-4 transition-colors duration-300 ${
-        fullWidth ? 'w-full' : 'snap-start shrink-0 w-[80vw] sm:w-[22rem]'
+        fullWidth ? 'w-full lg:max-w-xl' : 'snap-start shrink-0 w-[80vw] sm:w-[22rem]'
       } ${status === 'overdue' ? 'border-destructive/40' : 'border-border/60'}`}
     >
       <div className="min-w-0">

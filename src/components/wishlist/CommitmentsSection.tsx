@@ -30,6 +30,10 @@ interface CommitmentsSectionProps {
  * peek-cut `80vw` with no second card behind it, so the affordance that means "there is more this
  * way" reads as a card that simply does not fit the screen. Completed goals ride along as chips and
  * count toward that decision, since they occupy the same track.
+ *
+ * That lone card stops growing at `lg`: stretched to a desktop panel's full width its content —
+ * a name, two short bars and a row of small buttons — sat in a field of empty space that read as
+ * a broken layout rather than one goal, and the same card in a rail is only `22rem` wide.
  */
 export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
   pool,
@@ -76,7 +80,7 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
     <div
       key={goal.id}
       className={`flex flex-col justify-center gap-1 rounded-2xl border border-dashed border-border/60 bg-muted/20 p-4 ${
-        isSolo ? 'w-full' : 'snap-start shrink-0 w-36 sm:w-40'
+        isSolo ? 'w-full lg:max-w-xl' : 'snap-start shrink-0 w-36 sm:w-40'
       }`}
     >
       <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-500">
