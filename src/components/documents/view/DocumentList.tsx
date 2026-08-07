@@ -277,6 +277,8 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
             const isDeleting = deletingDocumentIds.has(document.id)
             const isSyncing = syncingDocumentIds.has(document.id)
             const isBusy = isDeleting || isSyncing
+            const pendingCategory = pendingReliefCategories.get(document.id)
+            const isReliefDraftChanged = pendingCategory !== undefined && pendingCategory !== (document.reliefCategory ?? '')
             return (
               <tr key={document.id} className="transition-colors hover:bg-muted/40" aria-busy={isBusy}>
                 {isSelecting && <td className="px-3 py-2.5"><Checkbox disabled={hideSensitive || isBusy} checked={selectedIds.has(document.id)} onChange={() => toggleSelected(document.id)} aria-label={`Select ${document.originalFileName}`} className="size-4 accent-primary" /></td>}
@@ -301,9 +303,17 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
                   </div>
                 </td>
                 <td className="px-3 py-2.5">
-                 <CustomSelect disabled={hideSensitive || isBusy} value={pendingReliefCategories.get(document.id) ?? document.reliefCategory ?? ''} onChange={value => onReliefCategoryChange(document.id, String(value))}
-                    options={[{ value: '', label: 'Uncategorised (legacy)', disabled: true }, ...documentReliefCategories.map(category => ({ value: category.id, label: category.name }))]}
-                    ariaLabel={`Tax relief category for ${document.originalFileName}`} className="w-40 max-w-40" />
+                  <div className="flex items-center gap-1.5">
+                    <CustomSelect
+                      disabled={hideSensitive || isBusy}
+                      value={pendingCategory ?? document.reliefCategory ?? ''}
+                      onChange={value => onReliefCategoryChange(document.id, String(value))}
+                      options={[{ value: '', label: 'Uncategorised (legacy)', disabled: true }, ...documentReliefCategories.map(category => ({ value: category.id, label: category.name }))]}
+                      ariaLabel={`Tax relief category for ${document.originalFileName}`}
+                      className={`w-40 max-w-40 ${isReliefDraftChanged ? 'rounded-lg ring-2 ring-blue-500/50' : ''}`}
+                    />
+                    {isReliefDraftChanged && <span className="inline-block size-1.5 shrink-0 rounded-full bg-blue-500" title="Unsaved change" />}
+                  </div>
                 </td>
                 <td className="px-3 py-2.5 font-bold text-foreground tabular-nums">{document.taxYear}</td>
                 <td className="px-3 py-2.5 text-muted-foreground tabular-nums">{formatBytes(document.sizeBytes)}</td>

@@ -170,4 +170,21 @@ describe('TaxReliefOverview sync status', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Manage limits' }))
     expect(screen.getByText('Syncing…')).toBeTruthy()
   })
+
+  it('shows unsaved draft indicator and ring highlight when category edit values differ from saved', () => {
+    renderOverview()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Manage limits' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+
+    // Initially draft matches server category, so no unsaved indicator is shown
+    expect(screen.queryByTitle('Unsaved change')).toBeNull()
+
+    // Modify the limit input
+    fireEvent.change(screen.getByLabelText(/Limit \(MYR\)/), { target: { value: '2000' } })
+
+    // Unsaved indicator dot and text appear
+    expect(screen.getByTitle('Unsaved change')).toBeTruthy()
+    expect(screen.getByText('Unsaved changes')).toBeTruthy()
+  })
 })

@@ -173,11 +173,12 @@ export function useDashboardView(options: UseDashboardViewOptions) {
   const wishlistGoal = useMemo(() => {
     if (!activeWishlistItem) return null
     const rewardsCategory = categories.find(c => c.name === 'Rewards')
-    const rewardsBalance = rewardsCategory?.remaining ?? 0
+    const pending = pendingDeductionsByCategory['Rewards'] || 0
+    const rewardsBalance = Math.max(0, (rewardsCategory?.remaining ?? 0) - pending)
     const pct = Math.max(0, Math.min(100, (rewardsBalance / activeWishlistItem.price) * 100))
     const canAfford = rewardsBalance >= activeWishlistItem.price
     return { item: activeWishlistItem, rewardsBalance, pct, canAfford }
-  }, [activeWishlistItem, categories])
+  }, [activeWishlistItem, categories, pendingDeductionsByCategory])
 
   // Disable the review button while the entered target matches the current balance.
   const isAdjustmentUnchanged = useMemo(() => {

@@ -83,6 +83,7 @@ export function DocumentCard({
   // turned the list into a form: ten required selects, nine of them already answered.
   const reliefId = pendingReliefCategory ?? document.reliefCategory ?? ''
   const reliefName = reliefCategories.find(category => category.id === reliefId)?.name
+  const isReliefDraftChanged = pendingReliefCategory !== undefined && pendingReliefCategory !== (document.reliefCategory ?? '')
   const [editingRelief, setEditingRelief] = useState(false)
   // An unset category has nothing to fall back to, so the picker stays open and there is no cancel —
   // the field is genuinely required. Once a category exists, opening the picker is reversible.
@@ -189,9 +190,14 @@ export function DocumentCard({
                 disabled={hideSensitive || isBusy}
                 onClick={() => setEditingRelief(true)}
                 aria-label={`Change tax relief category for ${document.originalFileName}`}
-                className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg border border-border/60 bg-muted/40 px-2 py-1 text-[10px] font-bold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                className={`inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1 text-[10px] font-bold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 ${
+                  isReliefDraftChanged
+                    ? 'border-blue-500/40 bg-blue-500/10 ring-2 ring-blue-500/50'
+                    : 'border-border/60 bg-muted/40'
+                }`}
               >
                 <span className="max-w-32 truncate">{reliefName}</span>
+                {isReliefDraftChanged && <span className="inline-block size-1.5 rounded-full bg-blue-500" title="Unsaved change" />}
                 <Pencil className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
               </Button>
             )}
@@ -200,8 +206,9 @@ export function DocumentCard({
           {showReliefPicker && (
             <div className="mt-3" onKeyDown={event => { if (event.key === 'Escape' && canCancelRelief) { event.stopPropagation(); setEditingRelief(false) } }}>
               <div className="mb-1.5 flex items-center justify-between gap-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Tax relief category <span className="text-destructive">*</span>
+                  {isReliefDraftChanged && <span className="inline-block size-1.5 rounded-full bg-blue-500" title="Unsaved change" />}
                 </p>
                 {canCancelRelief && (
                   <Button
@@ -228,7 +235,7 @@ export function DocumentCard({
                   ...reliefCategories.map(category => ({ value: category.id, label: category.name })),
                 ]}
                 ariaLabel={`Tax relief category for ${document.originalFileName}`}
-                className="w-full"
+                className={`w-full ${isReliefDraftChanged ? 'rounded-lg ring-2 ring-blue-500/50' : ''}`}
               />
             </div>
           )}
