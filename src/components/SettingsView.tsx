@@ -667,33 +667,51 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   </div>
                 </div>
 
+                {/* Same shape as the vault's selection toolbar: a one-row grid so the count can
+                    truncate instead of wrapping the actions onto a second line, with the way out
+                    sitting beside the way forward — an unsaved edit needs a free exit, and the only
+                    one before this was toggling every badge back by hand. */}
                 {changedFlowTypeCategories.length > 0 && (
-                  <div className="flex items-center justify-between rounded-xl border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-foreground animate-in fade-in duration-150">
-                    <span className="text-[11px] text-blue-600 dark:text-blue-400 font-bold">
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 animate-in fade-in duration-150">
+                    <span className="truncate text-[11px] font-bold text-primary">
                       {changedFlowTypeCategories.length} category flow type{changedFlowTypeCategories.length > 1 ? 's' : ''} modified
                     </span>
-                    <Button
-                      variant="unstyled"
-                      type="button"
-                      onClick={async () => {
-                        setIsSavingFlowTypes(true)
-                        try {
-                          for (const cat of changedFlowTypeCategories) {
-                            const draft = flowTypeDrafts[cat.id]
-                            if (draft) {
-                              await props.onUpdateCategoryType?.(cat.id, draft)
+                    <div className="flex shrink-0 items-center justify-end gap-1.5">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        onClick={() => setFlowTypeDrafts({})}
+                        disabled={isSavingFlowTypes || hideSensitive}
+                        className="bg-card"
+                      >
+                        Discard
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        type="button"
+                        onClick={async () => {
+                          setIsSavingFlowTypes(true)
+                          try {
+                            for (const cat of changedFlowTypeCategories) {
+                              const draft = flowTypeDrafts[cat.id]
+                              if (draft) {
+                                await props.onUpdateCategoryType?.(cat.id, draft)
+                              }
                             }
+                          } finally {
+                            setIsSavingFlowTypes(false)
                           }
-                        } finally {
-                          setIsSavingFlowTypes(false)
-                        }
-                      }}
-                      disabled={isSavingFlowTypes || hideSensitive}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1 text-[11px] font-bold text-primary-foreground shadow-sm hover:bg-blue-700 transition cursor-pointer disabled:opacity-50"
-                    >
-                      {isSavingFlowTypes ? <Loader2 className="size-3 animate-spin" /> : <Save className="size-3" />}
-                      Save Flow Types
-                    </Button>
+                        }}
+                        disabled={isSavingFlowTypes || hideSensitive}
+                        aria-busy={isSavingFlowTypes}
+                        className="shrink-0"
+                      >
+                        {isSavingFlowTypes ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+                        {isSavingFlowTypes ? 'Saving…' : 'Save'}
+                      </Button>
+                    </div>
                   </div>
                 )}
 
