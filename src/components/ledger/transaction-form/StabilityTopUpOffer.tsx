@@ -72,7 +72,7 @@ export function StabilityTopUpOffer({
       </div>
 
       {!accepted && (
-        <p className="mt-1.5 pl-7 text-xs leading-relaxed text-muted-foreground">
+        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
           {offer.proposedTopUp >= offer.maxTopUp
             ? <>Suggested: {money(offer.proposedTopUp)}, which clears what is left.</>
             : <>Suggested: {money(offer.proposedTopUp)} of the {money(offer.maxTopUp)} still to go.</>}
@@ -80,7 +80,7 @@ export function StabilityTopUpOffer({
       )}
 
       {accepted && (
-        <div className="mt-3 pl-7 space-y-3">
+        <div className="mt-3 space-y-3">
           <div>
             <label htmlFor={amountId} className="mb-1 block text-xs font-medium text-muted-foreground">
               Amount to put back (up to {money(offer.maxTopUp)})

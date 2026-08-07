@@ -120,6 +120,16 @@ export function LedgerFilterBar({
   const hasInvalidDateRange = !!startDate && !!endDate && startDate > endDate
   const hasInvalidRange = hasInvalidAmountRange || hasInvalidDateRange
 
+  const availableCategories = React.useMemo(() => {
+    return categories.filter(c => {
+      if (c.isPendingDelete) return false
+      if (txType === 'inflow' || txType === 'outflow') {
+        return !c.type || c.type === 'both' || c.type === txType
+      }
+      return true
+    })
+  }, [categories, txType])
+
   const advancedFilterControls = (
     <div className="space-y-4 border-t border-border/40 pt-4 lg:border-t-0 lg:pt-0">
       <div className="space-y-2">
@@ -401,7 +411,7 @@ export function LedgerFilterBar({
                   <div className="space-y-2">
                     <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Categories</span>
                     <div className="grid grid-cols-2 gap-1.5">
-                      {categories.map(c => {
+                      {availableCategories.map(c => {
                         const isChecked = checkboxFilters.includes(c.name)
                         return (
                           <label
@@ -508,7 +518,7 @@ export function LedgerFilterBar({
               <div className="space-y-2">
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Categories</span>
                 <div className="grid grid-cols-1 gap-1.5 pr-0.5">
-                  {categories.map(c => {
+                  {availableCategories.map(c => {
                     const isChecked = checkboxFilters.includes(c.name)
                     return (
                       <label

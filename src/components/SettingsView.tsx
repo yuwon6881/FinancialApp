@@ -110,6 +110,23 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
   })
 
   const [newCatType, setNewCatType] = React.useState<CategoryFlowType>('both')
+  const [flowTypeDrafts, setFlowTypeDrafts] = React.useState<Record<string, CategoryFlowType>>({})
+  const [isSavingFlowTypes, setIsSavingFlowTypes] = React.useState(false)
+
+  React.useEffect(() => {
+    if (props.categories) {
+      setFlowTypeDrafts(Object.fromEntries(props.categories.map(c => [c.id, c.type || 'both'])))
+    }
+  }, [props.categories])
+
+  const changedFlowTypeCategories = React.useMemo(() => {
+    return (props.categories || []).filter(c => {
+      const draft = flowTypeDrafts[c.id]
+      const current = c.type || 'both'
+      return draft != null && draft !== current
+    })
+  }, [props.categories, flowTypeDrafts])
+
   const [activeTab, setActiveTab] = React.useState<'financial-model' | 'investment-plan' | 'categories-preferences' | 'security'>(() => {
     if (typeof window !== 'undefined') {
       const search = window.location.search
@@ -650,6 +667,36 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   </div>
                 </div>
 
+                {changedFlowTypeCategories.length > 0 && (
+                  <div className="flex items-center justify-between rounded-xl border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-foreground animate-in fade-in duration-150">
+                    <span className="text-[11px] text-blue-600 dark:text-blue-400 font-bold">
+                      {changedFlowTypeCategories.length} category flow type{changedFlowTypeCategories.length > 1 ? 's' : ''} modified
+                    </span>
+                    <Button
+                      variant="unstyled"
+                      type="button"
+                      onClick={async () => {
+                        setIsSavingFlowTypes(true)
+                        try {
+                          for (const cat of changedFlowTypeCategories) {
+                            const draft = flowTypeDrafts[cat.id]
+                            if (draft) {
+                              await props.onUpdateCategoryType?.(cat.id, draft)
+                            }
+                          }
+                        } finally {
+                          setIsSavingFlowTypes(false)
+                        }
+                      }}
+                      disabled={isSavingFlowTypes || hideSensitive}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1 text-[11px] font-bold text-primary-foreground shadow-sm hover:bg-blue-700 transition cursor-pointer disabled:opacity-50"
+                    >
+                      {isSavingFlowTypes ? <Loader2 className="size-3 animate-spin" /> : <Save className="size-3" />}
+                      Save Flow Types
+                    </Button>
+                  </div>
+                )}
+
                 <ManageableNameList
                   items={categoryRows.map(({ category, count }) => ({ ...category, count }))}
                   itemLabel="Category"
@@ -659,35 +706,40 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   validateName={name => ['transfer', 'adjustment'].includes(name.toLowerCase()) ? 'Name is a reserved word.' : null}
                   onAdd={name => props.onAddCategory({ name, type: newCatType })}
                   onDelete={item => view.handleDeleteCategory(item.id)}
-                  renderName={item => (
-                    <div className="flex items-center gap-2">
-                      <span className={`inline-flex shrink-0 items-center rounded border px-2 py-0.5 font-semibold ${getCategoryBadgeClass(item.name)}`}>
-                        {item.name}
-                      </span>
-                      <button
-                        type="button"
-                        disabled={hideSensitive}
-                        onClick={() => {
-                          const current = item.type || 'both'
-                          const next: CategoryFlowType = current === 'both' ? 'inflow' : current === 'inflow' ? 'outflow' : 'both'
-                          props.onUpdateCategoryType?.(item.id, next)
-                        }}
-                        title="Click to toggle flow restriction (Both → Inflow → Outflow)"
-                        className={`inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold transition hover:scale-105 active:scale-95 disabled:opacity-50 ${
-                          (item.type || 'both') === 'inflow'
-                            ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                            : (item.type || 'both') === 'outflow'
-                              ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                              : 'border-border/60 bg-muted/40 text-muted-foreground'
-                        }`}
-                      >
-                        {(item.type || 'both') === 'inflow' && <ArrowDownLeft className="size-2.5" />}
-                        {(item.type || 'both') === 'outflow' && <ArrowUpRight className="size-2.5" />}
-                        {(item.type || 'both') === 'both' && <ArrowLeftRight className="size-2.5" />}
-                        <span className="capitalize">{item.type || 'both'}</span>
-                      </button>
-                    </div>
-                  )}
+                  renderName={item => {
+                    const activeType = flowTypeDrafts[item.id] || item.type || 'both'
+                    const isDraftChanged = flowTypeDrafts[item.id] != null && flowTypeDrafts[item.id] !== (item.type || 'both')
+                    return (
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex shrink-0 items-center rounded border px-2 py-0.5 font-semibold ${getCategoryBadgeClass(item.name)}`}>
+                          {item.name}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={hideSensitive}
+                          onClick={() => {
+                            const current = flowTypeDrafts[item.id] || item.type || 'both'
+                            const next: CategoryFlowType = current === 'both' ? 'inflow' : current === 'inflow' ? 'outflow' : 'both'
+                            setFlowTypeDrafts(prev => ({ ...prev, [item.id]: next }))
+                          }}
+                          title="Click to toggle flow restriction (Both → Inflow → Outflow)"
+                          className={`inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold transition hover:scale-105 active:scale-95 disabled:opacity-50 ${
+                            activeType === 'inflow'
+                              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                              : activeType === 'outflow'
+                                ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                : 'border-border/60 bg-muted/40 text-muted-foreground'
+                          } ${isDraftChanged ? 'ring-2 ring-blue-500/50' : ''}`}
+                        >
+                          {activeType === 'inflow' && <ArrowDownLeft className="size-2.5" />}
+                          {activeType === 'outflow' && <ArrowUpRight className="size-2.5" />}
+                          {activeType === 'both' && <ArrowLeftRight className="size-2.5" />}
+                          <span className="capitalize">{activeType}</span>
+                          {isDraftChanged && <span className="size-1.5 rounded-full bg-blue-500 inline-block" title="Unsaved change" />}
+                        </button>
+                      </div>
+                    )
+                  }}
                   renderMeta={item => item.count === 0
                     ? <span className="truncate text-[10px] font-semibold text-orange-500">Unused</span>
                     : item.count != null && item.count <= view.RARELY_USED_MAX_COUNT

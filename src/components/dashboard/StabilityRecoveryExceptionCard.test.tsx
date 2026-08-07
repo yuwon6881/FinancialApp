@@ -56,7 +56,8 @@ describe('StabilityRecoveryExceptionCard', () => {
     expect(screen.getByText('Your emergency fund is below where it was')).toBeTruthy()
     expect(screen.getByText(/You used \$3000\.00 from your emergency fund/)).toBeTruthy()
     expect(screen.getByText(/Spread over 3 cycles/)).toBeTruthy()
-    expect(screen.getByText(/Emergency fund progress: 70% of/)).toBeTruthy()
+    expect(screen.getByText('Emergency fund progress')).toBeTruthy()
+    expect(screen.getByText(/70%/)).toBeTruthy()
   })
 
   it('says so plainly on the last cycle of the plan', () => {

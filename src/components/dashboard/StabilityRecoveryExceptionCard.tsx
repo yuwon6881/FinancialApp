@@ -69,17 +69,18 @@ export function StabilityRecoveryExceptionCard({
                   : <>Spread over {recovery.cyclesRemaining} cycles that is about {formatSensitive(recovery.requiredThisCycle)} each time.</>}
             </p>
 
-            <div className="flex flex-wrap items-center gap-3 pt-1">
-              <div className="flex items-center gap-2">
-                <div className="h-1.5 w-24 rounded-full bg-amber-500/20 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-amber-500 transition-all duration-300"
-                    style={{ width: `${Math.min(100, Math.max(0, percentReached))}%` }}
-                  />
-                </div>
-                <span className="text-[11px] font-semibold text-muted-foreground">
-                  Emergency fund progress: {percentReached}% of {formatSensitive(recovery.target)}.
+            <div className="space-y-1.5 pt-1">
+              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs">
+                <span className="font-semibold text-muted-foreground">Emergency fund progress</span>
+                <span className="font-semibold text-foreground tabular-nums">
+                  <span className="font-extrabold text-amber-600 dark:text-amber-400">{percentReached}%</span> of {formatSensitive(recovery.target)}
                 </span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-amber-500/20 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-amber-500 transition-all duration-300"
+                  style={{ width: `${Math.min(100, Math.max(0, percentReached))}%` }}
+                />
               </div>
             </div>
           </div>
