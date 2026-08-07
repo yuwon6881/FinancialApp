@@ -93,7 +93,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               <p className="mt-1 text-xs text-muted-foreground">Trends, plan performance, and activity for {view.cycleLabel}.</p>
             </div>
           </div>
-          <div className="grid w-full grid-cols-[minmax(0,1fr)_5.5rem_auto] gap-2 sm:grid-cols-[minmax(14rem,1fr)_7rem_auto] lg:w-auto lg:min-w-[25rem]">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:flex-nowrap lg:w-auto">
             <CustomSelect
               ariaLabel="Report cycle"
               value={view.activeSettings.selectedMonth}
@@ -102,14 +102,14 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 value: month,
                 label: getCycleLabelForDropdown(month, view.activeSettings.selectedYear, view.activeSettings.cycleDay),
               }))}
-              className="w-full"
+              className="flex-1 min-w-[9.5rem] sm:w-52 sm:flex-initial"
             />
             <CustomSelect
               ariaLabel="Report year"
               value={view.activeSettings.selectedYear}
               onChange={year => onSelectPeriod(view.activeSettings.selectedMonth, Number(year))}
               options={view.years.map(year => ({ value: year, label: String(year) }))}
-              className="w-full"
+              className="w-20 shrink-0 sm:w-24"
               align="right"
             />
             {selectedCycleEnded && onViewCycleSummary && (
@@ -118,7 +118,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 onClick={() => onViewCycleSummary(selectedMonthIndex, view.activeSettings.selectedYear)}
                 aria-label="View cycle summary"
                 title="View cycle summary"
-                className="flex size-9 self-center items-center justify-center rounded-lg border border-blue-500/20 bg-blue-500/10 text-blue-500 transition hover:bg-blue-500/20 cursor-pointer sm:h-9 sm:w-auto sm:gap-1.5 sm:px-3"
+                className="flex h-9 shrink-0 items-center justify-center rounded-lg border border-blue-500/20 bg-blue-500/10 text-blue-500 transition hover:bg-blue-500/20 cursor-pointer px-2.5 sm:gap-1.5 sm:px-3"
               >
                 <ChartNoAxesCombined className="size-3.5" />
                 <span className="hidden whitespace-nowrap text-xs font-bold sm:inline">Summary</span>
@@ -129,6 +129,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 variant="secondary"
                 size="sm"
                 type="button"
+                className="shrink-0 px-2.5 sm:px-3"
                 onClick={() => onExplainWithAi(`${view.activeSettings.selectedYear}-${String(selectedMonthIndex).padStart(2, '0')}`)}
                 aria-label="Explain this cycle with Ask AI"
               >

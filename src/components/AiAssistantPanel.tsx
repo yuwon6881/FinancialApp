@@ -244,14 +244,14 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
               </div>
               <p className="font-medium text-foreground">Ready.</p>
               {isOffline && <p className="mt-2 text-[11px] font-medium text-orange-500">Ask AI requires an internet connection.</p>}
-              <div role="group" aria-label="Suggested questions" className="mt-4 grid w-full max-w-md grid-cols-1 gap-2">
+              <div role="group" aria-label="Suggested questions" className="mt-4 flex w-full max-w-md flex-col items-center gap-2">
                 {suggestedPrompts.map(prompt => (
                   <button
                     key={prompt}
                     type="button"
                     disabled={isOffline}
                     onClick={() => setInput(prompt)}
-                    className="w-full rounded-xl border border-border/60 bg-background px-3 py-2 text-left text-[11px] leading-4 text-muted-foreground transition hover:border-primary/50 hover:text-foreground cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
+                    className="w-auto max-w-full rounded-full border border-border/60 bg-background px-4 py-2 text-center text-[11px] leading-4 text-muted-foreground transition hover:border-primary/50 hover:text-foreground cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
                   >
                     {prompt}
                   </button>

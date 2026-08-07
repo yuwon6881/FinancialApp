@@ -63,7 +63,7 @@ const ReportsHeaderSkeleton: React.FC = () => (
   <div className="app-panel rounded-2xl border border-border/60 bg-card/92 p-4 sm:p-6">
     <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex items-center gap-3"><Skeleton className="size-10 rounded-xl" /><div className="space-y-2"><Skeleton className="h-6 w-28" /><Skeleton className="h-3 w-72 max-w-full" /></div></div>
-      <div className="grid w-full grid-cols-[minmax(0,1fr)_5.5rem_auto] gap-2 sm:grid-cols-[minmax(14rem,1fr)_7rem_auto] lg:w-96"><Skeleton className="h-9 rounded-xl" /><Skeleton className="h-9 rounded-xl" /><Skeleton className="size-9 rounded-lg" /></div>
+      <div className="flex w-full flex-wrap items-center gap-2 sm:flex-nowrap lg:w-auto"><Skeleton className="h-9 flex-1 min-w-[9.5rem] rounded-xl sm:w-52 sm:flex-initial" /><Skeleton className="h-9 w-20 shrink-0 rounded-xl sm:w-24" /><Skeleton className="h-9 w-24 shrink-0 rounded-lg" /></div>
     </div>
   </div>
 )

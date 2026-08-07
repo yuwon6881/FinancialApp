@@ -83,13 +83,14 @@ describe('AiAssistantPanel', () => {
     expect(screen.getAllByRole('button').filter(button => !button.getAttribute('title'))).toHaveLength(3)
   })
 
-  it('keeps each prompt suggestion on its own full-width row', () => {
+  it('keeps each prompt suggestion in a centered column stack with text-dependent pill widths', () => {
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} />)
     const suggestions = screen.getByRole('group', { name: 'Suggested questions' })
 
-    expect(suggestions.className).toContain('grid-cols-1')
+    expect(suggestions.className).toContain('flex-col')
+    expect(suggestions.className).toContain('items-center')
     expect(suggestions.querySelectorAll('button')).toHaveLength(3)
-    expect(Array.from(suggestions.querySelectorAll('button')).every(button => button.className.includes('w-full'))).toBe(true)
+    expect(Array.from(suggestions.querySelectorAll('button')).every(button => button.className.includes('max-w-full') && button.className.includes('text-center'))).toBe(true)
   })
 
   it('hydrates the active server conversation on first open', async () => {
