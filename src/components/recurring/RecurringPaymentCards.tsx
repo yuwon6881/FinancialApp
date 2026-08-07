@@ -1,9 +1,9 @@
 import React from 'react'
 import { m, AnimatePresence } from 'framer-motion'
-import { Calendar, CreditCard, Edit, FastForward, Repeat, Trash2 } from 'lucide-react'
+import { Calendar, CreditCard, Edit, FastForward, Repeat, Trash2, Wallet } from 'lucide-react'
 import type { RecurringPayment, RecurringReminderSettings } from '../../types'
 import { listContainerVariants, listItemVariants, listItemExit } from '../../lib/animations'
-import { isEligibleForPayEarly, normalizeRecurringFrequency } from '../../lib/recurringPayments'
+import { isEligibleForPayEarly, normalizeRecurringFrequency, RECURRING_PAYMENT_MODE_LABELS } from '../../lib/recurringPayments'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
 import { Button } from '../ui/Button'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
@@ -123,6 +123,17 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
                   </span>
                   <span className={`inline-block px-1.5 py-0.5 rounded-md border font-semibold ${getCategoryBadgeClass(rp.ledgerCategory)}`}>
                     {rp.ledgerCategory}
+                  </span>
+                </div>
+                {/* Stated on every card because it is the reason Pay Early is or isn't offered
+                    below -- without it, an auto-deducted bill just looks like a card missing a
+                    button. */}
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground flex items-center gap-1.5">
+                    <Wallet className="size-3.5" /> How it&rsquo;s paid
+                  </span>
+                  <span className="text-foreground font-medium">
+                    {RECURRING_PAYMENT_MODE_LABELS[rp.paymentMode]}
                   </span>
                 </div>
                 {rp.endDate && (

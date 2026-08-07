@@ -47,6 +47,8 @@ describe('RecurringPaymentsView form', () => {
     fireEvent.change(screen.getAllByLabelText('billing date')[0], { target: { value: '2026-07-20' } })
     fireEvent.click(screen.getByRole('combobox', { name: 'Payment frequency' }))
     fireEvent.click(screen.getByRole('option', { name: 'Annually' }))
+    fireEvent.click(screen.getByRole('combobox', { name: /How it's paid/ }))
+    fireEvent.click(screen.getByRole('option', { name: 'Manual payment' }))
     fireEvent.click(screen.getByRole('button', { name: 'Add Subscription' }))
 
     expect(onAddPayment).toHaveBeenCalledWith(expect.objectContaining({

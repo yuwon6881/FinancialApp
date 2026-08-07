@@ -1,4 +1,4 @@
-import type { RecurringFrequency, RecurringPayment, RecurringReminderMode, RecurringReminderSettings } from '../types'
+import type { RecurringFrequency, RecurringPayment, RecurringPaymentMode, RecurringReminderMode, RecurringReminderSettings } from '../types'
 
 export function normalizeRecurringFrequency(value: unknown): RecurringFrequency {
   return value === 'Annually' ? 'Annually' : 'Monthly'
@@ -52,9 +52,23 @@ export function hasBillingEnded(
   return payment.endDate < formatDateOnly(today)
 }
 
+// What the two payment modes are called on screen. Kept next to the eligibility rule so no call
+// site spells the words itself and the stored codes never reach the UI.
+export const RECURRING_PAYMENT_MODE_LABELS: Record<RecurringPaymentMode, string> = {
+  AutoDeduct: 'Auto deduct',
+  Manual: 'Manual payment',
+}
+
 // "Pay Early" is only offered for an active subscription whose next due date is strictly in
 // the future -- due-today/overdue subscriptions keep the normal pay flow unchanged.
-export function isEligibleForPayEarly(payment: Pick<RecurringPayment, 'active' | 'nextDueDate'>, today: Date = new Date()): boolean {
+export function isEligibleForPayEarly(
+  payment: Pick<RecurringPayment, 'active' | 'nextDueDate' | 'paymentMode'>,
+  today: Date = new Date()
+): boolean {
+  // An auto-deducted bill is moved by the bank on its own schedule, so there is nothing to bring
+  // forward -- paying it here would record money that is still going to leave on the due date.
+  // The server enforces the same rule; this only keeps the button off screen.
+  if (payment.paymentMode === 'AutoDeduct') return false
   if (!payment.active) return false
   const dueDate = parseDateOnly(payment.nextDueDate)
   const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate())

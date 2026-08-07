@@ -2,12 +2,13 @@ import { Input } from '../ui/Input'
 import React from 'react'
 import { Edit, Plus } from 'lucide-react'
 import type { RecurringFrequency, RecurringPayment, TransactionCategory } from '../../types'
+import { RECURRING_PAYMENT_MODE_LABELS } from '../../lib/recurringPayments'
 import { getCurrencySymbol } from '../../lib/utils'
 import { CustomSelect } from '../ui/CustomSelect'
 import { DatePicker } from '../ui/DatePicker'
 import { BottomSheet } from '../ui/BottomSheet'
 import { SmartAmountInput } from '../ui/SmartAmountInput'
-import type { RecurringLedgerCategory } from './useRecurringPaymentsView'
+import type { RecurringLedgerCategory, RecurringPaymentModeSelection } from './useRecurringPaymentsView'
 import { FormField } from '../ui/FormField'
 import { Button } from '../ui/Button'
 import { ModalActions } from '../ui/ModalActions'
@@ -23,6 +24,7 @@ interface RecurringPaymentFormSheetProps {
   frequency: RecurringFrequency
   startDateInput: string
   endDateInput: string
+  paymentMode: RecurringPaymentModeSelection
   categories: TransactionCategory[]
   currency: string
   firstInputRef: React.RefObject<HTMLInputElement | null>
@@ -33,6 +35,7 @@ interface RecurringPaymentFormSheetProps {
   onFrequencyChange: (value: RecurringFrequency) => void
   onStartDateChange: (value: string) => void
   onEndDateChange: (value: string) => void
+  onPaymentModeChange: (value: RecurringPaymentModeSelection) => void
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void
   onCancel: () => void
 }
@@ -49,6 +52,7 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
   frequency,
   startDateInput,
   endDateInput,
+  paymentMode,
   categories,
   currency,
   firstInputRef,
@@ -59,6 +63,7 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
   onFrequencyChange,
   onStartDateChange,
   onEndDateChange,
+  onPaymentModeChange,
   onSubmit,
   onCancel,
 }) => {
@@ -127,6 +132,31 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
             options={[
               { value: 'Monthly', label: 'Monthly' },
               { value: 'Annually', label: 'Annually' }
+            ]}
+            className="w-full"
+          />
+        </FormField>
+
+        {/* The explanation is a FormField hint rather than an InfoHint: the label is this
+            control's accessible name, so a popover button inside it would be read out as part
+            of the name, and a hint is wired to aria-describedby instead. */}
+        <FormField
+          label="How it's paid"
+          required
+          error={errors.paymentMode}
+          hint="Auto deduct means the money leaves your account on its own each cycle. Manual payment means you send it yourself — only these can be paid early."
+        >
+          <CustomSelect
+            ariaLabel="How it's paid"
+            value={paymentMode}
+            onChange={onPaymentModeChange}
+            invalid={Boolean(errors.paymentMode)}
+            options={[
+              // The empty option is what gives the untouched trigger its prompt; CustomSelect
+              // refuses to select a disabled option, so it can never be submitted.
+              { value: '', label: 'Choose how it’s paid', disabled: true },
+              { value: 'AutoDeduct', label: RECURRING_PAYMENT_MODE_LABELS.AutoDeduct },
+              { value: 'Manual', label: RECURRING_PAYMENT_MODE_LABELS.Manual }
             ]}
             className="w-full"
           />

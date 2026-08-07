@@ -277,6 +277,12 @@ export type RecurringFrequency = 'Monthly' | 'Annually'
 // from `leadDays` before the due date through the due date itself.
 export type RecurringReminderMode = 'Once' | 'Daily'
 
+// How the money actually leaves the account. 'AutoDeduct' means the bank moves it on the due date;
+// 'Manual' means the user sends it themselves each cycle -- and only those can be paid ahead of
+// time, since a direct debit cannot be brought forward. See lib/recurringPayments's
+// isEligibleForPayEarly, which is the single place that decision is made.
+export type RecurringPaymentMode = 'AutoDeduct' | 'Manual'
+
 export interface RecurringPayment {
   id: string
   name: string
@@ -288,6 +294,9 @@ export interface RecurringPayment {
   dueDate: number // Day of month (1-31)
   startDate: string // Date (yyyy-MM-dd)
   active: boolean
+  // Required, not optional: the server migration backfilled every existing row to 'Manual', so a
+  // payment without a mode is a bug rather than a state to render around.
+  paymentMode: RecurringPaymentMode
   endDate?: string
   isPendingSync?: boolean
   /** Internal optimistic projection marker for a queue op that changes this row indirectly. */

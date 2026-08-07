@@ -16,6 +16,7 @@ const basePayment: RecurringPayment = {
   dueDate: 20,
   startDate: '2026-01-20',
   active: true,
+  paymentMode: 'Manual',
 }
 
 const noop = () => {}
@@ -126,6 +127,30 @@ describe('RecurringPaymentCards pay early', () => {
     const inactive: RecurringPayment = { ...basePayment, active: false }
     renderCards([inactive])
     expect(screen.queryByRole('button', { name: /Pay Early/ })).toBeNull()
+  })
+
+  it('hides Pay Early for an auto deducted subscription', () => {
+    const autoDeducted: RecurringPayment = { ...basePayment, paymentMode: 'AutoDeduct' }
+    renderCards([autoDeducted])
+    expect(screen.queryByRole('button', { name: /Pay Early/ })).toBeNull()
+  })
+})
+
+describe('RecurringPaymentCards payment mode', () => {
+  beforeAll(() => {
+    Element.prototype.scrollIntoView = vi.fn()
+  })
+
+  // The card has to say which mode it is, otherwise an auto-deducted bill just looks like a card
+  // whose Pay Early button went missing.
+  it('states how a manual subscription is paid', () => {
+    renderCards([basePayment])
+    expect(screen.getByText('Manual payment')).toBeTruthy()
+  })
+
+  it('states how an auto deducted subscription is paid', () => {
+    renderCards([{ ...basePayment, paymentMode: 'AutoDeduct' }])
+    expect(screen.getByText('Auto deduct')).toBeTruthy()
   })
 })
 

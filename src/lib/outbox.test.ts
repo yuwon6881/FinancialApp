@@ -43,6 +43,7 @@ interface TestItem {
   ledgerCategory?: string
   amount?: number
   dueDate?: number
+  paymentMode?: string
   wishlistItemId?: number
   recurringPaymentId?: string | null
   active?: boolean
@@ -415,6 +416,34 @@ describe('optimistic list ordering', () => {
       'Music',
       'Streaming',
     ])
+  })
+
+  it('projects the payment mode onto an optimistic recurring payment', () => {
+    // Without this the row renders as auto deduct until the next fetch, which silently withholds
+    // Pay Early from a bill the user just told us they pay by hand.
+    const ops = [makeOp({
+      entity: 'recurringPayment',
+      type: 'add',
+      targetId: 'rec-b',
+      payload: { name: 'Music', amount: 10, dueDate: 15, paymentMode: 'Manual' },
+    })]
+
+    const projected = applyOpsToList([] as TestItem[], ops, 'recurringPayment')
+
+    expect(projected[0].paymentMode).toBe('Manual')
+    expect(projected[0].isPendingSync).toBe(true)
+  })
+
+  it('projects a payment mode change from a queued recurring update', () => {
+    const base: TestItem[] = [{ id: 'rec-a', name: 'Gym', amount: 10, paymentMode: 'Manual' }]
+    const ops = [makeOp({
+      entity: 'recurringPayment',
+      type: 'update',
+      targetId: 'rec-a',
+      payload: { name: 'Gym', amount: 10, paymentMode: 'AutoDeduct' },
+    })]
+
+    expect(applyOpsToList(base, ops, 'recurringPayment')[0].paymentMode).toBe('AutoDeduct')
   })
 
   it('appends optimistic tax relief categories in the API insertion order', () => {

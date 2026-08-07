@@ -141,6 +141,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         frequency={view.frequency}
         startDateInput={view.startDateInput}
         endDateInput={view.endDateInput}
+        paymentMode={view.paymentMode}
         categories={categories}
         currency={currency}
         firstInputRef={view.firstInputRef}
@@ -151,6 +152,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         onFrequencyChange={view.setFrequency}
         onStartDateChange={view.handleStartDateChange}
         onEndDateChange={view.setEndDateInput}
+        onPaymentModeChange={view.handlePaymentModeChange}
         onSubmit={view.handleSubmit}
         onCancel={view.handleCancelForm}
       />

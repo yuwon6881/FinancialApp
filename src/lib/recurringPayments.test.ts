@@ -67,20 +67,26 @@ describe('hasBillingEnded', () => {
 describe('isEligibleForPayEarly', () => {
   const today = new Date(2024, 5, 15)
 
-  it('is eligible for an active payment strictly due in the future', () => {
-    expect(isEligibleForPayEarly({ active: true, nextDueDate: '2024-06-20' }, today)).toBe(true)
+  it('is eligible for an active manual payment strictly due in the future', () => {
+    expect(isEligibleForPayEarly({ active: true, nextDueDate: '2024-06-20', paymentMode: 'Manual' }, today)).toBe(true)
   })
 
   it('is not eligible for an inactive payment', () => {
-    expect(isEligibleForPayEarly({ active: false, nextDueDate: '2024-06-20' }, today)).toBe(false)
+    expect(isEligibleForPayEarly({ active: false, nextDueDate: '2024-06-20', paymentMode: 'Manual' }, today)).toBe(false)
   })
 
   it('is not eligible when due today', () => {
-    expect(isEligibleForPayEarly({ active: true, nextDueDate: '2024-06-15' }, today)).toBe(false)
+    expect(isEligibleForPayEarly({ active: true, nextDueDate: '2024-06-15', paymentMode: 'Manual' }, today)).toBe(false)
   })
 
   it('is not eligible when overdue', () => {
-    expect(isEligibleForPayEarly({ active: true, nextDueDate: '2024-06-01' }, today)).toBe(false)
+    expect(isEligibleForPayEarly({ active: true, nextDueDate: '2024-06-01', paymentMode: 'Manual' }, today)).toBe(false)
+  })
+
+  // The bank moves an auto-deducted bill on its own schedule, so there is nothing to bring forward
+  // even when the occurrence is otherwise perfectly payable.
+  it('is not eligible for an auto deducted payment due in the future', () => {
+    expect(isEligibleForPayEarly({ active: true, nextDueDate: '2024-06-20', paymentMode: 'AutoDeduct' }, today)).toBe(false)
   })
 })
 

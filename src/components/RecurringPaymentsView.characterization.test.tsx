@@ -36,6 +36,7 @@ const payments: RecurringPayment[] = [
     dueDate: 15,
     startDate: '2026-07-15',
     active: true,
+    paymentMode: 'Manual',
   },
   {
     id: 'rp-2',
@@ -49,6 +50,7 @@ const payments: RecurringPayment[] = [
     startDate: '2026-01-01',
     active: true,
     endDate: '2027-01-01',
+    paymentMode: 'AutoDeduct',
   },
   {
     id: 'rp-3',
@@ -61,6 +63,7 @@ const payments: RecurringPayment[] = [
     dueDate: 3,
     startDate: '2026-03-03',
     active: false,
+    paymentMode: 'Manual',
   },
   {
     id: 'rp-4',
@@ -73,6 +76,7 @@ const payments: RecurringPayment[] = [
     dueDate: 22,
     startDate: '2026-07-22',
     active: true,
+    paymentMode: 'Manual',
   },
 ]
 
@@ -101,6 +105,13 @@ const getCard = (name: string): HTMLElement => {
 
 const getToggleButton = (card: HTMLElement): HTMLElement => {
   return within(card).getByRole('switch', { name: /^(Pause|Resume) / })
+}
+
+// The name matcher is a regex because FormField appends an sr-only " (required)" to the label,
+// which is this control's accessible name.
+const choosePaymentMode = (label: 'Auto deduct' | 'Manual payment') => {
+  fireEvent.click(screen.getByRole('combobox', { name: /How it's paid/ }))
+  fireEvent.click(screen.getByRole('option', { name: label }))
 }
 
 describe('RecurringPaymentsView characterization', () => {
@@ -248,7 +259,42 @@ describe('RecurringPaymentsView characterization', () => {
       expect(screen.getByText('Subscription name is required.')).toBeTruthy()
       expect(screen.getByText('Billing amount is required.')).toBeTruthy()
       expect(screen.getByText('Start billing date is required.')).toBeTruthy()
+      expect(screen.getByText('Choose whether this bill is auto deducted or paid manually.')).toBeTruthy()
       expect(onAddPayment).not.toHaveBeenCalled()
+    })
+
+    // The mode has no default on purpose: guessing it would either offer Pay Early on a direct
+    // debit or hide it from a bill the user does pay by hand.
+    it('blocks an otherwise complete submission until a payment mode is chosen', () => {
+      const onAddPayment = vi.fn()
+      render(<RecurringPaymentsView {...makeProps({ onAddPayment })} />)
+      fireEvent.click(screen.getByRole('button', { name: 'New Subscription' }))
+      fireEvent.change(screen.getByPlaceholderText('e.g. Netflix, Spotify'), { target: { value: 'Water Bill' } })
+      fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '42.50' } })
+      fireEvent.change(screen.getAllByLabelText('billing date')[0], { target: { value: '2026-07-31' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Add Subscription' }))
+
+      expect(screen.getByText('Choose whether this bill is auto deducted or paid manually.')).toBeTruthy()
+      expect(onAddPayment).not.toHaveBeenCalled()
+
+      choosePaymentMode('Auto deduct')
+      expect(screen.queryByText('Choose whether this bill is auto deducted or paid manually.')).toBeNull()
+      fireEvent.click(screen.getByRole('button', { name: 'Add Subscription' }))
+
+      expect(onAddPayment).toHaveBeenCalledWith(expect.objectContaining({ paymentMode: 'AutoDeduct' }))
+    })
+
+    it('carries the chosen manual mode into the new subscription', () => {
+      const onAddPayment = vi.fn()
+      render(<RecurringPaymentsView {...makeProps({ onAddPayment })} />)
+      fireEvent.click(screen.getByRole('button', { name: 'New Subscription' }))
+      fireEvent.change(screen.getByPlaceholderText('e.g. Netflix, Spotify'), { target: { value: 'Rent' } })
+      fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '900.00' } })
+      fireEvent.change(screen.getAllByLabelText('billing date')[0], { target: { value: '2026-07-05' } })
+      choosePaymentMode('Manual payment')
+      fireEvent.click(screen.getByRole('button', { name: 'Add Subscription' }))
+
+      expect(onAddPayment).toHaveBeenCalledWith(expect.objectContaining({ paymentMode: 'Manual' }))
     })
 
     it('rejects a non-positive amount', () => {
@@ -274,6 +320,7 @@ describe('RecurringPaymentsView characterization', () => {
       fireEvent.change(screen.getByPlaceholderText('e.g. Netflix, Spotify'), { target: { value: 'Water Bill' } })
       fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '42.50' } })
       fireEvent.change(screen.getAllByLabelText('billing date')[0], { target: { value: '2026-07-31' } })
+      choosePaymentMode('Manual payment')
       fireEvent.click(screen.getByRole('button', { name: 'Add Subscription' }))
 
       expect(onAddPayment).toHaveBeenCalledWith(expect.objectContaining({
@@ -409,6 +456,13 @@ describe('RecurringPaymentsView characterization', () => {
       expect((screen.getByPlaceholderText('e.g. Netflix, Spotify') as HTMLInputElement).value).toBe('Disney+')
       expect((screen.getByPlaceholderText('0.00') as HTMLInputElement).value).toBe('12.50')
 
+      // The assistant does not know how a bill leaves the account, so a draft cannot satisfy the
+      // payment-mode requirement on the user's behalf.
+      fireEvent.click(screen.getByRole('button', { name: 'Add Subscription' }))
+      expect(onAddPayment).not.toHaveBeenCalled()
+      expect(screen.getByText('Choose whether this bill is auto deducted or paid manually.')).toBeTruthy()
+
+      choosePaymentMode('Manual payment')
       fireEvent.click(screen.getByRole('button', { name: 'Add Subscription' }))
       expect(onAddPayment).toHaveBeenCalledWith(expect.objectContaining({
         name: 'Disney+',
@@ -418,7 +472,21 @@ describe('RecurringPaymentsView characterization', () => {
         startDate: '2026-08-01',
         dueDate: 1,
         active: true,
+        paymentMode: 'Manual',
       }))
+    })
+
+    it('applies a payment mode supplied by an aiDraft', () => {
+      const onAddPayment = vi.fn()
+      render(
+        <RecurringPaymentsView
+          {...makeProps({ onAddPayment })}
+          aiDraft={{ nonce: 1, fields: { name: 'Disney+', amount: 12.5, startDate: '2026-08-01', paymentMode: 'AutoDeduct' } }}
+        />,
+      )
+
+      fireEvent.click(screen.getByRole('button', { name: 'Add Subscription' }))
+      expect(onAddPayment).toHaveBeenCalledWith(expect.objectContaining({ paymentMode: 'AutoDeduct' }))
     })
 
     it('opens the edit form for an aiEditDraft target with changes applied on top', () => {

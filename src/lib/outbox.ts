@@ -29,6 +29,7 @@ export interface OutboxPayload {
   reminderEnabled?: boolean
   reminderMode?: string
   reminderLeadDays?: number
+  paymentMode?: string
   occurrenceDate?: string
   optimisticNextOccurrenceDate?: string
   settledOccurrenceDate?: string

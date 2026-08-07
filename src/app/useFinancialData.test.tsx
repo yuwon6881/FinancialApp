@@ -24,6 +24,7 @@ const payment: RecurringPayment = {
   dueDate: 1,
   startDate: '2026-01-01',
   active: true,
+  paymentMode: 'Manual',
   reminderEnabled: false,
   reminderMode: 'Once',
   reminderLeadDays: 0,

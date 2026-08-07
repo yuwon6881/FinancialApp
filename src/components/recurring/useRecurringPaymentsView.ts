@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import type { RecurringPayment, RecurringFrequency, TransactionCategory } from '../../types'
+import type { RecurringPayment, RecurringFrequency, RecurringPaymentMode, TransactionCategory } from '../../types'
 import { maskCurrencyInput } from '../../lib/utils'
 import { useSyncStatus } from '../../lib/useOptimisticList'
 import { useAutoOpenModal } from '../../lib/useAutoOpenModal'
@@ -12,6 +12,15 @@ export type RecurringLedgerCategory = typeof RECURRING_LEDGER_CATEGORIES[number]
 
 function isRecurringLedgerCategory(value: string): value is RecurringLedgerCategory {
   return (RECURRING_LEDGER_CATEGORIES as readonly string[]).includes(value)
+}
+
+// '' is the "not chosen yet" state of the add form's payment-mode select. There is deliberately no
+// default: guessing wrong here silently offers Pay Early on a direct debit, or hides it from a bill
+// the user does pay by hand, so the choice is made explicitly once per subscription.
+export type RecurringPaymentModeSelection = RecurringPaymentMode | ''
+
+function isRecurringPaymentMode(value: string): value is RecurringPaymentMode {
+  return value === 'AutoDeduct' || value === 'Manual'
 }
 
 export interface UseRecurringPaymentsViewOptions {
@@ -67,6 +76,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
   const [frequency, setFrequency] = useState<RecurringFrequency>('Monthly')
   const [startDateInput, setStartDateInput] = useState('')
   const [endDateInput, setEndDateInput] = useState('')
+  const [paymentMode, setPaymentMode] = useState<RecurringPaymentModeSelection>('')
 
   const firstInputRef = React.useRef<HTMLInputElement>(null)
 
@@ -99,6 +109,10 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     if (nextStartDate !== null) setStartDateInput(nextStartDate)
     const nextEndDate = getString('endDate')
     if (nextEndDate !== null) setEndDateInput(nextEndDate)
+    // A draft that names no mode (or an unrecognised one) leaves the select empty rather than
+    // picking for the user -- the assistant does not know how the bill leaves the account.
+    const nextPaymentMode = getString('paymentMode')
+    if (nextPaymentMode && isRecurringPaymentMode(nextPaymentMode)) setPaymentMode(nextPaymentMode)
   }, [])
 
   React.useEffect(() => {
@@ -111,6 +125,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     setFrequency('Monthly')
     setStartDateInput('')
     setEndDateInput('')
+    setPaymentMode('')
     applyAiRecurringFields(aiDraft.fields)
     setShowAddForm(true)
     onAiDraftConsumed?.()
@@ -134,6 +149,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     setFrequency(normalizeRecurringFrequency(payment.frequency))
     setStartDateInput(payment.startDate)
     setEndDateInput(payment.endDate || '')
+    setPaymentMode(payment.paymentMode)
     setEditingPayment(payment)
     applyAiRecurringFields(aiEditDraft.changes)
     setShowAddForm(true)
@@ -231,12 +247,18 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     if (!startDateInput) {
       newErrors.startDate = 'Start billing date is required.'
     }
+    if (!paymentMode) {
+      newErrors.paymentMode = 'Choose whether this bill is auto deducted or paid manually.'
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
       focusFirstInvalidField(e.currentTarget)
       return
     }
+    // Reported above already; repeated here so the type narrows to a real mode rather than needing
+    // a cast on the payload.
+    if (!paymentMode) return
     setErrors({})
 
     // Parse the start date to extract the day of the month as DueDate
@@ -254,7 +276,9 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
       nextDueDate: startDateInput,
       dueDate: dueDay,
       startDate: startDateInput,
-      endDate: endDateInput || undefined
+      endDate: endDateInput || undefined,
+      // Narrowed by the validation above: an empty selection never reaches here.
+      paymentMode
     }
 
     if (editingPayment) {
@@ -278,6 +302,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     setLedgerCategory('Essentials')
     setFrequency('Monthly')
     setCategory(categories.length > 0 ? categories[0].name : '')
+    setPaymentMode('')
     setEditingPayment(null)
     setShowAddForm(false)
     setErrors({})
@@ -291,6 +316,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     setLedgerCategory('Essentials')
     setFrequency('Monthly')
     setCategory(categories.length > 0 ? categories[0].name : '')
+    setPaymentMode('')
     setEditingPayment(null)
     setShowAddForm(false)
     setErrors({})
@@ -315,6 +341,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     setFrequency(normalizeRecurringFrequency(rp.frequency))
     setStartDateInput(rp.startDate)
     setEndDateInput(rp.endDate || '')
+    setPaymentMode(rp.paymentMode)
     setEditingPayment(rp)
     setShowAddForm(true)
   }
@@ -331,6 +358,13 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     handleAmountChange(e)
     if (errors.amount) {
       setErrors(prev => ({ ...prev, amount: '' }))
+    }
+  }
+
+  const handlePaymentModeChange = (value: RecurringPaymentModeSelection) => {
+    setPaymentMode(value)
+    if (errors.paymentMode) {
+      setErrors(prev => ({ ...prev, paymentMode: '' }))
     }
   }
 
@@ -366,6 +400,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     frequency,
     startDateInput,
     endDateInput,
+    paymentMode,
     firstInputRef,
     // form handlers
     toggleAddForm,
@@ -375,6 +410,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     handleNameChange,
     handleAmountFieldChange,
     handleStartDateChange,
+    handlePaymentModeChange,
     setCategory,
     setLedgerCategory,
     setFrequency,
