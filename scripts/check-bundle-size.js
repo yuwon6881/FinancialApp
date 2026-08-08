@@ -59,7 +59,10 @@ if (!fs.existsSync(distAssetsPath)) {
 // 188.5: raised from 188.0 for the optimistic income-split projection (lib/incomeSplitProjection.ts).
 // It has to sit here — the rows are generated in applyOpsToList, which the eager data hook runs on
 // every render — and without it a salary was the one mutation with no offline preview at all.
-const CRITICAL_PATH_LIMIT_KB = 188.5
+// 188.6: raised from 188.5 for the background price-refresh indicator pill
+// (useInvestmentPortfolio.ts isSyncRefreshing state + isBackgroundRefreshing derived value).
+// InvestmentsView itself is lazy, but the shared chunk it pulls in grew by ~0.04 kB gzip.
+const CRITICAL_PATH_LIMIT_KB = 188.6
 
 function criticalPathChunks(files) {
   const entry = files.find(f => /^index-.*\.js$/.test(f))
