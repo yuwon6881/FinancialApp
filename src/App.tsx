@@ -362,6 +362,7 @@ function App() {
     hasQueuedWrites: financial.pendingOps.length > 0,
   })
   const currentPendingNotifications = todayDashboardData?.pendingNotifications || []
+  const wishlistDashboardData = todayDashboardData || financial.optimisticDashboardData
   const wishlistRewardsCategory = wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')
   const wishlistPendingRewardsDeduction = (wishlistDashboardData?.activeRecurringPayments || []).reduce((sum, rp) => {
     if (rp.status === 'Pending' && (rp.ledgerCategory || rp.category) === 'Rewards') {
