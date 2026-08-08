@@ -146,6 +146,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
       isOpen={isOpen}
       onClose={handleClose}
       maxWidthClassName="max-w-2xl"
+      ariaLabel="ASK AI"
       title={
         <span className="flex items-center gap-2">
           <Sparkles className="size-4 text-accent-ink" />

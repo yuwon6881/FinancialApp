@@ -78,4 +78,15 @@ describe('BottomSheet HCI contract', () => {
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(closeLower).toHaveBeenCalledTimes(1)
   })
+
+  it('uses an explicit accessible name when supplied', () => {
+    render(
+      <BottomSheet isOpen title="Internal title" ariaLabel="Public title" onClose={vi.fn()}>
+        <Button>First action</Button>
+      </BottomSheet>,
+    )
+
+    expect(screen.getByRole('dialog', { name: 'Public title' })).toBeTruthy()
+    expect(screen.queryByRole('dialog', { name: 'Internal title' })).toBeNull()
+  })
 })
