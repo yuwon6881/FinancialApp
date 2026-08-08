@@ -123,4 +123,17 @@ describe('computeIncomeLedgerCategory', () => {
     const result = computeIncomeLedgerCategory({ ...base, stabilityBalance: 10000, stabilityTarget: 10000 })
     expect(result.startsWith('IncomeSplit:')).toBe(true)
   })
+
+  it('treats a zero Stability target as no cap', () => {
+    expect(computeIncomeLedgerCategory({ ...base, stabilityTarget: 0 })).toBe('Income')
+  })
+
+  it('keeps an explicitly accepted recovery top-up when the Stability target is zero', () => {
+    const result = computeIncomeLedgerCategory({ ...base, stabilityTarget: 0, recoveryTopUp: 40 })
+    const shares = result.slice('IncomeSplit:'.length).split(',').map(Number)
+
+    expect(result.startsWith('IncomeSplit:')).toBe(true)
+    expect(shares[2]).toBeCloseTo(24, 4)
+    expect(shares.reduce((sum, share) => sum + share, 0)).toBeCloseTo(100, 4)
+  })
 })

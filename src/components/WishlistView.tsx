@@ -30,6 +30,7 @@ interface WishlistViewProps {
   wishlist: WishlistItem[]
   savingsGoals: SavingsGoal[]
   rewardsBalance: number
+  pendingRewardsDeduction?: number
   rewardsTarget: number
   pastThreeMonthsRewardsAverage: number
   hasRewardsHistory: boolean
@@ -83,6 +84,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   wishlist,
   savingsGoals,
   rewardsBalance,
+  pendingRewardsDeduction = 0,
   rewardsTarget,
   pastThreeMonthsRewardsAverage,
   hasRewardsHistory,
@@ -205,8 +207,8 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   const todayKey = new Date().toLocaleDateString('en-CA')
   const today = React.useMemo(() => new Date(`${todayKey}T00:00:00`), [todayKey])
   const pool = useMemo(
-    () => summarizePool(savingsGoals, rewardsBalance, rewardsTarget, today, cycleDay),
-    [savingsGoals, rewardsBalance, rewardsTarget, today, cycleDay],
+    () => summarizePool(savingsGoals, rewardsBalance, rewardsTarget, today, cycleDay, pendingRewardsDeduction),
+    [savingsGoals, rewardsBalance, rewardsTarget, today, cycleDay, pendingRewardsDeduction],
   )
 
   const completedGoals = useMemo(

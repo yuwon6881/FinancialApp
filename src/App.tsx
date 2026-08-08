@@ -43,6 +43,7 @@ import { prefetchFingerprintAssertOptions } from './lib/fingerprintOptionsCache'
 import { readAppLocation, updateAppSearch } from './lib/appLocation'
 import { mutationBusyLabel } from './components/ui/rowSyncState'
 import type { AiInvocationContext } from './lib/api/ai'
+import { calculateFreeRewardsBalance } from './lib/freeRewards'
 
 // Instant, flash-free placeholder while a lazily-loaded chunk is fetched at the root level.
 const ViewFallback = () => <div className="app-shell min-h-screen" />
@@ -363,14 +364,22 @@ function App() {
   })
   const currentPendingNotifications = todayDashboardData?.pendingNotifications || []
   const wishlistDashboardData = todayDashboardData || financial.optimisticDashboardData
-  const wishlistPendingRewardsDeduction = wishlistDashboardData?.activeRecurringPayments?.reduce(
-    (sum, rp) => rp.status === 'Pending' && (rp.ledgerCategory || rp.category) === 'Rewards' ? sum + Math.abs(rp.amount) : sum,
-    0,
-  ) || 0
-  const wishlistRewardsBalance = Math.max(0, (wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')?.remaining ?? 0) - wishlistPendingRewardsDeduction)
+  // The shared helper owns the free-balance calculation below; this local reduction only extracts
+  // the pending bill amount needed by the Wishlist pool's display.
+  const wishlistPendingRewardsDeduction = wishlistDashboardData?.activeRecurringPayments?.reduce((sum, rp) => {
+    if (rp.status !== 'Pending') return sum
+    const category = rp.ledgerCategory || rp.category
+    return category === 'Rewards' ? sum + Math.abs(rp.amount) : sum
+  }, 0) ?? 0
+  const wishlistRewardsBalance = wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')?.remaining ?? 0
+  const wishlistFreeRewardsBalance = calculateFreeRewardsBalance(
+    wishlistRewardsBalance,
+    financial.allSavingsGoals,
+    wishlistPendingRewardsDeduction,
+  )
   useEffect(() => {
-    rewardsBalanceRef.current = wishlistRewardsBalance
-  }, [wishlistRewardsBalance])
+    rewardsBalanceRef.current = wishlistFreeRewardsBalance
+  }, [wishlistFreeRewardsBalance])
 
   // End-of-cycle summary: fires once when a new cycle begins (persisted server-side so it can't
   // re-fire on navigation or on another device), and is re-openable from Reports for any ended
@@ -595,6 +604,7 @@ function App() {
           todayDashboardData={todayDashboardData}
           wishlistDashboardData={wishlistDashboardData}
           wishlistRewardsBalance={wishlistRewardsBalance}
+          wishlistPendingRewardsDeduction={wishlistPendingRewardsDeduction}
           currentPendingNotificationsCount={currentPendingNotifications.length}
           currentCycleMonth={currentCycleMonth}
           currentCycleYear={currentCyclePeriod.year}

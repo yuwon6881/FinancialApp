@@ -1,7 +1,7 @@
 import { Button } from './ui/Button'
 import React from 'react'
 import { BarChart3, ChartNoAxesCombined, ChevronRight, Sparkles, TrendingUp } from 'lucide-react'
-import type { AppTab, DashboardData, Transaction, WishlistItem } from '../types'
+import type { AppTab, DashboardData, SavingsGoal, Transaction, WishlistItem } from '../types'
 import { useAppPrefs } from '../contexts/AppContext'
 import { getCycleLabelForDropdown } from '../lib/cycleLabels'
 import { getCycleProgress } from '../lib/cycle'
@@ -23,6 +23,7 @@ interface ReportsViewProps {
   dashboardData: DashboardData | null
   transactions: Transaction[]
   wishlist?: WishlistItem[]
+  savingsGoals?: SavingsGoal[]
   hideBalanceAmounts: boolean
   onSelectPeriod: (month: string, year: number) => void
   onNavigate?: (tab: AppTab) => void
@@ -50,6 +51,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   dashboardData,
   transactions,
   wishlist = [],
+  savingsGoals = [],
   hideBalanceAmounts,
   onSelectPeriod,
   onNavigate = () => undefined,
@@ -67,6 +69,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   const view = useDashboardView({
     dashboardData,
     wishlist,
+    savingsGoals,
     hideSensitive,
     hideBalanceAmounts,
     onAddBalanceAdjustment,

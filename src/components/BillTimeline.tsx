@@ -169,10 +169,10 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
 
     const isDiscardedTx = (t: Transaction) => String(t.ledgerCategory || '').toLowerCase() === 'discarded'
 
-    // Transactions confirmed as recurring bills carry a real recurringPaymentId link (set at
-    // confirmation time and never cleared even if the RecurringPayment is later deleted) --
-    // that's the authoritative match. Fuzzy name/category matching is kept only as a fallback
-    // for transactions recorded before that link existed.
+    // The current-cycle API row is an occurrence snapshot: its status is derived server-side from
+    // the exact RecurringOccurrenceDate, so it outranks every client-side transaction heuristic.
+    // Fuzzy matching remains only for legacy cached rows that predate the status field. Future-cycle
+    // rows are synthesized locally and may only be settled by the explicit pay-early link below.
     const matchedTxIds = new Set<string>()
     // recurringPaymentIds already represented by a rawList entry this cycle -- the historical
     // fallback below must never add a second entry for one of these, regardless of whether its
@@ -190,9 +190,12 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
         return { ...p, isPaid: false, isDiscarded: true, status: 'Discarded' as const }
       }
 
-      const isServerPaid = p.status === 'Paid'
+      const hasAuthoritativeStatus = cycleOffset === 0 && (
+        p.status === 'Pending' || p.status === 'Paid' || p.status === 'Discarded'
+      )
+      const isServerPaid = hasAuthoritativeStatus && p.status === 'Paid'
 
-      const matchingTx = (transactions || []).find(t => {
+      const matchingTx = !hasAuthoritativeStatus ? (transactions || []).find(t => {
         if (!isInCycle(t.date)) return false
         // A pay-early transaction for the *next* cycle will share the same
         // recurringPaymentId but its date will be the early-payment date (today),
@@ -219,7 +222,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
         const categoryMatch = catLower !== '' && catLower === pNameLower
 
         return nameMatch || categoryMatch
-      })
+      }) : undefined
 
       // For upcoming-cycle bills (cycleOffset > 0), also look for a pay-early transaction
       // that was recorded in the previous cycle (before this cycle started) with a matching

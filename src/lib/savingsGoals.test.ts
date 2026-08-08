@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest'
 import type { SavingsGoal } from '../types'
 import {
   computePace,
+  calculateFreeRewardsBalance,
   cyclesRemaining,
   cyclesToFund,
   distribute,
   getPaceStatus,
   orderForFunding,
+  pendingRewardsAmount,
   summarizePool,
   unassigned,
 } from './savingsGoals'
@@ -275,6 +277,29 @@ describe('unassigned', () => {
   })
 })
 
+describe('free Rewards balance', () => {
+  it('subtracts active earmarks and pending Rewards bills before a claim', () => {
+    const active = newGoal({ earmarkedAmount: 300 })
+    const completed = newGoal({ id: 2, earmarkedAmount: 200, status: 'completed' })
+    const pendingRewards = {
+      status: 'Pending' as const,
+      amount: 150,
+      ledgerCategory: 'Rewards',
+      category: 'Entertainment',
+    }
+    const paidRewards = { ...pendingRewards, status: 'Paid' as const }
+    const pendingEssentials = { ...pendingRewards, ledgerCategory: 'Essentials' }
+
+    expect(pendingRewardsAmount([pendingRewards, paidRewards, pendingEssentials])).toBe(150)
+    expect(calculateFreeRewardsBalance(1000, [active, completed], 150)).toBe(550)
+  })
+
+  it('clamps the free amount at zero and ignores goals queued out of the pool', () => {
+    const pendingDelete = newGoal({ earmarkedAmount: 900, isPendingDelete: true })
+    expect(calculateFreeRewardsBalance(100, [pendingDelete], 150)).toBe(0)
+  })
+})
+
 describe('summarizePool', () => {
   it('splits one balance into what goals claim and what is free', () => {
     const goals = [
@@ -359,6 +384,20 @@ describe('summarizePool', () => {
 
     expect(summary.totalEarmarked).toBe(0.3)
     expect(summary.unassigned).toBe(0)
+  })
+
+  it('keeps pending Rewards subscriptions out of the pool and free remainder', () => {
+    const summary = summarizePool(
+      [newGoal({ earmarkedAmount: 300 })],
+      1000,
+      0,
+      TODAY,
+      CYCLE_DAY,
+      150,
+    )
+
+    expect(summary.rewardsBalance).toBe(850)
+    expect(summary.unassigned).toBe(550)
   })
 })
 

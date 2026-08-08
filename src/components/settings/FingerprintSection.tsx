@@ -35,6 +35,9 @@ export function FingerprintSection() {
   }
   useEffect(() => {
     void load().catch(console.error)
+    // A credential-creation call is not a silent capability probe: browsers show their native
+    // passkey prompt before the promise can be cancelled. Only the explicit setup action below
+    // may invoke WebAuthn creation.
     void isPlatformAuthenticatorAvailable().then(setAvailable)
   }, [])
 
@@ -44,32 +47,6 @@ export function FingerprintSection() {
     if (stored === 'already_enrolled') return true
     return credentials.some(credential => credential.id.toUpperCase() === stored)
   }, [credentials, username])
-
-  useEffect(() => {
-    if (!credentialsLoaded || credentials.length === 0 || enrolledHere || !available || !username) return
-    let active = true
-    const probe = async () => {
-      try {
-        const { options } = await api.getFingerprintRegisterOptions()
-        if (!active) return
-        const controller = new AbortController()
-        const timer = setTimeout(() => controller.abort(), 100)
-        try {
-          await createFingerprintCredential(options, controller.signal)
-        } finally {
-          clearTimeout(timer)
-        }
-      } catch (error) {
-        if (!active) return
-        if (getErrorName(error) === 'InvalidStateError') {
-          rememberExistingDeviceUnlock(username)
-          await load()
-        }
-      }
-    }
-    void probe().catch(() => undefined)
-    return () => { active = false }
-  }, [credentialsLoaded, credentials.length, enrolledHere, available, username])
 
   const enabledOnAccount = credentials.length > 0
   const status = !credentialsLoaded

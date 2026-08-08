@@ -1,5 +1,5 @@
 import React from 'react'
-import type { DashboardData, WishlistItem, AppTab, InvestmentAllocationOverview } from '../types'
+import type { DashboardData, SavingsGoal, WishlistItem, AppTab, InvestmentAllocationOverview } from '../types'
 import { CycleSkeleton } from './ui/Skeleton'
 import { useAppPrefs } from '../contexts/AppContext'
 import { DashboardHeader } from './dashboard/DashboardHeader'
@@ -32,6 +32,7 @@ interface DashboardViewProps {
     showAllCycles?: boolean;
   }) => void
   wishlist?: WishlistItem[]
+  savingsGoals?: SavingsGoal[]
   isSwitchingCycle?: boolean
   investmentAllocation?: InvestmentAllocationOverview | null
   /** Opens Reports focused on the category limit breakdown. Falls back to plain Reports. */
@@ -48,6 +49,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenNotifications,
   onNavigateToLedger,
   wishlist = [],
+  savingsGoals = [],
   isSwitchingCycle = false,
   investmentAllocation = null,
   onNavigateToCategoryLimits,
@@ -62,6 +64,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const view = useDashboardView({
     dashboardData,
     wishlist,
+    savingsGoals,
     hideSensitive,
     hideBalanceAmounts,
   })

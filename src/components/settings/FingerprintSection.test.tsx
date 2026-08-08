@@ -2,19 +2,23 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { FingerprintSection } from './FingerprintSection'
 
+const { createFingerprintCredential, getFingerprintRegisterOptions } = vi.hoisted(() => ({
+  createFingerprintCredential: vi.fn(),
+  getFingerprintRegisterOptions: vi.fn(),
+}))
 const listFingerprintCredentials = vi.fn()
 const deleteFingerprintCredential = vi.fn()
 
 vi.mock('../../lib/api', () => ({
   listFingerprintCredentials: () => listFingerprintCredentials(),
-  getFingerprintRegisterOptions: vi.fn(),
+  getFingerprintRegisterOptions,
   verifyFingerprintRegistration: vi.fn(),
   deleteFingerprintCredential: (id: string) => deleteFingerprintCredential(id),
 }))
 
 vi.mock('../../lib/webauthn', () => ({
   base64UrlToHex: vi.fn((value: string) => value),
-  createFingerprintCredential: vi.fn(),
+  createFingerprintCredential,
   getFriendlyDeviceLabel: vi.fn(() => 'This device'),
   isPlatformAuthenticatorAvailable: vi.fn(async () => true),
 }))
@@ -27,6 +31,8 @@ vi.mock('../../contexts/AppContext', () => ({
 describe('FingerprintSection', () => {
   beforeEach(() => {
     localStorage.clear()
+    getFingerprintRegisterOptions.mockReset()
+    createFingerprintCredential.mockReset()
     deleteFingerprintCredential.mockReset()
     listFingerprintCredentials.mockResolvedValue([
       { id: 'credential-on-another-device', deviceLabel: 'Other phone' },
@@ -43,6 +49,14 @@ describe('FingerprintSection', () => {
     fireEvent.click(screen.getByRole('button', { name: /Device Unlock/i }))
 
     expect(await screen.findByRole('button', { name: 'Set up this device' })).toBeTruthy()
+  })
+
+  it('does not open a native passkey prompt while the security tab loads', async () => {
+    render(<FingerprintSection />)
+
+    expect(await screen.findByText('Available')).toBeTruthy()
+    expect(getFingerprintRegisterOptions).not.toHaveBeenCalled()
+    expect(createFingerprintCredential).not.toHaveBeenCalled()
   })
 
   it('shows a row-level state while removing a credential', async () => {

@@ -3,11 +3,13 @@ import type {
   ActiveRecurringPayment,
   CategorySummary,
   DashboardData,
+  SavingsGoal,
   Transaction,
   WishlistItem,
 } from '../../types'
 import { maskCurrencyInput } from '../../lib/utils'
 import { getActiveWishlistItem } from '../../lib/wishlist'
+import { calculateFreeRewardsBalance } from '../../lib/freeRewards'
 import {
   formatCompactSensitiveAmount,
   formatCurrencyAmount,
@@ -27,13 +29,21 @@ export interface PendingBalanceAdjustment {
 export interface UseDashboardViewOptions {
   dashboardData: DashboardData | null
   wishlist: WishlistItem[]
+  savingsGoals?: SavingsGoal[]
   hideSensitive: boolean
   hideBalanceAmounts: boolean
   onAddBalanceAdjustment?: (newTx: Omit<Transaction, 'id'>) => Promise<void> | void
 }
 
 export function useDashboardView(options: UseDashboardViewOptions) {
-  const { dashboardData, wishlist, hideSensitive, hideBalanceAmounts, onAddBalanceAdjustment } = options
+  const {
+    dashboardData,
+    wishlist,
+    savingsGoals = [],
+    hideSensitive,
+    hideBalanceAmounts,
+    onAddBalanceAdjustment,
+  } = options
 
   // Active wishlist item for dashboard progress display
   const activeWishlistItem = useMemo(() => getActiveWishlistItem(wishlist), [wishlist])
@@ -174,11 +184,11 @@ export function useDashboardView(options: UseDashboardViewOptions) {
     if (!activeWishlistItem) return null
     const rewardsCategory = categories.find(c => c.name === 'Rewards')
     const pending = pendingDeductionsByCategory['Rewards'] || 0
-    const rewardsBalance = Math.max(0, (rewardsCategory?.remaining ?? 0) - pending)
+    const rewardsBalance = calculateFreeRewardsBalance(rewardsCategory?.remaining ?? 0, savingsGoals, pending)
     const pct = Math.max(0, Math.min(100, (rewardsBalance / activeWishlistItem.price) * 100))
     const canAfford = rewardsBalance >= activeWishlistItem.price
     return { item: activeWishlistItem, rewardsBalance, pct, canAfford }
-  }, [activeWishlistItem, categories, pendingDeductionsByCategory])
+  }, [activeWishlistItem, categories, pendingDeductionsByCategory, savingsGoals])
 
   // Disable the review button while the entered target matches the current balance.
   const isAdjustmentUnchanged = useMemo(() => {

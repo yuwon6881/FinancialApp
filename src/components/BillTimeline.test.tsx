@@ -82,7 +82,7 @@ describe('BillTimeline', () => {
     expect(screen.queryByText('Paid On')).toBeNull()
   })
 
-  it('marks subscription as paid when a transaction matches description', () => {
+  it('keeps a server-pending occurrence pending despite a fuzzy description match', () => {
     render(
       <BillTimeline
         activeRecurringPayments={sampleActiveRecurring}
@@ -101,9 +101,69 @@ describe('BillTimeline', () => {
     const badgeButton = screen.getAllByText('ChatGPT Plus')[0]
     fireEvent.click(badgeButton)
 
-    // 'Paid' shows on both the timeline badge and the open detail sheet.
+    expect(screen.queryByText('Paid')).toBeNull()
+    expect(screen.queryByText('Paid On')).toBeNull()
+  })
+
+  it('keeps a pending occurrence pending when a linked transaction names a different occurrence', () => {
+    render(
+      <BillTimeline
+        activeRecurringPayments={sampleActiveRecurring}
+        transactions={[{ ...matchingTxByDescription, recurringPaymentId: 'rp-chatgpt', recurringOccurrenceDate: '2026-10-27' }]}
+        selectedMonth="Aug"
+        selectedYear={2026}
+        cycleDay={28}
+        currency="MYR"
+        hideSensitive={false}
+      />
+    )
+
+    fireEvent.click(screen.getByText('Subscriptions Billing Timeline'))
+    fireEvent.click(screen.getAllByText('ChatGPT Plus')[0])
+
+    expect(screen.queryByText('Paid')).toBeNull()
+    expect(screen.queryByText('Paid On')).toBeNull()
+  })
+
+  it('uses the server-paid occurrence status even without a transaction in the client list', () => {
+    render(
+      <BillTimeline
+        activeRecurringPayments={[{ ...sampleActiveRecurring[0], status: 'Paid', isPaid: true, paidDate: '2026-08-03' }]}
+        transactions={[]}
+        selectedMonth="Aug"
+        selectedYear={2026}
+        cycleDay={28}
+        currency="MYR"
+        hideSensitive={false}
+      />
+    )
+
+    fireEvent.click(screen.getByText('Subscriptions Billing Timeline'))
+    fireEvent.click(screen.getAllByText('ChatGPT Plus')[0])
+
     expect(screen.getAllByText('Paid').length).toBeGreaterThan(0)
     expect(screen.getByText('Paid On')).toBeTruthy()
+    expect(screen.getByText('2026-08-03')).toBeTruthy()
+  })
+
+  it('keeps the legacy undated transaction fallback for cached rows without a status', () => {
+    const legacyRow = { ...sampleActiveRecurring[0], status: undefined, isPaid: false } as unknown as ActiveRecurringPayment
+    render(
+      <BillTimeline
+        activeRecurringPayments={[legacyRow]}
+        transactions={[matchingTxByDescription]}
+        selectedMonth="Aug"
+        selectedYear={2026}
+        cycleDay={28}
+        currency="MYR"
+        hideSensitive={false}
+      />
+    )
+
+    fireEvent.click(screen.getByText('Subscriptions Billing Timeline'))
+    fireEvent.click(screen.getAllByText('ChatGPT Plus')[0])
+
+    expect(screen.getAllByText('Paid').length).toBeGreaterThan(0)
     expect(screen.getByText('2026-08-29')).toBeTruthy()
   })
 })

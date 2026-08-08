@@ -95,9 +95,12 @@ export function computeIncomeLedgerCategory(input: IncomeSplitInput): string {
     recoveryTopUp = 0,
   } = input
 
-  const isCapReached = stabilityBalance >= stabilityTarget
+  // A target of zero means the user has chosen not to cap Stability. It is not a zero-sized fund
+  // that should redirect every normal income split; the server applies the same no-target rule.
+  const hasStabilityTarget = stabilityTarget > 0
+  const isCapReached = hasStabilityTarget && stabilityBalance >= stabilityTarget
   const defaultStabilityContribution = amount * stabilityAlloc
-  const isCapReachedMidDeposit = !isCapReached && (stabilityBalance + defaultStabilityContribution > stabilityTarget)
+  const isCapReachedMidDeposit = hasStabilityTarget && !isCapReached && (stabilityBalance + defaultStabilityContribution > stabilityTarget)
 
   if (!isCapReached && !isCapReachedMidDeposit && recoveryTopUp <= 0) {
     return 'Income'
@@ -122,8 +125,8 @@ export function computeIncomeLedgerCategory(input: IncomeSplitInput): string {
 
   const redirectTargets = resolveRedirectWeights(stabilityOverflowRedirect)
 
-  let actualStabilityShare = 0
-  if (!isCapReached && amount > 0) {
+  let actualStabilityShare = hasStabilityTarget ? 0 : requestedStabilityShare
+  if (hasStabilityTarget && !isCapReached && amount > 0) {
     const stabilityNeeded = Math.max(0, stabilityTarget - stabilityBalance)
     const requestedContribution = amount * requestedStabilityShare
     actualStabilityShare = requestedContribution > stabilityNeeded

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { DashboardView } from './DashboardView'
-import type { DashboardData, WishlistItem } from '../types'
+import type { DashboardData, SavingsGoal, WishlistItem } from '../types'
 import { SENSITIVE_AMOUNT_MASK } from '../lib/utils'
 
 vi.mock('../lib/api/documents', () => ({
@@ -165,6 +165,40 @@ describe('DashboardView focused Today experience', () => {
     // Cycle inflow/outflow moved to the Reports tab.
     expect(screen.queryByText('Cycle Inflow')).toBeNull()
     expect(screen.queryByText('$3,210.55')).toBeNull()
+  })
+
+  it('shows Today rewards after active commitments and pending Rewards bills', () => {
+    const savingsGoals: SavingsGoal[] = [{
+      id: 7,
+      name: 'Car service',
+      targetAmount: 500,
+      earmarkedAmount: 300,
+      targetDate: '2026-12-01',
+      priority: 'Medium',
+      status: 'active',
+      isRecurring: false,
+      recurrenceMonths: 12,
+      cycleFundedAmount: 0,
+      createdAt: '2026-01-01T00:00:00.000Z',
+    }]
+
+    render(<DashboardView {...makeProps({
+      savingsGoals,
+      dashboardData: {
+        ...dashboardData,
+        categories: dashboardData.categories.map(category => category.name === 'Rewards'
+          ? { ...category, remaining: 600 }
+          : category),
+        activeRecurringPayments: [
+          ...dashboardData.activeRecurringPayments!,
+          { id: 'arp-3', recurringPaymentId: 'rp-3', name: 'Cloud storage', amount: 80, category: 'Software', ledgerCategory: 'Rewards', dueDate: '2026-08-15', isPaid: false, isDiscarded: false, status: 'Pending' },
+        ],
+      },
+    })} />)
+
+    // 600 balance - 300 earmarked - 80 pending bill = 220 free; 220/300 rounds to 73%.
+    expect(screen.getByText('73%')).toBeTruthy()
+    expect(screen.getByText('$220.00')).toBeTruthy()
   })
 
   it('shows the next cycle start and keeps daily spending room in the plan snapshot', () => {

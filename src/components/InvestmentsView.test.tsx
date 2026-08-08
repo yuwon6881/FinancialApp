@@ -111,6 +111,22 @@ describe('InvestmentsView provider call boundaries', () => {
     expect(api.refreshInvestmentMarketData).not.toHaveBeenCalled()
   })
 
+  it('shows the themed refresh status while a cached portfolio is replaced by the API response', async () => {
+    let resolveFetch!: (portfolio: InvestmentPortfolio) => void
+    vi.mocked(api.readCachedInvestmentPortfolio).mockReturnValue(tradablePortfolio)
+    vi.mocked(api.fetchInvestmentPortfolio).mockReturnValue(new Promise(resolve => {
+      resolveFetch = resolve
+    }))
+
+    renderView()
+
+    expect(await screen.findByText('Updating prices…')).toBeTruthy()
+    expect(screen.getByRole('status').textContent).toContain('Updating prices…')
+
+    resolveFetch(tradablePortfolio)
+    await waitFor(() => expect(screen.queryByText('Updating prices…')).toBeNull())
+  })
+
   it('explains investment archive eligibility', async () => {
     vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(tradablePortfolio)
     renderView()

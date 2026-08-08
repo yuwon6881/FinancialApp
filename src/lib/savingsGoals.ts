@@ -6,8 +6,33 @@
 // The governing idea: a goal is an *earmark* on the shared Rewards pool, not a fifth budget
 // bucket. One balance, N claims, and whatever is unclaimed is the free-to-spend remainder.
 
-import type { SavingsGoal } from '../types'
+import type { ActiveRecurringPayment, SavingsGoal } from '../types'
 import { getCycleYearAndMonthForDate } from './cycle'
+import { calculateFreeRewardsBalance } from './freeRewards'
+
+export { calculateFreeRewardsBalance } from './freeRewards'
+
+export const isActiveGoal = (goal: SavingsGoal): boolean =>
+  goal.status === 'active' && !goal.isPendingDelete
+
+/** The amount of the Rewards pool currently claimed by live savings commitments. */
+export function totalActiveEarmarked(goals: readonly SavingsGoal[]): number {
+  return goals
+    .filter(isActiveGoal)
+    .reduce((sum, goal) => sum + goal.earmarkedAmount, 0)
+}
+
+/** Pending Rewards bills are another claim on the pool until the occurrence is settled. */
+export function pendingRewardsAmount(
+  payments: readonly Pick<ActiveRecurringPayment, 'status' | 'amount' | 'ledgerCategory' | 'category'>[] | undefined,
+): number {
+  const total = (payments ?? []).reduce((sum, payment) => {
+    if (payment.status !== 'Pending') return sum
+    const category = payment.ledgerCategory || payment.category
+    return category === 'Rewards' ? sum + Math.abs(payment.amount) : sum
+  }, 0)
+  return Math.round(total * 100) / 100
+}
 
 export interface GoalPace {
   goalId: number
@@ -193,20 +218,19 @@ export function distribute(
   }
 }
 
-export const isActiveGoal = (goal: SavingsGoal): boolean =>
-  goal.status === 'active' && !goal.isPendingDelete
-
 /**
  * Money in the Rewards pool no goal has claimed. Floored at zero so a balance that has dropped
  * below the outstanding earmarks (a correction, a refund reversal) reports "nothing free" rather
  * than a negative amount.
  */
 export function unassigned(rewardsBalance: number, totalEarmarked: number): number {
-  return toCents(Math.max(0, rewardsBalance - totalEarmarked))
+  const safeBalance = Number.isFinite(rewardsBalance) ? rewardsBalance : 0
+  const safeEarmarked = Number.isFinite(totalEarmarked) ? totalEarmarked : 0
+  return toCents(Math.max(0, safeBalance - safeEarmarked))
 }
 
 export interface GoalPoolSummary {
-  /** The whole Rewards balance — one pool, shared by commitments and rewards alike. */
+  /** The Rewards balance after pending bills are held aside — one pool, shared by commitments and rewards alike. */
   rewardsBalance: number
   /** Sum of every active goal's claim on it. */
   totalEarmarked: number
@@ -251,6 +275,7 @@ export function summarizePool(
   expectedInflow: number,
   today: Date,
   cycleDay: number,
+  pendingRewards = 0,
 ): GoalPoolSummary {
   const activeGoals = orderForFunding(goals.filter(isActiveGoal))
   const currentCycleKey = cycleKeyFor(today, cycleDay)
@@ -264,17 +289,20 @@ export function summarizePool(
   for (const goal of activeGoals) {
     const pace = computePace(goal, today, cycleDay, currentCycleKey)
     paces.set(goal.id, pace)
-    totalEarmarked = toCents(totalEarmarked + goal.earmarkedAmount)
+    totalEarmarked = toCents(totalEarmarked + Math.max(0, goal.earmarkedAmount))
     requiredPerCycleTotal = toCents(requiredPerCycleTotal + pace.requiredPerCycle)
     outstandingThisCycleTotal = toCents(outstandingThisCycleTotal + pace.outstandingThisCycle)
     fundedThisCycleTotal = toCents(fundedThisCycleTotal + pace.fundedThisCycle)
     if (!pace.isFunded) hasUnfinishedGoals = true
   }
 
+  const availableRewards = toCents(Math.max(0, rewardsBalance - Math.max(0, pendingRewards)))
+  const freeRewards = calculateFreeRewardsBalance(rewardsBalance, activeGoals, pendingRewards)
+
   return {
-    rewardsBalance,
+    rewardsBalance: availableRewards,
     totalEarmarked,
-    unassigned: unassigned(rewardsBalance, totalEarmarked),
+    unassigned: freeRewards,
     requiredPerCycleTotal,
     fundedThisCycleTotal,
     outstandingThisCycleTotal,

@@ -56,6 +56,7 @@ interface AuthenticatedViewProps {
   todayDashboardData: DashboardData | null
   wishlistDashboardData: DashboardData | null
   wishlistRewardsBalance: number
+  wishlistPendingRewardsDeduction: number
   currentPendingNotificationsCount: number
   currentCycleMonth: string
   currentCycleYear: number
@@ -89,6 +90,7 @@ export function AuthenticatedView({
   todayDashboardData,
   wishlistDashboardData,
   wishlistRewardsBalance,
+  wishlistPendingRewardsDeduction,
   currentPendingNotificationsCount,
   currentCycleMonth,
   currentCycleYear,
@@ -196,6 +198,7 @@ export function AuthenticatedView({
                         targetYear: currentCycleYear,
                       })}
                       wishlist={financial.allWishlist}
+                      savingsGoals={financial.allSavingsGoals}
                       isSwitchingCycle={isCurrentCycleLoading || !todayDashboardData}
                       investmentAllocation={investmentAllocation}
                       onNavigateToCategoryLimits={() => nav.handleNavigateToReportSection('category-limits')}
@@ -207,6 +210,7 @@ export function AuthenticatedView({
                       dashboardData={financial.optimisticDashboardData}
                       transactions={financial.allTransactions}
                       wishlist={financial.allWishlist}
+                      savingsGoals={financial.allSavingsGoals}
                       hideBalanceAmounts={prefs.hideBalanceAmounts}
                       onSelectPeriod={nav.handleSelectPeriod}
                       onNavigate={prefs.setActiveTab}
@@ -395,6 +399,7 @@ export function AuthenticatedView({
                       wishlist={financial.allWishlist}
                       savingsGoals={financial.allSavingsGoals}
                       rewardsBalance={wishlistRewardsBalance}
+                      pendingRewardsDeduction={wishlistPendingRewardsDeduction}
                       rewardsTarget={wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')?.target ?? 400}
                       pastThreeMonthsRewardsAverage={wishlistDashboardData?.stats?.pastThreeMonthsRewardsAverage ?? 0}
                       hasRewardsHistory={wishlistDashboardData?.stats?.hasRewardsHistory ?? false}
