@@ -1,7 +1,7 @@
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
 import { Loader2, Plus, Search, Trash2, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 
 export interface ManageableNameItem {
@@ -14,6 +14,9 @@ interface ManageableNameListProps<T extends ManageableNameItem> {
   items: T[]
   itemLabel: string
   addPlaceholder: string
+  addFormTitle?: string
+  addFormDescription?: string
+  addFormFields?: ReactNode
   disabled?: boolean
   isLoading?: boolean
   onAdd: (name: string) => Promise<void> | void
@@ -28,6 +31,9 @@ export function ManageableNameList<T extends ManageableNameItem>({
   items,
   itemLabel,
   addPlaceholder,
+  addFormTitle,
+  addFormDescription,
+  addFormFields,
   disabled = false,
   isLoading = false,
   onAdd,
@@ -40,6 +46,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
   const [newName, setNewName] = useState('')
   const [search, setSearch] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
+  const addInputId = useId()
   const lowerItemLabel = itemLabel.toLowerCase()
   const pluralItemLabel = /[^aeiou]y$/i.test(lowerItemLabel)
     ? `${lowerItemLabel.slice(0, -1)}ies`
@@ -65,29 +72,43 @@ export function ManageableNameList<T extends ManageableNameItem>({
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-2">
-        <Input
-          type="text"
-          value={newName}
-          onChange={event => setNewName(event.target.value)}
-          onKeyDown={event => { if (event.key === 'Enter') void add() }}
-          placeholder={addPlaceholder}
-          disabled={disabled}
-          maxLength={40}
-          className="h-9 min-w-0 flex-1 rounded-lg border border-border bg-background px-3 text-xs focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
-        />
-        <Button variant="unstyled"
-          type="button"
-          onClick={() => void add()}
-          disabled={!trimmedName || duplicate || Boolean(validationError) || disabled || busyId !== null}
-          aria-label={`Add ${itemLabel}`}
-          className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-primary text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
-        >
-          {busyId === 'new' ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
-        </Button>
+      <div className={addFormTitle || addFormFields ? 'space-y-3 rounded-xl border border-border/60 bg-muted/15 p-3' : 'space-y-2'}>
+        {addFormTitle && (
+          <div className="space-y-0.5">
+            <p className="text-xs font-bold text-foreground">{addFormTitle}</p>
+            {addFormDescription && <p className="text-[11px] leading-relaxed text-muted-foreground">{addFormDescription}</p>}
+          </div>
+        )}
+        {addFormFields}
+        <div className="space-y-1.5">
+          {addFormTitle && <label htmlFor={addInputId} className="block text-xs font-bold text-muted-foreground">{itemLabel} name</label>}
+          <div className="flex gap-2">
+            <Input
+              id={addInputId}
+              type="text"
+              value={newName}
+              onChange={event => setNewName(event.target.value)}
+              onKeyDown={event => { if (event.key === 'Enter') void add() }}
+              placeholder={addPlaceholder}
+              aria-label={`New ${lowerItemLabel} name`}
+              disabled={disabled}
+              maxLength={40}
+              className="h-9 min-w-0 flex-1 rounded-lg border border-border bg-background px-3 text-xs focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
+            />
+            <Button variant="unstyled"
+              type="button"
+              onClick={() => void add()}
+              disabled={!trimmedName || duplicate || Boolean(validationError) || disabled || busyId !== null}
+              aria-label={`Add ${itemLabel}`}
+              className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-primary text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+            >
+              {busyId === 'new' ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
+            </Button>
+          </div>
+        </div>
+        {duplicate && <p className="text-[10px] font-semibold text-destructive">{itemLabel} already exists.</p>}
+        {validationError && <p className="text-[10px] font-semibold text-destructive">{validationError}</p>}
       </div>
-      {duplicate && <p className="text-[10px] font-semibold text-destructive">{itemLabel} already exists.</p>}
-      {validationError && <p className="text-[10px] font-semibold text-destructive">{validationError}</p>}
 
       <label className="group relative block">
         <Search className="pointer-events-none absolute left-3.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-foreground" />

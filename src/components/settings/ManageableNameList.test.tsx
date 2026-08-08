@@ -44,4 +44,25 @@ describe('ManageableNameList', () => {
     expect(screen.getByText('No categories yet.')).toBeTruthy()
     expect(screen.getByRole('searchbox')).toBeTruthy()
   })
+
+  it('groups additional fields with the add form', () => {
+    render(
+      <ManageableNameList
+        items={items}
+        itemLabel="Category"
+        addPlaceholder="New Category Name"
+        addFormTitle="Add a category"
+        addFormDescription="Choose where it can appear, then give it a name."
+        addFormFields={<span>This category is for</span>}
+        onAdd={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('Add a category')).toBeTruthy()
+    expect(screen.getByText('Choose where it can appear, then give it a name.')).toBeTruthy()
+    expect(screen.getByText('This category is for')).toBeTruthy()
+    expect(screen.getByText('Category name')).toBeTruthy()
+    expect(screen.getByRole('textbox', { name: 'New category name' })).toBeTruthy()
+  })
 })

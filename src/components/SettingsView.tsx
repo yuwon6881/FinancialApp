@@ -643,30 +643,6 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   </div>
                 )}
 
-                <div className="flex items-center justify-between pb-1.5 px-0.5">
-                  <span className="text-[11px] font-medium text-muted-foreground">New category flow type:</span>
-                  <div className="inline-flex rounded-lg border border-border/60 bg-muted/30 p-0.5 gap-0.5">
-                    {(['both', 'inflow', 'outflow'] as const).map(type => (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => setNewCatType(type)}
-                        className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition cursor-pointer capitalize ${
-                          newCatType === type
-                            ? type === 'inflow'
-                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shadow-sm border border-emerald-500/30'
-                              : type === 'outflow'
-                                ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 shadow-sm border border-amber-500/30'
-                                : 'bg-primary/15 text-primary shadow-sm border border-primary/30'
-                            : 'text-muted-foreground hover:text-foreground'
-                        }`}
-                      >
-                        {type}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Same shape as the vault's selection toolbar: a one-row grid so the count can
                     truncate instead of wrapping the actions onto a second line, with the way out
                     sitting beside the way forward — an unsaved edit needs a free exit, and the only
@@ -719,6 +695,26 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   items={categoryRows.map(({ category, count }) => ({ ...category, count }))}
                   itemLabel="Category"
                   addPlaceholder="New Category Name"
+                  addFormTitle="Add a category"
+                  addFormDescription="Choose where it can appear, then give it a name."
+                  addFormFields={(
+                    <FormField
+                      label="This category is for"
+                      hint="This controls where the category appears when adding a ledger entry."
+                    >
+                      <CustomSelect
+                        ariaLabel="This category is for"
+                        value={newCatType}
+                        onChange={setNewCatType}
+                        options={[
+                          { value: 'both', label: 'Money coming in and going out' },
+                          { value: 'inflow', label: 'Money coming in only' },
+                          { value: 'outflow', label: 'Money going out only' },
+                        ]}
+                        className="w-full"
+                      />
+                    </FormField>
+                  )}
                   disabled={hideSensitive}
                   isLoading={isCategoryListLoading}
                   validateName={name => ['transfer', 'adjustment'].includes(name.toLowerCase()) ? 'Name is a reserved word.' : null}
