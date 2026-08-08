@@ -15,6 +15,8 @@ import { DeleteTransactionModal, EditDisabledModal } from './ledger/LedgerDelete
 import { LedgerPagination } from './ledger/LedgerPagination'
 import { LedgerFilterBar } from './ledger/LedgerFilterBar'
 import { LedgerTransactionList } from './ledger/LedgerTransactionList'
+import { SelectionToolbar } from './ui/SelectionToolbar'
+import type { LedgerListProps } from './ledger/ledgerListShared'
 import { TransactionFormSheet, type TransactionFormSheetRef } from './ledger/TransactionFormSheet'
 import type { ReceiptSplitDraft, ReceiptSplitFailure } from '../lib/useReceiptSplitPolling'
 import { calculateLedgerTotals } from '../lib/ledgerTotals'
@@ -30,6 +32,8 @@ import { LedgerToolbar } from './ledger/view/LedgerToolbar'
 const LEDGER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
 const ReceiptSplitSheet = React.lazy(() =>
   import('./ledger/ReceiptSplitSheet').then(module => ({ default: module.ReceiptSplitSheet })))
+const LedgerBulkSelectionLayerLazy = React.lazy(() =>
+  import('./ledger/LedgerBulkSelectionLayer').then(module => ({ default: module.LedgerBulkSelectionLayer })))
 
 interface LedgerViewProps {
   transactions: Transaction[]
@@ -127,6 +131,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
   const formRef = useRef<TransactionFormSheetRef>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isReceiptSplitOpen, setIsReceiptSplitOpen] = useState(false)
+  const [isBulkSelectionRequested, setIsBulkSelectionRequested] = useState(false)
   const handleAddFormOpenChange = useCallback((open: boolean) => {
     setIsFormOpen(open)
     props.onAddFormOpenChange?.(open)
@@ -162,6 +167,32 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
     formRef,
   })
 
+  const bulkResetKey = JSON.stringify([
+    props.showAllCycles,
+    props.selectedMonth,
+    props.selectedYear,
+    ledger.pageSize,
+    ledger.sortOrder,
+    props.showAllCycles ? ledger.appliedSearch : ledger.searchTerm,
+    props.showAllCycles ? ledger.appliedFilters : ledger.selectedFilters,
+    props.showAllCycles ? ledger.appliedStartDate : ledger.selectedStartDate,
+    props.showAllCycles ? ledger.appliedEndDate : ledger.selectedEndDate,
+    props.showAllCycles ? ledger.appliedMinAmount : ledger.selectedMinAmount,
+    props.showAllCycles ? ledger.appliedMaxAmount : ledger.selectedMaxAmount,
+    props.showAllCycles ? ledger.appliedRecurringOnly : ledger.selectedRecurringOnly,
+    props.showAllCycles ? ledger.appliedWishlistOnly : ledger.selectedWishlistOnly,
+    props.showAllCycles ? ledger.appliedTxTypeFilter : ledger.selectedTxTypeFilter,
+    props.showAllCycles ? ledger.pendingSearchTerm : ledger.searchTerm,
+    props.showAllCycles ? ledger.pendingFilters : ledger.selectedFilters,
+    props.showAllCycles ? ledger.pendingStartDate : ledger.selectedStartDate,
+    props.showAllCycles ? ledger.pendingEndDate : ledger.selectedEndDate,
+    props.showAllCycles ? ledger.pendingMinAmount : ledger.selectedMinAmount,
+    props.showAllCycles ? ledger.pendingMaxAmount : ledger.selectedMaxAmount,
+    props.showAllCycles ? ledger.pendingRecurringOnly : ledger.selectedRecurringOnly,
+    props.showAllCycles ? ledger.pendingWishlistOnly : ledger.selectedWishlistOnly,
+    props.showAllCycles ? ledger.pendingTxTypeFilter : ledger.selectedTxTypeFilter,
+    hideSensitive,
+  ])
   const formatCurrency = (val: number) => {
     return formatCurrencyVal(val, currency)
   }
@@ -186,6 +217,21 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
     (activeRecurringOnly ? 1 : 0) +
     (activeWishlistOnly ? 1 : 0) +
     ((props.showAllCycles ? ledger.appliedTxTypeFilter : ledger.selectedTxTypeFilter) ? 1 : 0)
+
+  const listProps: LedgerListProps = {
+    transactions: ledger.displayTransactions,
+    listKey: `${props.selectedMonth}-${props.selectedYear}-${props.showAllCycles}-${ledger.currentPage}`,
+    hideSensitive,
+    currency,
+    serverIsFetching: ledger.serverIsFetching,
+    pageTotals,
+    isTxDeleting: ledger.isTxDeleting,
+    isTxSyncing: ledger.isTxSyncing,
+    onStartEdit: ledger.onStartEditStable,
+    onDeleteClick: ledger.onDeleteClickStable,
+    onEditBlocked: ledger.onEditBlockedStable,
+    formatSensitive,
+  }
 
   if (props.isSwitchingCycle) {
     return <CycleSkeleton variant="ledger" />
@@ -371,20 +417,50 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         }}
       />
 
-      <LedgerTransactionList
-        transactions={ledger.displayTransactions}
-        listKey={`${props.selectedMonth}-${props.selectedYear}-${props.showAllCycles}-${ledger.currentPage}`}
-        hideSensitive={hideSensitive}
-        currency={currency}
-        serverIsFetching={ledger.serverIsFetching}
-        pageTotals={pageTotals}
-        isTxDeleting={ledger.isTxDeleting}
-        isTxSyncing={ledger.isTxSyncing}
-        onStartEdit={ledger.onStartEditStable}
-        onDeleteClick={ledger.onDeleteClickStable}
-        onEditBlocked={ledger.onEditBlockedStable}
-        formatSensitive={formatSensitive}
-      />
+      {!isBulkSelectionRequested ? (
+        <>
+          <SelectionToolbar
+            testId="ledger-selection-toolbar"
+            itemCount={ledger.displayTransactions.length}
+            selectedCount={0}
+            allVisibleSelected={false}
+            someVisibleSelected={false}
+            isSelecting={false}
+            onStartSelection={() => setIsBulkSelectionRequested(true)}
+            onToggleSelectAll={() => undefined}
+            onLeaveSelection={() => undefined}
+            disabled={hideSensitive}
+            itemLabel="transactions"
+          />
+          <LedgerTransactionList {...listProps} />
+        </>
+      ) : (
+        <React.Suspense fallback={(
+          <>
+            <SelectionToolbar
+              testId="ledger-selection-toolbar"
+              itemCount={ledger.displayTransactions.length}
+              selectedCount={0}
+              allVisibleSelected={false}
+              someVisibleSelected={false}
+              isSelecting
+              onStartSelection={() => undefined}
+              onToggleSelectAll={() => undefined}
+              onLeaveSelection={() => setIsBulkSelectionRequested(false)}
+              disabled={hideSensitive}
+              itemLabel="transactions"
+            />
+            <LedgerTransactionList {...listProps} />
+          </>
+        )}>
+          <LedgerBulkSelectionLayerLazy
+            listProps={listProps}
+            allTransactions={props.transactions}
+            resetKey={bulkResetKey}
+            onExit={() => setIsBulkSelectionRequested(false)}
+          />
+        </React.Suspense>
+      )}
 
       <LedgerPagination
         currentPage={ledger.currentPage}
@@ -426,6 +502,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         transaction={ledger.editBlockedTransaction}
         onClose={() => ledger.setShowEditDisabledModal(false)}
       />
+
     </div>
   )
 }

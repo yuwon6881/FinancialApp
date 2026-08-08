@@ -266,7 +266,7 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
         const lockError = isLockError(err)
         const isJustLoggedIn = deps.now() - deps.getLastUnlockedTime() < JUST_LOGGED_IN_WINDOW_MS
         const isIdempotentMissingDelete = status === 404 &&
-          (nextOp.type === 'delete' || nextOp.type === 'unpurchase')
+          (nextOp.type === 'delete' || nextOp.type === 'unpurchase' || nextOp.type === 'bulkDelete')
         // A 404 on a delete/unpurchase is an expected, benign outcome (the row was
         // already gone — e.g. deleting a stale/optimistic item, or an undo chain).
         // It resolves to a success below, so don't log it as an error and pollute

@@ -18,6 +18,10 @@ export function DesktopLedgerTable({
   onStartEdit,
   onDeleteClick,
   onEditBlocked,
+  isSelecting = false,
+  isSelected = () => false,
+  canSelect = () => false,
+  onToggleSelected = () => undefined,
   formatSensitive,
 }: LedgerListProps) {
   const hasRows = transactions.length > 0
@@ -25,6 +29,7 @@ export function DesktopLedgerTable({
   return (
     <DataTable>
       <DataTableHeader>
+        {isSelecting && <DataTableHeaderCell className="w-12">Select</DataTableHeaderCell>}
         <DataTableHeaderCell>Date</DataTableHeaderCell>
         <DataTableHeaderCell>Description</DataTableHeaderCell>
         <DataTableHeaderCell>Category</DataTableHeaderCell>
@@ -54,11 +59,15 @@ export function DesktopLedgerTable({
                 onStartEdit={onStartEdit}
                 onDeleteClick={onDeleteClick}
                 onEditBlocked={onEditBlocked}
+                isSelecting={isSelecting}
+                isSelected={isSelected}
+                canSelect={canSelect}
+                onToggleSelected={onToggleSelected}
               />
             ))}
             {hasRows && (
               <tr className="bg-muted/25 font-bold border-t-2 border-border text-xs select-none">
-                <td className="p-4 align-middle" colSpan={4}>
+                <td className="p-4 align-middle" colSpan={isSelecting ? 5 : 4}>
                   <span className="uppercase tracking-wider text-foreground font-extrabold">
                     Page Total <span className="text-muted-foreground font-bold normal-case tracking-normal">({transactions.length} items)</span>
                   </span>
@@ -83,7 +92,7 @@ export function DesktopLedgerTable({
                 (rather than a stray sentence), plus the page Net Position. */}
             {hasRows && (
               <tr className="bg-muted/25 border-t border-border/40 text-xs select-none">
-                <td className="px-4 py-3" colSpan={7}>
+                <td className="px-4 py-3" colSpan={isSelecting ? 8 : 7}>
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     {pageTotals.transfer > 0 ? (
                       <span className="inline-flex items-center gap-2 rounded-lg bg-blue-500/10 ring-1 ring-inset ring-blue-500/30 px-2.5 py-1.5 text-blue-500">
@@ -106,7 +115,7 @@ export function DesktopLedgerTable({
 
             {!hasRows && (
               <tr className="list-row-enter">
-                <td colSpan={7} className="p-8 text-center text-muted-foreground text-sm">
+                <td colSpan={isSelecting ? 8 : 7} className="p-8 text-center text-muted-foreground text-sm">
                   {serverIsFetching ? 'Loading…' : 'No transactions match your search or filter criteria.'}
                 </td>
               </tr>

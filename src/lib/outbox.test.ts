@@ -14,6 +14,12 @@ vi.mock('./api', () => ({
   applyCategoryCleanup: vi.fn(async () => ({ appliedCount: 1, undoActions: [] })),
 }))
 
+vi.mock('./api/transactionBulk', () => ({
+  bulkDeleteTransactions: vi.fn(async () => ({ deleted: [], restored: [] })),
+  bulkRestoreTransactions: vi.fn(async () => ({ deleted: [], restored: [] })),
+  dispatchBulkTransaction: vi.fn(async () => ({ deleted: [], restored: [] })),
+}))
+
 // Savings goals are dispatched through a dynamic import of their own module (it is kept out of the
 // eager api barrel), so the mock has to target that module rather than './api'.
 vi.mock('./api/savingsGoals', () => ({
@@ -28,10 +34,13 @@ vi.mock('./api/documents', () => ({
   deleteTaxReliefCategory: vi.fn(async () => undefined),
 }))
 
-import { applyOpsToList, createLocalNumericId, enqueue, DISPATCH, getSyncSuccessToast, projectFinancialSetting, projectSettingPreference, type QueuedOp } from './outbox'
+import { applyOpsToList, createLocalNumericId, enqueue, getSyncSuccessToast, projectFinancialSetting, projectSettingPreference, type QueuedOp } from './outbox'
+import { DISPATCH } from './outboxDispatch'
 import * as api from './api'
+import * as transactionBulkApi from './api/transactionBulk'
 import * as savingsGoalsApi from './api/savingsGoals'
 import * as documentsApi from './api/documents'
+import { buildUndoAction } from './undo'
 
 interface TestItem {
   id: string | number
@@ -67,6 +76,17 @@ function makeOp(overrides: Partial<QueuedOp>): QueuedOp {
 }
 
 describe('DISPATCH idempotency wiring', () => {
+  it('dispatches a bulk transaction operation as one API request', async () => {
+    const snapshot = { id: 'tx-1', date: '2026-08-08', description: 'Lunch', category: 'Food', ledgerCategory: 'Essentials', amount: -10 }
+    await DISPATCH['transaction:bulkDelete'](makeOp({
+      entity: 'transaction', type: 'bulkDelete', targetId: 'bulk-1', payload: { transactionIds: ['tx-1'], transactions: [snapshot] },
+    }))
+    await DISPATCH['transaction:bulkRestore'](makeOp({
+      entity: 'transaction', type: 'bulkRestore', targetId: 'bulk-1', payload: { transactions: [snapshot] },
+    }))
+    expect(transactionBulkApi.dispatchBulkTransaction).toHaveBeenNthCalledWith(1, expect.objectContaining({ type: 'bulkDelete' }))
+    expect(transactionBulkApi.dispatchBulkTransaction).toHaveBeenNthCalledWith(2, expect.objectContaining({ type: 'bulkRestore' }))
+  })
   it('forwards the absolute active state for a recurring toggle so retries are idempotent', async () => {
     await DISPATCH['recurringPayment:toggle'](makeOp({
       entity: 'recurringPayment', type: 'toggle', targetId: 'rec-1', payload: { active: false },
@@ -175,6 +195,18 @@ describe('DISPATCH idempotency wiring', () => {
 })
 
 describe('sync success toast copy', () => {
+  it('uses one count-based toast for a bulk delete', () => {
+    expect(getSyncSuccessToast(makeOp({
+      entity: 'transaction',
+      type: 'bulkDelete',
+      targetId: 'bulk-1',
+      payload: { transactionIds: ['tx-1', 'tx-2'] },
+    }))).toEqual({
+      title: 'Transactions Deleted',
+      message: '2 transactions were deleted.',
+      tone: 'success',
+    })
+  })
   it.each([
     ['category', 'add', { name: 'Food' }, 'Category Added', '"Food" was added.'],
     ['category', 'delete', { name: 'Food' }, 'Category Deleted', '"Food" was deleted.'],
@@ -255,6 +287,62 @@ describe('projectSettingPreference', () => {
     expect(projectSettingPreference('hideSensitive', false, [
       makeOp({ entity: 'settings', targetId: 'darkMode', payload: { darkMode: true } }),
     ])).toBe(false)
+  })
+})
+
+describe('bulk transaction projection', () => {
+  const rows: TestItem[] = [
+    { id: 'tx-1', name: 'Salary', description: 'Salary', amount: 100, category: 'Income', ledgerCategory: 'Income' },
+    { id: 'tx-1-split-essentials', name: 'Essentials', description: 'Essentials', amount: 50, category: 'Income', ledgerCategory: 'Transfer: Essentials' },
+    { id: 'tx-2', name: 'Lunch', description: 'Lunch', amount: -10, category: 'Food', ledgerCategory: 'Essentials' },
+  ]
+
+  it('removes every split row immediately and keeps the group absent after sync', () => {
+    const op = makeOp({
+      entity: 'transaction',
+      type: 'bulkDelete',
+      targetId: 'bulk-1',
+      payload: { transactionIds: ['tx-1', 'tx-2'], transactions: [rows[0], rows[2]] },
+    })
+    const pending = applyOpsToList(rows, [op], 'transaction')
+    expect(pending).toEqual([])
+    const completed = applyOpsToList(rows, [{ ...op, isCompleted: true }], 'transaction')
+    expect(completed).toEqual([])
+  })
+
+  it('restores parent rows and regenerates split rows', () => {
+    const op = makeOp({
+      entity: 'transaction',
+      type: 'bulkRestore',
+      targetId: 'bulk-1',
+      payload: { transactions: [rows[0]] },
+      isUndo: true,
+    })
+    const restored = applyOpsToList<TestItem>([], [op], 'transaction', {
+      incomeAllocations: { essentialsAlloc: 0.5, growthAlloc: 0.25, stabilityAlloc: 0.15, rewardsAlloc: 0.1 },
+    })
+    expect(restored.some(row => row.id === 'tx-1')).toBe(true)
+    expect(restored.some(row => row.id === 'tx-1-split-Essentials')).toBe(true)
+  })
+})
+
+describe('bulk transaction undo', () => {
+  it('queues one restore operation containing the server snapshots', () => {
+    const enqueued: unknown[] = []
+    const op = makeOp({
+      entity: 'transaction',
+      type: 'bulkDelete',
+      targetId: 'bulk-1',
+      payload: { transactionIds: ['tx-1'] },
+    })
+    const snapshot = { id: 'tx-1', date: '2026-08-08', description: 'Lunch', category: 'Food', ledgerCategory: 'Essentials', amount: -10 }
+    const action = buildUndoAction(new Map(), op, { deleted: [snapshot], restored: [] }, (_entity, type, targetId, payload) => {
+      enqueued.push({ type, targetId, payload })
+    })
+
+    expect(action?.label).toBe('Undo')
+    action?.onAction()
+    expect(enqueued).toEqual([{ type: 'bulkRestore', targetId: 'bulk-1', payload: { transactions: [snapshot] } }])
   })
 })
 

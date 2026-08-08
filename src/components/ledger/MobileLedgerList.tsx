@@ -17,6 +17,10 @@ export function MobileLedgerList({
   onStartEdit,
   onDeleteClick,
   onEditBlocked,
+  isSelecting = false,
+  isSelected = () => false,
+  canSelect = () => false,
+  onToggleSelected = () => undefined,
   formatSensitive,
 }: LedgerListProps) {
   const hasRows = transactions.length > 0
@@ -42,6 +46,10 @@ export function MobileLedgerList({
           onStartEdit={onStartEdit}
           onDeleteClick={onDeleteClick}
           onEditBlocked={onEditBlocked}
+          isSelecting={isSelecting}
+          isSelected={isSelected}
+          canSelect={canSelect}
+          onToggleSelected={onToggleSelected}
         />
       ))}
       {hasRows && (

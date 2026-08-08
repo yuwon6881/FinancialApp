@@ -9,6 +9,7 @@ import { Button } from '../ui/Button'
 import { LedgerAllocationBadge } from './LedgerAllocationBadge'
 import { ledgerTransactionRowId } from '../../lib/ledgerTransactionTarget'
 import { SensitiveMask } from '../ui/SensitiveAmount'
+import { Checkbox } from '../ui/Checkbox'
 
 export interface LedgerRowProps {
   transaction: Transaction
@@ -21,6 +22,10 @@ export interface LedgerRowProps {
   onStartEdit: (transaction: Transaction) => void
   onDeleteClick: (transaction: Transaction) => void
   onEditBlocked: (transaction: Transaction) => void
+  isSelecting: boolean
+  isSelected: (transaction: Transaction) => boolean
+  canSelect: (transaction: Transaction) => boolean
+  onToggleSelected: (transaction: Transaction) => void
 }
 
 // Per-row entrance delay, replacing Framer Motion's `staggerChildren: 0.05`. Capped so
@@ -53,6 +58,19 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
       className="list-row-enter hover:bg-muted/10 transition"
       style={staggerStyle(props.index)}
     >
+      {props.isSelecting && <td className="p-4 align-middle">
+        <Checkbox
+          checked={props.isSelected(transaction)}
+          onChange={() => props.onToggleSelected(transaction)}
+          disabled={!props.canSelect(transaction)}
+          aria-label={props.canSelect(transaction)
+            ? `Select ${transaction.description}`
+            : transaction.savingsGoalId != null
+              ? `${transaction.description} is a commitment completion and must be deleted individually`
+              : `${transaction.description} is busy and cannot be selected`}
+          title={transaction.savingsGoalId != null ? 'Commitment completions must be deleted individually.' : undefined}
+        />
+      </td>}
       <td className="p-4 font-medium text-muted-foreground">{transaction.date}</td>
       <td className="p-4 font-semibold text-foreground">
         <div className="flex items-center gap-2">
@@ -104,6 +122,22 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
       >
         <div className={`h-0.5 w-full ${transfer ? 'bg-blue-500/60' : outflow ? 'bg-orange-500/60' : 'bg-emerald-500/60'}`} />
         <div className="p-4 space-y-3">
+          {props.isSelecting && <div className="flex items-center justify-between gap-2">
+            <label className="inline-flex items-center gap-2 text-[10px] font-semibold text-muted-foreground">
+              <Checkbox
+                checked={props.isSelected(transaction)}
+                onChange={() => props.onToggleSelected(transaction)}
+                disabled={!props.canSelect(transaction)}
+                aria-label={props.canSelect(transaction)
+                  ? `Select ${transaction.description}`
+                  : transaction.savingsGoalId != null
+                    ? `${transaction.description} is a commitment completion and must be deleted individually`
+                    : `${transaction.description} is busy and cannot be selected`}
+                title={transaction.savingsGoalId != null ? 'Commitment completions must be deleted individually.' : undefined}
+              />
+              Select transaction
+            </label>
+          </div>}
           <div className="flex items-center justify-between"><span className="text-[10px] text-muted-foreground font-mono">{transaction.date}</span><span className={`text-[10px] px-2 py-0.5 font-semibold rounded-full border ${getCategoryBadgeClass(transaction.category)}`}>{transaction.category}</span></div>
           <div className="flex items-center justify-between gap-3"><div className="flex-1 flex items-center gap-1.5 min-w-0"><h4 className="text-sm font-bold truncate">{transaction.description}</h4><RowSyncStatus isDeleting={props.isDeleting} isSyncing={props.isSyncing} isPending={transaction.isPendingSync} entityLabel="transaction" /></div><span className={`text-sm font-bold ${transfer ? 'text-blue-400' : outflow ? 'text-orange-400' : 'text-emerald-400'}`}>{props.hideSensitive ? <SensitiveMask /> : <>{transfer ? '' : outflow ? '-' : '+'}{formatted}</>}</span></div>
           <div className="flex items-center justify-between pt-2 border-t border-border/30"><span className="text-[10px] text-muted-foreground flex items-center gap-1.5">Ledger:<LedgerAllocationBadge ledgerCategory={transaction.ledgerCategory} transactionId={transaction.id} compact /></span></div>

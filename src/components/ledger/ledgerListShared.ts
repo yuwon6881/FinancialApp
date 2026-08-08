@@ -16,5 +16,9 @@ export interface LedgerListProps {
   onStartEdit: (t: Transaction) => void
   onDeleteClick: (t: Transaction) => void
   onEditBlocked: (t: Transaction) => void
+  isSelecting?: boolean
+  isSelected?: (t: Transaction) => boolean
+  canSelect?: (t: Transaction) => boolean
+  onToggleSelected?: (t: Transaction) => void
   formatSensitive: (val: number) => ReactNode
 }

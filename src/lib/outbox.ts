@@ -1,5 +1,7 @@
-import * as api from './api'
-import type { CategoryFlowType, FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentAllocationSleeve, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, PayEarlyResult, RecurringPayment, SavingsGoal, TaxReliefCategoryDefinition, Transaction, TransactionCategory, WishlistItem } from '../types'
+import type { BulkTransactionMutationResult } from './api/transactionBulk'
+import type { CategoryCleanupApplyResult } from './api/categories'
+import type { DeletedTransactionsSnapshot } from './api/investments'
+import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, PayEarlyResult, RecurringPayment, SavingsGoal, TaxReliefCategoryDefinition, Transaction, TransactionCategory, WishlistItem } from '../types'
 import { buildMutationSuccessToast, buildUndoSuccessToast } from './mutationToast'
 import { projectIncomeSplitRows, type IncomeAllocations } from './incomeSplitProjection'
 
@@ -8,7 +10,7 @@ export type EntityKind = 'transaction' | 'recurringPayment' | 'wishlistItem' | '
   | 'investmentPlan' | 'investmentAllocation'
   | 'investmentAllocationOrder' | 'taxReliefCategory'
 export type OpType = 'add' | 'update' | 'delete' | 'restore' | 'toggle' | 'purchase' | 'unpurchase'
-  | 'reminder' | 'payEarly' | 'cleanup'
+  | 'reminder' | 'payEarly' | 'cleanup' | 'bulkDelete' | 'bulkRestore'
 export interface OutboxPayload {
   [key: string]: unknown
   id?: string | number
@@ -39,6 +41,8 @@ export interface OutboxPayload {
   resultTransaction?: unknown
   actions?: unknown
   taxYear?: number
+  transactions?: unknown
+  transactionIds?: unknown
 }
 export type DispatchResult =
   | Transaction
@@ -52,8 +56,9 @@ export type DispatchResult =
   | InvestmentCashFlow
   | InvestmentPlan
   | TaxReliefCategoryDefinition
-  | api.DeletedTransactionsSnapshot
-  | api.CategoryCleanupApplyResult
+  | DeletedTransactionsSnapshot
+  | BulkTransactionMutationResult
+  | CategoryCleanupApplyResult
   | PayEarlyResult
   | { id: string }
   | { item: WishlistItem; transaction: Transaction; id?: undefined }
@@ -148,7 +153,7 @@ const ENTITY_LABELS: Record<EntityKind, string> = {
   , taxReliefCategory: 'Tax relief category'
 }
 
-const TYPE_COPY: Record<OpType, { title: string; messageVerb: string }> = {
+const TYPE_COPY: Partial<Record<OpType, { title: string; messageVerb: string }>> = {
   add: { title: 'Added', messageVerb: 'added' },
   update: { title: 'Updated', messageVerb: 'updated' },
   delete: { title: 'Deleted', messageVerb: 'deleted' },
@@ -228,7 +233,7 @@ const SUCCESS_TOAST_OVERRIDES: Partial<Record<string, (op: QueuedOp) => ToastCop
 }
 
 // Single source of truth for "queued op finished syncing" toast copy, used by the outbox
-// drain loop. Keeping this here (next to DISPATCH) means a new entity/op type gets a working
+// drain loop. The runtime dispatch map lives in the lazy outboxDispatch module, so a new entity/op type gets a working
 // toast automatically, and custom wording for a specific op is a one-line addition above.
 export function getSyncSuccessToast(op: QueuedOp): ToastCopy | null {
   if (op.isUndo) {
@@ -236,6 +241,17 @@ export function getSyncSuccessToast(op: QueuedOp): ToastCopy | null {
     const itemName = [op.payload?.description, op.payload?.name, op.payload?.symbol]
       .find(value => typeof value === 'string' && value.trim().length > 0) as string | undefined
     return buildUndoSuccessToast(itemName, entityName)
+  }
+
+  if (op.entity === 'transaction' && op.type === 'bulkDelete') {
+    const ids = op.payload?.transactionIds
+    const snapshots = op.payload?.transactions
+    const count = Array.isArray(ids) ? ids.length : Array.isArray(snapshots) ? snapshots.length : 0
+    return buildMutationSuccessToast({
+      entity: 'Transactions',
+      action: 'Deleted',
+      message: `${count} transaction${count === 1 ? '' : 's'} were deleted.`,
+    })
   }
 
   const key = `${op.entity}:${op.type}`
@@ -505,6 +521,35 @@ export interface ApplyOpsOptions {
   incomeAllocations?: IncomeAllocations
 }
 
+export function expandBulkTransactionProjection(ops: QueuedOp[]): QueuedOp[] {
+  return ops.flatMap(op => {
+    if (op.entity !== 'transaction' || (op.type !== 'bulkDelete' && op.type !== 'bulkRestore')) return [op]
+    const snapshots = Array.isArray(op.payload?.transactions)
+      ? op.payload.transactions.filter((item): item is Partial<Transaction> & { id: string | number } => Boolean(item && typeof item === 'object' && 'id' in item))
+      : []
+    if (op.type === 'bulkRestore') {
+      return snapshots.map(snapshot => ({ ...op, type: 'add' as const, targetId: String(snapshot.id), payload: { ...snapshot } as OutboxPayload }))
+    }
+    const ids = Array.isArray(op.payload?.transactionIds) ? op.payload.transactionIds.map(String).filter(Boolean) : []
+    const snapshotById = new Map(snapshots.map(snapshot => {
+      const snapshotId = String(snapshot.id)
+      const splitMarker = snapshotId.indexOf('-split-')
+      return [splitMarker < 0 ? snapshotId : snapshotId.slice(0, splitMarker), snapshot] as const
+    }))
+    return Array.from(new Set(ids)).map(id => {
+      const snapshot = snapshotById.get(id)
+      return {
+        ...op,
+        type: 'delete' as const,
+        targetId: id,
+        // Bulk rows disappear immediately; the original bulk op still stays pending for replay.
+        isCompleted: true,
+        payload: snapshot ? { ...snapshot } as OutboxPayload : op.payload,
+      }
+    })
+  })
+}
+
 export function applyOpsToList<T extends { id: string | number; isPendingSync?: boolean; isPendingDelete?: boolean }>(
   baseList: T[],
   ops: QueuedOp[],
@@ -512,11 +557,12 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
   options?: ApplyOpsOptions
 ): T[] {
   let result = baseList.map(item => ({ ...item }))
-  const entityOps = ops.filter(op => op.entity === entity)
+  const projectionOps = expandBulkTransactionProjection(ops)
+  const entityOps = projectionOps.filter(op => op.entity === entity)
   const unorderedOps = entity === 'transaction'
     ? [
         ...entityOps,
-        ...ops.filter(op =>
+        ...projectionOps.filter(op =>
           (op.entity === 'wishlistItem' && (op.type === 'purchase' || op.type === 'unpurchase' || op.type === 'delete')) ||
           (op.entity === 'recurringPayment' && op.type === 'payEarly') ||
           (op.entity === 'category' && (op.type === 'delete' || op.type === 'cleanup'))
@@ -525,12 +571,12 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
     : entity === 'recurringPayment'
       ? [
           ...entityOps,
-          ...ops.filter(op => op.entity === 'category' && (op.type === 'delete' || op.type === 'cleanup'))
+          ...projectionOps.filter(op => op.entity === 'category' && (op.type === 'delete' || op.type === 'cleanup'))
         ]
       : entity === 'wishlistItem'
         ? [
             ...entityOps,
-            ...ops.filter(op => op.entity === 'transaction' && (op.type === 'add' || op.type === 'delete')),
+            ...projectionOps.filter(op => op.entity === 'transaction' && (op.type === 'add' || op.type === 'delete')),
           ]
       : entityOps
 
@@ -934,141 +980,6 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
   return comparator ? result.sort(comparator) : result
 }
 
-const withoutUndoSnapshot = (payload: OutboxPayload | undefined): OutboxPayload => {
-  const requestPayload = { ...(payload ?? {}) }
-  delete requestPayload.undoSnapshot
-  return requestPayload
-}
-
-export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>> = {
-  'transaction:add': (op) => api.addTransaction({ ...(op.payload as Partial<Transaction>), id: op.targetId } as Omit<Transaction, 'id'> & { id?: string }),
-  'transaction:update': (op) => api.updateTransaction(
-    op.targetId,
-    withoutUndoSnapshot(op.payload) as unknown as Omit<Transaction, 'id'>,
-  ),
-  'transaction:delete': (op) => api.deleteTransaction(op.targetId),
-
-  'recurringPayment:add': (op) => api.addRecurringPayment({ ...(op.payload as Partial<RecurringPayment>), id: op.targetId } as Omit<RecurringPayment, 'id'> & { id?: string }),
-  'recurringPayment:update': (op) => api.updateRecurringPayment(
-    op.targetId,
-    withoutUndoSnapshot(op.payload) as unknown as RecurringPayment,
-  ),
-  'recurringPayment:delete': (op) => api.deleteRecurringPayment(op.targetId),
-  'recurringPayment:toggle': (op) => api.toggleRecurringPayment(op.targetId, typeof op.payload?.active === 'boolean' ? op.payload.active : undefined),
-  'recurringPayment:reminder': (op) => api.updateRecurringPaymentReminder(op.targetId, {
-    enabled: op.payload?.reminderEnabled === true,
-    mode: (typeof op.payload?.reminderMode === 'string' ? op.payload.reminderMode : 'Once') as 'Once' | 'Daily',
-    leadDays: typeof op.payload?.reminderLeadDays === 'number' ? op.payload.reminderLeadDays : 1,
-  }),
-  'recurringPayment:payEarly': (op) => api.payRecurringPaymentEarly(
-    op.targetId,
-    typeof op.payload?.occurrenceDate === 'string' ? op.payload.occurrenceDate : '',
-    op.id,
-  ),
-
-  'wishlistItem:add': (op) => api.addWishlistItem(op.payload as Partial<WishlistItem>, op.id),
-  'wishlistItem:update': (op) => api.updateWishlistItem(
-    Number(op.targetId),
-    withoutUndoSnapshot(op.payload) as unknown as WishlistItem,
-  ),
-  'wishlistItem:delete': (op) => api.deleteWishlistItem(Number(op.targetId)),
-  'wishlistItem:purchase': (op) => api.purchaseWishlistItem(Number(op.targetId), typeof op.payload?.date === 'string' ? op.payload.date : undefined),
-  'wishlistItem:unpurchase': (op) => api.unpurchaseWishlistItem(Number(op.targetId)),
-
-  // Authoring ops only. Money movement (contribute / fund-this-cycle / complete) is deliberately
-  // NOT queued: each depends on the authoritative Rewards balance to enforce the
-  // SUM(earmarked) <= balance invariant, and a replayed op could apply against a stale pool.
-  // Those are online-only calls in lib/api/savingsGoals.ts.
-  // Imported on demand (like './api/documents') to keep the savings-goal API module off the eager
-  // critical path — a queued op only ever dispatches after the app is already running.
-  'savingsGoal:add': async (op) => {
-    const { addSavingsGoal } = await import('./api/savingsGoals')
-    return addSavingsGoal(op.payload as Partial<SavingsGoal>, op.id)
-  },
-  'savingsGoal:update': async (op) => {
-    // The undo snapshot is local bookkeeping for the toast's Undo action; strip it so it is never
-    // sent as part of the goal body.
-    const { updateSavingsGoal } = await import('./api/savingsGoals')
-    return updateSavingsGoal(Number(op.targetId), withoutUndoSnapshot(op.payload) as unknown as SavingsGoal)
-  },
-  'savingsGoal:delete': async (op) => {
-    const { deleteSavingsGoal } = await import('./api/savingsGoals')
-    return deleteSavingsGoal(Number(op.targetId))
-  },
-
-  'category:add': (op) => api.addCategory({ ...(op.payload as Partial<TransactionCategory>), id: op.targetId } as Omit<TransactionCategory, 'id'> & { id?: string }),
-  'category:update': (op) => api.updateCategory(
-    op.targetId,
-    {
-      cycleLimit: typeof op.payload?.cycleLimit === 'number' ? op.payload.cycleLimit : (op.payload?.cycleLimit === null ? null : undefined),
-      type: typeof op.payload?.type === 'string' ? op.payload.type as CategoryFlowType : undefined,
-    },
-  ),
-  'category:delete': (op) => api.deleteCategory(op.targetId, typeof op.payload?.replacementCategoryId === 'string' ? op.payload.replacementCategoryId : undefined),
-  'category:cleanup': (op) => api.applyCategoryCleanup(
-    Array.isArray(op.payload?.actions) ? op.payload.actions as api.CategoryCleanupAction[] : [],
-  ),
-
-  'settings:update': (op) => {
-    if (op.targetId === 'darkMode') return api.updateDarkMode(op.payload?.darkMode === true)
-    if (op.targetId === 'hideSensitive') return api.updateHideSensitive(op.payload?.hideSensitive === true)
-    if (op.targetId === 'summarySeen') return api.updateSummarySeen(typeof op.payload?.cycleKey === 'string' ? op.payload.cycleKey : null)
-    return api.updateSettings(withoutUndoSnapshot(op.payload) as unknown as Pick<FinancialSetting, 'targetStabilityFund' | 'essentialsAlloc' | 'growthAlloc' | 'stabilityAlloc' | 'rewardsAlloc' | 'cycleDay'> & Partial<FinancialSetting>)
-  },
-
-  'investmentAccount:add': (op) => api.createInvestmentAccount({ ...(op.payload as unknown as api.AccountMutation), id: op.targetId }),
-  'investmentAccount:update': (op) => api.updateInvestmentAccount(op.targetId, op.payload as unknown as api.AccountMutation),
-  'investmentAccount:delete': (op) => api.deleteInvestmentAccount(op.targetId),
-
-  'investmentInstrument:add': (op) => api.createInvestmentInstrument({ ...(op.payload as unknown as api.InstrumentMutation), id: op.targetId }),
-  'investmentInstrument:update': (op) => api.updateInvestmentInstrument(op.targetId, op.payload as unknown as api.InstrumentMutation),
-  'investmentInstrument:delete': (op) => api.deleteInvestmentInstrument(op.targetId),
-
-  'investmentActivity:add': (op) => api.createInvestmentActivity({ ...(op.payload as unknown as api.InvestmentActivityMutation), id: op.targetId }),
-  'investmentActivity:update': (op) => api.updateInvestmentActivity(op.targetId, op.payload as unknown as api.InvestmentActivityMutation),
-  'investmentActivity:delete': (op) => api.deleteInvestmentActivity(op.targetId),
-  'investmentActivity:restore': (op) => api.restoreInvestmentActivity(op.payload as unknown as api.DeletedTransactionsSnapshot),
-
-  'investmentCashFlow:add': (op) => api.createInvestmentCashFlow({
-    ...(op.payload as unknown as Parameters<typeof api.createInvestmentCashFlow>[0]),
-    id: op.targetId,
-  }),
-  'investmentCashFlow:update': (op) => api.updateInvestmentCashFlow(op.targetId, op.payload as unknown as api.InvestmentCashFlowInput),
-  'investmentCashFlow:delete': (op) => api.deleteInvestmentCashFlow(op.targetId),
-  'investmentCashFlow:restore': (op) => api.restoreInvestmentCashFlow(op.payload as unknown as InvestmentCashFlow),
-
-  'investmentPlan:update': (op) => api.updateInvestmentPlan(
-    withoutUndoSnapshot(op.payload) as unknown as Parameters<typeof api.updateInvestmentPlan>[0],
-  ),
-  'investmentAllocation:update': (op) => api.updateInvestmentAllocationSleeve(
-    op.targetId,
-    typeof op.payload?.sleeve === 'string' ? op.payload.sleeve as InvestmentAllocationSleeve : undefined,
-  ),
-  'investmentAllocationOrder:update': (op) => api.updateInvestmentAllocationOrder(
-    Array.isArray(op.payload?.instrumentIds)
-      ? op.payload.instrumentIds.filter((value): value is string => typeof value === 'string')
-      : [],
-  ),
-  'taxReliefCategory:add': async (op) => {
-    const documents = await import('./api/documents')
-    return documents.addTaxReliefCategory(Number(op.payload?.taxYear), {
-      name: String(op.payload?.name ?? ''),
-      limit: Number(op.payload?.limit),
-    })
-  },
-  'taxReliefCategory:update': async (op) => {
-    const documents = await import('./api/documents')
-    return documents.updateTaxReliefCategory(Number(op.payload?.taxYear), op.targetId, {
-      name: String(op.payload?.name ?? ''),
-      limit: Number(op.payload?.limit),
-    })
-  },
-  'taxReliefCategory:delete': async (op) => {
-    const documents = await import('./api/documents')
-    return documents.deleteTaxReliefCategory(Number(op.payload?.taxYear), op.targetId)
-  },
-}
-
 function isWellFormedOp(op: unknown): op is QueuedOp {
   if (!op || typeof op !== 'object') return false
   const o = op as Record<string, unknown>
@@ -1077,7 +988,7 @@ function isWellFormedOp(op: unknown): op is QueuedOp {
     typeof o.entity === 'string' &&
     ['transaction', 'recurringPayment', 'wishlistItem', 'savingsGoal', 'category', 'settings', 'investmentAccount', 'investmentInstrument', 'investmentActivity', 'investmentCashFlow', 'investmentPlan', 'investmentAllocation', 'investmentAllocationOrder', 'taxReliefCategory'].includes(o.entity as string) &&
     typeof o.type === 'string' &&
-    ['add', 'update', 'delete', 'restore', 'toggle', 'purchase', 'unpurchase', 'reminder', 'payEarly', 'cleanup'].includes(o.type as string) &&
+    ['add', 'update', 'delete', 'restore', 'toggle', 'purchase', 'unpurchase', 'reminder', 'payEarly', 'cleanup', 'bulkDelete', 'bulkRestore'].includes(o.type as string) &&
     (typeof o.targetId === 'string' || typeof o.targetId === 'number') &&
     typeof o.createdAt === 'number' &&
     typeof o.retryCount === 'number'

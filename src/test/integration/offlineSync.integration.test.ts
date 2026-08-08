@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { drainQueue, type DrainQueueDeps } from '@/lib/outboxSync'
-import { enqueue, DISPATCH, type QueuedOp } from '@/lib/outbox'
+import { enqueue, type QueuedOp } from '@/lib/outbox'
+import { DISPATCH } from '@/lib/outboxDispatch'
 import { state, lastRequest } from '@/test/msw/backend'
 import { deobfuscateAmount, obfuscateAmount } from '@/lib/api/amounts'
 

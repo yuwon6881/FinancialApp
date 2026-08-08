@@ -122,6 +122,38 @@ describe('computeOptimisticDashboard', () => {
     expect(salary.netChange).toBe(0)
   })
 
+  it('projects a queued bulk delete through the dashboard totals', () => {
+    const orig: Transaction = { id: 't1', amount: -30, category: 'Food', ledgerCategory: 'Essentials' } as Transaction
+    const result = computeOptimisticDashboard(makeDashboard(), {
+      activeOps: [op({
+        type: 'bulkDelete',
+        targetId: 'bulk-1',
+        payload: { transactionIds: ['t1'], transactions: [orig] },
+      })],
+      transactions: [],
+    })
+
+    expect(result!.stats.totalBalance).toBe(1030)
+    expect(result!.stats.monthlyExpenses).toBe(-10)
+    expect(result!.categories.find(c => c.name === 'Food')!.netChange).toBe(10)
+  })
+
+  it('projects one bulk restore and its income split rows as income', () => {
+    const orig: Transaction = { id: 't1', amount: 500, category: 'Salary', ledgerCategory: 'Income' } as Transaction
+    const result = computeOptimisticDashboard(makeDashboard(), {
+      activeOps: [op({
+        type: 'bulkRestore',
+        targetId: 'bulk-1',
+        payload: { transactions: [orig] },
+      })],
+      transactions: [],
+    })
+
+    expect(result!.stats.totalBalance).toBe(1500)
+    expect(result!.stats.monthlyInflow).toBe(1000)
+    expect(result!.stats.monthlyIncome).toBe(0)
+  })
+
   it('merges a pending settings update from activeOps', () => {
     const result = computeOptimisticDashboard(makeDashboard(), {
       activeOps: [op({ entity: 'settings', type: 'update', payload: { currency: 'EUR' } })],

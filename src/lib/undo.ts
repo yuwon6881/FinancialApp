@@ -53,6 +53,14 @@ export function buildUndoAction(
   })
 
   switch (`${op.entity}:${op.type}`) {
+    case 'transaction:bulkDelete': {
+      const deleted = result && typeof result === 'object' && 'deleted' in result && Array.isArray(result.deleted)
+        ? result.deleted
+        : op.payload?.transactions
+      return Array.isArray(deleted) && deleted.length > 0
+        ? action('transaction', 'bulkRestore', String(op.targetId), { transactions: deleted })
+        : undefined
+    }
     case 'transaction:add':
       return action('transaction', 'delete', String(op.targetId), op.payload)
     case 'recurringPayment:add':

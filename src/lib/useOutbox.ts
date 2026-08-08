@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObjec
 import type { ToastAction, ToastTone } from '../components/ui/ToastViewport'
 import { CACHE_KEYS, getCachedJSON, getCachedOps, setCachedJSON } from './cache'
 import {
-  DISPATCH,
   enqueue as enqueueOperation,
   getSyncSuccessToast,
   sanitizeQueuedOps,
@@ -89,6 +88,7 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
   const activeSyncOpIdRef = useRef<string | null>(null)
   const nextToastAtRef = useRef(0)
   const undoSnapshotsRef = useRef<Map<string, UndoSnapshot>>(new Map())
+  const dispatchModuleRef = useRef<Promise<typeof import('./outboxDispatch')> | null>(null)
   const mountedRef = useRef(true)
 
   useEffect(() => {
@@ -167,6 +167,9 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
   const processQueueRef = useRef<() => void>(() => undefined)
   const processQueue = useCallback(async () => {
     const current = optionsRef.current
+    if (!current.token) return
+    const dispatchModule = dispatchModuleRef.current ?? (dispatchModuleRef.current = import('./outboxDispatch'))
+    const { DISPATCH } = await dispatchModule
     await drainQueue({
       token: current.token,
       now: Date.now,

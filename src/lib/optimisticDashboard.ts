@@ -8,7 +8,7 @@
 // arithmetic can be exercised directly.
 
 import type { DashboardData, Transaction } from '../types'
-import type { QueuedOp } from './outbox'
+import { expandBulkTransactionProjection, type QueuedOp } from './outbox'
 
 export interface OptimisticDashboardInputs {
   /** Combined pending + recently-completed ops awaiting server reconciliation. */
@@ -39,7 +39,7 @@ export function computeOptimisticDashboard(
   // Completed mutations stay in activeOps until a successful server refresh.
   // Applying that retained projection prevents dashboard totals from snapping
   // back when the mutation succeeded but reconciliation temporarily failed.
-  const txOps = activeOps.filter(o => o.entity === 'transaction')
+  const txOps = expandBulkTransactionProjection(activeOps.filter(o => o.entity === 'transaction'))
   txOps.forEach(op => {
     if (op.type === 'add' && op.payload) {
       const amount = op.payload.amount || 0
@@ -93,10 +93,19 @@ export function computeOptimisticDashboard(
         data.stats.monthlyExpenses += Math.abs(newAmount)
       }
     } else if (op.type === 'delete') {
+      const rawSnapshot = op.payload?.undoSnapshot ?? op.payload
+      const snapshot = rawSnapshot && typeof rawSnapshot === 'object'
+        ? rawSnapshot as Record<string, unknown>
+        : undefined
       const orig = transactions.find(t => String(t.id) === String(op.targetId))
-      const oldAmount = orig ? orig.amount : 0
+      const oldAmount = orig?.amount
+        ?? (typeof snapshot?.amount === 'number' ? snapshot.amount : 0)
       data.stats.totalBalance -= oldAmount
-      const catName = orig ? (orig.category || orig.ledgerCategory) : ''
+      const catName = orig
+        ? (orig.category || orig.ledgerCategory)
+        : typeof snapshot?.category === 'string'
+          ? snapshot.category
+          : typeof snapshot?.ledgerCategory === 'string' ? snapshot.ledgerCategory : ''
       const cat = data.categories.find(c => c.name.toLowerCase() === catName.toLowerCase())
       if (cat) {
         cat.netChange -= oldAmount
