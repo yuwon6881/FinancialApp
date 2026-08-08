@@ -528,7 +528,15 @@ export function expandBulkTransactionProjection(ops: QueuedOp[]): QueuedOp[] {
       ? op.payload.transactions.filter((item): item is Partial<Transaction> & { id: string | number } => Boolean(item && typeof item === 'object' && 'id' in item))
       : []
     if (op.type === 'bulkRestore') {
-      return snapshots.map(snapshot => ({ ...op, type: 'add' as const, targetId: String(snapshot.id), payload: { ...snapshot } as OutboxPayload }))
+      return snapshots.map(snapshot => ({
+        ...op,
+        type: 'add' as const,
+        targetId: String(snapshot.id),
+        payload: {
+          ...snapshot,
+          pendingSyncOperationId: op.isCompleted ? undefined : op.id,
+        } as OutboxPayload,
+      }))
     }
     const ids = Array.isArray(op.payload?.transactionIds) ? op.payload.transactionIds.map(String).filter(Boolean) : []
     const snapshotById = new Map(snapshots.map(snapshot => {

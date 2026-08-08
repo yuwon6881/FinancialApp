@@ -321,7 +321,7 @@ describe('bulk transaction projection', () => {
     const restored = applyOpsToList<TestItem>([], [op], 'transaction', {
       incomeAllocations: { essentialsAlloc: 0.5, growthAlloc: 0.25, stabilityAlloc: 0.15, rewardsAlloc: 0.1 },
     })
-    expect(restored.some(row => row.id === 'tx-1')).toBe(true)
+    expect(restored.find(row => row.id === 'tx-1')).toMatchObject({ isPendingSync: true, pendingSyncOperationId: op.id })
     expect(restored.some(row => row.id === 'tx-1-split-Essentials')).toBe(true)
   })
 })
