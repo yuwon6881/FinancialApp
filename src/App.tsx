@@ -363,14 +363,11 @@ function App() {
   })
   const currentPendingNotifications = todayDashboardData?.pendingNotifications || []
   const wishlistDashboardData = todayDashboardData || financial.optimisticDashboardData
-  const wishlistRewardsCategory = wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')
-  const wishlistPendingRewardsDeduction = (wishlistDashboardData?.activeRecurringPayments || []).reduce((sum, rp) => {
-    if (rp.status === 'Pending' && (rp.ledgerCategory || rp.category) === 'Rewards') {
-      return sum + Math.abs(rp.amount)
-    }
-    return sum
-  }, 0)
-  const wishlistRewardsBalance = Math.max(0, (wishlistRewardsCategory?.remaining ?? 0) - wishlistPendingRewardsDeduction)
+  const wishlistPendingRewardsDeduction = wishlistDashboardData?.activeRecurringPayments?.reduce(
+    (sum, rp) => rp.status === 'Pending' && (rp.ledgerCategory || rp.category) === 'Rewards' ? sum + Math.abs(rp.amount) : sum,
+    0,
+  ) || 0
+  const wishlistRewardsBalance = Math.max(0, (wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')?.remaining ?? 0) - wishlistPendingRewardsDeduction)
   useEffect(() => {
     rewardsBalanceRef.current = wishlistRewardsBalance
   }, [wishlistRewardsBalance])

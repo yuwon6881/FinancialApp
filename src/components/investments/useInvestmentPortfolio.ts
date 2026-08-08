@@ -13,12 +13,14 @@ export function useInvestmentPortfolio() {
   const [loading, setLoading] = useState(!portfolio)
   const [loadError, setLoadError] = useState('')
   const [refreshing, setRefreshing] = useState(false)
+  const [isSyncRefreshing, setIsSyncRefreshing] = useState(false)
   const [activityRevision, setActivityRevision] = useState(0)
   const cancelRefreshRef = useRef(false)
   const refreshTimerRef = useRef<number | null>(null)
 
   const load = useCallback(async (nextRange: InvestmentRange, quiet = false, rethrow = false) => {
     if (!quiet) setLoading(true)
+    else setIsSyncRefreshing(true)
     setLoadError('')
     try {
       const result = await api.fetchInvestmentPortfolio(nextRange)
@@ -35,6 +37,7 @@ export function useInvestmentPortfolio() {
       if (rethrow) throw error
     } finally {
       setLoading(false)
+      setIsSyncRefreshing(false)
     }
   }, [])
 
@@ -122,6 +125,7 @@ export function useInvestmentPortfolio() {
 
   return {
     activityRevision,
+    isBackgroundRefreshing: refreshing || isSyncRefreshing || (loading && portfolio !== null),
     load,
     loadError,
     loading,

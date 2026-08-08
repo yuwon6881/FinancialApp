@@ -85,6 +85,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
   )
   const {
     activityRevision,
+    isBackgroundRefreshing,
     loadError,
     loading,
     portfolio,
@@ -200,7 +201,18 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
           <ArrowLeft className="size-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-foreground">Growth Investments</h1>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-2xl font-black tracking-tight text-foreground">Growth Investments</h1>
+            {isBackgroundRefreshing && (
+              <span
+                role="status"
+                className="inline-flex items-center gap-1.5 rounded-full border border-ledger-purple-500/30 bg-ledger-purple-500/10 px-2.5 py-0.5 text-[11px] font-medium text-ledger-purple-400 dark:text-ledger-purple-300"
+              >
+                <RefreshCw className="size-3 animate-spin text-ledger-purple-400" />
+                <span>Updating prices…</span>
+              </span>
+            )}
+          </div>
           <p className="mt-1 text-xs text-muted-foreground">Track what you own, across any broker.</p>
         </div>
         {onExplainWithAi && (
