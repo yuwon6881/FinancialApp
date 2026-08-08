@@ -417,7 +417,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         }}
       />
 
-      {!isBulkSelectionRequested ? (
+      <React.Suspense fallback={(
         <>
           <SelectionToolbar
             testId="ledger-selection-toolbar"
@@ -425,42 +425,24 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
             selectedCount={0}
             allVisibleSelected={false}
             someVisibleSelected={false}
-            isSelecting={false}
+            isSelecting={isBulkSelectionRequested}
             onStartSelection={() => setIsBulkSelectionRequested(true)}
             onToggleSelectAll={() => undefined}
-            onLeaveSelection={() => undefined}
+            onLeaveSelection={() => setIsBulkSelectionRequested(false)}
             disabled={hideSensitive}
             itemLabel="transactions"
           />
           <LedgerTransactionList {...listProps} />
         </>
-      ) : (
-        <React.Suspense fallback={(
-          <>
-            <SelectionToolbar
-              testId="ledger-selection-toolbar"
-              itemCount={ledger.displayTransactions.length}
-              selectedCount={0}
-              allVisibleSelected={false}
-              someVisibleSelected={false}
-              isSelecting
-              onStartSelection={() => undefined}
-              onToggleSelectAll={() => undefined}
-              onLeaveSelection={() => setIsBulkSelectionRequested(false)}
-              disabled={hideSensitive}
-              itemLabel="transactions"
-            />
-            <LedgerTransactionList {...listProps} />
-          </>
-        )}>
-          <LedgerBulkSelectionLayerLazy
-            listProps={listProps}
-            allTransactions={props.transactions}
-            resetKey={bulkResetKey}
-            onExit={() => setIsBulkSelectionRequested(false)}
-          />
-        </React.Suspense>
-      )}
+      )}>
+        <LedgerBulkSelectionLayerLazy
+          listProps={listProps}
+          allTransactions={props.transactions}
+          resetKey={bulkResetKey}
+          startInSelectionMode={isBulkSelectionRequested}
+          onExit={() => setIsBulkSelectionRequested(false)}
+        />
+      </React.Suspense>
 
       <LedgerPagination
         currentPage={ledger.currentPage}

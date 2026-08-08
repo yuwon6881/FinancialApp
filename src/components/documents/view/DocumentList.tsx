@@ -193,6 +193,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
             const isSyncing = syncingDocumentIds.has(document.id)
             const isBusy = isDeleting || isSyncing
             const pendingCategory = pendingReliefCategories.get(document.id)
+            const reliefId = pendingCategory ?? document.reliefCategory ?? ''
             const isReliefDraftChanged = pendingCategory !== undefined && pendingCategory !== (document.reliefCategory ?? '')
             return (
               <tr key={document.id} className="transition-colors hover:bg-muted/40" aria-busy={isBusy}>
@@ -221,9 +222,12 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
                   <div className="flex items-center gap-1.5">
                     <CustomSelect
                       disabled={hideSensitive || isBusy}
-                      value={pendingCategory ?? document.reliefCategory ?? ''}
+                      value={reliefId}
                       onChange={value => onReliefCategoryChange(document.id, String(value))}
-                      options={[{ value: '', label: 'Uncategorised (legacy)', disabled: true }, ...documentReliefCategories.map(category => ({ value: category.id, label: category.name }))]}
+                      options={[
+                        ...(reliefId ? [] : [{ value: '', label: 'Choose tax relief category', disabled: true }]),
+                        ...documentReliefCategories.map(category => ({ value: category.id, label: category.name })),
+                      ]}
                       ariaLabel={`Tax relief category for ${document.originalFileName}`}
                       className={`w-40 max-w-40 ${isReliefDraftChanged ? 'rounded-lg ring-2 ring-blue-500/50' : ''}`}
                     />

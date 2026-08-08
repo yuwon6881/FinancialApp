@@ -231,7 +231,7 @@ export function DocumentCard({
                   setEditingRelief(false)
                 }}
                 options={[
-                  { value: '', label: 'Uncategorised (legacy)', disabled: true },
+                  ...(reliefId ? [] : [{ value: '', label: 'Choose tax relief category', disabled: true }]),
                   ...reliefCategories.map(category => ({ value: category.id, label: category.name })),
                 ]}
                 ariaLabel={`Tax relief category for ${document.originalFileName}`}

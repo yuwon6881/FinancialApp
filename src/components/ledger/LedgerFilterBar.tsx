@@ -4,6 +4,7 @@ import { Checkbox } from '../ui/Checkbox'
 import { useRef, useMemo } from 'react'
 import { Search, Filter, X, Loader2, CalendarDays, Banknote, ChevronDown } from 'lucide-react'
 import type { TransactionCategory } from '../../types'
+import { allowsCategoryFlow } from '../../lib/categoryFlow'
 import { BottomSheet } from '../ui/BottomSheet'
 import { AnchoredPopover } from '../ui/AnchoredPopover'
 import { CustomSelect } from '../ui/CustomSelect'
@@ -124,7 +125,7 @@ export function LedgerFilterBar({
     return categories.filter(c => {
       if (c.isPendingDelete) return false
       if (txType === 'inflow' || txType === 'outflow') {
-        return !c.type || c.type === 'both' || c.type === txType
+        return allowsCategoryFlow(c.type, txType)
       }
       return true
     })

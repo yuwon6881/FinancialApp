@@ -2,6 +2,7 @@ import React from 'react'
 import { ChevronDown, ChevronUp, Gauge, Save } from 'lucide-react'
 import type { TransactionCategory } from '../../types'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
+import { isSpendingGuideCategory } from '../../lib/categoryFlow'
 import { getCurrencySymbol } from '../../lib/utils'
 import { SmartAmountInput } from '../ui/SmartAmountInput'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
@@ -30,6 +31,10 @@ export function CategoryLimitsCard({
   activeSyncIds,
   onUpdate,
 }: CategoryLimitsCardProps) {
+  const spendingCategories = React.useMemo(
+    () => categories.filter(isSpendingGuideCategory),
+    [categories],
+  )
   const [drafts, setDrafts] = React.useState<Record<string, string | null>>({})
   const [errors, setErrors] = React.useState<Record<string, string>>({})
   const sectionRef = React.useRef<HTMLElement>(null)
@@ -56,11 +61,11 @@ export function CategoryLimitsCard({
   }, [])
 
   React.useEffect(() => {
-    setDrafts(Object.fromEntries(categories.map(category => [category.id, normalizedValue(category.cycleLimit)])))
+    setDrafts(Object.fromEntries(spendingCategories.map(category => [category.id, normalizedValue(category.cycleLimit)])))
     setErrors({})
-  }, [categories])
+  }, [spendingCategories])
 
-  const changedCategories = categories.filter(category => {
+  const changedCategories = spendingCategories.filter(category => {
     const draft = drafts[category.id]
     const current = normalizedValue(category.cycleLimit)
     if (draft == null) return current != null
@@ -116,7 +121,7 @@ export function CategoryLimitsCard({
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className="rounded-full bg-blue-500/10 px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-blue-500">
-            {categories.filter(category => category.cycleLimit != null).length} tracked
+            {spendingCategories.filter(category => category.cycleLimit != null).length} tracked
           </span>
           {isOpen ? <ChevronUp className="size-4 text-muted-foreground" /> : <ChevronDown className="size-4 text-muted-foreground" />}
         </div>
@@ -128,7 +133,7 @@ export function CategoryLimitsCard({
               once they bottom out, matching every other in-page list in the app.
               Containment is reserved for floating popovers and sheet panels. */}
           <div className="max-h-80 sm:max-h-96 overflow-y-auto pr-1 space-y-2.5 touch-pan-y">
-            {categories.map(category => {
+            {spendingCategories.map(category => {
               const enabled = drafts[category.id] != null
               const syncIds = activeSyncIds?.length ? activeSyncIds : activeSyncId ? [activeSyncId] : []
               const isSyncing = syncIds.includes(category.id)
@@ -202,6 +207,11 @@ export function CategoryLimitsCard({
                 </div>
               )
             })}
+            {spendingCategories.length === 0 && (
+              <p className="rounded-xl border border-border/40 bg-muted/20 p-3 text-xs text-muted-foreground">
+                Inflow categories do not use spending guides.
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-3 border-t border-border/30 pt-3 sm:flex-row sm:items-center sm:justify-between">

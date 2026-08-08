@@ -2,6 +2,7 @@ import { Input } from '../ui/Input'
 import React from 'react'
 import { Edit, Plus } from 'lucide-react'
 import type { RecurringFrequency, RecurringPayment, TransactionCategory } from '../../types'
+import { allowsCategoryFlow } from '../../lib/categoryFlow'
 import { RECURRING_PAYMENT_MODE_LABELS } from '../../lib/recurringPayments'
 import { getCurrencySymbol } from '../../lib/utils'
 import { CustomSelect } from '../ui/CustomSelect'
@@ -117,10 +118,10 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
         <FormField label="Budget category">
           <CustomSelect
             ariaLabel="Budget category"
-            value={category || (categories.find(c => !c.type || c.type === 'both' || c.type === 'outflow')?.name || categories[0]?.name || '')}
+            value={category || (categories.find(c => !c.isPendingDelete && allowsCategoryFlow(c.type, 'outflow'))?.name || '')}
             onChange={val => onCategoryChange(val)}
             options={categories
-              .filter(c => !c.isPendingDelete && (!c.type || c.type === 'both' || c.type === 'outflow'))
+              .filter(c => !c.isPendingDelete && allowsCategoryFlow(c.type, 'outflow'))
               .map(c => ({ value: c.name, label: c.name }))}
             className="w-full"
           />

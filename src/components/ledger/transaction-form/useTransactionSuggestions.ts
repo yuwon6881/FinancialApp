@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { suggestTransactionCategories, suggestTransactionNotes, type CategorySuggestion, type TransactionNoteSuggestion } from '../../../lib/api'
+import { allowsCategoryFlow } from '../../../lib/categoryFlow'
 
 export interface UseTransactionSuggestionsOptions {
   categories: any[]
@@ -13,14 +14,14 @@ export interface UseTransactionSuggestionsOptions {
 
 interface CategoryLike {
   name?: string
-  type?: 'both' | 'inflow' | 'outflow'
+  type?: string | null
   isPendingDelete?: boolean
 }
 
 export function getSelectableCategoryNames(categories: CategoryLike[], txType?: 'inflow' | 'outflow'): string[] {
   return categories
     .filter(category => !category.isPendingDelete)
-    .filter(category => !txType || !category.type || category.type === 'both' || category.type === txType)
+    .filter(category => !txType || allowsCategoryFlow(category.type, txType))
     .map(category => category.name?.trim())
     .filter((name): name is string => !!name)
     .filter(name => name.toLowerCase() !== 'transfer' && name.toLowerCase() !== 'adjustment')

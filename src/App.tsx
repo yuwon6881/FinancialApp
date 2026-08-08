@@ -560,17 +560,19 @@ function App() {
           draftCount={financial.draftTransactions.length}
         />
 
-        <AiAssistantPanel
-          isOpen={isAiOpen}
-          onClose={() => setIsAiOpen(false)}
-          onActions={aiRouter.handleAiActions}
-          sensitiveMode={prefs.hideSensitive}
-          isOffline={financial.isOffline}
-          hasPendingLocalChanges={financial.pendingOps.length > 0}
-          invocation={aiEntryPoint.invocation}
-          onInvocationConsumed={aiEntryPoint.consume}
-          surface={prefs.activeTab}
-        />
+        <Suspense fallback={null}>
+          <AiAssistantPanel
+            isOpen={isAiOpen}
+            onClose={() => setIsAiOpen(false)}
+            onActions={aiRouter.handleAiActions}
+            sensitiveMode={prefs.hideSensitive}
+            isOffline={financial.isOffline}
+            hasPendingLocalChanges={financial.pendingOps.length > 0}
+            invocation={aiEntryPoint.invocation}
+            onInvocationConsumed={aiEntryPoint.consume}
+            surface={prefs.activeTab}
+          />
+        </Suspense>
 
         {financial.error && (
           <div className="bg-destructive/15 border-b border-destructive/30 text-destructive px-4 py-2 text-xs flex items-center justify-center gap-2">

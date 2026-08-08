@@ -13,18 +13,20 @@ interface LedgerBulkSelectionLayerProps {
   listProps: LedgerListProps
   allTransactions: readonly Transaction[]
   resetKey: string
+  startInSelectionMode: boolean
   onExit: () => void
 }
 
 /**
- * The bulk interaction is loaded only after the user asks to select. Ledger's normal list stays
- * on the route's initial path, while this layer owns the selection state, confirmation copy, and
- * the selection-aware row props as one focused concern.
+ * This stays mounted beside the normal ledger route. Changing selection mode only changes row
+ * props, so the list's keyed entrance container is reused and its animation does not replay when
+ * the toolbar or the first page checkbox is clicked.
  */
 export function LedgerBulkSelectionLayer({
   listProps,
   allTransactions,
   resetKey,
+  startInSelectionMode,
   onExit,
 }: LedgerBulkSelectionLayerProps) {
   const app = useAppContext()
@@ -39,8 +41,8 @@ export function LedgerBulkSelectionLayer({
   })
 
   useEffect(() => {
-    bulk.startSelection()
-  }, [bulk.startSelection])
+    if (startInSelectionMode) bulk.startSelection()
+  }, [bulk.startSelection, startInSelectionMode])
 
   const leaveSelection = () => {
     bulk.leaveSelection()

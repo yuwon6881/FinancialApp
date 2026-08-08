@@ -195,6 +195,13 @@ describe('DocumentList selection toolbar', () => {
     expect(onNavigateToTransaction).toHaveBeenCalledWith('tx-1')
   })
 
+  it('does not expose the removed legacy document category label', () => {
+    render(<DocumentList {...baseProps} selectedIds={new Set()} />)
+
+    expect(screen.queryByText(/legacy/i)).toBeNull()
+    expect(screen.getAllByText('Choose tax relief category').length).toBeGreaterThan(0)
+  })
+
   it('keeps the filing facts behind a closed disclosure on the mobile card', () => {
     render(<DocumentList {...baseProps} selectedIds={new Set()} />)
 

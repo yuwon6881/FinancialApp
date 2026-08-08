@@ -1,6 +1,7 @@
 import type { CategoryFlowType, TransactionCategory } from '../../types'
 import { cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
 import { deobfuscateAmount, obfuscateAmount } from './amounts'
+import { normalizeCategoryFlowType } from '../categoryFlow'
 
 export type WireTransactionCategory = Omit<TransactionCategory, 'cycleLimit'> & {
   cycleLimit?: string | number | null
@@ -97,7 +98,7 @@ export async function applyCategoryCleanup(actions: CategoryCleanupAction[]): Pr
 export function mapCategory(category: WireTransactionCategory): TransactionCategory {
   return {
     ...category,
-    type: category.type ?? 'both',
+    type: normalizeCategoryFlowType(category.type),
     cycleLimit: category.cycleLimit == null ? null : deobfuscateAmount(category.cycleLimit),
   }
 }

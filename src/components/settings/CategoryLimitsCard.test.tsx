@@ -48,4 +48,22 @@ describe('CategoryLimitsCard', () => {
 
     expect(onUpdate).toHaveBeenCalledWith('cat-food', null)
   })
+
+  it('does not render spending guides for inflow categories', () => {
+    render(
+      <CategoryLimitsCard
+        categories={[
+          { id: 'cat-salary', name: 'Salary', type: 'inflow', cycleLimit: 500 },
+          { id: 'cat-food', name: 'Food', type: 'outflow', cycleLimit: 500 },
+        ]}
+        currency="MYR"
+        hideSensitive={false}
+        onUpdate={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByRole('switch', { name: 'Track Salary cycle spending' })).toBeNull()
+    expect(screen.getByRole('switch', { name: 'Track Food cycle spending' })).not.toBeNull()
+    expect(screen.getByText('1 tracked')).not.toBeNull()
+  })
 })

@@ -925,9 +925,9 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     snapshotForUndo('category', String(id), category)
     mutateQueue(prev => enqueue(prev, 'category', 'update', id, {
       name: category?.name,
-      cycleLimit: category?.cycleLimit,
       type: category?.type,
-      ...patch,
+      ...(patch.cycleLimit !== undefined ? { cycleLimit: patch.cycleLimit } : {}),
+      ...(patch.type !== undefined ? { type: patch.type } : {}),
       undoSnapshot: category,
     }))
   }

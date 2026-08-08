@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
+import type { ComponentProps } from 'react'
 import { LedgerTransactionList } from './LedgerTransactionList'
 import type { Transaction } from '../../types'
 
@@ -16,22 +17,26 @@ const tx: Transaction = {
   amount: -12.5,
 } as Transaction
 
-function renderList() {
+type ListProps = ComponentProps<typeof LedgerTransactionList>
+
+const baseListProps: ListProps = {
+  transactions: [tx],
+  listKey: 'k',
+  hideSensitive: false,
+  currency: 'MYR',
+  serverIsFetching: false,
+  pageTotals: { inflow: 0, outflow: 12.5, transfer: 0 },
+  isTxDeleting: () => false,
+  isTxSyncing: () => false,
+  onStartEdit: () => {},
+  onDeleteClick: () => {},
+  onEditBlocked: () => {},
+  formatSensitive: (v) => <span>{v.toFixed(2)}</span>,
+}
+
+function renderList(overrides: Partial<ListProps> = {}) {
   return render(
-    <LedgerTransactionList
-      transactions={[tx]}
-      listKey="k"
-      hideSensitive={false}
-      currency="MYR"
-      serverIsFetching={false}
-      pageTotals={{ inflow: 0, outflow: 12.5, transfer: 0 }}
-      isTxDeleting={() => false}
-      isTxSyncing={() => false}
-      onStartEdit={() => {}}
-      onDeleteClick={() => {}}
-      onEditBlocked={() => {}}
-      formatSensitive={(v) => <span>{v.toFixed(2)}</span>}
-    />,
+    <LedgerTransactionList {...baseListProps} {...overrides} />,
   )
 }
 
@@ -76,5 +81,23 @@ describe('LedgerTransactionList layout selection', () => {
 
     expect(document.getElementById('tx-row-mobile-tx-1')).not.toBeNull()
     expect(document.querySelector('table')).toBeNull()
+  })
+
+  it('keeps the entrance container mounted while selection mode changes', () => {
+    setViewport(1024)
+    const { rerender } = renderList()
+    const body = document.querySelector('tbody')
+
+    rerender(
+      <LedgerTransactionList
+        {...baseListProps}
+        isSelecting
+        canSelect={() => true}
+        isSelected={() => false}
+        onToggleSelected={() => undefined}
+      />,
+    )
+
+    expect(document.querySelector('tbody')).toBe(body)
   })
 })

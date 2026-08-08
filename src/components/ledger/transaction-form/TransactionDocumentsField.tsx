@@ -179,7 +179,7 @@ export const TransactionDocumentsField = React.forwardRef<
       {visibleExisting.map(document => {
         const categoryName = reliefCategories.find(category => category.id === document.reliefCategory)?.name
           ?? document.reliefCategory
-          ?? 'Uncategorised'
+          ?? 'Choose tax relief category'
         return (
           <div key={document.id} className="flex min-w-0 items-center gap-2.5 rounded-xl border border-border/60 bg-muted/30 p-2.5 shadow-sm shadow-black/5">
             <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent text-accent-ink ring-1 ring-accent/30">
