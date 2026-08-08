@@ -119,4 +119,21 @@ describe('ReportsView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'View cycle summary' }))
     expect(onViewCycleSummary).toHaveBeenCalledWith(6, 2026)
   })
+
+  it('keeps the ended-cycle controls in one compact row on narrow screens', () => {
+    render(
+      <ReportsView
+        dashboardData={null}
+        transactions={[]}
+        hideBalanceAmounts={false}
+        onSelectPeriod={vi.fn()}
+        onViewCycleSummary={vi.fn()}
+        onExplainWithAi={vi.fn()}
+      />,
+    )
+
+    const askAi = screen.getByRole('button', { name: 'Explain this cycle with Ask AI' })
+    expect(askAi.className).toContain('w-9')
+    expect(askAi.parentElement?.className).toContain('flex-nowrap')
+  })
 })
