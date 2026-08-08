@@ -109,7 +109,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
     onToast,
   })
 
-  const [newCatType, setNewCatType] = React.useState<CategoryFlowType>('both')
+
   const [flowTypeDrafts, setFlowTypeDrafts] = React.useState<Record<string, CategoryFlowType>>({})
   const [isSavingFlowTypes, setIsSavingFlowTypes] = React.useState(false)
 
@@ -696,29 +696,10 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   itemLabel="Category"
                   addPlaceholder="New Category Name"
                   addFormTitle="Add a category"
-                  addFormDescription="Choose where it can appear, then give it a name."
-                  addFormFields={(
-                    <FormField
-                      label="This category is for"
-                      hint="This controls where the category appears when adding a ledger entry."
-                    >
-                      <CustomSelect
-                        ariaLabel="This category is for"
-                        value={newCatType}
-                        onChange={setNewCatType}
-                        options={[
-                          { value: 'both', label: 'Money coming in and going out' },
-                          { value: 'inflow', label: 'Money coming in only' },
-                          { value: 'outflow', label: 'Money going out only' },
-                        ]}
-                        className="w-full"
-                      />
-                    </FormField>
-                  )}
                   disabled={hideSensitive}
                   isLoading={isCategoryListLoading}
                   validateName={name => ['transfer', 'adjustment'].includes(name.toLowerCase()) ? 'Name is a reserved word.' : null}
-                  onAdd={name => props.onAddCategory({ name, type: newCatType })}
+                  onAdd={name => props.onAddCategory({ name, type: 'both' })}
                   onDelete={item => view.handleDeleteCategory(item.id)}
                   renderName={item => {
                     const activeType = flowTypeDrafts[item.id] || item.type || 'both'
