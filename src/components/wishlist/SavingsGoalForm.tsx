@@ -1,6 +1,6 @@
 import { Input } from '../ui/Input'
 import { Checkbox } from '../ui/Checkbox'
-import type { ChangeEvent, FormEvent } from 'react'
+import type { ChangeEvent, FormEvent, ReactNode } from 'react'
 import { CustomSelect } from '../ui/CustomSelect'
 import { DatePicker } from '../ui/DatePicker'
 import { SmartAmountInput } from '../ui/SmartAmountInput'
@@ -18,6 +18,11 @@ interface SavingsGoalFormProps {
   isRecurring: boolean
   recurrenceMonths: string
   errors: Record<string, string>
+  /** Surplus a lowered target would hand back to free rewards. Stated, never blocking. */
+  releasedByLowerTarget: number
+  /** What this target and deadline would ask for each cycle, from the shared pacing math. */
+  requiredPerCycle: number
+  formatSensitive: (value: number) => ReactNode
   onNameChange: (value: string) => void
   onTargetChange: (event: ChangeEvent<HTMLInputElement>) => void
   onDateChange: (value: string) => void
@@ -58,6 +63,14 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
             placeholder={isAdd ? '0.00' : undefined}
             className="font-medium [appearance:textfield]"
           />
+          {/* A consequence, not a rejection: saving is still allowed, so this is stated in the
+              hint slot rather than as an error that would refuse the very change it describes. */}
+          {!props.errors.target && props.releasedByLowerTarget > 0 && (
+            <p className="text-[10px] text-amber-500 font-medium mt-1">
+              That is below the {props.formatSensitive(props.releasedByLowerTarget)} more you have
+              already set aside. Saving returns the difference to your free rewards.
+            </p>
+          )}
         </FormField>
         <FormField label="Priority">
           <CustomSelect
@@ -82,7 +95,9 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
         />
         {!props.errors.date && (
             <p className="text-[11px] text-muted-foreground mt-1 font-medium">
-              Your deadline sets how much to set aside each cycle.
+              {props.requiredPerCycle > 0
+                ? <>Your deadline works out at about {props.formatSensitive(props.requiredPerCycle)} to set aside each cycle.</>
+                : 'Your deadline sets how much to set aside each cycle.'}
             </p>
         )}
       </FormField>

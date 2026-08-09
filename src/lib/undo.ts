@@ -65,6 +65,14 @@ export function buildUndoAction(
       return action('transaction', 'delete', String(op.targetId), op.payload)
     case 'recurringPayment:add':
       return action('recurringPayment', 'delete', String(op.targetId), op.payload)
+    case 'recurringOccurrence:settle': {
+      const transaction = result && typeof result === 'object' && 'transaction' in result
+        ? result.transaction
+        : undefined
+      return transaction && typeof transaction === 'object' && 'id' in transaction && transaction.id != null
+        ? action('transaction', 'delete', String(transaction.id), { undoSnapshot: transaction })
+        : undefined
+    }
     case 'category:add':
       return action('category', 'delete', String(op.targetId), op.payload)
     case 'taxReliefCategory:add': {

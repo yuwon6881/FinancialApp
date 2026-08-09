@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react'
 import type { SavingsGoal, Transaction, WishlistItem } from '../../types'
 import { CACHE_KEYS, setCachedJSON } from '../../lib/cache'
-import { createLocalNumericId, createLocalWishlistId, type OutboxPayload } from '../../lib/outbox'
+import { createFinalId, createLocalNumericId, createLocalWishlistId, type OutboxPayload } from '../../lib/outbox'
 import { triggerHaptic } from '../../lib/haptics'
 import type { UseOutboxResult } from '../../lib/useOutbox'
 import type { AppDialogs } from '../useAppDialogs'
@@ -112,11 +112,13 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
     const now = new Date()
     const date = customDate || now.toLocaleDateString('en-CA')
     const postedAt = customDate ? `${customDate}T12:00:00.000Z` : now.toISOString()
+    const purchaseTransactionId = createFinalId('transaction')
     mutateQueue(previous => enqueue(previous, 'wishlistItem', 'purchase', String(id), item ? {
       name: item.name,
       price: item.price,
       date,
       postedAt,
+      purchaseTransactionId,
     } : undefined))
   }
 

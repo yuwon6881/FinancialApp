@@ -27,7 +27,7 @@ export interface IncomeAllocations {
 
 /** The shares a saved income row will be split by, or `null` when it generates no rows. */
 function resolveIncomeSplitShares(
-  transaction: Pick<Transaction, 'ledgerCategory' | 'amount'>,
+  transaction: Pick<Transaction, 'ledgerCategory' | 'amount' | 'stabilityRecoveryTopUpAmount'>,
   allocations: IncomeAllocations | undefined,
 ): number[] | null {
   const { ledgerCategory, amount } = transaction
@@ -36,10 +36,30 @@ function resolveIncomeSplitShares(
   const shares = ledgerCategory?.startsWith('IncomeSplit:')
     ? ledgerCategory.slice(12).split(',').map(Number)
     : ledgerCategory === 'Income' && allocations
-      ? [allocations.essentialsAlloc, allocations.growthAlloc, allocations.stabilityAlloc, allocations.rewardsAlloc]
+      ? resolveExplicitRecoveryShares(transaction, allocations)
       : null
   if (!shares || shares.length !== 4) return null
   return shares.some(share => share > 0) ? shares : null
+}
+
+function resolveExplicitRecoveryShares(
+  transaction: Pick<Transaction, 'amount' | 'stabilityRecoveryTopUpAmount'>,
+  allocations: IncomeAllocations,
+): number[] {
+  const shares = [
+    allocations.essentialsAlloc,
+    allocations.growthAlloc,
+    allocations.stabilityAlloc,
+    allocations.rewardsAlloc,
+  ]
+  const topUp = Math.max(0, transaction.stabilityRecoveryTopUpAmount ?? 0)
+  const otherTotal = shares[0] + shares[1] + shares[3]
+  if (!(topUp > 0) || !(transaction.amount > 0) || !(otherTotal > 0)) return shares
+
+  const movedShare = Math.min(topUp / transaction.amount, otherTotal)
+  for (const index of [0, 1, 3]) shares[index] -= movedShare * (shares[index] / otherTotal)
+  shares[2] += movedShare
+  return shares
 }
 
 /**
@@ -47,7 +67,7 @@ function resolveIncomeSplitShares(
  * (an expense, a zero split, or a plain `Income` saved before any plan was loaded).
  */
 export function buildIncomeSplitRows(
-  transaction: Pick<Transaction, 'id' | 'date' | 'postedAt' | 'description' | 'ledgerCategory' | 'amount'>,
+  transaction: Pick<Transaction, 'id' | 'date' | 'postedAt' | 'description' | 'ledgerCategory' | 'amount' | 'stabilityRecoveryTopUpAmount'>,
   allocations: IncomeAllocations | undefined,
 ): Transaction[] {
   const shares = resolveIncomeSplitShares(transaction, allocations)?.map(share => share > 0 ? share : 0)

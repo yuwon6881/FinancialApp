@@ -51,6 +51,21 @@ describe('isRecoveryActive', () => {
 })
 
 describe('proposeTopUp', () => {
+  it('hides the offer when the normal Stability share restores the shortfall', () => {
+    expect(proposeTopUp(
+      recovery({ outstandingShortfall: 100, outstandingThisCycle: 100 }), 1000, buckets(), 0.15
+    )).toBeNull()
+  })
+
+  it('limits extra reimbursement to the shortfall left after the normal share', () => {
+    const offer = proposeTopUp(
+      recovery({ outstandingShortfall: 200, outstandingThisCycle: 200 }), 1000, buckets(), 0.15
+    )!
+
+    expect(offer.maxTopUp).toBe(50)
+    expect(offer.proposedTopUp).toBe(50)
+  })
+
   it('splits the draw across the three buckets in proportion', () => {
     const offer = proposeTopUp(
       recovery({ outstandingShortfall: 3000, outstandingThisCycle: 170 }), 1000, buckets()
@@ -63,16 +78,10 @@ describe('proposeTopUp', () => {
     expect(drawFor(offer.draws, 'Rewards')).toBe(20)
   })
 
-  // A small dip should not need three instalments; the spread exists for real raids.
-  it('offers the whole shortfall when it is no bigger than the usual share', () => {
-    // 70 against the 150 this pay packet was sending the fund anyway.
-    const offer = proposeTopUp(
+  it('does not offer an extra when the normal share covers a small dip', () => {
+    expect(proposeTopUp(
       recovery({ outstandingShortfall: 70, outstandingThisCycle: 23.34 }), 1000, buckets(), 0.15
-    )!
-
-    expect(offer.proposedTopUp).toBe(70)
-    expect(offer.maxTopUp).toBe(70)
-    expect(offer.isReduced).toBe(false)
+    )).toBeNull()
   })
 
   // The spread exists for real raids, so a big one must not default to being cleared at once just
@@ -82,8 +91,8 @@ describe('proposeTopUp', () => {
       recovery({ outstandingShortfall: 3000, outstandingThisCycle: 1000 }), 10000, buckets(), 0.15
     )!
 
-    expect(offer.proposedTopUp).toBe(1000)
-    expect(offer.maxTopUp).toBe(3000)
+    expect(offer.proposedTopUp).toBe(1500)
+    expect(offer.maxTopUp).toBe(1500)
   })
 
   it('never lets the ceiling exceed what the three buckets receive', () => {

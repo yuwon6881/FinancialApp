@@ -19,7 +19,11 @@ export type PushNotificationData = RecurringNotificationData | CategoryLimitNoti
 
 export function buildNotificationTag(data: PushNotificationData): string {
   if (isCategoryLimitNotificationData(data)) {
-    return `category-limit-${data.cycleKey}-${data.categoryName || 'summary'}`
+    // Deliberately keyed on the cycle alone and NOT on the category: a cycle can produce an
+    // alert per category and two per category, and tagging them apart stacked a growing pile of
+    // notifications that all open the same Reports section. One replaceable line per cycle
+    // matches how the recurring reminders collapse per occurrence.
+    return `category-limit-${data.cycleKey}`
   }
   return `recurring-reminder-${data.recurringPaymentId}-${data.occurrenceDate}`
 }

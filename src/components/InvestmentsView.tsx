@@ -268,11 +268,12 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
       <BottomSheet isOpen={panel === 'cash'} title={editingCashFlow ? 'Edit cash movement' : 'Record cash movement'} onClose={closePanel} maxWidthClassName="max-w-lg">
         <CashForm key={`cash-${formKey}`} portfolio={setupPortfolio} initial={editingCashFlow} pendingCashFlows={pendingCashFlows} busy={busy} scanDraft={editingCashFlow ? null : investmentScanDraft} failedScanJob={failedScanJob} activeScanJobIds={activeScanJobIds} onScanStarted={onInvestmentScanStarted} onScanCleared={onInvestmentScanCleared} onCancel={closePanel} onSave={value => {
           const id = editingCashFlow?.id ?? crypto.randomUUID()
+          const amount = value.type === 'Deposit' ? Math.abs(value.amount) : -Math.abs(value.amount)
           return queueInvestment(
             'investmentCashFlow',
             editingCashFlow ? 'update' : 'add',
             id,
-            { ...value, id, undoSnapshot: editingCashFlow ?? undefined },
+            { ...value, amount, id, undoSnapshot: editingCashFlow ?? undefined },
           )
         }} onNeedAccount={() => openPanel('account')} />
       </BottomSheet>
@@ -490,11 +491,11 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
     return value > 0 ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-orange-500/5 border-orange-500/20'
   }
 
-  // "Money you put in" compares two independent records of the same money: what the
+  // "Money sent to broker" compares two independent records of the same money: what the
   // budget earmarked for Growth, and what the broker actually received. The old
   // "Not yet sent" row read the net Growth ledger balance instead of that difference,
   // so it silently meant something else — and could print a figure identical to
-  // "Sent to broker" while the two records were in fact thousands apart. Deriving the
+  // broker received while the two records were in fact thousands apart. Deriving the
   // gap from the two numbers on the card keeps it self-consistent by construction.
   const earmarked = portfolio.summary.growthContributions ?? 0
   const sentToBroker = portfolio.summary.netDeposits
@@ -511,9 +512,9 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
     },
     undeployed !== undefined && undeployed < -0.005
       ? {
-          label: 'Sent beyond earmark',
+          label: 'More sent than set aside',
           value: format(Math.abs(undeployed)),
-          hint: 'More sent to your broker than your Growth budget; another bucket may have covered it, or Growth is not recorded.',
+          hint: 'Your broker received more than you set aside in Growth.',
           color: 'text-amber-500',
         }
       : {
@@ -523,11 +524,11 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
           color: (undeployed ?? 0) > 0.005 ? 'text-foreground' : 'text-emerald-500',
         },
     {
-      label: 'Put to work',
+      label: 'Share sent',
       value: deployedPercent === undefined
         ? '—'
         : masked ? '••••' : `${deployedPercent.toFixed(0)}%`,
-      hint: 'How much of what you earmarked has actually reached your broker.',
+      hint: 'How much of the money set aside has reached your broker.',
       color: deployedPercent === undefined || deployedPercent >= 95 ? 'text-foreground' : 'text-amber-500',
     },
   ]
@@ -541,20 +542,20 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
   }> = [
     {
       label: 'What it is worth',
-      hint: `Everything in your broker accounts right now, shown in ${currency}.`,
+      hint: `Latest saved value of your investments and broker cash, shown in ${currency}.`,
       bg: 'bg-card/92 border-border/60',
-      hero: { label: 'Total today', value: format(portfolio.summary.totalValue), color: portfolio.summary.totalValue === undefined ? 'text-amber-500' : 'text-foreground' },
+      hero: { label: 'Latest total', value: format(portfolio.summary.totalValue), color: portfolio.summary.totalValue === undefined ? 'text-amber-500' : 'text-foreground' },
       rows: [
-        { label: 'In investments', value: format(portfolio.summary.marketValue), hint: 'Value of the shares and funds you hold, at their latest prices.' },
-        { label: 'In cash', value: format(portfolio.summary.cashValue), hint: 'Uninvested money sitting in your broker accounts.' },
+        { label: 'Investments', value: format(portfolio.summary.marketValue), hint: 'Value of the shares and funds you hold, at their latest saved prices.' },
+        { label: 'Broker cash', value: format(portfolio.summary.cashValue), hint: 'Money sitting uninvested in your broker accounts.' },
         { label: 'You paid', value: format(portfolio.summary.costBasis), hint: 'What the investments you still hold originally cost you.' },
       ],
     },
     {
-      label: 'Money you put in',
-      hint: 'How much of your own money has gone towards investing, before any gains.',
+      label: 'Money sent to broker',
+      hint: 'Tracks money added to and withdrawn from your broker accounts.',
       bg: 'bg-blue-500/5 border-blue-500/20',
-      hero: { label: 'Sent to broker', value: format(portfolio.summary.netDeposits), color: portfolio.summary.netDeposits === undefined ? 'text-amber-500' : 'text-foreground' },
+      hero: { label: 'Deposits minus withdrawals', value: format(portfolio.summary.netDeposits), color: portfolio.summary.netDeposits === undefined ? 'text-amber-500' : 'text-foreground' },
       rows: moneyInRows,
     },
     {
@@ -571,7 +572,7 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
       rows: [
         { label: 'Already banked', value: signed(realised), hint: 'Profit or loss locked in on investments you have sold, after fees and taxes.', color: tone(realised) },
         {
-          label: 'Your yearly return',
+          label: 'Yearly return',
           value: annualReturn === undefined ? 'Not available yet' : masked ? '••••' : `${annualReturn > 0 ? '+' : ''}${(annualReturn * 100).toFixed(1)}% a year`,
           hint: 'Average yearly return, adjusted for when each deposit went in.',
           color: annualReturn === undefined ? undefined : tone(annualReturn),
@@ -579,10 +580,10 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
       ],
     },
     {
-      label: 'Income and today',
-      hint: 'Cash your investments paid you, and how much their value moved today.',
+      label: 'Income and latest move',
+      hint: 'Dividends received, plus the move between the two latest saved market values. It may be from an earlier market day.',
       bg: cardTone(daily),
-      hero: { label: 'Change today', value: signed(daily), color: tone(daily) },
+      hero: { label: 'Latest value move', value: signed(daily), color: tone(daily) },
       rows: [
         { label: 'Dividends received', value: format(portfolio.summary.netDividends), hint: 'Payouts your investments have paid you, after any tax withheld.' },
       ],

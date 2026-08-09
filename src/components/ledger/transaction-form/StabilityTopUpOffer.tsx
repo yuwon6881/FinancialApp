@@ -17,6 +17,7 @@ interface StabilityTopUpOfferProps {
   hideSensitive: boolean
   /** The usual share the fund receives, as a fraction of 1, for the "on top of" wording. */
   stabilityAlloc: number
+  error?: string
 }
 
 /**
@@ -37,6 +38,7 @@ export function StabilityTopUpOffer({
   currency,
   hideSensitive,
   stabilityAlloc,
+  error,
 }: StabilityTopUpOfferProps) {
   const checkboxId = useId()
   const amountId = useId()
@@ -46,7 +48,7 @@ export function StabilityTopUpOffer({
   const chosen = amount.trim() === '' || !Number.isFinite(typed) ? offer.proposedTopUp : typed
   const overMax = chosen > offer.maxTopUp
   const overSafe = !overMax && chosen > offer.safeCap
-  const invalid = chosen <= 0 || overMax
+  const invalid = chosen <= 0 || overMax || Boolean(error)
   const draws = invalid ? [] : drawsFor(chosen, buckets)
 
   // Masked amounts are decoration for a screen reader; the labels carry the meaning.
@@ -100,6 +102,10 @@ export function StabilityTopUpOffer({
             <p className="text-xs text-destructive">
               That is more than the {money(offer.maxTopUp)} this pay packet can put back.
             </p>
+          )}
+
+          {error && !overMax && (
+            <p className="text-xs text-destructive">{error}</p>
           )}
 
           {overSafe && (

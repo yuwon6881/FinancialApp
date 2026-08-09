@@ -446,6 +446,7 @@ export function TransactionFormFields({
             currency={currency}
             hideSensitive={hideSensitive}
             stabilityAlloc={stabilityAlloc}
+            error={errors.stabilityTopUpAmount}
           />
         </>
       )}

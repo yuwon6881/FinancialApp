@@ -4,12 +4,15 @@ import { m, AnimatePresence } from 'framer-motion'
 import { Bell, Check, Loader2 } from 'lucide-react'
 import type { RecurringPayment, RecurringReminderMode, RecurringReminderSettings } from '../../types'
 import { buildReminderPreview, getEffectiveReminderSettings, REMINDER_LEAD_DAY_OPTIONS } from '../../lib/recurringPayments'
-import { RECURRING_PAUSED_LABEL } from '../../lib/push/messages'
+import { RECURRING_OTHER_DEVICES_ONLY_LABEL, RECURRING_PAUSED_LABEL } from '../../lib/push/messages'
 import { ToggleButton } from '../ui/ToggleButton'
 
 interface ReminderControlsProps {
   payment: Pick<RecurringPayment, 'id' | 'name' | 'reminderEnabled' | 'reminderMode' | 'reminderLeadDays'>
+  /** True when any device on the account is set up to receive notifications. */
   globalPushEnabled: boolean
+  /** True when the device being looked at right now is one of them. */
+  thisDevicePushEnabled?: boolean
   disabled?: boolean
   isSyncing?: boolean
   onUpdateReminder?: (id: string, settings: RecurringReminderSettings) => void
@@ -18,6 +21,7 @@ interface ReminderControlsProps {
 export const ReminderControls: React.FC<ReminderControlsProps> = ({
   payment,
   globalPushEnabled,
+  thisDevicePushEnabled = true,
   disabled,
   isSyncing,
   onUpdateReminder,
@@ -40,7 +44,11 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
       draftSettings.leadDays !== savedSettings.leadDays
     ))
 
+  // Nothing at all will be delivered, anywhere: the schedule is inert.
   const paused = draftSettings.enabled && !globalPushEnabled
+  // The reminder does work, just not on the screen being looked at. Reading this state as plain
+  // "on" told someone holding a phone with notifications off that their bill would ring on it.
+  const otherDevicesOnly = draftSettings.enabled && globalPushEnabled && !thisDevicePushEnabled
 
   const handleToggle = () => {
     if (draftSettings.enabled) {
@@ -93,6 +101,9 @@ export const ReminderControls: React.FC<ReminderControlsProps> = ({
             <div className={paused ? 'opacity-50' : undefined}>
               {paused && (
                 <p className="mb-2 text-[10px] font-semibold text-amber-500">{RECURRING_PAUSED_LABEL}</p>
+              )}
+              {otherDevicesOnly && (
+                <p className="mb-2 text-[10px] font-semibold text-amber-500">{RECURRING_OTHER_DEVICES_ONLY_LABEL}</p>
               )}
 
               <div role="radiogroup" aria-label={`Reminder frequency for ${payment.name}`} className="flex gap-1.5">

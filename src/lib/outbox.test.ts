@@ -11,6 +11,7 @@ vi.mock('./api', () => ({
     settledOccurrenceDate: '2026-08-01',
     nextOccurrenceDate: '2026-09-01',
   })),
+  settleRecurringOccurrence: vi.fn(async () => ({ occurrence: {}, transaction: null, nextOccurrenceDate: null })),
   applyCategoryCleanup: vi.fn(async () => ({ appliedCount: 1, undoActions: [] })),
 }))
 
@@ -55,7 +56,12 @@ interface TestItem {
   paymentMode?: string
   wishlistItemId?: number
   recurringPaymentId?: string | null
+  recurringOccurrenceDate?: string | null
+  nextDueDate?: string | null
+  createdAt?: string
+  type?: string
   active?: boolean
+  isActive?: boolean
   isPurchased?: boolean
   purchasedAt?: string
   purchaseTransactionId?: string | null
@@ -220,6 +226,26 @@ describe('sync success toast copy', () => {
     })
   })
 
+  it('says the attached documents are unrecoverable when the delete removed them', () => {
+    expect(getSyncSuccessToast(makeOp({
+      entity: 'transaction',
+      type: 'delete',
+      payload: { description: 'Lunch', deletedDocumentCount: 2 },
+    }))).toEqual({
+      title: 'Transaction Deleted',
+      message: '"Lunch" was deleted. 2 attached documents were deleted for good — undo cannot bring them back.',
+      tone: 'success',
+    })
+  })
+
+  it('leaves the delete copy alone when the documents were only detached', () => {
+    expect(getSyncSuccessToast(makeOp({
+      entity: 'transaction',
+      type: 'delete',
+      payload: { description: 'Lunch' },
+    }))?.message).toBe('"Lunch" was deleted.')
+  })
+
   it('keeps the item name in the undo confirmation', () => {
     expect(getSyncSuccessToast(makeOp({
       entity: 'transaction',
@@ -297,7 +323,7 @@ describe('bulk transaction projection', () => {
     { id: 'tx-2', name: 'Lunch', description: 'Lunch', amount: -10, category: 'Food', ledgerCategory: 'Essentials' },
   ]
 
-  it('removes every split row immediately and keeps the group absent after sync', () => {
+  it('keeps every selected row visible with deleting state until sync completes', () => {
     const op = makeOp({
       entity: 'transaction',
       type: 'bulkDelete',
@@ -305,9 +331,32 @@ describe('bulk transaction projection', () => {
       payload: { transactionIds: ['tx-1', 'tx-2'], transactions: [rows[0], rows[2]] },
     })
     const pending = applyOpsToList(rows, [op], 'transaction')
-    expect(pending).toEqual([])
+    expect(pending).toHaveLength(3)
+    expect(pending.every(row => row.isPendingDelete && row.isPendingSync)).toBe(true)
     const completed = applyOpsToList(rows, [{ ...op, isCompleted: true }], 'transaction')
     expect(completed).toEqual([])
+  })
+
+  it('passes the optimistic transaction identity through occurrence settlement', async () => {
+    await DISPATCH['recurringOccurrence:settle'](makeOp({
+      id: 'op-settle', entity: 'recurringOccurrence', type: 'settle', targetId: 'rp-1:2026-08-01',
+      payload: {
+        recurringPaymentId: 'rp-1',
+        occurrenceDate: '2026-08-01',
+        status: 'Paid',
+        paidDate: '2026-07-30',
+        optimisticTransaction: { id: 'tx-client', postedAt: '2026-07-30T12:00:00.000Z' },
+      },
+    }))
+    expect(api.settleRecurringOccurrence).toHaveBeenCalledWith(
+      'rp-1',
+      '2026-08-01',
+      'Paid',
+      '2026-07-30',
+      'op-settle',
+      'tx-client',
+      '2026-07-30T12:00:00.000Z',
+    )
   })
 
   it('restores parent rows and regenerates split rows', () => {
@@ -750,10 +799,14 @@ describe('applyOpsToList', () => {
   })
 
   it('marks an item purchased for a purchase op', () => {
-    const base: TestItem[] = [{ id: '1', name: 'Item' }]
-    const ops = [makeOp({ entity: 'wishlistItem', type: 'purchase', targetId: '1', payload: { purchasedAt: '2026-01-01', purchaseTransactionId: 'tx-1' } })]
+    const base: TestItem[] = [
+      { id: '1', name: 'Item', isActive: true, createdAt: '2026-01-01T00:00:00.000Z' },
+      { id: '2', name: 'Next', isActive: false, createdAt: '2026-02-01T00:00:00.000Z' },
+    ]
+    const ops = [makeOp({ entity: 'wishlistItem', type: 'purchase', targetId: '1', payload: { postedAt: '2026-03-01T00:00:00.000Z', purchaseTransactionId: 'tx-1' } })]
     const result = applyOpsToList(base, ops, 'wishlistItem')
-    expect(result[0]).toMatchObject({ isPurchased: true, purchasedAt: '2026-01-01', purchaseTransactionId: 'tx-1' })
+    expect(result.find(item => item.id === '1')).toMatchObject({ isPurchased: true, isActive: false, purchasedAt: '2026-03-01T00:00:00.000Z', purchaseTransactionId: 'tx-1' })
+    expect(result.find(item => item.id === '2')).toMatchObject({ isActive: true })
   })
 
   it('marks a purchased item unpurchased for an unpurchase op', () => {
@@ -762,6 +815,15 @@ describe('applyOpsToList', () => {
     const result = applyOpsToList(base, ops, 'wishlistItem')
     expect(result[0]).toMatchObject({ isPurchased: false, purchaseTransactionId: null, isPendingSync: true })
     expect(result[0].purchasedAt).toBeUndefined()
+  })
+
+  it('reactivates an unpurchased item only when no other active item exists', () => {
+    const base: TestItem[] = [
+      { id: '1', name: 'Item', isPurchased: true, isActive: false },
+      { id: '2', name: 'Other', isPurchased: false, isActive: false },
+    ]
+    const result = applyOpsToList(base, [makeOp({ entity: 'wishlistItem', type: 'unpurchase', targetId: '1' })], 'wishlistItem')
+    expect(result.find(item => item.id === '1')).toMatchObject({ isPurchased: false, isActive: true })
   })
 
   it('projects a pending ledger transaction for a wishlist purchase op', () => {
@@ -908,6 +970,59 @@ describe('applyOpsToList', () => {
       },
     }], 'recurringPayment')
     expect(completed[0]).toMatchObject({ nextDueDate: '2026-09-01', isPendingSync: false })
+  })
+
+  it('restores a recurring card before a settlement transaction deletion resolves', () => {
+    const payment = [{ id: 'rp-1', name: 'Streaming', nextDueDate: '2026-09-01' }]
+    const deleteOp = makeOp({
+      entity: 'transaction',
+      type: 'delete',
+      targetId: 'tx-settlement',
+      payload: {
+        undoSnapshot: {
+          id: 'tx-settlement',
+          recurringPaymentId: 'rp-1',
+          recurringOccurrenceDate: '2026-08-01',
+        },
+      },
+    })
+
+    expect(applyOpsToList(payment, [deleteOp], 'recurringPayment')[0]).toMatchObject({
+      nextDueDate: '2026-08-01',
+      isPendingSync: true,
+      pendingSyncOperationId: deleteOp.id,
+    })
+  })
+
+  it('stamps queued investment records with the ordering timestamp before dispatch', () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-08-09T12:34:56.000Z'))
+    try {
+      const [operation] = enqueue([], 'investmentCashFlow', 'add', 'cash-1', {
+        name: 'Withdrawal', type: 'Withdrawal', amount: -25,
+      })
+      expect(operation.payload?.createdAt).toBe('2026-08-09T12:34:56.000Z')
+    } finally {
+      now.mockRestore()
+    }
+  })
+
+  it('deduplicates and projects an occurrence settlement as one offline mutation', () => {
+    const payload = {
+      recurringPaymentId: 'rp-1', occurrenceDate: '2026-08-10', status: 'Paid',
+      optimisticNextOccurrenceDate: '2026-09-10',
+      optimisticTransaction: {
+        id: 'tx-local', date: '2026-08-05', amount: -50, description: 'Internet',
+        category: 'Bills', ledgerCategory: 'Essentials', recurringPaymentId: 'rp-1',
+        recurringOccurrenceDate: '2026-08-10',
+      },
+    }
+    const queued = enqueue([], 'recurringOccurrence', 'settle', 'occ-rp-1-20260810', payload)
+    expect(enqueue(queued, 'recurringOccurrence', 'settle', 'occ-rp-1-20260810', payload)).toHaveLength(1)
+
+    const recurring = applyOpsToList([{ id: 'rp-1', nextDueDate: '2026-08-10' }], queued, 'recurringPayment')
+    const transactions = applyOpsToList([], queued, 'transaction')
+    expect(recurring[0]).toMatchObject({ nextDueDate: '2026-09-10', isPendingSync: true })
+    expect(transactions[0]).toMatchObject({ id: 'tx-local', amount: -50, isPendingSync: true })
   })
 
   it('projects category cleanup across categories and dependent records', () => {

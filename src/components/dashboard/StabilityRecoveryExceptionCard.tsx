@@ -28,8 +28,8 @@ export function StabilityRecoveryExceptionCard({
   if (!recovery || !recovery.isActive) return null
   if (recovery.outstandingShortfall <= 0 || recovery.outstandingThisCycle <= 0) return null
 
-  const percentReached = recovery.target > 0
-    ? Math.round((recovery.currentBalance / recovery.target) * 100)
+  const percentReached = recovery.recoverableCeiling > 0
+    ? Math.round((recovery.currentBalance / recovery.recoverableCeiling) * 100)
     : 0
   // Overdue is checked first: past the window cyclesRemaining sits at 1 forever, so treating that
   // as "the final cycle" announced the last cycle of the plan every cycle from then on.
@@ -61,19 +61,19 @@ export function StabilityRecoveryExceptionCard({
           </div>
 
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Used {formatSensitive(recovery.lastDrawdownAmount)} from your emergency fund.{' '}
+            Put back {formatSensitive(recovery.outstandingThisCycle)} more this cycle.{' '}
             {recovery.isOverdue
-              ? <>{formatSensitive(recovery.outstandingShortfall)} remains.</>
+              ? <>{formatSensitive(recovery.outstandingShortfall)} remains overall and the plan is overdue.</>
               : isFinalCycle
-                ? <>{formatSensitive(recovery.outstandingThisCycle)} remains in the final cycle.</>
-                : <>About {formatSensitive(recovery.requiredThisCycle)} per cycle for {recovery.cyclesRemaining} cycles.</>}
+                ? <>This is the final planned cycle; {formatSensitive(recovery.outstandingShortfall)} remains overall.</>
+                : <>{formatSensitive(recovery.outstandingShortfall)} remains overall across {recovery.cyclesRemaining} cycles.</>}
           </p>
 
           <div className="space-y-1.5 pt-1">
             <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs">
               <span className="font-semibold text-muted-foreground">Emergency fund progress</span>
               <span className="font-semibold text-foreground tabular-nums">
-                <span className="font-extrabold text-amber-600 dark:text-amber-400">{percentReached}%</span> of {formatSensitive(recovery.target)}
+                <span className="font-extrabold text-amber-600 dark:text-amber-400">{percentReached}%</span> of {formatSensitive(recovery.recoverableCeiling)} to restore
               </span>
             </div>
             <div className="h-2 w-full rounded-full bg-amber-500/20 overflow-hidden">

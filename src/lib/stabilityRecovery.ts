@@ -105,7 +105,13 @@ export function proposeTopUp(
 
   // Nothing can come out of money the three buckets never receive, whatever the user asks for.
   const affordable = incomeAmount * allocTotal
-  const requestedTopUp = Math.min(recovery.outstandingThisCycle, affordable)
+  const normalStabilityContribution = incomeAmount * Math.max(0, stabilityAlloc)
+  const remainingAfterNormal = Math.max(
+    0,
+    recovery.outstandingShortfall - normalStabilityContribution
+  )
+  if (remainingAfterNormal <= 0) return null
+  const requestedTopUp = Math.min(recovery.outstandingThisCycle, remainingAfterNormal, affordable)
 
   // The largest amount that still leaves every bucket its committed money.
   let safeCap = affordable
@@ -121,8 +127,8 @@ export function proposeTopUp(
 
   // Floored, not rounded up: these are ceilings on how much may be moved, and rounding a ceiling
   // up breaks the invariant it exists to protect.
-  safeCap = Math.max(0, floorToCent(safeCap))
-  const maxTopUp = Math.max(0, floorToCent(Math.min(recovery.outstandingShortfall, affordable)))
+  safeCap = Math.max(0, floorToCent(Math.min(safeCap, remainingAfterNormal)))
+  const maxTopUp = Math.max(0, floorToCent(Math.min(remainingAfterNormal, affordable)))
 
   // Clear the whole thing in one go when it is small enough that spreading it is busywork: no
   // bigger than the share this pay packet was sending the fund anyway, and still inside the safe
@@ -131,9 +137,9 @@ export function proposeTopUp(
   // being cleared at once. The spread exists for exactly that case; a 70 dip does not need it.
   const trivialRemainder = incomeAmount * stabilityAlloc
   const wholeShortfallFits =
-    recovery.outstandingShortfall <= safeCap && recovery.outstandingShortfall <= trivialRemainder
+    remainingAfterNormal <= safeCap && remainingAfterNormal <= trivialRemainder
   const proposedTopUp = wholeShortfallFits
-    ? Math.max(0, floorToCent(recovery.outstandingShortfall))
+    ? Math.max(0, floorToCent(remainingAfterNormal))
     : Math.min(safeCap, Math.max(0, floorToCent(requestedTopUp)))
 
   const isReduced = !wholeShortfallFits && proposedTopUp < requestedTopUp

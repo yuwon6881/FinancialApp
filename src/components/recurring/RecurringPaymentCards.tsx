@@ -25,6 +25,7 @@ interface RecurringPaymentCardsProps {
   highlightedId?: string | null
   onClearHighlight?: () => void
   globalPushEnabled: boolean
+  thisDevicePushEnabled?: boolean
   onUpdateReminder?: (id: string, settings: RecurringReminderSettings) => void
   onRequestPayEarly?: (id: string) => void
 }
@@ -43,6 +44,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
   highlightedId = null,
   onClearHighlight,
   globalPushEnabled,
+  thisDevicePushEnabled,
   onUpdateReminder,
   onRequestPayEarly,
 }) => {
@@ -153,6 +155,7 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
               <ReminderControls
                 payment={rp}
                 globalPushEnabled={globalPushEnabled}
+                thisDevicePushEnabled={thisDevicePushEnabled}
                 disabled={isBusy || hideSensitive}
                 isSyncing={isPaymentSyncing(rp.id)}
                 onUpdateReminder={onUpdateReminder}

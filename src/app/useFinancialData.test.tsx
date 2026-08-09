@@ -320,9 +320,9 @@ describe('useFinancialData', () => {
   it('queues pay-early with an optimistic ledger row while offline', async () => {
     mockHappyApi()
     vi.spyOn(api, 'pingServer').mockResolvedValue({ status: 'ok' } as any)
-    const payEarly = vi.spyOn(api, 'payRecurringPaymentEarly').mockResolvedValue({
+    const settleOccurrence = vi.spyOn(api, 'settleRecurringOccurrence').mockResolvedValue({
+      occurrence: {} as never,
       transaction: { id: 'tx-server', date: '2026-08-02', description: 'Streaming', category: 'Entertainment', ledgerCategory: 'Needs', amount: -50, recurringPaymentId: 'rp-1', recurringOccurrenceDate: '2026-08-01' },
-      settledOccurrenceDate: '2026-08-01',
       nextOccurrenceDate: '2026-09-01',
     })
     const originalOnline = navigator.onLine
@@ -337,9 +337,9 @@ describe('useFinancialData', () => {
       })
 
       await waitFor(() => expect(result.current.pendingOps).toEqual([expect.objectContaining({
-        entity: 'recurringPayment',
-        type: 'payEarly',
-        targetId: 'rp-1',
+        entity: 'recurringOccurrence',
+        type: 'settle',
+        targetId: 'rp-1:2026-08-01',
       })]))
       expect(result.current.allTransactions).toEqual([expect.objectContaining({
         description: 'Streaming',
@@ -348,7 +348,7 @@ describe('useFinancialData', () => {
         amount: -50,
         isPendingSync: true,
       })])
-      expect(payEarly).not.toHaveBeenCalled()
+      expect(settleOccurrence).not.toHaveBeenCalled()
     } finally {
       Object.defineProperty(window.navigator, 'onLine', { configurable: true, value: originalOnline })
     }

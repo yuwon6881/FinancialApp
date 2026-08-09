@@ -37,6 +37,7 @@ interface RecurringPaymentsViewProps {
   onAiDraftConsumed?: () => void
   onAiEditDraftConsumed?: () => void
   globalPushEnabled?: boolean
+  thisDevicePushEnabled?: boolean
   onUpdateReminder?: (id: string, settings: RecurringReminderSettings) => void
   onRequestPayEarly?: (id: string) => void
 }
@@ -68,6 +69,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
   onAiDraftConsumed,
   onAiEditDraftConsumed,
   globalPushEnabled = false,
+  thisDevicePushEnabled = true,
   onUpdateReminder,
   onRequestPayEarly,
 }) => {
@@ -184,6 +186,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         highlightedId={highlightedRecurringId}
         onClearHighlight={onClearHighlightedRecurring}
         globalPushEnabled={globalPushEnabled}
+        thisDevicePushEnabled={thisDevicePushEnabled}
         onUpdateReminder={onUpdateReminder}
         onRequestPayEarly={onRequestPayEarly}
       />

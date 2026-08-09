@@ -26,15 +26,13 @@ describe('createLedgerSyncStatus', () => {
     expect(status.isSyncing('tx-1-split-2')).toBe(true)
   })
 
-  it('preserves transaction and attached-document deletion aliases for server-paged rows', () => {
+  it('preserves transaction deletion aliases for server-paged rows', () => {
     const status = createLedgerSyncStatus({
       transactions: [],
       deletingTxId: 'tx-1',
-      deletingAttachedDocumentsTxId: 'tx-2',
     })
 
     expect(status.isDeleting('tx-1-split-1')).toBe(true)
-    expect(status.isDeleting('tx-2-split-3')).toBe(true)
     expect(status.isDeleting('tx-3')).toBe(false)
   })
 })

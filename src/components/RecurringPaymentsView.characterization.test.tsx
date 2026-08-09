@@ -250,6 +250,14 @@ describe('RecurringPaymentsView characterization', () => {
   })
 
   describe('add form validation and cancel', () => {
+    it('keeps the optional marker with the end-date label', () => {
+      render(<RecurringPaymentsView {...makeProps()} />)
+      fireEvent.click(screen.getByRole('button', { name: 'New Subscription' }))
+
+      expect(screen.getByText('End billing date (optional)')).toBeTruthy()
+      expect(screen.queryByText('Optional')).toBeNull()
+    })
+
     it('shows field errors and does not submit when required fields are missing', () => {
       const onAddPayment = vi.fn()
       render(<RecurringPaymentsView {...makeProps({ onAddPayment })} />)
@@ -328,7 +336,7 @@ describe('RecurringPaymentsView characterization', () => {
         amount: -42.5,
         dueDate: 31,
         startDate: '2026-07-31',
-        nextDueDate: '2026-07-31',
+        nextDueDate: '2026-08-31',
         active: true,
         endDate: undefined,
       }))

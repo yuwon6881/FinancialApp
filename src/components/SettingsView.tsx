@@ -1,7 +1,7 @@
 import { Input } from './ui/Input'
 import { RangeInput } from './ui/RangeInput'
 import React from 'react'
-import { Save, Settings, AlertCircle, CheckCircle2, Bell, BellRing, Gauge, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap, Moon, Sun, Eye, EyeOff, HardDrive, ArrowDownLeft, ArrowUpRight, ArrowLeftRight } from 'lucide-react'
+import { Save, Settings, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap, Moon, Sun, Eye, EyeOff, HardDrive, ArrowDownLeft, ArrowUpRight, ArrowLeftRight } from 'lucide-react'
 import { m } from 'framer-motion'
 import type { DashboardData, TransactionCategory, CategoryFlowType } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
@@ -12,7 +12,8 @@ import { PerimeterBeam } from './ui/PerimeterBeam'
 import type { CategoryCleanupSuggestion } from '../lib/api'
 import type { ToastTone } from './ui/ToastViewport'
 import { ToggleButton } from './ui/ToggleButton'
-import { CATEGORY_LIMIT_PUSH_DESCRIPTION, NOTIFY_ON_LOGIN_DESCRIPTION, PUSH_DESCRIPTION } from '../lib/push/messages'
+import { NotificationsCard } from './settings/NotificationsCard'
+import type { PushBusyAction } from '../app/usePushNotifications'
 const TwoFactorSection = React.lazy(() => import('./TwoFactorSection').then(m => ({ default: m.TwoFactorSection })))
 const ChangePasswordSection = React.lazy(() => import('./ChangePasswordSection').then(m => ({ default: m.ChangePasswordSection })))
 import { CollapsibleBody } from './ui/CollapsibleBody'
@@ -62,7 +63,9 @@ interface SettingsViewProps {
   onClearLocalFinancialData?: () => void
   pushEnabled?: boolean
   pushSupported?: boolean
-  pushBusy?: boolean
+  pushLoading?: boolean
+  /** Which push control is mid-flight, so only that row shows a busy state. */
+  pushBusyAction?: PushBusyAction
   pushGuidance?: string | null
   onTogglePushEnabled?: (checked: boolean) => void
   categoryAlertsEnabled?: boolean
@@ -129,6 +132,13 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       return draft != null && draft !== current
     })
   }, [props.categoriesList, flowTypeDrafts])
+
+  // A spending alert can only fire against a category that has a planned amount, so the
+  // notifications panel says so rather than offering a switch with nothing to watch.
+  const hasSpendingGuides = React.useMemo(
+    () => (props.categoriesList || []).some((category: TransactionCategory) =>
+      typeof category.cycleLimit === 'number' && category.cycleLimit > 0),
+    [props.categoriesList])
 
   const [activeTab, setActiveTab] = React.useState<'financial-model' | 'investment-plan' | 'categories-preferences' | 'security'>(() => {
     if (typeof window !== 'undefined') {
@@ -352,7 +362,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
               <div>
                 <h3 className="text-sm font-bold text-foreground">App Preferences</h3>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Customize display, reminders, and local storage.</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Customize display and local storage.</p>
               </div>
             </div>
             <div className="grid grid-cols-1 gap-y-3">
@@ -387,56 +397,6 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   disabled={hideSensitiveSyncing || hideSensitivePending || (props.sensitivePreferenceStatus !== undefined && props.sensitivePreferenceStatus !== 'resolved')}
                 />
               </div>
-              <div className="flex items-center justify-between text-sm py-1 border-b border-border/20">
-                <div className="flex flex-1 min-w-0 pr-4 items-center gap-2">
-                  <Bell className="size-4 text-muted-foreground shrink-0" />
-                  <div className="flex flex-col gap-0.5 min-w-0">
-                    <span className="font-medium text-foreground truncate">Notify Bills</span>
-                    <span className="text-[10px] text-muted-foreground">{NOTIFY_ON_LOGIN_DESCRIPTION}</span>
-                  </div>
-                </div>
-                <ToggleButton active={props.notifyOnLoginEnabled || false} onClick={() => props.onToggleNotifyOnLogin?.(!props.notifyOnLoginEnabled)} label="Notify Bills" />
-              </div>
-              <div className="py-1 border-b border-border/20 md:border-b-0 space-y-1.5">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex flex-1 min-w-0 pr-4 items-center gap-2">
-                    <BellRing className="size-4 text-muted-foreground shrink-0" />
-                    <div className="flex flex-col gap-0.5 min-w-0">
-                      <span className="font-medium text-foreground truncate">Push notifications on this device</span>
-                      <span className="text-[10px] text-muted-foreground">{PUSH_DESCRIPTION}</span>
-                    </div>
-                  </div>
-                  <ToggleButton
-                    active={props.pushEnabled || false}
-                    onClick={() => props.onTogglePushEnabled?.(!props.pushEnabled)}
-                    label="Push notifications on this device"
-                    disabled={props.pushBusy || props.pushSupported === false}
-                  />
-                </div>
-                {props.pushGuidance && (
-                  <div className="mt-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-2 text-amber-500 dark:text-amber-400">
-                    <AlertCircle className="size-4 text-amber-500 shrink-0 mt-0.5" />
-                    <p className="text-xs font-medium leading-relaxed flex-1">
-                      {props.pushGuidance}
-                    </p>
-                  </div>
-                )}
-                <div className="mt-2 flex items-center justify-between rounded-xl border border-border/40 bg-muted/20 p-2.5 text-sm">
-                  <div className="flex min-w-0 flex-1 items-center gap-2 pr-4">
-                    <Gauge className="size-4 shrink-0 text-muted-foreground" />
-                    <div className="flex min-w-0 flex-col gap-0.5">
-                      <span className="truncate font-medium text-foreground">Category spending alerts</span>
-                      <span className="text-[10px] leading-relaxed text-muted-foreground">{CATEGORY_LIMIT_PUSH_DESCRIPTION}</span>
-                    </div>
-                  </div>
-                  <ToggleButton
-                    active={props.categoryAlertsEnabled || false}
-                    onClick={() => props.onToggleCategoryAlerts?.(!props.categoryAlertsEnabled)}
-                    label="Category spending alerts"
-                    disabled={props.pushBusy || props.pushSupported === false}
-                  />
-                </div>
-              </div>
               <div className="flex items-center justify-between text-sm py-1">
                 <div className="flex items-center gap-2">
                   <HardDrive className="size-4 text-muted-foreground shrink-0" />
@@ -454,6 +414,28 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                 </Button>
               </div>
             </div>
+          </div>
+
+          {/* Notifications live in their own panel rather than among the display preferences:
+              the three switches here have three different scopes (this device, this device,
+              every device), which is unreadable when they are stacked as peers with settings
+              that are all device-local. */}
+          <div className="lg:col-span-1">
+            <NotificationsCard
+              notifyOnLoginEnabled={props.notifyOnLoginEnabled || false}
+              onToggleNotifyOnLogin={checked => props.onToggleNotifyOnLogin?.(checked)}
+              pushEnabled={props.pushEnabled || false}
+              pushSupported={props.pushSupported !== false}
+              pushLoading={props.pushLoading || false}
+              deviceBusy={props.pushBusyAction === 'device'}
+              categoryAlertsBusy={props.pushBusyAction === 'categoryAlerts'}
+              pushGuidance={props.pushGuidance}
+              onTogglePushEnabled={checked => props.onTogglePushEnabled?.(checked)}
+              categoryAlertsEnabled={props.categoryAlertsEnabled || false}
+              onToggleCategoryAlerts={checked => props.onToggleCategoryAlerts?.(checked)}
+              hasSpendingGuides={hasSpendingGuides}
+              onNavigateToCategoryLimits={() => setActiveTab('categories-preferences')}
+            />
           </div>
         </div>
       )}

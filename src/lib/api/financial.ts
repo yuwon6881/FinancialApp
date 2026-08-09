@@ -67,7 +67,7 @@ export function mapDashboardCore(data: WireDashboardData, month?: string, year?:
       },
       activeRecurringPayments: (data.activeRecurringPayments || []).map((payment: WireActiveRecurringPayment) => ({
         ...payment,
-        amount: deobfuscateAmount(payment.amount),
+        amount: payment.amount == null ? null : deobfuscateAmount(payment.amount),
       })),
       trendPoints: (data.trendPoints || []).map((point: WireTrendPoint) => ({
         ...point,

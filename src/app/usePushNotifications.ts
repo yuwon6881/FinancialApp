@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
 import * as api from '../lib/api'
+import { getErrorMessage } from '../lib/errors'
 import type { PushStatus } from '../types'
+
+// Which control is mid-flight. The device switch and the account-wide alert switch used to share
+// one `busy` flag, so acting on either greyed out both and neither could report its own state.
+export type PushBusyAction = 'device' | 'categoryAlerts' | null
 
 export interface UsePushNotificationsResult {
   supported: boolean
   loading: boolean
   busy: boolean
+  busyAction: PushBusyAction
   // Visually "enabled" only once the global setting is on AND this specific device is
   // registered -- an in-flight enable (or a global toggle flipped on from another device)
   // must never flash this device's control into the "on" state.
@@ -36,7 +42,7 @@ export function usePushNotifications(
   const [deviceId, setDeviceId] = useState<string | null>(null)
   const [status, setStatus] = useState<PushStatus | null>(null)
   const [loading, setLoading] = useState(true)
-  const [busy, setBusy] = useState(false)
+  const [busyAction, setBusyAction] = useState<PushBusyAction>(null)
   const [guidance, setGuidance] = useState<string | null>(null)
 
   const refreshInternal = useCallback(async (pushModule: typeof import('../lib/push'), devId: string | null) => {
@@ -89,7 +95,25 @@ export function usePushNotifications(
       setDeviceId(devId)
       const next = await refreshInternal(push, devId)
       if (cancelled) return
-      if (!next?.enabled || !next.deviceRegistered || Notification.permission !== 'granted') return
+      if (!next?.deviceRegistered) return
+
+      // The server records the enrolment, but only the browser knows whether it is still allowed
+      // to show a notification. Revoking permission from browser settings leaves the row enabled,
+      // so the switch read "on" while nothing could arrive, the account looked opted in to every
+      // other surface, and the dispatcher kept sending to a device that would never display them.
+      // Drop the enrolment and say why, rather than showing a switch that lies.
+      if (Notification.permission !== 'granted') {
+        try {
+          await api.deletePushSubscription(devId)
+          if (cancelled) return
+          await refreshInternal(push, devId)
+        } catch (err) {
+          console.warn('Could not release this device after notification permission was revoked.', err)
+        }
+        if (!cancelled) setGuidance(push.PUSH_PERMISSION_REVOKED_GUIDANCE)
+        return
+      }
+
       try {
         const registration = await navigator.serviceWorker.ready
         const token = await push.getFcmToken(registration)
@@ -133,7 +157,7 @@ export function usePushNotifications(
       return false
     }
     const previousStatus = status
-    setBusy(true)
+    setBusyAction('device')
     setGuidance(null)
     try {
       // Strict order: permission -> service worker ready -> FCM token/backend upsert ->
@@ -168,7 +192,7 @@ export function usePushNotifications(
       setGuidance(push.PUSH_UNSUPPORTED_GUIDANCE)
       return false
     } finally {
-      setBusy(false)
+      setBusyAction(null)
     }
   }, [deviceId, refreshInternal, status])
 
@@ -176,7 +200,7 @@ export function usePushNotifications(
     const push = await loadPushModule()
     if (!push.isPushSupported() || !deviceId) return
     const previousStatus = status
-    setBusy(true)
+    setBusyAction('device')
     // We know this device is turning off immediately, but we do not yet know whether it is the
     // account's last device. Preserve the account state until the server returns the authoritative
     // multi-device result so recurring-payment cards never flash a false "Paused" state.
@@ -188,7 +212,7 @@ export function usePushNotifications(
     setGuidance(null)
     try {
       // Push opt-in is per device. Removing this subscription leaves every other device alone;
-      // the server clears the account gate only when this was the last enabled device.
+      // the server clears the account-wide category-alert consent only when this was the last one.
       await api.deletePushSubscription(deviceId)
       await refreshInternal(push, deviceId)
     } catch (err) {
@@ -198,7 +222,7 @@ export function usePushNotifications(
         ? push.PUSH_ENABLED_ELSEWHERE_MESSAGE
         : null)
     } finally {
-      setBusy(false)
+      setBusyAction(null)
     }
   }, [deviceId, refreshInternal, status])
 
@@ -209,7 +233,7 @@ export function usePushNotifications(
       return false
     }
     const previousStatus = status
-    setBusy(true)
+    setBusyAction('categoryAlerts')
     setGuidance(null)
     setStatus(current => current ? { ...current, categoryAlertsEnabled: enabled } : current)
     try {
@@ -219,17 +243,20 @@ export function usePushNotifications(
     } catch (err) {
       console.error('Could not update category spending alerts.', err)
       setStatus(previousStatus)
-      setGuidance('Category spending alerts could not be updated. Please try again.')
+      // The server refuses this with a specific reason (no enabled device); replacing it with a
+      // generic retry message hid the one thing that would have told the user what to do.
+      setGuidance(getErrorMessage(err, 'Category spending alerts could not be updated. Please try again.'))
       return false
     } finally {
-      setBusy(false)
+      setBusyAction(null)
     }
   }, [deviceId, refreshInternal, status])
 
   return {
     supported,
     loading,
-    busy,
+    busy: busyAction !== null,
+    busyAction,
     enabled: !!status?.enabled && !!status?.deviceRegistered,
     accountEnabled: !!status?.enabled,
     deviceRegistered: !!status?.deviceRegistered,

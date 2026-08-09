@@ -359,7 +359,7 @@ describe('InvestmentsView provider call boundaries', () => {
   })
 })
 
-describe('InvestmentsView money-you-put-in card', () => {
+describe('InvestmentsView money-sent-to-broker card', () => {
   beforeEach(() => {
     vi.mocked(api.readCachedInvestmentPortfolio).mockReturnValue(null)
     vi.mocked(api.fetchInvestmentActivity).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 10 })
@@ -385,7 +385,7 @@ describe('InvestmentsView money-you-put-in card', () => {
     expect(await screen.findByText('Waiting to be sent')).toBeTruthy()
     expect(screen.getByText('$155.29')).toBeTruthy()
     expect(screen.queryByText('Not yet sent')).toBeNull()
-    expect(screen.getByText('Put to work')).toBeTruthy()
+    expect(screen.getByText('Share sent')).toBeTruthy()
     expect(screen.getByText('95%')).toBeTruthy()
   })
 
@@ -397,11 +397,11 @@ describe('InvestmentsView money-you-put-in card', () => {
     }))
     renderView()
 
-    expect(await screen.findByText('Sent beyond earmark')).toBeTruthy()
+    expect(await screen.findByText('More sent than set aside')).toBeTruthy()
     expect(screen.getByText('$250.00')).toBeTruthy()
   })
 
-  it('never reports a negative put-to-work percentage after net withdrawals', async () => {
+  it('never reports a negative share-sent percentage after withdrawals', async () => {
     vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(withSummary({
       growthLedgerBalance: 1000,
       growthContributions: 1000,
@@ -409,7 +409,21 @@ describe('InvestmentsView money-you-put-in card', () => {
     }))
     renderView()
 
-    expect(await screen.findByText('Put to work')).toBeTruthy()
+    expect(await screen.findByText('Share sent')).toBeTruthy()
     expect(screen.getByText('0%')).toBeTruthy()
+  })
+
+  it('labels saved valuation figures without claiming they are from today', async () => {
+    vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(withSummary({
+      totalValue: 1200,
+      dailyChange: 25,
+    }))
+    renderView()
+
+    expect(await screen.findByText('Latest total')).toBeTruthy()
+    expect(screen.getByText('Income and latest move')).toBeTruthy()
+    expect(screen.getByText('Latest value move')).toBeTruthy()
+    expect(screen.queryByText('Total today')).toBeNull()
+    expect(screen.queryByText('Change today')).toBeNull()
   })
 })

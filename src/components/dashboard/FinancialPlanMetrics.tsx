@@ -21,6 +21,7 @@ interface EssentialsMetric {
 }
 
 interface StabilityMetric {
+  hasTarget: boolean
   currentPct: number
   pending: number
   currentBalance: number
@@ -161,16 +162,16 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
           <div className="flex flex-wrap justify-between gap-x-2 gap-y-1 text-xs font-semibold">
             <span className="text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
               <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-              Stability Cap Reached
+              {stabilityMetric.hasTarget ? 'Stability Cap Reached' : 'Stability Fund'}
             </span>
             <span className="text-foreground">
-              {(stabilityMetric.currentPct * 100).toFixed(1)}%
+              {stabilityMetric.hasTarget ? `${(stabilityMetric.currentPct * 100).toFixed(1)}%` : 'No limit set'}
               {stabilityMetric.pending > 0 && (
                 <span className="text-orange-500 ml-1">{'→'} {(stabilityMetric.projectedPct * 100).toFixed(1)}%</span>
               )}
             </span>
           </div>
-          <div className="w-full bg-muted/80 rounded-full h-2.5 overflow-hidden flex">
+          {stabilityMetric.hasTarget && <div className="w-full bg-muted/80 rounded-full h-2.5 overflow-hidden flex">
             <div
               className="bg-emerald-500 h-full transition-all duration-700 ease-out"
               style={{ width: `${stabilityMetric.projectedPct * 100}%` }}
@@ -181,9 +182,12 @@ export const FinancialPlanMetrics: React.FC<FinancialPlanMetricsProps> = ({
                 style={{ width: `${stabilityMetric.atRiskPct * 100}%` }}
               />
             )}
-          </div>
+          </div>}
           <span className="text-[10px] text-muted-foreground block leading-relaxed">
-            Target Stability Fund goal is <strong>{formatSensitive(targetStabilityFund)}</strong>. Currently at {formatSensitive(stabilityMetric.currentBalance)}.
+            {stabilityMetric.hasTarget
+              ? <>Target Stability Fund goal is <strong>{formatSensitive(targetStabilityFund)}</strong>. </>
+              : <>No Stability limit is set. </>}
+            Currently at {formatSensitive(stabilityMetric.currentBalance)}.
             {renderProjected(stabilityMetric.pending, stabilityMetric.projectedBalance)}
           </span>
         </div>

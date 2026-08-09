@@ -58,7 +58,7 @@ describe('buildBackgroundNotification', () => {
       },
     })
 
-    expect(result?.options.tag).toBe('category-limit-2026-08-Dining')
+    expect(result?.options.tag).toBe('category-limit-2026-08')
     expect(result?.options.data).toEqual({
       kind: 'category-limit',
       cycleKey: '2026-08',

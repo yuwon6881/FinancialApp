@@ -95,4 +95,23 @@ describe('useCycleNavigation', () => {
     expect(result.current.highlightedTxId).toBe('wishlist-tx-1')
     expect(result.current.ledgerShowAllCycles).toBe(false)
   })
+
+  it('persists cycle selection through the injected mutation queue', async () => {
+    const persistPeriod = vi.fn().mockResolvedValue(undefined)
+    const { result } = renderHook(() => useCycleNavigation({
+      loadAll: vi.fn().mockResolvedValue(undefined),
+      handleLogout: vi.fn(),
+      markSessionLocked: vi.fn(),
+      setDashboardData: vi.fn(),
+      setTransactions: vi.fn(),
+      setActiveTab: vi.fn(),
+      setLedgerCyclesRange: vi.fn(),
+      persistPeriod,
+    }))
+
+    await act(async () => result.current.handleSelectPeriod('Sep', 2026))
+
+    expect(persistPeriod).toHaveBeenCalledWith('Sep', 2026)
+    expect(api.selectPeriod).not.toHaveBeenCalled()
+  })
 })

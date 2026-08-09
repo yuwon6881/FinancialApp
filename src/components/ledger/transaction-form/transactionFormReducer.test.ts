@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { getInitialState, transactionFormReducer, type TransactionFormAction } from './transactionFormReducer'
 
-// The emergency-fund top-up is a per-salary decision. Consent must never survive a form opening or
-// arrive pre-ticked from somewhere the user did not choose it, so every action that opens or
-// repopulates the form clears it.
+// New/drafted salaries never inherit consent. Editing a persisted reimbursement is different: its
+// intent must remain explicit and stable through ordinary edits.
 
 const accepted = () => ({
   ...getInitialState('2026-07-09', 'Other'),
@@ -13,18 +12,6 @@ const accepted = () => ({
 
 const openingActions: [string, TransactionFormAction][] = [
   ['OPEN_CREATE', { type: 'OPEN_CREATE', payload: { defaultCategory: 'Other', todayDate: '2026-07-09' } }],
-  ['OPEN_EDIT', {
-    type: 'OPEN_EDIT',
-    payload: {
-      id: 'tx-1',
-      description: 'Salary',
-      amount: '1000',
-      date: '2026-07-09',
-      category: 'Other',
-      ledgerCategory: 'Income',
-      txType: 'inflow',
-    },
-  }],
   ['RESET', { type: 'RESET', todayDate: '2026-07-09', defaultCategory: 'Other' }],
   ['APPLY_RECEIPT', { type: 'APPLY_RECEIPT', payload: { amount: '42.00' }, todayDate: '2026-07-09' }],
   ['APPLY_AI_DRAFT', { type: 'APPLY_AI_DRAFT', payload: { fields: { amount: 1000 } }, todayDate: '2026-07-09' }],
@@ -44,6 +31,20 @@ describe('transactionFormReducer stabilityTopUpAccepted', () => {
 
   it('starts with an empty amount so the offer supplies the default', () => {
     expect(getInitialState('2026-07-09', 'Other').stabilityTopUpAmount).toBe('')
+  })
+
+  it('loads a persisted reimbursement checked when editing', () => {
+    const next = transactionFormReducer(accepted(), {
+      type: 'OPEN_EDIT',
+      payload: {
+        id: 'tx-1', description: 'Salary', amount: '1000', date: '2026-07-09',
+        category: 'Other', ledgerCategory: 'Income', txType: 'inflow',
+        stabilityRecoveryTopUpAmount: 250,
+      },
+    })
+
+    expect(next.stabilityTopUpAccepted).toBe(true)
+    expect(next.stabilityTopUpAmount).toBe('250.00')
   })
 
   it('is set only by an explicit field change', () => {

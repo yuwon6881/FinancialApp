@@ -29,16 +29,50 @@ function formatDateOnly(date: Date): string {
 // Advances a recurring payment's due date by one cycle (Monthly/Annually), clamping to the
 // last valid day of the resulting month so e.g. Jan 31 -> Feb 28/29 rather than overflowing
 // into March.
-export function computeNextOccurrenceDate(payment: Pick<RecurringPayment, 'nextDueDate' | 'frequency'>): string {
+export function computeNextOccurrenceDate(payment: Pick<RecurringPayment, 'nextDueDate' | 'frequency'> & Partial<Pick<RecurringPayment, 'dueDate' | 'startDate' | 'endDate'>>): string | null {
+  if (!payment.nextDueDate) return null
   const current = parseDateOnly(payment.nextDueDate)
-  const day = current.getDate()
+  const day = payment.dueDate ?? current.getDate()
   const monthsToAdd = payment.frequency === 'Annually' ? 12 : 1
-  const targetMonthIndex = current.getMonth() + monthsToAdd
-  const targetYear = current.getFullYear() + Math.floor(targetMonthIndex / 12)
+  const annualAnchorMonth = payment.startDate ? parseDateOnly(payment.startDate).getMonth() : current.getMonth()
+  const targetMonthIndex = payment.frequency === 'Annually'
+    ? annualAnchorMonth
+    : current.getMonth() + monthsToAdd
+  const targetYear = payment.frequency === 'Annually'
+    ? current.getFullYear() + 1
+    : current.getFullYear() + Math.floor(targetMonthIndex / 12)
   const targetMonth = ((targetMonthIndex % 12) + 12) % 12
   const lastDayOfTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate()
   const clampedDay = Math.min(day, lastDayOfTargetMonth)
-  return formatDateOnly(new Date(targetYear, targetMonth, clampedDay))
+  const next = formatDateOnly(new Date(targetYear, targetMonth, clampedDay))
+  return payment.endDate && next > payment.endDate ? null : next
+}
+
+export function computeOccurrenceOnOrAfter(
+  payment: Pick<RecurringPayment, 'frequency' | 'dueDate' | 'startDate'> & Partial<Pick<RecurringPayment, 'endDate'>>,
+  date: string
+): string | null {
+  const start = parseDateOnly(payment.startDate)
+  const target = parseDateOnly(date)
+  const dueDay = Math.max(1, Math.min(31, payment.dueDate))
+  const annual = payment.frequency === 'Annually'
+  let year = Math.max(start.getFullYear(), target.getFullYear())
+  let month = annual
+    ? start.getMonth()
+    : year === start.getFullYear() ? Math.max(start.getMonth(), target.getMonth()) : target.getMonth()
+
+  const anchoredDate = () => {
+    const lastDay = new Date(year, month + 1, 0).getDate()
+    return new Date(year, month, Math.min(dueDay, lastDay))
+  }
+  let candidate = anchoredDate()
+  if (candidate < start || candidate < target) {
+    if (annual) year++
+    else if (++month === 12) { month = 0; year++ }
+    candidate = anchoredDate()
+  }
+  const result = formatDateOnly(candidate)
+  return payment.endDate && result > payment.endDate ? null : result
 }
 
 // True once a subscription's end date has passed. Such a row can stay flagged `active` (the
@@ -70,6 +104,7 @@ export function isEligibleForPayEarly(
   // The server enforces the same rule; this only keeps the button off screen.
   if (payment.paymentMode === 'AutoDeduct') return false
   if (!payment.active) return false
+  if (!payment.nextDueDate) return false
   const dueDate = parseDateOnly(payment.nextDueDate)
   const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate())
   return dueDate.getTime() > todayDateOnly.getTime()

@@ -14,8 +14,7 @@ import { LedgerExportModal } from './ledger/LedgerExportModal'
 import { DeleteTransactionModal, EditDisabledModal } from './ledger/LedgerDeleteModals'
 import { LedgerPagination } from './ledger/LedgerPagination'
 import { LedgerFilterBar } from './ledger/LedgerFilterBar'
-import { LedgerTransactionList } from './ledger/LedgerTransactionList'
-import { SelectionToolbar } from './ui/SelectionToolbar'
+import { LedgerBulkSelectionLayer } from './ledger/LedgerBulkSelectionLayer'
 import type { LedgerListProps } from './ledger/ledgerListShared'
 import { TransactionFormSheet, type TransactionFormSheetRef } from './ledger/TransactionFormSheet'
 import type { ReceiptSplitDraft, ReceiptSplitFailure } from '../lib/useReceiptSplitPolling'
@@ -32,8 +31,6 @@ import { LedgerToolbar } from './ledger/view/LedgerToolbar'
 const LEDGER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
 const ReceiptSplitSheet = React.lazy(() =>
   import('./ledger/ReceiptSplitSheet').then(module => ({ default: module.ReceiptSplitSheet })))
-const LedgerBulkSelectionLayerLazy = React.lazy(() =>
-  import('./ledger/LedgerBulkSelectionLayer').then(module => ({ default: module.LedgerBulkSelectionLayer })))
 
 interface LedgerViewProps {
   transactions: Transaction[]
@@ -42,7 +39,7 @@ interface LedgerViewProps {
     transaction: Omit<Transaction, 'id'>,
     documentChanges?: TransactionDocumentChanges,
   ) => Promise<string | void> | string | void
-  onDeleteTransaction: (id: string, transaction?: Transaction) => Promise<void> | void
+  onDeleteTransaction: (id: string, transaction?: Transaction, attachedDocumentIdsToDelete?: number[]) => Promise<void> | void
   onUpdateTransaction?: (
     id: string,
     transaction: Omit<Transaction, 'id'>,
@@ -131,7 +128,6 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
   const formRef = useRef<TransactionFormSheetRef>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isReceiptSplitOpen, setIsReceiptSplitOpen] = useState(false)
-  const [isBulkSelectionRequested, setIsBulkSelectionRequested] = useState(false)
   const handleAddFormOpenChange = useCallback((open: boolean) => {
     setIsFormOpen(open)
     props.onAddFormOpenChange?.(open)
@@ -417,32 +413,11 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         }}
       />
 
-      <React.Suspense fallback={(
-        <>
-          <SelectionToolbar
-            testId="ledger-selection-toolbar"
-            itemCount={ledger.displayTransactions.length}
-            selectedCount={0}
-            allVisibleSelected={false}
-            someVisibleSelected={false}
-            isSelecting={isBulkSelectionRequested}
-            onStartSelection={() => setIsBulkSelectionRequested(true)}
-            onToggleSelectAll={() => undefined}
-            onLeaveSelection={() => setIsBulkSelectionRequested(false)}
-            disabled={hideSensitive}
-            itemLabel="transactions"
-          />
-          <LedgerTransactionList {...listProps} />
-        </>
-      )}>
-        <LedgerBulkSelectionLayerLazy
-          listProps={listProps}
-          allTransactions={props.transactions}
-          resetKey={bulkResetKey}
-          startInSelectionMode={isBulkSelectionRequested}
-          onExit={() => setIsBulkSelectionRequested(false)}
-        />
-      </React.Suspense>
+      <LedgerBulkSelectionLayer
+        listProps={listProps}
+        allTransactions={props.transactions}
+        resetKey={bulkResetKey}
+      />
 
       <LedgerPagination
         currentPage={ledger.currentPage}
@@ -476,7 +451,6 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         onAlsoDeleteDocumentsChange={ledger.setAlsoDeleteDocuments}
         isOnline={!app.isOffline && navigator.onLine}
         areAttachedDocumentsLoading={ledger.areAttachedDocumentsLoading}
-        isConfirming={ledger.isDeletingAttachedDocuments}
       />
 
       <EditDisabledModal

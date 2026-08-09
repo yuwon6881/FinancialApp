@@ -19,7 +19,7 @@ import { RewardCard } from './wishlist/RewardCard'
 import { RewardsPoolBar } from './wishlist/RewardsPoolBar'
 import { SavingsGoalContributeSheet, type ContributeMode } from './wishlist/SavingsGoalContributeSheet'
 import { InfoHint } from './ui/InfoHint'
-import { summarizePool } from '../lib/savingsGoals'
+import { previewRequiredPerCycle, summarizePool } from '../lib/savingsGoals'
 import {
   Plus,
   Trophy,
@@ -214,6 +214,20 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   const completedGoals = useMemo(
     () => savingsGoals.filter(goal => goal.status === 'completed'),
     [savingsGoals],
+  )
+
+  // What the amount and deadline currently typed into the form would ask for each cycle. The
+  // deadline is the input and the contribution is the output, so without this the one number a
+  // commitment is actually judged on only appeared after saving it.
+  const goalPacePreview = useMemo(
+    () => previewRequiredPerCycle(
+      Number.parseFloat(goalForm.targetInput),
+      goalForm.editingGoal?.earmarkedAmount ?? 0,
+      goalForm.dateInput,
+      today,
+      cycleDay,
+    ),
+    [goalForm.targetInput, goalForm.editingGoal, goalForm.dateInput, today, cycleDay],
   )
 
   // Rewards are claimed against the FREE remainder, never the whole balance. This is the fix for
@@ -473,6 +487,9 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
             isRecurring={goalForm.isRecurringInput}
             recurrenceMonths={goalForm.recurrenceMonthsInput}
             errors={goalForm.errors}
+            releasedByLowerTarget={goalForm.releasedByLowerTarget}
+            requiredPerCycle={goalPacePreview}
+            formatSensitive={formatSensitive}
             onNameChange={goalForm.setNameInput}
             onTargetChange={goalForm.handleTargetChange}
             onDateChange={goalForm.setDateInput}
@@ -503,6 +520,9 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
             isRecurring={goalForm.isRecurringInput}
             recurrenceMonths={goalForm.recurrenceMonthsInput}
             errors={goalForm.errors}
+            releasedByLowerTarget={goalForm.releasedByLowerTarget}
+            requiredPerCycle={goalPacePreview}
+            formatSensitive={formatSensitive}
             onNameChange={goalForm.setNameInput}
             onTargetChange={goalForm.handleTargetChange}
             onDateChange={goalForm.setDateInput}

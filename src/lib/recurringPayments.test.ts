@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildReminderPreview,
+  computeOccurrenceOnOrAfter,
   computeNextOccurrenceDate,
   DEFAULT_REMINDER_SETTINGS,
   getEffectiveReminderSettings,
@@ -39,8 +40,44 @@ describe('computeNextOccurrenceDate', () => {
     expect(computeNextOccurrenceDate({ nextDueDate: '2024-01-31', frequency: 'Monthly' })).toBe('2024-02-29')
   })
 
+  it('recovers the anchored day after a short month', () => {
+    expect(computeNextOccurrenceDate({
+      nextDueDate: '2026-02-28', frequency: 'Monthly', dueDate: 31, startDate: '2026-01-31',
+    })).toBe('2026-03-31')
+  })
+
+  it('returns null when the server reports no remaining occurrence', () => {
+    expect(computeNextOccurrenceDate({ nextDueDate: null, frequency: 'Monthly' })).toBeNull()
+  })
+
   it('rolls over into the next year', () => {
     expect(computeNextOccurrenceDate({ nextDueDate: '2024-12-15', frequency: 'Monthly' })).toBe('2025-01-15')
+  })
+
+  it('stops at the configured billing end date', () => {
+    expect(computeNextOccurrenceDate({
+      nextDueDate: '2026-08-31', frequency: 'Monthly', dueDate: 31, endDate: '2026-09-15',
+    })).toBeNull()
+  })
+})
+
+describe('computeOccurrenceOnOrAfter', () => {
+  it('matches the server monthly anchor when a past schedule is created', () => {
+    expect(computeOccurrenceOnOrAfter({
+      startDate: '2026-01-31', dueDate: 31, frequency: 'Monthly', endDate: undefined,
+    }, '2026-08-09')).toBe('2026-08-31')
+  })
+
+  it('uses the start month as the annual anchor', () => {
+    expect(computeOccurrenceOnOrAfter({
+      startDate: '2024-03-31', dueDate: 31, frequency: 'Annually', endDate: undefined,
+    }, '2026-04-01')).toBe('2027-03-31')
+  })
+
+  it('returns null when the next anchored date is after the end date', () => {
+    expect(computeOccurrenceOnOrAfter({
+      startDate: '2026-01-15', dueDate: 15, frequency: 'Monthly', endDate: '2026-08-10',
+    }, '2026-08-09')).toBeNull()
   })
 })
 

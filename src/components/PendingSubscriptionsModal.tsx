@@ -8,6 +8,7 @@ import { DatePicker } from './ui/DatePicker'
 import { SensitiveMask } from './ui/SensitiveAmount'
 import { Button } from './ui/Button'
 import { BellRing, CheckCircle2, Loader2 } from 'lucide-react'
+import { financialDate } from '../lib/financialDate'
 
 interface PendingSubscriptionsModalProps {
   isOpen: boolean
@@ -55,14 +56,6 @@ export function PendingSubscriptionsModal({
   ) => {
     setPendingActions(current => ({ ...current, [noti.id]: action }))
     callback()
-    window.setTimeout(() => {
-      setPendingActions(current => {
-        if (!current[noti.id]) return current
-        const next = { ...current }
-        delete next[noti.id]
-        return next
-      })
-    }, 15000)
   }
 
   return (
@@ -122,7 +115,7 @@ export function PendingSubscriptionsModal({
               <div className="flex items-start justify-between gap-4">
                 <span className="min-w-0 truncate text-sm font-bold text-foreground">{noti.name}</span>
                 <span className="shrink-0 text-sm font-extrabold text-orange-500 transition-all duration-300">
-                  {hideSensitive ? <SensitiveMask /> : <>-{formatCurrencyVal(noti.amount, currency)}</>}
+                  {hideSensitive ? <SensitiveMask /> : <>-{formatCurrencyVal(Math.abs(noti.amount), currency)}</>}
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
@@ -140,6 +133,7 @@ export function PendingSubscriptionsModal({
                   <DatePicker
                     value={paidDates[noti.id] ?? noti.billingDate}
                     onChange={value => setPaidDates(prev => ({ ...prev, [noti.id]: value }))}
+                    max={financialDate()}
                     align="right"
                     className="w-full sm:flex-1"
                   />

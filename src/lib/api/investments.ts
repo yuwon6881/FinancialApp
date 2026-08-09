@@ -107,6 +107,7 @@ export interface InvestmentActivityMutation {
   cashAmount?: number
   fees: number
   taxes: number
+  createdAt?: string
 }
 
 export function readCachedInvestmentPortfolio(): InvestmentPortfolio | null {
@@ -298,6 +299,7 @@ export interface InvestmentCashFlowInput {
   notes?: string
   toCurrency?: string
   toAmount?: number
+  createdAt?: string
 }
 
 export function createInvestmentCashFlow(value: InvestmentCashFlowInput): Promise<{ id: string }> {

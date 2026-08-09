@@ -34,7 +34,13 @@ export function obfuscateAmount(value: number | string): string {
 }
 
 export function deobfuscateTransaction(transaction: WireTransaction): Transaction {
-  return { ...transaction, amount: deobfuscateAmount(transaction.amount) }
+  return {
+    ...transaction,
+    amount: deobfuscateAmount(transaction.amount),
+    stabilityRecoveryTopUpAmount: transaction.stabilityRecoveryTopUpAmount == null
+      ? transaction.stabilityRecoveryTopUpAmount
+      : deobfuscateAmount(transaction.stabilityRecoveryTopUpAmount),
+  }
 }
 
 export function deobfuscateRecurringPayment(payment: WireRecurringPayment): RecurringPayment {

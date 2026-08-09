@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Button } from './Button'
 import { AlertCircle, CheckCircle2, Info, Undo2, X } from 'lucide-react'
@@ -58,13 +58,32 @@ const durationFor = (toast: ToastMessage): number => {
 }
 
 export const ToastViewport: React.FC<ToastViewportProps> = ({ toasts, onDismiss }) => {
+  // One timer per toast, started once and never restarted. Scheduling the whole list on every
+  // change gave each existing toast a fresh full duration whenever another arrived or was
+  // dismissed — and the outbox emits a batch of them 350ms apart, so during a queue drain nothing
+  // aged and an Undo could sit there long after the window it belongs to.
+  const timersRef = useRef(new Map<string, number>())
   useEffect(() => {
-    if (toasts.length === 0) return
-    const timers = toasts.map(toast =>
-      window.setTimeout(() => onDismiss(toast.id), durationFor(toast))
-    )
-    return () => timers.forEach(window.clearTimeout)
+    const timers = timersRef.current
+    const live = new Set(toasts.map(toast => toast.id))
+    for (const [id, timer] of timers) {
+      if (live.has(id)) continue
+      window.clearTimeout(timer)
+      timers.delete(id)
+    }
+    for (const toast of toasts) {
+      if (timers.has(toast.id)) continue
+      timers.set(toast.id, window.setTimeout(() => onDismiss(toast.id), durationFor(toast)))
+    }
   }, [toasts, onDismiss])
+
+  useEffect(() => {
+    const timers = timersRef.current
+    return () => {
+      timers.forEach(window.clearTimeout)
+      timers.clear()
+    }
+  }, [])
 
   const viewport = (
     <div

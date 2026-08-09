@@ -58,5 +58,6 @@ export function mapFormToTransaction(
     category: state.transactionType === 'transfer' ? 'Transfer' : state.category,
     ledgerCategory: finalLedgerCategory,
     date: state.date,
+    stabilityRecoveryTopUpAmount: isIncome ? Math.max(0, options.recoveryTopUp ?? 0) : undefined,
   }
 }

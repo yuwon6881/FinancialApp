@@ -9,6 +9,8 @@
 
 import type { DashboardData, Transaction } from '../types'
 import { expandBulkTransactionProjection, type QueuedOp } from './outbox'
+import { getCycleRangeDates, MONTH_NAMES } from './cycle'
+import { buildIncomeSplitRows, type IncomeAllocations } from './incomeSplitProjection'
 
 export interface OptimisticDashboardInputs {
   /** Combined pending + recently-completed ops awaiting server reconciliation. */
@@ -26,7 +28,66 @@ export function computeOptimisticDashboard(
   const data = { ...dashboardData }
   data.setting = { ...data.setting }
   data.stats = { ...data.stats }
-  data.categories = data.categories.map(c => ({ ...c }))
+  // A cached snapshot can predate any of these arrays — `cache.ts` replays whatever
+  // shape was persisted, so a dashboard written before a field existed must still boot
+  // rather than crash the whole app into the ErrorBoundary on cold launch.
+  data.categories = (data.categories ?? []).map(c => ({ ...c }))
+  data.activeRecurringPayments = (data.activeRecurringPayments ?? []).map(payment => ({ ...payment }))
+  data.pendingNotifications = (data.pendingNotifications ?? []).map(notification => ({ ...notification }))
+
+  const selectedMonth = MONTH_NAMES.indexOf(data.setting.selectedMonth) + 1
+  const selectedRange = getCycleRangeDates(data.setting.selectedYear, selectedMonth || 1, data.setting.cycleDay)
+  const selectedStart = selectedRange.start.getFullYear() + '-' + String(selectedRange.start.getMonth() + 1).padStart(2, '0') + '-' + String(selectedRange.start.getDate()).padStart(2, '0')
+  const selectedEnd = selectedRange.end.getFullYear() + '-' + String(selectedRange.end.getMonth() + 1).padStart(2, '0') + '-' + String(selectedRange.end.getDate()).padStart(2, '0')
+  const isInSelectedCycle = (date: unknown): date is string => typeof date === 'string' && date >= selectedStart && date <= selectedEnd
+  const incomeAllocations: IncomeAllocations = {
+    essentialsAlloc: data.setting.essentialsAlloc,
+    growthAlloc: data.setting.growthAlloc,
+    stabilityAlloc: data.setting.stabilityAlloc,
+    rewardsAlloc: data.setting.rewardsAlloc,
+  }
+  const splitRowsFor = (transaction: Partial<Transaction> & { id: string }) =>
+    buildIncomeSplitRows(transaction as Transaction, incomeAllocations)
+  const persistedSplitRowsFor = (parentId: string, fallback?: Transaction) => {
+    const rows = transactions.filter(transaction => transaction.id.startsWith(`${parentId}-split-`))
+    return rows.length > 0 ? rows : fallback ? splitRowsFor(fallback) : []
+  }
+  let stabilityBalanceDelta = 0
+  let recoveryTopUpDelta = 0
+  const applySplitRows = (rows: Transaction[], direction: 1 | -1) => {
+    rows.forEach(row => {
+      const bucket = row.ledgerCategory.split('->')[1]
+      const category = data.categories.find(item => item.name.toLowerCase() === bucket?.toLowerCase())
+      if (category) {
+        category.netChange += direction * row.amount
+        category.remaining += direction * row.amount
+      }
+      if (bucket === 'Stability') stabilityBalanceDelta += direction * row.amount
+    })
+  }
+  const walletSplitAmount = (rows: Transaction[]) => rows
+    .filter(row => !row.ledgerCategory.endsWith('->Growth'))
+    .reduce((sum, row) => sum + row.amount, 0)
+  const recoveryTopUp = (transaction: {
+    stabilityRecoveryTopUpAmount?: number | null
+    ledgerCategory?: string
+    amount?: number
+  }) => {
+    if (transaction.stabilityRecoveryTopUpAmount != null) {
+      return Math.max(0, transaction.stabilityRecoveryTopUpAmount)
+    }
+    const ledgerCategory = transaction.ledgerCategory ?? ''
+    const amount = transaction.amount ?? 0
+    if (!(amount > 0) || !ledgerCategory.startsWith('IncomeSplit:')) return 0
+    const stabilityPercent = Number(ledgerCategory.slice('IncomeSplit:'.length).split(',')[2])
+    return Number.isFinite(stabilityPercent)
+      ? Math.max(0, amount * (stabilityPercent / 100 - data.setting.stabilityAlloc))
+      : 0
+  }
+  const isIncomeTransaction = (transaction: { amount?: number; ledgerCategory?: string }) =>
+    (transaction.amount ?? 0) > 0
+    && (transaction.ledgerCategory === 'Income'
+      || transaction.ledgerCategory?.startsWith('IncomeSplit:'))
 
   // Check if settings op queued
   const settingsOps = activeOps.filter(o => o.entity === 'settings' && o.type === 'update')
@@ -43,16 +104,20 @@ export function computeOptimisticDashboard(
   txOps.forEach(op => {
     if (op.type === 'add' && op.payload) {
       const amount = op.payload.amount || 0
-      data.stats.totalBalance += amount
+      const splitRows = splitRowsFor({ ...op.payload, id: String(op.targetId) } as Transaction)
+      data.stats.totalBalance += splitRows.length > 0 ? walletSplitAmount(splitRows) : amount
       const catName = op.payload.category || op.payload.ledgerCategory || ''
       const cat = data.categories.find(c => c.name.toLowerCase() === catName.toLowerCase())
-      if (cat) {
+      if (splitRows.length > 0) {
+        applySplitRows(splitRows, 1)
+        recoveryTopUpDelta += recoveryTopUp(op.payload)
+      } else if (cat) {
         cat.netChange += amount
         cat.remaining += amount
       }
       if (amount > 0) {
         data.stats.monthlyInflow += amount
-        if ((op.payload.ledgerCategory || '').startsWith('IncomeSplit:')) {
+        if (isIncomeTransaction(op.payload)) {
           data.stats.monthlyIncome += amount
         }
       } else {
@@ -69,15 +134,26 @@ export function computeOptimisticDashboard(
       const newAmount = op.payload.amount !== undefined ? op.payload.amount : oldAmount
       data.stats.totalBalance += newAmount - oldAmount
 
+      const oldSplitRows = orig ? persistedSplitRowsFor(String(op.targetId), orig) : []
+      const nextTransaction = { ...orig, ...op.payload, id: String(op.targetId) } as Transaction
+      const newSplitRows = splitRowsFor(nextTransaction)
+      if (oldSplitRows.length > 0 || newSplitRows.length > 0) {
+        data.stats.totalBalance += walletSplitAmount(newSplitRows) - newAmount
+          - (walletSplitAmount(oldSplitRows) - oldAmount)
+      }
+      applySplitRows(oldSplitRows, -1)
+      applySplitRows(newSplitRows, 1)
+      recoveryTopUpDelta += recoveryTopUp(nextTransaction) - recoveryTopUp(orig ?? {})
+
       const oldCatName = orig ? (orig.category || orig.ledgerCategory) : ''
       const oldCat = data.categories.find(c => c.name.toLowerCase() === oldCatName.toLowerCase())
-      if (oldCat) {
+      if (oldSplitRows.length === 0 && oldCat) {
         oldCat.netChange -= oldAmount
         oldCat.remaining -= oldAmount
       }
       const newCatName = op.payload.category || op.payload.ledgerCategory || oldCatName
       const newCat = data.categories.find(c => c.name.toLowerCase() === newCatName.toLowerCase())
-      if (newCat) {
+      if (newSplitRows.length === 0 && newCat) {
         newCat.netChange += newAmount
         newCat.remaining += newAmount
       }
@@ -92,6 +168,8 @@ export function computeOptimisticDashboard(
       } else {
         data.stats.monthlyExpenses += Math.abs(newAmount)
       }
+      if (orig && isIncomeTransaction(orig)) data.stats.monthlyIncome -= oldAmount
+      if (isIncomeTransaction(nextTransaction)) data.stats.monthlyIncome += newAmount
     } else if (op.type === 'delete') {
       const rawSnapshot = op.payload?.undoSnapshot ?? op.payload
       const snapshot = rawSnapshot && typeof rawSnapshot === 'object'
@@ -101,13 +179,20 @@ export function computeOptimisticDashboard(
       const oldAmount = orig?.amount
         ?? (typeof snapshot?.amount === 'number' ? snapshot.amount : 0)
       data.stats.totalBalance -= oldAmount
+      const fallback = orig ?? (snapshot ? { ...snapshot, id: String(op.targetId) } as unknown as Transaction : undefined)
+      const oldSplitRows = persistedSplitRowsFor(String(op.targetId), fallback)
+      if (oldSplitRows.length > 0) {
+        data.stats.totalBalance -= walletSplitAmount(oldSplitRows) - oldAmount
+      }
+      applySplitRows(oldSplitRows, -1)
+      recoveryTopUpDelta -= recoveryTopUp(fallback ?? {})
       const catName = orig
         ? (orig.category || orig.ledgerCategory)
         : typeof snapshot?.category === 'string'
           ? snapshot.category
           : typeof snapshot?.ledgerCategory === 'string' ? snapshot.ledgerCategory : ''
       const cat = data.categories.find(c => c.name.toLowerCase() === catName.toLowerCase())
-      if (cat) {
+      if (oldSplitRows.length === 0 && cat) {
         cat.netChange -= oldAmount
         cat.remaining -= oldAmount
       }
@@ -116,6 +201,7 @@ export function computeOptimisticDashboard(
       } else {
         data.stats.monthlyExpenses -= Math.abs(oldAmount)
       }
+      if (fallback && isIncomeTransaction(fallback)) data.stats.monthlyIncome -= oldAmount
     }
   })
 
@@ -123,30 +209,35 @@ export function computeOptimisticDashboard(
   // being its own op, so without this the recovery card would keep asking for money the user has
   // already queued putting back — until the next successful refresh.
   if (data.stabilityRecovery) {
-    const stabilityAlloc = data.setting.stabilityAlloc || 0
-    const queuedTopUp = txOps.reduce((total, op) => {
-      if (op.type !== 'add' || !op.payload) return total
-      const ledgerCategory: string = op.payload.ledgerCategory || ''
-      if (!ledgerCategory.startsWith('IncomeSplit:')) return total
-      const amount = op.payload.amount || 0
-      if (amount <= 0) return total
-      const stabilityPercent = Number(ledgerCategory.slice('IncomeSplit:'.length).split(',')[2])
-      if (!Number.isFinite(stabilityPercent)) return total
-      // Only credit above what the plain percentage would have delivered counts as putting money
-      // back; the usual share was never part of the ask.
-      return total + Math.max(0, amount * (stabilityPercent / 100) - amount * stabilityAlloc)
-    }, 0)
-
-    if (queuedTopUp > 0) {
-      const outstandingShortfall = Math.max(0, data.stabilityRecovery.outstandingShortfall - queuedTopUp)
-      data.stabilityRecovery = {
-        ...data.stabilityRecovery,
-        outstandingShortfall,
-        outstandingThisCycle: Math.max(0, data.stabilityRecovery.outstandingThisCycle - queuedTopUp),
-        toppedUpThisCycle: data.stabilityRecovery.toppedUpThisCycle + queuedTopUp,
-        isActive: outstandingShortfall > 0,
-      }
+    const currentBalance = data.stabilityRecovery.currentBalance + stabilityBalanceDelta
+    const outstandingShortfall = Math.max(
+      0,
+      data.stabilityRecovery.recoverableCeiling - currentBalance,
+    )
+    const toppedUpThisCycle = Math.max(
+      0,
+      data.stabilityRecovery.toppedUpThisCycle + recoveryTopUpDelta,
+    )
+    const paceAnchor = outstandingShortfall + toppedUpThisCycle
+    const requiredThisCycle = data.stabilityRecovery.cyclesRemaining <= 1
+      ? paceAnchor
+      : Math.ceil((paceAnchor / data.stabilityRecovery.cyclesRemaining) * 100) / 100
+    const outstandingThisCycle = Math.max(
+      0,
+      Math.min(requiredThisCycle - toppedUpThisCycle, outstandingShortfall),
+    )
+    data.stabilityRecovery = {
+      ...data.stabilityRecovery,
+      currentBalance,
+      outstandingShortfall,
+      requiredThisCycle,
+      outstandingThisCycle,
+      toppedUpThisCycle,
+      isActive: outstandingShortfall > 0,
     }
+    data.stats.stabilityPercentReached = data.setting.targetStabilityFund > 0
+      ? Math.max(0, currentBalance / data.setting.targetStabilityFund)
+      : 0
   }
 
   // Pay-early is queued under its recurring-payment target but creates a ledger row. Project the
@@ -173,6 +264,45 @@ export function computeOptimisticDashboard(
     if (cat) {
       cat.netChange += amount
       cat.remaining += amount
+    }
+    if (amount > 0) data.stats.monthlyInflow += amount
+    else data.stats.monthlyExpenses += Math.abs(amount)
+  })
+
+  const settlementOps = activeOps.filter(op => op.entity === 'recurringOccurrence' && op.type === 'settle')
+  settlementOps.forEach(op => {
+    const paymentId = typeof op.payload?.recurringPaymentId === 'string' ? op.payload.recurringPaymentId : ''
+    const occurrenceDate = typeof op.payload?.occurrenceDate === 'string' ? op.payload.occurrenceDate : ''
+    const status = op.payload?.status === 'Discarded' ? 'Discarded' : 'Paid'
+    const occurrenceIndex = data.activeRecurringPayments.findIndex(payment =>
+      payment.recurringPaymentId === paymentId && payment.dueDate === occurrenceDate)
+    if (occurrenceIndex >= 0) {
+      data.activeRecurringPayments[occurrenceIndex] = {
+        ...data.activeRecurringPayments[occurrenceIndex],
+        status,
+        isPaid: status === 'Paid',
+        isDiscarded: status === 'Discarded',
+        paidDate: status === 'Paid' && typeof op.payload?.paidDate === 'string' ? op.payload.paidDate : null,
+      }
+    }
+    data.pendingNotifications = data.pendingNotifications.filter(notification =>
+      !(notification.recurringPaymentId === paymentId && notification.billingDate === occurrenceDate))
+
+    const rawTransaction = op.isCompleted ? op.payload?.resultTransaction : op.payload?.optimisticTransaction
+    if (!rawTransaction || typeof rawTransaction !== 'object') return
+    const transaction = rawTransaction as Partial<Transaction>
+    if (!isInSelectedCycle(transaction.date)) return
+    const alreadyPresent = transactions.some(existing =>
+      (transaction.id != null && String(existing.id) === String(transaction.id)) ||
+      (existing.recurringPaymentId === paymentId && existing.recurringOccurrenceDate === occurrenceDate))
+    if (alreadyPresent) return
+    const amount = typeof transaction.amount === 'number' ? transaction.amount : 0
+    data.stats.totalBalance += amount
+    const category = data.categories.find(item =>
+      item.name.toLowerCase() === (transaction.ledgerCategory || transaction.category || '').toLowerCase())
+    if (category) {
+      category.netChange += amount
+      category.remaining += amount
     }
     if (amount > 0) data.stats.monthlyInflow += amount
     else data.stats.monthlyExpenses += Math.abs(amount)

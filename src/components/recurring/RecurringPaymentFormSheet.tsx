@@ -191,7 +191,7 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
           />
         </FormField>
 
-        <FormField label="End billing date" hint="Optional">
+        <FormField label="End billing date (optional)">
           <DatePicker
             value={endDateInput}
             onChange={onEndDateChange}

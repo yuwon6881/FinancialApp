@@ -235,7 +235,7 @@ export function useOutbox(options: UseOutboxOptions): UseOutboxResult {
         current.onLockError()
       },
       shouldRefresh: current.shouldRefresh ?? (successfulOps => successfulOps.some(({ op }) =>
-        op.entity !== 'settings' || (op.targetId !== 'darkMode' && op.targetId !== 'hideSensitive' && op.targetId !== 'summarySeen')
+        op.entity !== 'settings' || !['darkMode', 'hideSensitive', 'summarySeen', 'selectedPeriod'].includes(op.targetId)
       )),
       refresh: current.refresh,
       onSettled: () => {

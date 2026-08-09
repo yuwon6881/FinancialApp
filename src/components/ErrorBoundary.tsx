@@ -20,11 +20,15 @@ interface ErrorBoundaryState {
   error: Error | null
   /** Bumped on every reset so the recovered subtree is re-keyed and fully remounts. */
   attempt: number
+  /** True between a reset and the recovered subtree either mounting or crashing again. */
+  retrying: boolean
+  /** Consecutive resets that crashed again before the subtree could mount. */
+  failedRetries: number
 }
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   private static readonly chunkReloadKey = 'chunk-load-reload-attempted'
-  state: ErrorBoundaryState = { error: null, attempt: 0 }
+  state: ErrorBoundaryState = { error: null, attempt: 0, retrying: false, failedRetries: 0 }
 
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
     return { error }
@@ -34,12 +38,26 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     // Auto-recover when the reset key changes (e.g. tab navigation).
     if (this.state.error && prevProps.resetKey !== this.props.resetKey) {
       this.reset()
+      return
+    }
+    // The recovered subtree committed without throwing, so the retry worked and the
+    // escalation copy must go away. A crash during that render never reaches here —
+    // it re-renders the boundary into its fallback and lands in componentDidCatch.
+    if (!this.state.error && this.state.retrying) {
+      this.setState({ retrying: false, failedRetries: 0 })
     }
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     // Keep a breadcrumb for debugging without crashing the app.
     console.error('[ErrorBoundary]', error, info.componentStack)
+
+    // A crash while retrying means the same fallback is about to be re-rendered
+    // unchanged, so "Try again" looks like a dead button. Count it, and let render
+    // say so and offer the recovery paths that can actually clear the cause.
+    if (this.state.retrying) {
+      this.setState(state => ({ retrying: false, failedRetries: state.failedRetries + 1 }))
+    }
 
     // Automatically recover from Vite chunk load errors when a new version is deployed.
     if (
@@ -61,7 +79,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   // so it fully unmounts/remounts. Nulling the error alone re-renders the same
   // element instances, so any crash driven by stale component state would rethrow
   // on the very next render and "Try again" would appear to do nothing.
-  reset = () => this.setState(state => ({ error: null, attempt: state.attempt + 1 }))
+  reset = () =>
+    this.setState(state => ({ error: null, attempt: state.attempt + 1, retrying: true }))
 
   // Last-resort recovery: the crash is often caused by a stale/malformed
   // cached record (e.g. a pending or draft transaction persisted before a
@@ -76,12 +95,16 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   render() {
-    const { error, attempt } = this.state
+    const { error, attempt, failedRetries } = this.state
     if (!error) return <Fragment key={attempt}>{this.props.children}</Fragment>
 
     if (this.props.fallback) return this.props.fallback(error, this.reset)
 
     const inline = this.props.variant === 'inline'
+    // Once retrying has visibly failed, the honest thing is to say so and put the
+    // recovery paths that can clear the cause on screen — including in the inline
+    // variant, which otherwise offers nothing but the button that just did nothing.
+    const retryFailed = failedRetries > 0
 
     return (
       <div
@@ -99,8 +122,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           <div className="space-y-1.5 text-center">
             <h2 className="text-lg font-bold tracking-tight text-foreground">Something went wrong</h2>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              An unexpected error interrupted this view. Your saved and queued data is safe —
-              try again, or reload the app.
+              {retryFailed
+                ? 'Trying again ran into the same problem, so it will not clear on its own. Your saved and queued data is safe — reload the app, and if that does not help, clear the data kept on this device.'
+                : 'An unexpected error interrupted this view. Your saved and queued data is safe — try again, or reload the app.'}
             </p>
           </div>
           <div className="flex items-center gap-2.5">
@@ -111,7 +135,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             >
               <RotateCcw className="size-3.5" /> Try again
             </Button>
-            {!inline && (
+            {(!inline || retryFailed) && (
               <Button
                 onClick={() => window.location.reload()}
                 className="rounded-xl px-4 shadow-md shadow-primary/10"
@@ -120,7 +144,17 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               </Button>
             )}
           </div>
-          {!inline && (
+          {error.message && (
+            <details className="w-full text-left">
+              <summary className="cursor-pointer text-[11px] font-bold text-muted-foreground">
+                What went wrong
+              </summary>
+              <p className="mt-1.5 break-words rounded-lg bg-muted/60 p-2 text-[11px] leading-relaxed text-muted-foreground">
+                {error.message}
+              </p>
+            </details>
+          )}
+          {(!inline || retryFailed) && (
             <Button
               variant="destructiveGhost"
               size="sm"

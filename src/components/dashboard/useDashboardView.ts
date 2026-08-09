@@ -119,7 +119,7 @@ export function useDashboardView(options: UseDashboardViewOptions) {
         if (rp.status === 'Pending') {
           const cat = rp.ledgerCategory || rp.category
           if (cat && sums[cat] !== undefined) {
-            sums[cat] += Math.abs(rp.amount)
+            sums[cat] += rp.amount == null ? 0 : Math.abs(rp.amount)
           }
         }
       })
@@ -169,14 +169,15 @@ export function useDashboardView(options: UseDashboardViewOptions) {
   // Stability Reached
   const stabilityMetric = useMemo(() => {
     const stabilityCat = categories.find(c => c.name === 'Stability')
-    const stabilityTarget = activeSettings.targetStabilityFund || 1
+    const stabilityTarget = activeSettings.targetStabilityFund
+    const hasTarget = stabilityTarget > 0
     const currentPct = Math.max(0, Math.min(1, stats.stabilityPercentReached))
     const pending = pendingDeductionsByCategory['Stability'] || 0
     const currentBalance = stabilityCat?.remaining ?? 0
     const projectedBalance = Math.max(0, currentBalance - pending)
-    const projectedPct = pending > 0 ? Math.max(0, Math.min(1, projectedBalance / stabilityTarget)) : currentPct
+    const projectedPct = pending > 0 && hasTarget ? Math.max(0, Math.min(1, projectedBalance / stabilityTarget)) : currentPct
     const atRiskPct = pending > 0 ? Math.max(0, currentPct - projectedPct) : 0
-    return { currentPct, pending, currentBalance, projectedBalance, projectedPct, atRiskPct }
+    return { hasTarget, currentPct, pending, currentBalance, projectedBalance, projectedPct, atRiskPct }
   }, [categories, activeSettings, stats, pendingDeductionsByCategory])
 
   // Wishlist Goal Card (Shown when active goal exists)

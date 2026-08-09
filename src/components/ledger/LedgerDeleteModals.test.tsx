@@ -51,7 +51,7 @@ describe('DeleteTransactionModal document safety', () => {
     expect(screen.getByText(/cannot delete vault documents while offline/i)).toBeTruthy()
   })
 
-  it('shows a busy state while attached vault documents are being deleted', () => {
+  it('warns that undo cannot bring the attached files back', () => {
     render(
       <DeleteTransactionModal
         isOpen
@@ -67,13 +67,12 @@ describe('DeleteTransactionModal document safety', () => {
         onConfirm={vi.fn()}
         formatSensitive={value => value.toFixed(2)}
         attachedDocumentCount={1}
-        isConfirming
+        alsoDeleteDocuments
       />,
     )
 
-    expect(screen.getByText('Deleting…')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Cancel' }).hasAttribute('disabled')).toBe(true)
-    expect(screen.getByRole('button', { name: 'Deleting…' }).hasAttribute('disabled')).toBe(true)
+    expect(screen.getByText(/undo brings the transaction back, but not the files/i)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Confirm Delete' }).hasAttribute('disabled')).toBe(false)
   })
 
   it('explains that deleting a completion restores its commitment snapshot', () => {

@@ -93,7 +93,7 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
           <dl className="mt-3 grid grid-cols-2 gap-2 text-[10px]">
             <div><dt className="text-muted-foreground">Units</dt><dd className="break-words font-semibold">{masked ? '••••' : number(holding.units, 8)}</dd></div>
             <div><dt className="text-muted-foreground">Latest price</dt><dd className="break-words font-semibold">{masked || holding.latestPriceNative === undefined ? '—' : money(holding.latestPriceNative, holding.currency)}</dd></div>
-            <div><dt className="text-muted-foreground">Worth in fund currency</dt><dd className="break-words font-semibold">{masked || holding.valueNative === undefined ? '—' : money(holding.valueNative, holding.currency)}</dd></div>
+            <div><dt className="text-muted-foreground">Latest value in fund currency</dt><dd className="break-words font-semibold">{masked || holding.valueNative === undefined ? '—' : money(holding.valueNative, holding.currency)}</dd></div>
             <div><dt className="text-muted-foreground">Exchange rate</dt><dd className="break-words font-semibold">{holding.fxRate === undefined ? 'Missing' : number(holding.fxRate, 8)}</dd></div>
             <div><dt className="text-muted-foreground">Already banked</dt><dd className={`break-words font-semibold ${holding.realisedProfitLossApp === undefined ? '' : holding.realisedProfitLossApp >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>{masked ? '••••' : holding.realisedProfitLossApp === undefined ? '—' : money(holding.realisedProfitLossApp, portfolio.appCurrency)}</dd></div>
             <div><dt className="text-muted-foreground">Dividends</dt><dd className={`break-words font-semibold ${holding.netDividendsApp === undefined ? '' : holding.netDividendsApp >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>{masked ? '••••' : holding.netDividendsApp === undefined ? '—' : money(holding.netDividendsApp, portfolio.appCurrency)}</dd></div>
@@ -137,8 +137,8 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
           <DataTableHeaderCell className="text-right">Units</DataTableHeaderCell>
           <DataTableHeaderCell className="text-right">Avg price paid</DataTableHeaderCell>
           <DataTableHeaderCell className="text-right">Latest price</DataTableHeaderCell>
-          <DataTableHeaderCell className="text-right">Worth now ({portfolio.appCurrency})</DataTableHeaderCell>
-          <DataTableHeaderCell className="text-right">Change today</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">Latest value ({portfolio.appCurrency})</DataTableHeaderCell>
+          <DataTableHeaderCell className="text-right">Latest move</DataTableHeaderCell>
           <DataTableHeaderCell className="text-right">Gain on paper</DataTableHeaderCell>
           <DataTableHeaderCell className="text-right">Already banked</DataTableHeaderCell>
           <DataTableHeaderCell className="text-right">Dividends</DataTableHeaderCell>
@@ -268,7 +268,6 @@ export const PagedActivityTable = ({
     (!appliedFilters.from || value.tradeDate >= appliedFilters.from) &&
     (!appliedFilters.to || value.tradeDate <= appliedFilters.to)))
   const displayCashFlows = sortCashFlowsNewestFirst(applyOpsToList(cashFlows, projectedOperations, 'investmentCashFlow')
-    .map(value => value.isPendingSync && value.type === 'Withdrawal' && value.amount > 0 ? { ...value, amount: -value.amount } : value)
     .filter(value =>
       (!appliedFilters.accountId || value.accountId === appliedFilters.accountId) &&
       (!appliedFilters.type || value.type === appliedFilters.type) &&

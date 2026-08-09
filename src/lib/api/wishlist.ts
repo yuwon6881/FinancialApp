@@ -41,10 +41,10 @@ export async function deleteWishlistItem(id: number): Promise<void> {
   invalidateCache()
 }
 
-export async function purchaseWishlistItem(id: number, date?: string): Promise<{ item: WishlistItem; transaction: Transaction }> {
+export async function purchaseWishlistItem(id: number, date?: string, transactionId?: string, postedAt?: string): Promise<{ item: WishlistItem; transaction: Transaction }> {
   const data = await request<WireWishlistPurchaseResult>(`/wishlist/${id}/purchase`, {
     method: 'POST',
-    ...(date ? jsonBody({ date }) : {}),
+    ...jsonBody({ date, transactionId, postedAt }),
     errorMessage: 'Failed to purchase wishlist item',
   })
   invalidateCache()

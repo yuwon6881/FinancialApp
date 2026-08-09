@@ -17,7 +17,7 @@ async function dispatchBulkTransaction(op: QueuedOp): Promise<BulkTransactionMut
 export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>> = {
   'transaction:bulkDelete': dispatchBulkTransaction,
   'transaction:bulkRestore': dispatchBulkTransaction,
-  'transaction:add': (op) => api.addTransaction({ ...(op.payload as Partial<Transaction>), id: op.targetId } as Omit<Transaction, 'id'> & { id?: string }),
+  'transaction:add': (op) => api.addTransaction({ ...(withoutUndoSnapshot(op.payload) as Partial<Transaction>), id: op.targetId } as Omit<Transaction, 'id'> & { id?: string }),
   'transaction:update': (op) => api.updateTransaction(op.targetId, withoutUndoSnapshot(op.payload) as unknown as Omit<Transaction, 'id'>),
   'transaction:delete': (op) => api.deleteTransaction(op.targetId),
 
@@ -35,11 +35,29 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
     typeof op.payload?.occurrenceDate === 'string' ? op.payload.occurrenceDate : '',
     op.id,
   ),
+  'recurringOccurrence:settle': (op) => api.settleRecurringOccurrence(
+    typeof op.payload?.recurringPaymentId === 'string' ? op.payload.recurringPaymentId : '',
+    typeof op.payload?.occurrenceDate === 'string' ? op.payload.occurrenceDate : '',
+    op.payload?.status === 'Discarded' ? 'Discarded' : 'Paid',
+    typeof op.payload?.paidDate === 'string' ? op.payload.paidDate : undefined,
+    op.id,
+    op.payload?.optimisticTransaction && typeof op.payload.optimisticTransaction === 'object' && 'id' in op.payload.optimisticTransaction
+      ? String(op.payload.optimisticTransaction.id)
+      : undefined,
+    op.payload?.optimisticTransaction && typeof op.payload.optimisticTransaction === 'object' && 'postedAt' in op.payload.optimisticTransaction
+      ? String(op.payload.optimisticTransaction.postedAt)
+      : undefined,
+  ),
 
   'wishlistItem:add': (op) => api.addWishlistItem(op.payload as Partial<WishlistItem>, op.id),
   'wishlistItem:update': (op) => api.updateWishlistItem(Number(op.targetId), withoutUndoSnapshot(op.payload) as unknown as WishlistItem),
   'wishlistItem:delete': (op) => api.deleteWishlistItem(Number(op.targetId)),
-  'wishlistItem:purchase': (op) => api.purchaseWishlistItem(Number(op.targetId), typeof op.payload?.date === 'string' ? op.payload.date : undefined),
+  'wishlistItem:purchase': (op) => api.purchaseWishlistItem(
+    Number(op.targetId),
+    typeof op.payload?.date === 'string' ? op.payload.date : undefined,
+    typeof op.payload?.purchaseTransactionId === 'string' ? op.payload.purchaseTransactionId : undefined,
+    typeof op.payload?.postedAt === 'string' ? op.payload.postedAt : undefined,
+  ),
   'wishlistItem:unpurchase': (op) => api.unpurchaseWishlistItem(Number(op.targetId)),
 
   // Authoring ops only. Money movement is deliberately online-only because it depends on the
@@ -71,6 +89,10 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
     if (op.targetId === 'darkMode') return api.updateDarkMode(op.payload?.darkMode === true)
     if (op.targetId === 'hideSensitive') return api.updateHideSensitive(op.payload?.hideSensitive === true)
     if (op.targetId === 'summarySeen') return api.updateSummarySeen(typeof op.payload?.cycleKey === 'string' ? op.payload.cycleKey : null)
+    if (op.targetId === 'selectedPeriod') return api.selectPeriod(
+      typeof op.payload?.selectedMonth === 'string' ? op.payload.selectedMonth : '',
+      typeof op.payload?.selectedYear === 'number' ? op.payload.selectedYear : 0,
+    )
     return api.updateSettings(withoutUndoSnapshot(op.payload) as unknown as Pick<FinancialSetting, 'targetStabilityFund' | 'essentialsAlloc' | 'growthAlloc' | 'stabilityAlloc' | 'rewardsAlloc' | 'cycleDay'> & Partial<FinancialSetting>)
   },
 
@@ -86,9 +108,13 @@ export const DISPATCH: Record<string, (op: QueuedOp) => Promise<DispatchResult>>
   'investmentActivity:restore': (op) => api.restoreInvestmentActivity(op.payload as unknown as api.DeletedTransactionsSnapshot),
   'investmentCashFlow:add': (op) => api.createInvestmentCashFlow({
     ...(op.payload as unknown as Parameters<typeof api.createInvestmentCashFlow>[0]),
+    amount: Math.abs(Number(op.payload?.amount ?? 0)),
     id: op.targetId,
   }),
-  'investmentCashFlow:update': (op) => api.updateInvestmentCashFlow(op.targetId, op.payload as unknown as api.InvestmentCashFlowInput),
+  'investmentCashFlow:update': (op) => api.updateInvestmentCashFlow(op.targetId, {
+    ...(op.payload as unknown as api.InvestmentCashFlowInput),
+    amount: Math.abs(Number(op.payload?.amount ?? 0)),
+  }),
   'investmentCashFlow:delete': (op) => api.deleteInvestmentCashFlow(op.targetId),
   'investmentCashFlow:restore': (op) => api.restoreInvestmentCashFlow(op.payload as unknown as InvestmentCashFlow),
   'investmentPlan:update': (op) => api.updateInvestmentPlan(withoutUndoSnapshot(op.payload) as unknown as Parameters<typeof api.updateInvestmentPlan>[0]),

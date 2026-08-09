@@ -60,7 +60,7 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, onClose }: {
     Math.abs(gainSplit.currency) > Math.abs(gainSplit.price)
 
   const rows = holding === null ? [] : [
-    { label: `Worth now (${appCurrency})`, value: figure(holding.valueApp, appCurrency, masked), hint: 'What these units would be worth at the latest price.' },
+    { label: `Latest value (${appCurrency})`, value: figure(holding.valueApp, appCurrency, masked), hint: 'Value of these units using the latest saved price and exchange rate.' },
     { label: 'Units', value: masked ? '••••' : new Intl.NumberFormat(undefined, { maximumFractionDigits: 8 }).format(holding.units), hint: 'How many units you hold.' },
     { label: `Avg price paid (${holding.currency})`, value: figure(holding.averageCostNative, holding.currency, masked), hint: `Your average cost for one unit, in the fund’s own currency.` },
     { label: `Latest price (${holding.currency})`, value: figure(holding.latestPriceNative, holding.currency, masked), hint: 'The most recent price on record, in the fund’s own currency.' },
@@ -74,7 +74,7 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, onClose }: {
     },
     { label: `Already banked (${appCurrency})`, value: figure(holding.realisedProfitLossApp, appCurrency, masked), tone: holding.realisedProfitLossApp, hint: 'Profit or loss locked in on units you have sold, after fees and taxes.' },
     { label: `Dividends (${appCurrency})`, value: figure(holding.netDividendsApp, appCurrency, masked), hint: 'Payouts this fund has paid you, after any tax withheld.' },
-    { label: `Change today (${appCurrency})`, value: figure(holding.dailyChangeApp, appCurrency, masked), tone: holding.dailyChangeApp, hint: 'How much its value moved since the previous price.' },
+    { label: `Latest value move (${appCurrency})`, value: figure(holding.dailyChangeApp, appCurrency, masked), tone: holding.dailyChangeApp, hint: 'Move between its two latest saved prices and exchange rates. It may be from an earlier market day.' },
   ]
 
   return (

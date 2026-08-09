@@ -25,7 +25,8 @@ import { triggerHaptic } from '../lib/haptics'
 import { getErrorMessage, getErrorName, isAuthError, isLockError, JUST_LOGGED_IN_WINDOW_MS } from '../lib/errors'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
 import { buildUndoSuccessToast } from '../lib/mutationToast'
-import { computeNextOccurrenceDate } from '../lib/recurringPayments'
+import { computeNextOccurrenceDate, computeOccurrenceOnOrAfter } from '../lib/recurringPayments'
+import { financialDate } from '../lib/financialDate'
 import type { ToastAction, ToastTone } from '../components/ui/ToastViewport'
 import type { ConfirmModalData } from './useAppDialogs'
 import { fetchBootstrapPayload } from './financialData/bootstrap'
@@ -132,6 +133,25 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     }
   })
   const pendingTransactionDocumentsRef = useRef(new Map<string, TransactionDocumentChanges>())
+  /** Vault documents to delete once their transaction's queued delete has actually synced. */
+  const pendingTransactionDocumentDeletesRef = useRef(new Map<string, number[]>())
+
+  /**
+   * Merged, never replaced. `enqueue` collapses a second edit of the same transaction into the
+   * queued add/update, so a plain `set` here dropped the first edit's uploads and detaches on the
+   * floor — silently, and invisibly, since the form reads its existing documents from the server
+   * and never showed the queued file at all.
+   */
+  const stageTransactionDocumentChanges = (targetId: string, changes: TransactionDocumentChanges) => {
+    if (changes.pending.length === 0 && changes.unlinkIds.length === 0) return
+    const existing = pendingTransactionDocumentsRef.current.get(targetId)
+    pendingTransactionDocumentsRef.current.set(targetId, existing
+      ? {
+          pending: [...existing.pending, ...changes.pending],
+          unlinkIds: [...new Set([...existing.unlinkIds, ...changes.unlinkIds])],
+        }
+      : changes)
+  }
 
   useEffect(() => {
     unconfirmedSettingWritesRef.current.clear()
@@ -225,9 +245,40 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     refresh: async successfulOps => {
       const ops = successfulOps.map(({ op }) => op)
       for (const op of ops) {
-        if (op.entity !== 'transaction' || (op.type !== 'add' && op.type !== 'update')) continue
+        if (op.entity !== 'transaction') continue
+
+        if (op.type === 'delete') {
+          const documentIds = pendingTransactionDocumentDeletesRef.current.get(op.targetId)
+          if (!documentIds) continue
+          pendingTransactionDocumentDeletesRef.current.delete(op.targetId)
+          try {
+            const { deleteDocument } = await import('../lib/api/documents')
+            for (const documentId of documentIds) {
+              await deleteDocument(documentId)
+            }
+          } catch (error) {
+            showToast(
+              getErrorMessage(error, 'The transaction was deleted, but its attached documents could not be removed. They are still in your Document Vault.'),
+              'Document Vault',
+              'error',
+            )
+          }
+          continue
+        }
+
+        if (op.type !== 'add' && op.type !== 'update') continue
         const documentChanges = pendingTransactionDocumentsRef.current.get(op.targetId)
         if (!documentChanges) continue
+
+        // An Undo tapped on the add's own success toast queues the delete while this refresh is
+        // still running, so uploading here would attach files to a row that is about to go and
+        // leave them orphaned in the vault with the user believing they undid the whole thing.
+        if (getPendingOps().some(pending => pending.entity === 'transaction'
+          && pending.type === 'delete'
+          && pending.targetId === op.targetId)) {
+          pendingTransactionDocumentsRef.current.delete(op.targetId)
+          continue
+        }
 
         try {
           // Both imported lazily: this hook sits on the eager critical path, while the
@@ -627,6 +678,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     resetOutbox()
     setDraftTransactions([])
     pendingTransactionDocumentsRef.current.clear()
+    pendingTransactionDocumentDeletesRef.current.clear()
     setCategoriesList([])
     setWishlist([])
     setSavingsGoals([])
@@ -1053,9 +1105,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     documentChanges?: TransactionDocumentChanges,
   ) => {
     const drafts = handleStageDraftTransactions([newTx])
-    if (documentChanges && (documentChanges.pending.length > 0 || documentChanges.unlinkIds.length > 0)) {
-      pendingTransactionDocumentsRef.current.set(drafts[0].id, documentChanges)
-    }
+    if (documentChanges) stageTransactionDocumentChanges(drafts[0].id, documentChanges)
     setActiveTab('drafts')
     return drafts[0].id
   }
@@ -1123,7 +1173,11 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     })
   }
 
-  const handleDeleteTransaction = (id: string, transactionHint?: Transaction) => {
+  const handleDeleteTransaction = (
+    id: string,
+    transactionHint?: Transaction,
+    attachedDocumentIdsToDelete?: number[],
+  ) => {
     if (!guardSensitive()) return
     void triggerHaptic(30)
     let deleteId = id
@@ -1162,9 +1216,19 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       return
     }
     snapshotForUndo('transaction', deleteId, transaction)
+    // Any queued attachment work for this row is void now, and would otherwise upload a file to a
+    // transaction that is on its way out.
+    pendingTransactionDocumentsRef.current.delete(deleteId)
+    const documentIdsToDelete = attachedDocumentIdsToDelete?.length ? [...attachedDocumentIdsToDelete] : undefined
+    if (documentIdsToDelete) {
+      pendingTransactionDocumentDeletesRef.current.set(deleteId, documentIdsToDelete)
+    }
     mutateQueue(prev => enqueue(prev, 'transaction', 'delete', deleteId, {
       description: transaction?.description,
       undoSnapshot: transaction,
+      // Read only by the success toast, so it can say plainly that the files are gone for good
+      // while the Undo beside it restores the transaction.
+      deletedDocumentCount: documentIdsToDelete?.length,
     }))
     if (deleteId === editingPendingId) setEditingPendingId(null)
   }
@@ -1178,9 +1242,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     void triggerHaptic(15)
     const previousTransaction = allTransactions.find(t => String(t.id) === String(id))
     snapshotForUndo('transaction', String(id), previousTransaction)
-    if (documentChanges && (documentChanges.pending.length > 0 || documentChanges.unlinkIds.length > 0)) {
-      pendingTransactionDocumentsRef.current.set(id, documentChanges)
-    }
+    if (documentChanges) stageTransactionDocumentChanges(id, documentChanges)
     mutateQueue(prev => enqueue(prev, 'transaction', 'update', id, {
       ...updatedTx,
       undoSnapshot: previousTransaction,
@@ -1190,31 +1252,54 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
 
   const handleConfirmSubscription = (noti: PendingNotification, paidDate: string) => {
     if (!guardSensitive()) return
-    const finalId = createFinalId('transaction')
-    mutateQueue(prev => enqueue(prev, 'transaction', 'add', finalId, {
-      id: finalId,
+    const transactionId = createFinalId('transaction')
+    const postedAt = new Date().toISOString()
+    const payment = allRecurringPayments.find(item => item.id === noti.recurringPaymentId)
+    mutateQueue(prev => enqueue(prev, 'recurringOccurrence', 'settle', noti.id, {
+      name: noti.name,
+      recurringPaymentId: noti.recurringPaymentId,
+      occurrenceDate: noti.billingDate,
+      status: 'Paid',
+      paidDate,
+      optimisticNextOccurrenceDate: payment ? computeNextOccurrenceDate(payment) ?? undefined : undefined,
+      optimisticTransaction: {
+      id: transactionId,
       date: paidDate,
+      postedAt,
       description: noti.name,
       amount: -Math.abs(noti.amount),
       category: noti.category,
       ledgerCategory: noti.ledgerCategory,
       recurringPaymentId: noti.recurringPaymentId,
-      recurringOccurrenceDate: noti.billingDate
+      recurringOccurrenceDate: noti.billingDate,
+      isPendingSync: true,
+      },
     }))
   }
 
   const handleDiscardSubscription = (noti: PendingNotification) => {
     if (!guardSensitive()) return
-    const finalId = createFinalId('transaction')
-    mutateQueue(prev => enqueue(prev, 'transaction', 'add', finalId, {
-      id: finalId,
-      date: noti.billingDate,
+    const transactionId = createFinalId('transaction')
+    const postedAt = new Date().toISOString()
+    const payment = allRecurringPayments.find(item => item.id === noti.recurringPaymentId)
+    mutateQueue(prev => enqueue(prev, 'recurringOccurrence', 'settle', noti.id, {
+      name: noti.name,
+      recurringPaymentId: noti.recurringPaymentId,
+      occurrenceDate: noti.billingDate,
+      status: 'Discarded',
+      optimisticNextOccurrenceDate: payment ? computeNextOccurrenceDate(payment) ?? undefined : undefined,
+      optimisticTransaction: {
+      id: transactionId,
+      date: financialDate(),
+      postedAt,
       description: `[Discarded] ${noti.name}`,
       amount: 0,
       category: noti.category,
       ledgerCategory: 'Discarded',
       recurringPaymentId: noti.recurringPaymentId,
-      recurringOccurrenceDate: noti.billingDate
+      recurringOccurrenceDate: noti.billingDate,
+      isPendingSync: true,
+      },
     }))
   }
 
@@ -1226,7 +1311,15 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const handleToggleActive = (id: string) => {
     if (!guardSensitive()) return
     const current = allRecurringPayments.find(p => String(p.id) === String(id))
-    const payload = current ? { active: !current.active, name: current.name } : undefined
+    const nextActive = current ? !current.active : false
+    const tomorrow = new Date(`${financialDate()}T12:00:00`)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const trackingStart = tomorrow.toLocaleDateString('en-CA')
+    const payload = current ? {
+      active: nextActive,
+      name: current.name,
+      nextDueDate: nextActive ? computeOccurrenceOnOrAfter(current, trackingStart) : null,
+    } : undefined
     mutateQueue(prev => enqueue(prev, 'recurringPayment', 'toggle', id, payload))
   }
 
@@ -1277,25 +1370,29 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const handlePayEarly = (id: string) => {
     if (!guardSensitive()) return
     const payment = allRecurringPayments.find(p => p.id === id)
-    if (!payment) return
+    if (!payment?.nextDueDate) return
+    const occurrenceDate = payment.nextDueDate
     const postedAt = new Date().toISOString()
-    const pendingTransactionId = createLocalId('pay-early-transaction')
+    const pendingTransactionId = createFinalId('transaction')
     const pendingTransaction: Transaction = {
       id: pendingTransactionId,
-      date: postedAt.slice(0, 10),
+      date: financialDate(),
       postedAt,
       description: payment.name,
       category: payment.category,
       ledgerCategory: payment.ledgerCategory,
       amount: -Math.abs(payment.amount),
       recurringPaymentId: payment.id,
-      recurringOccurrenceDate: payment.nextDueDate,
+      recurringOccurrenceDate: occurrenceDate,
       isPendingSync: true,
     }
-    mutateQueue(queue => enqueue(queue, 'recurringPayment', 'payEarly', id, {
+    mutateQueue(queue => enqueue(queue, 'recurringOccurrence', 'settle', `${id}:${occurrenceDate}`, {
       name: payment.name,
-      occurrenceDate: payment.nextDueDate,
-      optimisticNextOccurrenceDate: computeNextOccurrenceDate(payment),
+      recurringPaymentId: payment.id,
+      occurrenceDate,
+      status: 'Paid',
+      paidDate: financialDate(),
+      optimisticNextOccurrenceDate: computeNextOccurrenceDate(payment) ?? undefined,
       optimisticTransaction: pendingTransaction,
     }))
   }
@@ -1303,7 +1400,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const requestPayEarly = (id: string) => {
     if (!guardSensitive()) return
     const payment = allRecurringPayments.find(p => p.id === id)
-    if (!payment) return
+    if (!payment?.nextDueDate) return
     const todayFormatted = new Date().toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })
     setConfirmModalData({
       title: 'Pay Early',

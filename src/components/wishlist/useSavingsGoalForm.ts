@@ -197,11 +197,6 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
       nextErrors.recurrence = 'Repeat every 1–120 months.'
     }
 
-    // A lowered target releases the surplus, which is reasonable — but it should not be a surprise.
-    if (editingGoal && Number.isFinite(target) && target < editingGoal.earmarkedAmount) {
-      nextErrors.target = `Below the amount already set aside. Saving this releases the difference back to your free rewards.`
-    }
-
     setErrors(nextErrors)
     return Object.keys(nextErrors).length === 0
       ? { target, recurrence: isRecurringInput ? recurrence : 12 }
@@ -254,6 +249,16 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
     setTargetInput(previous => maskCurrencyInput(event.target.value, previous))
   }
 
+  // Lowering the target below what is already set aside releases the surplus — the server does
+  // exactly that (SavingsGoalService.UpdateGoalAsync clamps the earmark and reopens the cycle
+  // tally). It is a consequence to state, never a reason to refuse the save: as a validation error
+  // it blocked the only path to the behaviour its own message described, so a goal's target could
+  // never be lowered once money had gone in.
+  const target = Number.parseFloat(targetInput)
+  const releasedByLowerTarget = editingGoal && Number.isFinite(target) && target < editingGoal.earmarkedAmount
+    ? editingGoal.earmarkedAmount - target
+    : 0
+
   return {
     showAddModal,
     showEditModal,
@@ -264,6 +269,7 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
     setNameInput,
     targetInput,
     handleTargetChange,
+    releasedByLowerTarget,
     dateInput,
     setDateInput,
     priorityInput,

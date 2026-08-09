@@ -19,9 +19,18 @@ describe('buildNotificationTag', () => {
     expect(first).not.toBe(second)
   })
 
-  it('builds a stable category and cycle tag', () => {
+  it('builds one replaceable tag per cycle for category alerts, whatever the category', () => {
+    // A cycle can raise an alert for several categories and twice per category. Keying the tag on
+    // the category stacked a growing pile of notifications that all opened the same page.
     expect(buildNotificationTag({ kind: 'category-limit', cycleKey: '2026-08', categoryName: 'Dining' }))
-      .toBe('category-limit-2026-08-Dining')
+      .toBe('category-limit-2026-08')
+    expect(buildNotificationTag({ kind: 'category-limit', cycleKey: '2026-08', categoryName: 'Travel' }))
+      .toBe(buildNotificationTag({ kind: 'category-limit', cycleKey: '2026-08' }))
+  })
+
+  it('still separates category alerts from different cycles', () => {
+    expect(buildNotificationTag({ kind: 'category-limit', cycleKey: '2026-08' }))
+      .not.toBe(buildNotificationTag({ kind: 'category-limit', cycleKey: '2026-09' }))
   })
 })
 

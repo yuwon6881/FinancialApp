@@ -57,6 +57,8 @@ interface AuthenticatedViewProps {
   wishlistDashboardData: DashboardData | null
   wishlistRewardsBalance: number
   wishlistPendingRewardsDeduction: number
+  /** True while the Rewards figures on hand belong to a cycle other than the current one. */
+  isWishlistCycleStale: boolean
   currentPendingNotificationsCount: number
   currentCycleMonth: string
   currentCycleYear: number
@@ -91,6 +93,7 @@ export function AuthenticatedView({
   wishlistDashboardData,
   wishlistRewardsBalance,
   wishlistPendingRewardsDeduction,
+  isWishlistCycleStale,
   currentPendingNotificationsCount,
   currentCycleMonth,
   currentCycleYear,
@@ -134,18 +137,23 @@ export function AuthenticatedView({
     clearInvestmentScanJob,
   } = investmentScan
 
+  // Failures here reach the user as toasts, like every other failure in the app. A blocking
+  // window.alert also lands as a system dialog inside the installed PWA and the native shell,
+  // and the common case is not an error at all: a document whose linked transaction has since
+  // been deleted, which is worth a sentence, not a modal that has to be dismissed.
   const openLinkedVaultTransaction = async (transactionId: string) => {
+    const cannotOpen = (message: string) => dialogs.showToast(message, 'Linked transaction', 'warning')
     try {
       const transaction = await apiClient.fetchTransactionById(transactionId)
       const match = /^(\d{4})-(\d{2})-/.exec(transaction.date)
       if (!match) {
-        alert('The linked transaction date is invalid.')
+        cannotOpen('This document records a date the ledger cannot open.')
         return
       }
       const monthIndex = Number(match[2]) - 1
       const day = Number(transaction.date.slice(8, 10))
       if (monthIndex < 0 || monthIndex >= MONTH_NAMES.length || day < 1 || day > 31) {
-        alert('The linked transaction date is invalid.')
+        cannotOpen('This document records a date the ledger cannot open.')
         return
       }
       const cycleDay = financial.optimisticDashboardData?.setting?.cycleDay || 28
@@ -158,7 +166,7 @@ export function AuthenticatedView({
         targetYear: cycle.year,
       })
     } catch {
-      alert('The linked ledger transaction could not be opened.')
+      cannotOpen('The transaction this document was attached to could not be opened. It may have been deleted.')
     }
   }
 
@@ -188,7 +196,7 @@ export function AuthenticatedView({
                       dashboardData={todayDashboardData}
                       onNavigate={prefs.setActiveTab}
                       hideBalanceAmounts={prefs.hideBalanceAmounts}
-                      walletBalance={financial.totalBalance}
+                      walletBalance={financial.optimisticDashboardData?.stats.totalBalance ?? financial.totalBalance}
                       onToggleBalanceAmounts={handleToggleBalanceAmounts}
                       pendingNotificationCount={currentPendingNotificationsCount}
                       onOpenNotifications={() => dialogs.setShowLoginModal(true)}
@@ -264,17 +272,39 @@ export function AuthenticatedView({
                       }}
                       pushEnabled={push.enabled}
                       pushSupported={push.supported}
-                      pushBusy={push.busy || push.loading}
+                      pushLoading={push.loading}
+                      pushBusyAction={push.busyAction}
                       pushGuidance={push.guidance}
                       onTogglePushEnabled={(checked) => {
-                        if (checked) void push.enable()
-                        else void push.disable()
+                        void (async () => {
+                          const succeeded = checked ? await push.enable() : (await push.disable(), true)
+                          if (!succeeded) return
+                          const copy = buildMutationSuccessToast({
+                            entity: 'Notifications',
+                            action: checked ? 'Turned on' : 'Turned off',
+                            message: checked
+                              ? 'This device will now show bill reminders and spending alerts.'
+                              : 'This device will no longer show notifications. Your other devices are unchanged.',
+                          })
+                          dialogs.showToast(copy.message, copy.title, copy.tone)
+                        })()
                       }}
                       categoryAlertsEnabled={push.categoryAlertsEnabled}
                       onToggleCategoryAlerts={(checked) => {
+                        // Deliberately does NOT enable this device first. It used to, which meant
+                        // an account-wide switch raised a browser permission prompt without ever
+                        // mentioning devices or permission; the card disables it with a reason
+                        // instead. The server refuses the consent with no device either way.
                         void (async () => {
-                          if (checked && !push.enabled && !await push.enable()) return
-                          await push.setCategoryAlertsEnabled(checked)
+                          if (!await push.setCategoryAlertsEnabled(checked)) return
+                          const copy = buildMutationSuccessToast({
+                            entity: 'Spending alerts',
+                            action: checked ? 'Turned on' : 'Turned off',
+                            message: checked
+                              ? 'Every device you have set up will be told when a category gets close to its planned amount.'
+                              : 'No device will be told when a category gets close to its planned amount.',
+                          })
+                          dialogs.showToast(copy.message, copy.title, copy.tone)
                         })()
                       }}
                       onNavigateToLedger={nav.handleNavigateToLedger}
@@ -318,6 +348,7 @@ export function AuthenticatedView({
                       highlightedRecurringId={nav.highlightedRecurringId}
                       onClearHighlightedRecurring={nav.clearHighlightedRecurring}
                       globalPushEnabled={push.accountEnabled}
+                      thisDevicePushEnabled={push.enabled}
                       onUpdateReminder={financial.handleUpdateReminder}
                       onRequestPayEarly={financial.requestPayEarly}
                       aiDraft={aiRouter.state.aiRecurringDraft}
@@ -426,7 +457,12 @@ export function AuthenticatedView({
                       onResetAutoOpen={() => nav.setAutoOpenWishlistAdd(false)}
                       onNavigateToLedger={nav.handleNavigateToLedger}
                       cycleDay={financial.optimisticDashboardData?.setting?.cycleDay || 28}
-                      isSwitchingCycle={nav.isSwitchingCycle}
+                      // The pool skeleton also covers "the current cycle's figures are not here
+                      // yet". Without it, browsing a past cycle and opening Rewards divided the
+                      // *selected* cycle's balance among today's earmarks — wrong free-to-spend,
+                      // wrong affordability, and a Set aside button acting on other numbers than
+                      // the ones on screen.
+                      isSwitchingCycle={nav.isSwitchingCycle || isWishlistCycleStale}
                       onStartEditPending={financial.setEditingPendingId}
                       aiDraft={aiRouter.state.aiWishlistDraft}
                       aiEditDraft={aiRouter.state.aiWishlistEditDraft}

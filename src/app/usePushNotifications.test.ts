@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePushNotifications } from './usePushNotifications'
 import * as api from '../lib/api'
-import { PUSH_DENIED_GUIDANCE, PUSH_ENABLED_ELSEWHERE_MESSAGE, PUSH_UNSUPPORTED_GUIDANCE } from '../lib/push/messages'
+import { PUSH_DENIED_GUIDANCE, PUSH_ENABLED_ELSEWHERE_MESSAGE, PUSH_PERMISSION_REVOKED_GUIDANCE, PUSH_UNSUPPORTED_GUIDANCE } from '../lib/push/messages'
 
 vi.mock('../lib/push/firebaseMessaging', () => ({
   getFcmToken: vi.fn(async () => 'fcm-token-123'),
@@ -26,13 +26,12 @@ describe('usePushNotifications', () => {
     vi.spyOn(api, 'fetchPushStatus').mockResolvedValue({ enabled: false, deviceRegistered: false, categoryAlertsEnabled: false })
     vi.spyOn(api, 'upsertPushSubscription').mockResolvedValue(undefined)
     vi.spyOn(api, 'deletePushSubscription').mockResolvedValue(undefined)
-    vi.spyOn(api, 'updatePushSettings').mockResolvedValue(undefined)
     vi.spyOn(api, 'updateCategoryLimitAlerts').mockResolvedValue(undefined)
 
     Object.defineProperty(global, 'Notification', {
       configurable: true,
       writable: true,
-      value: { requestPermission: vi.fn(async () => 'granted') },
+      value: { permission: 'granted', requestPermission: vi.fn(async () => 'granted') },
     })
     Object.defineProperty(navigator, 'serviceWorker', {
       configurable: true,
@@ -70,7 +69,6 @@ describe('usePushNotifications', () => {
     expect(global.Notification.requestPermission).toHaveBeenCalled()
     expect(getFcmToken).toHaveBeenCalled()
     expect(api.upsertPushSubscription).toHaveBeenCalledWith('device-abc', 'fcm-token-123')
-    expect(api.updatePushSettings).not.toHaveBeenCalled()
     expect(result.current.enabled).toBe(true)
   })
 
@@ -88,7 +86,6 @@ describe('usePushNotifications', () => {
     expect(result.current.enabled).toBe(false)
     expect(result.current.guidance).toBe(PUSH_DENIED_GUIDANCE)
     expect(api.upsertPushSubscription).not.toHaveBeenCalled()
-    expect(api.updatePushSettings).not.toHaveBeenCalled()
   })
 
   it('gives unsupported guidance and does not touch the backend when the feature gate blocks it', async () => {
@@ -129,7 +126,6 @@ describe('usePushNotifications', () => {
     })
 
     expect(api.deletePushSubscription).toHaveBeenCalledWith('device-abc')
-    expect(api.updatePushSettings).not.toHaveBeenCalled()
     expect(result.current.enabled).toBe(false)
   })
 
@@ -146,6 +142,65 @@ describe('usePushNotifications', () => {
 
     expect(result.current.enabled).toBe(false)
     expect(result.current.guidance).toBe(PUSH_ENABLED_ELSEWHERE_MESSAGE)
+  })
+
+  it('releases this device when the browser has since revoked notification permission', async () => {
+    // The server still says registered; only the browser knows it can no longer show anything.
+    Object.defineProperty(global, 'Notification', {
+      configurable: true,
+      writable: true,
+      value: { permission: 'denied', requestPermission: vi.fn(async () => 'denied') },
+    })
+    vi.spyOn(api, 'fetchPushStatus')
+      .mockResolvedValueOnce({ enabled: true, deviceRegistered: true, categoryAlertsEnabled: true })
+      .mockResolvedValue({ enabled: false, deviceRegistered: false, categoryAlertsEnabled: false })
+
+    const { result } = renderHook(() => usePushNotifications())
+
+    await waitFor(() => expect(api.deletePushSubscription).toHaveBeenCalledWith('device-abc'))
+    await waitFor(() => expect(result.current.guidance).toBe(PUSH_PERMISSION_REVOKED_GUIDANCE))
+    expect(result.current.enabled).toBe(false)
+    expect(api.upsertPushSubscription).not.toHaveBeenCalled()
+  })
+
+  it('surfaces the server reason when category alerts are refused', async () => {
+    vi.spyOn(api, 'fetchPushStatus').mockResolvedValue({ enabled: true, deviceRegistered: true, categoryAlertsEnabled: false })
+    vi.spyOn(api, 'updateCategoryLimitAlerts').mockRejectedValue(
+      new Error('Enable push notifications on at least one device first.'))
+
+    const { result } = renderHook(() => usePushNotifications())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    await act(async () => {
+      expect(await result.current.setCategoryAlertsEnabled(true)).toBe(false)
+    })
+
+    expect(result.current.guidance).toBe('Enable push notifications on at least one device first.')
+    expect(result.current.categoryAlertsEnabled).toBe(false)
+  })
+
+  it('reports which control is busy so the other one is not greyed out with it', async () => {
+    vi.spyOn(api, 'fetchPushStatus').mockResolvedValue({ enabled: true, deviceRegistered: true, categoryAlertsEnabled: false })
+    let release: (() => void) | undefined
+    vi.spyOn(api, 'updateCategoryLimitAlerts').mockImplementation(
+      () => new Promise<void>(resolve => { release = () => resolve() }))
+
+    const { result } = renderHook(() => usePushNotifications())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.busyAction).toBeNull()
+
+    let pending: Promise<boolean> | undefined
+    await act(async () => {
+      pending = result.current.setCategoryAlertsEnabled(true)
+      await Promise.resolve()
+    })
+    expect(result.current.busyAction).toBe('categoryAlerts')
+
+    await act(async () => {
+      release?.()
+      await pending
+    })
+    expect(result.current.busyAction).toBeNull()
   })
 
   it('updates category spending alert consent without re-registering the device', async () => {

@@ -13,7 +13,7 @@
 // an `await dispatch` -- e.g. an Undo tap -- is preserved rather than clobbered.
 
 import type { EntityKind, QueuedOp, DispatchResult, ToastCopy } from './outbox'
-import type { PayEarlyResult } from '../types'
+import type { PayEarlyResult, RecurringSettlementResult } from '../types'
 import type { ToastAction } from '../components/ui/ToastViewport'
 import {
   getErrorMessage,
@@ -152,6 +152,10 @@ function isPayEarlyResult(result: DispatchResult): result is PayEarlyResult {
   )
 }
 
+function isRecurringSettlementResult(result: DispatchResult): result is RecurringSettlementResult {
+  return Boolean(result && typeof result === 'object' && 'occurrence' in result)
+}
+
 /**
  * Drain the pending-op queue. Mirrors the original processQueue() exactly;
  * safe to call re-entrantly (guards on `isSyncing()`).
@@ -220,6 +224,16 @@ export async function drainQueue(deps: DrainQueueDeps): Promise<void> {
               ...nextOp.payload,
               resultTransaction: result.transaction,
               settledOccurrenceDate: result.settledOccurrenceDate,
+              nextOccurrenceDate: result.nextOccurrenceDate,
+            },
+          }
+        } else if (nextOp.entity === 'recurringOccurrence' && nextOp.type === 'settle' && isRecurringSettlementResult(result)) {
+          completedOp = {
+            ...nextOp,
+            payload: {
+              ...nextOp.payload,
+              resultOccurrence: result.occurrence,
+              resultTransaction: result.transaction,
               nextOccurrenceDate: result.nextOccurrenceDate,
             },
           }

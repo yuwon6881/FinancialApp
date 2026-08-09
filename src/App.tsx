@@ -43,7 +43,7 @@ import { prefetchFingerprintAssertOptions } from './lib/fingerprintOptionsCache'
 import { readAppLocation, updateAppSearch } from './lib/appLocation'
 import { mutationBusyLabel } from './components/ui/rowSyncState'
 import type { AiInvocationContext } from './lib/api/ai'
-import { calculateFreeRewardsBalance } from './lib/freeRewards'
+import { calculateFreeRewardsBalance, pendingRewardsAmount } from './lib/freeRewards'
 
 // Instant, flash-free placeholder while a lazily-loaded chunk is fetched at the root level.
 const ViewFallback = () => <div className="app-shell min-h-screen" />
@@ -136,6 +136,7 @@ function App() {
   )
 
   // 4. Cycle Navigation
+  const persistSelectedPeriodRef = useRef<(month: string, year: number) => void | Promise<void>>(api.selectPeriod)
   const nav = useCycleNavigation({
     loadAll: (m, y, b, shouldCommit) => financial.loadAll(m, y, b, false, shouldCommit),
     handleLogout: session.handleLogout,
@@ -145,6 +146,7 @@ function App() {
     setActiveTab: prefs.setActiveTab,
     setLedgerCyclesRange: prefs.setLedgerCyclesRange,
     showAlert: dialogs.showAlert,
+    persistPeriod: (month, year) => persistSelectedPeriodRef.current(month, year),
   })
 
   // 5. Financial Data
@@ -173,6 +175,12 @@ function App() {
     hasShownModalThisSession,
     setShowLoginModal: dialogs.setShowLoginModal,
   })
+  persistSelectedPeriodRef.current = (month, year) => {
+    financial.mutateQueue(previous => financial.enqueue(previous, 'settings', 'update', 'selectedPeriod', {
+      selectedMonth: month,
+      selectedYear: year,
+    }))
+  }
 
   const investmentAllocation = useInvestmentRefreshCoordinator(
     Boolean(session.token) && !session.isLocked,
@@ -363,14 +371,13 @@ function App() {
     hasQueuedWrites: financial.pendingOps.length > 0,
   })
   const currentPendingNotifications = todayDashboardData?.pendingNotifications || []
+  // The Rewards pool is a *current-cycle* quantity: earmarks are today's, so pairing them with a
+  // past cycle's balance would divide the wrong money. Falling back to the selected cycle keeps
+  // something on screen during a cold start, and `isWishlistCycleStale` below is what stops the
+  // page rendering that fallback as if it were the pool.
   const wishlistDashboardData = todayDashboardData || financial.optimisticDashboardData
-  // The shared helper owns the free-balance calculation below; this local reduction only extracts
-  // the pending bill amount needed by the Wishlist pool's display.
-  const wishlistPendingRewardsDeduction = wishlistDashboardData?.activeRecurringPayments?.reduce((sum, rp) => {
-    if (rp.status !== 'Pending') return sum
-    const category = rp.ledgerCategory || rp.category
-    return category === 'Rewards' ? sum + Math.abs(rp.amount) : sum
-  }, 0) ?? 0
+  const isWishlistCycleStale = isCurrentCycleLoading || !todayDashboardData
+  const wishlistPendingRewardsDeduction = pendingRewardsAmount(wishlistDashboardData?.activeRecurringPayments)
   const wishlistRewardsBalance = wishlistDashboardData?.categories?.find(c => c.name === 'Rewards')?.remaining ?? 0
   const wishlistFreeRewardsBalance = calculateFreeRewardsBalance(
     wishlistRewardsBalance,
@@ -608,6 +615,7 @@ function App() {
           wishlistDashboardData={wishlistDashboardData}
           wishlistRewardsBalance={wishlistRewardsBalance}
           wishlistPendingRewardsDeduction={wishlistPendingRewardsDeduction}
+          isWishlistCycleStale={isWishlistCycleStale}
           currentPendingNotificationsCount={currentPendingNotifications.length}
           currentCycleMonth={currentCycleMonth}
           currentCycleYear={currentCyclePeriod.year}

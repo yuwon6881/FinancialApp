@@ -1,6 +1,6 @@
-import type { PayEarlyResult, RecurringPayment, RecurringReminderSettings } from '../../types'
-import type { WirePayEarlyResult, WireRecurringPayment } from '../apiTypes'
-import { deobfuscateRecurringPayment, deobfuscateTransaction, obfuscateAmount } from './amounts'
+import type { PayEarlyResult, RecurringPayment, RecurringReminderSettings, RecurringSettlementResult } from '../../types'
+import type { WirePayEarlyResult, WireRecurringPayment, WireRecurringSettlementResult } from '../apiTypes'
+import { deobfuscateAmount, deobfuscateRecurringPayment, deobfuscateTransaction, obfuscateAmount } from './amounts'
 import { cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
 
 export function fetchRecurringPayments(signal?: AbortSignal): Promise<RecurringPayment[]> {
@@ -72,6 +72,34 @@ export async function payRecurringPaymentEarly(id: string, occurrenceDate: strin
   return {
     transaction: deobfuscateTransaction(data.transaction),
     settledOccurrenceDate: data.settledOccurrenceDate,
+    nextOccurrenceDate: data.nextOccurrenceDate,
+  }
+}
+
+export async function settleRecurringOccurrence(
+  id: string,
+  occurrenceDate: string,
+  status: 'Paid' | 'Discarded',
+  paidDate?: string,
+  clientKey?: string,
+  transactionId?: string,
+  postedAt?: string,
+): Promise<RecurringSettlementResult> {
+  const data = await request<WireRecurringSettlementResult>(
+    `/recurring-payments/${id}/occurrences/${occurrenceDate}/settle`,
+    {
+      method: 'POST',
+      ...jsonBody({ status, paidDate, clientKey, transactionId, postedAt }),
+      errorMessage: status === 'Paid' ? 'Failed to confirm this bill' : 'Failed to discard this bill',
+    },
+  )
+  invalidateCache()
+  return {
+    occurrence: {
+      ...data.occurrence,
+      amount: data.occurrence.amount == null ? null : deobfuscateAmount(data.occurrence.amount),
+    },
+    transaction: data.transaction ? deobfuscateTransaction(data.transaction) : null,
     nextOccurrenceDate: data.nextOccurrenceDate,
   }
 }

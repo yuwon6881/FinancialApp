@@ -3,7 +3,8 @@ import type { RecurringPayment, RecurringFrequency, RecurringPaymentMode, Transa
 import { maskCurrencyInput } from '../../lib/utils'
 import { useSyncStatus } from '../../lib/useOptimisticList'
 import { useAutoOpenModal } from '../../lib/useAutoOpenModal'
-import { hasBillingEnded, normalizeRecurringFrequency } from '../../lib/recurringPayments'
+import { computeOccurrenceOnOrAfter, hasBillingEnded, normalizeRecurringFrequency } from '../../lib/recurringPayments'
+import { financialDate } from '../../lib/financialDate'
 import { formatSensitiveAmount, formatCurrencyAmount } from './formatters'
 import { focusFirstInvalidField } from '../ui/formValidation'
 
@@ -21,6 +22,12 @@ export type RecurringPaymentModeSelection = RecurringPaymentMode | ''
 
 function isRecurringPaymentMode(value: string): value is RecurringPaymentMode {
   return value === 'AutoDeduct' || value === 'Manual'
+}
+
+function nextDate(date: string): string {
+  const value = new Date(`${date}T12:00:00`)
+  value.setDate(value.getDate() + 1)
+  return value.toLocaleDateString('en-CA')
 }
 
 export interface UseRecurringPaymentsViewOptions {
@@ -267,13 +274,20 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     const parsedDueDay = dateParts.length === 3 ? Number.parseInt(dateParts[2], 10) : Number.NaN
     const dueDay = Number.isFinite(parsedDueDay) ? Math.min(31, Math.max(1, parsedDueDay)) : 1
 
+    const schedule = {
+      frequency,
+      dueDate: dueDay,
+      startDate: startDateInput,
+      endDate: endDateInput || undefined,
+    }
+    const trackingStart = editingPayment ? nextDate(financialDate()) : financialDate()
     const paymentData = {
       name,
       amount: -Math.abs(parsedAmount), // Excel outlays are stored as negative
       frequency,
       category,
       ledgerCategory,
-      nextDueDate: startDateInput,
+      nextDueDate: editingPayment?.active === false ? null : computeOccurrenceOnOrAfter(schedule, trackingStart),
       dueDate: dueDay,
       startDate: startDateInput,
       endDate: endDateInput || undefined,

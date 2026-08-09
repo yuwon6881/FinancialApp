@@ -19,10 +19,11 @@ export interface UseCycleNavigationOptions {
   setActiveTab: (tab: AppTab, navigationOptions?: AppNavigationOptions) => void
   setLedgerCyclesRange: (range: LedgerRouteRange) => void
   showAlert?: (message: string, title?: string) => void
+  persistPeriod?: (month: string, year: number) => void | Promise<void>
 }
 
 export function useCycleNavigation(options: UseCycleNavigationOptions) {
-  const { loadAll, handleLogout, markSessionLocked, setDashboardData, setTransactions, setActiveTab, setLedgerCyclesRange, showAlert } = options
+  const { loadAll, handleLogout, markSessionLocked, setDashboardData, setTransactions, setActiveTab, setLedgerCyclesRange, showAlert, persistPeriod = api.selectPeriod } = options
 
   const [initialLocation] = useState(readAppLocation)
   const cachedPeriod = getCachedDashboardPeriod()
@@ -79,7 +80,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     try {
       const selectRequest = selectPeriodQueueRef.current
         .catch(() => undefined)
-        .then(() => api.selectPeriod(month, year))
+        .then(() => persistPeriod(month, year))
       selectPeriodQueueRef.current = selectRequest.then(() => undefined, () => undefined)
       await selectRequest
       if (requestSeq !== selectPeriodSeqRef.current) return
@@ -100,7 +101,7 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
         setIsSwitchingCycle(false)
       }
     }
-  }, [loadAll, handleLogout, markSessionLocked, setDashboardData, setTransactions, showAlert])
+  }, [loadAll, handleLogout, markSessionLocked, setDashboardData, setTransactions, showAlert, persistPeriod])
 
   const handleNavigateToLedger = useCallback((navOptions: {
     category?: string | null

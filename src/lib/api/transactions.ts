@@ -122,7 +122,13 @@ export async function fetchPagedTransactions(params: TransactionQuery & { page: 
 export async function addTransaction(transaction: Omit<Transaction, 'id'> & { id?: string }): Promise<Transaction> {
   const data = await request<WireTransaction>('/transactions', {
     method: 'POST',
-    ...jsonBody({ ...transaction, amount: obfuscateAmount(transaction.amount) }),
+    ...jsonBody({
+      ...transaction,
+      amount: obfuscateAmount(transaction.amount),
+      stabilityRecoveryTopUpAmount: transaction.stabilityRecoveryTopUpAmount == null
+        ? transaction.stabilityRecoveryTopUpAmount
+        : obfuscateAmount(transaction.stabilityRecoveryTopUpAmount),
+    }),
     errorMessage: 'Failed to add transaction',
   })
   invalidateCache()
@@ -140,7 +146,13 @@ export async function deleteTransaction(id: string): Promise<void> {
 export async function updateTransaction(id: string, transaction: Omit<Transaction, 'id'>): Promise<void> {
   await requestVoid(`/transactions/${id}`, {
     method: 'PUT',
-    ...jsonBody({ ...transaction, amount: obfuscateAmount(transaction.amount) }),
+    ...jsonBody({
+      ...transaction,
+      amount: obfuscateAmount(transaction.amount),
+      stabilityRecoveryTopUpAmount: transaction.stabilityRecoveryTopUpAmount == null
+        ? transaction.stabilityRecoveryTopUpAmount
+        : obfuscateAmount(transaction.stabilityRecoveryTopUpAmount),
+    }),
     errorMessage: 'Failed to update transaction',
   })
   invalidateCache()

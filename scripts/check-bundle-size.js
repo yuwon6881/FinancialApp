@@ -12,7 +12,11 @@ const budgets = [
   // 62.0: the compiler's memo caches plus the single-request boot decoder and the
   // If-None-Match revalidation layer. The eager-critical-path budget below is the one that
   // reflects cold-launch cost; this per-chunk limit exists to catch unexpected growth.
-  { name: 'index-*.js (main application)', pattern: /^index-.*\.js$/, limitKb: 66.5 },
+  // 68.25: raised from 66.5 for the recurring-occurrence lifecycle. Occurrence status reaches
+  // the eager path through the dashboard payload, the outbox's recurringOccurrence:settle
+  // projection and the shared occurrence types, none of which can be deferred past a hook that
+  // runs on every render. Measured 68.05.
+  { name: 'index-*.js (main application)', pattern: /^index-.*\.js$/, limitKb: 68.25 },
   { name: 'vendor-react-*.js', pattern: /^vendor-react-.*\.js$/, limitKb: 58.0 },
   // No vendor-motion budget: framer-motion is no longer pinned to one chunk, because
   // that collapsed LazyMotion's split point (see vite.config.ts). Its cost is covered by
@@ -29,7 +33,12 @@ const budgets = [
   // Today card shares none of it, importing only the type. This
   // view is interaction-heavy, so its compiler memo caches are retained; the eager
   // critical-path budget still guards cold-launch cost.
-  { name: 'LedgerView-*.js', pattern: /^LedgerView-.*\.js$/, limitKb: 35.5 },
+  // 38.75: raised from 35.5 (measured 38.42, up from 31.07). Bulk delete/restore brings the
+  // selection layer, its two confirm modals and the grouped-Undo payloads into this view, and
+  // the selection layer is deliberately *not* lazy -- behind a fallback it renders and then
+  // replaces the list on first visit, replaying the entrance animation. This view is lazy, so
+  // none of it lands on cold launch; the critical-path budget below remains the cold-start gate.
+  { name: 'LedgerView-*.js', pattern: /^LedgerView-.*\.js$/, limitKb: 38.75 },
   { name: 'SettingsView-*.js', pattern: /^SettingsView-.*\.js$/, limitKb: 21.5 }
 ]
 
@@ -62,7 +71,13 @@ if (!fs.existsSync(distAssetsPath)) {
 // 188.6: raised from 188.5 for the background price-refresh indicator pill
 // (useInvestmentPortfolio.ts isSyncRefreshing state + isBackgroundRefreshing derived value).
 // InvestmentsView itself is lazy, but the shared chunk it pulls in grew by ~0.04 kB gzip.
-const CRITICAL_PATH_LIMIT_KB = 188.6
+// 191.75: raised from 188.6 (measured 191.43, against 188.08 for the previous commit). The same
+// eight chunks as before -- nothing lazy was dragged eager -- and the growth is in two of them:
+// index +2.33 for the recurring-occurrence lifecycle (see its budget above), and push-hook +1.14
+// for the per-device reconciliation, which has to run at mount because a device the server still
+// lists as registered but whose browser permission was revoked must be unsubscribed before any
+// switch is drawn from it.
+const CRITICAL_PATH_LIMIT_KB = 191.75
 
 function criticalPathChunks(files) {
   const entry = files.find(f => /^index-.*\.js$/.test(f))

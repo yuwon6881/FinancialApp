@@ -1,16 +1,16 @@
 import type { BulkTransactionMutationResult } from './api/transactionBulk'
 import type { CategoryCleanupApplyResult } from './api/categories'
 import type { DeletedTransactionsSnapshot } from './api/investments'
-import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, PayEarlyResult, RecurringPayment, SavingsGoal, TaxReliefCategoryDefinition, Transaction, TransactionCategory, WishlistItem } from '../types'
+import type { FinancialSetting, InvestmentAccount, InvestmentActivity, InvestmentCashFlow, InvestmentInstrument, InvestmentPlan, PayEarlyResult, RecurringPayment, RecurringSettlementResult, SavingsGoal, TaxReliefCategoryDefinition, Transaction, TransactionCategory, WishlistItem } from '../types'
 import { buildMutationSuccessToast, buildUndoSuccessToast } from './mutationToast'
 import { projectIncomeSplitRows, type IncomeAllocations } from './incomeSplitProjection'
 
-export type EntityKind = 'transaction' | 'recurringPayment' | 'wishlistItem' | 'savingsGoal' | 'category' | 'settings'
+export type EntityKind = 'transaction' | 'recurringPayment' | 'recurringOccurrence' | 'wishlistItem' | 'savingsGoal' | 'category' | 'settings'
   | 'investmentAccount' | 'investmentInstrument' | 'investmentActivity' | 'investmentCashFlow'
   | 'investmentPlan' | 'investmentAllocation'
   | 'investmentAllocationOrder' | 'taxReliefCategory'
 export type OpType = 'add' | 'update' | 'delete' | 'restore' | 'toggle' | 'purchase' | 'unpurchase'
-  | 'reminder' | 'payEarly' | 'cleanup' | 'bulkDelete' | 'bulkRestore'
+  | 'reminder' | 'payEarly' | 'settle' | 'cleanup' | 'bulkDelete' | 'bulkRestore'
 export interface OutboxPayload {
   [key: string]: unknown
   id?: string | number
@@ -19,6 +19,7 @@ export interface OutboxPayload {
   category?: string
   ledgerCategory?: string
   amount?: number
+  stabilityRecoveryTopUpAmount?: number | null
   price?: number
   active?: boolean
   darkMode?: boolean
@@ -27,8 +28,11 @@ export interface OutboxPayload {
   purchaseTransactionId?: string | null
   replacementCategoryId?: string
   cycleLimit?: number | null
+  selectedMonth?: string
+  selectedYear?: number
   date?: string
   postedAt?: string
+  createdAt?: string
   reminderEnabled?: boolean
   reminderMode?: string
   reminderLeadDays?: number
@@ -43,6 +47,8 @@ export interface OutboxPayload {
   taxYear?: number
   transactions?: unknown
   transactionIds?: unknown
+  /** Attached vault documents this delete also removes, for the success toast's honesty clause. */
+  deletedDocumentCount?: number
 }
 export type DispatchResult =
   | Transaction
@@ -60,6 +66,7 @@ export type DispatchResult =
   | BulkTransactionMutationResult
   | CategoryCleanupApplyResult
   | PayEarlyResult
+  | RecurringSettlementResult
   | { id: string }
   | { item: WishlistItem; transaction: Transaction; id?: undefined }
   | void
@@ -139,6 +146,7 @@ export interface ToastCopy {
 const ENTITY_LABELS: Record<EntityKind, string> = {
   transaction: 'Transaction',
   recurringPayment: 'Recurring payment',
+  recurringOccurrence: 'Bill occurrence',
   wishlistItem: 'Wishlist item',
   savingsGoal: 'Savings goal',
   category: 'Category',
@@ -163,6 +171,7 @@ const TYPE_COPY: Partial<Record<OpType, { title: string; messageVerb: string }>>
   unpurchase: { title: 'Purchase Undone', messageVerb: 'unmarked as purchased' },
   reminder: { title: 'Updated', messageVerb: 'updated' },
   payEarly: { title: 'Paid Early', messageVerb: 'paid early' },
+  settle: { title: 'Bill Updated', messageVerb: 'updated' },
   cleanup: { title: 'Applied', messageVerb: 'applied' },
 }
 
@@ -224,6 +233,19 @@ const SUCCESS_TOAST_OVERRIDES: Partial<Record<string, (op: QueuedOp) => ToastCop
     recordName: op.payload?.name as string | undefined,
     messageSuffix: 'Reminders for this cycle have stopped.',
   }),
+  // The Undo beside this toast restores the transaction and re-attaches every document that was
+  // only detached, so the one thing it cannot bring back has to be said out loud.
+  'transaction:delete': (op) => {
+    const deletedDocumentCount = typeof op.payload?.deletedDocumentCount === 'number'
+      ? op.payload.deletedDocumentCount
+      : 0
+    const copy = defaultSyncSuccessToast(op)
+    if (deletedDocumentCount <= 0) return copy
+    return {
+      ...copy,
+      message: `${copy.message} ${deletedDocumentCount} attached document${deletedDocumentCount === 1 ? '' : 's'} ${deletedDocumentCount === 1 ? 'was' : 'were'} deleted for good — undo cannot bring ${deletedDocumentCount === 1 ? 'it' : 'them'} back.`,
+    }
+  },
   'category:cleanup': (op) => buildMutationSuccessToast({
     entity: 'Category cleanup',
     action: 'Applied',
@@ -338,7 +360,9 @@ export function enqueue(
   const createdAt = Date.now()
   const timestampedPayload = entity === 'transaction' && type === 'add' && !payload?.postedAt
     ? { ...payload, postedAt: getOptimisticTransactionPostedAt(createdAt) }
-    : payload
+    : (entity === 'investmentActivity' || entity === 'investmentCashFlow') && type === 'add' && !payload?.createdAt
+      ? { ...payload, createdAt: getOptimisticTransactionPostedAt(createdAt) }
+      : payload
   const newOp: QueuedOp = {
     id: createOpId(),
     entity,
@@ -479,6 +503,11 @@ export function enqueue(
     return [...queue, newOp]
   }
 
+  if (type === 'settle') {
+    if (queue.some(op => op.entity === entity && op.targetId === targetId && op.type === 'settle')) return queue
+    return [...queue, newOp]
+  }
+
   if (type === 'cleanup') {
     if (queue.some(op => sameTarget(op) && op.type === 'cleanup')) return queue
     return [...queue, newOp]
@@ -550,8 +579,7 @@ export function expandBulkTransactionProjection(ops: QueuedOp[]): QueuedOp[] {
         ...op,
         type: 'delete' as const,
         targetId: id,
-        // Bulk rows disappear immediately; the original bulk op still stays pending for replay.
-        isCompleted: true,
+        isCompleted: op.isCompleted,
         payload: snapshot ? { ...snapshot } as OutboxPayload : op.payload,
       }
     })
@@ -573,12 +601,15 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         ...projectionOps.filter(op =>
           (op.entity === 'wishlistItem' && (op.type === 'purchase' || op.type === 'unpurchase' || op.type === 'delete')) ||
           (op.entity === 'recurringPayment' && op.type === 'payEarly') ||
+          (op.entity === 'recurringOccurrence' && op.type === 'settle') ||
           (op.entity === 'category' && (op.type === 'delete' || op.type === 'cleanup'))
         )
       ]
     : entity === 'recurringPayment'
       ? [
           ...entityOps,
+          ...projectionOps.filter(op => op.entity === 'recurringOccurrence' && op.type === 'settle'),
+          ...projectionOps.filter(op => op.entity === 'transaction' && op.type === 'delete'),
           ...projectionOps.filter(op => op.entity === 'category' && (op.type === 'delete' || op.type === 'cleanup'))
         ]
       : entity === 'wishlistItem'
@@ -635,6 +666,24 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
       continue
     }
 
+    if (entity === 'recurringPayment' && op.entity === 'transaction' && op.type === 'delete') {
+      const snapshot = op.payload?.undoSnapshot && typeof op.payload.undoSnapshot === 'object'
+        ? op.payload.undoSnapshot as Record<string, unknown>
+        : op.payload as Record<string, unknown> | undefined
+      const paymentId = typeof snapshot?.recurringPaymentId === 'string' ? snapshot.recurringPaymentId : ''
+      const occurrenceDate = typeof snapshot?.recurringOccurrenceDate === 'string' ? snapshot.recurringOccurrenceDate : ''
+      const existingIndex = paymentId ? result.findIndex(item => String(item.id) === paymentId) : -1
+      if (existingIndex >= 0 && occurrenceDate) {
+        result[existingIndex] = {
+          ...result[existingIndex],
+          nextDueDate: occurrenceDate,
+          isPendingSync: !op.isCompleted,
+          pendingSyncOperationId: op.isCompleted ? undefined : op.id,
+        } as unknown as T
+      }
+      continue
+    }
+
     if (op.entity === 'recurringPayment' && op.type === 'reminder' && entity === 'recurringPayment') {
       const existingIndex = result.findIndex(item => String(item.id) === targetStr)
       if (existingIndex >= 0) {
@@ -687,6 +736,41 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
           const projected = {
             ...transaction,
             ...(transactionId ? { id: transactionId } : {}),
+            isPendingDelete: false,
+            isPendingSync: !op.isCompleted,
+            pendingSyncOperationId: op.isCompleted ? undefined : op.id,
+          } as unknown as T
+          if (existingIndex >= 0) result[existingIndex] = { ...result[existingIndex], ...projected }
+          else result = [projected, ...result]
+        }
+      }
+      continue
+    }
+
+    if (op.entity === 'recurringOccurrence' && op.type === 'settle') {
+      if (entity === 'recurringPayment') {
+        const paymentId = typeof op.payload?.recurringPaymentId === 'string' ? op.payload.recurringPaymentId : ''
+        const existingIndex = result.findIndex(item => String(item.id) === paymentId)
+        if (existingIndex >= 0) {
+          const nextDate = op.isCompleted
+            ? op.payload?.nextOccurrenceDate
+            : op.payload?.optimisticNextOccurrenceDate
+          result[existingIndex] = {
+            ...result[existingIndex],
+            nextDueDate: typeof nextDate === 'string' ? nextDate : null,
+            isPendingSync: !op.isCompleted,
+            pendingSyncOperationId: op.isCompleted ? undefined : op.id,
+          } as unknown as T
+        }
+      } else if (entity === 'transaction') {
+        const rawTransaction = op.isCompleted ? op.payload?.resultTransaction : op.payload?.optimisticTransaction
+        if (rawTransaction && typeof rawTransaction === 'object') {
+          const transaction = rawTransaction as Record<string, unknown>
+          const transactionId = typeof transaction.id === 'string' ? transaction.id : `tx-${op.id}`
+          const existingIndex = result.findIndex(item => String(item.id) === transactionId)
+          const projected = {
+            ...transaction,
+            id: transactionId,
             isPendingDelete: false,
             isPendingSync: !op.isCompleted,
             pendingSyncOperationId: op.isCompleted ? undefined : op.id,
@@ -893,6 +977,9 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         result[existingIndex] = {
           ...item,
           active: nextActive,
+          ...(op.payload && Object.prototype.hasOwnProperty.call(op.payload, 'nextDueDate')
+            ? { nextDueDate: op.payload.nextDueDate }
+            : {}),
           isPendingSync: !op.isCompleted
         }
       }
@@ -941,10 +1028,19 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         result[existingIndex] = {
           ...item,
           isPurchased: true,
+          isActive: false,
           purchasedAt: op.payload?.postedAt || op.payload?.date || op.payload?.purchasedAt || new Date().toISOString(),
           purchaseTransactionId: op.payload?.purchaseTransactionId ?? item.purchaseTransactionId ?? null,
           isPendingSync: !op.isCompleted
         }
+        const candidates = result
+          .map((candidate, index) => ({ candidate: candidate as T & { isPurchased?: boolean; createdAt?: string }, index }))
+          .filter(({ candidate, index }) => index !== existingIndex && !candidate.isPurchased)
+          .sort((left, right) => String(right.candidate.createdAt ?? '').localeCompare(String(left.candidate.createdAt ?? '')))
+        result = result.map((candidate, index) => ({
+          ...candidate,
+          isActive: candidates.length > 0 && index === candidates[0].index,
+        }))
       }
     } else if (op.type === 'unpurchase') {
       const existingIndex = result.findIndex(item => String(item.id) === targetStr)
@@ -953,6 +1049,7 @@ export function applyOpsToList<T extends { id: string | number; isPendingSync?: 
         result[existingIndex] = {
           ...item,
           isPurchased: false,
+          isActive: !result.some((candidate, index) => index !== existingIndex && Boolean((candidate as T & { isActive?: boolean; isPurchased?: boolean }).isActive) && !(candidate as T & { isPurchased?: boolean }).isPurchased),
           purchasedAt: undefined,
           purchaseTransactionId: null,
           isPendingSync: !op.isCompleted
@@ -994,9 +1091,9 @@ function isWellFormedOp(op: unknown): op is QueuedOp {
   return (
     typeof o.id === 'string' &&
     typeof o.entity === 'string' &&
-    ['transaction', 'recurringPayment', 'wishlistItem', 'savingsGoal', 'category', 'settings', 'investmentAccount', 'investmentInstrument', 'investmentActivity', 'investmentCashFlow', 'investmentPlan', 'investmentAllocation', 'investmentAllocationOrder', 'taxReliefCategory'].includes(o.entity as string) &&
+    ['transaction', 'recurringPayment', 'recurringOccurrence', 'wishlistItem', 'savingsGoal', 'category', 'settings', 'investmentAccount', 'investmentInstrument', 'investmentActivity', 'investmentCashFlow', 'investmentPlan', 'investmentAllocation', 'investmentAllocationOrder', 'taxReliefCategory'].includes(o.entity as string) &&
     typeof o.type === 'string' &&
-    ['add', 'update', 'delete', 'restore', 'toggle', 'purchase', 'unpurchase', 'reminder', 'payEarly', 'cleanup', 'bulkDelete', 'bulkRestore'].includes(o.type as string) &&
+    ['add', 'update', 'delete', 'restore', 'toggle', 'purchase', 'unpurchase', 'reminder', 'payEarly', 'settle', 'cleanup', 'bulkDelete', 'bulkRestore'].includes(o.type as string) &&
     (typeof o.targetId === 'string' || typeof o.targetId === 'number') &&
     typeof o.createdAt === 'number' &&
     typeof o.retryCount === 'number'

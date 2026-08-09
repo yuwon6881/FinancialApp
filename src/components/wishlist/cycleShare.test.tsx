@@ -128,6 +128,23 @@ describe('RewardsPoolBar cycle share', () => {
     expect(screen.getByRole('button', { name: /Set aside RM 105\.00/ })).toBeTruthy()
     expect(screen.queryByText('Funded this cycle')).toBeNull()
   })
+
+  // The waterfall grants min(outstanding, free), so the button has to name the amount that will
+  // actually move. Labelled with the outstanding figure it promised money the pool did not hold.
+  it('names what the free balance can actually cover, not what the cycle owes', () => {
+    renderBar({ fundedThisCycleTotal: 70, outstandingThisCycleTotal: 105, unassigned: 40 })
+    expect(screen.getByRole('button', { name: /Set aside RM 40\.00/ })).toBeTruthy()
+  })
+
+  it('says so when the earmarks outrun the balance, instead of only showing nothing free', () => {
+    renderBar({ rewardsBalance: 120, totalEarmarked: 175, unassigned: 0 })
+    expect(screen.getByText(/claim RM 55\.00 more than your rewards hold/)).toBeTruthy()
+  })
+
+  it('stays quiet about over-commitment while the balance covers the earmarks', () => {
+    renderBar()
+    expect(screen.queryByText(/more than your rewards hold/)).toBeNull()
+  })
 })
 
 describe('SavingsGoalCard cycle share', () => {

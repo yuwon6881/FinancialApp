@@ -116,11 +116,19 @@ export async function completeGoal(deps: SavingsGoalActionDeps, id: number): Pro
   if (pendingTransaction) deps.addPendingLedgerTransaction?.(pendingTransaction)
   try {
     const result = await completeSavingsGoal(id)
-    deps.commitGoal(result.goal)
     if (pendingTransaction) {
       deps.replacePendingLedgerTransaction?.(pendingTransaction.id, result.transaction)
     }
-    await deps.refreshAll()
+    // Committed only once the authoritative refresh has landed, and in a `finally` so a failed
+    // refresh still records the completion. Zeroing the earmark first released it from the pool
+    // while the matching Rewards spend was still absent from the dashboard — the optimistic
+    // dashboard reads queued ops, not this direct row — so free-to-spend briefly claimed the
+    // completed amount twice, which is long enough to claim a reward against money already gone.
+    try {
+      await deps.refreshAll()
+    } finally {
+      deps.commitGoal(result.goal)
+    }
     // replacePendingLedgerTransaction swaps the local placeholder id for the server id.
     // Remove that server-shaped projection after the authoritative refresh; removing the old
     // placeholder would leave a hidden duplicate that resurfaces after the real row is deleted.

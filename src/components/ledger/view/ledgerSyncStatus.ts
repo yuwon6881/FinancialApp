@@ -9,7 +9,6 @@ type LedgerSyncStatusOptions = {
   activeSyncId?: string | null
   activeSyncIds?: ReadonlyArray<string>
   deletingTxId?: string | null
-  deletingAttachedDocumentsTxId?: string | null
 }
 
 const splitParentId = (transactionId: string) => {
@@ -22,13 +21,10 @@ export function createLedgerSyncStatus({
   activeSyncId,
   activeSyncIds,
   deletingTxId,
-  deletingAttachedDocumentsTxId,
 }: LedgerSyncStatusOptions) {
   const effectiveSyncIds = activeSyncIds?.length ? activeSyncIds : activeSyncId ? [activeSyncId] : []
   const activeSyncSet = new Set(effectiveSyncIds)
-  const directDeleteSet = new Set(
-    [deletingTxId, deletingAttachedDocumentsTxId].filter((id): id is string => Boolean(id)),
-  )
+  const directDeleteSet = new Set([deletingTxId].filter((id): id is string => Boolean(id)))
   const syncingTransactionIds = new Set<string>()
   const deletingTransactionIds = new Set<string>()
 

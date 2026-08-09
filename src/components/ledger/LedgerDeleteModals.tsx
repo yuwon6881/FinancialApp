@@ -1,6 +1,6 @@
 import { Checkbox } from '../ui/Checkbox'
 import type { ReactNode } from 'react'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import type { Transaction } from '../../types'
 import { BottomSheet } from '../ui/BottomSheet'
 import { Button } from '../ui/Button'
@@ -17,7 +17,6 @@ interface DeleteTransactionModalProps {
   onAlsoDeleteDocumentsChange?: (val: boolean) => void
   isOnline?: boolean
   areAttachedDocumentsLoading?: boolean
-  isConfirming?: boolean
 }
 
 // Confirm-deletion bottom sheet. Explains the cascade for Income Auto-Split
@@ -33,7 +32,6 @@ export function DeleteTransactionModal({
   onAlsoDeleteDocumentsChange,
   isOnline = true,
   areAttachedDocumentsLoading = false,
-  isConfirming = false,
 }: DeleteTransactionModalProps) {
   if (!isOpen || !transaction) return null
   const isSplitSubRecord = transaction.id.includes('-split-')
@@ -42,7 +40,7 @@ export function DeleteTransactionModal({
   return (
     <BottomSheet
       isOpen={isOpen}
-      onClose={isConfirming ? () => undefined : onCancel}
+      onClose={onCancel}
       maxWidthClassName="max-w-md"
       title={
         <div className="flex items-center gap-2 text-orange-500">
@@ -54,16 +52,18 @@ export function DeleteTransactionModal({
       }
       footer={
         <ModalActions>
-          <Button variant="outline" onClick={onCancel} disabled={isConfirming}>
+          <Button variant="outline" onClick={onCancel}>
             Cancel
           </Button>
+          {/* Confirming only queues the delete, so there is no busy state to show: the row's own
+              RowSyncBadge carries it from here, and any attached-document deletion runs after the
+              queued delete syncs. */}
           <Button
             variant="destructive"
             onClick={onConfirm}
-            disabled={areAttachedDocumentsLoading || isConfirming}
+            disabled={areAttachedDocumentsLoading}
           >
-            {isConfirming && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
-            {isConfirming ? 'Deleting…' : 'Confirm Delete'}
+            Confirm Delete
           </Button>
         </ModalActions>
       }
@@ -134,7 +134,8 @@ export function DeleteTransactionModal({
                 )}
                 {isOnline && alsoDeleteDocuments && (
                   <span className="text-xs text-orange-500/90 font-medium block">
-                    This will permanently delete the attached documents from your vault.
+                    The files are removed from your vault once this deletion syncs. Undo brings the
+                    transaction back, but not the files.
                   </span>
                 )}
               </div>

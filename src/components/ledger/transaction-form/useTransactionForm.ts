@@ -14,7 +14,7 @@ import type {
   VaultDocument,
 } from '../../../types'
 import type { StabilityRecovery } from '../../../types'
-import { proposeTopUp } from '../../../lib/stabilityRecovery'
+import { drawsFor, proposeTopUp } from '../../../lib/stabilityRecovery'
 import type { TransactionPrefillDraft } from '../TransactionFormSheet'
 import type { TransactionDocumentsFieldRef } from './TransactionDocumentsField'
 import { focusFirstInvalidField } from '../../ui/formValidation'
@@ -137,10 +137,10 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   const resolveAcceptedTopUp = () => {
     if (!state.stabilityTopUpAccepted || !topUpOffer) return 0
     const typed = parseFloat(state.stabilityTopUpAmount)
-    const chosen = state.stabilityTopUpAmount.trim() === '' || !Number.isFinite(typed)
+    const chosen = state.stabilityTopUpAmount.trim() === ''
       ? topUpOffer.proposedTopUp
       : typed
-    return Math.max(0, Math.min(chosen, topUpOffer.maxTopUp))
+    return chosen
   }
 
   // Growth carries no committed money: unlike bills and savings goals it has no hard per-cycle
@@ -158,14 +158,76 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     const amount = parseFloat(state.amount)
     if (!Number.isFinite(amount) || amount <= 0) return null
 
-    return proposeTopUp(stabilityRecovery, Math.abs(amount), topUpBuckets, stabilityAlloc)
+    let recoveryForOffer = stabilityRecovery
+    let bucketsForOffer = topUpBuckets
+    const original = state.editingId
+      ? transactions.find(transaction => String(transaction.id) === String(state.editingId))
+      : undefined
+    if (recoveryForOffer && original && (original.stabilityRecoveryTopUpAmount ?? 0) > 0) {
+      bucketsForOffer = topUpBuckets.map(bucket => {
+        const child = transactions.find(transaction =>
+          transaction.id === `${original.id}-split-${bucket.bucket}`)
+        return child ? { ...bucket, balance: bucket.balance - child.amount } : bucket
+      })
+      const stabilityChild = transactions.find(transaction =>
+        transaction.id === `${original.id}-split-Stability`)
+      const oldStabilityContribution = stabilityChild?.amount
+        ?? Math.max(0, original.amount * stabilityAlloc + (original.stabilityRecoveryTopUpAmount ?? 0))
+      const currentBalance = recoveryForOffer.currentBalance - oldStabilityContribution
+      const outstandingShortfall = Math.max(
+        0,
+        recoveryForOffer.recoverableCeiling - currentBalance,
+      )
+      const toppedUpThisCycle = Math.max(
+        0,
+        recoveryForOffer.toppedUpThisCycle - (original.stabilityRecoveryTopUpAmount ?? 0),
+      )
+      const paceAnchor = outstandingShortfall + toppedUpThisCycle
+      const requiredThisCycle = recoveryForOffer.cyclesRemaining <= 1
+        ? paceAnchor
+        : Math.ceil((paceAnchor / recoveryForOffer.cyclesRemaining) * 100) / 100
+      recoveryForOffer = {
+        ...recoveryForOffer,
+        isActive: outstandingShortfall > 0,
+        currentBalance,
+        outstandingShortfall,
+        toppedUpThisCycle,
+        requiredThisCycle,
+        outstandingThisCycle: Math.max(
+          0,
+          Math.min(requiredThisCycle - toppedUpThisCycle, outstandingShortfall),
+        ),
+      }
+    }
+
+    const liveOffer = proposeTopUp(recoveryForOffer, Math.abs(amount), bucketsForOffer, stabilityAlloc)
+    if (liveOffer) return liveOffer
+
+    // A saved reimbursement can have closed the live ask already. Keep it visible on edit so
+    // ordinary edits preserve intent and removal remains an explicit untick.
+    const saved = state.mode === 'edit' && state.stabilityTopUpAccepted
+      ? Number(state.stabilityTopUpAmount)
+      : 0
+    if (!Number.isFinite(saved) || saved <= 0) return null
+    return {
+      requestedTopUp: saved,
+      proposedTopUp: saved,
+      maxTopUp: saved,
+      safeCap: saved,
+      isReduced: false,
+      draws: drawsFor(saved, bucketsForOffer),
+    }
   }, [
     stabilityAlloc,
     state.transactionType,
     state.ledgerCategory,
     state.amount,
+    state.mode,
+    state.stabilityTopUpAccepted,
+    state.stabilityTopUpAmount,
     stabilityRecovery,
     topUpBuckets,
+    transactions,
     essentialsAlloc,
     growthAlloc,
     rewardsAlloc,
@@ -310,6 +372,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
         txType: t.ledgerCategory.startsWith('Transfer:') ? 'transfer' : (t.amount < 0 ? 'outflow' : 'inflow'),
         transferSource: t.ledgerCategory.startsWith('Transfer:') ? (t.ledgerCategory.substring(9).split('->')[0].trim() as TransferBucket) : undefined,
         transferTarget: t.ledgerCategory.startsWith('Transfer:') ? (t.ledgerCategory.substring(9).split('->')[1].trim() as TransferBucket) : undefined,
+        stabilityRecoveryTopUpAmount: t.stabilityRecoveryTopUpAmount,
       }
     })
     descriptionRef.current = t.description
@@ -460,6 +523,20 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       dispatch({ type: 'SET_ERRORS', errors: validationErrors })
       focusFirstInvalidField(e.currentTarget)
       return
+    }
+
+    if (state.stabilityTopUpAccepted) {
+      const chosenTopUp = resolveAcceptedTopUp()
+      if (!topUpOffer || !Number.isFinite(chosenTopUp) || chosenTopUp <= 0 || chosenTopUp > topUpOffer.maxTopUp) {
+        dispatch({
+          type: 'SET_ERRORS',
+          errors: {
+            stabilityTopUpAmount: 'Enter a valid reimbursement within the available maximum.',
+          },
+        })
+        focusFirstInvalidField(e.currentTarget)
+        return
+      }
     }
 
     const documentValidationError = documentsFieldRef.current?.getValidationError()

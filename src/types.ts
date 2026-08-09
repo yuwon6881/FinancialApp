@@ -254,6 +254,8 @@ export interface Transaction {
   category: string
   ledgerCategory: string
   amount: number // Positive for inflow, negative for outflow
+  /** Null is legacy unknown intent; zero is ordinary income; positive is applied reimbursement. */
+  stabilityRecoveryTopUpAmount?: number | null
   isPendingSync?: boolean
   /** Internal optimistic projection marker for a queue op that changes this row indirectly. */
   pendingSyncOperationId?: string
@@ -290,7 +292,7 @@ export interface RecurringPayment {
   frequency: RecurringFrequency
   category: string
   ledgerCategory: string
-  nextDueDate: string
+  nextDueDate: string | null
   dueDate: number // Day of month (1-31)
   startDate: string // Date (yyyy-MM-dd)
   active: boolean
@@ -317,6 +319,13 @@ export interface PushStatus {
   categoryAlertsEnabled: boolean
 }
 
+export interface PushDevice {
+  id: string
+  isCurrent: boolean
+  enrolledAt: string
+  lastUpdatedAt: string
+}
+
 export interface RecurringReminderSettings {
   enabled: boolean
   mode: RecurringReminderMode
@@ -328,6 +337,12 @@ export interface RecurringReminderSettings {
 export interface PayEarlyResult {
   transaction: Transaction
   settledOccurrenceDate: string
+  nextOccurrenceDate?: string | null
+}
+
+export interface RecurringSettlementResult {
+  occurrence: ActiveRecurringPayment
+  transaction?: Transaction | null
   nextOccurrenceDate?: string | null
 }
 
@@ -377,7 +392,7 @@ export interface ActiveRecurringPayment {
   id: string
   recurringPaymentId: string
   name: string
-  amount: number
+  amount: number | null
   category: string
   ledgerCategory: string
   dueDate: string

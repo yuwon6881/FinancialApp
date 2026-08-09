@@ -196,6 +196,8 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
       const isServerPaid = hasAuthoritativeStatus && p.status === 'Paid'
 
       const matchingTx = !hasAuthoritativeStatus ? (transactions || []).find(t => {
+        if (t.recurringPaymentId === p.recurringPaymentId &&
+          t.recurringOccurrenceDate && t.recurringOccurrenceDate === p.dueDate) return true
         if (!isInCycle(t.date)) return false
         // A pay-early transaction for the *next* cycle will share the same
         // recurringPaymentId but its date will be the early-payment date (today),
@@ -224,26 +226,6 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
         return nameMatch || categoryMatch
       }) : undefined
 
-      // For upcoming-cycle bills (cycleOffset > 0), also look for a pay-early transaction
-      // that was recorded in the previous cycle (before this cycle started) with a matching
-      // recurringPaymentId. A pay-early transaction will have: (a) date < this cycle's start,
-      // (b) date >= previous cycle's start (i.e. within a reasonable look-back window), and
-      // (c) not be a discard marker. We limit the look-back to 40 days to avoid false positives.
-      const payEarlyTx = !matchingTx && cycleOffset > 0 && p.recurringPaymentId
-        ? (transactions || []).find(t => {
-            if (!t.recurringPaymentId || t.recurringPaymentId !== p.recurringPaymentId) return false
-            const txDate = toIsoDate(t.date)
-            if (!txDate || txDate >= startIso) return false // must be before this cycle
-            if (isDiscardedTx(t)) return false // discard markers don't count as early payment
-            // Limit look-back to 40 days to avoid matching a payment from a much earlier cycle
-            const txDateObj = new Date(txDate)
-            const lookBackStart = new Date(cycleStart)
-            lookBackStart.setDate(lookBackStart.getDate() - 40)
-            return txDateObj >= lookBackStart
-          })
-        : undefined
-
-      if (payEarlyTx) matchedTxIds.add(String(payEarlyTx.id))
       if (matchingTx) matchedTxIds.add(String(matchingTx.id))
 
       // A matching transaction can be a real payment or a discard marker — they must
@@ -253,13 +235,12 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
         return { ...p, isPaid: false, isDiscarded: true, status: 'Discarded' as const }
       }
 
-      const effectiveTx = matchingTx || payEarlyTx
-      if (isServerPaid || effectiveTx) {
+      if (isServerPaid || matchingTx) {
         return {
           ...p,
           isPaid: true,
           status: 'Paid' as const,
-          paidDate: p.paidDate || (effectiveTx ? effectiveTx.date : null)
+          paidDate: p.paidDate || (matchingTx ? matchingTx.date : null)
         }
       }
 
@@ -301,7 +282,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
   }, [activeRecurringPayments, allPayments, transactions, cycleOffset, year, monthIndex, cycleStart, cycleEnd])
 
   const cycleTotal = React.useMemo(() => {
-    return processedPayments.reduce((acc, p) => acc + Math.abs(p.amount), 0)
+    return processedPayments.reduce((acc, p) => acc + (p.amount == null ? 0 : Math.abs(p.amount)), 0)
   }, [processedPayments])
 
   // Group bills by due date to prevent overlapping nodes on the timeline
@@ -411,7 +392,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
               : node.bills.length === 2
                 ? `${node.bills[0].name} & ${node.bills[1].name}`
                 : `${node.bills.length} bills`
-            const total = node.bills.reduce((s, b) => s + Math.abs(b.amount), 0)
+            const total = node.bills.reduce((s, b) => s + (b.amount == null ? 0 : Math.abs(b.amount)), 0)
             const statusLabel = anyPending ? 'Pending' : allDiscarded ? 'Discarded' : 'Paid'
             const statusStyle = statusLabel === 'Paid'
               ? 'text-green-500 bg-green-500/10'
@@ -607,7 +588,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                     </div>
                   </div>
                   <div className="text-right flex flex-col items-end gap-1 font-semibold">
-                    <span className="text-xs font-extrabold text-foreground">{formatSensitive(Math.abs(bill.amount))}</span>
+                    <span className="text-xs font-extrabold text-foreground">{bill.amount == null ? 'Unavailable' : formatSensitive(Math.abs(bill.amount))}</span>
                     <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${statusStyle}`}>{bill.status}</span>
                   </div>
                 </button>
@@ -649,7 +630,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
               <div className="flex flex-col justify-between">
                 <span className="text-[9px] text-muted-foreground block font-normal uppercase tracking-wider mb-1">Amount</span>
                 <div className="flex items-center min-h-[22px]">
-                  <span className="text-base font-extrabold text-foreground leading-none">{formatSensitive(Math.abs(selectedBill.amount))}</span>
+                  <span className="text-base font-extrabold text-foreground leading-none">{selectedBill.amount == null ? 'Unavailable' : formatSensitive(Math.abs(selectedBill.amount))}</span>
                 </div>
               </div>
               <div className="flex flex-col justify-between">

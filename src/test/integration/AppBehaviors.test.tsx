@@ -250,7 +250,9 @@ describe('App behaviors', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Open Menu' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Ask AI' }))
 
-    expect(await screen.findByRole('dialog', { name: 'ASK AI' })).toBeDefined()
+    // The panel is lazy behind a null fallback, so this waits on a real dynamic import
+    // rather than a render; the default 1s is not enough for its chunk here.
+    expect(await screen.findByRole('dialog', { name: 'ASK AI' }, { timeout: 5000 })).toBeDefined()
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: 'Ask AI' })).toBeNull()
     })

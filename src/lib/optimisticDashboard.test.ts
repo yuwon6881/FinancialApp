@@ -39,6 +39,36 @@ function op(partial: Partial<QueuedOp>): QueuedOp {
 }
 
 describe('computeOptimisticDashboard', () => {
+  it('projects one occurrence settlement across reports, alerts, and posting-cycle cash', () => {
+    const dashboard = makeDashboard()
+    dashboard.setting = { ...dashboard.setting, selectedMonth: 'Aug', selectedYear: 2026, cycleDay: 1 }
+    dashboard.activeRecurringPayments = [{
+      id: 'occ-rp-1-20260810', recurringPaymentId: 'rp-1', name: 'Internet', amount: 50,
+      category: 'Bills', ledgerCategory: 'Food', dueDate: '2026-08-10', isPaid: false,
+      isDiscarded: false, status: 'Pending',
+    }]
+    dashboard.pendingNotifications = [{
+      id: 'occ-rp-1-20260810', recurringPaymentId: 'rp-1', name: 'Internet', amount: 50,
+      category: 'Bills', ledgerCategory: 'Food', billingDate: '2026-08-10', year: 2026,
+      month: 8, cycleLabel: 'Aug',
+    }]
+    const result = computeOptimisticDashboard(dashboard, {
+      activeOps: [op({
+        entity: 'recurringOccurrence', type: 'settle', targetId: 'occ-rp-1-20260810',
+        payload: {
+          recurringPaymentId: 'rp-1', occurrenceDate: '2026-08-10', status: 'Paid', paidDate: '2026-08-05',
+          optimisticTransaction: { id: 'tx-local', date: '2026-08-05', amount: -50, category: 'Bills', ledgerCategory: 'Food' },
+        },
+      })],
+      transactions: [],
+    })!
+
+    expect(result.activeRecurringPayments[0]).toMatchObject({ status: 'Paid', paidDate: '2026-08-05' })
+    expect(result.pendingNotifications).toEqual([])
+    expect(result.stats.totalBalance).toBe(950)
+    expect(result.stats.monthlyExpenses).toBe(70)
+  })
+
   it('returns null when there is no dashboard data', () => {
     expect(computeOptimisticDashboard(null, { activeOps: [], transactions: [] })).toBeNull()
   })
@@ -151,7 +181,7 @@ describe('computeOptimisticDashboard', () => {
 
     expect(result!.stats.totalBalance).toBe(1500)
     expect(result!.stats.monthlyInflow).toBe(1000)
-    expect(result!.stats.monthlyIncome).toBe(0)
+    expect(result!.stats.monthlyIncome).toBe(500)
   })
 
   it('merges a pending settings update from activeOps', () => {
@@ -202,15 +232,22 @@ describe('computeOptimisticDashboard', () => {
     })
 
     it('credits an accepted top-up so the card stops asking twice', () => {
-      const result = computeOptimisticDashboard(withRecovery(300), {
+      const dashboard = withRecovery(300)
+      dashboard.categories.push({
+        name: 'Stability', allocation: 0.15, target: 0, budget: 0, netChange: 0, remaining: 0,
+      })
+      const result = computeOptimisticDashboard(dashboard, {
         activeOps: [acceptedTopUp],
         transactions: [],
       })
 
-      expect(result!.stabilityRecovery!.outstandingShortfall).toBe(210)
-      expect(result!.stabilityRecovery!.outstandingThisCycle).toBe(10)
+      expect(result!.stabilityRecovery!.outstandingShortfall).toBe(60)
+      expect(result!.stabilityRecovery!.requiredThisCycle).toBe(50)
+      expect(result!.stabilityRecovery!.outstandingThisCycle).toBe(0)
       expect(result!.stabilityRecovery!.toppedUpThisCycle).toBe(90)
       expect(result!.stabilityRecovery!.isActive).toBe(true)
+      expect(result!.stats.totalBalance).toBe(1810)
+      expect(result!.categories.find(category => category.name === 'Stability')!.remaining).toBe(240)
     })
 
     it('closes the recovery once the queued top-up covers the whole shortfall', () => {
@@ -223,14 +260,45 @@ describe('computeOptimisticDashboard', () => {
       expect(result!.stabilityRecovery!.isActive).toBe(false)
     })
 
-    it('ignores a salary split at the plain percentage', () => {
+    it('credits the normal Stability share without calling it reimbursement', () => {
       const result = computeOptimisticDashboard(withRecovery(300), {
         activeOps: [op({ type: 'add', payload: { amount: 1000, ledgerCategory: 'IncomeSplit:50,25,15,10' } })],
         transactions: [],
       })
 
+      expect(result!.stabilityRecovery!.outstandingShortfall).toBe(150)
+      expect(result!.stabilityRecovery!.requiredThisCycle).toBe(50)
+      expect(result!.stabilityRecovery!.outstandingThisCycle).toBe(50)
+      expect(result!.stabilityRecovery!.toppedUpThisCycle).toBe(0)
+    })
+
+    it('reopens recovery when a reimbursing salary is deleted', () => {
+      const dashboard = withRecovery(60)
+      dashboard.stabilityRecovery = {
+        ...dashboard.stabilityRecovery!,
+        currentBalance: 9940,
+        toppedUpThisCycle: 90,
+        requiredThisCycle: 50,
+        outstandingThisCycle: 0,
+      }
+      const salary = {
+        id: 'salary', date: '2026-07-09', description: 'Salary', category: 'Salary',
+        ledgerCategory: 'Income', amount: 1000, stabilityRecoveryTopUpAmount: 90,
+      }
+      const stabilitySplit = {
+        id: 'salary-split-Stability', date: '2026-07-09', description: 'Split', category: 'Transfer',
+        ledgerCategory: 'Transfer:Income->Stability', amount: 240,
+      }
+
+      const result = computeOptimisticDashboard(dashboard, {
+        activeOps: [op({ type: 'delete', targetId: 'salary', payload: salary })],
+        transactions: [salary, stabilitySplit],
+      })
+
+      expect(result!.stabilityRecovery!.currentBalance).toBe(9700)
       expect(result!.stabilityRecovery!.outstandingShortfall).toBe(300)
       expect(result!.stabilityRecovery!.toppedUpThisCycle).toBe(0)
+      expect(result!.stabilityRecovery!.outstandingThisCycle).toBe(100)
     })
   })
 })

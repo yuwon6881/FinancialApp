@@ -45,7 +45,7 @@ export interface UseLedgerViewOptions {
   activeSyncId?: string | null
   activeSyncIds?: ReadonlyArray<string>
   deletingTxId?: string | null
-  onDeleteTransaction: (id: string, transaction?: Transaction) => Promise<void> | void
+  onDeleteTransaction: (id: string, transaction?: Transaction, attachedDocumentIdsToDelete?: number[]) => Promise<void> | void
   onAiExportRequestConsumed?: () => void
   aiExportRequest?: any
   hideSensitive: boolean
@@ -209,7 +209,6 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   const [attachedDocumentIds, setAttachedDocumentIds] = useState<number[]>([])
   const [alsoDeleteDocuments, setAlsoDeleteDocuments] = useState(false)
   const [areAttachedDocumentsLoading, setAreAttachedDocumentsLoading] = useState(false)
-  const [deletingAttachedDocumentsTxId, setDeletingAttachedDocumentsTxId] = useState<string | null>(null)
   const deleteDocumentLookupRef = useRef(0)
   const [showEditDisabledModal, setShowEditDisabledModal] = useState(false)
   const [editBlockedTransaction, setEditBlockedTransaction] = useState<Transaction | null>(null)
@@ -635,25 +634,12 @@ export function useLedgerView(options: UseLedgerViewOptions) {
       deleteId = txToDelete.id.split('-split-')[0]
     }
 
-    if (alsoDeleteDocuments) {
-      setDeletingAttachedDocumentsTxId(deleteId)
-      try {
-        const { deleteDocument } = await import('../../../lib/api/documents')
-        for (const documentId of attachedDocumentIds) {
-          await deleteDocument(documentId)
-        }
-      } catch {
-        onShowAlert?.(
-          'The transaction was not deleted because an attached vault document could not be deleted.',
-          'Delete Failed',
-        )
-        return
-      } finally {
-        setDeletingAttachedDocumentsTxId(null)
-      }
-    }
-
-    await onDeleteTransaction(deleteId, txToDelete)
+    // The documents are handed over rather than deleted here, and the deletion runs only once the
+    // queued transaction delete has actually synced. Deleting the files first meant an irreversible
+    // action ran ahead of a reversible one: a queued delete that later failed permanently left the
+    // transaction on screen with its evidence already destroyed. Files are the one thing in this
+    // flow that cannot be recreated, so they go last.
+    await onDeleteTransaction(deleteId, txToDelete, alsoDeleteDocuments ? attachedDocumentIds : undefined)
     setShowDeleteModal(false)
     setTxToDelete(null)
     setAttachedDocumentIds([])
@@ -674,8 +660,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     activeSyncId,
     activeSyncIds,
     deletingTxId,
-    deletingAttachedDocumentsTxId,
-  }), [activeSyncId, activeSyncIds, deletingAttachedDocumentsTxId, deletingTxId, transactions])
+  }), [activeSyncId, activeSyncIds, deletingTxId, transactions])
 
   const pendingTransactions = useMemo(() => {
     return transactions.filter(t => t.isPendingSync || recentlySyncedIds.has(String(t.id)))
@@ -995,7 +980,6 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     alsoDeleteDocuments,
     setAlsoDeleteDocuments,
     areAttachedDocumentsLoading,
-    isDeletingAttachedDocuments: deletingAttachedDocumentsTxId !== null,
     showEditDisabledModal,
     setShowEditDisabledModal,
     editBlockedTransaction,

@@ -1,4 +1,4 @@
-import type { PushStatus } from '../../types'
+import type { PushDevice, PushStatus } from '../../types'
 import { request, requestVoid } from './client'
 
 export function fetchPushStatus(deviceId: string, signal?: AbortSignal): Promise<PushStatus> {
@@ -8,12 +8,17 @@ export function fetchPushStatus(deviceId: string, signal?: AbortSignal): Promise
   })
 }
 
-export function updatePushSettings(enabled: boolean): Promise<void> {
-  return requestVoid('/push/settings', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ enabled }),
-    errorMessage: 'Failed to update push notification settings',
+export function fetchPushDevices(deviceId: string, signal?: AbortSignal): Promise<PushDevice[]> {
+  return request<PushDevice[]>(`/push/devices?deviceId=${encodeURIComponent(deviceId)}`, {
+    signal,
+    errorMessage: 'Failed to load the devices receiving notifications',
+  })
+}
+
+export function revokePushDevice(id: string): Promise<void> {
+  return requestVoid(`/push/devices/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    errorMessage: 'Failed to stop notifications for that device',
   })
 }
 

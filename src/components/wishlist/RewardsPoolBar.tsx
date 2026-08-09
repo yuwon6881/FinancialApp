@@ -47,6 +47,12 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
   const committedPct = rewardsBalance > 0 ? Math.min(100, (totalEarmarked / rewardsBalance) * 100) : 0
   const hasGoals = summary.activeGoals.length > 0
 
+  // Earmarks are bookkeeping on money that already exists, but nothing stops the Rewards balance
+  // from falling under them afterwards — a Rewards expense, a correction, a stability top-up. The
+  // free remainder floors at zero, so without saying this the page reports "Free to spend 0" and
+  // goal cards that still claim money the pool no longer holds, with nothing connecting the two.
+  const overCommitted = Math.round((totalEarmarked - rewardsBalance) * 100) / 100
+
   // This cycle's share, as its own meter. The pool bar above answers "how is the balance divided";
   // this answers "has this cycle's contribution actually been made" — two different questions that
   // a single line of text underneath was conflating.
@@ -65,6 +71,9 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
   // is the loudest thing on the card, and pointing it at a no-op teaches the eye to ignore it.
   const showFundAction = hasGoals && summary.hasUnfinishedGoals
   const canFund = unassigned > 0
+  // What the tap will actually move. The waterfall grants min(outstanding, free), so labelling the
+  // button with the outstanding figure promised money the pool did not have and moved less.
+  const fundableNow = Math.min(outstandingThisCycleTotal, unassigned)
   const fundTitle = isOffline
     ? 'Funding needs a connection — it splits your real rewards balance'
     : hideSensitive
@@ -108,7 +117,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
               title={fundTitle}
             >
               {isFunding ? <Loader2 className="size-3 animate-spin" /> : <Coins className="size-3" />}
-              {isFunding ? 'Setting aside…' : <>Set aside {formatSensitive(outstandingThisCycleTotal)}</>}
+              {isFunding ? 'Setting aside…' : <>Set aside {formatSensitive(fundableNow)}</>}
             </Button>
           ))}
         </div>
@@ -181,6 +190,17 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
                 </>}
           </p>
         </div>
+      )}
+
+      {overCommitted > 0 && (
+        <p className="flex items-start gap-2 text-xs font-semibold text-destructive">
+          <AlertTriangle className="size-3.5 shrink-0 mt-px" />
+          <span>
+            Your commitments claim {formatSensitive(overCommitted)} more than your rewards hold.
+            Something has been spent from Rewards since it was set aside — release money from a
+            commitment, or let this cycle's rewards refill the pool.
+          </span>
+        </p>
       )}
 
       {/* The budget-level warning still wins over the panel above, because an unreachable deadline

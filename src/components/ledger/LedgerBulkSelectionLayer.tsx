@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { Transaction } from '../../types'
 import { useAppContext } from '../../contexts/AppContext'
 import { CustomConfirmModal } from '../ui/CustomConfirmModal'
@@ -13,8 +13,6 @@ interface LedgerBulkSelectionLayerProps {
   listProps: LedgerListProps
   allTransactions: readonly Transaction[]
   resetKey: string
-  startInSelectionMode: boolean
-  onExit: () => void
 }
 
 /**
@@ -26,8 +24,6 @@ export function LedgerBulkSelectionLayer({
   listProps,
   allTransactions,
   resetKey,
-  startInSelectionMode,
-  onExit,
 }: LedgerBulkSelectionLayerProps) {
   const app = useAppContext()
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
@@ -40,13 +36,8 @@ export function LedgerBulkSelectionLayer({
     resetKey,
   })
 
-  useEffect(() => {
-    if (startInSelectionMode) bulk.startSelection()
-  }, [bulk.startSelection, startInSelectionMode])
-
   const leaveSelection = () => {
     bulk.leaveSelection()
-    onExit()
   }
 
   return (
@@ -112,7 +103,6 @@ export function LedgerBulkSelectionLayer({
           }
           bulk.leaveSelection()
           setIsConfirmOpen(false)
-          onExit()
         }}
         onCancel={() => setIsConfirmOpen(false)}
       />

@@ -25,6 +25,9 @@ export async function bulkRestoreTransactions(transactions: Transaction[]): Prom
     ...jsonBody({ transactions: transactions.map(transaction => ({
       ...transaction,
       amount: obfuscateAmount(transaction.amount),
+      stabilityRecoveryTopUpAmount: transaction.stabilityRecoveryTopUpAmount == null
+        ? transaction.stabilityRecoveryTopUpAmount
+        : obfuscateAmount(transaction.stabilityRecoveryTopUpAmount),
     })) }),
     errorMessage: 'Failed to restore selected transactions',
   })

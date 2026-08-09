@@ -32,7 +32,7 @@ export interface TransactionFormState {
 
 export type TransactionFormAction =
   | { type: 'OPEN_CREATE'; payload?: { defaultCategory: string; todayDate: string } }
-  | { type: 'OPEN_EDIT'; payload: { id: string; description: string; amount: string; date: string; category: string; ledgerCategory: string; txType: TransactionType; transferSource?: TransferBucket; transferTarget?: TransferBucket } }
+  | { type: 'OPEN_EDIT'; payload: { id: string; description: string; amount: string; date: string; category: string; ledgerCategory: string; txType: TransactionType; transferSource?: TransferBucket; transferTarget?: TransferBucket; stabilityRecoveryTopUpAmount?: number | null } }
   | { type: 'SET_FIELD'; field: keyof TransactionFormState; value: any }
   | { type: 'APPLY_RECEIPT'; payload: { description?: string; amount?: string | number | null; date?: string | null; txType?: TransactionType; ledgerCategory?: SelectableLedgerCategory; category?: string }; todayDate: string }
   | { type: 'APPLY_AI_DRAFT'; payload: Record<string, any>; todayDate: string }
@@ -91,8 +91,10 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         ledgerCategory: action.payload.ledgerCategory as SelectableLedgerCategory,
         transferSource: action.payload.transferSource ?? state.transferSource,
         transferTarget: action.payload.transferTarget ?? state.transferTarget,
-        stabilityTopUpAccepted: false,
-        stabilityTopUpAmount: '',
+        stabilityTopUpAccepted: (action.payload.stabilityRecoveryTopUpAmount ?? 0) > 0,
+        stabilityTopUpAmount: (action.payload.stabilityRecoveryTopUpAmount ?? 0) > 0
+          ? action.payload.stabilityRecoveryTopUpAmount!.toFixed(2)
+          : '',
         errors: {},
       }
     case 'SET_FIELD':

@@ -6,33 +6,11 @@
 // The governing idea: a goal is an *earmark* on the shared Rewards pool, not a fifth budget
 // bucket. One balance, N claims, and whatever is unclaimed is the free-to-spend remainder.
 
-import type { ActiveRecurringPayment, SavingsGoal } from '../types'
+import type { SavingsGoal } from '../types'
 import { getCycleYearAndMonthForDate } from './cycle'
-import { calculateFreeRewardsBalance } from './freeRewards'
+import { calculateFreeRewardsBalance, isActiveGoal } from './freeRewards'
 
 export { calculateFreeRewardsBalance } from './freeRewards'
-
-export const isActiveGoal = (goal: SavingsGoal): boolean =>
-  goal.status === 'active' && !goal.isPendingDelete
-
-/** The amount of the Rewards pool currently claimed by live savings commitments. */
-export function totalActiveEarmarked(goals: readonly SavingsGoal[]): number {
-  return goals
-    .filter(isActiveGoal)
-    .reduce((sum, goal) => sum + goal.earmarkedAmount, 0)
-}
-
-/** Pending Rewards bills are another claim on the pool until the occurrence is settled. */
-export function pendingRewardsAmount(
-  payments: readonly Pick<ActiveRecurringPayment, 'status' | 'amount' | 'ledgerCategory' | 'category'>[] | undefined,
-): number {
-  const total = (payments ?? []).reduce((sum, payment) => {
-    if (payment.status !== 'Pending') return sum
-    const category = payment.ledgerCategory || payment.category
-    return category === 'Rewards' ? sum + Math.abs(payment.amount) : sum
-  }, 0)
-  return Math.round(total * 100) / 100
-}
 
 export interface GoalPace {
   goalId: number
@@ -54,21 +32,6 @@ export interface GoalPace {
   outstandingThisCycle: number
   isOverdue: boolean
   isFunded: boolean
-}
-
-export interface GoalGrant {
-  goalId: number
-  amount: number
-  shortfall: number
-}
-
-export interface GoalWaterfall {
-  grants: GoalGrant[]
-  totalGranted: number
-  /** What survived the waterfall — the money a wishlist reward can actually be claimed against. */
-  freeToSpend: number
-  totalRequired: number
-  shortfall: number
 }
 
 const PRIORITY_RANK: Record<string, number> = { High: 0, Medium: 1, Low: 2 }
@@ -181,52 +144,32 @@ export function cycleKeyFor(date: Date, cycleDay: number): string {
 }
 
 /**
- * Distributes `available` across the goals in funding order, capping each at its required pace.
- * Commitments fill before fun: the leftover is the free-to-spend remainder, never an implicit
- * extra contribution to whichever goal happens to sort first.
+ * What a goal of this size and deadline would ask for each cycle, for the add/edit form's preview.
+ * Deliberately the same `computePace` the cards and the server use rather than a second formula:
+ * a preview that rounded differently would quote a figure the goal then never asks for.
  */
-export function distribute(
-  goals: SavingsGoal[],
-  available: number,
+export function previewRequiredPerCycle(
+  targetAmount: number,
+  earmarkedAmount: number,
+  targetDate: string,
   today: Date,
   cycleDay: number,
-  currentCycleKey: string,
-): GoalWaterfall {
-  let remainingPool = toCents(Math.max(0, available))
-  const grants: GoalGrant[] = []
-  let totalRequired = 0
-  let totalGranted = 0
-
-  for (const goal of orderForFunding(goals)) {
-    // Only what the goal still needs *this* cycle, so anything already topped up by hand is skipped.
-    const wanted = computePace(goal, today, cycleDay, currentCycleKey).outstandingThisCycle
-    totalRequired = toCents(totalRequired + wanted)
-
-    const granted = toCents(Math.min(wanted, remainingPool))
-    remainingPool = toCents(remainingPool - granted)
-    totalGranted = toCents(totalGranted + granted)
-
-    grants.push({ goalId: goal.id, amount: granted, shortfall: toCents(Math.max(0, wanted - granted)) })
+): number {
+  if (!(targetAmount > 0) || !targetDate) return 0
+  const draft: SavingsGoal = {
+    id: 0,
+    name: '',
+    targetAmount,
+    earmarkedAmount: Math.min(Math.max(0, earmarkedAmount), targetAmount),
+    targetDate,
+    priority: 'Medium',
+    status: 'active',
+    isRecurring: false,
+    recurrenceMonths: 12,
+    cycleFundedAmount: 0,
+    createdAt: new Date().toISOString(),
   }
-
-  return {
-    grants,
-    totalGranted,
-    freeToSpend: remainingPool,
-    totalRequired,
-    shortfall: toCents(Math.max(0, totalRequired - totalGranted)),
-  }
-}
-
-/**
- * Money in the Rewards pool no goal has claimed. Floored at zero so a balance that has dropped
- * below the outstanding earmarks (a correction, a refund reversal) reports "nothing free" rather
- * than a negative amount.
- */
-export function unassigned(rewardsBalance: number, totalEarmarked: number): number {
-  const safeBalance = Number.isFinite(rewardsBalance) ? rewardsBalance : 0
-  const safeEarmarked = Number.isFinite(totalEarmarked) ? totalEarmarked : 0
-  return toCents(Math.max(0, safeBalance - safeEarmarked))
+  return computePace(draft, today, cycleDay, cycleKeyFor(today, cycleDay)).requiredPerCycle
 }
 
 export interface GoalPoolSummary {
@@ -251,9 +194,14 @@ export interface GoalPoolSummary {
    */
   outstandingThisCycleTotal: number
   /**
-   * How far the expected per-cycle Rewards inflow falls short of the requirement. Positive means at
-   * least one deadline is unreachable at the current allocation — a budget-level warning, separate
-   * from whether this cycle's contributions have been made.
+   * How far this cycle's requirement outruns what can actually meet it — the expected Rewards
+   * inflow *plus the money already free in the pool*.
+   *
+   * The free balance has to be in there. Measured against the inflow alone, a user holding 5,000
+   * free against a 1,000 goal due in two cycles was told the deadline was unreachable and offered
+   * "extend a deadline, lower a target" for money they could set aside in one tap. It also stays
+   * self-correcting: setting that money aside shrinks `unassigned` and the goal's remainder
+   * together, so the two sides move by the same amount and the verdict does not flip.
    */
   paceShortfall: number
   /** True while at least one active goal is not yet fully funded overall. */
@@ -306,7 +254,9 @@ export function summarizePool(
     requiredPerCycleTotal,
     fundedThisCycleTotal,
     outstandingThisCycleTotal,
-    paceShortfall: toCents(Math.max(0, requiredPerCycleTotal - Math.max(0, expectedInflow))),
+    paceShortfall: toCents(
+      Math.max(0, requiredPerCycleTotal - Math.max(0, expectedInflow) - freeRewards),
+    ),
     hasUnfinishedGoals,
     activeGoals,
     paces,
@@ -328,14 +278,4 @@ export function getPaceStatus(pace: GoalPace): GoalPaceStatus {
   if (pace.isFunded) return 'funded'
   if (pace.isOverdue) return 'overdue'
   return pace.outstandingThisCycle > 0 ? 'needsFunding' : 'onPace'
-}
-
-/**
- * When a goal will actually be funded at a given contribution rate, as a cycle count. Returns null
- * when the rate cannot get there at all, so callers show "not at this rate" instead of Infinity.
- */
-export function cyclesToFund(pace: GoalPace, ratePerCycle: number): number | null {
-  if (pace.remaining <= 0) return 0
-  if (ratePerCycle <= 0) return null
-  return Math.ceil(pace.remaining / ratePerCycle)
 }

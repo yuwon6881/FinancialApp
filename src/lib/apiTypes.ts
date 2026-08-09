@@ -8,6 +8,7 @@ import type {
   PayEarlyResult,
   PendingNotification,
   RecurringPayment,
+  RecurringSettlementResult,
   Transaction,
   TrendPoint,
   TodayPlanInsights,
@@ -41,8 +42,9 @@ export interface LoginCredentials {
 
 export type RegisterCredentials = LoginCredentials
 
-export type WireTransaction = Omit<Transaction, 'amount'> & {
+export type WireTransaction = Omit<Transaction, 'amount' | 'stabilityRecoveryTopUpAmount'> & {
   amount: WireAmount
+  stabilityRecoveryTopUpAmount?: WireAmount | null
 }
 
 export type WireRecurringPayment = Omit<RecurringPayment, 'amount'> & {
@@ -105,7 +107,12 @@ type WireDashboardStats = Omit<
 }
 
 export type WireActiveRecurringPayment = Omit<ActiveRecurringPayment, 'amount'> & {
-  amount: WireAmount
+  amount: WireAmount | null
+}
+
+export type WireRecurringSettlementResult = Omit<RecurringSettlementResult, 'occurrence' | 'transaction'> & {
+  occurrence: WireActiveRecurringPayment
+  transaction?: WireTransaction | null
 }
 
 export type WireTrendPoint = Omit<TrendPoint, 'balance'> & {
