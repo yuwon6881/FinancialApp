@@ -82,7 +82,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
         />
         {!props.errors.date && (
             <p className="text-[11px] text-muted-foreground mt-1 font-medium">
-              The deadline sets the pace — we work out what to set aside each cycle so you land on it.
+              Your deadline sets how much to set aside each cycle.
             </p>
         )}
       </FormField>
@@ -115,7 +115,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
             />
             {!props.errors.recurrence && (
                 <p className="text-[10px] text-muted-foreground/80 font-medium mt-1">
-                  When you mark it done, the deadline rolls forward and saving restarts from zero.
+                  Marking it done moves the deadline forward and restarts saving.
                 </p>
             )}
           </FormField>

@@ -55,18 +55,18 @@ export function StabilityRecoveryExceptionCard({
               Your emergency fund is below where it was
               <InfoHint
                 label="How putting money back is worked out"
-                text="This compares your emergency fund with the highest it has ever reached, so it only asks for money back that was actually in there. Still building it up for the first time? You will not see this."
+                text="Refills use your highest past emergency-fund balance. First-time building has no refill."
               />
             </h3>
           </div>
 
           <p className="text-xs leading-relaxed text-muted-foreground">
-            You used {formatSensitive(recovery.lastDrawdownAmount)} from your emergency fund.{' '}
+            Used {formatSensitive(recovery.lastDrawdownAmount)} from your emergency fund.{' '}
             {recovery.isOverdue
-              ? <>{formatSensitive(recovery.outstandingShortfall)} is still to go.</>
+              ? <>{formatSensitive(recovery.outstandingShortfall)} remains.</>
               : isFinalCycle
-                ? <>That leaves {formatSensitive(recovery.outstandingThisCycle)} to go, and this is the last cycle of the plan.</>
-                : <>Spread over {recovery.cyclesRemaining} cycles that is about {formatSensitive(recovery.requiredThisCycle)} each time.</>}
+                ? <>{formatSensitive(recovery.outstandingThisCycle)} remains in the final cycle.</>
+                : <>About {formatSensitive(recovery.requiredThisCycle)} per cycle for {recovery.cyclesRemaining} cycles.</>}
           </p>
 
           <div className="space-y-1.5 pt-1">

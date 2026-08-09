@@ -54,11 +54,11 @@ export function CategoryWatchExceptionCard({
             </h3>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
               {worst.status === 'Exceeded' ? (
-                <>You have spent {formatSensitive(worst.spent)} of the {formatSensitive(worst.limit)} you set — {formatSensitive(Math.abs(worst.remaining))} over.</>
+                <>Spent {formatSensitive(worst.spent)} of {formatSensitive(worst.limit)} — {formatSensitive(Math.abs(worst.remaining))} over.</>
               ) : (
-                <>You have spent {formatSensitive(worst.spent)} of the {formatSensitive(worst.limit)} you set, and at this pace the cycle finishes around {formatSensitive(worst.projectedSpend)}.</>
+                <>Spent {formatSensitive(worst.spent)} of {formatSensitive(worst.limit)}; at this pace, finish near {formatSensitive(worst.projectedSpend)}.</>
               )}
-              {others > 0 && ` ${others} other categor${others === 1 ? 'y needs' : 'ies need'} a look too.`}
+              {others > 0 && ` ${others} more need a look.`}
             </p>
           </div>
         </div>

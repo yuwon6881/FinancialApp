@@ -66,7 +66,7 @@ export function StabilityTopUpOffer({
           <span>Put money back into your emergency fund</span>
           <InfoHint
             label="What putting money back means"
-            text="Your emergency fund is money set aside for surprises. When you spend some of it, the app offers to put it back. You choose the amount and you choose every time — nothing changes unless you tick this box."
+            text="Put back used emergency-fund money; choose an amount, then tick the box."
           />
         </label>
       </div>
@@ -104,15 +104,13 @@ export function StabilityTopUpOffer({
 
           {overSafe && (
             <p className="text-xs text-amber-600 dark:text-amber-400">
-              Above {money(offer.safeCap)} this starts eating money already promised to bills or
-              savings goals this cycle. Still your call.
+              Above {money(offer.safeCap)}, bills or goals may be short this cycle. Still your call.
             </p>
           )}
 
           {!invalid && !overSafe && offer.isReduced && (
             <p className="text-xs leading-relaxed text-muted-foreground">
-              We suggested less than the full amount so your bills and savings goals still get
-              what they need this cycle.
+              The suggestion leaves room for this cycle’s bills and goals.
             </p>
           )}
 
@@ -129,8 +127,7 @@ export function StabilityTopUpOffer({
               ))}
             </ul>
             <p className="mt-2 text-xs text-muted-foreground border-t border-border/30 pt-1.5">
-              On top of the usual {Math.round(stabilityAlloc * 100)}% share, taken from Essentials,
-              Growth and Rewards in the proportions you already set.
+              Plus the usual {Math.round(stabilityAlloc * 100)}% share, split by your current plan.
             </p>
           </details>
         </div>

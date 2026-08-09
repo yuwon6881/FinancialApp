@@ -26,7 +26,7 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
       <Card className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-foreground">Recurring Bills & Subscriptions</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">Track, toggle, and manage your recurring committed outlays.</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Manage your recurring bills.</p>
           <div className="flex gap-4 mt-4">
             <div>
               <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block">Monthly Total</span>

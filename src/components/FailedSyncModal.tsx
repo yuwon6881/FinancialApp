@@ -64,8 +64,8 @@ export function FailedSyncModal({ isOpen, failedOps, onClose, onDiscard, onDisca
 
   const hasImmediateFailures = failedOps.some(op => op.retryCount < 5)
   const failureSummary = hasImmediateFailures
-    ? "These changes couldn't be synced to the server and were removed from the active queue. Permanent client errors are stopped immediately; temporary failures are retried up to 5 times. They were never saved — discard them to clear this notice, or note them down to re-enter manually."
-    : "These changes couldn't be synced to the server after 5 attempts and were removed from the active queue. They were never saved — discard them to clear this notice, or note them down to re-enter manually."
+    ? 'These changes were not saved and were removed from the sync queue. Permanent errors stop immediately; temporary failures retry up to five times. Discard this notice or re-enter the changes.'
+    : 'These changes were not saved after five sync attempts and were removed from the queue. Discard this notice or re-enter them.'
 
   return (
     <BottomSheet

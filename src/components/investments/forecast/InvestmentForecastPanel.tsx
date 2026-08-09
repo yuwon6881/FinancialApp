@@ -52,7 +52,7 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
     return (
       <section aria-labelledby="forecast-title" className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5">
         <h2 id="forecast-title" className="text-base font-bold text-foreground">Investment forecast</h2>
-        <p className="mt-2 text-xs text-muted-foreground">A complete current portfolio value is needed before a forecast can be calculated.</p>
+        <p className="mt-2 text-xs text-muted-foreground">A complete current portfolio value is needed to calculate this.</p>
       </section>
     )
   }
@@ -68,7 +68,7 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
       >
         <div>
           <h2 id="forecast-title" className="text-base font-bold text-foreground">Investment forecast</h2>
-          <p className="mt-1 text-xs text-muted-foreground">Explore possible long-term outcomes without changing any money or recorded activity.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Explore long-term outcomes without changing your records.</p>
         </div>
         <ChevronDown className="size-4 -rotate-90 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-foreground" />
       </Button>
@@ -77,7 +77,7 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
         title="Investment forecast"
-        description="Explore possible long-term outcomes without changing any money or recorded activity."
+        description="Explore long-term outcomes without changing your records."
         maxWidthClassName="max-w-4xl"
         initialFocusRef={initialFocusRef}
       >
@@ -139,9 +139,9 @@ export function InvestmentForecastPanel({ portfolio, masked }: {
           <details className="mt-3 rounded-xl border border-border/50 bg-muted/15 p-3">
             <summary className="cursor-pointer text-xs font-bold text-foreground">How this forecast was worked out</summary>
             <div className="mt-3 space-y-2 text-[11px] leading-relaxed text-muted-foreground">
-              <p>It tests 10,000 possible outcomes using your investment-plan mix. The estimates use {percentage(model.annualReturn)} average yearly growth and allow for returns to vary by about {percentage(model.annualVolatility)} a year. Your own past return is historical context, not a promise about the future.</p>
-              <p>The growth and variation figures come from a published long-term capital-markets model, not from your own history. The model assumes today’s portfolio and future deposits follow your plan, with deposits added at month-end.</p>
-              <p>These results are hypothetical, may change over time, and are not guaranteed. They exclude future tax, investment expenses, and exchange-rate changes.</p>
+              <p>It tests 10,000 outcomes using your plan. The model uses {percentage(model.annualReturn)} average annual growth and about {percentage(model.annualVolatility)} annual variation. Past returns are context, not a promise.</p>
+              <p>Growth and variation come from a published long-term capital-markets model, not your history. It follows today’s portfolio and plan, adding deposits at month-end.</p>
+              <p>Results are hypothetical, not guaranteed, and exclude future tax, expenses, and exchange-rate changes.</p>
               {forecast.initializationMs !== null && <p className="sr-only">The forecast paths were prepared in {Math.round(forecast.initializationMs)} milliseconds.</p>}
             </div>
           </details>

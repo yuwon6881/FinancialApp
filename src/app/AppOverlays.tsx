@@ -83,7 +83,7 @@ export function AppOverlays({
         onDiscardSubscription={financial.handleDiscardSubscription}
         onRemoveSubscription={(recurringPaymentId) => dialogs.setConfirmModalData({
           title: 'Remove Subscription',
-          message: 'Are you sure you want to delete this recurring subscription? This will cancel all future notifications for this subscription.',
+          message: 'Delete this subscription? Future reminders stop; past ledger entries stay.',
           confirmText: 'Remove',
           onConfirm: () => financial.handleDeletePayment(recurringPaymentId)
         })}

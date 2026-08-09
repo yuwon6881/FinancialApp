@@ -206,7 +206,7 @@ describe('InvestmentForecastPanel', () => {
     fireEvent.click(screen.getByRole('switch', { name: /Show in today/ }))
     expect(screen.getByRole('switch', { name: /Show in today/ }).getAttribute('aria-checked')).toBe('true')
     fireEvent.change(screen.getByLabelText('Forecast years'), { target: { value: '40' } })
-    expect(screen.getByText(/Years 31–50 extend beyond/)).toBeTruthy()
+    expect(screen.getByText(/Years 31–50 use a less certain/)).toBeTruthy()
   })
 
   it('masks values, disables controls, and keeps an accessible data table', () => {

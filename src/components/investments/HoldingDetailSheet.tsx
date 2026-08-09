@@ -141,8 +141,7 @@ export function HoldingDetailSheet({ holding, appCurrency, masked, onClose }: {
             {foreign && (
               <div className="mt-3 rounded-lg bg-background/50 p-2.5 text-[10px] leading-relaxed text-muted-foreground">
                 <p>
-                  This line is in {holding.currency}, the fund’s own currency. Your gain is counted in{' '}
-                  {appCurrency}, so the two can disagree.
+                  Prices use {holding.currency}; gains use {appCurrency}, so they may differ.
                 </p>
                 {gainSplit !== undefined && (
                   <p className="mt-1.5">

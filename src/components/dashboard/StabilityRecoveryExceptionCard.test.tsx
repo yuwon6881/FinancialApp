@@ -54,8 +54,8 @@ describe('StabilityRecoveryExceptionCard', () => {
     render(<StabilityRecoveryExceptionCard recovery={recovery()} formatSensitive={format} />)
 
     expect(screen.getByText('Your emergency fund is below where it was')).toBeTruthy()
-    expect(screen.getByText(/You used \$3000\.00 from your emergency fund/)).toBeTruthy()
-    expect(screen.getByText(/Spread over 3 cycles/)).toBeTruthy()
+    expect(screen.getByText(/Used \$3000\.00 from your emergency fund/)).toBeTruthy()
+    expect(screen.getByText(/About \$1000\.00 per cycle for 3 cycles/)).toBeTruthy()
     expect(screen.getByText('Emergency fund progress')).toBeTruthy()
     expect(screen.getByText(/70%/)).toBeTruthy()
   })
@@ -69,7 +69,7 @@ describe('StabilityRecoveryExceptionCard', () => {
       />
     )
 
-    expect(screen.getByText(/this is the last cycle of the plan/)).toBeTruthy()
+    expect(screen.getByText(/\$400\.00 remains in the final cycle/)).toBeTruthy()
   })
 
   // Past the window cyclesRemaining sits at 1 forever, so without the overdue flag the card
@@ -84,7 +84,7 @@ describe('StabilityRecoveryExceptionCard', () => {
     )
 
     expect(screen.queryByText(/last cycle of the plan/)).toBeNull()
-    expect(screen.getByText(/\$746\.80 is still to go/)).toBeTruthy()
+    expect(screen.getByText(/\$746\.80 remains/)).toBeTruthy()
   })
 
   // The card is informative only: putting money back happens by ticking the top-up offer on a

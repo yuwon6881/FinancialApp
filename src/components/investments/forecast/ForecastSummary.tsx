@@ -49,7 +49,7 @@ export function ForecastSummary({
           </p>
           <InfoHint
             label="the middle estimate"
-            text="Half of the 10,000 simulated outcomes ended above this amount and half below it. It is not a promise."
+            text="Half of outcomes finish above this amount and half below; it is not a promise."
           />
         </div>
         <strong className="mt-1 block break-words text-xl text-foreground">{money(ending)}</strong>
@@ -60,7 +60,7 @@ export function ForecastSummary({
         </p>
         {todayMoney && (
           <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-            Shown in today’s money — what that amount would buy at today’s prices.
+            Shown in today’s money — what this could buy at today’s prices.
           </p>
         )}
       </article>

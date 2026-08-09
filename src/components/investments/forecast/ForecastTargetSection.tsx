@@ -43,7 +43,7 @@ export function ForecastTargetSection({
       <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-border/50 bg-muted/15 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-bold text-foreground">Want to aim for a number?</p>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Add a target and this will show your chances of reaching it, and the monthly amount that would get you there.</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Add a target to see the chance of reaching it and the required monthly amount.</p>
         </div>
         <Button variant="outline" size="sm" disabled={masked} onClick={onAdd} className="shrink-0 self-end sm:self-auto">Add a target</Button>
       </div>
@@ -57,7 +57,7 @@ export function ForecastTargetSection({
     <div className="mt-5 space-y-4 rounded-2xl border border-border/50 bg-muted/15 p-4">
       <FormField
         label={<span className="flex justify-between gap-3"><span>Target amount</span><strong className="text-foreground">{money(target)}</strong></span>}
-        hint={`The monthly amount below aims to reach this in the middle simulated outcome after ${years} years.`}
+        hint={`Monthly amount for the middle outcome after ${years} years.`}
       >
         <RangeInput aria-label="Forecast target amount" min={0} max={targetMax} step={targetStep} value={Math.min(target, targetMax)} disabled={masked} onChange={event => onChange(Number(event.target.value))} />
       </FormField>
@@ -68,7 +68,7 @@ export function ForecastTargetSection({
             <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Chance of reaching your target</p>
             <InfoHint
               label="the chance of reaching your target"
-              text="The share of the 10,000 simulated paths that ended at or above your target, using the monthly amount you picked."
+              text="Share of simulated paths that reach the target with your chosen amount."
             />
           </div>
           <strong className="mt-1 block break-words text-base text-foreground">
@@ -80,7 +80,7 @@ export function ForecastTargetSection({
             <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Monthly amount for your target</p>
             <InfoHint
               label="the monthly amount for your target"
-              text="Adding this much every month would reach your target in the middle simulated outcome. Better or worse markets would change it."
+              text="Amount for the middle outcome; markets may vary."
             />
           </div>
           <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">

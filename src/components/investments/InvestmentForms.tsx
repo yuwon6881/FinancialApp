@@ -394,7 +394,7 @@ export const ActivityForm = ({ portfolio, initial, pendingActivities, busy, scan
     </>}
     </div>
     {trade && <p className="text-[10px] text-muted-foreground">Fill any two of units, unit price, and gross amount — the third is worked out for you.</p>}
-    {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && <p className="text-[10px] text-muted-foreground">Amounts stay in {selectedInstrument.currency} and are reported in {portfolio?.appCurrency} at that date's market rate. Use "Manage cash" to convert cash into {selectedInstrument.currency} before trading.</p>}
+    {selectedInstrument && selectedInstrument.currency !== portfolio?.appCurrency && <p className="text-[10px] text-muted-foreground">Amounts use {selectedInstrument.currency}; reports use {portfolio?.appCurrency} at that date's rate. Convert cash in "Manage cash" before trading.</p>}
     <FormActions busy={busy} onCancel={() => { clearScan(); onCancel() }} submitLabel="Save activity" />
   </form>
 }
@@ -590,7 +590,7 @@ export const CashForm = ({ portfolio, initial, pendingCashFlows, busy, scanDraft
       )}
       <Field label="Date" plain><DatePicker value={date} onChange={setDate} max={today()} className="w-full" /></Field>
     </div>
-    <p className="text-[10px] text-muted-foreground">For money moved in or out of the broker account itself, and for converting between currencies before a trade or after a sale. Buys, sells, dividends, and fees adjust cash on their own.</p>
+    <p className="text-[10px] text-muted-foreground">Use for deposits, withdrawals, and currency conversions. Trades, dividends, and fees adjust cash automatically.</p>
     <FormActions busy={busy} onCancel={() => { clearScan(); onCancel() }} submitLabel={initial ? 'Save changes' : type === 'Conversion' ? 'Record conversion' : type === 'Withdrawal' ? 'Record withdrawal' : 'Record deposit'} disabled={!accountId} />
   </form>
 }

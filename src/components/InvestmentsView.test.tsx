@@ -135,7 +135,7 @@ describe('InvestmentsView provider call boundaries', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Manage portfolio/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Investments (1)' }))
-    expect(screen.getByText(/Delete is available when an investment has no history/)).toBeTruthy()
+    expect(screen.getByText(/Delete only unused investments/)).toBeTruthy()
   })
 
   it('debounces explicit searches and starts at three characters', async () => {

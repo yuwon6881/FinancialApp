@@ -196,7 +196,7 @@ export function describeDeleteGoal(goal: SavingsGoal | undefined, currency: stri
   return {
     title: 'Delete Savings Goal',
     message: goal && goal.earmarkedAmount > 0
-      ? `Delete "${goal.name}"? The ${formatCurrencyVal(goal.earmarkedAmount, currency)} set aside for it goes back to your free rewards — no money leaves your ledger.`
+      ? `Delete "${goal.name}"? ${formatCurrencyVal(goal.earmarkedAmount, currency)} returns to free Rewards; no ledger money moves.`
       : `Delete "${goal?.name || 'this savings goal'}"? This removes the commitment from your rewards pool.`,
     confirmText: 'Delete',
   }
@@ -208,13 +208,13 @@ export function describeCompleteGoal(goal: SavingsGoal | undefined, currency: st
   if (goal?.isRecurring) {
     return {
       title: 'Complete This Round',
-      message: `Mark "${goal.name}" done for this round? ${amount} will be spent from Rewards and recorded in your ledger. Its deadline then rolls forward by ${goal.recurrenceMonths} month(s). Deleting that ledger entry restores this round and its date.`,
+      message: `Mark "${goal.name}" done? ${amount} is recorded in Rewards. The deadline moves forward ${goal.recurrenceMonths} month(s); deleting that entry restores this round.`,
       confirmText: 'Roll Forward',
     }
   }
   return {
     title: 'Complete Savings Goal',
-    message: `Mark "${goal?.name || 'this goal'}" done? ${amount} will be spent from Rewards and recorded in your ledger. Deleting that ledger entry restores the commitment.`,
+    message: `Mark "${goal?.name || 'this goal'}" done? ${amount} is recorded in Rewards. Deleting that ledger entry restores the commitment.`,
     confirmText: 'Complete',
   }
 }

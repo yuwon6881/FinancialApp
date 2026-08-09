@@ -190,8 +190,8 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
           <AlertTriangle className="size-3.5 shrink-0 mt-px" />
           <span>
             Your goals need {formatSensitive(summary.requiredPerCycleTotal)} a cycle —{' '}
-            {formatSensitive(paceShortfall)} more than your rewards budget. Push a deadline out, lower a
-            target, or raise your rewards allocation.
+            {formatSensitive(paceShortfall)} above your rewards budget. Extend a deadline, lower a
+            target, or raise your Rewards share.
           </span>
         </p>
       ) : null}

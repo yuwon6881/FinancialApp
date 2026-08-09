@@ -79,7 +79,7 @@ export function InvestmentPlanPanel({
               <InfoHint
                 label="the three-fund plan"
                 align="left"
-                text="You pick a target mix of three baskets. This card shows the mix you actually hold across all your brokers, and what to buy next to get back to target."
+                text="See your target mix, current holdings, and what to buy next."
               />
             </h2>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -126,7 +126,7 @@ export function InvestmentPlanPanel({
               <InfoHint
                 label="how your next investment is split"
                 align="left"
-                text="All uninvested cash already in your brokerage accounts, plus your routine Growth money when available. If a basket has drifted low, more goes there. For a large gap, the total rises to the amount needed to restore your target without selling."
+                text="Uses broker cash and available Growth money; larger gaps receive more, with no selling."
               />
             </h3>
             <span className="rounded-full border border-border/60 bg-background/60 px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
@@ -177,7 +177,7 @@ export function InvestmentPlanPanel({
             <InfoHint
               label="what you hold versus your target"
               align="left"
-              text="The top bar is the mix you hold today; the bottom bar is the mix you are aiming for. The closer they look, the better."
+              text="Top bar: current mix. Bottom bar: target mix."
             />
           </h3>
           <div className="mt-3 space-y-3">
@@ -213,7 +213,7 @@ export function InvestmentPlanPanel({
               <InfoHint
                 label="what to do next"
                 align="left"
-                text="Complete the missing setup so every holding can be included in your three-fund plan."
+                text="Complete setup so every holding joins the plan."
               />
             </h3>
           </div>

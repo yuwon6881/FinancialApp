@@ -326,7 +326,7 @@ export function InvestmentPlanSection() {
           <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
             <p className="flex items-start gap-2 text-[10px] leading-relaxed text-muted-foreground">
               <Info className="mt-0.5 size-3.5 shrink-0 text-blue-500" />
-              Drift is the percentage-point gap between a sleeve's actual share and its target. For example, 62% versus a 66% target is 4 points off.
+              Drift is the gap between a basket’s actual share and its target. 62% vs 66% is 4 points off.
             </p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <FormField
@@ -362,7 +362,7 @@ export function InvestmentPlanSection() {
 
       <section className="rounded-2xl border border-border/60 bg-card p-5 sm:p-6">
         <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">Investment classification <RowSyncStatus isSyncing={orderSyncing} isPending={orderPending} entityLabel="classification order" /></h3>
-        <p className="mt-1 text-[11px] text-muted-foreground">Every open holding needs an explicit sleeve. Multiple funds may share one sleeve.</p>
+        <p className="mt-1 text-[11px] text-muted-foreground">Every open holding needs a basket. Multiple funds may share one basket.</p>
         <Reorder.Group
           axis="y"
           values={orderedAssignments}

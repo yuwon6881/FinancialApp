@@ -138,7 +138,7 @@ export function ReceiptSplitItemRow({
                 </span>
                 <InfoHint
                   label="What the extras on this line are"
-                  text="Tax, service charge and any discount from the bottom of the receipt, split across the items they apply to. This is this line's share of them."
+                  text="Tax, service charges, and discounts are split across applicable items. This line's share."
                   align="left"
                 />
               </span>

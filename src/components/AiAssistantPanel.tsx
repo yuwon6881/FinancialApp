@@ -259,8 +259,8 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
                 ))}
               </div>
               <p className="mt-4 max-w-md text-[10px] leading-relaxed text-muted-foreground/80">
-                Relevant financial details are sent to the configured AI provider.
-                {sensitiveMode ? ' Sensitive mode keeps amounts hidden and disables record changes.' : ' Record changes still require your confirmation, except recurring on/off toggles.'}
+                Details go to the configured AI provider.
+                {sensitiveMode ? ' Sensitive mode hides amounts and disables changes.' : ' Changes still need your confirmation, except recurring toggles.'}
               </p>
             </div>
           ) : (

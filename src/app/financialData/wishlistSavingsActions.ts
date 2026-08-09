@@ -100,7 +100,7 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
     const item = wishlist.find(wish => wish.id === id)
     setConfirmModalData({
       title: 'Delete Wishlist Item',
-      message: `Delete "${item?.name || 'this wishlist item'}"? This removes the savings goal from your wishlist.`,
+      message: `Delete "${item?.name || 'this wishlist item'}"? This removes the item from your wishlist.`,
       confirmText: 'Delete',
       onConfirm: () => { handleDeleteWishlistItem(id) },
     })

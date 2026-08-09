@@ -177,7 +177,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
           <h2 className="text-2xl font-bold tracking-tight text-foreground">Settings</h2>
         </div>
         <p className="text-xs text-muted-foreground">
-          Manage financial model rules, app preferences, and transaction categories.
+          Manage your budget, app, and categories.
         </p>
       </div>
 
@@ -752,7 +752,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
 
                 {view.categoryUsage && view.visibleCategories.length > 0 && (
                   <p className="text-[10px] text-muted-foreground px-0.5">
-                    Usage over the last {view.USAGE_LOOKBACK_CYCLES} cycles, least used first. Unused and rarely used categories are good candidates to remove.
+                    Usage over the last {view.USAGE_LOOKBACK_CYCLES} cycles, least used first.
                   </p>
                 )}
                 {view.usageError && (

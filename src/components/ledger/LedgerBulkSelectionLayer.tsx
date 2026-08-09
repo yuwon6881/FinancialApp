@@ -93,9 +93,9 @@ export function LedgerBulkSelectionLayer({
         title={`Delete ${bulk.selectedCount} transaction${bulk.selectedCount === 1 ? '' : 's'}?`}
         message={(
           <div className="space-y-2">
-            <p>This removes the selected ledger entries immediately and queues the change if you are offline.</p>
-            <p>Income Auto-Split selections delete their parent and generated split rows together. Attached Vault documents will be kept.</p>
-            <p className="font-semibold text-orange-500/90">You can use Undo in the success notification to restore this batch.</p>
+            <p>This removes the selected entries immediately and queues the change if offline.</p>
+            <p>Income Auto-Split selections include the parent and split rows. Vault documents stay.</p>
+            <p className="font-semibold text-orange-500/90">Undo is available in the success notification.</p>
           </div>
         )}
         confirmText="Delete selected"

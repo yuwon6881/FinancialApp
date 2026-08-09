@@ -131,7 +131,7 @@ export const SavingsGoalContributeSheet: React.FC<SavingsGoalContributeSheetProp
         </FormField>
 
         <p className="text-[11px] text-muted-foreground font-medium">
-          This only changes which part of your rewards is spoken for — no transaction is added to your ledger.
+          This reserves Rewards without adding a ledger transaction.
         </p>
 
         <ModalActions className="pt-2">

@@ -244,8 +244,7 @@ export function ReceiptSplitSheet({
             <div>
               <h3 className="text-sm font-bold">Items</h3>
               <p className="text-[11px] text-muted-foreground">
-                Use − and + to say how many are yours, or take it down to 0 if none of it is.
-                Delete a line only if it was never on the receipt — swipe it left on a phone.
+                Use −/+ for your quantity. Delete a line only if it was not on the receipt.
               </p>
             </div>
 

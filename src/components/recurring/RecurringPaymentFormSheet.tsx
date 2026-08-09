@@ -85,7 +85,7 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
       <form noValidate onSubmit={onSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {editingPayment && (
           <p className="sm:col-span-2 rounded-xl border border-blue-500/15 bg-blue-500/5 px-3.5 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
-            Changes apply to unpaid and future bills. Paid bills keep the details recorded in the ledger.
+            Changes apply to unpaid and future bills. Paid bills keep their ledger details.
           </p>
         )}
         <FormField label="Subscription name" required error={errors.name}>
@@ -147,7 +147,7 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
           label="How it's paid"
           required
           error={errors.paymentMode}
-          hint="Auto deduct means the money leaves your account on its own each cycle. Manual payment means you send it yourself — only these can be paid early."
+          hint="Auto deduct bills leave your account automatically. Manual bills can be paid early."
         >
           <CustomSelect
             ariaLabel="How it's paid"
@@ -172,7 +172,7 @@ export const RecurringPaymentFormSheet: React.FC<RecurringPaymentFormSheetProps>
             className="w-full"
           />
           <p className="text-[10px] leading-relaxed text-muted-foreground">
-            Your start date sets the recurring payment date — monthly bills recur on this day each cycle; annual bills recur on this date each year.
+            Bills recur on this day each month or year.
           </p>
         </FormField>
 

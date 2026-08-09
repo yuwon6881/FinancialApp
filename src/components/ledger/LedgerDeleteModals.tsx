@@ -71,17 +71,16 @@ export function DeleteTransactionModal({
       <div className="space-y-3 text-xs leading-relaxed text-muted-foreground">
         {isSplitSubRecord ? (
           <p>
-            This transaction is a <span className="font-semibold text-foreground">split transfer sub-record</span> of an Income Auto-Split. Deleting it will delete the main Income record and all other category splits associated with it.
+            This split belongs to an Income Auto-Split. Deleting it also deletes the parent and other splits.
           </p>
         ) : isIncomeMain ? (
           <p>
-            This is the <span className="font-semibold text-foreground">main Income Auto-Split record</span>. Deleting it will delete all its associated category sub-split records as well.
+            This is the main Income Auto-Split record. Deleting it also deletes its category splits.
           </p>
         ) : isCommitmentCompletion ? (
           <div className="space-y-2">
             <p>
-              Deleting this ledger entry will undo the commitment completion, restore the amount
-              that was set aside, and roll its deadline back.
+              Deleting this entry restores the amount and deadline for the commitment.
             </p>
             <div className="rounded-lg border border-border/60 bg-muted/30 p-4 space-y-2.5">
               <div className="flex items-start justify-between gap-4">
@@ -185,19 +184,19 @@ export function EditDisabledModal({ isOpen, transaction, onClose }: EditDisabled
         {isCommitmentCompletion ? (
           <>
             <p>
-              This transaction records a <span className="font-semibold text-foreground">commitment completion</span> and must stay matched to the amount and date that were rolled forward.
+              This commitment-completion entry must stay linked to its saved amount and date.
             </p>
             <p>
-              Delete it to restore the commitment, make your changes there, then complete it again.
+              Edit the commitment, then complete it again.
             </p>
           </>
         ) : (
           <>
             <p>
-              This transaction is a <span className="font-semibold text-foreground">split transfer sub-record</span> generated automatically from an Income Auto-Split.
+              This row was generated from an Income Auto-Split.
             </p>
             <p>
-              To edit this transaction's amount, description, or split allocations, please find and edit the main <span className="font-semibold text-foreground">Income (Auto-Split)</span> record.
+              Edit the main <span className="font-semibold text-foreground">Income (Auto-Split)</span> record to change its amount, description, or allocations.
             </p>
           </>
         )}

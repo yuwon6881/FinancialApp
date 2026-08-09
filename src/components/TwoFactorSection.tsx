@@ -256,7 +256,7 @@ export const TwoFactorSection: React.FC<TwoFactorSectionProps> = ({ hideSensitiv
       {loaded && !enabled && setupSecret && (
         <div className="space-y-3">
           <p className="text-[11px] text-muted-foreground">
-            Scan this QR code with Microsoft Authenticator (or any TOTP app), then enter the 6-digit code it shows.
+            Scan the QR code in your authenticator app, then enter its 6-digit code.
           </p>
           {qrDataUrl && (
             <div className="flex justify-center bg-white rounded-xl p-3">

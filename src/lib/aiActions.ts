@@ -218,10 +218,10 @@ export async function requestAiLedgerDelete(
   deps.setConfirmModalData({
     title: 'Delete Transaction',
     message: deletesSplitGroup
-      ? `Delete "${tx.description}"? This is part of an Income Auto-Split, so the main Income record and all related splits will be deleted.`
+      ? `Delete "${tx.description}"? Its Income Auto-Split parent and related splits will also be deleted.`
       : tx.savingsGoalId != null
-        ? `Delete "${tx.description}"? This will restore the completed commitment, including its saved amount and prior deadline.`
-      : `Delete "${tx.description}"? This action will only proceed after you confirm here.`,
+        ? `Delete "${tx.description}"? This restores the commitment's saved amount and deadline.`
+      : `Delete "${tx.description}"? Confirm to continue.`,
     confirmText: 'Delete',
     onConfirm: () => deps.handleDeleteTransaction(tx.id, tx),
   })

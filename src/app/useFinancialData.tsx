@@ -1127,7 +1127,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       // Completion deletion rolls back both the ledger row and goal, so it cannot use the transaction-only outbox.
       if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         setDeletingTxId(null)
-        showToast('Undoing a completed savings goal needs a live connection so the linked ledger row and goal snapshot stay consistent.', 'Available online only', 'warning')
+        showToast('Undo requires a live connection to restore the linked ledger entry and goal.', 'Available online only', 'warning')
         return
       }
       const syncIds = [deleteId, String(transaction.savingsGoalId)]
@@ -1244,7 +1244,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     const payment = recurringPayments.find(p => p.id === id)
     setConfirmModalData({
       title: 'Delete Subscription',
-      message: `Delete "${payment?.name || 'this recurring subscription'}"? This will cancel all future notifications for this subscription.`,
+      message: `Delete "${payment?.name || 'this recurring subscription'}"? Future reminders stop; past ledger entries stay.`,
       confirmText: 'Delete',
       onConfirm: () => { handleDeletePayment(id) }
     })

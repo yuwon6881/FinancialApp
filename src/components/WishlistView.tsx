@@ -383,7 +383,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
           </HorizontalRail>
         ) : (
           <Card className="p-5 border-dashed text-center">
-            <p className="text-xs text-muted-foreground">No rewards yet. Add something to save toward.</p>
+            <p className="text-xs text-muted-foreground">No rewards yet. Add one to save toward.</p>
           </Card>
         )}
       </section>
@@ -407,7 +407,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
 
             <FormField
               label="Purchased date"
-              hint="Select the date this reward was acquired. A ledger transaction will be logged on this date."
+              hint="Use this date for the ledger entry."
             >
               <DatePicker
                 value={purchaseDateInput}

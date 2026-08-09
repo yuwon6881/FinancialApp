@@ -84,7 +84,7 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
   return (
     <section aria-labelledby="allocation-title" className="app-panel min-w-0 flex flex-col rounded-2xl border border-border/60 bg-card/92 p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0"><h2 id="allocation-title" className="text-base font-bold text-foreground">Where your money sits</h2><p className="mt-1 text-xs text-muted-foreground">Everything you hold, including cash. Pick a slice to see just those investments below.</p></div>
+        <div className="min-w-0"><h2 id="allocation-title" className="text-base font-bold text-foreground">Where your money sits</h2><p className="mt-1 text-xs text-muted-foreground">See holdings and cash by basket; select a slice to filter below.</p></div>
         <div className="w-full shrink-0 sm:w-auto">
           <CustomSelect
             value={mode}

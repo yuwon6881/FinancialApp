@@ -213,7 +213,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
               </span>
             )}
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">Track what you own, across any broker.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Track holdings across your brokers.</p>
         </div>
         {onExplainWithAi && (
           <Button
@@ -232,13 +232,13 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
       {(isOffline || loadError) && (
         <div role="status" className="flex items-center gap-2 rounded-xl border border-amber-500/25 bg-amber-500/8 px-4 py-3 text-xs text-amber-700 dark:text-amber-300">
           <CloudOff className="size-4 shrink-0" />
-          {isOffline ? 'You are offline, so this is the last saved copy. Edits are queued and prices cannot refresh yet.' : loadError}
+          {isOffline ? 'Offline: showing saved data. Edits queue; prices cannot refresh.' : loadError}
         </div>
       )}
 
       {!portfolio?.marketDataConfigured && (
         <div className="rounded-xl border border-blue-500/20 bg-blue-500/7 px-4 py-3 text-xs text-muted-foreground">
-          Live prices are not switched on yet. You can still add accounts, investments, and activity, but valuations will remain unavailable until market data is configured.
+          Live prices are unavailable. You can still record activity; values update when market data is configured.
         </div>
       )}
 
@@ -513,7 +513,7 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
       ? {
           label: 'Sent beyond earmark',
           value: format(Math.abs(undeployed)),
-          hint: 'You have sent your broker more than your budget earmarked for Growth — money from another bucket, or a Growth allocation not yet recorded.',
+          hint: 'More sent to your broker than your Growth budget; another bucket may have covered it, or Growth is not recorded.',
           color: 'text-amber-500',
         }
       : {
@@ -573,7 +573,7 @@ const SummaryCards = ({ portfolio, masked }: { portfolio: InvestmentPortfolio; m
         {
           label: 'Your yearly return',
           value: annualReturn === undefined ? 'Not available yet' : masked ? '••••' : `${annualReturn > 0 ? '+' : ''}${(annualReturn * 100).toFixed(1)}% a year`,
-          hint: 'The rate your money has actually earned, counting when each deposit went in. A deposit made last month has not had a year to grow, so this is fairer than comparing your total gain to what you paid.',
+          hint: 'Average yearly return, adjusted for when each deposit went in.',
           color: annualReturn === undefined ? undefined : tone(annualReturn),
         },
       ],
@@ -687,7 +687,7 @@ const AccountsAndInstruments = ({
                         entityLabel="account"
                       />
                       {!value.canDelete && !value.canArchive && !value.isArchived && (
-                        <span title="Close every position and bring all cash balances to zero before archiving." className="flex cursor-help items-center gap-1.5 rounded-md px-1.5 py-0.5 text-amber-500 hover:bg-amber-500/10">
+                        <span title="Close all positions and set cash to zero before archiving." className="flex cursor-help items-center gap-1.5 rounded-md px-1.5 py-0.5 text-amber-500 hover:bg-amber-500/10">
                           <Info className="size-3.5" />
                           <span className="text-[10px] font-medium">Cannot archive</span>
                         </span>
@@ -761,7 +761,7 @@ const AccountsAndInstruments = ({
                 </div>
               ))}
             </div>
-            <p className="mt-3 text-[10px] text-muted-foreground">Delete is available when an investment has no history. Once it has activity, close all units to archive it while preserving that history.</p>
+            <p className="mt-3 text-[10px] text-muted-foreground">Delete only unused investments. Close active ones to keep their history.</p>
           </div>}
         </div>
       </BottomSheet>

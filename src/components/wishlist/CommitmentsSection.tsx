@@ -114,7 +114,7 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
 
       {!hasAny ? (
         <Card className="p-5 border-dashed text-center">
-          <p className="text-xs text-muted-foreground">No commitments yet. Add a goal and we’ll work out what to set aside each cycle.</p>
+          <p className="text-xs text-muted-foreground">No commitments yet. Add a goal to save a set amount each cycle.</p>
         </Card>
       ) : isSolo ? (
         <div>{goalCards}{completedChips}</div>

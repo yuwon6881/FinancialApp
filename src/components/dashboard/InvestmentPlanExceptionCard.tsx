@@ -48,8 +48,8 @@ export function InvestmentPlanExceptionCard({
             </h3>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
               {incomplete
-                ? allocation.incompleteReasons[0] ?? 'Classify every open investment and complete its market valuation.'
-                : `${alertSleeve?.label ?? 'A sleeve'} is ${Math.abs(alertSleeve?.driftPercentagePoints ?? 0).toFixed(1)} percentage points from target.`}
+                ? allocation.incompleteReasons[0] ?? 'Classify every open investment to complete its valuation.'
+                : `${alertSleeve?.label ?? 'A basket'} is ${Math.abs(alertSleeve?.driftPercentagePoints ?? 0).toFixed(1)} points from target.`}
             </p>
           </div>
         </div>

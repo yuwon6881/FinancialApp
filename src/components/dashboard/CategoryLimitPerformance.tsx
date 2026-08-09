@@ -36,7 +36,7 @@ export function CategoryLimitPerformance({
             <div className="space-y-1">
               <h4 className="text-xs font-bold text-foreground">No category spending guides configured</h4>
               <p className="max-w-md text-[11px] text-muted-foreground leading-relaxed">
-                Set budget limits on categories to track spend pace, monitor warning thresholds, and keep your cycle budget on track.
+                Set category limits to track spending pace and warnings.
               </p>
             </div>
           </div>
@@ -79,7 +79,7 @@ export function CategoryLimitPerformance({
             <Gauge className="size-4 text-blue-500" /> Category limit performance
             <InfoHint
               label="category limit performance"
-              text="Each bar shows what you have spent so far against the budget you set for that category. The small vertical marker shows where the bar is heading by the end of this cycle if you keep spending at the same pace."
+              text="Bars show spending against your limit; marker projects the cycle-end total."
             />
           </h3>
           <p className="mt-1 text-[11px] text-muted-foreground">
@@ -163,7 +163,7 @@ export function CategoryLimitPerformance({
       {anyProjectionMarker && (
         <p className="mt-3 flex items-center gap-2 text-[10px] text-muted-foreground">
           <span aria-hidden className="inline-block h-3 w-0 border-r-2 border-amber-500/90" />
-          Marks where a bar ends up by the close of this cycle if spending keeps to the same pace.
+          Projected end-of-cycle total at the current pace.
         </p>
       )}
     </section>

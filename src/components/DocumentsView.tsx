@@ -466,7 +466,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
       <CustomConfirmModal
         isOpen={docToDelete !== null}
         title="Delete Document"
-        message="This permanently removes the file from your vault and cannot be undone. If you still need it as tax evidence, download a copy first."
+        message="Delete this file permanently? Download a copy first if you still need it for tax evidence."
         confirmText="Delete"
         isConfirming={deletingDocumentId !== null}
         confirmingText="Deleting…"
@@ -510,7 +510,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
       <CustomConfirmModal
         isOpen={isBulkDeleteOpen}
         title={`Delete ${selectedIds.size} documents?`}
-        message="This permanently removes every selected original file. Successful deletions cannot be undone; any storage failure will be reported and left in the Vault."
+        message="Delete the selected files permanently? Successful deletions cannot be undone; failed files stay in the Vault."
         confirmText="Delete selected"
         isConfirming={isBulkDeleting}
         confirmingText="Deleting…"

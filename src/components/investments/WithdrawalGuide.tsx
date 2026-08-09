@@ -55,7 +55,7 @@ export function WithdrawalGuide({ allocation, constituentsBySleeve, money, color
           <InfoHint
             label="taking money out"
             align="left"
-            text="Enter what you need and this works out where it should come from: any spare cash at your broker first, then the baskets holding more than their share. Selling that way keeps your mix close to target."
+            text="Uses spare broker cash first, then baskets above target, to keep the mix balanced."
           />
         </h3>
         <Button
