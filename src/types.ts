@@ -314,6 +314,7 @@ export interface RecurringPayment {
 export interface PushStatus {
   enabled: boolean
   deviceRegistered: boolean
+  categoryAlertsEnabled: boolean
 }
 
 export interface RecurringReminderSettings {

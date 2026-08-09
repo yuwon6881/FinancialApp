@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import type { AiChatResponse, AiConversationState } from '../lib/api/ai'
+import type { AiChatResponse, AiConversationState, AiUiAction } from '../lib/api/ai'
 import type { AiInvocationRequest } from './useAiConversation'
 
 // Mock the API module so no network happens and we can assert on call arguments.
@@ -10,6 +10,7 @@ vi.mock('../lib/api/ai', () => ({
   chatWithAi: vi.fn(),
   fetchAiConversation: vi.fn(),
   deleteAiConversation: vi.fn(),
+  resolveAiActionBatch: vi.fn(),
 }))
 
 vi.mock('../lib/api/client', () => ({
@@ -37,6 +38,7 @@ import { AiAssistantPanel } from './AiAssistantPanel'
 const chatWithAi = aiApi.chatWithAi as unknown as ReturnType<typeof vi.fn>
 const fetchAiConversation = aiApi.fetchAiConversation as unknown as ReturnType<typeof vi.fn>
 const deleteAiConversation = aiApi.deleteAiConversation as unknown as ReturnType<typeof vi.fn>
+const resolveAiActionBatch = aiApi.resolveAiActionBatch as unknown as ReturnType<typeof vi.fn>
 
 const reply = (over: Partial<AiChatResponse> = {}): AiChatResponse => ({
   reply: 'ok',
@@ -68,6 +70,7 @@ beforeEach(() => {
     state: null,
   })
   deleteAiConversation.mockResolvedValue(undefined)
+  resolveAiActionBatch.mockResolvedValue(undefined)
 })
 
 afterEach(() => {
@@ -75,6 +78,7 @@ afterEach(() => {
   chatWithAi.mockReset()
   fetchAiConversation.mockReset()
   deleteAiConversation.mockReset()
+  resolveAiActionBatch.mockReset()
 })
 
 describe('AiAssistantPanel', () => {
@@ -274,6 +278,14 @@ describe('AiAssistantPanel', () => {
 
   it('preserves conversation state across close and reopen', async () => {
     const state: AiConversationState = { lastIntent: 'ledger.spending_total' }
+    fetchAiConversation
+      .mockResolvedValueOnce({ conversationId: null, conversationVersion: 0, messages: [], state: null })
+      .mockResolvedValueOnce({
+        conversationId: 'conversation-1',
+        conversationVersion: 1,
+        messages: [{ role: 'user', content: 'hi' }, { role: 'assistant', content: 'ok' }],
+        state,
+      })
     chatWithAi.mockResolvedValue(reply({ state }))
     const onClose = vi.fn()
     const { rerender } = render(<AiAssistantPanel isOpen onClose={onClose} onActions={vi.fn()} />)
@@ -349,6 +361,46 @@ describe('AiAssistantPanel', () => {
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
   })
 
+  it('resumes a server-owned action batch after hydration and then acknowledges it', async () => {
+    const actions = [{ type: 'openAddLedgerDraft' as const, payload: { description: 'Badminton', amount: 10 }, actionId: 'action-1' }]
+    fetchAiConversation.mockResolvedValueOnce({
+      conversationId: 'conversation-1',
+      conversationVersion: 1,
+      messages: [
+        { role: 'user', content: 'Badminton 10' },
+        { role: 'assistant', content: 'I prepared 1 draft for review.' },
+      ],
+      state: null,
+      pendingActionBatches: [{ batchId: 'batch-1', actions, status: 'PendingReview' }],
+    })
+    const onActions = vi.fn()
+    const onClose = vi.fn()
+    render(<AiAssistantPanel isOpen onClose={onClose} onActions={onActions} />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Resume review' }))
+
+    await waitFor(() => expect(onActions).toHaveBeenCalledWith(actions))
+    expect(resolveAiActionBatch).toHaveBeenCalledWith('batch-1', 'accepted')
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('keeps a durable action batch pending when frontend dispatch fails', async () => {
+    const actions = [{ type: 'openAddLedgerDraft' as const, payload: { description: 'Badminton', amount: 10 }, actionId: 'action-1' }]
+    chatWithAi.mockResolvedValue(reply({
+      actions,
+      actionBatch: { batchId: 'batch-1', actions, status: 'PendingReview' },
+    }))
+    const onActions = vi.fn().mockRejectedValue(new Error('lazy chunk failed'))
+    const onClose = vi.fn()
+    render(<AiAssistantPanel isOpen onClose={onClose} onActions={onActions} />)
+
+    await typeAndSend('Badminton 10')
+
+    expect(await screen.findByRole('button', { name: 'Resume review' })).not.toBeNull()
+    expect(resolveAiActionBatch).not.toHaveBeenCalled()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
   it('preserves the last valid state when a subsequent request fails', async () => {
     const state: AiConversationState = { lastIntent: 'ledger.spending_total', lastSearchText: 'coffee' }
     chatWithAi
@@ -383,14 +435,25 @@ describe('AiAssistantPanel', () => {
       actions: [{ type: 'openAddLedgerDraft', payload: { description: 'Badminton', amount: 10 } }],
     }))
     const props = { onClose: vi.fn(), onActions: vi.fn() }
-    const { rerender } = render(<AiAssistantPanel isOpen {...props} />)
+    fetchAiConversation
+      .mockResolvedValueOnce({ conversationId: null, conversationVersion: 0, messages: [], state: null })
+      .mockResolvedValueOnce({
+        conversationId: 'conversation-1',
+        conversationVersion: 1,
+        messages: [
+          { role: 'user', content: 'Badminton 10' },
+          { role: 'assistant', content: 'Draft staged for review.' },
+        ],
+        state: null,
+      })
+    const { rerender } = render(<AiAssistantPanel isOpen sensitiveMode={false} {...props} />)
 
     await typeAndSend('Badminton 10')
     await waitFor(() => expect(props.onClose).toHaveBeenCalled())
-    rerender(<AiAssistantPanel isOpen={false} {...props} />)
-    rerender(<AiAssistantPanel isOpen {...props} />)
+    rerender(<AiAssistantPanel isOpen={false} sensitiveMode={false} {...props} />)
+    rerender(<AiAssistantPanel isOpen sensitiveMode={false} {...props} />)
 
-    expect(screen.getByText('Draft staged for review.')).not.toBeNull()
+    expect(await screen.findByText('Draft staged for review.')).not.toBeNull()
   })
 
   it('ignores a stale response after the user closes the chat', async () => {
@@ -410,8 +473,18 @@ describe('AiAssistantPanel', () => {
 
   it('discloses provider data sharing and sensitive-mode protection', () => {
     render(<AiAssistantPanel isOpen onClose={vi.fn()} onActions={vi.fn()} sensitiveMode />)
-    expect(screen.getByText(/sent to the configured AI provider/i)).toBeTruthy()
-    expect(screen.getByText(/disables record changes/i)).toBeTruthy()
+    expect(screen.getByText(/details go to the configured AI provider/i)).toBeTruthy()
+    expect(screen.getByText(/disables changes/i)).toBeTruthy()
+  })
+
+  it('closes when the server requests it without returning actions', async () => {
+    chatWithAi.mockResolvedValue(reply({ reply: 'Goodbye.', closeChat: true, actions: [] }))
+    const onClose = vi.fn()
+    render(<AiAssistantPanel isOpen onClose={onClose} onActions={vi.fn()} />)
+
+    await typeAndSend('bye')
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
   })
 
   it('disables prompts and sending while offline', () => {
@@ -465,7 +538,7 @@ describe('AiAssistantPanel', () => {
   })
 
   it('multi-action responses trigger onActions with all actions', async () => {
-    const actions = [
+    const actions: AiUiAction[] = [
       { type: 'openDashboard', payload: {} },
       { type: 'openDashboard', payload: { foo: 'bar' } }
     ]
@@ -624,8 +697,8 @@ describe('AiAssistantPanel', () => {
     expect(chatWithAi).toHaveBeenCalledTimes(1)
   })
 
-  it('path where requiresPanelClose is true executes onClose before onActions', async () => {
-    const actions = [{ type: 'openAddLedgerDraft', payload: {} }]
+  it('applies a review action before closing the panel', async () => {
+    const actions: AiUiAction[] = [{ type: 'openAddLedgerDraft', payload: {} }]
     chatWithAi.mockResolvedValue(reply({ actions }))
 
     const onClose = vi.fn()
@@ -643,6 +716,6 @@ describe('AiAssistantPanel', () => {
     // Check order
     const closeOrder = onClose.mock.invocationCallOrder[0]
     const actionOrder = onActions.mock.invocationCallOrder[0]
-    expect(closeOrder).toBeLessThan(actionOrder)
+    expect(actionOrder).toBeLessThan(closeOrder)
   })
 })

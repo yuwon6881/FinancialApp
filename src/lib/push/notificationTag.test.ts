@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildNotificationTag, isRecurringNotificationData } from './notificationTag'
+import { buildNotificationTag, isCategoryLimitNotificationData, isRecurringNotificationData } from './notificationTag'
 
 describe('buildNotificationTag', () => {
   it('builds a stable tag from the payment id and occurrence date', () => {
@@ -17,6 +17,23 @@ describe('buildNotificationTag', () => {
     const first = buildNotificationTag({ recurringPaymentId: 'sub-1', occurrenceDate: '2024-06-15' })
     const second = buildNotificationTag({ recurringPaymentId: 'sub-1', occurrenceDate: '2024-07-15' })
     expect(first).not.toBe(second)
+  })
+
+  it('builds a stable category and cycle tag', () => {
+    expect(buildNotificationTag({ kind: 'category-limit', cycleKey: '2026-08', categoryName: 'Dining' }))
+      .toBe('category-limit-2026-08-Dining')
+  })
+})
+
+describe('isCategoryLimitNotificationData', () => {
+  it('accepts category and summary payloads with a valid cycle key', () => {
+    expect(isCategoryLimitNotificationData({ kind: 'category-limit', cycleKey: '2026-08', categoryName: 'Dining' })).toBe(true)
+    expect(isCategoryLimitNotificationData({ kind: 'category-limit', cycleKey: '2026-08' })).toBe(true)
+  })
+
+  it('rejects malformed cycle keys and unrelated notification kinds', () => {
+    expect(isCategoryLimitNotificationData({ kind: 'category-limit', cycleKey: 'Aug-2026' })).toBe(false)
+    expect(isCategoryLimitNotificationData({ kind: 'recurring-payment', cycleKey: '2026-08' })).toBe(false)
   })
 })
 

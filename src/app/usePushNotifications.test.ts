@@ -23,10 +23,11 @@ import { getFcmToken } from '../lib/push/firebaseMessaging'
 describe('usePushNotifications', () => {
   beforeEach(() => {
     supportedMock = true
-    vi.spyOn(api, 'fetchPushStatus').mockResolvedValue({ enabled: false, deviceRegistered: false })
+    vi.spyOn(api, 'fetchPushStatus').mockResolvedValue({ enabled: false, deviceRegistered: false, categoryAlertsEnabled: false })
     vi.spyOn(api, 'upsertPushSubscription').mockResolvedValue(undefined)
     vi.spyOn(api, 'deletePushSubscription').mockResolvedValue(undefined)
     vi.spyOn(api, 'updatePushSettings').mockResolvedValue(undefined)
+    vi.spyOn(api, 'updateCategoryLimitAlerts').mockResolvedValue(undefined)
 
     Object.defineProperty(global, 'Notification', {
       configurable: true,
@@ -53,8 +54,8 @@ describe('usePushNotifications', () => {
 
   it('is not enabled until permission, service worker, token, and both backend calls all succeed', async () => {
     vi.spyOn(api, 'fetchPushStatus')
-      .mockResolvedValueOnce({ enabled: false, deviceRegistered: false })
-      .mockResolvedValueOnce({ enabled: true, deviceRegistered: true })
+      .mockResolvedValueOnce({ enabled: false, deviceRegistered: false, categoryAlertsEnabled: false })
+      .mockResolvedValueOnce({ enabled: true, deviceRegistered: true, categoryAlertsEnabled: false })
 
     const { result } = renderHook(() => usePushNotifications())
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -106,7 +107,7 @@ describe('usePushNotifications', () => {
   })
 
   it('shows the exact enabled-elsewhere message when the global flag is on but this device is not registered', async () => {
-    vi.spyOn(api, 'fetchPushStatus').mockResolvedValue({ enabled: true, deviceRegistered: false })
+    vi.spyOn(api, 'fetchPushStatus').mockResolvedValue({ enabled: true, deviceRegistered: false, categoryAlertsEnabled: false })
     const { result } = renderHook(() => usePushNotifications())
     await waitFor(() => expect(result.current.loading).toBe(false))
 
@@ -116,8 +117,8 @@ describe('usePushNotifications', () => {
 
   it('disabling immediately unregisters only this device and reconciles account status', async () => {
     vi.spyOn(api, 'fetchPushStatus')
-      .mockResolvedValueOnce({ enabled: true, deviceRegistered: true })
-      .mockResolvedValueOnce({ enabled: false, deviceRegistered: false })
+      .mockResolvedValueOnce({ enabled: true, deviceRegistered: true, categoryAlertsEnabled: false })
+      .mockResolvedValueOnce({ enabled: false, deviceRegistered: false, categoryAlertsEnabled: false })
 
     const { result } = renderHook(() => usePushNotifications())
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -134,17 +135,34 @@ describe('usePushNotifications', () => {
 
   it('shows enabled elsewhere after disabling this device when another remains', async () => {
     vi.spyOn(api, 'fetchPushStatus')
-      .mockResolvedValueOnce({ enabled: true, deviceRegistered: true })
-      .mockResolvedValueOnce({ enabled: true, deviceRegistered: false })
+      .mockResolvedValueOnce({ enabled: true, deviceRegistered: true, categoryAlertsEnabled: false })
+      .mockResolvedValueOnce({ enabled: true, deviceRegistered: false, categoryAlertsEnabled: false })
 
     const { result } = renderHook(() => usePushNotifications())
     await waitFor(() => expect(result.current.loading).toBe(false))
-
     await act(async () => {
       await result.current.disable()
     })
 
     expect(result.current.enabled).toBe(false)
     expect(result.current.guidance).toBe(PUSH_ENABLED_ELSEWHERE_MESSAGE)
+  })
+
+  it('updates category spending alert consent without re-registering the device', async () => {
+    vi.spyOn(api, 'fetchPushStatus')
+      .mockResolvedValueOnce({ enabled: true, deviceRegistered: true, categoryAlertsEnabled: false })
+      .mockResolvedValueOnce({ enabled: true, deviceRegistered: true, categoryAlertsEnabled: true })
+
+    const { result } = renderHook(() => usePushNotifications())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    vi.mocked(api.upsertPushSubscription).mockClear()
+
+    await act(async () => {
+      expect(await result.current.setCategoryAlertsEnabled(true)).toBe(true)
+    })
+
+    expect(api.updateCategoryLimitAlerts).toHaveBeenCalledWith(true)
+    expect(api.upsertPushSubscription).not.toHaveBeenCalled()
+    expect(result.current.categoryAlertsEnabled).toBe(true)
   })
 })

@@ -567,7 +567,8 @@ function App() {
             onActions={aiRouter.handleAiActions}
             sensitiveMode={prefs.hideSensitive}
             isOffline={financial.isOffline}
-            hasPendingLocalChanges={financial.pendingOps.length > 0}
+            hasPendingLocalChanges={financial.pendingOps.length > 0 || financial.failedOps.length > 0 ||
+              financial.draftTransactions.length > 0 || financial.activeSyncId != null}
             invocation={aiEntryPoint.invocation}
             onInvocationConsumed={aiEntryPoint.consume}
             surface={prefs.activeTab}

@@ -97,11 +97,11 @@ describe('DeleteTransactionModal document safety', () => {
       />,
     )
 
-    expect(screen.getByText(/restore the amount that was set aside/i)).toBeTruthy()
+    expect(screen.getByText(/restores the amount and deadline/i)).toBeTruthy()
     expect(screen.getByText('MYR 1200.00')).toBeTruthy()
     unmount()
 
     render(<EditDisabledModal isOpen transaction={completion} onClose={vi.fn()} />)
-    expect(screen.getByText(/delete it to restore the commitment/i)).toBeTruthy()
+    expect(screen.getByText(/edit the commitment, then complete it again/i)).toBeTruthy()
   })
 })

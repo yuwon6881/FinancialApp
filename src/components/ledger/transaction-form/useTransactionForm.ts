@@ -18,6 +18,7 @@ import { proposeTopUp } from '../../../lib/stabilityRecovery'
 import type { TransactionPrefillDraft } from '../TransactionFormSheet'
 import type { TransactionDocumentsFieldRef } from './TransactionDocumentsField'
 import { focusFirstInvalidField } from '../../ui/formValidation'
+import type { ReceiptScanResult } from '../../../lib/api'
 export interface UseTransactionFormOptions {
   categories: TransactionCategory[]
   currency: string
@@ -50,11 +51,11 @@ export interface UseTransactionFormOptions {
   autoOpenAddForm?: boolean
   autoOpenTxType?: 'inflow' | 'outflow' | 'transfer' | null
   onResetAutoOpen?: () => void
-  receiptScanDraft?: any
+  receiptScanDraft?: { jobId: string; result: ReceiptScanResult } | null
   onReceiptScanStarted?: (scanId: string) => void
   onReceiptScanCleared?: (scanId: string) => void | Promise<void>
   activeScanJobIds?: string[]
-  failedScanJob?: any
+  failedScanJob?: { jobId: string; errorMessage: string } | null
 
   aiEditDraft?: any
   onAiEditDraftConsumed?: () => void
@@ -217,8 +218,15 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   }, [state.showAddForm, onAddFormOpenChange])
 
   // Receipt Scan results
-  const applyReceiptScanResult = useCallback((result: any) => {
-    dispatch({ type: 'APPLY_RECEIPT', payload: result, todayDate })
+  const applyReceiptScanResult = useCallback((result: ReceiptScanResult) => {
+    const ledgerCategory = ['Essentials', 'Growth', 'Stability', 'Rewards'].includes(result.ledgerCategory)
+      ? result.ledgerCategory as SelectableLedgerCategory
+      : undefined
+    dispatch({
+      type: 'APPLY_RECEIPT',
+      payload: { ...result, ledgerCategory },
+      todayDate,
+    })
     window.setTimeout(() => {
       firstInputRef.current?.focus()
       firstInputRef.current?.select()

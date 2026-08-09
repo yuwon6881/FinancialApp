@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildBackgroundNotification, buildRecurringNotificationUrl } from './backgroundNotification'
+import { buildBackgroundNotification, buildPushNotificationUrl, buildRecurringNotificationUrl } from './backgroundNotification'
 
 describe('buildBackgroundNotification', () => {
   it('builds a notification from a data-only background message', () => {
@@ -15,7 +15,11 @@ describe('buildBackgroundNotification', () => {
     expect(result?.title).toBe('Netflix due soon')
     expect(result?.options.body).toBe('$15.99 due in 3 days')
     expect(result?.options.tag).toBe('recurring-reminder-sub-1-2024-06-15')
-    expect(result?.options.data).toEqual({ recurringPaymentId: 'sub-1', occurrenceDate: '2024-06-15' })
+    expect(result?.options.data).toEqual({
+      kind: 'recurring-payment',
+      recurringPaymentId: 'sub-1',
+      occurrenceDate: '2024-06-15',
+    })
   })
 
   it('falls back to the legacy notification title/body when data ones are absent', () => {
@@ -41,6 +45,38 @@ describe('buildBackgroundNotification', () => {
     const first = buildBackgroundNotification(message)
     const second = buildBackgroundNotification(message)
     expect(first?.options.tag).toBe(second?.options.tag)
+  })
+
+  it('builds a category-limit notification without recurring-payment fields', () => {
+    const result = buildBackgroundNotification({
+      data: {
+        kind: 'category-limit',
+        title: 'Category spending alert',
+        body: 'Dining is close to its cycle spending guide.',
+        cycleKey: '2026-08',
+        categoryName: 'Dining',
+      },
+    })
+
+    expect(result?.options.tag).toBe('category-limit-2026-08-Dining')
+    expect(result?.options.data).toEqual({
+      kind: 'category-limit',
+      cycleKey: '2026-08',
+      categoryName: 'Dining',
+    })
+  })
+
+  it('rejects a malformed category-limit cycle key', () => {
+    expect(buildBackgroundNotification({
+      data: { kind: 'category-limit', cycleKey: 'August 2026' },
+    })).toBeNull()
+  })
+})
+
+describe('buildPushNotificationUrl', () => {
+  it('opens the category-limit section for category alerts', () => {
+    expect(buildPushNotificationUrl({ kind: 'category-limit', cycleKey: '2026-08', categoryName: 'Dining' }))
+      .toBe('/reports?focus=category-limits')
   })
 })
 

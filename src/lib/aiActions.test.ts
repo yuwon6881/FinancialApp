@@ -101,7 +101,7 @@ describe('dispatchAiActions — navigation', () => {
     expect(d.navigate).toHaveBeenCalledWith({ tab: 'wishlist' })
   })
 
-  it('processes at most the first three actions and navigates exactly once', async () => {
+  it('processes all four contract actions and navigates exactly once', async () => {
     const d = makeDeps()
     await dispatchAiActions(
       [
@@ -113,8 +113,8 @@ describe('dispatchAiActions — navigation', () => {
       d
     )
     expect(d.navigate).toHaveBeenCalledOnce()
-    expect(d.navigate).toHaveBeenCalledWith({ tab: 'wishlist' })
-    expect(d.handleNavigateToLedger).not.toHaveBeenCalled()
+    expect(d.navigate).toHaveBeenCalledWith({ tab: 'ledger' })
+    expect(d.handleNavigateToLedger).toHaveBeenCalledOnce()
   })
 
   it('stages every ledger record and opens the draft transactions tab', async () => {
@@ -266,6 +266,9 @@ describe('dispatchAiActions — record actions', () => {
     const payment = { id: 'rp1', name: 'Netflix', active: false } as AiActionsDeps['allRecurringPayments'][number]
     const d = makeDeps({ allRecurringPayments: [payment] })
     await dispatchAiActions([{ type: 'toggleRecurring', payload: { id: 'rp1', active: true } }], d)
+    expect(d.handleToggleActive).not.toHaveBeenCalled()
+    const confirmation = vi.mocked(d.setConfirmModalData).mock.calls[0]?.[0]
+    confirmation?.onConfirm()
     expect(d.handleToggleActive).toHaveBeenCalledWith('rp1')
     expect(d.navigate).toHaveBeenCalledWith({ tab: 'recurring', recurringId: 'rp1' })
   })
@@ -311,6 +314,8 @@ describe('dispatchAiActions — recurring reminders', () => {
       id: 'rp1', enabled: true, reminderMode: 'Daily', leadDays: 7,
     } }], d)
 
+    expect(d.handleUpdateReminder).not.toHaveBeenCalled()
+    vi.mocked(d.setConfirmModalData).mock.calls[0]?.[0].onConfirm()
     expect(d.handleUpdateReminder).toHaveBeenCalledWith('rp1', { enabled: true, mode: 'Daily', leadDays: 7 })
     expect(d.navigate).toHaveBeenCalledWith({ tab: 'recurring', recurringId: 'rp1' })
   })
@@ -318,6 +323,7 @@ describe('dispatchAiActions — recurring reminders', () => {
   it('keeps the saved mode and lead time when the request names neither', async () => {
     const d = makeDeps({ allRecurringPayments: [{ ...payment, reminderMode: 'Daily', reminderLeadDays: 7 }] })
     await dispatchAiActions([{ type: 'updateRecurringReminder', payload: { id: 'rp1', enabled: true } }], d)
+    vi.mocked(d.setConfirmModalData).mock.calls[0]?.[0].onConfirm()
     expect(d.handleUpdateReminder).toHaveBeenCalledWith('rp1', { enabled: true, mode: 'Daily', leadDays: 7 })
   })
 
@@ -326,6 +332,7 @@ describe('dispatchAiActions — recurring reminders', () => {
     await dispatchAiActions([{ type: 'updateRecurringReminder', payload: {
       id: 'rp1', enabled: true, reminderMode: 'Once', leadDays: 5,
     } }], d)
+    vi.mocked(d.setConfirmModalData).mock.calls[0]?.[0].onConfirm()
     expect(d.handleUpdateReminder).toHaveBeenCalledWith('rp1', { enabled: true, mode: 'Once', leadDays: 3 })
   })
 

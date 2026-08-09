@@ -7,9 +7,9 @@ import { cleanupOutdatedCaches, createHandlerBoundToURL, precacheAndRoute } from
 import { NavigationRoute, registerRoute } from 'workbox-routing'
 import { StaleWhileRevalidate } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
-import { buildBackgroundNotification, buildRecurringNotificationUrl } from './lib/push/backgroundNotification'
+import { buildBackgroundNotification, buildPushNotificationUrl } from './lib/push/backgroundNotification'
 import { getFirebaseConfig } from './lib/push/firebaseConfig'
-import { isRecurringNotificationData } from './lib/push/notificationTag'
+import { isPushNotificationData } from './lib/push/notificationTag'
 
 declare let self: ServiceWorkerGlobalScope & { __WB_MANIFEST: Array<unknown> }
 
@@ -83,9 +83,9 @@ if (firebaseConfig) {
 self.addEventListener('notificationclick', event => {
   event.notification.close()
   const data = event.notification.data
-  if (!isRecurringNotificationData(data)) return
+  if (!isPushNotificationData(data)) return
 
-  const targetUrl = new URL(buildRecurringNotificationUrl(data), self.location.origin).href
+  const targetUrl = new URL(buildPushNotificationUrl(data), self.location.origin).href
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
     for (const client of windows) {

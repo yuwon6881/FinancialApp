@@ -41,7 +41,8 @@ describe('useReceiptScanDraft', () => {
         date: '2026-07-16',
         category: 'Food',
         ledgerCategory: 'Essentials',
-        txType: 'outflow',
+        txType: 'outflow' as const,
+        confidence: 0.95,
       },
     }
     const options = createOptions({

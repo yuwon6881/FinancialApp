@@ -1,5 +1,5 @@
 import { Textarea } from './ui/Textarea'
-import { Fragment, useEffect, useState, useRef } from 'react'
+import { Fragment, useEffect, useMemo, useState, useRef } from 'react'
 import { Send, Sparkles, X, RotateCcw, SquarePen, Square } from 'lucide-react'
 import { BottomSheet } from './ui/BottomSheet'
 import { Button } from './ui/Button'
@@ -86,6 +86,10 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
   surface,
 }) => {
   const [suggestedPrompts, setSuggestedPrompts] = useState(() => pickSuggestedPrompts(sensitiveMode, surface))
+  const defaultContext = useMemo(() => ({
+    surface: surface ?? 'dashboard',
+    hasPendingLocalChanges,
+  }), [hasPendingLocalChanges, surface])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const {
@@ -104,7 +108,20 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
     newChat,
     cancelInFlight,
     historyRedacted,
-  } = useAiConversation({ isOpen, onClose, onActions, isOffline, invocation, onInvocationConsumed })
+    hasConversation,
+    pendingActionBatches,
+    resumeActionBatch,
+    dismissActionBatch,
+  } = useAiConversation({
+    isOpen,
+    onClose,
+    onActions,
+    isOffline,
+    sensitiveMode,
+    defaultContext,
+    invocation,
+    onInvocationConsumed,
+  })
 
   useEffect(() => {
     if (isOpen && messages.length === 0) setSuggestedPrompts(pickSuggestedPrompts(sensitiveMode, surface))
@@ -155,7 +172,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
       }
       headerActions={
         <>
-          {messages.length > 0 && (
+          {hasConversation && (
             <button
               type="button"
               onClick={() => void handleNewChat()}
@@ -221,6 +238,36 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
             </Button>
           </div>
         )}
+        {pendingActionBatches[0] && (
+          <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+            <span className="min-w-0 flex-1">
+              {pendingActionBatches[0].actions.length === 1
+                ? 'One AI-prepared review is waiting.'
+                : `${pendingActionBatches[0].actions.length} AI-prepared reviews are waiting.`}
+              {pendingActionBatches.length > 1 ? ` ${pendingActionBatches.length - 1} older batch${pendingActionBatches.length === 2 ? '' : 'es'} will remain.` : ''}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              disabled={isSending || isOffline || isHydrating || isResetting}
+              onClick={() => void resumeActionBatch(pendingActionBatches[0])}
+            >
+              Resume review
+            </Button>
+            <Button
+              variant="ghost"
+              size="xs"
+              className="size-7 shrink-0 p-0"
+              disabled={isSending || isOffline}
+              onClick={() => void dismissActionBatch(pendingActionBatches[0].batchId)}
+              title="Dismiss prepared review"
+              aria-label="Dismiss prepared review"
+            >
+              <X className="size-3.5" />
+            </Button>
+          </div>
+        )}
         {/* The non-scrolling wrapper owns a subtle perimeter-only activity trace. */}
         <div className={`relative min-h-0 flex-1 rounded-xl ${isSending ? 'perimeter-beam-host' : ''}`}>
           {isSending && <PerimeterBeam size={132} duration={7} />}
@@ -260,7 +307,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
               </div>
               <p className="mt-4 max-w-md text-[10px] leading-relaxed text-muted-foreground/80">
                 Details go to the configured AI provider.
-                {sensitiveMode ? ' Sensitive mode hides amounts and disables changes.' : ' Changes still need your confirmation, except recurring toggles.'}
+                {sensitiveMode ? ' Sensitive mode hides amounts and disables changes.' : ' Changes still need your confirmation.'}
               </p>
             </div>
           ) : (

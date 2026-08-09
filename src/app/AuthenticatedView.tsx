@@ -225,7 +225,8 @@ export function AuthenticatedView({
                         surface: 'reports',
                         preset: 'report-review',
                         cycleKey,
-                        hasPendingLocalChanges: financial.pendingOps.length > 0,
+                        hasPendingLocalChanges: financial.pendingOps.length > 0 || financial.failedOps.length > 0 ||
+                          financial.draftTransactions.length > 0 || financial.activeSyncId != null,
                       }, 'Explain this cycle')}
                     />
                   )}
@@ -268,6 +269,13 @@ export function AuthenticatedView({
                       onTogglePushEnabled={(checked) => {
                         if (checked) void push.enable()
                         else void push.disable()
+                      }}
+                      categoryAlertsEnabled={push.categoryAlertsEnabled}
+                      onToggleCategoryAlerts={(checked) => {
+                        void (async () => {
+                          if (checked && !push.enabled && !await push.enable()) return
+                          await push.setCategoryAlertsEnabled(checked)
+                        })()
                       }}
                       onNavigateToLedger={nav.handleNavigateToLedger}
                       onClearLocalFinancialData={() => {
@@ -431,7 +439,8 @@ export function AuthenticatedView({
                       onExplainWithAi={() => onExplainWithAi({
                         surface: 'wishlist',
                         preset: 'rewards-plan',
-                        hasPendingLocalChanges: financial.pendingOps.length > 0,
+                        hasPendingLocalChanges: financial.pendingOps.length > 0 || financial.failedOps.length > 0 ||
+                          financial.draftTransactions.length > 0 || financial.activeSyncId != null,
                       }, 'Explain my plan')}
                     />
                   )}
@@ -467,7 +476,8 @@ export function AuthenticatedView({
                         surface: 'investments',
                         preset: 'investment-explain',
                         investmentRange: range,
-                        hasPendingLocalChanges: financial.pendingOps.length > 0,
+                        hasPendingLocalChanges: financial.pendingOps.length > 0 || financial.failedOps.length > 0 ||
+                          financial.draftTransactions.length > 0 || financial.activeSyncId != null,
                       }, 'Explain my portfolio')}
                     />
                   )}

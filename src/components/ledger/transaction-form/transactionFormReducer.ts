@@ -34,7 +34,7 @@ export type TransactionFormAction =
   | { type: 'OPEN_CREATE'; payload?: { defaultCategory: string; todayDate: string } }
   | { type: 'OPEN_EDIT'; payload: { id: string; description: string; amount: string; date: string; category: string; ledgerCategory: string; txType: TransactionType; transferSource?: TransferBucket; transferTarget?: TransferBucket } }
   | { type: 'SET_FIELD'; field: keyof TransactionFormState; value: any }
-  | { type: 'APPLY_RECEIPT'; payload: { description?: string; amount?: string; date?: string; txType?: TransactionType; ledgerCategory?: SelectableLedgerCategory; category?: string }; todayDate: string }
+  | { type: 'APPLY_RECEIPT'; payload: { description?: string; amount?: string | number | null; date?: string | null; txType?: TransactionType; ledgerCategory?: SelectableLedgerCategory; category?: string }; todayDate: string }
   | { type: 'APPLY_AI_DRAFT'; payload: Record<string, any>; todayDate: string }
   | { type: 'RESET'; todayDate: string; defaultCategory: string }
   | { type: 'SET_ERRORS'; errors: Record<string, string> }
@@ -103,10 +103,13 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
       }
     case 'APPLY_RECEIPT': {
       const { description, amount, date, txType, ledgerCategory, category } = action.payload
+      const normalizedAmount = typeof amount === 'number'
+        ? Number.isFinite(amount) ? Math.abs(amount).toFixed(2) : state.amount
+        : amount ?? state.amount
       return {
         ...state,
         description: description ?? state.description,
-        amount: amount ?? state.amount,
+        amount: normalizedAmount,
         date: date ?? action.todayDate,
         transactionType: txType ?? state.transactionType,
         ledgerCategory: ledgerCategory ?? state.ledgerCategory,

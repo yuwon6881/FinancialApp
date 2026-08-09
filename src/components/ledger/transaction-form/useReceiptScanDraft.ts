@@ -1,16 +1,17 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { startReceiptScan } from '../../../lib/api'
+import type { ReceiptScanResult } from '../../../lib/api'
 import { getErrorMessage } from '../../../lib/errors'
 
 export interface UseReceiptScanDraftOptions {
   showAddForm: boolean
   autoOpenAddForm?: boolean
-  receiptScanDraft: any
+  receiptScanDraft?: { jobId: string; result: ReceiptScanResult } | null
   activeScanJobIds?: string[]
-  failedScanJob?: any
+  failedScanJob?: { jobId: string; errorMessage: string } | null
   onReceiptScanStarted?: (scanId: string) => void
   onReceiptScanCleared?: (scanId: string) => void | Promise<void>
-  applyReceiptScanResult: (result: any) => void
+  applyReceiptScanResult: (result: ReceiptScanResult) => void
   openTransactionForm: () => void
   onStartEditPending?: (id: string | null) => void
 }

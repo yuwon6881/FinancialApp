@@ -1,7 +1,7 @@
 import { Input } from './ui/Input'
 import { RangeInput } from './ui/RangeInput'
 import React from 'react'
-import { Save, Settings, AlertCircle, CheckCircle2, Bell, BellRing, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap, Moon, Sun, Eye, EyeOff, HardDrive, ArrowDownLeft, ArrowUpRight, ArrowLeftRight } from 'lucide-react'
+import { Save, Settings, AlertCircle, CheckCircle2, Bell, BellRing, Gauge, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap, Moon, Sun, Eye, EyeOff, HardDrive, ArrowDownLeft, ArrowUpRight, ArrowLeftRight } from 'lucide-react'
 import { m } from 'framer-motion'
 import type { DashboardData, TransactionCategory, CategoryFlowType } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
@@ -12,7 +12,7 @@ import { PerimeterBeam } from './ui/PerimeterBeam'
 import type { CategoryCleanupSuggestion } from '../lib/api'
 import type { ToastTone } from './ui/ToastViewport'
 import { ToggleButton } from './ui/ToggleButton'
-import { NOTIFY_ON_LOGIN_DESCRIPTION, PUSH_DESCRIPTION } from '../lib/push/messages'
+import { CATEGORY_LIMIT_PUSH_DESCRIPTION, NOTIFY_ON_LOGIN_DESCRIPTION, PUSH_DESCRIPTION } from '../lib/push/messages'
 const TwoFactorSection = React.lazy(() => import('./TwoFactorSection').then(m => ({ default: m.TwoFactorSection })))
 const ChangePasswordSection = React.lazy(() => import('./ChangePasswordSection').then(m => ({ default: m.ChangePasswordSection })))
 import { CollapsibleBody } from './ui/CollapsibleBody'
@@ -64,6 +64,8 @@ interface SettingsViewProps {
   pushBusy?: boolean
   pushGuidance?: string | null
   onTogglePushEnabled?: (checked: boolean) => void
+  categoryAlertsEnabled?: boolean
+  onToggleCategoryAlerts?: (checked: boolean) => void
 }
 
 const getDayWithSuffix = (day: number) => {
@@ -399,14 +401,14 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   <div className="flex flex-1 min-w-0 pr-4 items-center gap-2">
                     <BellRing className="size-4 text-muted-foreground shrink-0" />
                     <div className="flex flex-col gap-0.5 min-w-0">
-                      <span className="font-medium text-foreground truncate">Push Payment Reminders</span>
+                      <span className="font-medium text-foreground truncate">Push notifications on this device</span>
                       <span className="text-[10px] text-muted-foreground">{PUSH_DESCRIPTION}</span>
                     </div>
                   </div>
                   <ToggleButton
                     active={props.pushEnabled || false}
                     onClick={() => props.onTogglePushEnabled?.(!props.pushEnabled)}
-                    label="Push Payment Reminders"
+                    label="Push notifications on this device"
                     disabled={props.pushBusy || props.pushSupported === false}
                   />
                 </div>
@@ -418,6 +420,21 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                     </p>
                   </div>
                 )}
+                <div className="mt-2 flex items-center justify-between rounded-xl border border-border/40 bg-muted/20 p-2.5 text-sm">
+                  <div className="flex min-w-0 flex-1 items-center gap-2 pr-4">
+                    <Gauge className="size-4 shrink-0 text-muted-foreground" />
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                      <span className="truncate font-medium text-foreground">Category spending alerts</span>
+                      <span className="text-[10px] leading-relaxed text-muted-foreground">{CATEGORY_LIMIT_PUSH_DESCRIPTION}</span>
+                    </div>
+                  </div>
+                  <ToggleButton
+                    active={props.categoryAlertsEnabled || false}
+                    onClick={() => props.onToggleCategoryAlerts?.(!props.categoryAlertsEnabled)}
+                    label="Category spending alerts"
+                    disabled={props.pushBusy || props.pushSupported === false}
+                  />
+                </div>
               </div>
               <div className="flex items-center justify-between text-sm py-1">
                 <div className="flex items-center gap-2">

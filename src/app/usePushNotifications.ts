@@ -12,9 +12,11 @@ export interface UsePushNotificationsResult {
   enabled: boolean
   accountEnabled: boolean
   deviceRegistered: boolean
+  categoryAlertsEnabled: boolean
   guidance: string | null
   enable: () => Promise<boolean>
   disable: () => Promise<void>
+  setCategoryAlertsEnabled: (enabled: boolean) => Promise<boolean>
   refresh: () => Promise<PushStatus | null>
 }
 
@@ -108,8 +110,8 @@ export function usePushNotifications(
     void loadPushModule().then(push => {
       if (disposed || !push.isPushSupported()) return
       return push.onForegroundMessage(payload => {
-        const title = payload.data?.title || payload.notification?.title || 'Payment reminder'
-        const message = payload.data?.body || payload.notification?.body || 'A recurring payment is approaching.'
+        const title = payload.data?.title || payload.notification?.title || 'FinancialApp notification'
+        const message = payload.data?.body || payload.notification?.body || 'Open the app to review this update.'
         onForegroundNotification(message, title)
       })
       .then(cleanup => {
@@ -152,7 +154,11 @@ export function usePushNotifications(
 
       // Permission/token acquisition can require browser UI, but once those succeed the switch
       // should react immediately. Reconcile with the server afterward and roll back on failure.
-      setStatus({ enabled: true, deviceRegistered: true })
+      setStatus({
+        enabled: true,
+        deviceRegistered: true,
+        categoryAlertsEnabled: previousStatus?.categoryAlertsEnabled ?? false,
+      })
       await api.upsertPushSubscription(deviceId, token)
       await refreshInternal(push, deviceId)
       return true
@@ -177,6 +183,7 @@ export function usePushNotifications(
     setStatus({
       enabled: previousStatus?.enabled ?? false,
       deviceRegistered: false,
+      categoryAlertsEnabled: previousStatus?.categoryAlertsEnabled ?? false,
     })
     setGuidance(null)
     try {
@@ -195,6 +202,30 @@ export function usePushNotifications(
     }
   }, [deviceId, refreshInternal, status])
 
+  const setCategoryAlertsEnabled = useCallback(async (enabled: boolean): Promise<boolean> => {
+    const push = await loadPushModule()
+    if (!push.isPushSupported()) {
+      setGuidance(push.PUSH_UNSUPPORTED_GUIDANCE)
+      return false
+    }
+    const previousStatus = status
+    setBusy(true)
+    setGuidance(null)
+    setStatus(current => current ? { ...current, categoryAlertsEnabled: enabled } : current)
+    try {
+      await api.updateCategoryLimitAlerts(enabled)
+      if (deviceId) await refreshInternal(push, deviceId)
+      return true
+    } catch (err) {
+      console.error('Could not update category spending alerts.', err)
+      setStatus(previousStatus)
+      setGuidance('Category spending alerts could not be updated. Please try again.')
+      return false
+    } finally {
+      setBusy(false)
+    }
+  }, [deviceId, refreshInternal, status])
+
   return {
     supported,
     loading,
@@ -202,9 +233,11 @@ export function usePushNotifications(
     enabled: !!status?.enabled && !!status?.deviceRegistered,
     accountEnabled: !!status?.enabled,
     deviceRegistered: !!status?.deviceRegistered,
+    categoryAlertsEnabled: !!status?.categoryAlertsEnabled,
     guidance,
     enable,
     disable,
+    setCategoryAlertsEnabled,
     refresh,
   }
 }

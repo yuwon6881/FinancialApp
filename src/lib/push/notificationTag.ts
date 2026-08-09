@@ -4,11 +4,23 @@
 // re-delivered ('Daily' mode) or duplicate push replaces the prior notification instead of
 // stacking a new one in the tray.
 export interface RecurringNotificationData {
+  kind?: 'recurring-payment'
   recurringPaymentId: string
   occurrenceDate: string
 }
 
-export function buildNotificationTag(data: RecurringNotificationData): string {
+export interface CategoryLimitNotificationData {
+  kind: 'category-limit'
+  cycleKey: string
+  categoryName?: string
+}
+
+export type PushNotificationData = RecurringNotificationData | CategoryLimitNotificationData
+
+export function buildNotificationTag(data: PushNotificationData): string {
+  if (isCategoryLimitNotificationData(data)) {
+    return `category-limit-${data.cycleKey}-${data.categoryName || 'summary'}`
+  }
   return `recurring-reminder-${data.recurringPaymentId}-${data.occurrenceDate}`
 }
 
@@ -16,4 +28,17 @@ export function isRecurringNotificationData(value: unknown): value is RecurringN
   if (!value || typeof value !== 'object') return false
   const data = value as Record<string, unknown>
   return typeof data.recurringPaymentId === 'string' && typeof data.occurrenceDate === 'string'
+}
+
+export function isCategoryLimitNotificationData(value: unknown): value is CategoryLimitNotificationData {
+  if (!value || typeof value !== 'object') return false
+  const data = value as Record<string, unknown>
+  return data.kind === 'category-limit'
+    && typeof data.cycleKey === 'string'
+    && /^\d{4}-\d{2}$/.test(data.cycleKey)
+    && (data.categoryName === undefined || typeof data.categoryName === 'string')
+}
+
+export function isPushNotificationData(value: unknown): value is PushNotificationData {
+  return isRecurringNotificationData(value) || isCategoryLimitNotificationData(value)
 }

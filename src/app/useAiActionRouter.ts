@@ -85,10 +85,7 @@ export function useAiActionRouter(options: UseAiActionRouterOptions) {
       optionsRef.current,
       dispatch,
       nextAiActionNonce,
-    ).catch(error => {
-      console.error('AI action dispatch failed', error)
-      optionsRef.current.showToast('Could not apply the AI action. Please try again.', 'Action failed', 'error')
-    })
+    )
   }, [])
 
   return {

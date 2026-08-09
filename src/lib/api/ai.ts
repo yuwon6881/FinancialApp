@@ -11,9 +11,27 @@ export interface AiChatMessage {
   content: string
 }
 
+export const AI_ACTION_TYPES = [
+  'openLedger', 'openDashboard', 'openRecurring', 'openWishlist', 'openReports', 'openInvestments',
+  'openAddLedgerDraft', 'openAddRecurringDraft', 'openAddWishlistDraft', 'openEditLedgerDraft',
+  'openEditRecurringDraft', 'openEditWishlistDraft', 'openAddSavingsGoalDraft', 'openEditSavingsGoalDraft',
+  'requestDeleteLedger', 'requestDeleteRecurring', 'requestDeleteWishlist', 'requestConfirmRecurringBill',
+  'requestDiscardRecurringBill', 'requestPurchaseWishlist', 'requestUnpurchaseWishlist', 'toggleRecurring',
+  'updateRecurringReminder', 'openLedgerExport',
+] as const
+
+export type AiActionType = typeof AI_ACTION_TYPES[number]
+
 export interface AiUiAction {
-  type: string
+  type: AiActionType
   payload: Record<string, unknown>
+  actionId?: string | null
+}
+
+export interface AiActionBatch {
+  batchId: string
+  actions: AiUiAction[]
+  status: 'PendingReview'
 }
 
 interface AiAmountThreshold {
@@ -42,7 +60,7 @@ export interface AiConversationState {
   lastComparison?: boolean
   lastRecurringReference?: string | null
   lastIntents?: string[] | null
-  lastTopic?: 'transactional' | 'wishlist' | 'recurring' | null
+  lastTopic?: 'transactional' | 'wishlist' | 'recurring' | 'rewards' | 'investment' | 'report' | null
   lastQueryFacets?: string[] | null
   lastRecurringStatus?: string | null
   lastWishlistStatus?: string | null
@@ -75,6 +93,7 @@ export interface AiChatResponse {
   conversationId?: string | null
   conversationVersion?: number
   historyRedacted?: boolean
+  actionBatch?: AiActionBatch | null
 }
 
 export interface AiConversationSnapshot {
@@ -83,6 +102,7 @@ export interface AiConversationSnapshot {
   messages: AiChatMessage[]
   state: AiConversationState | null
   historyRedacted?: boolean
+  pendingActionBatches: AiActionBatch[]
 }
 
 export interface AiConversationRequest {
@@ -155,6 +175,9 @@ function normalizeAiConversationState(value: unknown): AiConversationState | nul
     state.lastTopic = candidate.lastTopic === 'transactional'
       || candidate.lastTopic === 'wishlist'
       || candidate.lastTopic === 'recurring'
+      || candidate.lastTopic === 'rewards'
+      || candidate.lastTopic === 'investment'
+      || candidate.lastTopic === 'report'
       ? candidate.lastTopic
       : null
   }
@@ -171,6 +194,29 @@ function normalizeAiConversationState(value: unknown): AiConversationState | nul
   return state
 }
 
+const AI_ACTION_TYPE_SET = new Set<string>(AI_ACTION_TYPES)
+
+function normalizeAiAction(value: unknown): AiUiAction | null {
+  if (!value || typeof value !== 'object') return null
+  const candidate = value as Record<string, unknown>
+  if (typeof candidate.type !== 'string' || !AI_ACTION_TYPE_SET.has(candidate.type)) return null
+  if (!candidate.payload || typeof candidate.payload !== 'object' || Array.isArray(candidate.payload)) return null
+  return {
+    type: candidate.type as AiActionType,
+    payload: candidate.payload as Record<string, unknown>,
+    actionId: typeof candidate.actionId === 'string' ? candidate.actionId : null,
+  }
+}
+
+function normalizeAiActionBatch(value: unknown): AiActionBatch | null {
+  if (!value || typeof value !== 'object') return null
+  const candidate = value as Record<string, unknown>
+  if (typeof candidate.batchId !== 'string' || !Array.isArray(candidate.actions)) return null
+  const actions = candidate.actions.map(normalizeAiAction).filter((action): action is AiUiAction => action !== null)
+  if (actions.length === 0) return null
+  return { batchId: candidate.batchId, actions, status: 'PendingReview' }
+}
+
 export async function chatWithAi(
   message: string,
   history: AiChatMessage[],
@@ -178,6 +224,7 @@ export async function chatWithAi(
   signal?: AbortSignal,
   conversation?: AiConversationRequest,
   context?: AiInvocationContext,
+  forceSensitiveMode = false,
 ): Promise<AiChatResponse> {
   // Linked controller rather than AbortSignal.any(): the Android WebView we ship
   // through Capacitor can predate it.
@@ -200,6 +247,8 @@ export async function chatWithAi(
         conversationVersion: conversation?.conversationVersion ?? null,
         clientTurnId: conversation?.clientTurnId,
         context: context ?? null,
+        forceSensitiveMode,
+        clientContractVersion: 2,
       }),
       signal: controller.signal,
       errorMessage: 'AI is unavailable. Please try again.',
@@ -216,17 +265,20 @@ export async function chatWithAi(
   }
   return {
     reply: data.reply || '',
-    actions: data.actions || [],
+    actions: Array.isArray(data.actions)
+      ? data.actions.map(normalizeAiAction).filter((action): action is AiUiAction => action !== null)
+      : [],
     closeChat: data.closeChat === true,
     state: normalizeAiConversationState(data.state),
     conversationId: typeof data.conversationId === 'string' ? data.conversationId : null,
     conversationVersion: typeof data.conversationVersion === 'number' ? data.conversationVersion : 0,
     historyRedacted: data.historyRedacted === true,
+    actionBatch: normalizeAiActionBatch(data.actionBatch),
   }
 }
 
-export async function fetchAiConversation(signal?: AbortSignal): Promise<AiConversationSnapshot> {
-  const data = await request<Partial<AiConversationSnapshot>>('/ai/conversation', {
+export async function fetchAiConversation(forceSensitiveMode = false, signal?: AbortSignal): Promise<AiConversationSnapshot> {
+  const data = await request<Partial<AiConversationSnapshot>>(`/ai/conversation${forceSensitiveMode ? '?forceSensitiveMode=true' : ''}`, {
     method: 'GET',
     signal,
     errorMessage: 'The Ask AI conversation could not be loaded.',
@@ -243,11 +295,36 @@ export async function fetchAiConversation(signal?: AbortSignal): Promise<AiConve
     messages,
     state: normalizeAiConversationState(data.state),
     historyRedacted: data.historyRedacted === true,
+    pendingActionBatches: Array.isArray(data.pendingActionBatches)
+      ? data.pendingActionBatches
+        .map(normalizeAiActionBatch)
+        .filter((batch): batch is AiActionBatch => batch !== null)
+      : [],
   }
 }
 
-export async function deleteAiConversation(signal?: AbortSignal): Promise<void> {
-  await requestVoid('/ai/conversation', {
+export async function resolveAiActionBatch(
+  batchId: string,
+  resolution: 'accepted' | 'dismissed',
+  signal?: AbortSignal,
+): Promise<void> {
+  await requestVoid(`/ai/action-batches/${encodeURIComponent(batchId)}/resolve`, {
+    method: 'POST',
+    ...jsonBody({ resolution }),
+    signal,
+    errorMessage: 'The AI review action could not be updated.',
+  })
+}
+
+export async function deleteAiConversation(
+  conversationId: string | null,
+  expectedVersion: number | null,
+  signal?: AbortSignal,
+): Promise<void> {
+  const query = conversationId
+    ? `?conversationId=${encodeURIComponent(conversationId)}${expectedVersion != null ? `&expectedVersion=${expectedVersion}` : ''}`
+    : ''
+  await requestVoid(`/ai/conversation${query}`, {
     method: 'DELETE',
     signal,
     errorMessage: 'The current conversation could not be deleted.',

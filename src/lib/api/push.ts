@@ -17,6 +17,15 @@ export function updatePushSettings(enabled: boolean): Promise<void> {
   })
 }
 
+export function updateCategoryLimitAlerts(enabled: boolean): Promise<void> {
+  return requestVoid('/push/category-alerts', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled }),
+    errorMessage: 'Failed to update category spending alerts',
+  })
+}
+
 export function upsertPushSubscription(deviceId: string, fcmToken: string): Promise<void> {
   return requestVoid('/push/subscriptions', {
     method: 'PUT',

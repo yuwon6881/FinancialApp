@@ -10,8 +10,7 @@ import type { Dispatch, ReactNode } from 'react'
 import type { AiUiAction } from './api/ai'
 import { fetchTransactionById } from './api/transactions'
 import { capitalizeWords } from './utils'
-import { buildMutationSuccessToast } from './mutationToast'
-import { REMINDER_LEAD_DAY_OPTIONS } from './recurringPayments'
+import { dispatchAiRecurringSettingAction } from './aiRecurringActions'
 import type { PendingNotification, RecurringPayment, Transaction, TransactionCategory, WishlistItem } from '../types'
 import type {
   AiActionRouterPatch,
@@ -56,7 +55,7 @@ export function getPayloadNumber(payload: Record<string, unknown>, key: string):
 }
 
 /** Action types that mutate records — blocked while sensitive mode is active. */
-export const AI_MUTATION_TYPES = new Set<string>([
+export const AI_MUTATION_TYPES = new Set<AiUiAction['type']>([
   'openAddLedgerDraft', 'openAddRecurringDraft', 'openAddWishlistDraft', 'openEditLedgerDraft', 'openEditRecurringDraft', 'openEditWishlistDraft',
   'openAddSavingsGoalDraft', 'openEditSavingsGoalDraft',
   'requestDeleteLedger', 'requestDeleteRecurring', 'requestDeleteWishlist',
@@ -134,6 +133,7 @@ export const AI_CONFIRMATION_TYPES = new Set<string>([
   'requestDeleteLedger', 'requestDeleteRecurring', 'requestDeleteWishlist',
   'requestConfirmRecurringBill', 'requestDiscardRecurringBill',
   'requestPurchaseWishlist', 'requestUnpurchaseWishlist',
+  'toggleRecurring', 'updateRecurringReminder',
 ])
 
 interface NonceDraft { nonce: number; fields: Record<string, unknown> }
@@ -227,11 +227,11 @@ export async function requestAiLedgerDelete(
   })
 }
 
-/** Route AI UI actions, allowing a ledger-only batch while retaining the normal three-action cap. */
+/** Route AI UI actions within the shared four-action server contract. */
 export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDeps): Promise<void> {
   const candidates = actions.slice(0, 50)
   const containsOnlyLedgerDrafts = candidates.length > 0 && candidates.every(action => action.type === 'openAddLedgerDraft')
-  const selectedActions = containsOnlyLedgerDrafts ? candidates : actions.slice(0, 3)
+  const selectedActions = containsOnlyLedgerDrafts ? candidates.slice(0, 4) : actions.slice(0, 4)
 
   if (containsOnlyLedgerDrafts) {
     if (deps.hideSensitive) {
@@ -405,72 +405,9 @@ export async function dispatchAiActions(actions: AiUiAction[], deps: AiActionsDe
         deps.requestDeleteWishlistItem(id)
         setDestination({ tab: 'wishlist' })
       }
-    } else if (action.type === 'toggleRecurring') {
-      const id = getPayloadString(payload, 'id')
-      const payment = id ? deps.allRecurringPayments.find(p => String(p.id) === id) : undefined
-      const requestedActive = typeof payload.active === 'boolean' ? payload.active : payment ? !payment.active : null
-      if (!payment) {
-        deps.showToast('That recurring payment could not be found.', 'Toggle unavailable', 'warning')
-        continue
-      }
-      if (requestedActive !== null && payment.active !== requestedActive) {
-        deps.handleToggleActive(payment.id)
-        const copy = buildMutationSuccessToast({
-          entity: 'Recurring Payment',
-          action: requestedActive ? 'Resumed' : 'Paused',
-          recordName: payment.name,
-          messageVerb: requestedActive ? 'resumed' : 'paused',
-        })
-        deps.showToast(copy.message, copy.title, copy.tone)
-      } else {
-        deps.showToast(`"${payment.name}" is already ${requestedActive ? 'on' : 'off'}.`, 'No change needed', 'info')
-      }
-      setDestination({ tab: 'recurring', recurringId: payment.id })
-    } else if (action.type === 'updateRecurringReminder') {
-      const id = getPayloadString(payload, 'id')
-      const payment = id ? deps.allRecurringPayments.find(p => String(p.id) === id) : undefined
-      if (!payment) {
-        deps.showToast('That recurring payment could not be found.', 'Reminder unavailable', 'warning')
-        continue
-      }
-      if (typeof payload.enabled !== 'boolean') {
-        deps.showToast('The AI did not say whether to turn the reminder on or off.', 'Reminder unchanged', 'warning')
-        continue
-      }
-      const enabled = payload.enabled
-      const requestedMode = getPayloadString(payload, 'reminderMode')
-      const requestedLeadDays = getPayloadNumber(payload, 'leadDays')
-      // Anything the request left out keeps the subscription's saved value, so "remind me daily"
-      // does not silently reset a lead time the user chose earlier.
-      const settings = {
-        enabled,
-        mode: requestedMode === 'Once' || requestedMode === 'Daily' ? requestedMode : (payment.reminderMode ?? 'Once'),
-        leadDays: requestedLeadDays != null && REMINDER_LEAD_DAY_OPTIONS.includes(requestedLeadDays)
-          ? requestedLeadDays
-          : (payment.reminderLeadDays ?? 3),
-      } as const
-      const current = {
-        enabled: payment.reminderEnabled ?? false,
-        mode: payment.reminderMode ?? 'Once',
-        leadDays: payment.reminderLeadDays ?? 3,
-      }
-      const unchanged = current.enabled === settings.enabled &&
-        (!settings.enabled || (current.mode === settings.mode && current.leadDays === settings.leadDays))
-      if (unchanged) {
-        deps.showToast(`"${payment.name}" already uses those reminder settings.`, 'No change needed', 'info')
-      } else {
-        deps.handleUpdateReminder(payment.id, { ...settings })
-        const copy = buildMutationSuccessToast({
-          entity: 'Recurring Payment',
-          action: 'Updated',
-          recordName: payment.name,
-          messageSuffix: settings.enabled
-            ? `Reminder is on — ${settings.mode === 'Daily' ? 'daily' : 'once'}, ${settings.leadDays} day${settings.leadDays === 1 ? '' : 's'} before it is due.`
-            : 'Reminder is off.',
-        })
-        deps.showToast(copy.message, copy.title, copy.tone)
-      }
-      setDestination({ tab: 'recurring', recurringId: payment.id })
+    } else if (action.type === 'toggleRecurring' || action.type === 'updateRecurringReminder') {
+      const recurringId = dispatchAiRecurringSettingAction(action, deps)
+      if (recurringId) setDestination({ tab: 'recurring', recurringId })
     } else if (action.type === 'requestConfirmRecurringBill' || action.type === 'requestDiscardRecurringBill') {
       const id = getPayloadString(payload, 'id')
       const requestedDate = getPayloadString(payload, 'date')

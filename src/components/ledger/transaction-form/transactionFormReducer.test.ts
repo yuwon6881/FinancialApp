@@ -58,4 +58,17 @@ describe('transactionFormReducer stabilityTopUpAccepted', () => {
     const state = transactionFormReducer(accepted(), { type: 'SET_FIELD', field: 'amount', value: '1200' })
     expect(state.stabilityTopUpAccepted).toBe(true)
   })
+
+  it('normalizes a numeric OCR amount to the form string contract', () => {
+    const state = transactionFormReducer(
+      getInitialState('2026-07-09', 'Other'),
+      {
+        type: 'APPLY_RECEIPT',
+        payload: { amount: 42.5 },
+        todayDate: '2026-07-09',
+      },
+    )
+
+    expect(state.amount).toBe('42.50')
+  })
 })

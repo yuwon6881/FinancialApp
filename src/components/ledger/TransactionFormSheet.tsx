@@ -17,6 +17,7 @@ import type {
   StabilityRecovery,
 } from '../../types'
 import type { ReceiptSplitDraft, ReceiptSplitFailure } from '../../lib/useReceiptSplitPolling'
+import type { ReceiptScanResult } from '../../lib/api'
 import { Button } from '../ui/Button'
 import { ModalActions } from '../ui/ModalActions'
 
@@ -52,11 +53,11 @@ export interface TransactionFormSheetProps {
   autoOpenAddForm?: boolean
   autoOpenTxType?: 'inflow' | 'outflow' | 'transfer' | null
   onResetAutoOpen?: () => void
-  receiptScanDraft?: any
+  receiptScanDraft?: { jobId: string; result: ReceiptScanResult } | null
   onReceiptScanStarted?: (scanId: string) => void
   onReceiptScanCleared?: (scanId: string) => void | Promise<void>
   activeScanJobIds?: string[]
-  failedScanJob?: any
+  failedScanJob?: { jobId: string; errorMessage: string } | null
   aiEditDraft?: any
   onAiEditDraftConsumed?: () => void
   onFetchTransactionById?: (id: string) => Promise<Transaction>
