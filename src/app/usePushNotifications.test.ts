@@ -6,7 +6,7 @@ import { PUSH_DENIED_GUIDANCE, PUSH_ENABLED_ELSEWHERE_MESSAGE, PUSH_PERMISSION_R
 
 vi.mock('../lib/push/firebaseMessaging', () => ({
   getFcmToken: vi.fn(async () => 'fcm-token-123'),
-  onForegroundMessage: vi.fn(() => () => undefined),
+  onForegroundMessage: vi.fn(async () => () => undefined),
 }))
 
 let supportedMock = true
@@ -18,10 +18,11 @@ vi.mock('../lib/push/deviceId', () => ({
   getOrCreateDeviceId: () => 'device-abc',
 }))
 
-import { getFcmToken } from '../lib/push/firebaseMessaging'
+import { getFcmToken, onForegroundMessage } from '../lib/push/firebaseMessaging'
 
 describe('usePushNotifications', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     supportedMock = true
     vi.spyOn(api, 'fetchPushStatus').mockResolvedValue({ enabled: false, deviceRegistered: false, categoryAlertsEnabled: false })
     vi.spyOn(api, 'upsertPushSubscription').mockResolvedValue(undefined)
@@ -45,7 +46,7 @@ describe('usePushNotifications', () => {
 
   it('reports unsupported immediately when the feature gate blocks it', async () => {
     supportedMock = false
-    const { result } = renderHook(() => usePushNotifications())
+    const { result } = renderHook(() => usePushNotifications(true, vi.fn()))
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.supported).toBe(false)
     expect(result.current.guidance).toBe(PUSH_UNSUPPORTED_GUIDANCE)
@@ -56,7 +57,7 @@ describe('usePushNotifications', () => {
       .mockResolvedValueOnce({ enabled: false, deviceRegistered: false, categoryAlertsEnabled: false })
       .mockResolvedValueOnce({ enabled: true, deviceRegistered: true, categoryAlertsEnabled: false })
 
-    const { result } = renderHook(() => usePushNotifications())
+    const { result } = renderHook(() => usePushNotifications(true, vi.fn()))
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.enabled).toBe(false)
 
@@ -105,11 +106,20 @@ describe('usePushNotifications', () => {
 
   it('shows the exact enabled-elsewhere message when the global flag is on but this device is not registered', async () => {
     vi.spyOn(api, 'fetchPushStatus').mockResolvedValue({ enabled: true, deviceRegistered: false, categoryAlertsEnabled: false })
-    const { result } = renderHook(() => usePushNotifications())
+    const { result } = renderHook(() => usePushNotifications(true, vi.fn()))
     await waitFor(() => expect(result.current.loading).toBe(false))
 
     expect(result.current.enabled).toBe(false)
     expect(result.current.guidance).toBe(PUSH_ENABLED_ELSEWHERE_MESSAGE)
+    expect(onForegroundMessage).not.toHaveBeenCalled()
+  })
+
+  it('starts foreground Firebase handling only for a registered permitted device', async () => {
+    vi.spyOn(api, 'fetchPushStatus').mockResolvedValue({ enabled: true, deviceRegistered: true, categoryAlertsEnabled: false })
+
+    renderHook(() => usePushNotifications(true, vi.fn()))
+
+    await waitFor(() => expect(onForegroundMessage).toHaveBeenCalledTimes(1))
   })
 
   it('disabling immediately unregisters only this device and reconciles account status', async () => {

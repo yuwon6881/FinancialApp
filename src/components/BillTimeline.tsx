@@ -46,19 +46,23 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
   const [selectedBill, setSelectedBill] = useState<ActiveRecurringPayment | null>(null)
   const [selectedNode, setSelectedNode] = useState<TimelineNode | null>(null)
 
-  // Determine base month index (0-11)
-  const baseMonthIndex = MONTH_NAMES.indexOf(selectedMonth) !== -1 ? MONTH_NAMES.indexOf(selectedMonth) : new Date().getMonth()
-  const baseYear = selectedYear > 0 ? selectedYear : new Date().getFullYear()
-
-  // Calculate effective month & year based on cycleOffset (e.g. +1 for next cycle)
-  const totalMonths = baseMonthIndex + cycleOffset
-  const monthIndex = (totalMonths % 12 + 12) % 12
-  const year = baseYear + Math.floor(totalMonths / 12)
+  const { monthIndex, year, cycleStart, cycleEnd } = React.useMemo(() => {
+    const selectedIndex = MONTH_NAMES.indexOf(selectedMonth)
+    const baseMonthIndex = selectedIndex !== -1 ? selectedIndex : new Date().getMonth()
+    const baseYear = selectedYear > 0 ? selectedYear : new Date().getFullYear()
+    const totalMonths = baseMonthIndex + cycleOffset
+    const effectiveMonthIndex = (totalMonths % 12 + 12) % 12
+    const effectiveYear = baseYear + Math.floor(totalMonths / 12)
+    const range = getCycleRangeDates(effectiveYear, effectiveMonthIndex + 1, cycleDay)
+    return {
+      monthIndex: effectiveMonthIndex,
+      year: effectiveYear,
+      cycleStart: range.start,
+      cycleEnd: range.end,
+    }
+  }, [selectedMonth, selectedYear, cycleOffset, cycleDay])
 
   const displayTitle = title || (cycleOffset === 1 ? 'Upcoming Next Cycle Subscriptions' : 'Subscriptions Billing Timeline')
-
-  // Cycle range dates
-  const { start: cycleStart, end: cycleEnd } = getCycleRangeDates(year, monthIndex + 1, cycleDay)
 
   const startTime = cycleStart.getTime()
   const endTime = cycleEnd.getTime()

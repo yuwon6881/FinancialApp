@@ -128,7 +128,7 @@ export function usePushNotifications(
   }, [active, refreshInternal])
 
   useEffect(() => {
-    if (!active || !onForegroundNotification) return
+    if (!active || !onForegroundNotification || !status?.deviceRegistered || Notification.permission !== 'granted') return
     let disposed = false
     let unsubscribe: (() => void) | undefined
     void loadPushModule().then(push => {
@@ -148,7 +148,7 @@ export function usePushNotifications(
       disposed = true
       unsubscribe?.()
     }
-  }, [active, onForegroundNotification])
+  }, [active, onForegroundNotification, status?.deviceRegistered])
 
   const enable = useCallback(async (): Promise<boolean> => {
     const push = await loadPushModule()

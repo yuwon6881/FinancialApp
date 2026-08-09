@@ -15,10 +15,11 @@ import type {
   TransactionDocumentChanges,
 } from '../types'
 import type { CategoryCleanupSuggestion } from '../lib/api'
-import { CACHE_KEYS, getCachedJSON, getCachedTransactions, getCachedWishlist, sanitizeTransactions, setCachedJSON, hasCachedKey, getCachedDashboardPeriod, setCachedCycleSnapshot } from '../lib/cache'
+import { CACHE_KEYS, getCachedJSON, getCachedTransactions, getCachedWishlist, sanitizeTransactions, setCachedJSON, hasCachedKey, setCachedCycleSnapshot } from '../lib/cache'
 import { useOptimisticList } from '../lib/useOptimisticList'
 import { computeOptimisticDashboard } from '../lib/optimisticDashboard'
 import { useOutbox } from '../lib/useOutbox'
+import { useStartupSync } from './useStartupSync'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from '../lib/modalDrafts'
 import { createFinalId, projectFinancialSetting, sanitizeQueuedOps, type OutboxPayload } from '../lib/outbox'
 import { triggerHaptic } from '../lib/haptics'
@@ -63,11 +64,6 @@ export interface UseFinancialDataOptions {
   setHasShownModalThisSession: (value: boolean) => void
   hasShownModalThisSession: boolean
   setShowLoginModal: (value: boolean) => void
-}
-
-/** Wake-up/connectivity tracing is noisy in production; keep it to dev builds. */
-const debugLog = (...args: unknown[]) => {
-  if (import.meta.env.DEV) console.log(...args)
 }
 
 const createLocalId = (prefix: string, separator = '_') => {
@@ -121,8 +117,6 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   // same value. Queue state alone is insufficient here: a fast settings write can leave
   // the outbox before an older, slower bootstrap response commits.
   const unconfirmedSettingWritesRef = useRef(new Map<string, unknown>())
-  const wakeUpCancelledRef = useRef(false)
-  const wakeUpTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [draftTransactions, setDraftTransactions] = useState<Transaction[]>(() => {
     try {
@@ -527,7 +521,13 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       if (Array.isArray(goals)) {
         setCachedJSON(CACHE_KEYS.savingsGoals, goals)
       }
-      setCachedCycleSnapshot(effectiveSetting.selectedMonth, effectiveSetting.selectedYear, mergedDashboard, txs)
+      // This snapshot duplicates the two large payloads just written above. Let React paint
+      // the fresh screen before serialising and rotating the offline cycle history.
+      window.setTimeout(() => {
+        if (!isStale()) {
+          setCachedCycleSnapshot(effectiveSetting.selectedMonth, effectiveSetting.selectedYear, mergedDashboard, txs)
+        }
+      }, 0)
 
       // A concrete server value is an explicit user choice; null means "never chosen",
       // so we follow the OS/browser scheme — matching the login screen — and keep the
@@ -797,70 +797,13 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     restoreModalDraftsOnLogin(newUsername)
   }, [mutateQueue])
 
-  // Server wake-up and background sync task
-  const wakeUpAndSync = useCallback(async () => {
-    if (!token) return
-    wakeUpCancelledRef.current = false
-    let attempts = 0
-    const maxAttempts = 15
-    const runPing = async () => {
-      if (wakeUpCancelledRef.current || !token || isServerAwakeRef.current) return
-      try {
-        const res = await api.pingServer()
-        if (wakeUpCancelledRef.current) return
-        if (res && res.status !== 'waking_up') {
-          debugLog('Server is awake! Performing initial load and processing queue...')
-          isServerAwakeRef.current = true
-          const { month: cachedMonth, year: cachedYear } = getCachedDashboardPeriod()
-          await loadAll(cachedMonth, cachedYear, true)
-          if (!wakeUpCancelledRef.current) processQueue()
-          return
-        }
-      } catch (err) {
-        if (!wakeUpCancelledRef.current) debugLog('Wake-up ping failed:', err)
-      }
-      attempts++
-      if (attempts < maxAttempts && !wakeUpCancelledRef.current) {
-        wakeUpTimeoutRef.current = setTimeout(runPing, 5000)
-      }
-    }
-    runPing()
-  }, [token, processQueue, loadAll])
-
-  // Proactively reflect browser connectivity
-  useEffect(() => {
-    const handleConnectivityOnline = () => setIsOffline(false)
-    const handleConnectivityOffline = () => setIsOffline(true)
-    window.addEventListener('online', handleConnectivityOnline)
-    window.addEventListener('offline', handleConnectivityOffline)
-    return () => {
-      window.removeEventListener('online', handleConnectivityOnline)
-      window.removeEventListener('offline', handleConnectivityOffline)
-    }
-  }, [])
-
-  // Trigger wakeUpAndSync on mount or online status change
-  useEffect(() => {
-    if (!token) {
-      isServerAwakeRef.current = false
-      return
-    }
-
-    void wakeUpAndSync()
-    const handleOnline = () => {
-      debugLog('Browser went online, starting wake-up ping...')
-      void wakeUpAndSync()
-    }
-    window.addEventListener('online', handleOnline)
-    return () => {
-      window.removeEventListener('online', handleOnline)
-      wakeUpCancelledRef.current = true
-      if (wakeUpTimeoutRef.current) {
-        clearTimeout(wakeUpTimeoutRef.current)
-        wakeUpTimeoutRef.current = null
-      }
-    }
-  }, [token, wakeUpAndSync])
+  const wakeUpAndSync = useStartupSync({
+    token,
+    isServerAwakeRef,
+    loadAll,
+    processQueue,
+    setIsOffline,
+  })
 
   // A queued salary generates four bucket rows server-side; projecting them needs the plan
   // percentages whenever the row was saved as plain `Income` (see incomeSplitProjection.ts).

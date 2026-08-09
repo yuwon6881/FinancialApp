@@ -179,19 +179,13 @@ describe('App behaviors', () => {
   })
 
   it('shows the skeleton and fetches data immediately after login', async () => {
-    let releasePing!: (value: { status: string }) => void
-    const pendingPing = new Promise<{ status: string }>(resolve => { releasePing = resolve })
-    vi.mocked(api.pingServer).mockReturnValueOnce(pendingPing)
-
     render(<App />)
     fireEvent.click(await screen.findByText('Log In'))
 
     await waitFor(() => {
       expect(screen.getByTestId('app-loading-skeleton')).toBeDefined()
     })
-    expect(api.fetchBootstrap).not.toHaveBeenCalled()
-
-    releasePing({ status: 'healthy' })
+    expect(api.pingServer).not.toHaveBeenCalled()
 
     await waitFor(() => {
       expect(api.fetchBootstrap).toHaveBeenCalled()
@@ -211,6 +205,12 @@ describe('App behaviors', () => {
     }]
     localStorage.setItem('auth_session', '1')
     localStorage.setItem('auth_username', 'alice')
+    localStorage.setItem('cached_dashboard_data', JSON.stringify({
+      setting: { selectedMonth: 'Jun', selectedYear: 2026, cycleDay: 28, currency: 'USD', hideSensitive: false, darkMode: false },
+      stats: { pastThreeMonthsRewardsAverage: 120, hasRewardsHistory: true },
+      categories: [],
+      pendingNotifications: [],
+    }))
     localStorage.setItem('cached_wishlist', JSON.stringify(cachedWishlist))
     // The boot request carries the wishlist now, so a transient failure is a failure of the
     // whole refresh rather than of one slice. The guarantee under test is unchanged and is

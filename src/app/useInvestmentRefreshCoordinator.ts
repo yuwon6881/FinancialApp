@@ -4,6 +4,8 @@ import type { InvestmentAllocationOverview } from '../types'
 import * as api from '../lib/api'
 
 let sharedRefresh: Promise<void> | null = null
+let lastCompletedRefreshAt = 0
+const RESUME_REFRESH_COOLDOWN_MS = 60_000
 
 export function useInvestmentRefreshCoordinator(enabled: boolean, isOffline: boolean) {
   const [allocation, setAllocation] = useState<InvestmentAllocationOverview | null>(null)
@@ -16,13 +18,15 @@ export function useInvestmentRefreshCoordinator(enabled: boolean, isOffline: boo
     }
   }, [])
 
-  const loadAndRefresh = useCallback(async () => {
+  const loadAndRefresh = useCallback(async (force = false) => {
     if (!enabled || isOffline) return
+    if (!force && Date.now() - lastCompletedRefreshAt < RESUME_REFRESH_COOLDOWN_MS) return
     if (sharedRefresh) return sharedRefresh
     sharedRefresh = (async () => {
       const overview = await api.fetchInvestmentAllocation()
       if (mounted.current) setAllocation(overview)
       const allocationNeedsRefresh = overview.freshness.isStale || overview.freshness.hasMissingData
+      if (!allocationNeedsRefresh) return
 
       let complete = false
       let marketDataChanged = false
@@ -36,11 +40,13 @@ export function useInvestmentRefreshCoordinator(enabled: boolean, isOffline: boo
           break
         }
       }
-      if (!allocationNeedsRefresh && !marketDataChanged) return
+      if (!marketDataChanged) return
       const updated = await api.fetchInvestmentAllocation()
       if (mounted.current) setAllocation(updated)
       window.dispatchEvent(new CustomEvent('investment-market-data-refreshed', { detail: updated }))
-    })().catch(error => {
+    })().then(() => {
+      lastCompletedRefreshAt = Date.now()
+    }).catch(error => {
       // Background refresh is deliberately quiet. The investment page keeps its
       // explicit refresh error UI for user-initiated work.
       console.warn('Background investment refresh was unavailable', error)
@@ -52,18 +58,19 @@ export function useInvestmentRefreshCoordinator(enabled: boolean, isOffline: boo
 
   useEffect(() => {
     if (!enabled || isOffline) return
-    void loadAndRefresh()
+    void loadAndRefresh(true)
   }, [enabled, isOffline, loadAndRefresh])
 
   useEffect(() => {
     if (!enabled) return
     const resume = () => void loadAndRefresh()
+    const investmentSync = () => void loadAndRefresh(true)
     const visible = () => {
       if (document.visibilityState === 'visible') resume()
     }
     window.addEventListener('online', resume)
     window.addEventListener('pageshow', resume)
-    window.addEventListener('investment-sync', resume)
+    window.addEventListener('investment-sync', investmentSync)
     document.addEventListener('visibilitychange', visible)
     let removeNative: (() => void) | undefined
     void CapacitorApp.addListener('appStateChange', ({ isActive }) => {
@@ -74,7 +81,7 @@ export function useInvestmentRefreshCoordinator(enabled: boolean, isOffline: boo
     return () => {
       window.removeEventListener('online', resume)
       window.removeEventListener('pageshow', resume)
-      window.removeEventListener('investment-sync', resume)
+      window.removeEventListener('investment-sync', investmentSync)
       document.removeEventListener('visibilitychange', visible)
       removeNative?.()
     }

@@ -13,7 +13,7 @@ import type {
   MarketDataReference,
 } from '../../types'
 import { CACHE_KEYS, clearCachedInvestmentPages, getCachedJSON, setCachedJSON } from '../cache'
-import { cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
+import { cachedGet, invalidateCachePrefix, invalidateRevalidationPrefix, jsonBody, request, requestVoid } from './client'
 
 export interface InstrumentSearchResult {
   selectedInstrumentId?: string
@@ -202,7 +202,8 @@ export function fetchInvestmentCashFlows(
 
 function invalidateAfter<T>(work: Promise<T>): Promise<T> {
   return work.then(result => {
-    invalidateCache()
+    invalidateCachePrefix('cached_investment_')
+    invalidateRevalidationPrefix('/investments/')
     clearCachedInvestmentPages()
     return result
   })

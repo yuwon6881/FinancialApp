@@ -130,24 +130,24 @@ describe('useFinancialData', () => {
     vi.restoreAllMocks()
   })
 
-  it('does not restart the wake-up ping loop when the outbox queue changes', async () => {
+  it('starts with bootstrap directly and does not restart startup when the outbox queue changes', async () => {
     mockHappyApi()
-    // Keep the server "waking" so the ping loop stays live and every effect
-    // re-registration would be observable as an extra immediate ping.
-    const ping = vi.spyOn(api, 'pingServer').mockResolvedValue({ status: 'waking_up' } as any)
+    const ping = vi.spyOn(api, 'pingServer')
 
     const { result } = renderFinancialData()
-    await waitFor(() => expect(ping).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(api.fetchBootstrap).toHaveBeenCalledTimes(1))
+    expect(ping).not.toHaveBeenCalled()
 
     act(() => {
-      result.current.mutateQueue(prev =>
-        result.current.enqueue(prev, 'transaction', 'add', 'tx-local-1', { amount: 5 } as any))
+      result.current.mutateQueue(prev => [...prev])
     })
-    // The queue really did change identity -- that is what used to churn `loadAll`.
-    expect(result.current.pendingOps).toHaveLength(1)
+    // The queue really did change identity -- that is what used to churn `loadAll`. Keep it
+    // empty so this assertion cannot confuse a legitimate post-dispatch refresh with startup.
+    expect(result.current.pendingOps).toHaveLength(0)
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)) })
 
-    expect(ping).toHaveBeenCalledTimes(1)
+    expect(api.fetchBootstrap).toHaveBeenCalledTimes(1)
+    expect(ping).not.toHaveBeenCalled()
   })
 
   it('does not let a late startup response roll back a newly selected theme', async () => {
@@ -294,11 +294,12 @@ describe('useFinancialData', () => {
     const updateReminder = vi.spyOn(api, 'updateRecurringPaymentReminder').mockResolvedValue(undefined)
 
     const originalOnline = navigator.onLine
-    Object.defineProperty(window.navigator, 'onLine', { configurable: true, value: false })
 
     try {
       const { result } = renderFinancialData()
       await waitFor(() => expect(result.current.recurringPayments).toHaveLength(1))
+      Object.defineProperty(window.navigator, 'onLine', { configurable: true, value: false })
+      act(() => window.dispatchEvent(new Event('offline')))
 
       act(() => {
         result.current.handleUpdateReminder('rp-1', { enabled: true, mode: 'Once', leadDays: 0 })
@@ -326,11 +327,12 @@ describe('useFinancialData', () => {
       nextOccurrenceDate: '2026-09-01',
     })
     const originalOnline = navigator.onLine
-    Object.defineProperty(window.navigator, 'onLine', { configurable: true, value: false })
 
     try {
       const { result } = renderFinancialData()
       await waitFor(() => expect(result.current.recurringPayments).toHaveLength(1))
+      Object.defineProperty(window.navigator, 'onLine', { configurable: true, value: false })
+      act(() => window.dispatchEvent(new Event('offline')))
 
       act(() => {
         result.current.handlePayEarly('rp-1')
