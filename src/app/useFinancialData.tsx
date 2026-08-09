@@ -114,6 +114,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const [isOffline, setIsOffline] = useState<boolean>(() => typeof navigator !== 'undefined' ? !navigator.onLine : false)
 
   const isServerAwakeRef = useRef<boolean>(false)
+  const isFinancialDataMountedRef = useRef(true)
   const loadAllSeqRef = useRef(0)
   // Keep each locally chosen setting until a server snapshot explicitly confirms the
   // same value. Queue state alone is insufficient here: a fast settings write can leave
@@ -135,6 +136,16 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   useEffect(() => {
     unconfirmedSettingWritesRef.current.clear()
   }, [token])
+
+  useEffect(() => {
+    isFinancialDataMountedRef.current = true
+    return () => {
+      isFinancialDataMountedRef.current = false
+      loadAllSeqRef.current += 1
+      loadAllAbortRef.current?.abort()
+      loadAllAbortRef.current = null
+    }
+  }, [loadAllAbortRef])
 
   // Persist draft transactions to localStorage
   useEffect(() => {
@@ -349,9 +360,9 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     rethrowOnError = false,
     shouldCommit?: () => boolean,
   ) => {
-    if (!token) return
+    if (!token || !isFinancialDataMountedRef.current) return
     const requestSeq = ++loadAllSeqRef.current
-    const isStale = () => requestSeq !== loadAllSeqRef.current
+    const isStale = () => !isFinancialDataMountedRef.current || requestSeq !== loadAllSeqRef.current
     // A preference can finish syncing while this request is in flight. Preserve
     // the request-start snapshot so an older bootstrap response cannot overwrite
     // that user choice after the outbox removes its completed operation.

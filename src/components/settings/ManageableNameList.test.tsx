@@ -45,6 +45,22 @@ describe('ManageableNameList', () => {
     expect(screen.getByRole('searchbox')).toBeTruthy()
   })
 
+  it('checks duplicates against items hidden by an external filter', () => {
+    render(
+      <ManageableNameList
+        items={[items[0]]}
+        duplicateItems={items}
+        itemLabel="Category"
+        addPlaceholder="New Category Name"
+        onAdd={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    )
+
+    fireEvent.change(screen.getByPlaceholderText('New Category Name'), { target: { value: 'Invoice' } })
+    expect(screen.getByText('Category already exists.')).toBeTruthy()
+  })
+
   it('groups additional fields with the add form', () => {
     render(
       <ManageableNameList

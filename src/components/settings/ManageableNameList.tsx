@@ -12,6 +12,7 @@ export interface ManageableNameItem {
 
 interface ManageableNameListProps<T extends ManageableNameItem> {
   items: T[]
+  duplicateItems?: T[]
   itemLabel: string
   addPlaceholder: string
   addFormTitle?: string
@@ -29,6 +30,7 @@ interface ManageableNameListProps<T extends ManageableNameItem> {
 
 export function ManageableNameList<T extends ManageableNameItem>({
   items,
+  duplicateItems = items,
   itemLabel,
   addPlaceholder,
   addFormTitle,
@@ -52,7 +54,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
     ? `${lowerItemLabel.slice(0, -1)}ies`
     : `${lowerItemLabel}s`
   const trimmedName = newName.trim()
-  const duplicate = items.some(item => item.name.trim().toLowerCase() === trimmedName.toLowerCase())
+  const duplicate = duplicateItems.some(item => item.name.trim().toLowerCase() === trimmedName.toLowerCase())
   const validationError = trimmedName && !duplicate ? validateName?.(trimmedName) ?? null : null
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()

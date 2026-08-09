@@ -58,11 +58,12 @@ const insights = {
 const handleLogout = vi.fn(async () => undefined)
 const markSessionLocked = vi.fn()
 const markSensitivePreferenceUnavailable = vi.fn()
-const setDarkMode = vi.fn()
+const mountedFinancialDataHooks = new Set<() => void>()
 
 function renderFinancialData() {
   // Every option must be stable across renders -- an inline literal or `vi.fn()` here
   // would churn `loadAll`'s identity by itself and mask the churn these tests pin.
+  const setDarkMode = vi.fn()
   const options = {
     token: 'token-1',
     lastUnlockedTimeRef: { current: 0 },
@@ -87,7 +88,9 @@ function renderFinancialData() {
     hasShownModalThisSession: true,
     setShowLoginModal: vi.fn(),
   }
-  return renderHook(() => useFinancialData(options as any))
+  const rendered = renderHook(() => useFinancialData(options as any))
+  mountedFinancialDataHooks.add(rendered.unmount)
+  return { ...rendered, setDarkMode }
 }
 
 function mockHappyApi(recurring: RecurringPayment[] = [payment]) {
@@ -122,6 +125,8 @@ describe('useFinancialData', () => {
   })
 
   afterEach(() => {
+    for (const unmount of mountedFinancialDataHooks) unmount()
+    mountedFinancialDataHooks.clear()
     vi.restoreAllMocks()
   })
 
@@ -153,7 +158,7 @@ describe('useFinancialData', () => {
     vi.spyOn(api, 'pingServer').mockResolvedValue({ status: 'ok' } as any)
     vi.spyOn(api, 'updateDarkMode').mockReturnValue(new Promise(() => undefined) as any)
 
-    const { result } = renderFinancialData()
+    const { result, setDarkMode } = renderFinancialData()
     await waitFor(() => expect(api.fetchBootstrap).toHaveBeenCalled())
 
     act(() => {
@@ -188,7 +193,7 @@ describe('useFinancialData', () => {
     vi.spyOn(api, 'pingServer').mockResolvedValue({ status: 'ok' } as any)
     vi.spyOn(api, 'updateDarkMode').mockResolvedValue(undefined as any)
 
-    const { result } = renderFinancialData()
+    const { result, setDarkMode } = renderFinancialData()
     await waitFor(() => expect(api.fetchBootstrap).toHaveBeenCalled())
 
     act(() => {

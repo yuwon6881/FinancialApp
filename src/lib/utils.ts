@@ -51,6 +51,17 @@ export const maskCurrencyInput = (rawVal: string, currentValue: string): string 
   const tokens = val.split(/([+\-×÷])/)
   const currentTokens = currentValue ? currentValue.split(/([+\-×÷])/) : []
 
+  const followsMultiplierOrDivisor = (index: number) => {
+    const operator = tokens[index - 1]
+    if (operator === '×' || operator === '÷') return true
+
+    // Keep a unary sign attached to the scalar operand: `12÷-2` should divide
+    // by negative two, not by negative two cents.
+    return (operator === '+' || operator === '-')
+      && tokens[index - 2] === ''
+      && (tokens[index - 3] === '×' || tokens[index - 3] === '÷')
+  }
+
   const formattedTokens = tokens.map((token, index) => {
     // If the token is an operator, keep it as is
     if (/[+\-×÷]/.test(token)) return token
@@ -58,6 +69,22 @@ export const maskCurrencyInput = (rawVal: string, currentValue: string): string 
 
     // Apply ATM formatting to this specific number token
     const digits = token.replace(/\D/g, '')
+
+    // Multiplication and division operands are counts or factors more often
+    // than money, so enter whole numbers by default. A typed decimal point is
+    // explicit and switches just that operand to normal decimal entry.
+    if (followsMultiplierOrDivisor(index)) {
+      const decimalIndex = token.indexOf('.')
+      if (decimalIndex >= 0) {
+        const wholeDigits = token.slice(0, decimalIndex).replace(/\D/g, '')
+        const fractionDigits = token.slice(decimalIndex + 1).replace(/\D/g, '')
+        const whole = wholeDigits ? String(parseInt(wholeDigits, 10)) : '0'
+        return `${whole}.${fractionDigits}`
+      }
+      if (!digits) return ''
+      return String(parseInt(digits, 10))
+    }
+
     if (!digits) return ''
 
     const parsed = parseInt(digits, 10)

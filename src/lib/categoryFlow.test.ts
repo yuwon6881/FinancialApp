@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { allowsCategoryFlow, isSpendingGuideCategory, normalizeCategoryFlowType } from './categoryFlow'
+import {
+  allowsCategoryFlow,
+  isSelectableTransactionCategory,
+  isSpendingGuideCategory,
+  normalizeCategoryFlowType,
+} from './categoryFlow'
 
 describe('category flow rules', () => {
   it('normalizes missing and invalid legacy flow values to both', () => {
@@ -20,5 +25,11 @@ describe('category flow rules', () => {
     expect(isSpendingGuideCategory({ type: 'inflow' })).toBe(false)
     expect(isSpendingGuideCategory({ type: 'outflow' })).toBe(true)
     expect(isSpendingGuideCategory({ type: undefined })).toBe(true)
+  })
+
+  it('keeps reserved categories out of ordinary transaction category lists', () => {
+    expect(isSelectableTransactionCategory({ name: 'Transfer', type: 'both' }, 'inflow')).toBe(false)
+    expect(isSelectableTransactionCategory({ name: ' adjustment ', type: 'both' }, 'outflow')).toBe(false)
+    expect(isSelectableTransactionCategory({ name: 'Salary', type: 'inflow' }, 'inflow')).toBe(true)
   })
 })

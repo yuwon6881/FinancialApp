@@ -19,6 +19,48 @@ export function allowsCategoryFlow(
   return normalizedType === 'both' || normalizedType === transactionType
 }
 
+interface SelectableTransactionCategory {
+  name?: string | null
+  type?: string | null
+  isPendingDelete?: boolean
+}
+
+export function isSelectableTransactionCategory(
+  category: SelectableTransactionCategory,
+  transactionType?: 'inflow' | 'outflow',
+): boolean {
+  const normalizedName = category.name?.trim().toLowerCase()
+  if (!normalizedName || category.isPendingDelete) return false
+  if (normalizedName === 'transfer' || normalizedName === 'adjustment') return false
+  return !transactionType || allowsCategoryFlow(category.type, transactionType)
+}
+
+export type CategoryFlowFilterValue = 'all' | CategoryFlowType
+
+export interface CategoryFlowRow {
+  category: TransactionCategory
+  count: number | null
+}
+
+const FLOW_GROUP_ORDER: Record<CategoryFlowType, number> = {
+  both: 0,
+  inflow: 1,
+  outflow: 2,
+}
+
+export function filterAndGroupCategoryRows(
+  rows: CategoryFlowRow[],
+  flowTypeDrafts: Record<string, CategoryFlowType>,
+  filter: CategoryFlowFilterValue,
+): CategoryFlowRow[] {
+  const flowType = (row: CategoryFlowRow) => normalizeCategoryFlowType(
+    flowTypeDrafts[row.category.id] ?? row.category.type,
+  )
+  const filteredRows = filter === 'all' ? rows : rows.filter(row => flowType(row) === filter)
+  if (filter !== 'all') return filteredRows
+  return [...filteredRows].sort((left, right) => FLOW_GROUP_ORDER[flowType(left)] - FLOW_GROUP_ORDER[flowType(right)])
+}
+
 export function isSpendingGuideCategory(category: Pick<TransactionCategory, 'type'>): boolean {
   return normalizeCategoryFlowType(category.type) !== 'inflow'
 }

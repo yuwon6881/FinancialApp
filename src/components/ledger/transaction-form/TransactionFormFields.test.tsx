@@ -22,6 +22,8 @@ describe('TransactionFormFields', () => {
         categories={[
           { id: 'entertainment', name: 'Entertainment' },
           { id: 'food', name: 'Food' },
+          { id: 'transfer', name: 'Transfer' },
+          { id: 'adjustment', name: 'Adjustment' },
         ]}
         errors={{}}
         onSetField={vi.fn()}
@@ -49,5 +51,7 @@ describe('TransactionFormFields', () => {
 
     expect(screen.queryByRole('combobox', { name: 'Search category' })).toBeNull()
     expect(screen.getByRole('option', { name: 'Food, Suggested 92%' })).toBeTruthy()
+    expect(screen.queryByRole('option', { name: 'Transfer' })).toBeNull()
+    expect(screen.queryByRole('option', { name: 'Adjustment' })).toBeNull()
   })
 })

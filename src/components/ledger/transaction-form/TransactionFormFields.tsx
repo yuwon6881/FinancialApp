@@ -13,6 +13,7 @@ import { Button } from '../../ui/Button'
 import { HorizontalRail } from '../../ui/HorizontalRail'
 import { StabilityTopUpOffer } from './StabilityTopUpOffer'
 import type { RecoveryBucketState, RecoveryOffer } from '../../../lib/stabilityRecovery'
+import { isSelectableTransactionCategory } from '../../../lib/categoryFlow'
 
 interface TransactionFormFieldsProps {
   state: TransactionFormState
@@ -120,11 +121,10 @@ export function TransactionFormFields({
   const categorySelectOptions = React.useMemo(() => {
     const activeTxType = state.transactionType
     const availableCategories = categories.filter(cat => {
-      if (cat.isPendingDelete) return false
       if (activeTxType === 'inflow' || activeTxType === 'outflow') {
-        return !cat.type || cat.type === 'both' || cat.type === activeTxType
+        return isSelectableTransactionCategory(cat, activeTxType)
       }
-      return true
+      return isSelectableTransactionCategory(cat)
     })
     const categoryByName = new Map(availableCategories.map(cat => [cat.name.toLowerCase(), cat.name]))
     const suggestedNames = new Set<string>()

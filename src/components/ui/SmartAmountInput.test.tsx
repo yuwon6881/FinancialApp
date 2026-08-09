@@ -41,6 +41,40 @@ describe('SmartAmountInput calculator', () => {
     expect(input.value).toBe('60.00')
   })
 
+  it('enters multiplication and division operands as whole numbers by default', () => {
+    render(<MaskedWrapper />)
+    const input = screen.getByLabelText('amount') as HTMLInputElement
+
+    fireEvent.change(input, { target: { value: '12.00*5' } })
+    expect(input.value).toBe('12.00×5')
+
+    fireEvent.change(input, { target: { value: '12.00/3' } })
+    expect(input.value).toBe('12.00÷3')
+    fireEvent.keyDown(input, { key: '=' })
+    expect(input.value).toBe('4.00')
+  })
+
+  it('preserves an explicitly entered decimal multiplier or divisor', () => {
+    render(<MaskedWrapper />)
+    const input = screen.getByLabelText('amount') as HTMLInputElement
+
+    fireEvent.change(input, { target: { value: '12.00*0.5' } })
+    expect(input.value).toBe('12.00×0.5')
+    fireEvent.keyDown(input, { key: '=' })
+    expect(input.value).toBe('6.00')
+
+    fireEvent.change(input, { target: { value: '12.00*.5' } })
+    expect(input.value).toBe('12.00×0.5')
+  })
+
+  it('keeps cents-push entry for addition and subtraction operands', () => {
+    render(<MaskedWrapper />)
+    const input = screen.getByLabelText('amount') as HTMLInputElement
+
+    fireEvent.change(input, { target: { value: '12.00+5-5' } })
+    expect(input.value).toBe('12.00+0.05-0.05')
+  })
+
   it('evaluates a pending expression when the field loses focus', () => {
     render(<MaskedWrapper />)
     const input = screen.getByLabelText('amount') as HTMLInputElement

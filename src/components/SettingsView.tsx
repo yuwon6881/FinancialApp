@@ -24,6 +24,7 @@ const InvestmentPlanSection = React.lazy(() => import('./settings/InvestmentPlan
 import { useSettingsView } from './settings/view/useSettingsView'
 import { CategoryLimitsCard } from './settings/CategoryLimitsCard'
 import { ManageableNameList } from './settings/ManageableNameList'
+import { CategoryFlowFilter } from './settings/CategoryFlowFilter'
 import type { SensitivePreferenceStatus } from '../app/useAppPreferences'
 import { FormField } from './ui/FormField'
 import { Button } from './ui/Button'
@@ -708,8 +709,10 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   </div>
                 )}
 
-                <ManageableNameList
-                  items={categoryRows.map(({ category, count }) => ({ ...category, count }))}
+                <CategoryFlowFilter rows={categoryRows} flowTypeDrafts={flowTypeDrafts}>
+                  {filteredCategoryRows => <ManageableNameList
+                  items={filteredCategoryRows.map(({ category, count }) => ({ ...category, count }))}
+                  duplicateItems={categoryRows.map(({ category, count }) => ({ ...category, count }))}
                   itemLabel="Category"
                   addPlaceholder="New Category Name"
                   addFormTitle="Add a category"
@@ -765,7 +768,8 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                       entityLabel="category"
                     />
                   )}
-                />
+                  />}
+                </CategoryFlowFilter>
 
                 {view.categoryUsage && view.visibleCategories.length > 0 && (
                   <p className="text-[10px] text-muted-foreground px-0.5">
