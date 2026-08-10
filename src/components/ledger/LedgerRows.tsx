@@ -44,6 +44,25 @@ const Amount = ({ value, hidden }: { value: ReactNode; hidden: boolean }) => (
   hidden ? <SensitiveMask /> : <span>{value}</span>
 )
 
+// The reload answer sits beside the description, not in the allocation cell: that cell is the
+// ledger bucket and nothing else, and painting the answer in the Stability badge colour read as a
+// second bucket. Amber (--ledger-pending-*) is the needs-attention token the Today card already
+// uses for the same obligation; "spent for good" is settled, so it stays muted.
+const ReloadIntentChip = ({ intent }: { intent: Transaction['stabilityReloadIntent'] }) => {
+  const spentForGood = intent === 'NotRequired'
+  return (
+    <span
+      className={`inline-flex shrink-0 rounded-md border px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap ${
+        spentForGood
+          ? 'border-border/60 bg-muted/40 text-muted-foreground'
+          : 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+      }`}
+    >
+      {stabilityReloadIntentLabel(intent)}
+    </span>
+  )
+}
+
 export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: LedgerRowProps) {
   const transaction = props.transaction
   const outflow = transaction.amount < 0
@@ -75,8 +94,9 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
       </td>}
       <td className="p-4 font-medium text-muted-foreground">{transaction.date}</td>
       <td className="p-4 font-semibold text-foreground">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span>{transaction.description}</span>
+          {reloadDrawdown && <ReloadIntentChip intent={transaction.stabilityReloadIntent} />}
           <RowSyncStatus isDeleting={props.isDeleting} isSyncing={props.isSyncing} isPending={transaction.isPendingSync} entityLabel="transaction" />
         </div>
       </td>
@@ -87,11 +107,6 @@ export const DesktopLedgerRow = React.memo(function DesktopLedgerRow(props: Ledg
           {transfer && (
             <span className="text-[10px] font-semibold text-blue-500 whitespace-nowrap">
               {split ? 'Allocated' : 'Moved'} {money(Math.abs(transaction.amount))}
-            </span>
-          )}
-          {reloadDrawdown && (
-            <span className={`inline-flex rounded-md border px-2 py-0.5 text-[10px] font-semibold ${getCategoryBadgeClass('Stability')}`}>
-              {stabilityReloadIntentLabel(transaction.stabilityReloadIntent)}
             </span>
           )}
         </span>
@@ -148,7 +163,8 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
           </div>}
           <div className="flex items-center justify-between gap-2"><span className="shrink-0 text-[10px] text-muted-foreground font-mono">{transaction.date}</span><span title={transaction.category} className={`min-w-0 max-w-[65%] truncate px-2 py-0.5 text-right text-[10px] font-semibold rounded-full border ${getCategoryBadgeClass(transaction.category)}`}>{transaction.category}</span></div>
           <div className="flex items-center justify-between gap-3"><div className="flex min-w-0 flex-1 items-center gap-1.5"><h4 className="min-w-0 truncate text-sm font-bold">{transaction.description}</h4><RowSyncStatus isDeleting={props.isDeleting} isSyncing={props.isSyncing} isPending={transaction.isPendingSync} entityLabel="transaction" /></div><span className={`max-w-[45%] shrink-0 break-words text-right text-sm font-bold ${transfer ? 'text-blue-400' : outflow ? 'text-orange-400' : 'text-emerald-400'}`}>{props.hideSensitive ? <SensitiveMask /> : <>{transfer ? '' : outflow ? '-' : '+'}{formatted}</>}</span></div>
-           <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/30"><span className="text-[10px] text-muted-foreground flex items-center gap-1.5">Ledger:<LedgerAllocationBadge ledgerCategory={transaction.ledgerCategory} transactionId={transaction.id} compact /></span>{reloadDrawdown && <span className={`inline-flex rounded-md border px-2 py-0.5 text-[10px] font-semibold ${getCategoryBadgeClass('Stability')}`}>{stabilityReloadIntentLabel(transaction.stabilityReloadIntent)}</span>}</div>
+          {reloadDrawdown && <div className="flex"><ReloadIntentChip intent={transaction.stabilityReloadIntent} /></div>}
+           <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/30"><span className="text-[10px] text-muted-foreground flex items-center gap-1.5">Ledger:<LedgerAllocationBadge ledgerCategory={transaction.ledgerCategory} transactionId={transaction.id} compact /></span></div>
         </div>
       </SwipeableRow>
     </div>

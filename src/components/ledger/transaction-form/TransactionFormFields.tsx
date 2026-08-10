@@ -454,40 +454,63 @@ export function TransactionFormFields({
       )}
 
       {isStabilityReloadFormDrawdown(state) && (
-        <fieldset className="space-y-2 rounded-xl border border-amber-500/25 bg-amber-500/5 p-3.5 sm:col-span-2">
-          <legend className="px-1 text-sm font-semibold text-foreground">
-            <span className="inline-flex items-center gap-1.5">
-              Money out of your emergency fund
-              <InfoHint
-                label="Emergency-fund putting-back choice"
-                text="Only I'll put this back keeps the Today reminder alive. Choose spent for good when this money will not return to the fund."
-              />
-            </span>
-          </legend>
-          <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-describedby={errors.stabilityReloadIntent ? 'stability-reload-intent-error' : undefined}>
+        // A div rather than a fieldset/legend: the legend sits in the border line and the box's own
+        // top padding then starts below it, so the card opened with a visibly deeper gap than its
+        // other three sides.
+        <div className="space-y-2 rounded-xl border border-amber-500/25 bg-amber-500/5 p-3 sm:col-span-2">
+          <p id="stability-reload-intent-label" className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">
+            Money out of your emergency fund
+            <InfoHint
+              label="Emergency-fund putting-back choice"
+              text="Only I'll put this back keeps the Today reminder alive. Choose spent for good when this money will not return to the fund."
+            />
+          </p>
+          <div
+            className="grid gap-2 sm:grid-cols-2"
+            role="radiogroup"
+            aria-labelledby="stability-reload-intent-label"
+            aria-describedby={errors.stabilityReloadIntent ? 'stability-reload-intent-error' : undefined}
+          >
             {([
               ['Required', "I'll put this back"],
               ['NotRequired', "This one's spent for good"],
-            ] as const).map(([value, label]) => (
-              <label key={value} className="flex cursor-pointer items-center gap-2 rounded-lg border border-border/60 bg-card/60 px-3 py-2.5 text-xs font-semibold text-foreground transition hover:bg-muted/40">
-                <Input
-                  type="radio"
-                  name="stabilityReloadIntent"
-                  value={value}
-                  checked={state.stabilityReloadIntent === value}
-                  onChange={() => onSetField('stabilityReloadIntent', value)}
-                  className="size-4 w-auto shrink-0 rounded-full p-0 shadow-none"
-                />
-                {label}
-              </label>
-            ))}
+            ] as const).map(([value, label]) => {
+              const selected = state.stabilityReloadIntent === value
+              return (
+                // Buttons rather than <input type="radio">: styling a native radio's background and
+                // border makes Chrome drop native rendering, which painted a filled rectangle over
+                // the dot once selected. This is the same role="radio" idiom as TransactionTypeFields.
+                <Button
+                  key={value}
+                  variant="unstyled"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => onSetField('stabilityReloadIntent', value)}
+                  className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-xs font-semibold transition ${
+                    selected
+                      ? 'border-amber-500/50 bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                      : 'border-border/60 bg-card/60 text-foreground hover:bg-muted/40'
+                  }`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`flex size-4 shrink-0 items-center justify-center rounded-full border ${
+                      selected ? 'border-amber-500' : 'border-border'
+                    }`}
+                  >
+                    {selected && <span className="size-2 rounded-full bg-amber-500" />}
+                  </span>
+                  {label}
+                </Button>
+              )
+            })}
           </div>
           {errors.stabilityReloadIntent && (
             <p id="stability-reload-intent-error" className="text-xs text-destructive">
               {errors.stabilityReloadIntent}
             </p>
           )}
-        </fieldset>
+        </div>
       )}
     </>
   )

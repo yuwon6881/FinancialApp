@@ -36,9 +36,6 @@ describe('StabilityRecoveryExceptionCard', () => {
   it.each([
     ['inactive', { isActive: false }],
     ['nothing left to put back', { outstandingShortfall: 0 }],
-    // Deliberately separate from the shortfall gate: the fund can still be short overall while
-    // this cycle's share is already back, which is a healthy state Today should not comment on.
-    ["this cycle's share already back", { outstandingThisCycle: 0 }],
   ])('stays hidden when %s', (_label, overrides) => {
     const { container } = render(
       <StabilityRecoveryExceptionCard
@@ -48,6 +45,30 @@ describe('StabilityRecoveryExceptionCard', () => {
       />
     )
     expect(container.innerHTML).toBe('')
+  })
+
+  // 871.77 marked with 520 already put back leaves 351.77 genuinely owed, while the three-cycle
+  // pace only asks for ceil(871.77 / 3) = 290.59 -- which the 520 already covers. Gating the card on
+  // this cycle's ask hid it in exactly that state: below target, still owing, and never told.
+  it('keeps reporting the overall shortfall when this cycle is already ahead of the plan', () => {
+    render(
+      <StabilityRecoveryExceptionCard
+        recovery={recovery({
+          markedTotal: 871.77,
+          repaidTotal: 520,
+          outstandingShortfall: 351.77,
+          toppedUpThisCycle: 520,
+          requiredThisCycle: 290.59,
+          outstandingThisCycle: 0,
+        })}
+        formatSensitive={format}
+      />
+    )
+
+    expect(screen.getByText('Your emergency fund is below where it was')).toBeTruthy()
+    expect(screen.getByText(/Nothing more is needed this cycle/)).toBeTruthy()
+    expect(screen.getByText(/\$351\.77 remains overall across 3 cycles/)).toBeTruthy()
+    expect(screen.queryByText(/Put back \$0\.00 more this cycle/)).toBeNull()
   })
 
   it('says what was used and what putting it back looks like', () => {

@@ -21,10 +21,15 @@ interface StabilityRecoveryExceptionCardProps {
 }
 
 /**
- * Today speaks up only while an explicitly marked emergency-fund obligation remains and this
- * cycle's share of putting it back is still owed. Those are two separate gates on purpose: the
- * fund can still be short overall after this cycle's share is already back, which is a perfectly
- * healthy state that deserves no card.
+ * Today speaks up while an explicitly marked emergency-fund obligation remains, and stops only when
+ * it is gone.
+ *
+ * `outstandingThisCycle` is deliberately *not* a gate. It is the three-cycle pace's ask for this
+ * cycle, and it hits zero the moment this cycle's share is back -- so 871.77 marked with 520 already
+ * put back left 351.77 genuinely owed while the pace asked for ceil(871.77/3) = 290.59, which 520
+ * already covers. Gating on it hid the card in exactly the state the user was trying to read: still
+ * short of target, still owing, and no longer told about it. Being ahead of pace changes the
+ * sentence, not whether there is one.
  *
  * The card still carries no action that *changes* anything — the transaction form and ledger edit
  * own the answer. What it does carry is the marked/repaid arithmetic and a way to see it: an
@@ -39,7 +44,9 @@ export function StabilityRecoveryExceptionCard({
   const reduceMotion = useReducedMotion()
 
   if (!recovery || !recovery.isActive) return null
-  if (recovery.outstandingShortfall <= 0 || recovery.outstandingThisCycle <= 0) return null
+  if (recovery.outstandingShortfall <= 0) return null
+
+  const aheadOfPace = recovery.outstandingThisCycle <= 0
 
   const percentRepaid = recovery.markedTotal > 0
     ? Math.round(Math.min(1, Math.max(0, recovery.repaidTotal / recovery.markedTotal)) * 100)
@@ -76,7 +83,9 @@ export function StabilityRecoveryExceptionCard({
           </div>
 
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Put back {formatSensitive(recovery.outstandingThisCycle)} more this cycle.{' '}
+            {aheadOfPace
+              ? <>Nothing more is needed this cycle — you are ahead of the plan.{' '}</>
+              : <>Put back {formatSensitive(recovery.outstandingThisCycle)} more this cycle.{' '}</>}
             {recovery.isOverdue
               ? <>{formatSensitive(recovery.outstandingShortfall)} remains overall and the plan is overdue.</>
               : isFinalCycle
