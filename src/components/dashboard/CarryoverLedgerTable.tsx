@@ -43,13 +43,13 @@ export function CarryoverLedgerTable({
   return (
     <div className="app-panel p-6 bg-card/92 border border-border/60 rounded-2xl">
       <h3 className="text-base font-bold text-foreground mb-1">Carryover Rolling Ledgers</h3>
-      <p className="text-xs text-muted-foreground mb-4">Starting budget carries forward from previous month's remaining balance.</p>
+      <p className="text-xs text-muted-foreground mb-4">Starting budget carries forward from the previous cycle's remaining balance.</p>
 
       {!isMobile && (
       <div className="overflow-x-auto">
         <div className="min-w-[800px] text-xs space-y-1">
           <div className="grid grid-cols-[1.8fr_1fr_1.5fr_2fr_2fr_2fr] items-center gap-4 border-b border-border/50 text-muted-foreground font-semibold pb-2.5 px-4 mb-2">
-            <div>Category</div><div>Target Alloc.</div><div className="text-right">Allocated Budget</div>
+            <div>Category</div><div>Plan Target</div><div className="text-right">Income Added</div>
             <div className="text-right">Carried Over</div><div className="text-right">Net Change</div>
             <div className="text-right">Remaining Balance</div>
           </div>
@@ -61,7 +61,7 @@ export function CarryoverLedgerTable({
                   <span className={`size-2.5 rounded-full ${getCategoryDotClass(category.name)}`} />{category.name}
                 </div>
                 <div className="text-muted-foreground font-medium">{(category.allocation * 100).toFixed(0)}%</div>
-                <div className="text-right font-medium text-foreground">{amount(category.target)}</div>
+                <div className="text-right font-medium text-foreground">{amount(category.incomeAllocated ?? category.target)}</div>
                 <div className="text-right text-muted-foreground font-medium">{amount(category.budget)}</div>
                 <div className={`text-right font-medium ${category.netChange < 0 ? 'text-orange-500' : category.netChange > 0 ? 'text-blue-500' : ''}`}>
                   <div><SensitiveAmount value={category.netChange} isMasked={amountsMasked} formatFn={(v) => (v > 0 ? '+' : '') + formatCurrency(v)} /></div>
@@ -94,7 +94,7 @@ export function CarryoverLedgerTable({
                 <span className="text-[10px] font-semibold bg-muted px-2 py-0.5 rounded-md text-muted-foreground">Target: {(category.allocation * 100).toFixed(0)}%</span>
               </div>
               <div className="grid grid-cols-2 gap-4 text-xs border-t border-border/30 pt-2.5">
-                <Metric label="Allocated Budget" value={amount(category.target)} />
+                <Metric label="Income Added" value={amount(category.incomeAllocated ?? category.target)} />
                 <Metric label="Carried Over" value={amount(category.budget)} />
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs border-t border-border/30 pt-2.5">

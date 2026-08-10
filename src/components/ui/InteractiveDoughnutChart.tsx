@@ -67,8 +67,8 @@ export function InteractiveDoughnutChart({
 
   return (
     <>
-      <div className={`relative shrink-0 ${chartClassName} ${masked ? 'blur-md' : ''}`}>
-        <svg role="img" aria-label={ariaLabel} className="size-full overflow-visible" viewBox="0 0 200 200">
+      <div aria-hidden={masked || undefined} className={`relative shrink-0 ${chartClassName} ${masked ? 'pointer-events-none select-none blur-md' : ''}`}>
+        <svg role="img" aria-label={masked ? `${centerLabel} values hidden` : ariaLabel} className="size-full overflow-visible" viewBox="0 0 200 200">
           {chartSlices.map((slice, index) => {
             const highlighted = activeKey === slice.key
             return (
@@ -88,13 +88,14 @@ export function InteractiveDoughnutChart({
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.4, ease: 'easeOut', delay: reduceMotion ? 0 : index * 0.04 }}
                 style={{ transformOrigin: '100px 100px' }}
-                tabIndex={0}
-                onMouseEnter={() => setHoveredKey(slice.key)}
+                tabIndex={masked ? -1 : 0}
+                onMouseEnter={() => { if (!masked) setHoveredKey(slice.key) }}
                 onMouseLeave={() => setHoveredKey(null)}
-                onFocus={() => setHoveredKey(slice.key)}
+                onFocus={() => { if (!masked) setHoveredKey(slice.key) }}
                 onBlur={() => setHoveredKey(null)}
-                onClick={() => activateArc(slice)}
+                onClick={() => { if (!masked) activateArc(slice) }}
                 onKeyDown={event => {
+                  if (masked) return
                   if (event.key !== 'Enter' && event.key !== ' ') return
                   event.preventDefault()
                   onActivate?.(slice)

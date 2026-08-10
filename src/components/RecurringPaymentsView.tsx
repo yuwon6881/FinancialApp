@@ -115,6 +115,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
         activeCount={view.activeCount}
         totalCount={payments.length}
         showAddForm={view.showAddForm}
+        hideSensitive={hideSensitive}
         formatSensitive={view.formatSensitive}
         onToggleForm={view.toggleAddForm}
       />

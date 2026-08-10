@@ -7,7 +7,7 @@ import type { DocumentSort } from '../documentOrdering'
 
 export const DOCUMENT_CACHE_KEYS = {
   constraints: 'documents:constraints',
-  expired: 'documents:expired',
+  retention: 'documents:retention',
   listPrefix: 'documents:list:',
   reliefCategoriesPrefix: 'documents:relief-categories:',
   reliefCategories: (taxYear: number) => `documents:relief-categories:${taxYear}`,
@@ -49,7 +49,7 @@ export function invalidateDocumentDerivedData(): void {
   invalidateCachePrefix(DOCUMENT_CACHE_KEYS.reliefCategoriesPrefix)
   invalidateCacheKey(DOCUMENT_CACHE_KEYS.usage)
   invalidateCacheKey(DOCUMENT_CACHE_KEYS.years)
-  invalidateCacheKey(DOCUMENT_CACHE_KEYS.expired)
+  invalidateCacheKey(DOCUMENT_CACHE_KEYS.retention)
   invalidateRevalidationPrefix('/documents')
 }
 

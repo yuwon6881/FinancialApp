@@ -102,10 +102,25 @@ export function DesktopLedgerTable({
                         <span className="text-[10px] font-medium text-blue-500/70">internal — excluded from debit &amp; credit</span>
                       </span>
                     ) : <span />}
-                    <span className="inline-flex items-center gap-2">
-                      <span className="uppercase tracking-wider text-muted-foreground font-bold text-[11px]">Net Position</span>
-                      <span className={`font-extrabold text-sm ${net >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
-                        {net >= 0 ? '+' : '-'}{formatSensitive(Math.abs(net))}
+                    <span className="inline-flex flex-wrap items-center gap-x-4 gap-y-2">
+                      {/* Filtering to one bucket makes debit/credit useless — a Stability-only view
+                          is nearly all transfers, so both read zero while the fund has visibly
+                          moved. This is the figure that answers "how much left this bucket". */}
+                      {pageTotals.bucket && (
+                        <span className="inline-flex items-center gap-2">
+                          <span className="uppercase tracking-wider text-muted-foreground font-bold text-[11px]">
+                            {pageTotals.bucket} on this page
+                          </span>
+                          <span className={`font-extrabold text-sm ${pageTotals.bucketNet >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
+                            {pageTotals.bucketNet >= 0 ? '+' : '-'}{formatSensitive(Math.abs(pageTotals.bucketNet))}
+                          </span>
+                        </span>
+                      )}
+                      <span className="inline-flex items-center gap-2">
+                        <span className="uppercase tracking-wider text-muted-foreground font-bold text-[11px]">Net Position</span>
+                        <span className={`font-extrabold text-sm ${net >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
+                          {net >= 0 ? '+' : '-'}{formatSensitive(Math.abs(net))}
+                        </span>
                       </span>
                     </span>
                   </div>

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import type { VaultDocument, DocumentVaultUsage, TaxYearReliefSummary, ExpiredTaxYearSummary, TaxReliefCategoryDefinition } from '../../../types'
+import type { VaultDocument, DocumentVaultUsage, TaxYearReliefSummary, DocumentRetentionReview, TaxReliefCategoryDefinition } from '../../../types'
 import * as api from '../../../lib/api/documents'
+import { EMPTY_RETENTION_REVIEW } from '../../../lib/documentRetention'
 import type { DocumentSort } from '../../../lib/documentOrdering'
 
 function clampDocumentPage(totalCount: number, page: number, pageSize: number): number {
@@ -14,7 +15,7 @@ export function useDocumentsView() {
   const [usage, setUsage] = useState<DocumentVaultUsage | null>(null)
   const [availableYears, setAvailableYears] = useState<number[]>([])
   const [summary, setSummary] = useState<TaxYearReliefSummary | null>(null)
-  const [expiredYears, setExpiredYears] = useState<ExpiredTaxYearSummary[]>([])
+  const [retentionReview, setRetentionReview] = useState<DocumentRetentionReview>(EMPTY_RETENTION_REVIEW)
   const [reliefCategories, setReliefCategories] = useState<TaxReliefCategoryDefinition[]>([])
   const [reliefCategoriesByTaxYear, setReliefCategoriesByTaxYear] = useState<Record<number, TaxReliefCategoryDefinition[]>>({})
   
@@ -81,14 +82,14 @@ export function useDocumentsView() {
     const categoryYears = taxYear === undefined ? availableYears : selectedYear === undefined ? [] : [selectedYear]
     setIsTaxInsightsLoading(true)
     try {
-      const [expired, yearSummary, categoryResults] = await Promise.all([
-        api.getExpiredTaxYears(),
+      const [retention, yearSummary, categoryResults] = await Promise.all([
+        api.getDocumentRetentionReview(),
         selectedYear ? api.getTaxYearReliefSummary(selectedYear).catch(() => null) : Promise.resolve(null),
         Promise.all(categoryYears.map(async year => [year, await api.getTaxReliefCategories(year).catch(() => [])] as const)),
       ])
       if (requestId !== taxInsightsRequestIdRef.current) return
       const categoriesByYear = Object.fromEntries(categoryResults) as Record<number, TaxReliefCategoryDefinition[]>
-      setExpiredYears(expired)
+      setRetentionReview(retention)
       setSummary(yearSummary)
       setReliefCategories(selectedYear === undefined ? [] : categoriesByYear[selectedYear] ?? [])
       setReliefCategoriesByTaxYear(categoriesByYear)
@@ -154,6 +155,10 @@ export function useDocumentsView() {
       else if (nextTotalCount > 0) await loadDocuments()
       void loadUsage()
       void loadAvailableYears()
+      // The deleted document's amount was counted in the relief summary and its year in the
+      // retention notice, so both are wrong until this runs. `bulkDelete` has always refreshed
+      // them; deleting one document left the tracker claiming money from a file that is now gone.
+      void loadTaxInsights()
     } catch (err) {
       console.error('Failed to delete document:', err)
       throw err
@@ -210,7 +215,7 @@ export function useDocumentsView() {
     usage,
     availableYears,
     summary,
-    expiredYears,
+    retentionReview,
     reliefCategories,
     reliefCategoriesByTaxYear,
     isLoading,

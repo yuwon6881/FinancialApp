@@ -11,6 +11,7 @@ import { ToggleButton } from '../ui/ToggleButton'
 import { FormField } from '../ui/FormField'
 import { focusFirstInvalidField } from '../ui/formValidation'
 import { Button } from '../ui/Button'
+import { SensitiveMask } from '../ui/SensitiveAmount'
 
 interface CategoryLimitsCardProps {
   categories: TransactionCategory[]
@@ -65,6 +66,12 @@ export function CategoryLimitsCard({
     setErrors({})
   }, [spendingCategories])
 
+  React.useEffect(() => {
+    if (!hideSensitive) return
+    setDrafts(Object.fromEntries(spendingCategories.map(category => [category.id, normalizedValue(category.cycleLimit)])))
+    setErrors({})
+  }, [hideSensitive, spendingCategories])
+
   const changedCategories = spendingCategories.filter(category => {
     const draft = drafts[category.id]
     const current = normalizedValue(category.cycleLimit)
@@ -74,6 +81,7 @@ export function CategoryLimitsCard({
   })
 
   const save = () => {
+    if (hideSensitive) return
     const nextErrors: Record<string, string> = {}
     const updates: Array<{ id: string; amount: number | null }> = []
 
@@ -183,6 +191,11 @@ export function CategoryLimitsCard({
                       labelClassName="text-[10px] uppercase tracking-wider"
                       errorClassName="text-[10px] font-semibold"
                     >
+                      {hideSensitive ? (
+                        <div className="flex h-10 items-center rounded-md border border-border bg-muted/20 px-3">
+                          <SensitiveMask />
+                        </div>
+                      ) : (
                       <div className="relative flex items-center">
                         <span className="absolute left-3 z-10 text-xs font-bold text-muted-foreground pointer-events-none">
                           {getCurrencySymbol(currency)}
@@ -190,7 +203,7 @@ export function CategoryLimitsCard({
                         <SmartAmountInput
                           type="text"
                           inputMode="decimal"
-                          disabled={hideSensitive || isSyncing}
+                          disabled={isSyncing}
                           value={drafts[category.id] ?? ''}
                           onChange={event => {
                             setDrafts(previous => ({ ...previous, [category.id]: event.target.value }))
@@ -202,6 +215,7 @@ export function CategoryLimitsCard({
                           }`}
                         />
                       </div>
+                      )}
                     </FormField>
                   )}
                 </div>

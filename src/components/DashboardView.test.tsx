@@ -3,9 +3,11 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { DashboardView } from './DashboardView'
 import type { DashboardData, SavingsGoal, WishlistItem } from '../types'
 import { SENSITIVE_AMOUNT_MASK } from '../lib/utils'
+import { EMPTY_RETENTION_REVIEW } from '../lib/documentRetention'
 
+const retentionReview = vi.fn().mockResolvedValue(EMPTY_RETENTION_REVIEW)
 vi.mock('../lib/api/documents', () => ({
-  getExpiredTaxYears: vi.fn().mockResolvedValue([]),
+  getDocumentRetentionReview: () => retentionReview(),
 }))
 
 const dashboardData: DashboardData = {
@@ -24,10 +26,10 @@ const dashboardData: DashboardData = {
   },
   cycleLabel: 'Jul 28th ~ Aug 27th, 2026',
   categories: [
-    { name: 'Essentials', allocation: 0.5, target: 2000, budget: 500, netChange: -1000, remaining: 1500 },
-    { name: 'Growth', allocation: 0.25, target: 1000, budget: 0, netChange: 400, remaining: 400 },
-    { name: 'Stability', allocation: 0.15, target: 600, budget: 1836, netChange: 0, remaining: 2436 },
-    { name: 'Rewards', allocation: 0.1, target: 400, budget: 0, netChange: -280, remaining: 120 },
+    { name: 'Essentials', allocation: 0.5, target: 2000, incomeAllocated: 1500, budget: 500, netChange: -1000, remaining: 1500 },
+    { name: 'Growth', allocation: 0.25, target: 1000, incomeAllocated: 750, budget: 0, netChange: 400, remaining: 400 },
+    { name: 'Stability', allocation: 0.15, target: 600, incomeAllocated: 450, budget: 1836, netChange: 0, remaining: 2436 },
+    { name: 'Rewards', allocation: 0.1, target: 400, incomeAllocated: 300, budget: 0, netChange: -280, remaining: 120 },
   ],
   stats: {
     totalBalance: 4456,
@@ -109,6 +111,27 @@ describe('DashboardView focused Today experience', () => {
     expect(screen.queryByText('Subscriptions')).toBeNull()
     expect(screen.queryByText('Financial Plan Metrics')).toBeNull()
     expect(screen.queryByText('Carryover Rolling Ledgers')).toBeNull()
+  })
+
+  it('warns about tax records before their keep-until date and keeps the manual-only promise', async () => {
+    retentionReview.mockResolvedValueOnce({
+      taxYears: [
+        { taxYear: 2018, documentCount: 4, totalBytes: 2_200_000, keepUntil: '2025-12-31', daysUntilKeepUntil: -400 },
+        { taxYear: 2019, documentCount: 3, totalBytes: 1_400_000, keepUntil: '2026-12-31', daysUntilKeepUntil: 150 },
+      ],
+      noticeWindowDays: 180,
+      keepYears: 7,
+    })
+
+    render(<DashboardView {...makeProps()} />)
+
+    expect(await screen.findByText('Some tax records are older than you need to keep')).toBeTruthy()
+    // The year still inside its keep period must be named too — warning only after the date has
+    // passed was the gap this notice exists to close.
+    expect(screen.getByText(/2019/)).toBeTruthy()
+    expect(screen.getByText(/in about 5 months/)).toBeTruthy()
+    // This promise is the reason nothing is auto-purged. It must never quietly fall off the screen.
+    expect(screen.getByText(/Nothing is ever deleted for you/)).toBeTruthy()
   })
 
   it('gives the plan snapshot the full Today content width', () => {

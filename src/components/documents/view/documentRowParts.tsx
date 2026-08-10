@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Check, Download, ExternalLink, Eye, FileArchive, FileCode, FileImage, FileText, Link2, Loader2, Pencil, Trash2, X } from 'lucide-react'
 import type { VaultDocument } from '../../../types'
 import { downloadDocument } from '../../../lib/api/documents'
+import { getErrorMessage } from '../../../lib/errors'
 import { useAppPrefs } from '../../../contexts/AppContext'
 import { formatCurrencyVal, getCurrencySymbol } from '../../../lib/utils'
 import { Input } from '../../ui/Input'
@@ -13,6 +14,12 @@ import { SensitiveMask } from '../../ui/SensitiveAmount'
  * cannot drift on what an action is called or what confirming an amount does.
  */
 
+/**
+ * Writes one document's metadata. **Rejects with a server-authored message that the caller must
+ * put on screen** — the server refuses an edit for five distinct reasons (unconfigured category,
+ * disallowed tax year, negative amount, …) and each arrives as the error's message. A bare
+ * `void update(…)` swallows all of them and leaves the control looking broken.
+ */
 export type UpdateDocumentFn = (
   id: number,
   updates: Pick<Partial<VaultDocument>, 'taxYear' | 'transactionId' | 'reliefCategory' | 'amount' | 'amountCurrency'> & {
@@ -91,6 +98,12 @@ export function AmountReview({ document, updateDocument, currency, disabled = fa
         amountStatus: 'Confirmed',
       })
       setEditing(false)
+    } catch (error) {
+      // The server refuses this write for reasons the user can act on, and it names them. Without
+      // this the rejection was an unhandled promise: the editor stayed open, the value stayed
+      // typed, and nothing said why — the tick reading as broken, which is what the checks above
+      // were added to stop it doing.
+      setError(getErrorMessage(error, 'That amount could not be saved. Please try again.'))
     } finally { setSaving(false) }
   }
   if (hideSensitive) return <SensitiveMask />
@@ -135,17 +148,34 @@ export function PreviewDocumentButton({ document, onPreview, disabled = false }:
 
 export function DownloadDocumentButton({ document, downloadFailed, disabled = false, className }: { document: VaultDocument; downloadFailed: () => void; disabled?: boolean; className?: string }) {
   const { hideSensitive } = useAppPrefs()
+  // Fetching the file has to finish before the browser will offer to save it, and a vault document
+  // runs to 20 MB. Without this the button was indistinguishable from a tap that never landed, for
+  // the same reason LinkedTransactionButton below shows a spinner while it resolves.
+  const [isDownloading, setIsDownloading] = useState(false)
+  const start = async () => {
+    setIsDownloading(true)
+    try {
+      await downloadDocument(document.id, document.originalFileName)
+    } catch {
+      downloadFailed()
+    } finally {
+      setIsDownloading(false)
+    }
+  }
   return (
     <Button
       variant="unstyled"
       type="button"
-      disabled={hideSensitive || disabled}
-      onClick={() => void downloadDocument(document.id, document.originalFileName).catch(downloadFailed)}
+      disabled={hideSensitive || disabled || isDownloading}
+      aria-busy={isDownloading}
+      onClick={() => void start()}
       className={className ?? ACTION_CLASS}
-      aria-label={`Download ${document.originalFileName}`}
+      aria-label={isDownloading ? `Preparing ${document.originalFileName}` : `Download ${document.originalFileName}`}
     >
-      <Download className="size-3.5" />
-      {className ? <span className="text-[10px] font-bold">Download</span> : null}
+      {isDownloading
+        ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+        : <Download className="size-3.5" />}
+      {className ? <span className="text-[10px] font-bold">{isDownloading ? 'Preparing…' : 'Download'}</span> : null}
     </Button>
   )
 }

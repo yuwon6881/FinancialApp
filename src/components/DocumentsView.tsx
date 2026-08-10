@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
-import { AlertTriangle, Download, Loader2, ShieldCheck, UploadCloud } from 'lucide-react'
+import { Download, Loader2, ShieldCheck, UploadCloud } from 'lucide-react'
 import { DocumentUploadSheet } from './documents/DocumentUploadSheet'
+import { VaultRetentionNotice } from './documents/VaultRetentionNotice'
 import { useDocumentsView } from './documents/view/useDocumentsView'
 import { CustomConfirmModal } from './ui/CustomConfirmModal'
 import { DocumentFilterBar } from './documents/view/DocumentFilterBar'
 import { StorageUsageMeter } from './documents/view/StorageUsageMeter'
 import { DocumentList } from './documents/view/DocumentList'
+import { useStagedReliefCategories } from './documents/view/useStagedReliefCategories'
 import { useAppPrefs, useAppSync, useAppUi } from '../contexts/AppContext'
 import { TaxReliefOverview } from './documents/view/TaxReliefOverview'
 import * as documentsApi from '../lib/api/documents'
@@ -28,7 +30,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     usage,
     availableYears,
     summary,
-    expiredYears,
+    retentionReview,
     reliefCategories,
     reliefCategoriesByTaxYear,
     isLoading,
@@ -68,10 +70,36 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false)
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
-  const [isDownloading, setIsDownloading] = useState(false)
-  const [pendingReliefCategories, setPendingReliefCategories] = useState<Map<number, string>>(new Map())
-  const [isSavingReliefCategories, setIsSavingReliefCategories] = useState(false)
+  // Two flags, not one: the header archive button and the selection download are different controls,
+  // and a shared flag made each of them relabel and disable the other while the other was running.
+  const [isDownloadingArchive, setIsDownloadingArchive] = useState(false)
+  const [isDownloadingSelection, setIsDownloadingSelection] = useState(false)
   const refreshedCategoryOpsRef = useRef(new Set<string>())
+
+  const addDocumentIds = (setter: Dispatch<SetStateAction<Set<number>>>, ids: number[]) => {
+    setter(current => {
+      const next = new Set(current)
+      ids.forEach(id => next.add(id))
+      return next
+    })
+  }
+
+  const removeDocumentIds = (setter: Dispatch<SetStateAction<Set<number>>>, ids: number[]) => {
+    setter(current => {
+      const next = new Set(current)
+      ids.forEach(id => next.delete(id))
+      return next
+    })
+  }
+
+  const stagedCategories = useStagedReliefCategories({
+    documents,
+    bulkUpdate: bulkUpdateDocumentCategories,
+    setRowsSyncing: (ids, isSyncing) =>
+      (isSyncing ? addDocumentIds : removeDocumentIds)(setSyncingDocumentIds, ids),
+    showToast,
+    guardSensitive,
+  })
 
   const selectedReliefYear = taxYear ?? availableYears[0]
   const taxReliefOperations = useMemo(() => operations.filter(operation =>
@@ -97,6 +125,10 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
 
   useEffect(() => {
     setSelectedIds(new Set())
+    // Staged category edits are cleared with the selection, and for the same reason: after a filter
+    // change the staged rows are no longer on screen, so the "N staged" bar counted documents the
+    // user could not see or reach, and Save wrote changes they had lost sight of.
+    stagedCategories.clear()
   }, [taxYear, selectedReliefCategories, sortOrder, pageSize])
 
   useEffect(() => {
@@ -117,78 +149,6 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
       else visibleIds.forEach(id => next.add(id))
       return next
     })
-  }
-
-  const stageReliefCategory = (id: number, reliefCategory: string) => {
-    if (!guardSensitive()) return
-    const document = documents.find(item => item.id === id)
-    if (!document) return
-    const originalCategory = document.reliefCategory ?? ''
-    setPendingReliefCategories(current => {
-      const next = new Map(current)
-      if (reliefCategory === originalCategory) next.delete(id)
-      else next.set(id, reliefCategory)
-      return next
-    })
-  }
-
-  const addDocumentIds = (setter: Dispatch<SetStateAction<Set<number>>>, ids: number[]) => {
-    setter(current => {
-      const next = new Set(current)
-      ids.forEach(id => next.add(id))
-      return next
-    })
-  }
-
-  const removeDocumentIds = (setter: Dispatch<SetStateAction<Set<number>>>, ids: number[]) => {
-    setter(current => {
-      const next = new Set(current)
-      ids.forEach(id => next.delete(id))
-      return next
-    })
-  }
-
-  const saveReliefCategories = async () => {
-    if (!guardSensitive()) return
-    if (pendingReliefCategories.size === 0 || isSavingReliefCategories) return
-    const staged = Array.from(pendingReliefCategories.entries())
-    const stagedIds = staged.map(([id]) => id)
-    setIsSavingReliefCategories(true)
-    addDocumentIds(setSyncingDocumentIds, stagedIds)
-    try {
-      const results = await bulkUpdateDocumentCategories(staged.map(([id, reliefCategory]) => ({ id, reliefCategory })))
-      const resultsById = new Map(results.map(result => [result.id, result]))
-      const failed = staged.filter(([id]) => resultsById.get(id)?.updated !== true)
-      setPendingReliefCategories(current => {
-        const next = new Map(current)
-        for (const [id, stagedCategory] of staged) {
-          if (current.get(id) !== stagedCategory) continue
-          if (resultsById.get(id)?.updated === true) next.delete(id)
-          else next.set(id, stagedCategory)
-        }
-        return next
-      })
-      const savedCount = staged.length - failed.length
-      if (failed.length) {
-        showToast(
-          `${savedCount} document categor${savedCount === 1 ? 'y' : 'ies'} updated; ${failed.length} remain staged.`,
-          'Document Categories Partially Updated',
-          'error',
-        )
-      } else {
-        const copy = buildMutationSuccessToast({
-          entity: 'Document Categories',
-          action: 'Updated',
-          message: `${savedCount} document categor${savedCount === 1 ? 'y' : 'ies'} were updated together.`,
-        })
-        showToast(copy.message, copy.title, copy.tone)
-      }
-    } catch (error) {
-      showToast(getErrorMessage(error, 'The document categories could not be saved.'), 'Category update failed', 'error')
-    } finally {
-      removeDocumentIds(setSyncingDocumentIds, stagedIds)
-      setIsSavingReliefCategories(false)
-    }
   }
 
   return (
@@ -213,17 +173,17 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
             variant="outline"
             size="lg"
             type="button"
-            disabled={hideSensitive || isDownloading || availableYears.length === 0}
+            disabled={hideSensitive || isDownloadingArchive || availableYears.length === 0}
             onClick={() => {
               if (!guardSensitive()) return
-              setIsDownloading(true)
-              void documentsApi.downloadDocumentArchive(taxYear).catch(() =>
-                showToast('The ZIP archive could not be prepared.', 'Download Failed', 'error'))
-                .finally(() => setIsDownloading(false))
+              setIsDownloadingArchive(true)
+              void documentsApi.downloadDocumentArchive(taxYear).catch(error =>
+                showToast(getErrorMessage(error, 'The ZIP archive could not be prepared.'), 'Download Failed', 'error'))
+                .finally(() => setIsDownloadingArchive(false))
             }}
             className="w-full justify-center rounded-xl bg-card text-xs sm:w-auto"
           >
-            <Download className="size-4" /> {isDownloading ? 'Preparing ZIP…' : taxYear ? `Download ${taxYear}` : 'Download all'}
+            <Download className="size-4" /> {isDownloadingArchive ? 'Preparing ZIP…' : taxYear ? `Download ${taxYear}` : 'Download all'}
           </Button>
           <Button
             variant="primary"
@@ -242,19 +202,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
         </div>
       </div>
 
-      {expiredYears.length > 0 && (
-        <section className="rounded-2xl border border-amber-500/30 bg-amber-500/8 p-4">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
-            <div>
-              <h3 className="text-sm font-bold text-amber-700 dark:text-amber-300">Tax records past their seven-year retention date</h3>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                {expiredYears.map(year => `${year.taxYear} (${year.documentCount})`).join(', ')}. Nothing will be deleted automatically—review and remove them when you decide they are no longer needed.
-              </p>
-            </div>
-          </div>
-        </section>
-      )}
+      <VaultRetentionNotice review={retentionReview} />
 
       {/* Vault insights */}
       <div className="rounded-2xl border border-border/60 bg-card p-3 shadow-xs sm:p-4">
@@ -332,18 +280,18 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
           onClearAllReliefCategories={clearAllReliefCategories}
         />
 
-        {pendingReliefCategories.size > 0 && (
+        {stagedCategories.staged.size > 0 && (
           <div className="mb-3 flex flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs font-bold">{pendingReliefCategories.size} tax relief categor{pendingReliefCategories.size === 1 ? 'y change' : 'y changes'} staged</p>
+              <p className="text-xs font-bold">{stagedCategories.staged.size} tax relief categor{stagedCategories.staged.size === 1 ? 'y change' : 'y changes'} staged</p>
               <p className="mt-0.5 text-[10px] text-muted-foreground">Save them together to update the Vault in one request.</p>
             </div>
             <div className="flex shrink-0 gap-2">
               <Button
                 variant="unstyled"
                 type="button"
-                disabled={isSavingReliefCategories}
-                onClick={() => setPendingReliefCategories(new Map())}
+                disabled={stagedCategories.isSaving}
+                onClick={() => stagedCategories.clear()}
                 className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-muted-foreground disabled:opacity-50"
               >
                 Discard
@@ -351,12 +299,12 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
               <Button
                 variant="unstyled"
                 type="button"
-                disabled={isSavingReliefCategories}
-                aria-busy={isSavingReliefCategories}
-                onClick={() => void saveReliefCategories()}
+                disabled={stagedCategories.isSaving}
+                aria-busy={stagedCategories.isSaving}
+                onClick={() => void stagedCategories.save()}
                 className="rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground disabled:opacity-50"
               >
-                {isSavingReliefCategories ? 'Saving…' : 'Save categories'}
+                {stagedCategories.isSaving ? 'Saving…' : 'Save categories'}
               </Button>
             </div>
           </div>
@@ -387,11 +335,11 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
               onClearSelection={() => setSelectedIds(new Set())}
               allVisibleSelected={allVisibleSelected}
               someVisibleSelected={someVisibleSelected}
-              isDownloadingSelected={isDownloading}
+              isDownloadingSelected={isDownloadingSelection}
               onDownloadSelected={() => {
                 if (!guardSensitive()) return
                 const idsToDownload = [...selectedIds]
-                setIsDownloading(true)
+                setIsDownloadingSelection(true)
                 void documentsApi.downloadSelectedDocumentArchive(idsToDownload)
                   .then(() => {
                     setSelectedIds(current => {
@@ -406,8 +354,12 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
                     })
                     showToast(copy.message, copy.title, copy.tone)
                   })
-                  .catch(() => showToast('The selected documents could not be downloaded.', 'Download Failed', 'error'))
-                  .finally(() => setIsDownloading(false))
+                  .catch(error => showToast(
+                    getErrorMessage(error, 'The selected documents could not be downloaded.'),
+                    'Download Failed',
+                    'error',
+                  ))
+                  .finally(() => setIsDownloadingSelection(false))
               }}
               onDeleteSelected={() => {
                 if (!guardSensitive()) return
@@ -417,8 +369,8 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
               syncingDocumentIds={syncingDocumentIds}
               deletingDocumentIds={deletingDocumentIds}
               currency={currency}
-              pendingReliefCategories={pendingReliefCategories}
-              onReliefCategoryChange={stageReliefCategory}
+              pendingReliefCategories={stagedCategories.staged}
+              onReliefCategoryChange={stagedCategories.stage}
               updateDocument={async (id, updates) => {
                 if (!guardSensitive()) return
                 addDocumentIds(setSyncingDocumentIds, [id])
@@ -488,16 +440,17 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
               next.delete(docToDelete)
               return next
             })
+            stagedCategories.forget([docToDelete])
             const copy = buildMutationSuccessToast({
               entity: 'Document',
               action: 'Deleted',
               recordName: document?.originalFileName,
             })
             showToast(copy.message, copy.title, copy.tone)
-          } catch {
+          } catch (error) {
             // deleteDocument rethrows so the row stays put; surface it instead of
             // leaving the modal open on an unhandled rejection.
-            showToast('The document could not be deleted.', 'Delete Failed', 'error')
+            showToast(getErrorMessage(error, 'The document could not be deleted.'), 'Delete Failed', 'error')
           } finally {
             setDeletingDocumentId(null)
             removeDocumentIds(setDeletingDocumentIds, [docToDelete])
@@ -533,9 +486,13 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
               failed.forEach(result => next.add(result.id))
               return next
             })
+            stagedCategories.forget(results.filter(result => result.deleted).map(result => result.id))
             if (failed.length) {
+              // The endpoint says why each one failed; a bare count left the user to guess whether
+              // retrying was worth it.
+              const reason = failed.find(result => result.message)?.message
               showToast(
-                `${results.length - failed.length} document${results.length - failed.length === 1 ? '' : 's'} deleted; ${failed.length} failed and remain selected.`,
+                `${results.length - failed.length} document${results.length - failed.length === 1 ? '' : 's'} deleted; ${failed.length} failed and remain selected.${reason ? ` ${reason}` : ''}`,
                 'Documents Partially Deleted',
                 'error',
               )
@@ -547,8 +504,8 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
               })
               showToast(copy.message, copy.title, copy.tone)
             }
-          } catch {
-            showToast('The selected documents could not be deleted.', 'Delete Failed', 'error')
+          } catch (error) {
+            showToast(getErrorMessage(error, 'The selected documents could not be deleted.'), 'Delete Failed', 'error')
           } finally {
             setIsBulkDeleting(false)
             removeDocumentIds(setDeletingDocumentIds, idsToDelete)

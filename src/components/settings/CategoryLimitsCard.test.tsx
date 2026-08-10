@@ -66,4 +66,22 @@ describe('CategoryLimitsCard', () => {
     expect(screen.getByRole('switch', { name: 'Track Food cycle spending' })).not.toBeNull()
     expect(screen.getByText('1 tracked')).not.toBeNull()
   })
+
+  it('renders saved guide amounts as a static mask in sensitive mode', () => {
+    const onUpdate = vi.fn()
+    render(
+      <CategoryLimitsCard
+        categories={[{ id: 'cat-food', name: 'Food', cycleLimit: 500 }]}
+        currency="MYR"
+        hideSensitive
+        onUpdate={onUpdate}
+      />,
+    )
+
+    expect(screen.queryByRole('textbox', { name: /^Food cycle spending guide/ })).toBeNull()
+    expect(screen.queryByDisplayValue('500.00')).toBeNull()
+    expect(screen.getByRole('img', { name: 'Sensitive amount hidden' })).toBeTruthy()
+    expect((screen.getByRole('button', { name: 'Save Guides' }) as HTMLButtonElement).disabled).toBe(true)
+    expect(onUpdate).not.toHaveBeenCalled()
+  })
 })

@@ -155,6 +155,7 @@ export function useSettingsView(options: UseSettingsViewOptions) {
   }, [essentialsAllocInput, growthAllocInput, stabilityAllocInput, rewardsAllocInput])
 
   const handleAllocationChange = (changedKey: AllocationKey, newValue: number) => {
+    if (hideSensitive) return
     const current = {
       essentials: parseFloat(essentialsAllocInput) || 0,
       growth: parseFloat(growthAllocInput) || 0,
@@ -173,6 +174,7 @@ export function useSettingsView(options: UseSettingsViewOptions) {
 
   const handleSaveSettings = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (hideSensitive) return
     const newErrors: Record<string, string> = {}
 
     const target = parseFloat(targetInput)

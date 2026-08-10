@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type {
   ActiveRecurringPayment,
   CategorySummary,
@@ -10,6 +10,7 @@ import type {
 import { maskCurrencyInput } from '../../lib/utils'
 import { getActiveWishlistItem } from '../../lib/wishlist'
 import { calculateFreeRewardsBalance } from '../../lib/freeRewards'
+import { calculateEssentialsMetric, calculateGrowthMetric, calculateStabilityMetric } from '../../lib/financialPlanMetrics'
 import {
   formatCompactSensitiveAmount,
   formatCurrencyAmount,
@@ -55,6 +56,15 @@ export function useDashboardView(options: UseDashboardViewOptions) {
   const [adjustmentDescription, setAdjustmentDescription] = useState<string>('Balance Adjustment')
   const [pendingBalanceAdjustment, setPendingBalanceAdjustment] = useState<PendingBalanceAdjustment | null>(null)
 
+  useEffect(() => {
+    if (!hideSensitive) return
+    setAdjustingCategory(null)
+    setNewBalanceInput('')
+    setAdjustmentDescription('')
+    setBalanceErrors({})
+    setPendingBalanceAdjustment(null)
+  }, [hideSensitive])
+
   const years = useMemo<number[]>(() => {
     return dashboardData?.availableYears || [new Date().getFullYear()]
   }, [dashboardData])
@@ -75,10 +85,10 @@ export function useDashboardView(options: UseDashboardViewOptions) {
   const cycleLabel = dashboardData?.cycleLabel || 'Jun 28th ~ Jul 27th, 2026'
 
   const categories = useMemo<CategorySummary[]>(() => dashboardData?.categories || [
-    { name: "Essentials", allocation: 0.50, target: 2000.00, budget: 0, netChange: 0, remaining: 0 },
-    { name: "Growth", allocation: 0.25, target: 1000.00, budget: 0, netChange: 0, remaining: 0 },
-    { name: "Stability", allocation: 0.15, target: 600.00, budget: 2436.00, netChange: 0, remaining: 2436.00 },
-    { name: "Rewards", allocation: 0.10, target: 400.00, budget: 0, netChange: 0, remaining: 0 }
+    { name: "Essentials", allocation: 0.50, target: 2000.00, incomeAllocated: 0, budget: 0, netChange: 0, remaining: 0 },
+    { name: "Growth", allocation: 0.25, target: 1000.00, incomeAllocated: 0, budget: 0, netChange: 0, remaining: 0 },
+    { name: "Stability", allocation: 0.15, target: 600.00, incomeAllocated: 0, budget: 2436.00, netChange: 0, remaining: 2436.00 },
+    { name: "Rewards", allocation: 0.10, target: 400.00, incomeAllocated: 0, budget: 0, netChange: 0, remaining: 0 }
   ], [dashboardData])
 
   const stats = useMemo(() => dashboardData?.stats || {
@@ -145,40 +155,24 @@ export function useDashboardView(options: UseDashboardViewOptions) {
   // Growth Achieved
   const growthMetric = useMemo(() => {
     const growthCat = categories.find(c => c.name === 'Growth')
-    const growthTarget = growthCat?.target ?? 0
-    const currentPct = growthTarget > 0 ? Math.max(0, Math.min(1, stats.growthPercentAchieved)) : 0
     const pending = pendingDeductionsByCategory['Growth'] || 0
-    const projectedRemaining = Math.max(0, (growthCat?.remaining ?? 0) - pending)
-    const atRiskPct = (pending > 0 && growthTarget > 0) ? Math.max(0, Math.min(currentPct, pending / growthTarget)) : 0
-    const safePct = currentPct - atRiskPct
-    return { target: growthTarget, currentPct, pending, projectedRemaining, atRiskPct, safePct }
+    return calculateGrowthMetric(growthCat, pending)
   }, [categories, stats, pendingDeductionsByCategory])
 
   // Essentials Remaining
   const essentialsMetric = useMemo(() => {
     const essentialsCat = categories.find(c => c.name === 'Essentials')
-    const totalAvailable = (essentialsCat?.budget ?? 0) + (essentialsCat?.target ?? 0)
-    const currentPct = totalAvailable > 0 ? Math.max(0, Math.min(1, (essentialsCat?.remaining ?? 0) / totalAvailable)) : 0
     const pending = pendingDeductionsByCategory['Essentials'] || 0
-    const projectedRemaining = Math.max(0, (essentialsCat?.remaining ?? 0) - pending)
-    const projectedPct = (pending > 0 && totalAvailable > 0) ? Math.max(0, Math.min(1, projectedRemaining / totalAvailable)) : currentPct
-    const atRiskPct = pending > 0 ? Math.max(0, currentPct - projectedPct) : 0
-    return { totalAvailable, currentPct, pending, projectedRemaining, projectedPct, atRiskPct }
+    return calculateEssentialsMetric(essentialsCat, pending)
   }, [categories, pendingDeductionsByCategory])
 
   // Stability Reached
   const stabilityMetric = useMemo(() => {
     const stabilityCat = categories.find(c => c.name === 'Stability')
     const stabilityTarget = activeSettings.targetStabilityFund
-    const hasTarget = stabilityTarget > 0
-    const currentPct = Math.max(0, Math.min(1, stats.stabilityPercentReached))
     const pending = pendingDeductionsByCategory['Stability'] || 0
-    const currentBalance = stabilityCat?.remaining ?? 0
-    const projectedBalance = Math.max(0, currentBalance - pending)
-    const projectedPct = pending > 0 && hasTarget ? Math.max(0, Math.min(1, projectedBalance / stabilityTarget)) : currentPct
-    const atRiskPct = pending > 0 ? Math.max(0, currentPct - projectedPct) : 0
-    return { hasTarget, currentPct, pending, currentBalance, projectedBalance, projectedPct, atRiskPct }
-  }, [categories, activeSettings, stats, pendingDeductionsByCategory])
+    return calculateStabilityMetric(stabilityCat, stabilityTarget, pending)
+  }, [categories, activeSettings, pendingDeductionsByCategory])
 
   // Wishlist Goal Card (Shown when active goal exists)
   const wishlistGoal = useMemo(() => {

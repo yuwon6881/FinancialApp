@@ -13,7 +13,7 @@ interface DoughnutChartProps {
 }
 
 export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger }: DoughnutChartProps) {
-  const { formatSensitive } = useAppPrefs()
+  const { formatSensitive, hideSensitive } = useAppPrefs()
   const [chartView, setChartView] = useState<ChartRange>('monthly')
 
   const breakdownData = useMemo(() => {
@@ -43,7 +43,9 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
     (current, item) => current === null || item.amount > current.amount ? item : current,
     null,
   )
-  const chartSummary = total > 0
+  const chartSummary = hideSensitive
+    ? `Expense breakdown for ${rangeLabel}. Values are hidden.`
+    : total > 0
     ? `Expense breakdown for ${rangeLabel}. Total ${formatSensitive(total)} across ${slices.length} categor${slices.length === 1 ? 'y' : 'ies'}. Largest: ${largest?.category} at ${largest ? (largest.amount / total * 100).toFixed(0) : 0}%.`
     : `Expense breakdown for ${rangeLabel}. No outflows logged.`
 
@@ -81,6 +83,7 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
               centerLabel="Total"
               centerValue={formatSensitive(total)}
               formatValue={formatSensitive}
+              masked={hideSensitive}
               chartClassName="mx-auto size-52 sm:mx-0 sm:size-44 lg:size-52"
               legendClassName="grid max-h-32 w-full min-w-0 grid-cols-1 content-start gap-x-4 gap-y-0.5 overflow-y-auto pr-0.5 no-scrollbar sm:max-h-40 xl:grid-cols-2"
               onActivate={slice => onNavigateToLedger?.({ category: slice.label, range: chartView })}

@@ -1,5 +1,5 @@
 import { Input } from './ui/Input'
-import React, { useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import type { Transaction, TransactionCategory } from '../types'
 import { FileText, Edit2, Trash2, ArrowLeft, Plus, Sparkles, Loader2 } from 'lucide-react'
 import { formatCurrencyVal, maskCurrencyInput, getCurrencySymbol } from '../lib/utils'
@@ -128,6 +128,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
 
   const handleSaveEdit = (event: React.FormEvent<HTMLFormElement>, draft: Transaction) => {
     event.preventDefault()
+    if (hideSensitive) return
     const newErrors: Record<string, string> = {}
     if (!description.trim()) {
       newErrors.description = 'Description is required.'
@@ -173,6 +174,17 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
     setEditingDraftId(null)
     suggestions.clearSuggestions()
   }
+
+  useEffect(() => {
+    if (!hideSensitive) return
+    setEditingDraftId(null)
+    setDescription('')
+    setAmount('')
+    setDate('')
+    setCategory('')
+    setErrors({})
+    suggestions.clearSuggestions()
+  }, [hideSensitive, suggestions.clearSuggestions])
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -442,7 +454,7 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
                   <Button
                     type="submit"
                     className="rounded-xl px-4 py-1.5 shadow-md"
-                    disabled={!description.trim() || !amount.trim() || !date || (!isTransferDraft && (!category || !ledgerCategory))}
+                    disabled={hideSensitive || !description.trim() || !amount.trim() || !date || (!isTransferDraft && (!category || !ledgerCategory))}
                   >
                     Save
                   </Button>
@@ -537,6 +549,8 @@ export const DraftStagingView: React.FC<DraftStagingViewProps> = ({
         <Button
           variant="outline"
           onClick={onAddAnother}
+          disabled={hideSensitive}
+          title={hideSensitive ? 'Unhide balances to add another entry' : undefined}
           className="w-full gap-2.5 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 px-4 py-4 text-sm text-accent-ink hover:border-primary/60 hover:bg-primary/10 active:scale-[0.99]"
         >
           <span className="flex items-center justify-center size-7 rounded-full bg-primary text-primary-foreground shadow-md shadow-primary/20">

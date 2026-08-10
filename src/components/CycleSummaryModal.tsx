@@ -1,13 +1,11 @@
-import { useMemo, type ReactNode } from 'react'
+import { useMemo } from 'react'
 import {
   ArrowDownRight,
   ArrowUpRight,
   ChartNoAxesCombined,
   FileBarChart,
-  Gift,
   Gauge,
   LoaderCircle,
-  Receipt,
   TrendingDown,
   TrendingUp,
   Zap,
@@ -17,6 +15,9 @@ import { useAppPrefs } from '../contexts/AppContext'
 import { getCategoryBadgeClass } from '../lib/categoryColors'
 import { buildCycleSummary, formatRate } from '../lib/cycleSummary'
 import { BottomSheet } from './ui/BottomSheet'
+import { CycleActivitySections, Section } from './cycle-summary/CycleActivitySections'
+import { InsightCard, StatTile } from './cycle-summary/CycleSummaryCards'
+import { changeTone } from '../lib/cycleSummaryTone'
 
 interface CycleSummaryModalProps {
   isOpen: boolean
@@ -54,6 +55,13 @@ export function CycleSummaryModal({
     () => data ? buildCycleSummary(data, previousData, wishlist, year, monthIndex, cycleDay, transactions) : null,
     [data, previousData, wishlist, year, monthIndex, cycleDay, transactions],
   )
+
+  // Rounded to whole percentage points, which is the unit the card reports in: a change of
+  // 0.4pt reads as "Same as last cycle" in the detail line, so it must not colour as a move.
+  // `null` means there is no previous rate to have changed from, not a change of zero.
+  const savingsRateChange = summary?.savingsRate == null || summary.previousSavingsRate == null
+    ? null
+    : Math.round((summary.savingsRate - summary.previousSavingsRate) * 100)
 
   return (
     <BottomSheet
@@ -233,26 +241,33 @@ export function CycleSummaryModal({
                   <InsightCard
                     title="Spending"
                     value={formatSensitive(Math.abs(summary.spendingDelta))}
-                    tone={summary.spendingDelta <= 0 ? 'good' : 'warn'}
-                    trendUp={summary.spendingDelta > 0}
-                    detail={summary.spendingDelta <= 0 ? 'Less than last cycle' : 'More than last cycle'}
+                    tone={changeTone(summary.spendingDelta, false)}
+                    trendUp={summary.spendingDelta === 0 ? undefined : summary.spendingDelta > 0}
+                    detail={summary.spendingDelta === 0
+                      ? 'Same as last cycle'
+                      : summary.spendingDelta < 0 ? 'Less than last cycle' : 'More than last cycle'}
                   />
                 )}
                 {summary.savingsRate !== null && (
                   <InsightCard
                     title="Savings rate"
                     value={formatRate(summary.savingsRate)}
-                    tone={summary.savingsRate >= 0.1 ? 'good' : 'warn'}
-                    trendUp={summary.previousSavingsRate !== null ? summary.savingsRate > summary.previousSavingsRate : summary.savingsRate > 0}
-                    detail={(() => {
-                      if (summary.previousSavingsRate === null) {
-                        return `${formatRate(summary.savingsRate)} of income saved this cycle`
-                      }
-                      const change = summary.savingsRate - summary.previousSavingsRate
-                      const pts = Math.round(Math.abs(change) * 100)
-                      if (pts === 0) return `Same as last cycle (${formatRate(summary.savingsRate)})`
-                      return `Was ${formatRate(summary.previousSavingsRate)} last cycle`
-                    })()}
+                    // This card sits under "Since last cycle", so it reports a *change* -- but its
+                    // tone was an absolute threshold. A rate that fell from 40% to 20% still cleared
+                    // 10%, so it was painted green beside a down arrow and the words "Was 40% last
+                    // cycle". Direction decides the colour whenever there is a previous cycle to
+                    // have moved from; the threshold is only the fallback when there is not.
+                    tone={savingsRateChange === null
+                      ? (summary.savingsRate >= 0.1 ? 'good' : 'warn')
+                      : changeTone(savingsRateChange, true)}
+                    trendUp={savingsRateChange === null || savingsRateChange === 0
+                      ? undefined
+                      : savingsRateChange > 0}
+                    detail={savingsRateChange === null
+                      ? `${formatRate(summary.savingsRate)} of income saved this cycle`
+                      : savingsRateChange === 0
+                        ? `Same as last cycle (${formatRate(summary.savingsRate)})`
+                        : `Was ${formatRate(summary.previousSavingsRate ?? 0)} last cycle`}
                     tooltipHint="Savings rate = (Income − Spending) ÷ Income"
                   />
                 )}
@@ -260,8 +275,10 @@ export function CycleSummaryModal({
                   <InsightCard
                     title="Biggest shift"
                     value={summary.biggestCategoryShift.category}
-                    tone={summary.biggestCategoryShift.delta <= 0 ? 'good' : 'warn'}
-                    trendUp={summary.biggestCategoryShift.delta > 0}
+                    tone={changeTone(summary.biggestCategoryShift.delta, false)}
+                    trendUp={summary.biggestCategoryShift.delta === 0
+                      ? undefined
+                      : summary.biggestCategoryShift.delta > 0}
                     detail={`${formatSensitive(Math.abs(summary.biggestCategoryShift.delta))} ${summary.biggestCategoryShift.delta <= 0 ? 'less' : 'more'} spent`}
                   />
                 )}
@@ -269,8 +286,8 @@ export function CycleSummaryModal({
                   <InsightCard
                     title="Growth fund"
                     value={`${summary.growthDelta < 0 ? '−' : '+'}${formatSensitive(Math.abs(summary.growthDelta))}`}
-                    tone={summary.growthDelta >= 0 ? 'good' : 'warn'}
-                    trendUp={summary.growthDelta >= 0}
+                    tone={changeTone(summary.growthDelta, true)}
+                    trendUp={summary.growthDelta === 0 ? undefined : summary.growthDelta > 0}
                     detail="Ending balance this cycle"
                   />
                 )}
@@ -312,7 +329,7 @@ export function CycleSummaryModal({
                 </div>
                 <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
                   <p className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Transaction count</p>
-                  <p className="mt-1 text-xs font-bold text-foreground">{summary.transactionCount} transactions</p>
+                  <p className="mt-1 text-xs font-bold text-foreground">{summary.transactionCount} expense entries</p>
                   <p className="mt-0.5 text-[10px] text-muted-foreground">Total purchases this cycle</p>
                 </div>
                 {summary.committedSpend + summary.discretionarySpend > 0 && (
@@ -400,108 +417,7 @@ export function CycleSummaryModal({
                   </Section>
                 )}
 
-                {summary.billsCount > 0 && (
-                  <Section title="Bills">
-                    <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5 space-y-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <Receipt className="size-3.5 shrink-0 text-amber-500" />
-                            <span className="text-xs font-bold text-foreground">
-                              {summary.pendingCount === 0
-                                ? 'All bills settled'
-                                : `${summary.paidBillsCount} of ${summary.billsCount} paid`}
-                            </span>
-                          </div>
-                          <p className="mt-0.5 text-[10px] text-muted-foreground truncate">
-                            {summary.pendingCount === 0
-                              ? `Completed ${summary.paidBillsCount} subscription bill${summary.paidBillsCount === 1 ? '' : 's'}`
-                              : `${summary.pendingCount} bill${summary.pendingCount === 1 ? '' : 's'} pending (${formatSensitive(summary.pendingTotal)})`}
-                          </p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <span className="text-xs font-extrabold text-foreground block">
-                            {formatSensitive(summary.paidTotal)}
-                          </span>
-                          <span className="text-[9px] uppercase tracking-wider font-semibold text-muted-foreground block">
-                            Total paid
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="pt-2 border-t border-border/40 flex flex-wrap items-center justify-between gap-2 text-[11px]">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 font-semibold text-[10px]">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                            {summary.paidBillsCount} Paid ({formatSensitive(summary.paidTotal)})
-                          </span>
-                          {summary.pendingCount > 0 && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 font-semibold text-[10px]">
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                              {summary.pendingCount} Pending ({formatSensitive(summary.pendingTotal)})
-                            </span>
-                          )}
-                          {summary.discardedCount > 0 && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-semibold text-[10px]">
-                              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
-                              {summary.discardedCount} Skipped
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </Section>
-                )}
-
-                {summary.purchasedThisCycle.length > 0 && (
-                  <Section title="Wishlist purchases">
-                    <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5 space-y-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <Gift className="size-3.5 shrink-0 text-pink-500" />
-                            <span className="text-xs font-bold text-foreground">
-                              {summary.purchasedThisCycle.length} {summary.purchasedThisCycle.length === 1 ? 'goal fulfilled' : 'goals fulfilled'}
-                            </span>
-                          </div>
-                          <p className="mt-0.5 text-[10px] text-muted-foreground truncate">
-                            Achieved wishlist items for this cycle
-                          </p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <span className="text-xs font-extrabold text-foreground block">
-                            {formatSensitive(summary.purchasedTotal)}
-                          </span>
-                          <span className="text-[9px] uppercase tracking-wider font-semibold text-muted-foreground block">
-                            Total value
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5 pt-1">
-                        {summary.purchasedThisCycle.map(item => (
-                          <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/40 bg-background/50 px-3 py-2 text-[11px]">
-                            <div className="min-w-0 flex items-center gap-2">
-                              <span className="font-bold text-foreground truncate">{item.name}</span>
-                              {item.priority && (
-                                <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
-                                  item.priority.toLowerCase() === 'high'
-                                    ? 'bg-pink-500/10 text-pink-500'
-                                    : item.priority.toLowerCase() === 'medium'
-                                    ? 'bg-amber-500/10 text-amber-500'
-                                    : 'bg-muted text-muted-foreground'
-                                }`}>
-                                  {item.priority}
-                                </span>
-                              )}
-                            </div>
-                            <span className="shrink-0 font-bold text-foreground">{formatSensitive(item.price)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </Section>
-                )}
+                <CycleActivitySections summary={summary} formatSensitive={formatSensitive} />
               </div>
             </div>
           ) : (
@@ -518,108 +434,7 @@ export function CycleSummaryModal({
                 </Section>
               )}
 
-              {summary.billsCount > 0 && (
-                <Section title="Bills">
-                  <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5 space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <Receipt className="size-3.5 shrink-0 text-amber-500" />
-                          <span className="text-xs font-bold text-foreground">
-                            {summary.pendingCount === 0
-                              ? 'All bills settled'
-                              : `${summary.paidBillsCount} of ${summary.billsCount} paid`}
-                          </span>
-                        </div>
-                        <p className="mt-0.5 text-[10px] text-muted-foreground truncate">
-                          {summary.pendingCount === 0
-                            ? `Completed ${summary.paidBillsCount} subscription bill${summary.paidBillsCount === 1 ? '' : 's'}`
-                            : `${summary.pendingCount} bill${summary.pendingCount === 1 ? '' : 's'} pending (${formatSensitive(summary.pendingTotal)})`}
-                        </p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-xs font-extrabold text-foreground block">
-                          {formatSensitive(summary.paidTotal)}
-                        </span>
-                        <span className="text-[9px] uppercase tracking-wider font-semibold text-muted-foreground block">
-                          Total paid
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="pt-2 border-t border-border/40 flex flex-wrap items-center justify-between gap-2 text-[11px]">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 font-semibold text-[10px]">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          {summary.paidBillsCount} Paid ({formatSensitive(summary.paidTotal)})
-                        </span>
-                        {summary.pendingCount > 0 && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 font-semibold text-[10px]">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                            {summary.pendingCount} Pending ({formatSensitive(summary.pendingTotal)})
-                          </span>
-                        )}
-                        {summary.discardedCount > 0 && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-semibold text-[10px]">
-                            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
-                            {summary.discardedCount} Skipped
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </Section>
-              )}
-
-              {summary.purchasedThisCycle.length > 0 && (
-                <Section title="Wishlist purchases">
-                  <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5 space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <Gift className="size-3.5 shrink-0 text-pink-500" />
-                          <span className="text-xs font-bold text-foreground">
-                            {summary.purchasedThisCycle.length} {summary.purchasedThisCycle.length === 1 ? 'goal fulfilled' : 'goals fulfilled'}
-                          </span>
-                        </div>
-                        <p className="mt-0.5 text-[10px] text-muted-foreground truncate">
-                          Achieved wishlist items for this cycle
-                        </p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-xs font-extrabold text-foreground block">
-                          {formatSensitive(summary.purchasedTotal)}
-                        </span>
-                        <span className="text-[9px] uppercase tracking-wider font-semibold text-muted-foreground block">
-                          Total value
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5 pt-1">
-                      {summary.purchasedThisCycle.map(item => (
-                        <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/40 bg-background/50 px-3 py-2 text-[11px]">
-                          <div className="min-w-0 flex items-center gap-2">
-                            <span className="font-bold text-foreground truncate">{item.name}</span>
-                            {item.priority && (
-                              <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
-                                item.priority.toLowerCase() === 'high'
-                                  ? 'bg-pink-500/10 text-pink-500'
-                                  : item.priority.toLowerCase() === 'medium'
-                                  ? 'bg-amber-500/10 text-amber-500'
-                                  : 'bg-muted text-muted-foreground'
-                              }`}>
-                                {item.priority}
-                              </span>
-                            )}
-                          </div>
-                          <span className="shrink-0 font-bold text-foreground">{formatSensitive(item.price)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </Section>
-              )}
+              <CycleActivitySections summary={summary} formatSensitive={formatSensitive} />
             </div>
           )}
         </div>
@@ -628,43 +443,18 @@ export function CycleSummaryModal({
   )
 }
 
-function StatTile({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
-  return <div className="flex min-w-0 flex-col items-center justify-center rounded-xl border border-border/50 bg-muted/20 px-2 py-2.5 sm:flex-row sm:justify-between sm:px-3"><div className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide text-muted-foreground sm:text-[10px]">{icon}{label}</div><div className="mt-1 max-w-full truncate text-xs font-bold text-foreground sm:mt-0 sm:text-sm">{value}</div></div>
-}
+/**
+ * `neutral` exists because these cards compare two cycles, and "no change" is a real third
+ * answer. Forced into good/warn it had to be painted as one of them, and `trendUp` — a boolean —
+ * had to pick an arrow, so an unchanged figure drew a downward trend in a colour that claimed a
+ * verdict nobody had reached.
+ */
 
-interface InsightCardProps {
-  title: string
-  value: ReactNode
-  detail: string
-  tone: 'good' | 'warn'
-  trendUp?: boolean
-  tooltipHint?: string
-}
-
-function InsightCard({ title, value, detail, tone, trendUp, tooltipHint }: InsightCardProps) {
-  const isGood = tone === 'good'
-  const trendColor = trendUp === undefined
-    ? 'text-muted-foreground'
-    : isGood ? 'text-emerald-500' : 'text-orange-500'
-
-  return (
-    <div className="rounded-xl border border-border/50 bg-muted/20 p-3.5">
-      <div className="flex items-start justify-between gap-3">
-        <span className="text-[11px] font-semibold text-muted-foreground" title={tooltipHint}>{title}</span>
-        <div className="flex shrink-0 items-center gap-1">
-          {trendUp !== undefined && (
-            trendUp
-              ? <TrendingUp className={`size-3 ${trendColor}`} />
-              : <TrendingDown className={`size-3 ${trendColor}`} />
-          )}
-          <span className={`max-w-[10rem] truncate text-right text-xs font-bold ${isGood ? 'text-emerald-500' : 'text-orange-500'}`}>{value}</span>
-        </div>
-      </div>
-      <p className="mt-1.5 text-[10px] leading-relaxed text-foreground/70">{detail}</p>
-    </div>
-  )
-}
-
-function Section({ title, icon, children }: { title: string; icon?: ReactNode; children: ReactNode }) {
-  return <section><h3 className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{icon}{title}</h3>{children}</section>
-}
+/**
+ * Tone for a card that reports a change between two cycles, from the change alone.
+ *
+ * `change` is in whatever unit the card rounds to before it words the detail line, so a movement
+ * the copy calls "same as last cycle" cannot be painted as a movement. `higherIsBetter` flips it
+ * for the cards where going up is the good news (savings rate, growth) versus the ones where going
+ * down is (spending). `null` means there is nothing to compare against, not a change of zero.
+ */

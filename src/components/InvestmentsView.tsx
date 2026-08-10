@@ -78,7 +78,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
   onInvestmentScanCleared,
   onExplainWithAi,
 }) => {
-  const { hideSensitive, isOffline, confirm, activeSyncId, activeSyncIds = [], operations = [], queueMutation = () => undefined } = useAppContext()
+  const { hideSensitive, isOffline, confirm, activeSyncId, activeSyncIds = [], operations = [], queueMutation = () => false } = useAppContext()
   const investmentOps = useMemo(
     () => operations.filter(operation => operation.entity.startsWith('investment')),
     [operations],
@@ -146,18 +146,20 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
     targetId: string,
     payload: Record<string, unknown> | undefined,
   ) => {
-    queueMutation(entity, type, targetId, payload)
+    if (!queueMutation(entity, type, targetId, payload)) return false
     closePanel()
     return true
   }
 
   const openPanel = (next: Exclude<Panel, null>, activity: InvestmentActivity | null = null) => {
+    if (hideSensitive) return
     setEditingActivity(activity)
     setEditingCashFlow(null)
     setFormKey(value => value + 1)
     setPanel(next)
   }
   const openCashPanel = (flow: InvestmentCashFlow | null = null) => {
+    if (hideSensitive) return
     setEditingActivity(null)
     setEditingCashFlow(flow)
     setFormKey(value => value + 1)
@@ -168,6 +170,13 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
     setEditingActivity(null)
     setEditingCashFlow(null)
   }
+  useEffect(() => {
+    if (!hideSensitive) return
+    setPanel(null)
+    setEditingActivity(null)
+    setEditingCashFlow(null)
+    setDetailHolding(null)
+  }, [hideSensitive])
   useAutoOpenModal(autoOpenAddForm, () => openPanel('activity'), onResetAutoOpen)
   useEffect(() => {
     if (!investmentScanDraft || !['Deposit', 'Withdrawal', 'Conversion'].includes(investmentScanDraft.result.type ?? '')) return
@@ -282,6 +291,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
         <EmptyState
           onAddAccount={() => openPanel('account')}
           onAddInvestment={() => openPanel('instrument')}
+          mutationsDisabled={hideSensitive}
         />
       ) : (
         <>
@@ -290,6 +300,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
             portfolio={setupPortfolio ?? portfolio}
             isOffline={isOffline}
             refreshing={refreshing}
+            mutationsDisabled={hideSensitive}
             onAddActivity={() => openPanel('activity')}
             onManageCash={() => openPanel('cash')}
             onAddAccount={() => openPanel('account')}
@@ -306,6 +317,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
           />
           <AccountsAndInstruments
             portfolio={setupPortfolio ?? portfolio}
+            mutationsDisabled={hideSensitive}
             onArchiveAccount={id => {
               const account = portfolio.accounts.find(a => a.id === id)
               if (account) queueInvestment('investmentAccount', 'update', id, { name: account.name, baseCurrency: account.baseCurrency, isArchived: true, undoSnapshot: account })
@@ -416,10 +428,11 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
  * record you add most; the rest share the same ghost pattern, and "Update prices"
  * is separated because it changes market data rather than your records.
  */
-const ActionToolbar = ({ portfolio, isOffline, refreshing, onAddActivity, onManageCash, onAddAccount, onAddInvestment, onUpdatePrices }: {
+const ActionToolbar = ({ portfolio, isOffline, refreshing, mutationsDisabled, onAddActivity, onManageCash, onAddAccount, onAddInvestment, onUpdatePrices }: {
   portfolio: InvestmentPortfolio
   isOffline: boolean
   refreshing: boolean
+  mutationsDisabled: boolean
   onAddActivity: () => void
   onManageCash: () => void
   onAddAccount: () => void
@@ -428,10 +441,10 @@ const ActionToolbar = ({ portfolio, isOffline, refreshing, onAddActivity, onMana
 }) => (
   <section aria-label="Investment actions" className="app-panel flex flex-col gap-3 rounded-2xl border border-border/60 bg-card/92 p-4 lg:flex-row lg:items-center lg:justify-between">
     <div className="grid grid-cols-2 gap-2 md:grid-cols-4 lg:flex lg:flex-wrap">
-      <Button variant="ghost" disabled={portfolio.accounts.length === 0 || portfolio.instruments.length === 0} onClick={onAddActivity}><Plus className="size-4" /> Add activity</Button>
-      <Button variant="ghost" disabled={portfolio.accounts.length === 0} onClick={onManageCash}><Wallet className="size-4" /> Manage cash</Button>
-      <Button variant="ghost" onClick={onAddAccount}><Building2 className="size-4" /> Add account</Button>
-      <Button variant="ghost" onClick={onAddInvestment}><Search className="size-4" /> Add investment</Button>
+      <Button variant="ghost" disabled={mutationsDisabled || portfolio.accounts.length === 0 || portfolio.instruments.length === 0} onClick={onAddActivity}><Plus className="size-4" /> Add activity</Button>
+      <Button variant="ghost" disabled={mutationsDisabled || portfolio.accounts.length === 0} onClick={onManageCash}><Wallet className="size-4" /> Manage cash</Button>
+      <Button variant="ghost" disabled={mutationsDisabled} onClick={onAddAccount}><Building2 className="size-4" /> Add account</Button>
+      <Button variant="ghost" disabled={mutationsDisabled} onClick={onAddInvestment}><Search className="size-4" /> Add investment</Button>
     </div>
     <Button
       variant="ghost"
@@ -447,7 +460,7 @@ const ActionToolbar = ({ portfolio, isOffline, refreshing, onAddActivity, onMana
   </section>
 )
 
-const EmptyState = ({ onAddAccount, onAddInvestment }: { onAddAccount: () => void; onAddInvestment: () => void }) => (
+const EmptyState = ({ onAddAccount, onAddInvestment, mutationsDisabled }: { onAddAccount: () => void; onAddInvestment: () => void; mutationsDisabled: boolean }) => (
   <section className="app-panel rounded-2xl border border-border/60 bg-card/92 px-6 py-14 text-center">
     <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-violet-500/10 text-violet-500"><TrendingUp className="size-7" /></div>
     <h2 className="mt-5 text-xl font-black text-foreground">Build your investment view</h2>
@@ -455,8 +468,8 @@ const EmptyState = ({ onAddAccount, onAddInvestment }: { onAddAccount: () => voi
       Add an account and record a buy to get started.
     </p>
     <div className="mt-6 flex flex-col justify-center gap-2 sm:flex-row">
-      <Button variant="primary" onClick={onAddAccount}><Building2 className="size-4" /> Add account</Button>
-      <Button variant="ghost" onClick={onAddInvestment}><Search className="size-4" /> Add investment</Button>
+      <Button variant="primary" onClick={onAddAccount} disabled={mutationsDisabled}><Building2 className="size-4" /> Add account</Button>
+      <Button variant="ghost" onClick={onAddInvestment} disabled={mutationsDisabled}><Search className="size-4" /> Add investment</Button>
     </div>
   </section>
 )
@@ -630,6 +643,7 @@ const AccountsAndInstruments = ({
   onArchiveInstrument,
   onUnarchiveInstrument,
   activeSyncIds,
+  mutationsDisabled,
 }: {
   portfolio: InvestmentPortfolio
   onArchiveAccount: (id: string) => void
@@ -639,10 +653,14 @@ const AccountsAndInstruments = ({
   onArchiveInstrument: (id: string) => void
   onUnarchiveInstrument: (id: string) => void
   activeSyncIds: string[]
+  mutationsDisabled: boolean
 }) => {
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<'accounts' | 'investments'>('accounts')
   const [query, setQuery] = useState('')
+  useEffect(() => {
+    if (mutationsDisabled) setOpen(false)
+  }, [mutationsDisabled])
   const matches = (value: string) => value.toLowerCase().includes(query.trim().toLowerCase())
   return (
     <>
@@ -650,6 +668,7 @@ const AccountsAndInstruments = ({
         variant="unstyled"
         type="button"
         onClick={() => setOpen(true)}
+        disabled={mutationsDisabled}
         aria-expanded={open}
         className={`${interactivePanelClass} group flex w-full cursor-pointer items-center justify-between p-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring`}
       >
@@ -701,7 +720,7 @@ const AccountsAndInstruments = ({
                       <Button
                         variant="ghost"
                         size="sm"
-                        disabled={Boolean(value.isPendingSync || value.isPendingDelete)}
+                        disabled={mutationsDisabled || Boolean(value.isPendingSync || value.isPendingDelete)}
                         onClick={() => onUnarchiveAccount(value.id, value.name, value.baseCurrency)}
                       >
                         Unarchive
@@ -710,7 +729,7 @@ const AccountsAndInstruments = ({
                       <Button
                         variant="danger"
                         size="sm"
-                        disabled={Boolean(value.isPendingSync || value.isPendingDelete) || (!value.canDelete && !value.canArchive)}
+                        disabled={mutationsDisabled || Boolean(value.isPendingSync || value.isPendingDelete) || (!value.canDelete && !value.canArchive)}
                         title={value.archiveUnavailableReason}
                         onClick={() => value.canDelete ? onDeleteAccount(value.id) : onArchiveAccount(value.id)}
                       >
@@ -749,7 +768,7 @@ const AccountsAndInstruments = ({
                   <Button
                     variant={value.isArchived ? 'ghost' : 'danger'}
                     size="sm"
-                    disabled={Boolean(value.isPendingSync || value.isPendingDelete) || (!value.isArchived && !value.canDelete && !value.canArchive)}
+                    disabled={mutationsDisabled || Boolean(value.isPendingSync || value.isPendingDelete) || (!value.isArchived && !value.canDelete && !value.canArchive)}
                     title={value.archiveUnavailableReason}
                     onClick={() => value.isArchived
                       ? onUnarchiveInstrument(value.id)

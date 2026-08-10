@@ -63,10 +63,11 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
   }, [])
 
   const openAdd = useCallback(() => {
+    if (options.hideSensitive) return
     resetFields()
     setEditingGoal(null)
     setMode('add')
-  }, [resetFields])
+  }, [options.hideSensitive, resetFields])
 
   const openEdit = useCallback((goal: SavingsGoal) => {
     if (options.hideSensitive) return
@@ -84,6 +85,10 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
 
   useEffect(() => {
     if (!options.aiDraft) return
+    if (options.hideSensitive) {
+      options.onAiDraftConsumed?.()
+      return
+    }
     const fields = options.aiDraft.fields
     resetFields()
     setNameInput(readText(fields, 'name', ''))
@@ -176,6 +181,12 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
     close()
   }, [clearEditDraft, close])
 
+  useEffect(() => {
+    if (!options.hideSensitive) return
+    if (mode === 'add') closeAdd()
+    if (mode === 'edit') closeEdit()
+  }, [options.hideSensitive, mode, closeAdd, closeEdit])
+
   const validate = () => {
     const nextErrors: Record<string, string> = {}
     if (!nameInput.trim()) nextErrors.name = 'Goal name is required.'
@@ -205,6 +216,7 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
 
   const saveAdd = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (options.hideSensitive) return
     const valid = validate()
     if (!valid) {
       focusFirstInvalidField(event.currentTarget)
@@ -224,6 +236,7 @@ export function useSavingsGoalForm(options: UseSavingsGoalFormOptions) {
 
   const saveEdit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (options.hideSensitive) return
     if (!editingGoal) return
     const valid = validate()
     if (!valid) {

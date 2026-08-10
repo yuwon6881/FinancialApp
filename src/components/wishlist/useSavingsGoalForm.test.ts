@@ -83,4 +83,31 @@ describe('useSavingsGoalForm', () => {
     expect(result.current.errors.target).toBeTruthy()
     expect(onUpdateGoal).not.toHaveBeenCalled()
   })
+
+  it('closes and clears an open goal workflow when sensitive mode activates', () => {
+    const onAddGoal = vi.fn()
+    const onUpdateGoal = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ hideSensitive }) => useSavingsGoalForm({
+        goals: [goal],
+        hideSensitive,
+        onAddGoal,
+        onUpdateGoal,
+      }),
+      { initialProps: { hideSensitive: false } },
+    )
+
+    act(() => {
+      result.current.handleOpenEditModal(goal)
+      result.current.setNameInput('Unsaved private value')
+    })
+    expect(result.current.showEditModal).toBe(true)
+
+    rerender({ hideSensitive: true })
+
+    expect(result.current.showEditModal).toBe(false)
+    expect(result.current.editingGoal).toBeNull()
+    expect(result.current.nameInput).toBe('')
+    expect(onUpdateGoal).not.toHaveBeenCalled()
+  })
 })

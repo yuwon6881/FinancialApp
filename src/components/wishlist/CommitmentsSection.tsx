@@ -96,18 +96,28 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
   const hasAny = pool.activeGoals.length > 0 || completedGoals.length > 0
 
   return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between gap-3 px-1">
-        <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-          <Flag className="size-4 text-violet-500" />
-          Commitments
-          {pool.activeGoals.length > 0 && (
-            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-              {pool.activeGoals.length}
-            </span>
-          )}
-        </h3>
-        <Button variant="secondary" size="sm" onClick={onAddGoal}>
+    /* The panel shell every other view uses. These two sections were bare headings with cards
+       floating on the page background, directly under a header and a pool bar that *were* panels —
+       so the page started as chrome and then stopped, which is most of why it reads as a different
+       application from the rest of the app. */
+    <section
+      aria-labelledby="wishlist-commitments-heading"
+      className="app-panel space-y-3 rounded-2xl border border-border/60 bg-card/92 p-4 sm:p-5"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h3 id="wishlist-commitments-heading" className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+            <Flag className="size-4 text-pink-500" />
+            Commitments
+            {pool.activeGoals.length > 0 && (
+              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                {pool.activeGoals.length}
+              </span>
+            )}
+          </h3>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">Money held back from your rewards for something specific.</p>
+        </div>
+        <Button variant="secondary" size="sm" className="shrink-0" onClick={onAddGoal} disabled={hideSensitive} title={hideSensitive ? 'Unhide balances to add a commitment' : undefined}>
           <Plus className="size-3" /> Add goal
         </Button>
       </div>

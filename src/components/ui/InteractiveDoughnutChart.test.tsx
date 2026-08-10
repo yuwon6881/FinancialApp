@@ -30,4 +30,26 @@ describe('InteractiveDoughnutChart', () => {
     fireEvent.keyDown(arcs[0], { key: 'Enter' })
     expect(onActivate).toHaveBeenCalledWith(expect.objectContaining({ key: 'stocks' }))
   })
+
+  it('removes masked arcs and exact values from the accessibility tree', () => {
+    const { container } = render(
+      <InteractiveDoughnutChart
+        ariaLabel="Stocks 75%, bonds 25%"
+        slices={[
+          { key: 'stocks', label: 'Stocks', value: 75, color: '#2563eb' },
+          { key: 'bonds', label: 'Bonds', value: 25, color: '#10b981' },
+        ]}
+        centerLabel="Total"
+        centerValue="$100"
+        formatValue={value => `$${value}`}
+        masked
+      />,
+    )
+
+    expect(container.querySelector('[aria-hidden="true"] path[tabindex="0"]')).toBeNull()
+    expect(container.querySelectorAll('path[tabindex="-1"]')).toHaveLength(2)
+    expect(screen.getByRole('listitem', { name: 'Stocks: hidden' })).toBeTruthy()
+    expect(container.textContent).not.toContain('$100')
+    expect(container.textContent).not.toContain('75.0%')
+  })
 })

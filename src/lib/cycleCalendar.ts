@@ -1,5 +1,6 @@
 import type { ActiveRecurringPayment, Transaction } from '../types'
 import { getCycleRangeDates } from './cycle'
+import { isReportableCashMovement } from './transactionReportSemantics'
 
 const MONTH_INDEX: Record<string, number> = {
   Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
@@ -34,7 +35,7 @@ export function buildCycleCalendar(options: {
 
   const netByDay = new Map<string, number>()
   for (const transaction of options.transactions) {
-    if (transaction.date < startKey || transaction.date > endKey || transaction.ledgerCategory.startsWith('Transfer:')) continue
+    if (transaction.date < startKey || transaction.date > endKey || !isReportableCashMovement(transaction)) continue
     netByDay.set(transaction.date, (netByDay.get(transaction.date) || 0) + transaction.amount)
   }
   const recurringByDay = new Map<string, string[]>()

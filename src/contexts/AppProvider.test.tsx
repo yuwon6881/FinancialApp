@@ -23,7 +23,7 @@ const baseValue: AppContextValue = {
   isSyncing: false,
   isOffline: false,
   operations: [],
-  queueMutation: () => undefined,
+  queueMutation: () => false,
 }
 
 // These tests are the point of the three-context split: they fail if the slices are

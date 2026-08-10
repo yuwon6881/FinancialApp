@@ -8,6 +8,7 @@ interface RecurringPaymentsHeaderProps {
   activeCount: number
   totalCount: number
   showAddForm: boolean
+  hideSensitive: boolean
   formatSensitive: (val: number) => React.ReactNode
   onToggleForm: () => void
 }
@@ -18,6 +19,7 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
   activeCount,
   totalCount,
   showAddForm,
+  hideSensitive,
   formatSensitive,
   onToggleForm,
 }) => {
@@ -42,6 +44,8 @@ export const RecurringPaymentsHeader: React.FC<RecurringPaymentsHeaderProps> = (
           variant="primary"
           size="lg"
           onClick={onToggleForm}
+          disabled={hideSensitive}
+          title={hideSensitive ? 'Unhide balances to add a subscription' : undefined}
           className="rounded-xl shadow-lg shadow-blue-600/10 hover:shadow-blue-600/20 duration-200 self-start md:self-center"
         >
           {showAddForm ? <X className="size-4" /> : <Plus className="size-4" />}

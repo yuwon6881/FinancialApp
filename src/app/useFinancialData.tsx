@@ -17,9 +17,9 @@ import type {
 import type { CategoryCleanupSuggestion } from '../lib/api'
 import { CACHE_KEYS, getCachedJSON, getCachedTransactions, getCachedWishlist, sanitizeTransactions, setCachedJSON, hasCachedKey, setCachedCycleSnapshot } from '../lib/cache'
 import { useOptimisticList } from '../lib/useOptimisticList'
-import { computeOptimisticDashboard } from '../lib/optimisticDashboard'
 import { useOutbox } from '../lib/useOutbox'
 import { useStartupSync } from './useStartupSync'
+import { useOptimisticDashboard } from './useOptimisticDashboard'
 import { backupModalDraftsOnLogout, restoreModalDraftsOnLogin, clearAllModalDrafts } from '../lib/modalDrafts'
 import { createFinalId, projectFinancialSetting, sanitizeQueuedOps, type OutboxPayload } from '../lib/outbox'
 import { triggerHaptic } from '../lib/haptics'
@@ -837,10 +837,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const allSavingsGoals = useOptimisticList(savingsGoals, activeOps, 'savingsGoal')
   const allCategories = useOptimisticList(categoriesList, activeOps, 'category')
 
-  const optimisticDashboardData = useMemo(
-    () => computeOptimisticDashboard(dashboardData, { activeOps, transactions }),
-    [dashboardData, activeOps, transactions]
-  )
+  const optimisticDashboardData = useOptimisticDashboard(dashboardData, activeOps, transactions)
 
   const formatSensitive = useCallback((val: number) => {
     const formatted = formatCurrencyVal(val, optimisticDashboardData?.setting?.currency || 'USD')
@@ -861,6 +858,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     darkMode?: boolean
     hideSensitive?: boolean
   }) => {
+    if (!guardSensitive()) return
     const payload = {
       ...settings,
       darkMode: settings.darkMode ?? darkMode,
@@ -942,6 +940,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   const handleUpdateCategoryType = (id: string, type: CategoryFlowType) => updateCatMeta(id, { type })
 
   const handleDeleteCategory = (id: string, replacementCategoryId?: string) => {
+    if (!guardSensitive()) return
     const category = allCategories.find(cat => String(cat.id) === String(id))
     const replacementCategory = replacementCategoryId
       ? allCategories.find(cat => String(cat.id) === String(replacementCategoryId))
@@ -1048,12 +1047,14 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     documentChanges?: TransactionDocumentChanges,
   ) => {
     const drafts = handleStageDraftTransactions([newTx])
+    if (drafts.length === 0) return undefined
     if (documentChanges) stageTransactionDocumentChanges(drafts[0].id, documentChanges)
     setActiveTab('drafts')
     return drafts[0].id
   }
 
   const handleStageDraftTransactions = (newTransactions: Omit<Transaction, 'id'>[]) => {
+    if (!guardSensitive()) return []
     if (newTransactions.length === 0) return []
     const drafts = newTransactions.map(transaction => ({
       ...transaction,
@@ -1066,6 +1067,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   }
 
   const handleAddBalanceAdjustment = (newTx: Omit<Transaction, 'id'>) => {
+    if (!guardSensitive()) return
     const finalId = createFinalId('transaction')
     void triggerHaptic(20)
     mutateQueue(prev => enqueue(prev, 'transaction', 'add', finalId, { ...newTx, id: finalId }))
@@ -1078,6 +1080,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   }
 
   const handleDeleteDraftTransaction = (id: string) => {
+    if (!guardSensitive()) return
     pendingTransactionDocumentsRef.current.delete(id)
     setDraftTransactions(prev => prev.filter(t => t.id !== id))
     void triggerHaptic(30)
@@ -1095,6 +1098,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   }
 
   const handleSyncDraftBatch = () => {
+    if (!guardSensitive()) return
     if (draftTransactions.length === 0) return
     const drafts = draftTransactions
     setDraftTransactions([])
@@ -1247,6 +1251,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   }
 
   const handleAddPayment = (newPay: Omit<RecurringPayment, 'id'>) => {
+    if (!guardSensitive()) return
     const finalId = createFinalId('recurringPayment')
     mutateQueue(prev => enqueue(prev, 'recurringPayment', 'add', finalId, { ...newPay, id: finalId, active: true }))
   }
@@ -1277,6 +1282,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
   }
 
   const handleDeletePayment = (id: string) => {
+    if (!guardSensitive()) return
     void triggerHaptic(30)
     const payment = allRecurringPayments.find(p => String(p.id) === String(id))
     snapshotForUndo('recurringPayment', String(id), payment)

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { DashboardData, WishlistItem } from '../types'
+import type { DashboardData, Transaction, WishlistItem } from '../types'
 import { buildCycleSummary, formatRate, formatRateChange } from '../lib/cycleSummary'
 
 function dashboard(overrides: Partial<DashboardData> = {}): DashboardData {
@@ -18,10 +18,10 @@ function dashboard(overrides: Partial<DashboardData> = {}): DashboardData {
     },
     cycleLabel: 'Jul 01 ~ Jul 31, 2026',
     categories: [
-      { name: 'Essentials', allocation: 0.5, target: 500, budget: 0, netChange: 375, spent: 125, remaining: 375 },
-      { name: 'Growth', allocation: 0.2, target: 200, budget: 0, netChange: 160, spent: 40, remaining: 160 },
-      { name: 'Stability', allocation: 0.1, target: 100, budget: 0, netChange: 100, spent: 0, remaining: 100 },
-      { name: 'Rewards', allocation: 0.2, target: 200, budget: 0, netChange: 175, spent: 25, remaining: 175 },
+      { name: 'Essentials', allocation: 0.5, target: 500, incomeAllocated: 500, budget: 0, netChange: 375, spent: 125, remaining: 375 },
+      { name: 'Growth', allocation: 0.2, target: 200, incomeAllocated: 200, budget: 0, netChange: 160, spent: 40, remaining: 160 },
+      { name: 'Stability', allocation: 0.1, target: 100, incomeAllocated: 100, budget: 0, netChange: 100, spent: 0, remaining: 100 },
+      { name: 'Rewards', allocation: 0.2, target: 200, incomeAllocated: 200, budget: 0, netChange: 175, spent: 25, remaining: 175 },
     ],
     stats: {
       totalBalance: 650,
@@ -105,6 +105,31 @@ describe('buildCycleSummary', () => {
 
     expect(summary.purchasedThisCycle.map(item => item.name)).toEqual(['Headphones'])
     expect(summary.purchasedTotal).toBe(80)
+  })
+
+  it('uses the linked ledger snapshot for wishlist date and amount', () => {
+    const item = wish({ price: 120, purchasedAt: '2026-08-01T08:00:00.000Z', purchaseTransactionId: 'wish-tx' })
+    const linked = {
+      id: 'wish-tx', date: '2026-07-20', amount: -80, wishlistItemId: item.id,
+      description: 'Purchased: Headphones', category: 'Other', ledgerCategory: 'Rewards',
+    } as Transaction
+
+    const summary = buildCycleSummary(dashboard(), null, [item], 2026, 7, 1, [linked])
+
+    expect(summary.purchasedThisCycle).toHaveLength(1)
+    expect(summary.purchasedTotal).toBe(80)
+  })
+
+  it('bases savings rate on actual income and leaves it unavailable without income', () => {
+    const withRefund = dashboard({
+      stats: { ...dashboard().stats, monthlyIncome: 1000, monthlyInflow: 1200, monthlyExpenses: 190 },
+    })
+    const noIncome = dashboard({
+      stats: { ...dashboard().stats, monthlyIncome: 0, monthlyInflow: 200, monthlyExpenses: 50 },
+    })
+
+    expect(buildCycleSummary(withRefund, null, [], 2026, 7, 1).savingsRate).toBeCloseTo(.81)
+    expect(buildCycleSummary(noIncome, null, [], 2026, 7, 1).savingsRate).toBeNull()
   })
 
   it('derives previous-cycle spending, savings, category, and growth comparisons', () => {

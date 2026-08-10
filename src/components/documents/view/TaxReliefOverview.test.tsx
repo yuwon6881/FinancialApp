@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { TaxReliefOverview } from './TaxReliefOverview'
 import type { TaxYearReliefSummary } from '../../../types'
+import { AppPrefsContext } from '../../../contexts/AppContext'
 
 const CURRENT_YEAR = new Date().getFullYear()
 
@@ -186,5 +187,39 @@ describe('TaxReliefOverview sync status', () => {
     // Unsaved indicator dot and text appear
     expect(screen.getByTitle('Unsaved change')).toBeTruthy()
     expect(screen.getByText('Unsaved changes')).toBeTruthy()
+  })
+})
+
+describe('TaxReliefOverview sensitive accessibility', () => {
+  it('omits exact progress values while amounts are masked', () => {
+    const summary = summaryWithDocuments(1)
+    summary.categories[0].confirmedAmount = 600
+    summary.confirmedAmount = 600
+
+    render(
+      <AppPrefsContext.Provider value={{
+        hideSensitive: true,
+        currency: 'MYR',
+        darkMode: false,
+        formatSensitive: () => '••••',
+      }}>
+        <TaxReliefOverview
+          summary={summary}
+          categories={[category]}
+          taxYear={CURRENT_YEAR}
+          currency="MYR"
+          isLoading={false}
+          onToggleReliefCategory={vi.fn()}
+          onAddCategory={vi.fn(async () => undefined)}
+          onUpdateCategory={vi.fn(async () => undefined)}
+          onDeleteCategory={vi.fn(async () => undefined)}
+        />
+      </AppPrefsContext.Provider>,
+    )
+
+    const progress = screen.getByRole('progressbar', { name: 'Education confirmed amount hidden' })
+    expect(progress.getAttribute('aria-valuenow')).toBeNull()
+    expect(progress.getAttribute('aria-valuemax')).toBeNull()
+    expect(progress.getAttribute('aria-valuemin')).toBeNull()
   })
 })

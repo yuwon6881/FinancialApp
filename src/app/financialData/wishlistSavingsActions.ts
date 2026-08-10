@@ -62,6 +62,7 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
   } = deps
 
   const handleAddWishlistItem = (newWish: Partial<WishlistItem>) => {
+    if (!guardSensitive()) return
     const placeholderId = String(createLocalWishlistId())
     const payload = {
       name: newWish.name || '',
@@ -86,6 +87,7 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
   }
 
   const handleDeleteWishlistItem = (id: number) => {
+    if (!guardSensitive()) return
     void triggerHaptic(30)
     const item = allWishlist.find(wish => String(wish.id) === String(id))
     snapshotForUndo('wishlistItem', String(id), item)
@@ -149,6 +151,7 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
   }
 
   const handleAddSavingsGoal = (goal: Partial<SavingsGoal>) => {
+    if (!guardSensitive()) return
     const placeholderId = String(createLocalNumericId())
     const payload = {
       name: goal.name || '',
@@ -172,6 +175,7 @@ export function createWishlistSavingsActions(deps: WishlistSavingsActionDependen
   }
 
   const handleDeleteSavingsGoal = (id: number) => {
+    if (!guardSensitive()) return
     void triggerHaptic(30)
     const goal = allSavingsGoals.find(item => String(item.id) === String(id))
     snapshotForUndo('savingsGoal', String(id), goal)

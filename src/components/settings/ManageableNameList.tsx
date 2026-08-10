@@ -1,5 +1,6 @@
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
+import { CollapsibleBody } from '../ui/CollapsibleBody'
 import { Loader2, Plus, Search, Trash2, X } from 'lucide-react'
 import { useId, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
@@ -18,6 +19,12 @@ interface ManageableNameListProps<T extends ManageableNameItem> {
   addFormTitle?: string
   addFormDescription?: string
   addFormFields?: ReactNode
+  /**
+   * An extra control for the toolbar row, sitting between search and Add. Consumers own their own
+   * filtering; this exists so a filter does not have to be stacked as a separate labelled row
+   * above the list, which is what made three unrelated control clusters out of one toolbar.
+   */
+  filterSlot?: ReactNode
   disabled?: boolean
   isLoading?: boolean
   onAdd: (name: string) => Promise<void> | void
@@ -36,6 +43,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
   addFormTitle,
   addFormDescription,
   addFormFields,
+  filterSlot,
   disabled = false,
   isLoading = false,
   onAdd,
@@ -48,7 +56,13 @@ export function ManageableNameList<T extends ManageableNameItem>({
   const [newName, setNewName] = useState('')
   const [search, setSearch] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
+  // Adding is occasional; searching and scanning the list is what this panel is opened for. The
+  // add form was permanently expanded above the search box, so the first thing on screen was a
+  // form for something the user was usually not doing, and the three controls read as three
+  // unrelated blocks rather than one toolbar over one list.
+  const [isAddOpen, setIsAddOpen] = useState(false)
   const addInputId = useId()
+  const addPanelId = useId()
   const lowerItemLabel = itemLabel.toLowerCase()
   const pluralItemLabel = /[^aeiou]y$/i.test(lowerItemLabel)
     ? `${lowerItemLabel.slice(0, -1)}ies`
@@ -72,68 +86,101 @@ export function ManageableNameList<T extends ManageableNameItem>({
     }
   }
 
+  // Leaving the panel discards the half-typed name, so the way out and the way in are the same
+  // control rather than a second one appearing beside it.
+  const toggleAdd = () => {
+    setIsAddOpen(open => {
+      if (open) setNewName('')
+      return !open
+    })
+  }
+
   return (
     <div className="space-y-3">
-      <div className={addFormTitle || addFormFields ? 'space-y-3 rounded-xl border border-border/60 bg-muted/15 p-3' : 'space-y-2'}>
-        {addFormTitle && (
-          <div className="space-y-0.5">
-            <p className="text-xs font-bold text-foreground">{addFormTitle}</p>
-            {addFormDescription && <p className="text-[11px] leading-relaxed text-muted-foreground">{addFormDescription}</p>}
-          </div>
-        )}
-        {addFormFields}
-        <div className="space-y-1.5">
-          {addFormTitle && <label htmlFor={addInputId} className="block text-xs font-bold text-muted-foreground">{itemLabel} name</label>}
-          <div className="flex gap-2">
-            <Input
-              id={addInputId}
-              type="text"
-              value={newName}
-              onChange={event => setNewName(event.target.value)}
-              onKeyDown={event => { if (event.key === 'Enter') void add() }}
-              placeholder={addPlaceholder}
-              aria-label={`New ${lowerItemLabel} name`}
-              disabled={disabled}
-              maxLength={40}
-              className="h-9 min-w-0 flex-1 rounded-lg border border-border bg-background px-3 text-xs focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
-            />
+      {/* One toolbar row: find, narrow, add. Wraps rather than truncating, so the search box keeps
+          a usable width on a phone instead of collapsing to fit two controls beside it. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="group relative min-w-[10rem] flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-foreground" />
+          <Input
+            type="text"
+            role="searchbox"
+            value={search}
+            onChange={event => setSearch(event.target.value)}
+            placeholder={`Search ${pluralItemLabel}`}
+            aria-label={`Search ${pluralItemLabel}`}
+            className="h-9 w-full rounded-lg border border-border/70 bg-background py-2 pl-9 pr-9 text-xs transition placeholder:text-muted-foreground/75 hover:border-border focus:border-ring/70 focus:outline-none focus:ring-2 focus:ring-ring/15"
+          />
+          {search && (
             <Button variant="unstyled"
               type="button"
-              onClick={() => void add()}
-              disabled={!trimmedName || duplicate || Boolean(validationError) || disabled || busyId !== null}
-              aria-label={`Add ${itemLabel}`}
-              className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-primary text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+              onClick={() => setSearch('')}
+              aria-label={`Clear ${lowerItemLabel} search`}
+              className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground"
             >
-              {busyId === 'new' ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
+              <X className="size-3.5" />
             </Button>
-          </div>
-        </div>
-        {duplicate && <p className="text-[10px] font-semibold text-destructive">{itemLabel} already exists.</p>}
-        {validationError && <p className="text-[10px] font-semibold text-destructive">{validationError}</p>}
+          )}
+        </label>
+
+        {filterSlot}
+
+        <Button
+          variant={isAddOpen ? 'outline' : 'primary'}
+          size="sm"
+          type="button"
+          onClick={toggleAdd}
+          disabled={disabled}
+          aria-expanded={isAddOpen}
+          aria-controls={addPanelId}
+          className="h-9 shrink-0"
+        >
+          {isAddOpen ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
+          {isAddOpen ? 'Cancel' : 'Add'}
+        </Button>
       </div>
 
-      <label className="group relative block">
-        <Search className="pointer-events-none absolute left-3.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-foreground" />
-        <Input
-          type="text"
-          role="searchbox"
-          value={search}
-          onChange={event => setSearch(event.target.value)}
-          placeholder={`Search ${pluralItemLabel}`}
-          aria-label={`Search ${pluralItemLabel}`}
-          className="h-10 w-full rounded-xl border border-border/70 bg-muted/20 py-2 pl-10 pr-10 text-xs shadow-inner shadow-black/[0.025] transition placeholder:text-muted-foreground/75 hover:border-border focus:border-ring/70 focus:bg-background focus:outline-none focus:ring-2 focus:ring-ring/15"
-        />
-        {search && (
-          <Button variant="unstyled"
-            type="button"
-            onClick={() => setSearch('')}
-            aria-label={`Clear ${lowerItemLabel} search`}
-            className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground"
-          >
-            <X className="size-3.5" />
-          </Button>
-        )}
-      </label>
+      <div id={addPanelId}>
+        <CollapsibleBody open={isAddOpen}>
+          <div className="space-y-3 rounded-xl border border-border/60 bg-muted/15 p-3">
+            {addFormTitle && (
+              <div className="space-y-0.5">
+                <p className="text-xs font-bold text-foreground">{addFormTitle}</p>
+                {addFormDescription && <p className="text-[11px] leading-relaxed text-muted-foreground">{addFormDescription}</p>}
+              </div>
+            )}
+            {addFormFields}
+            <div className="space-y-1.5">
+              {addFormTitle && <label htmlFor={addInputId} className="block text-xs font-bold text-muted-foreground">{itemLabel} name</label>}
+              <div className="flex gap-2">
+                <Input
+                  id={addInputId}
+                  type="text"
+                  value={newName}
+                  onChange={event => setNewName(event.target.value)}
+                  onKeyDown={event => { if (event.key === 'Enter') void add() }}
+                  placeholder={addPlaceholder}
+                  aria-label={`New ${lowerItemLabel} name`}
+                  disabled={disabled}
+                  maxLength={40}
+                  className="h-9 min-w-0 flex-1 rounded-lg border border-border bg-background px-3 text-xs focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
+                />
+                <Button variant="unstyled"
+                  type="button"
+                  onClick={() => void add()}
+                  disabled={!trimmedName || duplicate || Boolean(validationError) || disabled || busyId !== null}
+                  aria-label={`Add ${itemLabel}`}
+                  className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-primary text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+                >
+                  {busyId === 'new' ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
+                </Button>
+              </div>
+            </div>
+            {duplicate && <p className="text-[10px] font-semibold text-destructive">{itemLabel} already exists.</p>}
+            {validationError && <p className="text-[10px] font-semibold text-destructive">{validationError}</p>}
+          </div>
+        </CollapsibleBody>
+      </div>
 
       <div className="max-h-72 space-y-1.5 overflow-y-auto pr-1" aria-busy={isLoading}>
         {isLoading ? (

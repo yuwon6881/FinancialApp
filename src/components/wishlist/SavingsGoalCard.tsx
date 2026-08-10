@@ -32,8 +32,8 @@ interface SavingsGoalCardProps {
 // service is a problem — a percentage alone cannot tell those apart.
 const STATUS: Record<GoalPaceStatus, { label: string; dot: string; text: string; bar: string }> = {
   funded: { label: 'Ready', dot: 'bg-emerald-500', text: 'text-emerald-500', bar: 'bg-emerald-500' },
-  onPace: { label: 'On pace', dot: 'bg-emerald-500', text: 'text-emerald-500', bar: 'bg-violet-500' },
-  needsFunding: { label: 'Needs funding', dot: 'bg-amber-500', text: 'text-amber-500', bar: 'bg-violet-500' },
+  onPace: { label: 'On pace', dot: 'bg-emerald-500', text: 'text-emerald-500', bar: 'bg-pink-500' },
+  needsFunding: { label: 'Needs funding', dot: 'bg-amber-500', text: 'text-amber-500', bar: 'bg-pink-500' },
   overdue: { label: 'Overdue', dot: 'bg-destructive', text: 'text-destructive', bar: 'bg-destructive' },
 }
 
@@ -130,7 +130,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
             <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               {cycleDone
                 ? <CheckCircle2 className="size-3 text-emerald-500" aria-hidden />
-                : <CalendarClock className="size-3 text-violet-500" aria-hidden />}
+                : <CalendarClock className="size-3 text-pink-500" aria-hidden />}
               This cycle
             </span>
             <span className="text-[10px] font-semibold text-muted-foreground">

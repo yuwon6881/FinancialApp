@@ -1,4 +1,4 @@
-import { lazy, Suspense, type Dispatch, type SetStateAction } from 'react'
+import { lazy, Suspense, useEffect, type Dispatch, type SetStateAction } from 'react'
 import { AnimatePresence, m } from 'framer-motion'
 import { CreditCard, PiggyBank, Sparkles, Upload, Wallet, X, Zap } from 'lucide-react'
 import type { DashboardData, PendingNotification } from '../types'
@@ -67,6 +67,10 @@ export function AppOverlays({
   currentPendingNotifications,
   setIsAiOpen,
 }: AppOverlaysProps) {
+  useEffect(() => {
+    if (prefs.hideSensitive) fabMenu.close()
+  }, [prefs.hideSensitive, fabMenu.close])
+
   return (
     <>
       <PendingSubscriptionsModal
@@ -98,7 +102,7 @@ export function AppOverlays({
           isLoading={cycleSummary.isLoading}
           loadError={cycleSummary.loadError}
           wishlist={financial.allWishlist}
-          transactions={financial.allTransactions}
+          transactions={cycleSummary.transactions}
           monthIndex={cycleSummary.target.monthIndex}
           year={cycleSummary.target.year}
           cycleDay={cycleSummary.cycleDay}
@@ -218,6 +222,8 @@ export function AppOverlays({
                     type="button"
                     variants={fabActionVariants}
                     whileTap={{ scale: 0.92 }}
+                    disabled={prefs.hideSensitive && key !== 'ai'}
+                    title={prefs.hideSensitive && key !== 'ai' ? 'Reveal sensitive data to make financial changes' : label}
                     onClick={() => {
                       if (key === 'ai') {
                         setIsAiOpen(true)
@@ -240,6 +246,7 @@ export function AppOverlays({
           </AnimatePresence>
           <m.button
             whileTap={{ scale: 0.92 }}
+            disabled={prefs.activeTab === 'drafts' && prefs.hideSensitive}
             onClick={() => {
               if (prefs.activeTab === 'drafts') {
                 financial.handleSyncDraftBatch()
@@ -255,7 +262,7 @@ export function AppOverlays({
             style={{
               bottom: 'calc(96px + env(safe-area-inset-bottom, 0px))'
             }}
-            title={prefs.activeTab === 'drafts' ? 'Sync Batch to Server' : fabMenu.isOpen ? 'Close Menu' : 'Open Menu'}
+            title={prefs.activeTab === 'drafts' && prefs.hideSensitive ? 'Reveal sensitive data to sync drafts' : prefs.activeTab === 'drafts' ? 'Sync Batch to Server' : fabMenu.isOpen ? 'Close Menu' : 'Open Menu'}
             aria-label={prefs.activeTab === 'drafts' ? 'Sync Batch to Server' : fabMenu.isOpen ? 'Close Menu' : 'Open Menu'}
             aria-expanded={prefs.activeTab === 'drafts' ? undefined : fabMenu.isOpen}
           >

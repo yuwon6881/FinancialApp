@@ -98,9 +98,7 @@ export function LedgerBulkSelectionLayer({
             return
           }
           const request = buildBulkTransactionDeleteRequest(bulk.selectedTransactions)
-          if (request && app.queueMutation) {
-            app.queueMutation('transaction', 'bulkDelete', request.targetId, request.payload)
-          }
+          if (!request || !app.queueMutation?.('transaction', 'bulkDelete', request.targetId, request.payload)) return
           bulk.leaveSelection()
           setIsConfirmOpen(false)
         }}

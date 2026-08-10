@@ -1,12 +1,23 @@
 import React from 'react'
 import { m, useReducedMotion } from 'framer-motion'
-import { ShieldAlert } from 'lucide-react'
+import { ChevronRight, ShieldAlert } from 'lucide-react'
 import type { StabilityRecovery } from '../../types'
+import { Button } from '../ui/Button'
 import { InfoHint } from '../ui/InfoHint'
+
+export interface StabilityRecoveryLedgerJump {
+  category?: string | null
+  startDate?: string | null
+  endDate?: string | null
+  showAllCycles?: boolean
+  range?: 'monthly' | '3month' | '6month' | 'yearly'
+}
 
 interface StabilityRecoveryExceptionCardProps {
   recovery: StabilityRecovery | undefined
   formatSensitive: (value: number) => React.ReactNode
+  /** Opens the ledger on the movements that produced the shortfall. Absent in tests and previews. */
+  onNavigateToLedger?: (options: StabilityRecoveryLedgerJump) => void
 }
 
 /**
@@ -15,13 +26,16 @@ interface StabilityRecoveryExceptionCardProps {
  * gates on purpose: the fund can still be short overall after this cycle's share is already back,
  * which is a perfectly healthy state that deserves no card.
  *
- * The card is purely informative and carries no action. Putting money back happens by ticking the
- * top-up offer on a salary, so an "Add income" button here pointed at a blank transaction form that
- * could not do the thing the card was asking for.
+ * The card still carries no action that *changes* anything — putting money back happens by ticking
+ * the top-up offer on a salary, so the "Add income" button it once had opened a blank transaction
+ * form that could not do the thing the card was asking for. What it does carry is the arithmetic
+ * and a way to see it: a figure derived from balances across several cycles is otherwise a number
+ * the app asserts and the user cannot check.
  */
 export function StabilityRecoveryExceptionCard({
   recovery,
   formatSensitive,
+  onNavigateToLedger,
 }: StabilityRecoveryExceptionCardProps) {
   const reduceMotion = useReducedMotion()
 
@@ -34,6 +48,8 @@ export function StabilityRecoveryExceptionCard({
   // Overdue is checked first: past the window cyclesRemaining sits at 1 forever, so treating that
   // as "the final cycle" announced the last cycle of the plan every cycle from then on.
   const isFinalCycle = !recovery.isOverdue && recovery.cyclesRemaining <= 1
+  // The jump needs a window to filter on, and only the server can say when the fund was last full.
+  const canShowMovements = Boolean(onNavigateToLedger && recovery.recoveryFromDate)
 
   return (
     <m.section
@@ -83,6 +99,73 @@ export function StabilityRecoveryExceptionCard({
               />
             </div>
           </div>
+
+          {/* The whole figure is one subtraction between two balances, and stating it is the
+              difference between a number the app asserts and one the user can check. Behind a
+              disclosure because a healthy reader never needs it, and this panel already competes
+              with two other exception cards for the top of the page. */}
+          <details className="group pt-1">
+            <summary className="flex cursor-pointer list-none items-center gap-1 text-[11px] font-bold text-amber-700 transition hover:underline dark:text-amber-300">
+              <ChevronRight className="size-3 transition-transform group-open:rotate-90" aria-hidden="true" />
+              Where this figure comes from
+            </summary>
+            <div className="mt-2 space-y-2 rounded-xl border border-amber-500/20 bg-card/60 p-3">
+              <dl className="space-y-1.5 text-xs">
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="text-muted-foreground">Highest your fund has reached</dt>
+                  <dd className="font-semibold tabular-nums text-foreground">{formatSensitive(recovery.recoverableCeiling)}</dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="text-muted-foreground">In it now</dt>
+                  <dd className="font-semibold tabular-nums text-foreground">{formatSensitive(recovery.currentBalance)}</dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-3 border-t border-border/40 pt-1.5">
+                  <dt className="font-semibold text-foreground">Short by</dt>
+                  <dd className="font-extrabold tabular-nums text-amber-600 dark:text-amber-400">
+                    {formatSensitive(recovery.outstandingShortfall)}
+                  </dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="text-muted-foreground">
+                    Spread over {recovery.cyclesRemaining} {recovery.cyclesRemaining === 1 ? 'cycle' : 'cycles'}, already back this cycle
+                  </dt>
+                  <dd className="font-semibold tabular-nums text-foreground">{formatSensitive(recovery.toppedUpThisCycle)}</dd>
+                </div>
+              </dl>
+
+              {canShowMovements ? (
+                <>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    type="button"
+                    className="w-full justify-center"
+                    onClick={() => onNavigateToLedger?.({
+                      category: 'Stability',
+                      startDate: recovery.recoveryFromDate,
+                      endDate: new Date().toLocaleDateString('en-CA'),
+                      showAllCycles: true,
+                      range: 'yearly',
+                    })}
+                  >
+                    See every movement since then
+                  </Button>
+                  {/* Said plainly rather than left to be discovered: the ledger totals it lands on
+                      are per page, and the window can run to more rows than one page holds. */}
+                  <p className="text-[10px] leading-relaxed text-muted-foreground">
+                    Opens your ledger filtered to emergency-fund movements from the start of the cycle
+                    after it was last full. The list totals each page, so a long window needs more
+                    than one page to add up to the figure above.
+                  </p>
+                </>
+              ) : (
+                <p className="text-[10px] leading-relaxed text-muted-foreground">
+                  Your fund has not yet closed a cycle at its highest point, so there is no window of
+                  movements to list.
+                </p>
+              )}
+            </div>
+          </details>
         </div>
       </div>
     </m.section>

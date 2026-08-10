@@ -4,6 +4,7 @@
 // transaction-type matching live here so the rules exist in exactly one place.
 
 import type { Transaction } from '../types'
+import { isReportTransfer, isReportableInflow, isReportableOutflow } from './transactionReportSemantics'
 
 /** The ledger "bucket" pseudo-categories, distinct from user sub-categories. */
 export const LEDGER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income'] as const
@@ -41,10 +42,6 @@ export function splitFilterSelections(filters: string[]): { buckets: string[]; c
     buckets: filters.filter(f => bucketSet.includes(f)),
     categories: filters.filter(f => !bucketSet.includes(f)),
   }
-}
-
-function isTransferTx(t: Transaction): boolean {
-  return t.category === 'Transfer' || (t.ledgerCategory || '').startsWith('Transfer:')
 }
 
 /** Whether a transaction is income (plain Income bucket or an IncomeSplit). */
@@ -94,10 +91,9 @@ export function matchesTransactionFilters(t: Transaction, criteria: TransactionF
   }
 
   if (txType) {
-    const isTransfer = isTransferTx(t)
-    if (txType === 'inflow' && !(t.amount > 0 && !isTransfer)) return false
-    if (txType === 'outflow' && !(t.amount < 0 && !isTransfer)) return false
-    if (txType === 'transfer' && !isTransfer) return false
+    if (txType === 'inflow' && !isReportableInflow(t)) return false
+    if (txType === 'outflow' && !isReportableOutflow(t)) return false
+    if (txType === 'transfer' && !isReportTransfer(t)) return false
   }
 
   return true

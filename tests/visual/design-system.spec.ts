@@ -196,7 +196,9 @@ async function mockApi(page: Page, options: { registered?: boolean; failStatus?:
       })
     }
     if (pathname.endsWith('/documents/years')) return fulfill(route, [2026])
-    if (pathname.endsWith('/documents/expired')) return fulfill(route, [])
+    // Must stay an object: the generic `GET -> []` fallthrough below would leave `taxYears`
+    // undefined, so the Vault and Dashboard would crash rather than render an empty notice.
+    if (pathname.endsWith('/documents/retention')) return fulfill(route, { taxYears: [], noticeWindowDays: 180, keepYears: 7 })
     if (pathname.includes('/documents/relief-categories')) return fulfill(route, [])
     if (pathname.includes('/documents/summary/')) {
       return fulfill(route, {

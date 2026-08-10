@@ -124,6 +124,10 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
 
   React.useEffect(() => {
     if (!aiDraft) return
+    if (hideSensitive) {
+      onAiDraftConsumed?.()
+      return
+    }
     setEditingPayment(null)
     setName('')
     setAmount('')
@@ -136,7 +140,22 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     applyAiRecurringFields(aiDraft.fields)
     setShowAddForm(true)
     onAiDraftConsumed?.()
-  }, [aiDraft?.nonce])
+  }, [aiDraft?.nonce, hideSensitive, onAiDraftConsumed])
+
+  React.useEffect(() => {
+    if (!hideSensitive) return
+    setShowAddForm(false)
+    setEditingPayment(null)
+    setName('')
+    setAmount('')
+    setCategory(categories.length > 0 ? categories[0].name : '')
+    setLedgerCategory('Essentials')
+    setFrequency('Monthly')
+    setStartDateInput('')
+    setEndDateInput('')
+    setPaymentMode('')
+    setErrors({})
+  }, [hideSensitive, categories])
 
   React.useEffect(() => {
     if (!aiEditDraft) return
@@ -220,7 +239,9 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
   // Deferred so the sheet's entrance animation doesn't start on the contended
   // tab-switch/mount frame (which made the slide occasionally skip). See
   // lib/useAutoOpenModal.
-  useAutoOpenModal(autoOpenAddForm, () => setShowAddForm(true), onResetAutoOpen)
+  useAutoOpenModal(autoOpenAddForm, () => {
+    if (!hideSensitive) setShowAddForm(true)
+  }, onResetAutoOpen)
 
 
   React.useEffect(() => {
@@ -239,7 +260,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (hideSensitive && editingPayment) return
+    if (hideSensitive) return
 
     const newErrors: Record<string, string> = {}
     if (!name.trim()) {
@@ -338,6 +359,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
 
   // Header "New Subscription"/"Cancel" toggle
   const toggleAddForm = () => {
+    if (hideSensitive) return
     if (showAddForm) {
       handleCancelForm()
     } else {

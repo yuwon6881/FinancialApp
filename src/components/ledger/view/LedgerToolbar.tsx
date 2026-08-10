@@ -79,6 +79,8 @@ export function LedgerToolbar({
           variant="primary"
           size="lg"
           onClick={onToggleForm}
+          disabled={hideSensitive}
+          title={hideSensitive ? 'Unhide balances to post a transaction' : undefined}
           className="flex-1 whitespace-nowrap rounded-xl text-xs shadow-lg shadow-blue-600/10 hover:shadow-blue-600/20 duration-200 md:flex-initial"
         >
           {isFormOpen ? <X className="size-3.5" /> : <Plus className="size-3.5" />}

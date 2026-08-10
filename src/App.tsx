@@ -395,6 +395,7 @@ function App() {
     token: session.token,
     dashboardData: financial.dashboardData,
     optimisticDashboardData: financial.optimisticDashboardData,
+    selectedTransactions: financial.allTransactions,
     onMarkSummarySeen: financial.handleMarkSummarySeen,
   })
 
@@ -410,6 +411,10 @@ function App() {
       financial.handleUpdateHideSensitivePreference(true)
     }
   }
+
+  useEffect(() => {
+    if (prefs.hideSensitive) dialogs.setConfirmModalData(null)
+  }, [prefs.hideSensitive, dialogs.setConfirmModalData])
 
   const retrySensitivePreference = () => {
     prefs.beginSensitivePreferenceResolution()
@@ -442,7 +447,9 @@ function App() {
     confirm: dialogs.setConfirmModalData,
     operations: financial.activeOps,
     queueMutation: (entity, type, targetId, payload, isUndo) => {
+      if (!guardSensitive()) return false
       financial.mutateQueue(previous => financial.enqueue(previous, entity, type, targetId, payload, isUndo))
+      return true
     },
   }), [
     prefs.hideSensitive,

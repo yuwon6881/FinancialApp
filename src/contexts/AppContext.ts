@@ -45,7 +45,7 @@ export interface AppSyncValue {
   isSyncing: boolean
   isOffline: boolean
   operations?: QueuedOp[]
-  queueMutation?: (entity: EntityKind, type: OpType, targetId: string, payload?: OutboxPayload, isUndo?: boolean) => void
+  queueMutation?: (entity: EntityKind, type: OpType, targetId: string, payload?: OutboxPayload, isUndo?: boolean) => boolean
 }
 
 /** The flat shape callers pass to AppProvider, which splits it into the three above. */
@@ -71,7 +71,7 @@ const defaultSync: AppSyncValue = {
   isSyncing: false,
   isOffline: false,
   operations: [],
-  queueMutation: () => undefined,
+  queueMutation: () => false,
 }
 
 export const AppPrefsContext = createContext<AppPrefsValue>(defaultPrefs)

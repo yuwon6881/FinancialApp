@@ -6,7 +6,7 @@ export const PUSH_DESCRIPTION =
   'Let this device show bill reminders and spending alerts, even when the app is closed.'
 
 export const CATEGORY_LIMIT_PUSH_DESCRIPTION =
-  'Tells you once when a category is getting close to what you planned to spend, and once when it gets there.'
+  'A heads-up as a category nears what you planned, and again when it gets there.'
 
 export const PUSH_DENIED_GUIDANCE =
   'Notifications are blocked for this site. Allow notifications for this app in your browser settings, then try again.'

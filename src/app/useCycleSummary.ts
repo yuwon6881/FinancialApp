@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as api from '../lib/api'
-import type { DashboardCore, DashboardData } from '../types'
+import type { DashboardCore, DashboardData, Transaction } from '../types'
 import { MONTH_NAMES, getCurrentCycleYearAndMonth } from '../lib/cycle'
 import { getErrorName } from '../lib/errors'
 
@@ -46,11 +46,12 @@ export interface UseCycleSummaryOptions {
   dashboardData: DashboardData | null
   // Live optimistic dashboard for the *selected* cycle -- reflects unsynced edits instantly.
   optimisticDashboardData: DashboardData | null
+  selectedTransactions: Transaction[]
   onMarkSummarySeen: (cycleKey: string) => void
 }
 
 export function useCycleSummary(options: UseCycleSummaryOptions) {
-  const { token, dashboardData, optimisticDashboardData, onMarkSummarySeen } = options
+  const { token, dashboardData, optimisticDashboardData, selectedTransactions, onMarkSummarySeen } = options
 
   const cycleDay = dashboardData?.setting.cycleDay || 28
 
@@ -109,6 +110,7 @@ export function useCycleSummary(options: UseCycleSummaryOptions) {
 
   const [fetched, setFetched] = useState<{ key: string; data: DashboardData } | null>(null)
   const [previous, setPrevious] = useState<{ key: string; data: DashboardData } | null>(null)
+  const [fetchedTransactions, setFetchedTransactions] = useState<{ key: string; items: Transaction[] } | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const fetchedKey = target ? cycleKeyOf(target.year, target.monthIndex) : null
@@ -121,6 +123,7 @@ export function useCycleSummary(options: UseCycleSummaryOptions) {
     if (!token || !target) {
       setFetched(null)
       setPrevious(null)
+      setFetchedTransactions(null)
       setIsLoading(false)
       setLoadError(null)
       return
@@ -135,9 +138,10 @@ export function useCycleSummary(options: UseCycleSummaryOptions) {
     setLoadError(null)
     Promise.allSettled([
       targetIsSelected ? Promise.resolve(null) : api.fetchDashboard(month, target.year, ac.signal, false, true),
+      targetIsSelected ? Promise.resolve(null) : api.fetchTransactions(month, target.year, undefined, ac.signal),
       api.fetchDashboard(priorMonth, prior.year, ac.signal, false, true),
     ])
-      .then(([targetResult, previousResult]) => {
+      .then(([targetResult, transactionsResult, previousResult]) => {
         if (targetResult.status === 'fulfilled') {
           if (targetResult.value) setFetched({ key, data: completeDashboard(targetResult.value) })
           else setFetched(null)
@@ -145,6 +149,15 @@ export function useCycleSummary(options: UseCycleSummaryOptions) {
           setFetched(null)
           setLoadError('Could not load this cycle. Please try again.')
           console.warn('Could not load end-of-cycle summary data', targetResult.reason)
+        }
+
+        if (transactionsResult.status === 'fulfilled') {
+          if (transactionsResult.value) setFetchedTransactions({ key, items: transactionsResult.value })
+          else setFetchedTransactions(null)
+        } else if (getErrorName(transactionsResult.reason) !== 'AbortError') {
+          setFetchedTransactions(null)
+          setLoadError('Could not load this cycle. Please try again.')
+          console.warn('Could not load end-of-cycle summary transactions', transactionsResult.reason)
         }
 
         if (previousResult.status === 'fulfilled') {
@@ -171,6 +184,11 @@ export function useCycleSummary(options: UseCycleSummaryOptions) {
       : null
 
   const previousData = previous && previous.key === previousKey ? previous.data : null
+  const transactions = targetIsSelected
+    ? selectedTransactions
+    : fetchedTransactions?.key === fetchedKey
+      ? fetchedTransactions.items
+      : []
 
   return {
     isOpen: target != null,
@@ -178,6 +196,7 @@ export function useCycleSummary(options: UseCycleSummaryOptions) {
     target,
     data,
     previousData,
+    transactions,
     isLoading: isLoading || (target != null && data == null && loadError == null),
     loadError,
     cycleDay,

@@ -449,6 +449,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   }, [categories, state.category, defaultCategory])
 
   const openFresh = useCallback((initialTxType?: 'inflow' | 'outflow' | 'transfer') => {
+    if (hideSensitive) return
     setExistingDocuments([])
     documentsFieldRef.current?.reset()
     dispatch({ type: 'OPEN_CREATE', payload: { defaultCategory, todayDate } })
@@ -460,11 +461,12 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     autocompletedDescriptionRef.current = null
     suggestions.clearSuggestions()
     openTransactionForm()
-  }, [defaultCategory, todayDate, autoOpenTxType, suggestions, openTransactionForm])
+  }, [hideSensitive, defaultCategory, todayDate, autoOpenTxType, suggestions, openTransactionForm])
 
   useAutoOpenModal(autoOpenAddForm, () => openFresh(autoOpenTxType || undefined), onResetAutoOpen)
 
   const openWithDraft = (draft: TransactionPrefillDraft) => {
+    if (hideSensitive) return
     setExistingDocuments([])
     documentsFieldRef.current?.reset()
     dispatch({ type: 'OPEN_CREATE', payload: { defaultCategory, todayDate } })

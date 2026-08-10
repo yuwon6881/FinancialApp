@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 import type { StabilityRecovery } from '../../types'
 import { StabilityRecoveryExceptionCard } from './StabilityRecoveryExceptionCard'
 
@@ -20,6 +20,7 @@ const recovery = (overrides: Partial<StabilityRecovery> = {}): StabilityRecovery
   essentialsCommitted: 0,
   rewardsCommitted: 0,
   suggestedDraws: [],
+  recoveryFromDate: '2026-06-28',
   ...overrides,
 })
 
@@ -88,11 +89,54 @@ describe('StabilityRecoveryExceptionCard', () => {
     expect(screen.getByText(/\$746\.80 remains/)).toBeTruthy()
   })
 
-  // The card is informative only: putting money back happens by ticking the top-up offer on a
-  // salary, so an action here would have pointed at a form that could not do it.
-  it('offers no action at all', () => {
+  // Putting money back happens by ticking the top-up offer on a salary, so an action here would
+  // have pointed at a form that could not do it. Showing the working is not such an action.
+  it('offers nothing that claims to change the shortfall', () => {
     render(<StabilityRecoveryExceptionCard recovery={recovery()} formatSensitive={format} />)
 
-    expect(screen.queryAllByRole('button').filter(b => b.textContent?.trim())).toHaveLength(0)
+    const labelled = screen.queryAllByRole('button').filter(button => button.textContent?.trim())
+    expect(labelled.map(button => button.textContent?.trim())).toEqual([])
+  })
+
+  it('shows the subtraction the figure comes from', () => {
+    render(<StabilityRecoveryExceptionCard recovery={recovery()} formatSensitive={format} />)
+
+    expect(screen.getByText('Highest your fund has reached')).toBeTruthy()
+    expect(screen.getByText('In it now')).toBeTruthy()
+    expect(screen.getByText('Short by')).toBeTruthy()
+  })
+
+  it('opens the ledger on the window the shortfall accumulated over', () => {
+    const onNavigateToLedger = vi.fn()
+    render(
+      <StabilityRecoveryExceptionCard
+        recovery={recovery()}
+        formatSensitive={format}
+        onNavigateToLedger={onNavigateToLedger}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /every movement since then/i }))
+    expect(onNavigateToLedger).toHaveBeenCalledWith(expect.objectContaining({
+      category: 'Stability',
+      startDate: '2026-06-28',
+      showAllCycles: true,
+    }))
+  })
+
+  // Without a window there is no date filter to build, so the jump would land on an unfiltered
+  // ledger and silently claim to be showing the movements behind the figure.
+  it('explains itself instead of linking when no cycle has closed at the high point', () => {
+    const onNavigateToLedger = vi.fn()
+    render(
+      <StabilityRecoveryExceptionCard
+        recovery={recovery({ recoveryFromDate: undefined })}
+        formatSensitive={format}
+        onNavigateToLedger={onNavigateToLedger}
+      />
+    )
+
+    expect(screen.queryByRole('button', { name: /every movement since then/i })).toBeNull()
+    expect(screen.getByText(/no window of movements to list/)).toBeTruthy()
   })
 })

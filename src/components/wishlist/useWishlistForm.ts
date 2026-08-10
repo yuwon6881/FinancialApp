@@ -57,11 +57,12 @@ export function useWishlistForm(options: UseWishlistFormOptions) {
   }, [])
 
   const openAdd = useCallback(() => {
+    if (options.hideSensitive) return
     resetFields()
     setEditingItem(null)
     setIsActiveInput(options.wishlist.every(item => item.isPurchased))
     setMode('add')
-  }, [options.wishlist, resetFields])
+  }, [options.hideSensitive, options.wishlist, resetFields])
 
   const openEdit = useCallback((item: WishlistItem) => {
     if (options.hideSensitive) return
@@ -120,6 +121,12 @@ export function useWishlistForm(options: UseWishlistFormOptions) {
     close()
   }, [clearEditDraft, close])
 
+  useEffect(() => {
+    if (!options.hideSensitive) return
+    if (mode === 'add') closeAdd()
+    if (mode === 'edit') closeEdit()
+  }, [options.hideSensitive, mode, closeAdd, closeEdit])
+
   const validate = () => {
     const nextErrors: Record<string, string> = {}
     if (!nameInput.trim()) nextErrors.name = 'Goal name is required.'
@@ -132,6 +139,7 @@ export function useWishlistForm(options: UseWishlistFormOptions) {
 
   const saveAdd = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (options.hideSensitive) return
     const price = validate()
     if (price == null) {
       focusFirstInvalidField(event.currentTarget)
@@ -144,6 +152,7 @@ export function useWishlistForm(options: UseWishlistFormOptions) {
 
   const saveEdit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (options.hideSensitive) return
     if (!editingItem) return
     const price = validate()
     if (price == null) {
@@ -165,6 +174,10 @@ export function useWishlistForm(options: UseWishlistFormOptions) {
 
   useEffect(() => {
     if (!options.aiDraft) return
+    if (options.hideSensitive) {
+      options.onAiDraftConsumed?.()
+      return
+    }
     openAdd()
     applyAiFields(options.aiDraft.fields)
     options.onAiDraftConsumed?.()

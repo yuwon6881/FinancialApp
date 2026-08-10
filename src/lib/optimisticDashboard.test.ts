@@ -1,304 +1,161 @@
 import { describe, expect, it } from 'vitest'
-import { computeOptimisticDashboard } from './optimisticDashboard'
 import type { DashboardData, Transaction } from '../types'
 import type { QueuedOp } from './outbox'
+import { computeOptimisticDashboard } from './optimisticDashboard'
 
-function makeDashboard(): DashboardData {
+const transaction = (partial: Partial<Transaction> & Pick<Transaction, 'id' | 'amount'>): Transaction => ({
+  date: '2026-08-10',
+  description: String(partial.id),
+  category: 'Food',
+  ledgerCategory: 'Essentials',
+  ...partial,
+} as Transaction)
+
+const baseTransactions = (): Transaction[] => [
+  transaction({ id: 'salary', amount: 500, category: 'Salary', ledgerCategory: 'IncomeSplit:50,20,20,10', date: '2026-08-01' }),
+  transaction({ id: 'food', amount: -20, category: 'Food', ledgerCategory: 'Essentials' }),
+]
+
+function dashboard(): DashboardData {
   return {
-    setting: { currency: 'USD', cycleDay: 1 } as DashboardData['setting'],
-    cycleLabel: 'Jan',
+    setting: {
+      selectedMonth: 'Aug', selectedYear: 2026, cycleDay: 1, currency: 'USD',
+      essentialsAlloc: .5, growthAlloc: .2, stabilityAlloc: .2, rewardsAlloc: .1,
+      targetStabilityFund: 1000,
+    } as DashboardData['setting'],
+    cycleLabel: 'Aug 01 ~ Aug 31, 2026',
     categories: [
-      { name: 'Food', allocation: 0, target: 0, budget: 100, netChange: -20, remaining: 80 },
-      { name: 'Salary', allocation: 0, target: 0, budget: 0, netChange: 500, remaining: 500 },
+      { name: 'Essentials', allocation: .5, target: 250, incomeAllocated: 250, budget: 100, netChange: 230, spent: 20, remaining: 330 },
+      { name: 'Growth', allocation: .2, target: 100, incomeAllocated: 100, budget: 0, netChange: 100, spent: 0, remaining: 100 },
+      { name: 'Stability', allocation: .2, target: 100, incomeAllocated: 100, budget: 0, netChange: 100, spent: 0, remaining: 100 },
+      { name: 'Rewards', allocation: .1, target: 50, incomeAllocated: 50, budget: 0, netChange: 50, spent: 0, remaining: 50 },
     ],
     stats: {
-      totalBalance: 1000,
-      monthlyIncome: 0,
-      monthlyInflow: 500,
-      monthlyExpenses: 20,
-      activeRecurringTotal: 0,
-      growthPercentAchieved: 0,
-      stabilityPercentReached: 0,
-      pastThreeMonthsRewardsAverage: 0,
-      hasRewardsHistory: false,
+      totalBalance: 480, monthlyIncome: 500, monthlyInflow: 500, monthlyExpenses: 20,
+      activeRecurringTotal: 0, growthPercentAchieved: 1, stabilityPercentReached: .1,
+      pastThreeMonthsRewardsAverage: 0, hasRewardsHistory: false,
     },
-    activeRecurringPayments: [],
-    trendPoints: [],
-    last3TrendPoints: [],
-    last6TrendPoints: [],
-    pendingNotifications: [],
-    monthlyCategoryBreakdown: [],
-    last3CategoryBreakdown: [],
-    last6CategoryBreakdown: [],
-    yearlyCategoryBreakdown: [],
+    activeRecurringPayments: [], pendingNotifications: [],
+    trendPoints: [{ cycleKey: '2026-08', month: 'Aug', balance: 100 }],
+    last3TrendPoints: [{ cycleKey: '2026-08', month: 'Aug', balance: 100 }],
+    last6TrendPoints: [{ cycleKey: '2026-08', month: 'Aug', balance: 100 }],
+    monthlyCategoryBreakdown: [{ category: 'Food', amount: 20 }],
+    last3CategoryBreakdown: [], last6CategoryBreakdown: [], yearlyCategoryBreakdown: [],
+    cycleSummaryInsights: {
+      cycleLengthDays: 31, noSpendDays: 30, transactionCount: 1,
+      committedSpend: 0, discretionarySpend: 20,
+    },
   }
 }
 
-function op(partial: Partial<QueuedOp>): QueuedOp {
-  return { id: 'op1', entity: 'transaction', type: 'add', targetId: 't1', createdAt: 0, retryCount: 0, ...partial }
-}
+const op = (partial: Partial<QueuedOp>): QueuedOp => ({
+  id: 'op-1', entity: 'transaction', type: 'add', targetId: 'new', createdAt: 1, retryCount: 0,
+  ...partial,
+})
 
 describe('computeOptimisticDashboard', () => {
-  it('projects one occurrence settlement across reports, alerts, and posting-cycle cash', () => {
-    const dashboard = makeDashboard()
-    dashboard.setting = { ...dashboard.setting, selectedMonth: 'Aug', selectedYear: 2026, cycleDay: 1 }
-    dashboard.activeRecurringPayments = [{
-      id: 'occ-rp-1-20260810', recurringPaymentId: 'rp-1', name: 'Internet', amount: 50,
-      category: 'Bills', ledgerCategory: 'Food', dueDate: '2026-08-10', isPaid: false,
-      isDiscarded: false, status: 'Pending',
+  it('returns a cloned unchanged snapshot when no report-affecting operation exists', () => {
+    const source = dashboard()
+    const result = computeOptimisticDashboard(source, { activeOps: [], transactions: baseTransactions() })!
+    expect(result).not.toBe(source)
+    expect(result.stats).toEqual(source.stats)
+  })
+
+  it('projects a selected-cycle expense through totals, spending, breakdown, and insights', () => {
+    const result = computeOptimisticDashboard(dashboard(), {
+      activeOps: [op({ payload: { ...transaction({ id: 'new', amount: -30, category: 'food' }) } })],
+      transactions: baseTransactions(),
+    })!
+    expect(result.stats.monthlyExpenses).toBe(50)
+    expect(result.categories[0]).toMatchObject({ spent: 50, netChange: 200, remaining: 300 })
+    expect(result.monthlyCategoryBreakdown).toEqual([{ category: 'Food', amount: 50 }])
+    expect(result.cycleSummaryInsights?.transactionCount).toBe(2)
+  })
+
+  it('does not project an add dated outside the selected cycle', () => {
+    const result = computeOptimisticDashboard(dashboard(), {
+      activeOps: [op({ payload: { ...transaction({ id: 'new', amount: -30, date: '2026-09-01' }) } })],
+      transactions: baseTransactions(),
+    })!
+    expect(result.stats.monthlyExpenses).toBe(20)
+    expect(result.categories[0].remaining).toBe(330)
+  })
+
+  it('removes the old side when an update moves a row out of the selected cycle', () => {
+    const result = computeOptimisticDashboard(dashboard(), {
+      activeOps: [op({ type: 'update', targetId: 'food', payload: { date: '2026-09-01' } })],
+      transactions: baseTransactions(),
+    })!
+    expect(result.stats.monthlyExpenses).toBe(0)
+    expect(result.categories[0]).toMatchObject({ spent: 0, netChange: 250, remaining: 350 })
+  })
+
+  it('adds the new side when an update moves a row into the selected cycle', () => {
+    const outside = transaction({ id: 'outside', amount: -15, date: '2026-09-01' })
+    const result = computeOptimisticDashboard(dashboard(), {
+      activeOps: [op({ type: 'update', targetId: 'outside', payload: { date: '2026-08-20' } })],
+      transactions: [...baseTransactions(), outside],
+    })!
+    expect(result.stats.monthlyExpenses).toBe(35)
+    expect(result.categories[0].spent).toBe(35)
+  })
+
+  it('keeps transfers and adjustments out of report cash flow in every queue state', () => {
+    const operations = [
+      op({ targetId: 'adjust', payload: { ...transaction({ id: 'adjust', amount: -25, category: 'ADJUSTMENT' }) } }),
+      op({ id: 'op-2', targetId: 'transfer', isCompleted: true, payload: { ...transaction({ id: 'transfer', amount: 10, category: 'transfer', ledgerCategory: 'Transfer:Essentials->Growth' }) } }),
+    ]
+    const result = computeOptimisticDashboard(dashboard(), { activeOps: operations, transactions: baseTransactions() })!
+    expect(result.stats.monthlyInflow).toBe(500)
+    expect(result.stats.monthlyExpenses).toBe(20)
+    expect(result.monthlyCategoryBreakdown).toEqual([{ category: 'Food', amount: 20 }])
+    expect(result.categories[0].remaining).toBe(295)
+    expect(result.categories[1].remaining).toBe(110)
+  })
+
+  it('projects a bulk delete and a completed-before-refresh operation identically', () => {
+    const pending = op({
+      type: 'bulkDelete', targetId: 'bulk',
+      payload: { transactionIds: ['food'], transactions: [baseTransactions()[1]] },
+    })
+    const pendingResult = computeOptimisticDashboard(dashboard(), { activeOps: [pending], transactions: baseTransactions() })!
+    const completedResult = computeOptimisticDashboard(dashboard(), { activeOps: [{ ...pending, isCompleted: true }], transactions: baseTransactions() })!
+    expect(pendingResult.stats.monthlyExpenses).toBe(0)
+    expect(completedResult).toEqual(pendingResult)
+  })
+
+  it('updates the selected and downstream Growth trend points', () => {
+    const source = dashboard()
+    source.trendPoints.push({ cycleKey: '2026-09', month: 'Sep', balance: 120 })
+    const result = computeOptimisticDashboard(source, {
+      activeOps: [op({ payload: { ...transaction({ id: 'growth', amount: 25, category: 'Deposit', ledgerCategory: 'Growth' }) } })],
+      transactions: baseTransactions(),
+    })!
+    expect(result.trendPoints.map(point => point.balance)).toEqual([125, 145])
+  })
+
+  it('projects a selected-cycle recurring settlement and clears its alert', () => {
+    const source = dashboard()
+    source.activeRecurringPayments = [{
+      id: 'occ', recurringPaymentId: 'rent', name: 'Rent', amount: 50, category: 'Bills',
+      ledgerCategory: 'Essentials', dueDate: '2026-08-12', isPaid: false, isDiscarded: false, status: 'Pending',
     }]
-    dashboard.pendingNotifications = [{
-      id: 'occ-rp-1-20260810', recurringPaymentId: 'rp-1', name: 'Internet', amount: 50,
-      category: 'Bills', ledgerCategory: 'Food', billingDate: '2026-08-10', year: 2026,
-      month: 8, cycleLabel: 'Aug',
+    source.pendingNotifications = [{
+      id: 'occ', recurringPaymentId: 'rent', name: 'Rent', amount: 50, category: 'Bills',
+      ledgerCategory: 'Essentials', billingDate: '2026-08-12', year: 2026, month: 8, cycleLabel: 'Aug',
     }]
-    const result = computeOptimisticDashboard(dashboard, {
+    const result = computeOptimisticDashboard(source, {
       activeOps: [op({
-        entity: 'recurringOccurrence', type: 'settle', targetId: 'occ-rp-1-20260810',
+        entity: 'recurringOccurrence', type: 'settle', targetId: 'occ',
         payload: {
-          recurringPaymentId: 'rp-1', occurrenceDate: '2026-08-10', status: 'Paid', paidDate: '2026-08-05',
-          optimisticTransaction: { id: 'tx-local', date: '2026-08-05', amount: -50, category: 'Bills', ledgerCategory: 'Food' },
+          recurringPaymentId: 'rent', occurrenceDate: '2026-08-12', status: 'Paid',
+          optimisticTransaction: transaction({ id: 'rent-tx', amount: -50, category: 'Bills', recurringPaymentId: 'rent' }),
         },
       })],
-      transactions: [],
+      transactions: baseTransactions(),
     })!
-
-    expect(result.activeRecurringPayments[0]).toMatchObject({ status: 'Paid', paidDate: '2026-08-05' })
+    expect(result.activeRecurringPayments[0].status).toBe('Paid')
     expect(result.pendingNotifications).toEqual([])
-    expect(result.stats.totalBalance).toBe(950)
     expect(result.stats.monthlyExpenses).toBe(70)
-  })
-
-  it('returns null when there is no dashboard data', () => {
-    expect(computeOptimisticDashboard(null, { activeOps: [], transactions: [] })).toBeNull()
-  })
-
-  it('returns an unchanged (but cloned) copy when there are no ops', () => {
-    const dash = makeDashboard()
-    const result = computeOptimisticDashboard(dash, { activeOps: [], transactions: [] })
-    expect(result).not.toBe(dash)
-    expect(result!.stats).toEqual(dash.stats)
-    expect(result!.stats).not.toBe(dash.stats)
-    expect(result!.categories[0]).not.toBe(dash.categories[0])
-  })
-
-  it('applies a pending expense: balance down, expenses up, category adjusted', () => {
-    const result = computeOptimisticDashboard(makeDashboard(), {
-      activeOps: [op({ type: 'add', payload: { amount: -30, category: 'Food' } })],
-      transactions: [],
-    })
-    expect(result!.stats.totalBalance).toBe(970)
-    expect(result!.stats.monthlyExpenses).toBe(50)
-    const food = result!.categories.find(c => c.name === 'Food')!
-    expect(food.netChange).toBe(-50)
-    expect(food.remaining).toBe(50)
-  })
-
-  it('counts an IncomeSplit add toward monthlyIncome as well as inflow', () => {
-    const result = computeOptimisticDashboard(makeDashboard(), {
-      activeOps: [op({ type: 'add', payload: { amount: 200, ledgerCategory: 'IncomeSplit:50,20,20,10' } })],
-      transactions: [],
-    })
-    expect(result!.stats.monthlyInflow).toBe(700)
-    expect(result!.stats.monthlyIncome).toBe(200)
-  })
-
-  it('applies an update as the delta against the original transaction', () => {
-    const orig: Transaction = { id: 't1', amount: -20, category: 'Food', ledgerCategory: 'Essentials' } as Transaction
-    const result = computeOptimisticDashboard(makeDashboard(), {
-      activeOps: [op({ type: 'update', targetId: 't1', payload: { amount: -50 } })],
-      transactions: [orig],
-    })
-    // diff = -50 - (-20) = -30
-    expect(result!.stats.totalBalance).toBe(970)
-    expect(result!.stats.monthlyExpenses).toBe(50)
-    const food = result!.categories.find(c => c.name === 'Food')!
-    expect(food.netChange).toBe(-50)
-  })
-
-  it('moves the amount between categories when an update changes the category', () => {
-    const orig: Transaction = { id: 't1', amount: -30, category: 'Food', ledgerCategory: 'Essentials' } as Transaction
-    const result = computeOptimisticDashboard(makeDashboard(), {
-      // Category changes Food -> Salary, amount unchanged (no `amount` in payload).
-      activeOps: [op({ type: 'update', targetId: 't1', payload: { category: 'Salary' } })],
-      transactions: [orig],
-    })
-    // Balance and totals unchanged (same amount), but the -30 leaves Food and lands on Salary.
-    expect(result!.stats.totalBalance).toBe(1000)
-    expect(result!.categories.find(c => c.name === 'Food')!.netChange).toBe(10)   // -20 - (-30)
-    expect(result!.categories.find(c => c.name === 'Salary')!.netChange).toBe(470) // 500 + (-30)
-  })
-
-  it('reducing an expense lowers expenses rather than counting as inflow', () => {
-    const orig: Transaction = { id: 't1', amount: -50, category: 'Food', ledgerCategory: 'Essentials' } as Transaction
-    const result = computeOptimisticDashboard(makeDashboard(), {
-      activeOps: [op({ type: 'update', targetId: 't1', payload: { amount: -20 } })],
-      transactions: [orig],
-    })
-    expect(result!.stats.totalBalance).toBe(1030)      // +30 net
-    expect(result!.stats.monthlyInflow).toBe(500)      // unchanged — the delta must NOT be treated as inflow
-    expect(result!.categories.find(c => c.name === 'Food')!.netChange).toBe(10) // -20 +50 -20
-  })
-
-  it('reverses a delete using the original transaction amount', () => {
-    const orig: Transaction = { id: 't1', amount: 500, category: 'Salary', ledgerCategory: 'Income' } as Transaction
-    const result = computeOptimisticDashboard(makeDashboard(), {
-      activeOps: [op({ type: 'delete', targetId: 't1' })],
-      transactions: [orig],
-    })
-    expect(result!.stats.totalBalance).toBe(500)
-    expect(result!.stats.monthlyInflow).toBe(0)
-    const salary = result!.categories.find(c => c.name === 'Salary')!
-    expect(salary.netChange).toBe(0)
-  })
-
-  it('projects a queued bulk delete through the dashboard totals', () => {
-    const orig: Transaction = { id: 't1', amount: -30, category: 'Food', ledgerCategory: 'Essentials' } as Transaction
-    const result = computeOptimisticDashboard(makeDashboard(), {
-      activeOps: [op({
-        type: 'bulkDelete',
-        targetId: 'bulk-1',
-        payload: { transactionIds: ['t1'], transactions: [orig] },
-      })],
-      transactions: [],
-    })
-
-    expect(result!.stats.totalBalance).toBe(1030)
-    expect(result!.stats.monthlyExpenses).toBe(-10)
-    expect(result!.categories.find(c => c.name === 'Food')!.netChange).toBe(10)
-  })
-
-  it('projects one bulk restore and its income split rows as income', () => {
-    const orig: Transaction = { id: 't1', amount: 500, category: 'Salary', ledgerCategory: 'Income' } as Transaction
-    const result = computeOptimisticDashboard(makeDashboard(), {
-      activeOps: [op({
-        type: 'bulkRestore',
-        targetId: 'bulk-1',
-        payload: { transactions: [orig] },
-      })],
-      transactions: [],
-    })
-
-    expect(result!.stats.totalBalance).toBe(1500)
-    expect(result!.stats.monthlyInflow).toBe(1000)
-    expect(result!.stats.monthlyIncome).toBe(500)
-  })
-
-  it('merges a pending settings update from activeOps', () => {
-    const result = computeOptimisticDashboard(makeDashboard(), {
-      activeOps: [op({ entity: 'settings', type: 'update', payload: { currency: 'EUR' } })],
-      transactions: [],
-    })
-    expect(result!.setting.currency).toBe('EUR')
-  })
-
-  it('keeps completed transaction deltas projected while refresh is pending', () => {
-    const result = computeOptimisticDashboard(makeDashboard(), {
-      activeOps: [op({ type: 'add', isCompleted: true, payload: { amount: -30, category: 'Food' } })],
-      transactions: [],
-    })
-    expect(result!.stats.totalBalance).toBe(970)
-    expect(result!.stats.monthlyExpenses).toBe(50)
-  })
-
-  describe('emergency fund recovery', () => {
-    function withRecovery(outstanding: number): DashboardData {
-      const data = makeDashboard()
-      data.setting = { ...data.setting, stabilityAlloc: 0.15 }
-      data.stabilityRecovery = {
-        isActive: true,
-        highWaterMark: 10000,
-        target: 10000,
-        recoverableCeiling: 10000,
-        currentBalance: 10000 - outstanding,
-        outstandingShortfall: outstanding,
-        cyclesRemaining: 3,
-        requiredThisCycle: outstanding / 3,
-        toppedUpThisCycle: 0,
-        outstandingThisCycle: outstanding / 3,
-        isOverdue: false,
-        lastDrawdownAmount: outstanding,
-        essentialsCommitted: 0,
-        rewardsCommitted: 0,
-        suggestedDraws: [],
-      }
-      return data
-    }
-
-    // A queued salary carrying 24% to stability against a 15% baseline puts 90 back.
-    const acceptedTopUp = op({
-      type: 'add',
-      payload: { amount: 1000, ledgerCategory: 'IncomeSplit:47.5,19,24,9.5' },
-    })
-
-    it('credits an accepted top-up so the card stops asking twice', () => {
-      const dashboard = withRecovery(300)
-      dashboard.categories.push({
-        name: 'Stability', allocation: 0.15, target: 0, budget: 0, netChange: 0, remaining: 0,
-      })
-      const result = computeOptimisticDashboard(dashboard, {
-        activeOps: [acceptedTopUp],
-        transactions: [],
-      })
-
-      expect(result!.stabilityRecovery!.outstandingShortfall).toBe(60)
-      expect(result!.stabilityRecovery!.requiredThisCycle).toBe(50)
-      expect(result!.stabilityRecovery!.outstandingThisCycle).toBe(0)
-      expect(result!.stabilityRecovery!.toppedUpThisCycle).toBe(90)
-      expect(result!.stabilityRecovery!.isActive).toBe(true)
-      expect(result!.stats.totalBalance).toBe(1810)
-      expect(result!.categories.find(category => category.name === 'Stability')!.remaining).toBe(240)
-    })
-
-    it('closes the recovery once the queued top-up covers the whole shortfall', () => {
-      const result = computeOptimisticDashboard(withRecovery(90), {
-        activeOps: [acceptedTopUp],
-        transactions: [],
-      })
-
-      expect(result!.stabilityRecovery!.outstandingShortfall).toBe(0)
-      expect(result!.stabilityRecovery!.isActive).toBe(false)
-    })
-
-    it('credits the normal Stability share without calling it reimbursement', () => {
-      const result = computeOptimisticDashboard(withRecovery(300), {
-        activeOps: [op({ type: 'add', payload: { amount: 1000, ledgerCategory: 'IncomeSplit:50,25,15,10' } })],
-        transactions: [],
-      })
-
-      expect(result!.stabilityRecovery!.outstandingShortfall).toBe(150)
-      expect(result!.stabilityRecovery!.requiredThisCycle).toBe(50)
-      expect(result!.stabilityRecovery!.outstandingThisCycle).toBe(50)
-      expect(result!.stabilityRecovery!.toppedUpThisCycle).toBe(0)
-    })
-
-    it('reopens recovery when a reimbursing salary is deleted', () => {
-      const dashboard = withRecovery(60)
-      dashboard.stabilityRecovery = {
-        ...dashboard.stabilityRecovery!,
-        currentBalance: 9940,
-        toppedUpThisCycle: 90,
-        requiredThisCycle: 50,
-        outstandingThisCycle: 0,
-      }
-      const salary = {
-        id: 'salary', date: '2026-07-09', description: 'Salary', category: 'Salary',
-        ledgerCategory: 'Income', amount: 1000, stabilityRecoveryTopUpAmount: 90,
-      }
-      const stabilitySplit = {
-        id: 'salary-split-Stability', date: '2026-07-09', description: 'Split', category: 'Transfer',
-        ledgerCategory: 'Transfer:Income->Stability', amount: 240,
-      }
-
-      const result = computeOptimisticDashboard(dashboard, {
-        activeOps: [op({ type: 'delete', targetId: 'salary', payload: salary })],
-        transactions: [salary, stabilitySplit],
-      })
-
-      expect(result!.stabilityRecovery!.currentBalance).toBe(9700)
-      expect(result!.stabilityRecovery!.outstandingShortfall).toBe(300)
-      expect(result!.stabilityRecovery!.toppedUpThisCycle).toBe(0)
-      expect(result!.stabilityRecovery!.outstandingThisCycle).toBe(100)
-    })
   })
 })

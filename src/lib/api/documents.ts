@@ -4,7 +4,7 @@ import type {
   DocumentVaultConstraints,
   TaxReliefCategoryDefinition,
   TaxYearReliefSummary,
-  ExpiredTaxYearSummary,
+  DocumentRetentionReview,
 } from '../../types'
 import { API_BASE_URL, request, requestVoid, cachedGet, apiFetch, throwApiError } from './client'
 import {
@@ -152,17 +152,22 @@ export async function bulkUpdateDocumentCategories(
   updates: BulkDocumentCategoryUpdate[],
 ): Promise<BulkDocumentCategoryUpdateResult[]> {
   const results: BulkDocumentCategoryUpdateResult[] = []
-  for (let index = 0; index < updates.length; index += 100) {
-    const batch = updates.slice(index, index + 100)
-    const result = await request<{ results: BulkDocumentCategoryUpdateResult[] }>('/documents/bulk-update-categories', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ updates: batch }),
-      errorMessage: 'Failed to update document categories',
-    })
-    results.push(...result.results)
+  try {
+    for (let index = 0; index < updates.length; index += 100) {
+      const batch = updates.slice(index, index + 100)
+      const result = await request<{ results: BulkDocumentCategoryUpdateResult[] }>('/documents/bulk-update-categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates: batch }),
+        errorMessage: 'Failed to update document categories',
+      })
+      results.push(...result.results)
+    }
+  } finally {
+    // Invalidated even when a later chunk throws: the earlier chunks were committed, so leaving the
+    // list and summary caches in place would keep serving figures that no longer match the server.
+    invalidateDocumentDerivedData()
   }
-  invalidateDocumentDerivedData()
   return results
 }
 
@@ -235,12 +240,19 @@ export function getTaxYearReliefSummary(taxYear: number): Promise<TaxYearReliefS
   }), { staleTime: DOCUMENT_CACHE_TTL.derived })
 }
 
-export function getExpiredTaxYears(): Promise<ExpiredTaxYearSummary[]> {
-  return cachedGet(DOCUMENT_CACHE_KEYS.expired, () => request<ExpiredTaxYearSummary[]>('/documents/expired', {
+export function getDocumentRetentionReview(): Promise<DocumentRetentionReview> {
+  return cachedGet(DOCUMENT_CACHE_KEYS.retention, () => request<DocumentRetentionReview>('/documents/retention', {
     method: 'GET',
     errorMessage: 'Failed to load retention alerts',
   }), { staleTime: DOCUMENT_CACHE_TTL.derived })
 }
+
+/**
+ * The most documents one bulk delete or bulk download may carry. The server rejects anything larger
+ * outright, so the UI must stop the user before they get there rather than after — selection persists
+ * across pages, which is how a 50-per-page list reaches three figures.
+ */
+export const DOCUMENT_BULK_LIMIT = 100
 
 export async function bulkDeleteDocuments(ids: number[]): Promise<{ id: number; deleted: boolean; message?: string | null }[]> {
   const result = await request<{ results: { id: number; deleted: boolean; message?: string | null }[] }>('/documents/bulk-delete', {

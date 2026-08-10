@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { buildCycleCalendar } from './cycleCalendar'
 
 describe('buildCycleCalendar', () => {
-  it('clamps the cycle day and excludes transfers from daily net activity', () => {
+  it('clamps the cycle day and excludes transfers and adjustments from daily net activity', () => {
     const result = buildCycleCalendar({
       selectedMonth: 'Feb',
       selectedYear: 2026,
@@ -10,6 +10,7 @@ describe('buildCycleCalendar', () => {
       transactions: [
         { id: '1', date: '2026-02-28', description: 'Income', category: 'Salary', ledgerCategory: 'Income', amount: 100 },
         { id: '2', date: '2026-02-28', description: 'Move', category: 'Transfer', ledgerCategory: 'Transfer: Growth->Rewards', amount: -50 },
+        { id: '3', date: '2026-02-28', description: 'Correction', category: 'adjustment', ledgerCategory: 'Essentials', amount: 25 },
       ],
       recurringPayments: [],
     })

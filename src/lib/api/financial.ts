@@ -52,6 +52,7 @@ export function mapDashboardCore(data: WireDashboardData, month?: string, year?:
       categories: (data.categories || []).map((category: WireCategorySummary) => ({
         ...category,
         target: deobfuscateAmount(category.target),
+        incomeAllocated: deobfuscateAmount(category.incomeAllocated),
         budget: deobfuscateAmount(category.budget),
         netChange: deobfuscateAmount(category.netChange),
         spent: deobfuscateAmount(category.spent),
@@ -111,6 +112,7 @@ export function mapDashboardCore(data: WireDashboardData, month?: string, year?:
           outstandingThisCycle: deobfuscateAmount(data.stabilityRecovery.outstandingThisCycle),
           isOverdue: Boolean(data.stabilityRecovery.isOverdue),
           lastDrawdownCycleKey: data.stabilityRecovery.lastDrawdownCycleKey,
+          recoveryFromDate: data.stabilityRecovery.recoveryFromDate ?? undefined,
           lastDrawdownAmount: deobfuscateAmount(data.stabilityRecovery.lastDrawdownAmount),
           essentialsCommitted: deobfuscateAmount(data.stabilityRecovery.essentialsCommitted),
           rewardsCommitted: deobfuscateAmount(data.stabilityRecovery.rewardsCommitted),

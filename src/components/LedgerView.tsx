@@ -142,16 +142,21 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
   // underneath so "Use This Amount" lands straight back in it.
   useEffect(() => {
     if (!props.receiptSplitDraft) return
+    if (hideSensitive) return
     setReceiptSplitOpen(true)
-  }, [props.receiptSplitDraft, setReceiptSplitOpen])
+  }, [props.receiptSplitDraft, hideSensitive, setReceiptSplitOpen])
 
   // Same open, requested by the poller when a scan finished while the app was
   // elsewhere (the toast's follow-up).
   useEffect(() => {
     if (!props.autoOpenReceiptSplit) return
-    setReceiptSplitOpen(true)
+    if (!hideSensitive) setReceiptSplitOpen(true)
     props.onResetAutoOpenReceiptSplit?.()
-  }, [props.autoOpenReceiptSplit, setReceiptSplitOpen, props.onResetAutoOpenReceiptSplit])
+  }, [props.autoOpenReceiptSplit, hideSensitive, setReceiptSplitOpen, props.onResetAutoOpenReceiptSplit])
+
+  useEffect(() => {
+    if (hideSensitive) setReceiptSplitOpen(false)
+  }, [hideSensitive, setReceiptSplitOpen])
 
   const ledger = useLedgerView({
     ...props,
@@ -199,7 +204,16 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
       : <span className="transition-[filter] duration-200">{formatCurrency(val)}</span>
   }
 
-  const pageTotals = React.useMemo(() => calculateLedgerTotals(ledger.displayTransactions), [ledger.displayTransactions])
+  // Only a lone bucket filter gets a net: with two selected the figure would be a sum across
+  // buckets that no balance on any screen corresponds to.
+  const activeBucketFilter = React.useMemo(() => {
+    const active = (props.showAllCycles ? ledger.appliedFilters : ledger.selectedFilters)
+      .filter(filter => LEDGER_BUCKETS.includes(filter))
+    return active.length === 1 ? active[0] : null
+  }, [props.showAllCycles, ledger.appliedFilters, ledger.selectedFilters])
+  const pageTotals = React.useMemo(
+    () => calculateLedgerTotals(ledger.displayTransactions, activeBucketFilter),
+    [ledger.displayTransactions, activeBucketFilter])
   const isServerMode = props.showAllCycles && !!ledger.serverResult
   const activeStartDate = props.showAllCycles ? ledger.appliedStartDate : ledger.selectedStartDate
   const activeEndDate = props.showAllCycles ? ledger.appliedEndDate : ledger.selectedEndDate

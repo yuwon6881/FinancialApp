@@ -25,7 +25,7 @@ const baseListProps: ListProps = {
   hideSensitive: false,
   currency: 'MYR',
   serverIsFetching: false,
-  pageTotals: { inflow: 0, outflow: 12.5, transfer: 0 },
+  pageTotals: { inflow: 0, outflow: 12.5, transfer: 0, bucket: null, bucketNet: 0 },
   isTxDeleting: () => false,
   isTxSyncing: () => false,
   onStartEdit: () => {},

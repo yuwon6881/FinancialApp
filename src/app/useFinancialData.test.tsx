@@ -60,7 +60,7 @@ const markSessionLocked = vi.fn()
 const markSensitivePreferenceUnavailable = vi.fn()
 const mountedFinancialDataHooks = new Set<() => void>()
 
-function renderFinancialData() {
+function renderFinancialData(guardSensitive: () => boolean = () => true) {
   // Every option must be stable across renders -- an inline literal or `vi.fn()` here
   // would churn `loadAll`'s identity by itself and mask the churn these tests pin.
   const setDarkMode = vi.fn()
@@ -73,7 +73,7 @@ function renderFinancialData() {
     hideSensitive: false,
     darkMode: false,
     showToast: vi.fn(),
-    guardSensitive: () => true,
+    guardSensitive,
     setConfirmModalData: vi.fn(),
     resolveHideSensitive: vi.fn(),
     markSensitivePreferenceUnavailable,
@@ -128,6 +128,28 @@ describe('useFinancialData', () => {
     for (const unmount of mountedFinancialDataHooks) unmount()
     mountedFinancialDataHooks.clear()
     vi.restoreAllMocks()
+  })
+
+  it('blocks financial mutation handlers at execution time in sensitive mode', async () => {
+    mockHappyApi()
+    const guardSensitive = vi.fn(() => false)
+    const { result } = renderFinancialData(guardSensitive)
+    await waitFor(() => expect(api.fetchBootstrap).toHaveBeenCalled())
+
+    act(() => {
+      expect(result.current.handleStageDraftTransactions([{} as any])).toEqual([])
+      result.current.handleAddBalanceAdjustment({} as any)
+      result.current.handleDeleteDraftTransaction('draft-1')
+      result.current.handleSyncDraftBatch()
+      result.current.handleAddPayment({} as any)
+      result.current.handleDeletePayment('rp-1')
+      result.current.handleUpdateSettings({} as any)
+      result.current.handleDeleteCategory('category-1')
+    })
+
+    expect(result.current.pendingOps).toHaveLength(0)
+    expect(result.current.draftTransactions).toHaveLength(0)
+    expect(guardSensitive).toHaveBeenCalledTimes(8)
   })
 
   it('starts with bootstrap directly and does not restart startup when the outbox queue changes', async () => {

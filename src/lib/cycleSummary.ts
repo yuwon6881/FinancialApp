@@ -45,33 +45,44 @@ export function buildCycleSummary(
   const bills = data.activeRecurringPayments || []
   const paidBills = bills.filter(bill => bill.status === 'Paid')
   const { start, end } = getCycleRangeDates(year, monthIndex, cycleDay)
-  const purchasedThisCycle = wishlist.filter(item => {
-    if (!item.isPurchased) return false
+  const localDateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  const startKey = localDateKey(start)
+  const endKey = localDateKey(end)
+  const purchasedThisCycle = wishlist.flatMap(item => {
+    if (!item.isPurchased) return []
     const linkedTx = transactions?.find(t => t.wishlistItemId === item.id || (item.purchaseTransactionId && String(t.id) === String(item.purchaseTransactionId)))
     const rawDate = linkedTx?.date || item.purchasedAt
-    if (!rawDate) return false
-    const purchasedAt = new Date(rawDate)
-    return !Number.isNaN(purchasedAt.getTime()) && purchasedAt >= start && purchasedAt <= end
+    if (!rawDate) return []
+    const purchaseDateKey = rawDate.slice(0, 10)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(purchaseDateKey) || purchaseDateKey < startKey || purchaseDateKey > endKey) return []
+    return [{ ...item, price: linkedTx ? Math.abs(linkedTx.amount) : item.price }]
   })
 
   const previousExpenses = previousData?.stats.monthlyExpenses ?? null
   const previousInflow = previousData?.stats.monthlyInflow ?? null
-  const previousNet = previousInflow === null || previousExpenses === null ? null : previousInflow - previousExpenses
-  const savingsRate = inflow > EPSILON ? net / inflow : null
-  const previousSavingsRate = previousInflow !== null && previousInflow > EPSILON && previousNet !== null
-    ? previousNet / previousInflow
+  const previousIncome = previousData?.stats.monthlyIncome ?? null
+  const savingsRate = income > EPSILON ? (income - expenses) / income : null
+  const previousSavingsRate = previousIncome !== null && previousIncome > EPSILON && previousExpenses !== null
+    ? (previousIncome - previousExpenses) / previousIncome
     : null
   const spendingDelta = previousExpenses === null ? null : expenses - previousExpenses
 
-  const previousBreakdown = new Map(
-    (previousData?.monthlyCategoryBreakdown || []).map(category => [category.category, category.amount]),
-  )
-  const currentBreakdown = new Map((data.monthlyCategoryBreakdown || []).map(category => [category.category, category.amount]))
+  const toBreakdownMap = (items: typeof data.monthlyCategoryBreakdown) => {
+    const result = new Map<string, { label: string; amount: number }>()
+    for (const item of items || []) {
+      const key = item.category.trim().toLocaleLowerCase()
+      const existing = result.get(key)
+      result.set(key, { label: existing?.label || item.category.trim(), amount: (existing?.amount || 0) + item.amount })
+    }
+    return result
+  }
+  const previousBreakdown = toBreakdownMap(previousData?.monthlyCategoryBreakdown || [])
+  const currentBreakdown = toBreakdownMap(data.monthlyCategoryBreakdown || [])
   const categoryNames = new Set([...currentBreakdown.keys(), ...previousBreakdown.keys()])
   const biggestCategoryShift = [...categoryNames]
     .map(category => ({
-      category,
-      delta: (currentBreakdown.get(category) || 0) - (previousBreakdown.get(category) || 0),
+      category: currentBreakdown.get(category)?.label || previousBreakdown.get(category)?.label || category,
+      delta: (currentBreakdown.get(category)?.amount || 0) - (previousBreakdown.get(category)?.amount || 0),
     }))
     .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))[0] || null
 

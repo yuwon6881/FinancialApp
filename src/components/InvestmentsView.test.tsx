@@ -98,6 +98,7 @@ describe('InvestmentsView provider call boundaries', () => {
     vi.mocked(api.searchInvestmentInstruments).mockReset()
     vi.mocked(api.createInvestmentInstrument).mockReset()
     vi.mocked(context.queueMutation!).mockReset()
+    vi.mocked(context.queueMutation!).mockReturnValue(true)
     vi.mocked(context.showToast).mockReset()
     vi.mocked(api.refreshInvestmentMarketData).mockReset()
   })
@@ -411,6 +412,31 @@ describe('InvestmentsView money-sent-to-broker card', () => {
 
     expect(await screen.findByText('Share sent')).toBeTruthy()
     expect(screen.getByText('0%')).toBeTruthy()
+  })
+
+  it('blocks record controls but keeps price refresh available in sensitive mode', async () => {
+    const portfolio = {
+      ...tradablePortfolio,
+      holdings: [{
+        accountId: 'a1', accountName: 'Broker', instrumentId: 'i1', symbol: 'VOO', name: 'Vanguard S&P 500',
+        type: 'ETF', currency: 'USD', units: 1, averageCostNative: 100, latestPriceNative: 110,
+        valueNative: 110, valueApp: 110, fxIncomplete: false,
+      }],
+    } as InvestmentPortfolio
+    vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(portfolio)
+
+    render(
+      <AppProvider value={{ ...context, hideSensitive: true, guardSensitive: () => false }}>
+        <InvestmentsView onNavigate={vi.fn()} />
+      </AppProvider>,
+    )
+
+    expect((await screen.findByRole('button', { name: 'Add activity' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: 'Manage cash' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: 'Add account' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: 'Add investment' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: /Manage portfolio/ }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: 'Update prices' }) as HTMLButtonElement).disabled).toBe(false)
   })
 
   it('labels saved valuation figures without claiming they are from today', async () => {

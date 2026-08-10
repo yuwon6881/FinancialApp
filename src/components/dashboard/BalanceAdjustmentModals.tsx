@@ -110,7 +110,7 @@ export const BalanceAdjustmentModals: React.FC<BalanceAdjustmentModalsProps> = (
             {adjustmentPreviewDiff !== null && (
               <div className="p-3 bg-muted/40 border border-border/50 rounded-xl text-[10px] text-muted-foreground select-none">
                 Calculated ledger entry: <span className={`font-bold ${adjustmentPreviewDiff > 0 ? 'text-blue-500' : adjustmentPreviewDiff < 0 ? 'text-orange-500' : ''}`}>
-                  {adjustmentPreviewDiff > 0 ? '+' : ''}{adjustmentPreviewDiff.toFixed(2)}
+                  {adjustmentPreviewDiff > 0 ? '+' : ''}{formatSensitive(adjustmentPreviewDiff)}
                 </span>
               </div>
             )}

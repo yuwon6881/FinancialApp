@@ -38,7 +38,11 @@ const budgets = [
   // the selection layer is deliberately *not* lazy -- behind a fallback it renders and then
   // replaces the list on first visit, replaying the entrance animation. This view is lazy, so
   // none of it lands on cold launch; the critical-path budget below remains the cold-start gate.
-  { name: 'LedgerView-*.js', pattern: /^LedgerView-.*\.js$/, limitKb: 38.75 },
+  // 39.0: raised from 38.75 (measured 38.85). The per-bucket net in the page-total footers,
+  // plus lib/bucketAttribution.ts behind it. It cannot be deferred: it is part of the totals row
+  // that renders with the list, and it is the only figure that reads correctly in a single-bucket
+  // view, where debit and credit are both zero because the rows are transfers.
+  { name: 'LedgerView-*.js', pattern: /^LedgerView-.*\.js$/, limitKb: 39.0 },
   { name: 'SettingsView-*.js', pattern: /^SettingsView-.*\.js$/, limitKb: 21.5 }
 ]
 

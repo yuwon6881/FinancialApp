@@ -16,7 +16,7 @@ export function buildAppContextValue(params: {
   guardSensitive: () => boolean
   confirm: (request: any) => void
   operations: QueuedOp[]
-  queueMutation: (entity: EntityKind, type: OpType, targetId: string, payload?: OutboxPayload, isUndo?: boolean) => void
+  queueMutation: (entity: EntityKind, type: OpType, targetId: string, payload?: OutboxPayload, isUndo?: boolean) => boolean
 }): AppContextValue {
   return {
     hideSensitive: params.hideSensitive,

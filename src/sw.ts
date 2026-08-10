@@ -29,6 +29,19 @@ self.addEventListener('activate', event => {
     if (self.registration.navigationPreload) {
       await self.registration.navigationPreload.disable()
     }
+    // Evict asset entries whose body is the SPA shell. Workers shipped before the
+    // cacheWillUpdate guard below could store a rewritten `text/html` response under a chunk
+    // URL, and that entry outlives the fix by up to its 30-day expiry — so the worker that
+    // carries the fix has to clear what the broken one wrote, or the console error survives
+    // the deploy that repaired it. Purging the whole cache would also work; this keeps the
+    // still-valid chunks and costs one pass at activation.
+    const assetCache = await caches.open('app-assets')
+    for (const request of await assetCache.keys()) {
+      const cached = await assetCache.match(request)
+      if (cached?.headers.get('content-type')?.includes('text/html')) {
+        await assetCache.delete(request)
+      }
+    }
   })())
 })
 
@@ -52,6 +65,20 @@ registerRoute(
   new StaleWhileRevalidate({
     cacheName: 'app-assets',
     plugins: [
+      // A chunk request that the host cannot satisfy must never be stored, and the host answers
+      // it with the SPA shell rather than a 404 unless its rewrite excludes the asset directory
+      // (vercel.json does). A 200 carrying `text/html` is what Workbox would otherwise cache
+      // under the `.js` URL, turning one deploy-race miss into a permanently poisoned entry:
+      // every later load re-served HTML for a module and failed strict MIME checking with
+      // "Expected a JavaScript-or-Wasm module script", with no network request left to recover.
+      // Returning null here declines the write and lets the failure stay transient.
+      {
+        cacheWillUpdate: async ({ response }) => {
+          const contentType = response.headers.get('content-type') ?? ''
+          if (contentType.includes('text/html')) return null
+          return response.status === 200 ? response : null
+        },
+      },
       // Bounded so superseded hashed chunks cannot accumulate indefinitely on a device.
       new ExpirationPlugin({ maxEntries: 80, maxAgeSeconds: 30 * 24 * 60 * 60, purgeOnQuotaError: true }),
     ],

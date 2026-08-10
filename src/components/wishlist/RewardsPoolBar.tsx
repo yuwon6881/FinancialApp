@@ -126,23 +126,23 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
       {/* The stacked track. Committed sits left so the free remainder reads as "what's left over",
           which is how the money actually behaves. */}
       <div
-        className="w-full h-2.5 rounded-full bg-blue-500/25 overflow-hidden"
+        className="w-full h-2.5 rounded-full bg-pink-500/25 overflow-hidden"
         role="img"
         aria-label={hasGoals
           ? `${committedPct.toFixed(0)}% of your rewards is committed to goals`
           : 'No rewards committed to goals yet'}
       >
-        <div className="h-full bg-violet-500 transition-all duration-500" style={{ width: `${committedPct}%` }} />
+        <div className="h-full bg-pink-500 transition-all duration-500" style={{ width: `${committedPct}%` }} />
       </div>
 
       <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs font-semibold">
         <span className="flex items-center gap-1.5">
-          <span className="size-2 rounded-full bg-violet-500" aria-hidden />
+          <span className="size-2 rounded-full bg-pink-500" aria-hidden />
           <span className="text-muted-foreground">Committed</span>
           <span className="text-foreground font-extrabold">{formatSensitive(totalEarmarked)}</span>
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="size-2 rounded-full bg-blue-500" aria-hidden />
+          <span className="size-2 rounded-full bg-pink-500/30 ring-1 ring-pink-500/40" aria-hidden />
           <span className="text-muted-foreground">Free to spend</span>
           <span className="text-foreground font-extrabold">{formatSensitive(unassigned)}</span>
         </span>
@@ -156,7 +156,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
             <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               {cycleDone
                 ? <CheckCircle2 className="size-3 text-emerald-500" aria-hidden />
-                : <CalendarClock className="size-3 text-violet-500" aria-hidden />}
+                : <CalendarClock className="size-3 text-pink-500" aria-hidden />}
               This cycle
             </span>
             <span className="text-xs font-semibold text-muted-foreground">
@@ -175,7 +175,7 @@ export const RewardsPoolBar: React.FC<RewardsPoolBarProps> = ({
               : `${cyclePct.toFixed(0)}% of this cycle's commitments set aside`}
           >
             <div
-              className={`h-full rounded-full transition-all duration-500 ${cycleDone ? 'bg-emerald-500' : 'bg-violet-500'}`}
+              className={`h-full rounded-full transition-all duration-500 ${cycleDone ? 'bg-emerald-500' : 'bg-pink-500'}`}
               style={{ width: `${cyclePct}%` }}
             />
           </div>

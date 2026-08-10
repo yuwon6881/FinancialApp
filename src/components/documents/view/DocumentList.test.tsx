@@ -154,6 +154,31 @@ describe('DocumentList selection toolbar', () => {
     expect(updateDocument).not.toHaveBeenCalled()
   })
 
+  it('shows the server’s reason when it refuses an amount, leaving the editor open', async () => {
+    // The server refuses this write for five distinct reasons and names each one. Without a catch the
+    // rejection was an unhandled promise: the editor stayed open with nothing said, so the tick read
+    // as broken — exactly what the validation above was added to stop it doing.
+    const updateDocument = vi.fn().mockRejectedValue(
+      new Error('The category is not configured for this document\'s tax year.'),
+    )
+    render(
+      <DocumentList
+        {...baseProps}
+        updateDocument={updateDocument}
+        documents={[{ ...document, amount: 125.5, amountStatus: 'Confirmed' }]}
+        selectedIds={new Set()}
+      />,
+    )
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Add amount|125\.50/ })[0])
+    fireEvent.change(screen.getAllByLabelText('Amount for tax.pdf')[0], { target: { value: '90' } })
+    fireEvent.click(screen.getAllByRole('button', { name: 'Confirm amount for tax.pdf' })[0])
+
+    expect((await screen.findByRole('alert')).textContent).toContain('not configured')
+    // Still open, with the typed value intact, so the edit can be corrected rather than retyped.
+    expect(screen.getAllByLabelText('Amount for tax.pdf')).toHaveLength(1)
+  })
+
   it('does not open an editor for every AI-suggested amount on the page', () => {
     render(
       <DocumentList

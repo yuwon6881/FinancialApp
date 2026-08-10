@@ -10,7 +10,7 @@ export interface LedgerListProps {
   hideSensitive: boolean
   currency: string
   serverIsFetching: boolean
-  pageTotals: { inflow: number; outflow: number; transfer: number }
+  pageTotals: { inflow: number; outflow: number; transfer: number; bucket: string | null; bucketNet: number }
   isTxDeleting: (id: string) => boolean
   isTxSyncing: (id: string) => boolean
   onStartEdit: (t: Transaction) => void

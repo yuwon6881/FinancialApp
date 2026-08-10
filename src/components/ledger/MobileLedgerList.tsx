@@ -76,6 +76,19 @@ export function MobileLedgerList({
               </p>
             </div>
           )}
+          {pageTotals.bucket && (
+            <div className="border-t border-border/30 pt-2.5">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground font-semibold">{pageTotals.bucket} on this page</span>
+                <span className={`font-bold text-sm ${pageTotals.bucketNet >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
+                  {pageTotals.bucketNet >= 0 ? '+' : '-'}{formatSensitive(Math.abs(pageTotals.bucketNet))}
+                </span>
+              </div>
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                What went in minus what came out, counting each row's share of this bucket.
+              </p>
+            </div>
+          )}
           <div className="flex justify-between items-center border-t border-border/50 pt-2.5 font-bold">
             <span className="text-foreground">Net Position</span>
             <span className={`${net >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>

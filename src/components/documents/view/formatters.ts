@@ -1,9 +1,12 @@
+const BYTE_UNITS = ['Bytes', 'KB', 'MB', 'GB', 'TB']
+
 export const formatBytes = (bytes: number) => {
-  if (bytes === 0) return '0 Bytes'
+  // Guarded rather than trusted: a missing or malformed size used to reach Math.log and render as
+  // "NaN undefined" on the card, and a total above GB ran off the end of the unit list.
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 Bytes'
   const k = 1024
-  const sizes = ['Bytes', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  const index = Math.min(BYTE_UNITS.length - 1, Math.floor(Math.log(bytes) / Math.log(k)))
+  return parseFloat((bytes / Math.pow(k, index)).toFixed(2)) + ' ' + BYTE_UNITS[index]
 }
 
 export const formatDate = (dateString: string) => {

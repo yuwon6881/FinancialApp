@@ -92,7 +92,13 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
                 </div>
               </div>
               <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                <span className={`font-bold block ${rp.isDiscarded ? 'text-slate-500 line-through' : 'text-orange-500'}`}>{rp.amount == null ? 'Unavailable' : `-${formatSensitive(rp.amount)}`}</span>
+                <span className={`font-bold block ${rp.isDiscarded ? 'text-slate-500 line-through' : 'text-orange-500'}`}>
+                  {/* A fragment, not a template literal: `formatSensitive` here is
+                      dashboard/formatters' node-returning version (a <span>, or <SensitiveMask/>
+                      when masked), and interpolating an element into a string renders the literal
+                      text "[object Object]" for every bill. */}
+                  {rp.amount == null ? 'Unavailable' : <>-{formatSensitive(rp.amount)}</>}
+                </span>
                 <span className="text-muted-foreground text-[9px]">Due {rp.dueDate}</span>
               </div>
               {/* Chevron affordance: fades and slides in on hover */}

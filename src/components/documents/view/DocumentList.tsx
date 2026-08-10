@@ -13,6 +13,7 @@ import { DocumentPreviewSheet } from './DocumentPreviewSheet'
 import { RowSyncStatus } from '../../ui/RowSyncBadge'
 import { DocumentCard } from './DocumentCard'
 import { AmountReview, DocumentActions, DocumentTypeIcon, EmptyState, LinkedTransactionButton, type UpdateDocumentFn } from './documentRowParts'
+import { DOCUMENT_BULK_LIMIT } from '../../../lib/api/documents'
 
 interface DocumentListProps {
   documents: VaultDocument[]
@@ -56,7 +57,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
     setSelectionRequested(false)
     onClearSelection?.()
   }
-  const exceedsSelectionLimit = selectedIds.size > 100
+  const exceedsSelectionLimit = selectedIds.size > DOCUMENT_BULK_LIMIT
   const downloadFailed = () =>
     showToast('The document could not be downloaded.', 'Download Failed', 'error')
   const openLinkedTransaction = async (transactionId: string) => {
@@ -79,6 +80,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
         actionsTestId="document-selection-actions"
         itemCount={documents.length}
         selectedCount={selectedIds.size}
+        selectionLimit={DOCUMENT_BULK_LIMIT}
         allVisibleSelected={allVisibleSelected}
         someVisibleSelected={someVisibleSelected}
         isSelecting={isSelecting}
@@ -117,6 +119,15 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
           </Button>
         </>}
       />
+      {/* Below the toolbar, never inside it: that row is a fixed one-row grid, and a second line in
+          it changes the list's position the moment a box is ticked. The buttons above are disabled
+          at this point, and a disabled button with no stated reason reads as broken. */}
+      {exceedsSelectionLimit && (
+        <p role="alert" className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/8 px-3 py-2 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+          You have {selectedIds.size} files picked, and these buttons work on up to {DOCUMENT_BULK_LIMIT} at a time.
+          Untick {selectedIds.size - DOCUMENT_BULK_LIMIT} to carry on, or do it in two goes.
+        </p>
+      )}
       <div data-testid="document-results">
       <div className="space-y-3 lg:hidden">
         {isLoading && documents.length === 0 ? (

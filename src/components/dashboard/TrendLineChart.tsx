@@ -10,9 +10,14 @@ type TrendRange = '3month' | '6month' | 'yearly'
 const chartPosition = (points: TrendPoint[], index: number) => {
   const min = Math.min(...points.map(point => point.balance), 0)
   const max = Math.max(...points.map(point => point.balance), 1000)
-  const x = 15 + (index / (points.length - 1)) * 470
+  const x = points.length === 1 ? 250 : 15 + (index / (points.length - 1)) * 470
   const y = 105 - ((points[index].balance - min) / (max - min || 1)) * 90
   return { x, y, left: (x / 500) * 100, top: (y / 120) * 75 + 25 }
+}
+
+const trendLabel = (point: TrendPoint) => {
+  const year = point.cycleKey?.slice(0, 4) ?? ''
+  return year ? `${point.month} ${year}` : point.month
 }
 
 export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData: DashboardData | null; growthBalance: number }) {
@@ -25,22 +30,20 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
     : range === '6month'
       ? dashboardData?.last6TrendPoints || []
       : dashboardData?.trendPoints || []
-  const polyline = useMemo(() => points.length < 2
-    ? ''
-    : points.map((_, index) => {
+  const polyline = useMemo(() => points.map((_, index) => {
       const position = chartPosition(points, index)
       return `${position.x},${position.y}`
     }).join(' '), [points])
 
   const rangeLabel = range === '3month' ? 'last 3 cycles' : range === '6month' ? 'last 6 cycles' : 'full year'
   const chartSummary = points.length > 0
-    ? `Cumulative growth balance over the ${rangeLabel}, from ${points[0].month} at ${formatSensitive(points[0].balance)} to ${points[points.length - 1].month} at ${formatSensitive(points[points.length - 1].balance)}.`
+    ? `Growth ledger balance over the ${rangeLabel}, from ${trendLabel(points[0])} at ${formatSensitive(points[0].balance)} to ${trendLabel(points[points.length - 1])} at ${formatSensitive(points[points.length - 1].balance)}.`
     : 'Growth balance trend. No data points available yet.'
 
   const selectNearest = (clientX: number) => {
-    if (!svgRef.current || points.length < 2) return
+    if (!svgRef.current || points.length === 0) return
     const rect = svgRef.current.getBoundingClientRect()
-    const index = Math.round(((clientX - rect.left) / rect.width) * (points.length - 1))
+    const index = points.length === 1 ? 0 : Math.round(((clientX - rect.left) / rect.width) * (points.length - 1))
     setHoveredIndex(Math.max(0, Math.min(points.length - 1, index)))
   }
 
@@ -49,8 +52,8 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
       <div>
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h3 className="text-base font-semibold text-foreground">Total Growth Deposited</h3>
-            <p className="text-[10px] text-muted-foreground">Cumulative Growth category investment balance</p>
+            <h3 className="text-base font-semibold text-foreground">Growth ledger balance</h3>
+            <p className="text-[10px] text-muted-foreground">Growth balance carried across budget cycles</p>
           </div>
           <TrendingUp className="size-4 text-blue-500" />
         </div>
@@ -80,15 +83,15 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
                     ("Expected number" SVG error). Fading in avoids that entirely. */}
                 {/* Keyed by range so a timeframe switch remounts the fill/line and
                     replays the fade-in with the new shape, rather than snapping. */}
-                <m.path
+                {points.length > 1 && <m.path
                   key={`fill-${range}`}
                   d={`M 15,105 L ${polyline} L 485,105 Z`}
                   fill="url(#growthGradient)"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.4, ease: 'easeInOut' }}
-                />
-                <m.polyline
+                />}
+                {points.length > 1 && <m.polyline
                   key={`line-${range}`}
                   points={polyline}
                   fill="none"
@@ -99,7 +102,7 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.4, ease: 'easeInOut' }}
-                />
+                />}
               </svg>
               {points.map((point, index) => {
                 const position = chartPosition(points, index)
@@ -110,7 +113,7 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
                     // into place on every timeframe switch. Remounting per range and
                     // easing only scale/opacity gives a smooth staggered fade-in with no
                     // position morph, so the dots land cleanly with the redrawn line.
-                    key={`${range}-${point.month}-${index}`}
+                    key={`${range}-${point.cycleKey || point.month}-${index}`}
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.3, ease: 'easeOut', delay: index * 0.03 }}
@@ -123,7 +126,7 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
               {hoveredIndex !== null && points[hoveredIndex] && (() => {
                 const point = points[hoveredIndex]
                 const position = chartPosition(points, hoveredIndex)
-                return <div aria-hidden="true" className="absolute z-20 bg-card border rounded-xl p-1.5 shadow-xl text-center" style={{ left: `clamp(4px, calc(${position.left}% - 50px), calc(100% - 104px))`, top: `clamp(4px, calc(${position.top}% - 46px), calc(100% - 40px))`, width: 100 }}><b className="block text-[9px]">{point.month}</b><span className="text-[10px] font-black text-blue-500">{hideSensitive ? SENSITIVE_AMOUNT_MASK : formatCurrencyVal(point.balance, currency)}</span></div>
+                return <div aria-hidden="true" className="absolute z-20 bg-card border rounded-xl p-1.5 shadow-xl text-center" style={{ left: `clamp(4px, calc(${position.left}% - 50px), calc(100% - 104px))`, top: `clamp(4px, calc(${position.top}% - 46px), calc(100% - 40px))`, width: 100 }}><b className="block text-[9px]">{trendLabel(point)}</b><span className="text-[10px] font-black text-blue-500">{hideSensitive ? SENSITIVE_AMOUNT_MASK : formatCurrencyVal(point.balance, currency)}</span></div>
               })()}
               {/* Screen-reader-only data table: the SVG scrubber is pointer-only, so expose the
                   underlying points as a real table for assistive tech and keyboard users. */}
@@ -136,7 +139,7 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
                   <tbody>
                     {points.map((point, index) => (
                       <tr key={index}>
-                        <th scope="row">{point.month}</th>
+                        <th scope="row">{trendLabel(point)}</th>
                         <td>{formatSensitive(point.balance)}</td>
                       </tr>
                     ))}
@@ -146,7 +149,7 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
             </>
           ) : <div className="text-xs text-muted-foreground pb-12 text-center">Calculating trend points...</div>}
         </div>
-        <div aria-hidden="true" className="flex px-[3%] mt-1">{points.map((point, index) => <span key={index} className="flex-1 min-w-0 text-center truncate text-[9px] text-muted-foreground font-bold">{point.month}</span>)}</div>
+        <div aria-hidden="true" className="flex px-[3%] mt-1">{points.map((point, index) => <span key={point.cycleKey || `${point.month}-${index}`} className="flex-1 min-w-0 text-center truncate text-[9px] text-muted-foreground font-bold">{trendLabel(point)}</span>)}</div>
       </div>
       <div className="border-t border-border/50 pt-3 mt-3 flex justify-between text-[10px] text-muted-foreground">
         <span>{range === '3month' ? 'Last 3 cycles' : range === '6month' ? 'Last 6 cycles' : `${dashboardData?.setting.selectedYear || new Date().getFullYear()} full year`}</span>

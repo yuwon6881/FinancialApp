@@ -1,12 +1,13 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useDocumentsView } from './useDocumentsView'
+import { EMPTY_RETENTION_REVIEW } from '../../../lib/documentRetention'
 
 const api = vi.hoisted(() => ({
   listDocuments: vi.fn(),
   getDocumentUsage: vi.fn(),
   getAvailableDocumentYears: vi.fn(),
-  getExpiredTaxYears: vi.fn(),
+  getDocumentRetentionReview: vi.fn(),
   getTaxYearReliefSummary: vi.fn(),
   getTaxReliefCategories: vi.fn(),
   addTaxReliefCategory: vi.fn(),
@@ -43,7 +44,7 @@ describe('useDocumentsView', () => {
     api.listDocuments.mockResolvedValue({ items: [document], totalCount: 1 })
     api.getDocumentUsage.mockResolvedValue({ totalBytes: 12, documentCount: 1 })
     api.getAvailableDocumentYears.mockResolvedValue([2026, 2025])
-    api.getExpiredTaxYears.mockResolvedValue([])
+    api.getDocumentRetentionReview.mockResolvedValue(EMPTY_RETENTION_REVIEW)
     api.getTaxYearReliefSummary.mockResolvedValue({
       taxYear: 2026,
       confirmedAmount: 0,
@@ -76,6 +77,26 @@ describe('useDocumentsView', () => {
     expect(result.current.documents).toEqual([])
     expect(result.current.totalCount).toBe(0)
     await waitFor(() => expect(result.current.usage).toEqual({ totalBytes: 0, documentCount: 0 }))
+  })
+
+  it('refreshes the tax insights after deleting a single document', async () => {
+    const { result } = renderHook(() => useDocumentsView())
+    await waitFor(() => expect(result.current.documents).toEqual([document]))
+
+    const summaryCallsBefore = api.getTaxYearReliefSummary.mock.calls.length
+    const retentionCallsBefore = api.getDocumentRetentionReview.mock.calls.length
+
+    await act(async () => {
+      await result.current.deleteDocument(1)
+    })
+
+    // The deleted document's amount counted towards the relief summary and its year towards the
+    // retention notice. Only bulk delete used to refresh them, so deleting one document left the
+    // tracker claiming money from a file that no longer existed.
+    await waitFor(() => {
+      expect(api.getTaxYearReliefSummary.mock.calls.length).toBeGreaterThan(summaryCallsBefore)
+      expect(api.getDocumentRetentionReview.mock.calls.length).toBeGreaterThan(retentionCallsBefore)
+    })
   })
 
   it('clamps the page and reloads after bulk deletion removes the current page', async () => {

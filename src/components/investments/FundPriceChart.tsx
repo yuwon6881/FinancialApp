@@ -53,7 +53,7 @@ export function FundPriceChart({ history, masked }: { history: InstrumentHistory
             {masked ? '••••' : `${rising ? '+' : '−'}${money(Math.abs(change))}`}
           </strong>
           <span className="text-[10px] text-muted-foreground">
-            {changePercent === undefined ? 'over this period' : `${rising ? '+' : ''}${changePercent.toFixed(1)}% over this period`}
+            {changePercent === undefined ? 'over this period' : masked ? 'Change hidden over this period' : `${rising ? '+' : ''}${changePercent.toFixed(1)}% over this period`}
           </span>
         </div>
       </div>
@@ -71,14 +71,14 @@ export function FundPriceChart({ history, masked }: { history: InstrumentHistory
         </p>
       )}
 
-      <p className="sr-only">{summary}</p>
+      <p className="sr-only">{masked ? 'Fund price history values are hidden.' : summary}</p>
       <div className={`mt-3 ${masked ? 'select-none blur-md' : ''}`} aria-hidden={masked}>
         <svg
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
           preserveAspectRatio="none"
           className="h-40 w-full overflow-visible"
           role="img"
-          aria-label={summary}
+          aria-label={masked ? 'Fund price history values hidden' : summary}
         >
           <defs>
             <linearGradient id="fundPriceGradient" x1="0" y1="0" x2="0" y2="1">

@@ -136,11 +136,13 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   const [purchaseDateInput, setPurchaseDateInput] = React.useState<string>(new Date().toLocaleDateString('en-CA'))
 
   const handleOpenClaimModal = (item: WishlistItem) => {
+    if (hideSensitive) return
     setPurchaseDateInput(new Date().toLocaleDateString('en-CA'))
     setPurchasingItem(item)
   }
 
   const handleConfirmPurchase = () => {
+    if (hideSensitive) return
     if (!purchasingItem) return
     void onPurchaseItem(purchasingItem.id, purchaseDateInput)
     setPurchasingItem(null)
@@ -195,6 +197,12 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   const { isSyncing: isGoalSyncing, isDeleting: isGoalDeleting } = useSyncStatus(savingsGoals, activeSyncIds, deletingId)
   const isFunding = activeSyncIds.some(id => String(id) === 'savings-goals-fund')
   const [contributeTarget, setContributeTarget] = React.useState<{ goal: SavingsGoal; mode: ContributeMode } | null>(null)
+
+  React.useEffect(() => {
+    if (!hideSensitive) return
+    setPurchasingItem(null)
+    setContributeTarget(null)
+  }, [hideSensitive])
 
   // --- The shared pool ------------------------------------------------------------------------
   // One Rewards balance, two kinds of claim on it. Everything below is derived from this single
@@ -352,11 +360,15 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
         onRelease={target => setContributeTarget({ goal: target, mode: 'release' })}
       />
 
-      <section className="space-y-3">
-        <div className="flex items-center justify-between gap-3 px-1">
+      {/* Same panel shell as Commitments above, for the same reason. */}
+      <section
+        aria-labelledby="wishlist-rewards-heading"
+        className="app-panel space-y-3 rounded-2xl border border-border/60 bg-card/92 p-4 sm:p-5"
+      >
+        <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-              <Trophy className="size-4 text-blue-500" />
+            <h3 id="wishlist-rewards-heading" className="text-sm font-bold text-foreground flex items-center gap-1.5">
+              <Trophy className="size-4 text-pink-500" />
               Rewards
               {affordableCount > 0 && (
                 <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
@@ -364,14 +376,14 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
                 </span>
               )}
             </h3>
-            <p className="mt-0.5 text-xs font-medium text-muted-foreground">
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
               From your {formatSensitive(claimableBalance)} free rewards
               {!activeItem || claimableBalance >= activeItem.price ? null : (
                 <> · {activeItem.name} in {getTimelineString(activeItem.price, freeInflowPerCycle)}</>
               )}
             </p>
           </div>
-          <Button variant="secondary" size="sm" onClick={handleOpenAddModal}>
+          <Button variant="secondary" size="sm" className="shrink-0" onClick={handleOpenAddModal} disabled={hideSensitive} title={hideSensitive ? 'Unhide balances to add a reward' : undefined}>
             <Plus className="size-3" /> Add reward
           </Button>
         </div>
@@ -411,12 +423,14 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
           maxWidthClassName="max-w-md"
         >
           <div className="space-y-4 py-2">
-            <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-between">
+            {/* Money emphasis is the theme's own primary tint, as on the split-receipt sheet — a
+                blue step here read as a different design system from the totals it mirrors. */}
+            <div className="p-4 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between">
               <div>
                 <h4 className="font-bold text-sm text-foreground">{purchasingItem.name}</h4>
-                <span className="text-xs text-muted-foreground font-medium">Goal Target</span>
+                <span className="text-xs text-muted-foreground font-medium">Reward target</span>
               </div>
-              <span className="text-lg font-extrabold text-blue-500">{formatSensitive(purchasingItem.price)}</span>
+              <span className="text-lg font-extrabold text-accent-ink">{formatSensitive(purchasingItem.price)}</span>
             </div>
 
             <FormField
@@ -434,7 +448,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
               <Button variant="ghost" className="flex-1" onClick={() => setPurchasingItem(null)}>
                 Cancel
               </Button>
-              <Button variant="primary" className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-bold" onClick={handleConfirmPurchase}>
+              <Button variant="primary" className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-bold" onClick={handleConfirmPurchase} disabled={hideSensitive}>
                 Claim & Log to Ledger
               </Button>
             </div>

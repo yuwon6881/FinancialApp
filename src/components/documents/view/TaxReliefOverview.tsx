@@ -17,7 +17,11 @@ import { useSyncStatus } from '../../../lib/useOptimisticList'
 
 type CategoryInput = { name: string; limit: number }
 type CategoryDraft = { name: string; limit: string }
-type CategoryValidationErrors = { name?: string; limit?: string }
+/**
+ * `form` is for a refusal that belongs to no single field — the tax year being too old to edit is a
+ * fact about the whole sheet, and hanging it off `limit` blamed a number the user had typed correctly.
+ */
+type CategoryValidationErrors = { name?: string; limit?: string; form?: string }
 
 const EMPTY_CATEGORY_DRAFT: CategoryDraft = { name: '', limit: '' }
 
@@ -172,7 +176,10 @@ export function TaxReliefOverview({
     const limit = Number(rawLimit)
     if (!rawLimit || !Number.isFinite(limit) || limit < 0) errors.limit = 'Enter a non-negative limit.'
     else if (limit > MAX_CATEGORY_LIMIT) errors.limit = 'That limit is larger than this tracker supports.'
-    else if (!isEditableTaxYear) errors.limit = `Only tax years ${currentYear - TAX_YEAR_LOOKBACK} to ${currentYear} can be edited.`
+
+    if (!isEditableTaxYear) {
+      errors.form = `Only tax years ${currentYear - TAX_YEAR_LOOKBACK} to ${currentYear} can be edited.`
+    }
 
     const normalizedName = name.toLowerCase()
     if (
@@ -346,7 +353,7 @@ export function TaxReliefOverview({
                       <span className="font-semibold text-foreground">{money(category.confirmedAmount)} used</span>
                       <span className="text-muted-foreground">{money(category.limit)} limit</span>
                     </div>
-                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted" role="progressbar" aria-label={`${category.name} confirmed amount`} aria-valuemin={0} aria-valuemax={category.limit} aria-valuenow={Math.min(category.confirmedAmount, category.limit)}>
+                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted" role="progressbar" aria-label={hideSensitive ? `${category.name} confirmed amount hidden` : `${category.name} confirmed amount`} aria-valuemin={hideSensitive ? undefined : 0} aria-valuemax={hideSensitive ? undefined : category.limit} aria-valuenow={hideSensitive ? undefined : Math.min(category.confirmedAmount, category.limit)}>
                       <div className={`h-full rounded-full transition-all duration-500 ${full ? 'bg-emerald-500' : 'bg-primary'}`} style={{ width: `${progress}%` }} />
                     </div>
                   </div>
@@ -414,6 +421,7 @@ export function TaxReliefOverview({
                     <div className="grid gap-2 sm:grid-cols-2">
                       <FormField label="Category" required error={draftErrors.name}><Input value={draft.name} onChange={event => { setDraft(current => ({ ...current, name: event.target.value })); setDraftErrors(current => ({ ...current, name: undefined })) }} controlSize="sm" /></FormField>
                       <FormField label={`Limit (${currency})`} required error={draftErrors.limit}><Input type="number" min="0" step="0.01" value={draft.limit} onChange={event => { setDraft(current => ({ ...current, limit: event.target.value })); setDraftErrors(current => ({ ...current, limit: undefined })) }} controlSize="sm" className="tabular-nums" /></FormField>
+                      {draftErrors.form && <p role="alert" className="text-[10px] font-semibold text-destructive sm:col-span-2">{draftErrors.form}</p>}
                       <div className="flex items-center justify-end gap-1.5 sm:col-span-2">
                         {isDraftChanged && (
                           <span className="mr-auto flex items-center gap-1 text-[10px] font-semibold text-blue-500">
@@ -481,6 +489,7 @@ export function TaxReliefOverview({
               <div className="grid gap-2 sm:grid-cols-2">
                 <FormField label="Category" required error={newCategoryErrors.name}><Input autoFocus value={newCategory.name} onChange={event => { setNewCategory(current => ({ ...current, name: event.target.value })); setNewCategoryErrors(current => ({ ...current, name: undefined })) }} placeholder="e.g. Education" controlSize="sm" /></FormField>
                 <FormField label={`Limit (${currency})`} required error={newCategoryErrors.limit}><Input type="number" min="0" step="0.01" value={newCategory.limit} onChange={event => { setNewCategory(current => ({ ...current, limit: event.target.value })); setNewCategoryErrors(current => ({ ...current, limit: undefined })) }} controlSize="sm" className="tabular-nums" /></FormField>
+                {newCategoryErrors.form && <p role="alert" className="text-[10px] font-semibold text-destructive sm:col-span-2">{newCategoryErrors.form}</p>}
                 <div className="flex justify-end gap-1.5 sm:col-span-2"><Button variant="primary" size="sm" type="button" onClick={() => void addCategory()} disabled={isAddingBusy} className="py-2"><Check className="size-3.5" /> Add</Button><Button variant="unstyled" type="button" onClick={() => { setIsAdding(false); setNewCategory(EMPTY_CATEGORY_DRAFT); setNewCategoryErrors({}) }} aria-label="Close add category form" className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted"><X className="size-3.5" /></Button></div>
               </div>
             </div>

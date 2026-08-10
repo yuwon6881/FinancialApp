@@ -368,6 +368,8 @@ export interface CategorySummary {
   name: string
   allocation: number
   target: number
+  // Income actually credited to this envelope; may differ from the planned target after recovery.
+  incomeAllocated: number
   budget: number
   netChange: number
   // Actual outflows assigned to this envelope during the selected cycle. Unlike netChange this
@@ -404,6 +406,7 @@ export interface ActiveRecurringPayment {
 }
 
 export interface TrendPoint {
+  cycleKey: string
   month: string
   balance: number
 }
@@ -476,6 +479,12 @@ export interface StabilityRecovery {
   isOverdue: boolean
   lastDrawdownCycleKey?: string
   lastDrawdownAmount: number
+  /**
+   * First day of the window the shortfall accumulated over — the start of the cycle after the fund
+   * was last at its recoverable ceiling, as `yyyy-MM-dd`. Absent on a payload written before this
+   * shipped, and on an account with no ceiling to have fallen from.
+   */
+  recoveryFromDate?: string
   /** Bills this cycle still owes, which the proposed draw must stay above. */
   essentialsCommitted: number
   /** Savings-goal funding this cycle still owes, likewise protected. */
@@ -683,11 +692,27 @@ export interface TaxYearReliefSummary {
   categories: TaxReliefCategorySummary[]
 }
 
-export interface ExpiredTaxYearSummary {
+/**
+ * One tax year's stored records measured against the date they stop being worth keeping.
+ * `daysUntilKeepUntil` is negative once that date has passed, and is the only thing separating
+ * records that can be cleared out now from ones still worth holding.
+ */
+export interface RetentionTaxYearSummary {
   taxYear: number
   documentCount: number
   totalBytes: number
-  retentionUntil: string
+  keepUntil: string
+  daysUntilKeepUntil: number
+}
+
+/**
+ * `noticeWindowDays` and `keepYears` are echoed by the server so no screen states the keep period
+ * from its own copy of the number.
+ */
+export interface DocumentRetentionReview {
+  taxYears: RetentionTaxYearSummary[]
+  noticeWindowDays: number
+  keepYears: number
 }
 
 export interface PendingVaultDocument {

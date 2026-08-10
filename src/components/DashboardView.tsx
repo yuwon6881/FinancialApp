@@ -11,8 +11,10 @@ import { Button } from './ui/Button'
 import { getCycleProgress, MONTH_NAMES } from '../lib/cycle'
 import { InvestmentPlanExceptionCard } from './dashboard/InvestmentPlanExceptionCard'
 import { StabilityRecoveryExceptionCard } from './dashboard/StabilityRecoveryExceptionCard'
-import { getExpiredTaxYears } from '../lib/api/documents'
-import type { ExpiredTaxYearSummary } from '../types'
+import { getDocumentRetentionReview } from '../lib/api/documents'
+import { EMPTY_RETENTION_REVIEW } from '../lib/documentRetention'
+import { VaultRetentionNotice } from './documents/VaultRetentionNotice'
+import type { DocumentRetentionReview } from '../types'
 
 interface DashboardViewProps {
   dashboardData: DashboardData | null
@@ -26,6 +28,8 @@ interface DashboardViewProps {
   onNavigateToLedger?: (options: {
     category?: string | null;
     date?: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
     txType?: 'inflow' | 'outflow' | null;
     range?: 'monthly' | '3month' | '6month' | 'yearly';
     highlightedTxId?: string | null;
@@ -54,9 +58,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   investmentAllocation = null,
   onNavigateToCategoryLimits,
 }) => {
-  const [expiredTaxYears, setExpiredTaxYears] = React.useState<ExpiredTaxYearSummary[]>([])
+  const [retentionReview, setRetentionReview] = React.useState<DocumentRetentionReview>(EMPTY_RETENTION_REVIEW)
   React.useEffect(() => {
-    void getExpiredTaxYears().then(setExpiredTaxYears).catch(() => setExpiredTaxYears([]))
+    void getDocumentRetentionReview().then(setRetentionReview).catch(() => setRetentionReview(EMPTY_RETENTION_REVIEW))
   }, [])
   const { hideSensitive: contextHideSensitive } = useAppPrefs()
   const hideSensitive = hideSensitiveProp ?? contextHideSensitive
@@ -125,26 +129,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </section>
       )}
 
-      {expiredTaxYears.length > 0 && (
-        <section className="rounded-2xl border border-amber-500/30 bg-amber-500/8 p-5" aria-labelledby="vault-retention-heading">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
-              <div>
-                <h3 id="vault-retention-heading" className="text-sm font-bold text-amber-700 dark:text-amber-300">
-                  Old tax records need your review
-                </h3>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {expiredTaxYears.map(year => `${year.taxYear} (${year.documentCount} document${year.documentCount === 1 ? '' : 's'})`).join(', ')} passed the seven-year retention date. They will not be deleted automatically.
-                </p>
-              </div>
-            </div>
-            <Button variant="ghost" onClick={() => onNavigate('documents')} className="w-full justify-center sm:w-auto">
-              Review Vault
-            </Button>
-          </div>
-        </section>
-      )}
+      <VaultRetentionNotice review={retentionReview} onOpenVault={() => onNavigate('documents')} />
 
       <InvestmentPlanExceptionCard allocation={investmentAllocation} onNavigate={onNavigate} />
 
@@ -157,6 +142,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <StabilityRecoveryExceptionCard
         recovery={dashboardData?.stabilityRecovery}
         formatSensitive={view.formatSensitive}
+        onNavigateToLedger={onNavigateToLedger}
       />
 
       {/* Today-focused metric cards: cycle progress, safe-to-spend, and the active wish goal */}

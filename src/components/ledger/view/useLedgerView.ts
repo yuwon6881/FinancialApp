@@ -213,6 +213,20 @@ export function useLedgerView(options: UseLedgerViewOptions) {
   const [showEditDisabledModal, setShowEditDisabledModal] = useState(false)
   const [editBlockedTransaction, setEditBlockedTransaction] = useState<Transaction | null>(null)
 
+  useEffect(() => {
+    if (!hideSensitive) return
+    deleteDocumentLookupRef.current += 1
+    setShowExportModal(false)
+    setShowDeleteModal(false)
+    setTxToDelete(null)
+    setAttachedDocumentIds([])
+    setAlsoDeleteDocuments(false)
+    setAreAttachedDocumentsLoading(false)
+    setShowEditDisabledModal(false)
+    setEditBlockedTransaction(null)
+    formRef.current?.handleCloseForm()
+  }, [hideSensitive, formRef])
+
   // Synchronize AI export requests
   useEffect(() => {
     if (!aiExportRequest) return

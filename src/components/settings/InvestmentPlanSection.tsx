@@ -33,6 +33,7 @@ function ClassificationRow({
   isSyncing,
   isPending,
   orderBusy,
+  mutationsDisabled,
 }: {
   value: InvestmentAllocationOverview['assignments'][number]
   classify: (instrumentId: string, sleeve?: InvestmentAllocationSleeve) => void
@@ -40,10 +41,11 @@ function ClassificationRow({
   isSyncing: boolean
   isPending: boolean
   orderBusy: boolean
+  mutationsDisabled: boolean
 }) {
   const controls = useDragControls()
   const reduceMotion = useReducedMotion()
-  const isBusy = isSyncing || isPending || orderBusy
+  const isBusy = mutationsDisabled || isSyncing || isPending || orderBusy
 
   return (
     <Reorder.Item
@@ -93,7 +95,8 @@ export function InvestmentPlanSection() {
     activeSyncId,
     activeSyncIds = [],
     operations = [],
-    queueMutation = () => undefined,
+    queueMutation = () => false,
+    hideSensitive,
   } = useAppContext()
   const investmentOps = useMemo(
     () => operations.filter(operation => operation.entity.startsWith('investment')),
@@ -204,6 +207,7 @@ export function InvestmentPlanSection() {
   }, [plan, total])
 
   const changeTarget = (key: TargetKey, value: number) => {
+    if (hideSensitive) return
     setPlan(previous => ({
       ...previous,
       ...redistributeInvestmentTargets(previous, key, value, lockedSleeve ?? undefined),
@@ -211,6 +215,7 @@ export function InvestmentPlanSection() {
   }
 
   const toggleSleeveLock = (key: TargetKey) => {
+    if (hideSensitive) return
     setLockedSleeve(current => {
       if (current === key) return null
       // Three sleeves need two adjustable values to preserve a 100% total. Keep the
@@ -220,7 +225,7 @@ export function InvestmentPlanSection() {
   }
 
   const save = () => {
-    if (validation) return
+    if (hideSensitive || validation) return
     const payload = {
       usEquityTarget: plan.usEquityTarget,
       internationalExUsTarget: plan.internationalExUsTarget,
@@ -228,24 +233,27 @@ export function InvestmentPlanSection() {
       watchDrift: plan.watchDrift,
       alertDrift: plan.alertDrift,
     }
-    setOverview(previous => previous ? { ...previous, plan: { ...previous.plan, ...payload } } : previous)
-    queueMutation('investmentPlan', 'update', 'three-fund', {
+    const accepted = queueMutation('investmentPlan', 'update', 'three-fund', {
       ...payload,
       undoSnapshot: overview?.plan,
     })
+    if (!accepted) return
+    setOverview(previous => previous ? { ...previous, plan: { ...previous.plan, ...payload } } : previous)
   }
 
   const classify = (instrumentId: string, sleeve?: InvestmentAllocationSleeve) => {
+    if (hideSensitive) return
+    const previousSleeve = overview?.assignments.find(value => value.instrumentId === instrumentId)?.sleeve
+    const accepted = queueMutation('investmentAllocation', 'update', instrumentId, {
+      sleeve: sleeve ?? null,
+      undoSnapshot: { sleeve: previousSleeve ?? null },
+    })
+    if (!accepted) return
     setOverview(previous => previous ? {
       ...previous,
       assignments: previous.assignments.map(value =>
         value.instrumentId === instrumentId ? { ...value, sleeve } : value),
     } : previous)
-    const previousSleeve = overview?.assignments.find(value => value.instrumentId === instrumentId)?.sleeve
-    queueMutation('investmentAllocation', 'update', instrumentId, {
-      sleeve: sleeve ?? null,
-      undoSnapshot: { sleeve: previousSleeve ?? null },
-    })
   }
 
   const orderedAssignments = useMemo(
@@ -253,12 +261,14 @@ export function InvestmentPlanSection() {
     [overview?.assignments],
   )
   const reorderAssignments = (assignments: InvestmentAllocationOverview['assignments']) => {
+    if (hideSensitive) return
     setOverview(previous => previous ? {
       ...previous,
       assignments: assignments.map((value, order) => ({ ...value, order })),
     } : previous)
   }
   const saveAssignmentOrder = () => {
+    if (hideSensitive) return
     const instrumentIds = [...(overview?.assignments ?? [])]
       .sort((left, right) => left.order - right.order)
       .map(value => value.instrumentId)
@@ -274,6 +284,15 @@ export function InvestmentPlanSection() {
       undoSnapshot: { instrumentIds: previousInstrumentIds },
     })
   }
+
+  useEffect(() => {
+    if (!hideSensitive) return
+    const projected = projectQueuedChanges(cachedOverview())
+    setOverview(projected)
+    setPlan(projected?.plan ?? defaults)
+    setLockedSleeve(null)
+    setGlobalTargetLock(true)
+  }, [hideSensitive])
 
   if (!overview && (loading || isOffline)) {
     return <div className="flex h-40 items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>
@@ -293,6 +312,7 @@ export function InvestmentPlanSection() {
           <Button variant="unstyled"
             type="button"
             onClick={() => setGlobalTargetLock(!globalTargetLock)}
+            disabled={hideSensitive}
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/60 bg-secondary/60 text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer shrink-0 mt-1"
           >
             {globalTargetLock ? <Lock className="size-3" /> : <Unlock className="size-3" />}
@@ -307,7 +327,7 @@ export function InvestmentPlanSection() {
           ] as const).map(([label, key, accentClass]) => (
             <label key={key} className="space-y-2 block">
               <div className="flex justify-between items-center text-[11px] font-bold">
-                <span className="text-muted-foreground flex items-center gap-1.5"><span className="uppercase tracking-wider">{label}</span><Button variant="unstyled" type="button" aria-label={`${lockedSleeve === key ? 'Unlock' : 'Lock'} ${label} target`} onClick={(e) => { e.preventDefault(); toggleSleeveLock(key) }} className="p-1 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-40" disabled={lockedSleeve !== null && lockedSleeve !== key} title={lockedSleeve === key ? "Unlock target" : lockedSleeve ? "Unlock the current target before locking another" : "Lock target"}>{lockedSleeve === key ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</Button></span>
+                <span className="text-muted-foreground flex items-center gap-1.5"><span className="uppercase tracking-wider">{label}</span><Button variant="unstyled" type="button" aria-label={`${lockedSleeve === key ? 'Unlock' : 'Lock'} ${label} target`} onClick={(e) => { e.preventDefault(); toggleSleeveLock(key) }} className="p-1 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-40" disabled={hideSensitive || (lockedSleeve !== null && lockedSleeve !== key)} title={lockedSleeve === key ? "Unlock target" : lockedSleeve ? "Unlock the current target before locking another" : "Lock target"}>{lockedSleeve === key ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</Button></span>
                 <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md">{plan[key]}%</span>
               </div>
               <RangeInput
@@ -315,7 +335,7 @@ export function InvestmentPlanSection() {
                 min="1"
                 max="98"
                 step="1"
-                disabled={globalTargetLock || lockedSleeve === key}
+                disabled={hideSensitive || globalTargetLock || lockedSleeve === key}
                 value={plan[key]}
                 onChange={event => changeTarget(key, Number(event.target.value))}
                 className={`w-full h-2 rounded-full cursor-pointer ${accentClass} bg-border disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -337,7 +357,7 @@ export function InvestmentPlanSection() {
                 hintClassName="text-[9px]"
               >
                 <span className="relative block">
-                  <Input type="number" min="1" max="99" step="1" value={plan.watchDrift} onChange={event => setPlan(value => ({ ...value, watchDrift: Number(event.target.value) }))} className="pr-8" />
+                  <Input type="number" min="1" max="99" step="1" disabled={hideSensitive} value={plan.watchDrift} onChange={event => setPlan(value => ({ ...value, watchDrift: Number(event.target.value) }))} className="pr-8" />
                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">pp</span>
                 </span>
               </FormField>
@@ -349,14 +369,14 @@ export function InvestmentPlanSection() {
                 hintClassName="text-[9px]"
               >
                 <span className="relative block">
-                  <Input type="number" min="2" max="100" step="1" value={plan.alertDrift} onChange={event => setPlan(value => ({ ...value, alertDrift: Number(event.target.value) }))} className="pr-8" />
+                  <Input type="number" min="2" max="100" step="1" disabled={hideSensitive} value={plan.alertDrift} onChange={event => setPlan(value => ({ ...value, alertDrift: Number(event.target.value) }))} className="pr-8" />
                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">pp</span>
                 </span>
               </FormField>
             </div>
           </div>
           {(validation || error) && <p role="alert" className="flex gap-2 text-xs text-destructive"><AlertCircle className="size-4 shrink-0" />{validation || error}</p>}
-          <Button variant="primary" disabled={Boolean(validation) || planSyncing || planPending} aria-busy={planSyncing} onClick={save}>{planSyncing ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} {planSyncing ? 'Saving…' : 'Save targets'}</Button>
+          <Button variant="primary" disabled={hideSensitive || Boolean(validation) || planSyncing || planPending} aria-busy={planSyncing} onClick={save}>{planSyncing ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} {planSyncing ? 'Saving…' : 'Save targets'}</Button>
         </div>
       </section>
 
@@ -377,6 +397,7 @@ export function InvestmentPlanSection() {
               onReorderFinished={saveAssignmentOrder}
               isSyncing={isActive(value.instrumentId)}
               orderBusy={orderSyncing || orderPending}
+              mutationsDisabled={hideSensitive}
               isPending={Boolean(investmentOps.find(operation =>
                 operation.entity === 'investmentAllocation'
                 && operation.type === 'update'

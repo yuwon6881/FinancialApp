@@ -29,6 +29,7 @@ import { CategoryFlowFilter } from './settings/CategoryFlowFilter'
 import type { SensitivePreferenceStatus } from '../app/useAppPreferences'
 import { FormField } from './ui/FormField'
 import { Button } from './ui/Button'
+import { SensitiveMask } from './ui/SensitiveAmount'
 
 interface SettingsViewProps {
   dashboardData: DashboardData | null
@@ -243,30 +244,33 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField label="Target stability fund limit" required error={view.errors.target}>
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  disabled={hideSensitive}
-                  value={view.targetInput}
-                  onChange={e => {
-                    const val = e.target.value
-                    if (!/^\d*\.?\d{0,2}$/.test(val)) return
-                    view.setTargetInput(val)
-                    if (view.errors.target) {
-                      view.setErrors(prev => {
-                        const next = { ...prev }
-                        delete next.target
-                        return next
-                      })
-                    }
-                  }}
-                  className={hideSensitive ? 'border-transparent text-transparent blur-sm select-none pointer-events-none' : undefined}
-                />
+                {hideSensitive ? (
+                  <div className="flex h-10 items-center rounded-md border border-border bg-muted/20 px-3"><SensitiveMask /></div>
+                ) : (
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={view.targetInput}
+                    onChange={e => {
+                      const val = e.target.value
+                      if (!/^\d*\.?\d{0,2}$/.test(val)) return
+                      view.setTargetInput(val)
+                      if (view.errors.target) {
+                        view.setErrors(prev => {
+                          const next = { ...prev }
+                          delete next.target
+                          return next
+                        })
+                      }
+                    }}
+                  />
+                )}
               </FormField>
 
               <FormField label="Ledger cycle day">
                 <CustomSelect
                   ariaLabel="Ledger cycle day"
+                  disabled={hideSensitive}
                   value={view.cycleDayInput}
                   onChange={val => view.setCycleDayInput(String(val))}
                   options={Array.from({ length: 28 }, (_, i) => ({
@@ -280,6 +284,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
               <FormField label="Default account currency">
                 <CurrencySelect
                   ariaLabel="Default account currency"
+                  disabled={hideSensitive}
                   value={view.currencyInput}
                   onChange={view.setCurrencyInput}
                   className="w-full"
@@ -289,6 +294,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
               <FormField label="Stability fund overflow redirect">
                 <CustomSelect
                   ariaLabel="Stability fund overflow redirect"
+                  disabled={hideSensitive}
                   value={view.stabilityOverflowRedirectInput}
                   onChange={val => view.setStabilityOverflowRedirectInput(String(val))}
                   options={[
@@ -317,6 +323,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   size="sm"
                   type="button"
                   onClick={() => view.setGlobalAllocLock(!view.globalAllocLock)}
+                  disabled={hideSensitive}
                   className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/60 bg-secondary/60 text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer"
                 >
                   {view.globalAllocLock ? <Lock className="size-3" /> : <Unlock className="size-3" />}
@@ -333,10 +340,10 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                 ] as const).map(([label, value, key, accentClass]) => (
                   <label key={label} className="space-y-2 block">
                     <div className="flex justify-between items-center text-[11px] font-bold">
-                      <span className="text-muted-foreground flex items-center gap-1.5"><span className="uppercase tracking-wider">{label}</span><Button variant="ghost" size="icon" type="button" onClick={() => view.toggleLock(key)} className="size-6 text-muted-foreground hover:text-foreground hover:bg-muted" title={view.lockedAllocations.includes(key) ? 'Unlock' : 'Lock'}>{view.lockedAllocations.includes(key) ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</Button></span>
+                      <span className="text-muted-foreground flex items-center gap-1.5"><span className="uppercase tracking-wider">{label}</span><Button variant="ghost" size="icon" type="button" onClick={() => view.toggleLock(key)} disabled={hideSensitive} className="size-6 text-muted-foreground hover:text-foreground hover:bg-muted" title={view.lockedAllocations.includes(key) ? 'Unlock' : 'Lock'}>{view.lockedAllocations.includes(key) ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</Button></span>
                       <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md">{Number(value).toFixed(0)}%</span>
                     </div>
-                    <RangeInput  min="0" max="100" step="5" disabled={view.globalAllocLock || view.lockedAllocations.includes(key)} value={value} onChange={e => view.handleAllocationChange(key, parseFloat(e.target.value))} className={`w-full h-2 rounded-full cursor-pointer ${accentClass} bg-border disabled:opacity-50 disabled:cursor-not-allowed`} />
+                    <RangeInput  min="0" max="100" step="5" disabled={hideSensitive || view.globalAllocLock || view.lockedAllocations.includes(key)} value={value} onChange={e => view.handleAllocationChange(key, parseFloat(e.target.value))} className={`w-full h-2 rounded-full cursor-pointer ${accentClass} bg-border disabled:opacity-50 disabled:cursor-not-allowed`} />
                   </label>
                 ))}
               </div>
@@ -348,7 +355,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             <div className="flex justify-end pt-3">
               <Button
                 type="submit"
-                disabled={settingsSyncing || settingsPending}
+                disabled={hideSensitive || settingsSyncing || settingsPending}
                 aria-busy={settingsSyncing}
                 className="rounded-xl px-4 py-2 shadow-lg shadow-primary/10 hover:shadow-primary/20"
               >
@@ -358,7 +365,12 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             </div>
           </form>
 
-          <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4 lg:col-span-1">
+          {/* The two narrow panels share one column so both sit *beside* the Financial Model form.
+              As three direct grid children the third one wrapped to a second row under the wide
+              form on lg, leaving Notifications stranded below with a column of empty space
+              alongside it. */}
+          <div className="space-y-6 lg:col-span-1">
+          <div className="p-4 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xs space-y-4">
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
               <div>
                 <h3 className="text-sm font-bold text-foreground">App Preferences</h3>
@@ -420,7 +432,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
               the three switches here have three different scopes (this device, this device,
               every device), which is unreadable when they are stacked as peers with settings
               that are all device-local. */}
-          <div className="lg:col-span-1">
+          <div>
             <NotificationsCard
               notifyOnLoginEnabled={props.notifyOnLoginEnabled || false}
               onToggleNotifyOnLogin={checked => props.onToggleNotifyOnLogin?.(checked)}
@@ -436,6 +448,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
               hasSpendingGuides={hasSpendingGuides}
               onNavigateToCategoryLimits={() => setActiveTab('categories-preferences')}
             />
+          </div>
           </div>
         </div>
       )}
@@ -462,32 +475,35 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
             >
               <div className="min-w-0">
                 <h3 className="text-sm font-bold text-foreground">Transaction Categories</h3>
-                <div className="text-[11px] text-muted-foreground mt-0.5">
-                  <div>
+                {/* One row of chips, not up to four stacked lines. Each line was independently
+                    conditional, so the header grew and shrank as the usage request resolved and
+                    the collapse control moved out from under the cursor reaching for it. */}
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+                  <span>
                     {isCategoryListLoading
-                      ? 'Loading categories\u2026'
-                      : `${view.visibleCategories.length} active categories.`}
-                  </div>
+                      ? 'Loading categories…'
+                      : `${view.visibleCategories.length} active`}
+                  </span>
                   {view.isLoadingUsage && (
-                    <div className="flex items-center gap-1">
+                    <span className="flex items-center gap-1">
                       <Loader2 className="size-3 animate-spin" />
                       Checking usage…
-                    </div>
+                    </span>
                   )}
                   {view.categoryUsage && view.unusedCategoryCount > 0 && (
-                    <div className="text-orange-500 font-semibold mt-0.5">
-                      {view.unusedCategoryCount} unused in last {view.USAGE_LOOKBACK_CYCLES} cycles
-                    </div>
+                    <span className="rounded-full bg-orange-500/10 px-2 py-0.5 font-semibold text-orange-500">
+                      {view.unusedCategoryCount} unused
+                    </span>
                   )}
                   {view.categoryUsage && view.rarelyUsedCategoryCount > 0 && (
-                    <div className="text-amber-600 dark:text-amber-500 font-semibold mt-0.5">
+                    <span className="rounded-full bg-amber-500/10 px-2 py-0.5 font-semibold text-amber-600 dark:text-amber-500">
                       {view.rarelyUsedCategoryCount} rarely used
-                    </div>
+                    </span>
                   )}
                   {view.categoryUsage && view.unusedCategoryCount === 0 && view.rarelyUsedCategoryCount === 0 && view.visibleCategories.length > 0 && (
-                    <div className="text-emerald-500 font-semibold mt-0.5">
+                    <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 font-semibold text-emerald-500">
                       all used recently
-                    </div>
+                    </span>
                   )}
                 </div>
               </div>
@@ -692,12 +708,14 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                 )}
 
                 <CategoryFlowFilter rows={categoryRows} flowTypeDrafts={flowTypeDrafts}>
-                  {filteredCategoryRows => <ManageableNameList
+                  {(filteredCategoryRows, flowControl) => <ManageableNameList
                   items={filteredCategoryRows.map(({ category, count }) => ({ ...category, count }))}
                   duplicateItems={categoryRows.map(({ category, count }) => ({ ...category, count }))}
                   itemLabel="Category"
                   addPlaceholder="New Category Name"
                   addFormTitle="Add a category"
+                  addFormDescription="It starts open to both money in and money out; change that from the badge beside its name."
+                  filterSlot={flowControl}
                   disabled={hideSensitive}
                   isLoading={isCategoryListLoading}
                   validateName={name => ['transfer', 'adjustment'].includes(name.toLowerCase()) ? 'Name is a reserved word.' : null}

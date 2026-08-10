@@ -22,6 +22,43 @@ const ScopeChip: React.FC<{ scope: string }> = ({ scope }) => (
   </span>
 )
 
+/**
+ * One switch and everything that describes it, in a fixed shape: icon, name, scope, busy badge,
+ * a single line of explanation, control on the right.
+ *
+ * The three rows here used to be written out longhand, and each drifted into carrying a different
+ * amount of prose — the panel read as three unrelated settings stacked rather than one list. A
+ * shared row also caps the explanation at one line by construction, which is the actual fix for a
+ * panel that had grown too wordy to scan.
+ */
+const NotificationRow: React.FC<{
+  icon: React.ReactNode
+  title: string
+  scope: string
+  description: string
+  hint?: React.ReactNode
+  status?: React.ReactNode
+  control: React.ReactNode
+}> = ({ icon, title, scope, description, hint, status, control }) => (
+  <div className="flex items-start justify-between gap-3">
+    <div className="flex min-w-0 flex-1 gap-2">
+      <span className="mt-0.5 shrink-0 text-muted-foreground" aria-hidden="true">{icon}</span>
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium text-foreground">
+          <span className="truncate">{title}</span>
+          <ScopeChip scope={scope} />
+          {status}
+        </span>
+        <span className="text-[10px] leading-relaxed text-muted-foreground">{description}</span>
+      </span>
+    </div>
+    <div className="flex shrink-0 items-center gap-1.5">
+      {hint}
+      {control}
+    </div>
+  </div>
+)
+
 export interface NotificationsCardProps {
   notifyOnLoginEnabled: boolean
   onToggleNotifyOnLogin: (checked: boolean) => void
@@ -46,6 +83,14 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
   // to store the consent without one. The switch used to quietly enable this device first --
   // a browser permission prompt raised by a control that never mentioned devices or permission.
   const categoryAlertsBlocked = deviceUnavailable || !props.pushEnabled
+  // At most one line of explanation under the alerts row. Both conditions can hold at once, and
+  // rendering both stacked two caveats under a switch that is already disabled -- only the reason
+  // it cannot be turned on right now is worth the line.
+  const alertsNote = categoryAlertsBlocked && props.pushSupported
+    ? CATEGORY_ALERTS_NEED_DEVICE
+    : !props.hasSpendingGuides
+      ? 'You have not set a planned amount for any category yet, so there is nothing to alert on.'
+      : null
 
   return (
     <section
@@ -59,32 +104,28 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
         </p>
       </div>
 
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between gap-3 text-sm">
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <BellRing className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="flex items-center gap-2 font-medium text-foreground">
-                <span className="truncate">Notifications on this device</span>
-                <ScopeChip scope={SCOPE_THIS_DEVICE} />
-                <RowSyncStatus isSyncing={props.deviceBusy} entityLabel="device notifications" />
-              </span>
-              <span className="text-[10px] leading-relaxed text-muted-foreground">{PUSH_DESCRIPTION}</span>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-1.5">
+      <div className="space-y-3">
+        <NotificationRow
+          icon={<BellRing className="size-4" />}
+          title="Notifications on this device"
+          scope={SCOPE_THIS_DEVICE}
+          description={PUSH_DESCRIPTION}
+          status={<RowSyncStatus isSyncing={props.deviceBusy} entityLabel="device notifications" />}
+          hint={
             <InfoHint
               label="How notifications are turned on"
               text="Each device is set up separately, even on the same account. A phone only shows notifications once you turn this on while using that phone, and your browser has to allow them."
             />
+          }
+          control={
             <ToggleButton
               active={props.pushEnabled}
               onClick={() => props.onTogglePushEnabled(!props.pushEnabled)}
               label="Notifications on this device"
               disabled={anyBusy || deviceUnavailable}
             />
-          </div>
-        </div>
+          }
+        />
 
         {/* amber-500 is aliased to --ledger-pending-500 in index.css, so this is the theme's own
             "needs attention" gold rather than a raw Tailwind palette colour. */}
@@ -98,41 +139,29 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
           </div>
         )}
 
-        {/* Everything below depends on the switch above, and the left rule is what says so. */}
-        <div className="ml-2 space-y-2 border-l border-border/50 pl-3 pt-1">
-          <div className="flex items-center justify-between gap-3 text-sm">
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="flex items-center gap-2 font-medium text-foreground">
-                <Gauge className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                <span className="truncate">Category spending alerts</span>
-                <ScopeChip scope={SCOPE_ALL_DEVICES} />
-                <RowSyncStatus isSyncing={props.categoryAlertsBusy} entityLabel="spending alerts" />
-              </span>
-              <span className="text-[10px] leading-relaxed text-muted-foreground">
-                {CATEGORY_LIMIT_PUSH_DESCRIPTION}
-              </span>
-            </div>
-            <ToggleButton
-              active={props.categoryAlertsEnabled}
-              onClick={() => props.onToggleCategoryAlerts(!props.categoryAlertsEnabled)}
-              label="Category spending alerts"
-              disabled={anyBusy || categoryAlertsBlocked}
-            />
-          </div>
+        {/* Everything here depends on the switch above, and the left rule is what says so. */}
+        <div className="ml-2 space-y-2 border-l border-border/50 pl-3">
+          <NotificationRow
+            icon={<Gauge className="size-4" />}
+            title="Category spending alerts"
+            scope={SCOPE_ALL_DEVICES}
+            description={CATEGORY_LIMIT_PUSH_DESCRIPTION}
+            status={<RowSyncStatus isSyncing={props.categoryAlertsBusy} entityLabel="spending alerts" />}
+            control={
+              <ToggleButton
+                active={props.categoryAlertsEnabled}
+                onClick={() => props.onToggleCategoryAlerts(!props.categoryAlertsEnabled)}
+                label="Category spending alerts"
+                disabled={anyBusy || categoryAlertsBlocked}
+              />
+            }
+          />
 
-          {categoryAlertsBlocked && props.pushSupported && (
-            <p className="text-[10px] font-medium text-muted-foreground">{CATEGORY_ALERTS_NEED_DEVICE}</p>
-          )}
+          {alertsNote && <p className="text-[10px] font-medium text-muted-foreground">{alertsNote}</p>}
 
-          {/* An alert can only fire for a category that has an amount to compare against, so
-              switching this on with none set up is a promise nothing will ever keep. */}
-          {!props.hasSpendingGuides && (
-            <p className="text-[10px] font-medium text-muted-foreground">
-              You have not set a planned amount for any category yet, so there is nothing to alert on.
-            </p>
-          )}
-
-          {props.onNavigateToCategoryLimits && (
+          {/* Only offered when there is nothing to watch, which is the one state where it is the
+              fix rather than a permanent extra link under a working switch. */}
+          {!props.hasSpendingGuides && props.onNavigateToCategoryLimits && (
             <Button
               variant="unstyled"
               type="button"
@@ -142,32 +171,34 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
               Set planned amounts per category <ChevronRight className="size-3" aria-hidden="true" />
             </Button>
           )}
+        </div>
 
-          <div className="pt-1">
-            <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-              Devices set up
-            </p>
+        <NotificationRow
+          icon={<Bell className="size-4" />}
+          title="Bill alerts when you open the app"
+          scope={SCOPE_THIS_DEVICE}
+          description={NOTIFY_ON_LOGIN_DESCRIPTION}
+          control={
+            <ToggleButton
+              active={props.notifyOnLoginEnabled}
+              onClick={() => props.onToggleNotifyOnLogin(!props.notifyOnLoginEnabled)}
+              label="Bill alerts when you open the app"
+            />
+          }
+        />
+
+        {/* The device roster is reference material, not a control: it answers "which browsers did
+            I ever turn this on in", which is a question people ask occasionally and never on the
+            way to changing a setting. Left open it was the tallest thing in the panel. */}
+        <details className="group border-t border-border/30 pt-3">
+          <summary className="flex cursor-pointer list-none items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground transition hover:text-foreground">
+            <ChevronRight className="size-3 transition-transform group-open:rotate-90" aria-hidden="true" />
+            Devices set up
+          </summary>
+          <div className="pt-2">
             <PushDevicesList refreshKey={props.pushEnabled ? 1 : 0} />
           </div>
-        </div>
-
-        <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-3 text-sm">
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <Bell className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="flex items-center gap-2 font-medium text-foreground">
-                <span className="truncate">Bill alerts when you open the app</span>
-                <ScopeChip scope={SCOPE_THIS_DEVICE} />
-              </span>
-              <span className="text-[10px] leading-relaxed text-muted-foreground">{NOTIFY_ON_LOGIN_DESCRIPTION}</span>
-            </div>
-          </div>
-          <ToggleButton
-            active={props.notifyOnLoginEnabled}
-            onClick={() => props.onToggleNotifyOnLogin(!props.notifyOnLoginEnabled)}
-            label="Bill alerts when you open the app"
-          />
-        </div>
+        </details>
       </div>
     </section>
   )

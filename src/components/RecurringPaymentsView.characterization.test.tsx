@@ -426,6 +426,19 @@ describe('RecurringPaymentsView characterization', () => {
       render(<RecurringPaymentsView {...makeProps()} />)
       expect(within(getCard('Netflix')).getByText('$15.99')).toBeTruthy()
     })
+
+    it('closes and clears an open add sheet when sensitive mode activates', () => {
+      const onAddPayment = vi.fn()
+      const { rerender } = render(<RecurringPaymentsView {...makeProps({ onAddPayment })} />)
+      fireEvent.click(screen.getByRole('button', { name: 'New Subscription' }))
+      fireEvent.change(screen.getByPlaceholderText('e.g. Netflix, Spotify'), { target: { value: 'Private draft' } })
+
+      rerender(<RecurringPaymentsView {...makeProps({ hideSensitive: true, onAddPayment })} />)
+
+      expect(screen.queryByPlaceholderText('e.g. Netflix, Spotify')).toBeNull()
+      expect((screen.getByRole('button', { name: 'New Subscription' }) as HTMLButtonElement).disabled).toBe(true)
+      expect(onAddPayment).not.toHaveBeenCalled()
+    })
   })
 
   describe('BillTimeline integration', () => {
