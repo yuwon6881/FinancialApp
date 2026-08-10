@@ -445,7 +445,35 @@ test('rewards rail responds to a desktop mouse wheel and releases page scrolling
   await expect.poll(() => rail.evaluate(element => element.scrollLeft)).toBeGreaterThan(0)
 
   await rail.evaluate(element => { element.scrollLeft = element.scrollWidth })
+
+  // Put the page somewhere it can actually move from, rather than trusting where scrolling the rail
+  // into view happened to leave it. The rail sits at the bottom of Rewards, so bringing it into view
+  // pins the page at its end — and a page that cannot scroll is indistinguishable from a rail that
+  // refused to hand the wheel over, which is the whole point of the assertion below. This used to
+  // pass on 32px of incidental headroom, so a content change worth 100px of page height broke it
+  // while the handoff itself still worked.
+  const EDGE_HANDOFF_HEADROOM = 120
+  await page.evaluate(headroom => {
+    window.scrollTo(0, Math.max(0, document.documentElement.scrollHeight - window.innerHeight - headroom))
+  }, EDGE_HANDOFF_HEADROOM)
+
+  // The page moved, so the rail did too; re-read it and hover a point inside both the rail and the
+  // viewport. Hovering outside the rail would let the wheel reach the page directly and pass for the
+  // wrong reason. `rail.hover()` is not usable here — it would scroll the rail back into view.
+  const edgeBox = await rail.boundingBox()
+  if (!edgeBox) throw new Error('Rewards rail did not have a layout box at the page edge')
+  const viewport = page.viewportSize()
+  if (!viewport) throw new Error('Viewport size was unavailable')
+  const hoverY = Math.min(edgeBox.y + edgeBox.height / 2, viewport.height - 4)
+  expect(hoverY, 'the hover point must sit inside the rail').toBeGreaterThan(edgeBox.y)
+  await page.mouse.move(edgeBox.x + edgeBox.width / 2, hoverY)
+
   const pageOffsetBeforeEdgeWheel = await page.evaluate(() => window.scrollY)
+  const remainingPageScroll = await page.evaluate(
+    () => document.documentElement.scrollHeight - window.innerHeight - window.scrollY,
+  )
+  expect(remainingPageScroll, 'the page needs somewhere to scroll for the handoff to be observable').toBeGreaterThan(0)
+
   await page.mouse.wheel(0, 240)
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(pageOffsetBeforeEdgeWheel)
 })
