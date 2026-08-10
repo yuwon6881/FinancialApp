@@ -198,13 +198,13 @@ describe('SavingsGoalCard cycle share', () => {
     expect(screen.queryByText('This cycle')).toBeNull()
   })
 
-  it('mounts compact management actions without inheriting completion styles', () => {
+  it('animates into compact management actions without inheriting completion styles', async () => {
     renderCard()
     const completeButton = screen.getByRole('button', { name: 'Complete this cycle for Car Maintenance' })
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit or delete Car Maintenance' }))
 
-    const deleteButton = screen.getByRole('button', { name: 'Delete Car Maintenance' })
+    const deleteButton = await screen.findByRole('button', { name: 'Delete Car Maintenance' })
     expect(deleteButton).not.toBe(completeButton)
     expect(deleteButton.className).toContain('shrink-0')
     expect(deleteButton.className).not.toContain('flex-1')
@@ -212,13 +212,13 @@ describe('SavingsGoalCard cycle share', () => {
 })
 
 describe('RewardCard management actions', () => {
-  it('mounts compact management actions without inheriting the claim style', () => {
+  it('animates into compact management actions without inheriting the claim style', async () => {
     renderRewardCard()
     const claimButton = screen.getByRole('button', { name: 'Claim' })
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit or delete Noise-cancelling headphones' }))
 
-    const editButton = screen.getByRole('button', { name: 'Edit Noise-cancelling headphones' })
+    const editButton = await screen.findByRole('button', { name: 'Edit Noise-cancelling headphones' })
     expect(editButton).not.toBe(claimButton)
     expect(editButton.className).toContain('shrink-0')
     expect(editButton.className).not.toContain('flex-1')

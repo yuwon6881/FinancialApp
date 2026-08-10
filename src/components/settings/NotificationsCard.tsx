@@ -44,12 +44,12 @@ const NotificationRow: React.FC<{
     <div className="flex min-w-0 flex-1 gap-2">
       <span className="mt-0.5 shrink-0 text-muted-foreground" aria-hidden="true">{icon}</span>
       <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium text-foreground">
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] font-medium text-foreground sm:text-sm">
           <span className="truncate">{title}</span>
           <ScopeChip scope={scope} />
           {status}
         </span>
-        <span className="text-[10px] leading-relaxed text-muted-foreground">{description}</span>
+        <span className="text-[10px] leading-snug text-muted-foreground">{description}</span>
       </span>
     </div>
     <div className="flex shrink-0 items-center gap-1.5">
@@ -95,16 +95,16 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
   return (
     <section
       aria-labelledby="settings-notifications-heading"
-      className="app-panel rounded-2xl border border-border/60 bg-card/92 p-5 space-y-4"
+      className="app-panel space-y-3 rounded-2xl border border-border/60 bg-card/92 p-4 sm:space-y-4 sm:p-5"
     >
-      <div className="border-b border-border/40 pb-3">
+      <div className="border-b border-border/40 pb-2.5 sm:pb-3">
         <h3 id="settings-notifications-heading" className="text-sm font-bold text-foreground">Notifications</h3>
         <p className="mt-0.5 text-[11px] text-muted-foreground">
           Choose what you are told about, and on which devices.
         </p>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2.5 sm:space-y-3">
         <NotificationRow
           icon={<BellRing className="size-4" />}
           title="Notifications on this device"
@@ -135,12 +135,12 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
             className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 p-2.5 text-amber-500"
           >
             <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-            <p className="flex-1 text-xs font-medium leading-relaxed">{props.pushGuidance}</p>
+            <p className="flex-1 text-[11px] font-medium leading-snug sm:text-xs">{props.pushGuidance}</p>
           </div>
         )}
 
         {/* Everything here depends on the switch above, and the left rule is what says so. */}
-        <div className="ml-2 space-y-2 border-l border-border/50 pl-3">
+        <div className="ml-1 space-y-2 border-l border-border/50 pl-2 sm:ml-2 sm:pl-3">
           <NotificationRow
             icon={<Gauge className="size-4" />}
             title="Category spending alerts"
@@ -157,7 +157,7 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
             }
           />
 
-          {alertsNote && <p className="text-[10px] font-medium text-muted-foreground">{alertsNote}</p>}
+          {alertsNote && <p className="text-[10px] font-medium leading-snug text-muted-foreground">{alertsNote}</p>}
 
           {/* Only offered when there is nothing to watch, which is the one state where it is the
               fix rather than a permanent extra link under a working switch. */}

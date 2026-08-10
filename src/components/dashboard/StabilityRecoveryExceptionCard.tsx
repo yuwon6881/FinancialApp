@@ -56,7 +56,7 @@ export function StabilityRecoveryExceptionCard({
       initial={reduceMotion ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       aria-labelledby="stability-recovery-exception"
-      className="app-panel rounded-2xl border border-amber-500/30 bg-amber-500/8 p-5 sm:p-6"
+      className="app-panel rounded-2xl border border-amber-500/30 bg-amber-500/8 p-4 sm:p-6"
     >
       <div className="flex flex-col gap-4">
         <div className="space-y-3 min-w-0">
@@ -86,9 +86,9 @@ export function StabilityRecoveryExceptionCard({
           </p>
 
           <div className="space-y-1.5 pt-1">
-            <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs">
+            <div className="grid gap-0.5 text-xs sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-2 sm:gap-y-1">
               <span className="font-semibold text-muted-foreground">Emergency fund progress</span>
-              <span className="font-semibold text-foreground tabular-nums">
+              <span className="font-semibold text-foreground tabular-nums sm:text-right">
                 <span className="font-extrabold text-amber-600 dark:text-amber-400">{percentReached}%</span> of {formatSensitive(recovery.recoverableCeiling)} to restore
               </span>
             </div>
@@ -110,26 +110,29 @@ export function StabilityRecoveryExceptionCard({
               Where this figure comes from
             </summary>
             <div className="mt-2 space-y-2 rounded-xl border border-amber-500/20 bg-card/60 p-3">
-              <dl className="space-y-1.5 text-xs">
-                <div className="flex items-baseline justify-between gap-3">
-                  <dt className="text-muted-foreground">Highest your fund has reached</dt>
-                  <dd className="font-semibold tabular-nums text-foreground">{formatSensitive(recovery.recoverableCeiling)}</dd>
+              <dl className="space-y-1.5 text-[11px] sm:text-xs">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
+                  <dt className="min-w-0 leading-snug text-muted-foreground">Highest your fund has reached</dt>
+                  <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.recoverableCeiling)}</dd>
                 </div>
-                <div className="flex items-baseline justify-between gap-3">
-                  <dt className="text-muted-foreground">In it now</dt>
-                  <dd className="font-semibold tabular-nums text-foreground">{formatSensitive(recovery.currentBalance)}</dd>
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
+                  <dt className="min-w-0 leading-snug text-muted-foreground">In it now</dt>
+                  <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.currentBalance)}</dd>
                 </div>
-                <div className="flex items-baseline justify-between gap-3 border-t border-border/40 pt-1.5">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2 border-t border-border/40 pt-1.5">
                   <dt className="font-semibold text-foreground">Short by</dt>
-                  <dd className="font-extrabold tabular-nums text-amber-600 dark:text-amber-400">
+                  <dd className="text-right font-extrabold tabular-nums text-amber-600 dark:text-amber-400">
                     {formatSensitive(recovery.outstandingShortfall)}
                   </dd>
                 </div>
-                <div className="flex items-baseline justify-between gap-3">
-                  <dt className="text-muted-foreground">
-                    Spread over {recovery.cyclesRemaining} {recovery.cyclesRemaining === 1 ? 'cycle' : 'cycles'}, already back this cycle
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
+                  <dt className="min-w-0 leading-snug text-muted-foreground">
+                    <span className="sm:hidden">Back this cycle ({recovery.cyclesRemaining} {recovery.cyclesRemaining === 1 ? 'cycle' : 'cycles'})</span>
+                    <span className="hidden sm:inline">
+                      Spread over {recovery.cyclesRemaining} {recovery.cyclesRemaining === 1 ? 'cycle' : 'cycles'}, already back this cycle
+                    </span>
                   </dt>
-                  <dd className="font-semibold tabular-nums text-foreground">{formatSensitive(recovery.toppedUpThisCycle)}</dd>
+                  <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.toppedUpThisCycle)}</dd>
                 </div>
               </dl>
 
@@ -152,10 +155,9 @@ export function StabilityRecoveryExceptionCard({
                   </Button>
                   {/* Said plainly rather than left to be discovered: the ledger totals it lands on
                       are per page, and the window can run to more rows than one page holds. */}
-                  <p className="text-[10px] leading-relaxed text-muted-foreground">
-                    Opens your ledger filtered to emergency-fund movements from the start of the cycle
-                    after it was last full. The list totals each page, so a long window needs more
-                    than one page to add up to the figure above.
+                  <p className="text-[10px] leading-snug text-muted-foreground">
+                    Opens your ledger on emergency-fund movements from when your fund was last full.
+                    A long window may span more than one page.
                   </p>
                 </>
               ) : (

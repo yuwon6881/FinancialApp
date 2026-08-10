@@ -1,4 +1,5 @@
 import React from 'react'
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion'
 import { CalendarClock, CheckCircle2, Edit2, Minus, MoreHorizontal, Plus, Repeat, Trash2, X } from 'lucide-react'
 import type { SavingsGoal } from '../../types'
 import type { GoalPace, GoalPaceStatus } from '../../lib/savingsGoals'
@@ -66,6 +67,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
   onTopUp,
   onRelease,
 }) => {
+  const reduceMotion = useReducedMotion()
   const pct = goal.targetAmount > 0
     ? Math.max(0, Math.min(100, (goal.earmarkedAmount / goal.targetAmount) * 100))
     : 0
@@ -167,100 +169,116 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
           close button past the card edge — and nobody needs the top-up buttons while deciding whether
           to delete. Keep the management actions content-sized so a wide desktop card does not turn
           two short labels into oversized full-width controls. */}
-      <div className="mt-auto flex items-center justify-end gap-1.5 border-t border-border/30 pt-3">
-        {showManage ? (
-          <React.Fragment key="manage-actions">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="shrink-0"
-              onClick={() => onEdit(goal)}
-              disabled={isBusy || hideSensitive}
-              aria-label={`Edit ${goal.name}`}
-              title={hideSensitive ? 'Unhide balances to edit' : 'Edit goal'}
+      <div className="mt-auto flex items-center gap-1.5 border-t border-border/30 pt-3">
+        <AnimatePresence initial={false} mode="wait">
+          {showManage ? (
+            <m.div
+              key="manage-actions"
+              initial={reduceMotion ? false : { opacity: 0, y: 4, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.98 }}
+              transition={{ duration: reduceMotion ? 0 : 0.18, ease: 'easeOut' }}
+              className="ml-auto flex items-center gap-1.5"
             >
-              <Edit2 className="size-3.5 shrink-0" /> Edit
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              className="shrink-0"
-              onClick={() => onDelete(goal.id)}
-              disabled={isBusy || hideSensitive}
-              aria-label={`Delete ${goal.name}`}
-              title={hideSensitive ? 'Unhide balances to delete' : 'Delete goal'}
-            >
-              <Trash2 className="size-3.5 shrink-0" /> Delete
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="shrink-0"
-              onClick={() => setShowManage(false)}
-              aria-expanded
-              aria-label={`Hide edit and delete for ${goal.name}`}
-              title="Back"
-            >
-              <X className="size-3.5" />
-            </Button>
-          </React.Fragment>
-        ) : (
-          <React.Fragment key="primary-actions">
-            <div className="flex items-center gap-px rounded-lg overflow-hidden shrink-0 shadow-xs ring-1 ring-border/50">
               <Button
-                variant="secondary"
-                size="icon"
-                className="rounded-none border-none shadow-none hover:shadow-none"
-                onClick={() => onTopUp(goal)}
-                disabled={isBusy || hideSensitive || pace.isFunded}
-                aria-label={`Add money to ${goal.name}`}
-                title={pace.isFunded ? 'This goal already has everything it needs' : 'Move free rewards into this goal'}
+                variant="ghost"
+                size="sm"
+                className="shrink-0"
+                onClick={() => onEdit(goal)}
+                disabled={isBusy || hideSensitive}
+                aria-label={`Edit ${goal.name}`}
+                title={hideSensitive ? 'Unhide balances to edit' : 'Edit goal'}
               >
-                <Plus className="size-3.5" />
+                <Edit2 className="size-3.5 shrink-0" /> Edit
               </Button>
-              <div className="w-px h-5 bg-border/40" aria-hidden />
               <Button
-                variant="secondary"
+                variant="danger"
+                size="sm"
+                className="shrink-0"
+                onClick={() => onDelete(goal.id)}
+                disabled={isBusy || hideSensitive}
+                aria-label={`Delete ${goal.name}`}
+                title={hideSensitive ? 'Unhide balances to delete' : 'Delete goal'}
+              >
+                <Trash2 className="size-3.5 shrink-0" /> Delete
+              </Button>
+              <Button
+                variant="ghost"
                 size="icon"
-                className="rounded-none border-none shadow-none hover:shadow-none"
-                onClick={() => onRelease(goal)}
+                className="shrink-0"
+                onClick={() => setShowManage(false)}
+                aria-expanded
+                aria-label={`Hide edit and delete for ${goal.name}`}
+                title="Back"
+              >
+                <X className="size-3.5" />
+              </Button>
+            </m.div>
+          ) : (
+            <m.div
+              key="primary-actions"
+              initial={reduceMotion ? false : { opacity: 0, y: 4, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.98 }}
+              transition={{ duration: reduceMotion ? 0 : 0.18, ease: 'easeOut' }}
+              className="flex min-w-0 flex-1 items-center gap-1"
+            >
+              <div className="flex items-center gap-px rounded-lg overflow-hidden shrink-0 shadow-xs ring-1 ring-border/50">
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="rounded-none border-none shadow-none hover:shadow-none"
+                  onClick={() => onTopUp(goal)}
+                  disabled={isBusy || hideSensitive || pace.isFunded}
+                  aria-label={`Add money to ${goal.name}`}
+                  title={pace.isFunded ? 'This goal already has everything it needs' : 'Move free rewards into this goal'}
+                >
+                  <Plus className="size-3.5" />
+                </Button>
+                <div className="w-px h-5 bg-border/40" aria-hidden />
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="rounded-none border-none shadow-none hover:shadow-none"
+                  onClick={() => onRelease(goal)}
+                  disabled={isBusy || hideSensitive || goal.earmarkedAmount <= 0}
+                  aria-label={`Release money from ${goal.name}`}
+                  title="Release money back to your free rewards"
+                >
+                  <Minus className="size-3.5" />
+                </Button>
+              </div>
+              <Button
+                variant="successGhost"
+                size="icon"
+                className="shrink-0"
+                onClick={() => onComplete(goal.id)}
                 disabled={isBusy || hideSensitive || goal.earmarkedAmount <= 0}
-                aria-label={`Release money from ${goal.name}`}
-                title="Release money back to your free rewards"
+                aria-label={goal.isRecurring ? `Complete this cycle for ${goal.name}` : `Mark ${goal.name} done`}
+                title={goal.earmarkedAmount <= 0
+                  ? 'Set aside some rewards before marking this commitment done'
+                  : goal.isRecurring
+                    ? 'Spend the saved amount and roll the deadline forward'
+                    : 'Spend the saved amount and mark this commitment done'}
               >
-                <Minus className="size-3.5" />
+                <CheckCircle2 className="size-3.5" />
               </Button>
-            </div>
-            <Button
-              variant="successGhost"
-              size="icon"
-              className="shrink-0"
-              onClick={() => onComplete(goal.id)}
-              disabled={isBusy || hideSensitive || goal.earmarkedAmount <= 0}
-              aria-label={goal.isRecurring ? `Complete this cycle for ${goal.name}` : `Mark ${goal.name} done`}
-              title={goal.earmarkedAmount <= 0
-                ? 'Set aside some rewards before marking this commitment done'
-                : goal.isRecurring
-                  ? 'Spend the saved amount and roll the deadline forward'
-                  : 'Spend the saved amount and mark this commitment done'}
-            >
-              <CheckCircle2 className="size-3.5" />
-            </Button>
-            {/* Swipe-to-reveal is not an option for these two: the card lives in a horizontally
-                scrolling rail, so a horizontal drag on it belongs to the rail. */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="ml-auto shrink-0"
-              onClick={() => setShowManage(true)}
-              aria-expanded={false}
-              aria-label={`Edit or delete ${goal.name}`}
-              title="Edit or delete"
-            >
-              <MoreHorizontal className="size-3.5" />
-            </Button>
-          </React.Fragment>
-        )}
+              {/* Swipe-to-reveal is not an option for these two: the card lives in a horizontally
+                  scrolling rail, so a horizontal drag on it belongs to the rail. */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="ml-auto shrink-0"
+                onClick={() => setShowManage(true)}
+                aria-expanded={false}
+                aria-label={`Edit or delete ${goal.name}`}
+                title="Edit or delete"
+              >
+                <MoreHorizontal className="size-3.5" />
+              </Button>
+            </m.div>
+          )}
+        </AnimatePresence>
       </div>
     </Card>
   )

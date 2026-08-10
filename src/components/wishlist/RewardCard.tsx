@@ -1,4 +1,5 @@
 import React from 'react'
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion'
 import { Edit2, MoreHorizontal, Target, Trash2, X } from 'lucide-react'
 import type { WishlistItem } from '../../types'
 import { Button } from '../ui/Button'
@@ -37,6 +38,7 @@ export const RewardCard: React.FC<RewardCardProps> = ({
   onEdit,
   onDelete,
 }) => {
+  const reduceMotion = useReducedMotion()
   const pct = item.price > 0
     ? Math.max(0, Math.min(100, (claimableBalance / item.price) * 100))
     : 0
@@ -97,82 +99,98 @@ export const RewardCard: React.FC<RewardCardProps> = ({
       {/* Management *replaces* the claim actions, exactly as it does on SavingsGoalCard. This row
           used to carry a permanently visible red Delete beside a text Edit — the loudest thing on
           the page, on a card whose neighbour in the next rail keeps both behind a toggle. */}
-      <div className="mt-auto flex items-center justify-end gap-1.5 border-t border-border/30 pt-3">
-        {showManage ? (
-          <React.Fragment key="manage-actions">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="shrink-0"
-              onClick={() => onEdit(item)}
-              disabled={isBusy || hideSensitive}
-              aria-label={`Edit ${item.name}`}
-              title={hideSensitive ? 'Unhide balances to edit' : 'Edit reward'}
+      <div className="mt-auto flex items-center gap-1.5 border-t border-border/30 pt-3">
+        <AnimatePresence initial={false} mode="wait">
+          {showManage ? (
+            <m.div
+              key="manage-actions"
+              initial={reduceMotion ? false : { opacity: 0, y: 4, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.98 }}
+              transition={{ duration: reduceMotion ? 0 : 0.18, ease: 'easeOut' }}
+              className="ml-auto flex items-center gap-1.5"
             >
-              <Edit2 className="size-3.5 shrink-0" /> Edit
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              className="shrink-0"
-              onClick={() => onDelete(item.id)}
-              disabled={isBusy || hideSensitive}
-              aria-label={`Delete ${item.name}`}
-              title={hideSensitive ? 'Unhide balances to delete' : 'Delete reward'}
-            >
-              <Trash2 className="size-3.5 shrink-0" /> Delete
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="shrink-0"
-              onClick={() => setShowManage(false)}
-              aria-expanded
-              aria-label={`Hide edit and delete for ${item.name}`}
-              title="Back"
-            >
-              <X className="size-3.5" />
-            </Button>
-          </React.Fragment>
-        ) : (
-          <React.Fragment key="primary-actions">
-            <Button
-              size="sm"
-              className="shrink-0"
-              onClick={() => onClaim(item)}
-              disabled={!canAfford || isBusy || hideSensitive}
-              title={canAfford ? 'Claim this reward and log it to your ledger' : 'Not enough free rewards yet'}
-            >
-              Claim
-            </Button>
-            {!isFocused && (
               <Button
-                variant="secondary"
+                variant="ghost"
+                size="sm"
+                className="shrink-0"
+                onClick={() => onEdit(item)}
+                disabled={isBusy || hideSensitive}
+                aria-label={`Edit ${item.name}`}
+                title={hideSensitive ? 'Unhide balances to edit' : 'Edit reward'}
+              >
+                <Edit2 className="size-3.5 shrink-0" /> Edit
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                className="shrink-0"
+                onClick={() => onDelete(item.id)}
+                disabled={isBusy || hideSensitive}
+                aria-label={`Delete ${item.name}`}
+                title={hideSensitive ? 'Unhide balances to delete' : 'Delete reward'}
+              >
+                <Trash2 className="size-3.5 shrink-0" /> Delete
+              </Button>
+              <Button
+                variant="ghost"
                 size="icon"
                 className="shrink-0"
-                onClick={() => onFocus(item)}
-                disabled={isBusy || hideSensitive}
-                aria-label={`Focus ${item.name}`}
-                title="Save toward this one next"
+                onClick={() => setShowManage(false)}
+                aria-expanded
+                aria-label={`Hide edit and delete for ${item.name}`}
+                title="Back"
               >
-                <Target className="size-3.5" />
+                <X className="size-3.5" />
               </Button>
-            )}
-            {/* Swipe-to-reveal is not an option here either: the card lives in a horizontally
-                scrolling rail, so a horizontal drag on it belongs to the rail. */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="ml-auto shrink-0"
-              onClick={() => setShowManage(true)}
-              aria-expanded={false}
-              aria-label={`Edit or delete ${item.name}`}
-              title="Edit or delete"
+            </m.div>
+          ) : (
+            <m.div
+              key="primary-actions"
+              initial={reduceMotion ? false : { opacity: 0, y: 4, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.98 }}
+              transition={{ duration: reduceMotion ? 0 : 0.18, ease: 'easeOut' }}
+              className="flex min-w-0 flex-1 items-center gap-1"
             >
-              <MoreHorizontal className="size-3.5" />
-            </Button>
-          </React.Fragment>
-        )}
+              <Button
+                size="sm"
+                className="shrink-0"
+                onClick={() => onClaim(item)}
+                disabled={!canAfford || isBusy || hideSensitive}
+                title={canAfford ? 'Claim this reward and log it to your ledger' : 'Not enough free rewards yet'}
+              >
+                Claim
+              </Button>
+              {!isFocused && (
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="shrink-0"
+                  onClick={() => onFocus(item)}
+                  disabled={isBusy || hideSensitive}
+                  aria-label={`Focus ${item.name}`}
+                  title="Save toward this one next"
+                >
+                  <Target className="size-3.5" />
+                </Button>
+              )}
+              {/* Swipe-to-reveal is not an option here either: the card lives in a horizontally
+                  scrolling rail, so a horizontal drag on it belongs to the rail. */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="ml-auto shrink-0"
+                onClick={() => setShowManage(true)}
+                aria-expanded={false}
+                aria-label={`Edit or delete ${item.name}`}
+                title="Edit or delete"
+              >
+                <MoreHorizontal className="size-3.5" />
+              </Button>
+            </m.div>
+          )}
+        </AnimatePresence>
       </div>
     </Card>
   )
