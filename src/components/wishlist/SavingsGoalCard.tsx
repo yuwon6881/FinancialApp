@@ -165,19 +165,15 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
       {/* Management *replaces* the money actions rather than joining them. Adding a sixth control to
           a row that already held five at the rail's 80vw is what squeezed the tick and pushed the
           close button past the card edge — and nobody needs the top-up buttons while deciding whether
-          to delete. Every child is `shrink-0`: only the +/- pair had it, which is why the others were
-          the ones that visibly compressed. */}
-      <div className="mt-auto flex items-center gap-1 border-t border-border/30 pt-3">
+          to delete. Keep the management actions content-sized so a wide desktop card does not turn
+          two short labels into oversized full-width controls. */}
+      <div className="mt-auto flex items-center justify-end gap-1.5 border-t border-border/30 pt-3">
         {showManage ? (
-          /* Edit and Delete share the row rather than huddling at the left edge with dead space
-             beside them. `flex-1` on a pair of actions with a trailing icon is the same shape the
-             sheet footers already use, so the panel reads as part of the system instead of a row
-             that lost its other buttons. */
-          <>
+          <React.Fragment key="manage-actions">
             <Button
               variant="ghost"
               size="sm"
-              className="flex-1"
+              className="shrink-0"
               onClick={() => onEdit(goal)}
               disabled={isBusy || hideSensitive}
               aria-label={`Edit ${goal.name}`}
@@ -188,7 +184,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
             <Button
               variant="danger"
               size="sm"
-              className="flex-1"
+              className="shrink-0"
               onClick={() => onDelete(goal.id)}
               disabled={isBusy || hideSensitive}
               aria-label={`Delete ${goal.name}`}
@@ -207,9 +203,9 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
             >
               <X className="size-3.5" />
             </Button>
-          </>
+          </React.Fragment>
         ) : (
-          <>
+          <React.Fragment key="primary-actions">
             <div className="flex items-center gap-px rounded-lg overflow-hidden shrink-0 shadow-xs ring-1 ring-border/50">
               <Button
                 variant="secondary"
@@ -263,7 +259,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
             >
               <MoreHorizontal className="size-3.5" />
             </Button>
-          </>
+          </React.Fragment>
         )}
       </div>
     </Card>

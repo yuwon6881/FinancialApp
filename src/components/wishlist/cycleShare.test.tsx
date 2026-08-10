@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import type { SavingsGoal } from '../../types'
+import type { SavingsGoal, WishlistItem } from '../../types'
 import type { GoalPace, GoalPoolSummary } from '../../lib/savingsGoals'
 import { RewardsPoolBar } from './RewardsPoolBar'
+import { RewardCard } from './RewardCard'
 import { SavingsGoalCard } from './SavingsGoalCard'
 
 // The cycle share is the number a user acts on ("do I owe anything right now?"), so it is asserted
@@ -56,6 +57,16 @@ const summary = (over: Partial<GoalPoolSummary> = {}): GoalPoolSummary => ({
 
 const money = (value: number) => `RM ${value.toFixed(2)}`
 
+const reward: WishlistItem = {
+  id: 11,
+  name: 'Noise-cancelling headphones',
+  price: 250,
+  priority: 'Medium',
+  isPurchased: false,
+  createdAt: '2026-01-01T00:00:00.000Z',
+  isActive: false,
+}
+
 function renderBar(over: Partial<GoalPoolSummary> = {}) {
   render(
     <RewardsPoolBar
@@ -85,6 +96,24 @@ function renderCard(over: Partial<GoalPace> = {}) {
       onComplete={() => undefined}
       onTopUp={() => undefined}
       onRelease={() => undefined}
+    />,
+  )
+}
+
+function renderRewardCard() {
+  render(
+    <RewardCard
+      item={reward}
+      isFocused={false}
+      claimableBalance={100}
+      formatSensitive={money}
+      hideSensitive={false}
+      isSyncing={false}
+      isDeleting={false}
+      onClaim={() => undefined}
+      onFocus={() => undefined}
+      onEdit={() => undefined}
+      onDelete={() => undefined}
     />,
   )
 }
@@ -167,5 +196,31 @@ describe('SavingsGoalCard cycle share', () => {
     renderCard({ isFunded: true, remaining: 0 })
     expect(screen.getByText('Ready to use')).toBeTruthy()
     expect(screen.queryByText('This cycle')).toBeNull()
+  })
+
+  it('mounts compact management actions without inheriting completion styles', () => {
+    renderCard()
+    const completeButton = screen.getByRole('button', { name: 'Complete this cycle for Car Maintenance' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit or delete Car Maintenance' }))
+
+    const deleteButton = screen.getByRole('button', { name: 'Delete Car Maintenance' })
+    expect(deleteButton).not.toBe(completeButton)
+    expect(deleteButton.className).toContain('shrink-0')
+    expect(deleteButton.className).not.toContain('flex-1')
+  })
+})
+
+describe('RewardCard management actions', () => {
+  it('mounts compact management actions without inheriting the claim style', () => {
+    renderRewardCard()
+    const claimButton = screen.getByRole('button', { name: 'Claim' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit or delete Noise-cancelling headphones' }))
+
+    const editButton = screen.getByRole('button', { name: 'Edit Noise-cancelling headphones' })
+    expect(editButton).not.toBe(claimButton)
+    expect(editButton.className).toContain('shrink-0')
+    expect(editButton.className).not.toContain('flex-1')
   })
 })

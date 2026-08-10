@@ -97,13 +97,13 @@ export const RewardCard: React.FC<RewardCardProps> = ({
       {/* Management *replaces* the claim actions, exactly as it does on SavingsGoalCard. This row
           used to carry a permanently visible red Delete beside a text Edit — the loudest thing on
           the page, on a card whose neighbour in the next rail keeps both behind a toggle. */}
-      <div className="mt-auto flex items-center gap-1 border-t border-border/30 pt-3">
+      <div className="mt-auto flex items-center justify-end gap-1.5 border-t border-border/30 pt-3">
         {showManage ? (
-          <>
+          <React.Fragment key="manage-actions">
             <Button
               variant="ghost"
               size="sm"
-              className="flex-1"
+              className="shrink-0"
               onClick={() => onEdit(item)}
               disabled={isBusy || hideSensitive}
               aria-label={`Edit ${item.name}`}
@@ -114,7 +114,7 @@ export const RewardCard: React.FC<RewardCardProps> = ({
             <Button
               variant="danger"
               size="sm"
-              className="flex-1"
+              className="shrink-0"
               onClick={() => onDelete(item.id)}
               disabled={isBusy || hideSensitive}
               aria-label={`Delete ${item.name}`}
@@ -133,9 +133,9 @@ export const RewardCard: React.FC<RewardCardProps> = ({
             >
               <X className="size-3.5" />
             </Button>
-          </>
+          </React.Fragment>
         ) : (
-          <>
+          <React.Fragment key="primary-actions">
             <Button
               size="sm"
               className="shrink-0"
@@ -171,7 +171,7 @@ export const RewardCard: React.FC<RewardCardProps> = ({
             >
               <MoreHorizontal className="size-3.5" />
             </Button>
-          </>
+          </React.Fragment>
         )}
       </div>
     </Card>
