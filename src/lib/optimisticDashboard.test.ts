@@ -16,7 +16,7 @@ const baseTransactions = (): Transaction[] => [
   transaction({ id: 'food', amount: -20, category: 'Food', ledgerCategory: 'Essentials' }),
 ]
 
-function dashboard(): DashboardData {
+function dashboard(stabilityRecovery?: DashboardData['stabilityRecovery']): DashboardData {
   return {
     setting: {
       selectedMonth: 'Aug', selectedYear: 2026, cycleDay: 1, currency: 'USD',
@@ -45,8 +45,27 @@ function dashboard(): DashboardData {
       cycleLengthDays: 31, noSpendDays: 30, transactionCount: 1,
       committedSpend: 0, discretionarySpend: 20,
     },
+    stabilityRecovery,
   }
 }
+
+const recovery = (): NonNullable<DashboardData['stabilityRecovery']> => ({
+  isActive: true,
+  markedTotal: 500,
+  target: 1000,
+  currentBalance: 900,
+  outstandingShortfall: 500,
+  cyclesRemaining: 3,
+  requiredThisCycle: 167,
+  toppedUpThisCycle: 0,
+  outstandingThisCycle: 167,
+  isOverdue: false,
+  lastDrawdownCycleKey: '2026-08',
+  repaidTotal: 0,
+  essentialsCommitted: 0,
+  rewardsCommitted: 0,
+  suggestedDraws: [],
+})
 
 const op = (partial: Partial<QueuedOp>): QueuedOp => ({
   id: 'op-1', entity: 'transaction', type: 'add', targetId: 'new', createdAt: 1, retryCount: 0,
@@ -70,6 +89,29 @@ describe('computeOptimisticDashboard', () => {
     expect(result.categories[0]).toMatchObject({ spent: 50, netChange: 200, remaining: 300 })
     expect(result.monthlyCategoryBreakdown).toEqual([{ category: 'Food', amount: 50 }])
     expect(result.cycleSummaryInsights?.transactionCount).toBe(2)
+  })
+
+  it('projects a marked drawdown before dispatch and keeps the same result after completion', () => {
+    const drawdown = transaction({
+      id: 'drawdown', amount: -50, category: 'Emergency', ledgerCategory: 'Stability',
+      stabilityReloadIntent: 'Required',
+    })
+    const pending = computeOptimisticDashboard(dashboard(recovery()), {
+      activeOps: [op({ payload: { ...drawdown } })],
+      transactions: baseTransactions(),
+    })!
+    const completed = computeOptimisticDashboard(dashboard(recovery()), {
+      activeOps: [op({ payload: { ...drawdown }, isCompleted: true })],
+      transactions: baseTransactions(),
+    })!
+
+    expect(pending.stabilityRecovery).toMatchObject({
+      currentBalance: 850,
+      markedTotal: 550,
+      outstandingShortfall: 550,
+      isActive: true,
+    })
+    expect(completed.stabilityRecovery).toEqual(pending.stabilityRecovery)
   })
 
   it('does not project an add dated outside the selected cycle', () => {

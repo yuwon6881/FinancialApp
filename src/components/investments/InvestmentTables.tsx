@@ -7,6 +7,7 @@ import { sortActivityNewestFirst, sortCashFlowsNewestFirst } from '../../lib/inv
 import { formatCurrencyVal } from '../../lib/utils'
 import { buildSleeveIndex, sleeveLabelFor } from '../../lib/investmentAllocation'
 import { filterHoldings } from '../../lib/investmentHoldingFilter'
+import { investmentActivityCashAfterCharges, investmentActivityCharges } from '../../lib/investmentActivityDisplay'
 import { Button } from '../ui/Button'
 import { CustomSelect } from '../ui/CustomSelect'
 import { DatePicker } from '../ui/DatePicker'
@@ -35,6 +36,34 @@ const cashFlowAmount = (flow: InvestmentCashFlow, masked: boolean) => {
   if (flow.type === 'Withdrawal') return `−${amount}`
   if (flow.toCurrency === undefined || flow.toAmount === undefined) return amount
   return `${amount} → ${money(flow.toAmount, flow.toCurrency)}`
+}
+
+function InvestmentActivityAmount({ activity, currency, masked, mobile = false }: { activity: InvestmentActivity; currency: string; masked: boolean; mobile?: boolean }) {
+  const charges = investmentActivityCharges(activity)
+  const cashAfterCharges = investmentActivityCashAfterCharges(activity)
+  const hasCharges = charges.total > 0
+
+  return (
+    <span className={`flex min-w-0 max-w-full flex-col items-end gap-0.5 text-right ${mobile ? 'max-w-[56%]' : ''}`}>
+      <span className="font-bold">
+        {masked ? '••••' : activity.cashAmount === undefined ? 'Unavailable' : money(activity.cashAmount, currency)}
+      </span>
+      {!masked && hasCharges && (
+        <>
+          <span className="max-w-full text-[10px] font-medium leading-tight text-muted-foreground">
+            {charges.fees > 0 && <span>Fees {money(charges.fees, currency)}</span>}
+            {charges.fees > 0 && charges.taxes > 0 && <span aria-hidden="true"> · </span>}
+            {charges.taxes > 0 && <span>Taxes {money(charges.taxes, currency)}</span>}
+          </span>
+          {cashAfterCharges !== undefined && (
+            <span className="max-w-full text-[10px] font-semibold leading-tight text-foreground">
+              After charges {money(cashAfterCharges, currency)}
+            </span>
+          )}
+        </>
+      )}
+    </span>
+  )
 }
 
 export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { portfolio: InvestmentPortfolio; masked: boolean; filter: AllocationFilter; onSelectHolding: (holding: InvestmentPortfolio['holdings'][number]) => void }) => {
@@ -87,7 +116,7 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
       {paginatedHoldings.map(holding => (
         <article key={`${holding.accountId}-${holding.instrumentId}`} className="interactive-card min-w-0 rounded-xl border border-border/50 p-4">
           <div className="flex min-w-0 items-start justify-between gap-3">
-            <div className="min-w-0"><Button variant="unstyled" onClick={() => onSelectHolding(holding)} className="block max-w-full cursor-pointer truncate text-left text-sm font-bold text-foreground underline decoration-dotted underline-offset-4 hover:text-primary">{holding.symbol} · {holding.name}</Button><span className="text-[10px] text-muted-foreground">{holding.accountName} · {holding.type}</span></div>
+            <div className="min-w-0"><Button variant="unstyled" onClick={() => onSelectHolding(holding)} className="block max-w-full cursor-pointer truncate text-left text-sm font-bold text-foreground underline decoration-dotted underline-offset-4 hover:text-accent-ink">{holding.symbol} · {holding.name}</Button><span className="text-[10px] text-muted-foreground">{holding.accountName} · {holding.type}</span></div>
             <strong className="shrink-0 text-sm">{masked ? '••••' : holding.valueApp === undefined ? 'Exchange rate missing' : money(holding.valueApp, portfolio.appCurrency)}</strong>
           </div>
           <dl className="mt-3 grid grid-cols-2 gap-2 text-[10px]">
@@ -104,7 +133,7 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
               <ChevronDown className="size-3.5 transition-transform duration-200 group-open:rotate-180" />
             </summary>
             <div className="border-t border-border/50 p-2.5 pt-2 text-[10px] text-muted-foreground">
-              <p className="break-words font-medium text-foreground/80">
+              <p className="break-words font-medium text-foreground">
                 {holding.latestPriceNative === undefined ? 'Closing price unavailable' : `${number(holding.units, 8)} × ${number(holding.latestPriceNative, 8)} ${holding.currency}`}
                 {holding.currency !== portfolio.appCurrency ? ` × ${holding.fxRate === undefined ? 'missing FX' : number(holding.fxRate, 8)} = ${holding.valueApp === undefined ? 'incomplete' : money(holding.valueApp, portfolio.appCurrency)}` : ''}
               </p>
@@ -146,7 +175,7 @@ export const HoldingsTable = ({ portfolio, masked, filter, onSelectHolding }: { 
         <DataTableBody>
           {paginatedHoldings.map(holding => (
             <tr key={`${holding.accountId}-${holding.instrumentId}`} className="hover:bg-muted/20">
-              <td className="px-4 py-3"><Button variant="unstyled" onClick={() => onSelectHolding(holding)} className="cursor-pointer font-bold text-foreground underline decoration-dotted underline-offset-4 hover:text-primary">{holding.symbol}</Button><span className="ml-2 text-[10px] text-muted-foreground">{holding.type}</span><span className="block max-w-44 truncate text-[10px] text-muted-foreground">{holding.name}</span><details className="group/valuation mt-2 rounded border border-border/50 bg-muted/10"><summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1.5 text-[9px] font-semibold text-muted-foreground outline-none transition-colors hover:bg-muted/20 hover:text-foreground"><span>How this was worked out</span><ChevronDown className="size-3 transition-transform duration-200 group-open/valuation:rotate-180" /></summary><div className="border-t border-border/50 px-2 py-1.5 text-[9px]"><div className="flex flex-col gap-1 text-muted-foreground"><div className="flex justify-between gap-2"><span className="opacity-80">Fund worth</span><span className="font-medium text-foreground/90">{masked || holding.valueNative === undefined ? '—' : money(holding.valueNative, holding.currency)}</span></div><div className="flex justify-between gap-2"><span className="opacity-80">Price date</span><span className="font-medium text-foreground/90">{holding.priceDate ?? 'None'}</span></div></div></div></details></td>
+              <td className="px-4 py-3"><Button variant="unstyled" onClick={() => onSelectHolding(holding)} className="cursor-pointer font-bold text-foreground underline decoration-dotted underline-offset-4 hover:text-accent-ink">{holding.symbol}</Button><span className="ml-2 text-[10px] text-muted-foreground">{holding.type}</span><span className="block max-w-44 truncate text-[10px] text-muted-foreground">{holding.name}</span><details className="group/valuation mt-2 rounded border border-border/50 bg-muted/10"><summary className="flex cursor-pointer select-none items-center justify-between px-2 py-1.5 text-[9px] font-semibold text-muted-foreground outline-none transition-colors hover:bg-muted/20 hover:text-foreground"><span>How this was worked out</span><ChevronDown className="size-3 transition-transform duration-200 group-open/valuation:rotate-180" /></summary><div className="border-t border-border/50 px-2 py-1.5 text-[9px]"><div className="flex flex-col gap-1 text-muted-foreground"><div className="flex justify-between gap-2"><span className="opacity-80">Fund worth</span><span className="font-medium text-foreground/90">{masked || holding.valueNative === undefined ? '—' : money(holding.valueNative, holding.currency)}</span></div><div className="flex justify-between gap-2"><span className="opacity-80">Price date</span><span className="font-medium text-foreground/90">{holding.priceDate ?? 'None'}</span></div></div></div></details></td>
               <td className="px-4 py-3 text-muted-foreground">{holding.accountName}</td>
               <td className="px-4 py-3 text-right font-medium">{masked ? '••••' : number(holding.units, 8)}</td>
               <td className="px-4 py-3 text-right">{masked ? '••••' : money(holding.averageCostNative, holding.currency)}</td>
@@ -341,7 +370,7 @@ export const PagedActivityTable = ({
                   const isActive = isActiveRecord(value.id, 'investmentActivity')
                   const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
                   return <article key={value.id} className="interactive-card min-w-0 rounded-xl border border-border/50 p-3">
-                    <div className="flex min-w-0 items-start justify-between gap-2"><div className="min-w-0"><strong className="block truncate text-xs">{activityTypes.find(item => item.value === value.type)?.label} · {instrument?.symbol}</strong><span className="text-[10px] text-muted-foreground">{value.tradeDate} · {accounts.get(value.accountId)}</span><RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></div><span className="shrink-0 text-xs font-bold">{masked || value.cashAmount === undefined ? '—' : money(value.cashAmount, instrument?.currency ?? portfolio.appCurrency)}</span></div>
+                    <div className="flex min-w-0 items-start justify-between gap-2"><div className="min-w-0"><strong className="block truncate text-xs">{activityTypes.find(item => item.value === value.type)?.label} · {instrument?.symbol}</strong><span className="text-[10px] text-muted-foreground">{value.tradeDate} · {accounts.get(value.accountId)}</span><RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></div><InvestmentActivityAmount activity={value} currency={instrument?.currency ?? portfolio.appCurrency} masked={masked} mobile /></div>
                     <div className="mt-2 flex items-center justify-end gap-1">
                       <Button variant="ghost" size="sm" disabled={isBusy || masked} onClick={() => onEdit(value)}>Edit</Button>
                       <Button variant="danger" size="sm" disabled={isBusy || masked} onClick={() => onDelete(value)}>Delete</Button>
@@ -366,13 +395,13 @@ export const PagedActivityTable = ({
                       <DataTableHeaderCell>Type</DataTableHeaderCell>
                       <DataTableHeaderCell>Account</DataTableHeaderCell>
                       {mode === 'investments' && <DataTableHeaderCell>Investment</DataTableHeaderCell>}
-                      <DataTableHeaderCell className="text-right">Amount</DataTableHeaderCell>
+                      <DataTableHeaderCell className="text-right">Gross amount</DataTableHeaderCell>
                       <DataTableHeaderCell />
                     </DataTableHeader>
                     <DataTableBody>{mode === 'investments' ? displayTransactions.map(value => {
                       const isActive = isActiveRecord(value.id, 'investmentActivity')
                       const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)
-                      return <tr key={value.id}><td className="px-4 py-3">{value.tradeDate}</td><td className="px-4 py-3"><span className="flex items-center gap-2 font-bold">{activityTypes.find(item => item.value === value.type)?.label}<RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3">{instruments.get(value.instrumentId)?.symbol}</td><td className="px-4 py-3 text-right">{masked || value.cashAmount === undefined ? '—' : money(value.cashAmount, instruments.get(value.instrumentId)?.currency ?? portfolio.appCurrency)}</td><td className="px-4 py-3"><span className="flex justify-end gap-1"><Button variant="ghost" size="sm" disabled={isBusy || masked} onClick={() => onEdit(value)}>Edit</Button><Button variant="danger" size="sm" disabled={isBusy || masked} onClick={() => onDelete(value)}>Delete</Button></span></td></tr>
+                      return <tr key={value.id}><td className="px-4 py-3">{value.tradeDate}</td><td className="px-4 py-3"><span className="flex items-center gap-2 font-bold">{activityTypes.find(item => item.value === value.type)?.label}<RowSyncStatus entityLabel="investment activity" isDeleting={value.isPendingDelete} isSyncing={isActive} isPending={value.isPendingSync && !isActive} /></span></td><td className="px-4 py-3">{accounts.get(value.accountId)}</td><td className="px-4 py-3">{instruments.get(value.instrumentId)?.symbol}</td><td className="px-4 py-3 text-right"><InvestmentActivityAmount activity={value} currency={instruments.get(value.instrumentId)?.currency ?? portfolio.appCurrency} masked={masked} /></td><td className="px-4 py-3"><span className="flex justify-end gap-1"><Button variant="ghost" size="sm" disabled={isBusy || masked} onClick={() => onEdit(value)}>Edit</Button><Button variant="danger" size="sm" disabled={isBusy || masked} onClick={() => onDelete(value)}>Delete</Button></span></td></tr>
                     }) : displayCashFlows.map(value => {
                       const isActive = isActiveRecord(value.id, 'investmentCashFlow')
                       const isBusy = Boolean(value.isPendingSync || value.isPendingDelete || isActive)

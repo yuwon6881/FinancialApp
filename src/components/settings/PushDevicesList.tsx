@@ -1,19 +1,27 @@
 import React from 'react'
-import { Loader2, MonitorSmartphone, Trash2 } from 'lucide-react'
+import { AlertCircle, Loader2, MonitorSmartphone, RefreshCw, Trash2 } from 'lucide-react'
 import * as api from '../../lib/api'
 import type { PushDevice } from '../../types'
 import { getErrorMessage } from '../../lib/errors'
 import { buildMutationSuccessToast } from '../../lib/mutationToast'
+import { PUSH_DEVICES_UNAVAILABLE } from '../../lib/push/messages'
 import { useAppUi } from '../../contexts/AppContext'
 import { Button } from '../ui/Button'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
 
 const enrolledOn = (iso: string): string => new Date(iso).toLocaleDateString()
 
+// What one device receives, in the same words as the switches above it. A device is only listed
+// while it receives something, so an empty pair cannot occur.
+const receivesLabel = (device: PushDevice): string => {
+  if (device.billRemindersEnabled && device.categoryAlertsEnabled) return 'Bill reminders and spending alerts'
+  return device.billRemindersEnabled ? 'Bill reminders' : 'Spending alerts'
+}
+
 interface PushDevicesListProps {
-  // Rises whenever this device's own enrolment changes, so the list re-reads instead of showing
-  // a browser that was just switched on or off.
-  refreshKey: number
+  // Changes whenever this device's own enrolment changes in either kind, so the list re-reads
+  // instead of showing a browser that was just switched on or off.
+  refreshKey: string
 }
 
 // Push opt-in is per device, and until this list existed the only evidence that another browser
@@ -23,21 +31,28 @@ export const PushDevicesList: React.FC<PushDevicesListProps> = ({ refreshKey }) 
   const { showToast } = useAppUi()
   const [devices, setDevices] = React.useState<PushDevice[]>([])
   const [loading, setLoading] = React.useState(true)
+  // A failed read must not fall into the "no device is set up" empty state. That is a different
+  // and confidently wrong answer, and it reads as proof that the switches above did nothing --
+  // which is exactly how a broken roster gets mistaken for a broken enrolment.
+  const [failed, setFailed] = React.useState(false)
   const [revokingId, setRevokingId] = React.useState<string | null>(null)
 
   const load = React.useCallback(async (signal?: AbortSignal) => {
     const { getExistingDeviceId } = await import('../../lib/push/deviceId')
     const deviceId = getExistingDeviceId()
-    if (!deviceId) {
-      setDevices([])
-      setLoading(false)
-      return
-    }
     try {
-      const next = await api.fetchPushDevices(deviceId, signal)
-      if (!signal?.aborted) setDevices(next)
+      // No local device id yet means this browser has never enrolled, but the account may still
+      // have other devices worth showing -- the id only decides which row is marked "this device".
+      const next = await api.fetchPushDevices(deviceId ?? '', signal)
+      if (!signal?.aborted) {
+        setDevices(next)
+        setFailed(false)
+      }
     } catch (error) {
-      if (!signal?.aborted) console.warn('Could not load the devices receiving notifications.', error)
+      if (!signal?.aborted) {
+        console.warn('Could not load the devices receiving notifications.', error)
+        setFailed(true)
+      }
     } finally {
       if (!signal?.aborted) setLoading(false)
     }
@@ -77,6 +92,25 @@ export const PushDevicesList: React.FC<PushDevicesListProps> = ({ refreshKey }) 
     )
   }
 
+  if (failed) {
+    return (
+      <div role="status" className="flex items-start gap-2 text-[10px] text-muted-foreground">
+        <AlertCircle className="mt-0.5 size-3 shrink-0 text-amber-500" aria-hidden="true" />
+        <span className="flex-1">
+          {PUSH_DEVICES_UNAVAILABLE}{' '}
+          <Button
+            variant="unstyled"
+            type="button"
+            onClick={() => { setLoading(true); void load() }}
+            className="inline-flex items-center gap-1 font-bold text-accent-ink hover:underline"
+          >
+            <RefreshCw className="size-3" aria-hidden="true" /> Try again
+          </Button>
+        </span>
+      </div>
+    )
+  }
+
   if (devices.length === 0) {
     return (
       <p className="text-[10px] text-muted-foreground">
@@ -101,9 +135,13 @@ export const PushDevicesList: React.FC<PushDevicesListProps> = ({ refreshKey }) 
                 {device.isCurrent ? 'This device' : 'Another device'}
                 <RowSyncStatus isDeleting={isRevoking} entityLabel="device" />
               </span>
-              <span className="text-[10px] text-muted-foreground">Set up on {enrolledOn(device.enrolledAt)}</span>
+              {/* Naming what each device receives is what makes "on for another device" checkable
+                  rather than something the app just asserts. */}
+              <span className="text-[10px] text-muted-foreground">
+                {receivesLabel(device)} · set up on {enrolledOn(device.enrolledAt)}
+              </span>
             </span>
-            {/* The current device is switched off with the switch above, so a second control for
+            {/* The current device is switched off with the switches above, so a second control for
                 the same thing would be one more way to reach the same state, worded differently. */}
             {!device.isCurrent && (
               <Button

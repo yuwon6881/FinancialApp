@@ -1,6 +1,7 @@
 import { ArrowRightLeft } from 'lucide-react'
 import { MobileLedgerRow } from './LedgerRows'
 import type { LedgerListProps } from './ledgerListShared'
+import { hasDistinctBucketMovement } from '../../lib/ledgerTotals'
 
 // Mobile (< md) ledger card list — swipe a row left to reveal Edit / Delete.
 // Mounted only when useIsMobile() is true, so the desktop table's row tree,
@@ -54,7 +55,7 @@ export function MobileLedgerList({
       ))}
       {hasRows && (
         <div className="flex flex-col gap-2.5 p-4 bg-card border border-border/60 rounded-xl text-xs shadow-xs select-none">
-          <div className="text-xs font-extrabold text-foreground/80 uppercase tracking-wider border-b border-border/30 pb-2.5 mb-1">Page Total Summary</div>
+          <div className="text-xs font-extrabold text-foreground uppercase tracking-wider border-b border-border/30 pb-2.5 mb-1">Page Total Summary</div>
           <div className="flex justify-between items-center">
             <span className="text-muted-foreground font-semibold">Total Outflow (Debit)</span>
             <span className="text-orange-500 font-bold text-sm">{formatSensitive(pageTotals.outflow)}</span>
@@ -72,14 +73,14 @@ export function MobileLedgerList({
                 <span className="text-blue-500 font-bold text-sm">{formatSensitive(pageTotals.transfer)}</span>
               </div>
               <p className="mt-1 text-[10px] text-muted-foreground">
-                Internal movement between buckets — excluded from debit, credit and the net position below.
+                Internal movement between buckets — excluded from debit and credit.
               </p>
             </div>
           )}
-          {pageTotals.bucket && (
+          {pageTotals.bucket && hasDistinctBucketMovement(pageTotals.bucketNet, net) ? (
             <div className="border-t border-border/30 pt-2.5">
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground font-semibold">{pageTotals.bucket} on this page</span>
+                <span className="text-muted-foreground font-semibold">{pageTotals.bucket} movement on this page</span>
                 <span className={`font-bold text-sm ${pageTotals.bucketNet >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
                   {pageTotals.bucketNet >= 0 ? '+' : '-'}{formatSensitive(Math.abs(pageTotals.bucketNet))}
                 </span>
@@ -88,14 +89,15 @@ export function MobileLedgerList({
                 What went in minus what came out, counting each row's share of this bucket.
               </p>
             </div>
+          ) : (
+            <div className="flex justify-between items-center border-t border-border/50 pt-2.5 font-bold">
+              <span className="text-foreground">Net Position</span>
+              <span className={`${net >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
+                {net >= 0 ? '+' : '-'}
+                {formatSensitive(Math.abs(net))}
+              </span>
+            </div>
           )}
-          <div className="flex justify-between items-center border-t border-border/50 pt-2.5 font-bold">
-            <span className="text-foreground">Net Position</span>
-            <span className={`${net >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
-              {net >= 0 ? '+' : '-'}
-              {formatSensitive(Math.abs(net))}
-            </span>
-          </div>
         </div>
       )}
 

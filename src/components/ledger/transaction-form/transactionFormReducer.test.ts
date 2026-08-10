@@ -22,6 +22,10 @@ describe('transactionFormReducer stabilityTopUpAccepted', () => {
     expect(getInitialState('2026-07-09', 'Other').stabilityTopUpAccepted).toBe(false)
   })
 
+  it('starts an emergency-fund answer unanswered', () => {
+    expect(getInitialState('2026-07-09', 'Other').stabilityReloadIntent).toBe('Unanswered')
+  })
+
   it.each(openingActions)('is cleared by %s, amount included', (_label, action) => {
     const next = transactionFormReducer(accepted(), action)
     expect(next.stabilityTopUpAccepted).toBe(false)
@@ -45,6 +49,29 @@ describe('transactionFormReducer stabilityTopUpAccepted', () => {
 
     expect(next.stabilityTopUpAccepted).toBe(true)
     expect(next.stabilityTopUpAmount).toBe('250.00')
+  })
+
+  it('loads the persisted emergency-fund answer when editing', () => {
+    const next = transactionFormReducer(getInitialState('2026-07-09', 'Other'), {
+      type: 'OPEN_EDIT',
+      payload: {
+        id: 'tx-2', description: 'Emergency fund spend', amount: '250', date: '2026-07-09',
+        category: 'Other', ledgerCategory: 'Stability', txType: 'outflow',
+        stabilityReloadIntent: 'NotRequired',
+      },
+    })
+
+    expect(next.stabilityReloadIntent).toBe('NotRequired')
+  })
+
+  it('does not carry the answer through a new entry or an unrelated edit', () => {
+    const answered = transactionFormReducer(getInitialState('2026-07-09', 'Other'), {
+      type: 'SET_FIELD', field: 'stabilityReloadIntent', value: 'Required',
+    })
+    expect(transactionFormReducer(answered, openingActions[0][1]).stabilityReloadIntent).toBe('Unanswered')
+    expect(transactionFormReducer(answered, {
+      type: 'SET_FIELD', field: 'amount', value: '1200',
+    }).stabilityReloadIntent).toBe('Required')
   })
 
   it('is set only by an explicit field change', () => {

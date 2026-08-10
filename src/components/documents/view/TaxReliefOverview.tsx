@@ -344,7 +344,7 @@ export function TaxReliefOverview({
                 >
                   <div className="flex min-w-0 items-start justify-between gap-2">
                     <p className="min-w-0 truncate text-sm font-bold text-foreground" title={category.name}>{category.name}</p>
-                    <span className={`shrink-0 transition ${selected ? 'text-primary' : full ? 'text-emerald-500' : 'text-muted-foreground/30 group-hover:text-primary'}`}>
+                    <span className={`shrink-0 transition ${selected ? 'text-accent-ink' : full ? 'text-emerald-500' : 'text-muted-foreground/30 group-hover:text-accent-ink'}`}>
                       {selected ? <Filter className="size-3.5" aria-hidden="true" /> : full ? <CheckCircle2 className="size-3.5" aria-label="Relief limit reached" /> : <Filter className="size-3.5" aria-hidden="true" />}
                     </span>
                   </div>

@@ -42,7 +42,13 @@ const budgets = [
   // plus lib/bucketAttribution.ts behind it. It cannot be deferred: it is part of the totals row
   // that renders with the list, and it is the only figure that reads correctly in a single-bucket
   // view, where debit and credit are both zero because the rows are transfers.
-  { name: 'LedgerView-*.js', pattern: /^LedgerView-.*\.js$/, limitKb: 39.0 },
+  // 40.0: raised from 39.0 (measured 39.56). The emergency-fund reload answer -- the required
+  // Required/NotRequired choice on any drawdown, its validation and mapping, and the intent badge
+  // on both row layouts -- plus the three-state recurring/wishlist filters. The answer cannot be
+  // deferred: the form refuses to save without it, so it belongs in the form's own chunk, and the
+  // badge renders with every row. The replay math it reads lives in lib/stabilityRecovery.ts,
+  // already on the eager graph via optimisticDashboard, so this chunk does not duplicate it.
+  { name: 'LedgerView-*.js', pattern: /^LedgerView-.*\.js$/, limitKb: 40.0 },
   { name: 'SettingsView-*.js', pattern: /^SettingsView-.*\.js$/, limitKb: 21.5 }
 ]
 

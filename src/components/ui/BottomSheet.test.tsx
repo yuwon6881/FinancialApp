@@ -89,4 +89,26 @@ describe('BottomSheet HCI contract', () => {
     expect(screen.getByRole('dialog', { name: 'Public title' })).toBeTruthy()
     expect(screen.queryByRole('dialog', { name: 'Internal title' })).toBeNull()
   })
+
+  it('focuses the panel without opening the mobile keyboard when the first control is text entry', async () => {
+    const previousWidth = window.innerWidth
+    window.innerWidth = 500
+
+    try {
+      render(
+        <BottomSheet isOpen title="Add record" onClose={vi.fn()}>
+          <input aria-label="Record name" />
+        </BottomSheet>,
+      )
+
+      const dialog = screen.getByRole('dialog', { name: 'Add record' })
+      const focus = vi.spyOn(dialog, 'focus')
+
+      await waitFor(() => expect(document.activeElement).toBe(dialog))
+      expect(focus).toHaveBeenCalledWith({ preventScroll: true })
+      expect(document.activeElement).not.toBe(screen.getByRole('textbox', { name: 'Record name' }))
+    } finally {
+      window.innerWidth = previousWidth
+    }
+  })
 })

@@ -1,3 +1,5 @@
+import type { StabilityReloadIntent } from '../../../types'
+
 export type TransactionType = 'inflow' | 'outflow' | 'transfer'
 export type TransferBucket = 'Essentials' | 'Growth' | 'Stability' | 'Rewards'
 export type SelectableLedgerCategory = 'Income' | TransferBucket
@@ -27,12 +29,14 @@ export interface TransactionFormState {
    * changing salary until the user overrides it and then stops moving under them.
    */
   stabilityTopUpAmount: string
+  /** Required only when the transaction takes money out of Stability. */
+  stabilityReloadIntent: StabilityReloadIntent
   errors: Record<string, string>
 }
 
 export type TransactionFormAction =
   | { type: 'OPEN_CREATE'; payload?: { defaultCategory: string; todayDate: string } }
-  | { type: 'OPEN_EDIT'; payload: { id: string; description: string; amount: string; date: string; category: string; ledgerCategory: string; txType: TransactionType; transferSource?: TransferBucket; transferTarget?: TransferBucket; stabilityRecoveryTopUpAmount?: number | null } }
+  | { type: 'OPEN_EDIT'; payload: { id: string; description: string; amount: string; date: string; category: string; ledgerCategory: string; txType: TransactionType; transferSource?: TransferBucket; transferTarget?: TransferBucket; stabilityRecoveryTopUpAmount?: number | null; stabilityReloadIntent?: StabilityReloadIntent } }
   | { type: 'SET_FIELD'; field: keyof TransactionFormState; value: any }
   | { type: 'APPLY_RECEIPT'; payload: { description?: string; amount?: string | number | null; date?: string | null; txType?: TransactionType; ledgerCategory?: SelectableLedgerCategory; category?: string }; todayDate: string }
   | { type: 'APPLY_AI_DRAFT'; payload: Record<string, any>; todayDate: string }
@@ -54,8 +58,12 @@ export const getInitialState = (todayDate: string, defaultCategory: string): Tra
   date: todayDate,
   stabilityTopUpAccepted: false,
   stabilityTopUpAmount: '',
+  stabilityReloadIntent: 'Unanswered',
   errors: {},
 })
+
+const normalizeReloadIntent = (value: StabilityReloadIntent | undefined): StabilityReloadIntent =>
+  value === 'Required' || value === 'NotRequired' ? value : 'Unanswered'
 
 export function transactionFormReducer(state: TransactionFormState, action: TransactionFormAction): TransactionFormState {
   switch (action.type) {
@@ -75,6 +83,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         category: action.payload?.defaultCategory ?? state.category,
         stabilityTopUpAccepted: false,
         stabilityTopUpAmount: '',
+        stabilityReloadIntent: 'Unanswered',
         errors: {},
       }
     case 'OPEN_EDIT':
@@ -95,6 +104,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         stabilityTopUpAmount: (action.payload.stabilityRecoveryTopUpAmount ?? 0) > 0
           ? action.payload.stabilityRecoveryTopUpAmount!.toFixed(2)
           : '',
+        stabilityReloadIntent: normalizeReloadIntent(action.payload.stabilityReloadIntent),
         errors: {},
       }
     case 'SET_FIELD':
@@ -118,6 +128,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         category: category ?? state.category,
         stabilityTopUpAccepted: false,
         stabilityTopUpAmount: '',
+        stabilityReloadIntent: 'Unanswered',
         errors: {},
       }
     }
@@ -168,6 +179,7 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         // arrives pre-accepted.
         stabilityTopUpAccepted: false,
         stabilityTopUpAmount: '',
+        stabilityReloadIntent: 'Unanswered',
         errors: {},
       }
     }

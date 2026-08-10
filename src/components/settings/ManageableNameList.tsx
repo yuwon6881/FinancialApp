@@ -97,10 +97,10 @@ export function ManageableNameList<T extends ManageableNameItem>({
 
   return (
     <div className="space-y-3">
-      {/* One toolbar row: find, narrow, add. Wraps rather than truncating, so the search box keeps
-          a usable width on a phone instead of collapsing to fit two controls beside it. */}
-      <div className="flex flex-wrap items-center gap-2">
-        <label className="group relative min-w-[10rem] flex-1">
+      {/* One toolbar row: find, narrow, add. The search field may shrink on a phone, but the
+          actions stay together so Add never becomes a detached second-line control. */}
+      <div className="flex flex-nowrap items-center gap-2">
+        <label className="group relative min-w-0 flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-foreground" />
           <Input
             type="text"
@@ -109,7 +109,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
             onChange={event => setSearch(event.target.value)}
             placeholder={`Search ${pluralItemLabel}`}
             aria-label={`Search ${pluralItemLabel}`}
-            className="h-9 w-full rounded-lg border border-border/70 bg-background py-2 pl-9 pr-9 text-xs transition placeholder:text-muted-foreground/75 hover:border-border focus:border-ring/70 focus:outline-none focus:ring-2 focus:ring-ring/15"
+            className="h-9 w-full rounded-lg border border-border/70 bg-background py-2 pl-9 pr-9 text-xs transition placeholder:text-muted-foreground hover:border-border focus:border-ring/70 focus:outline-none focus:ring-2 focus:ring-ring/15"
           />
           {search && (
             <Button variant="unstyled"
@@ -133,7 +133,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
           disabled={disabled}
           aria-expanded={isAddOpen}
           aria-controls={addPanelId}
-          className="h-9 shrink-0"
+          className="h-9 shrink-0 whitespace-nowrap px-2 sm:px-2.5"
         >
           {isAddOpen ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
           {isAddOpen ? 'Cancel' : 'Add'}

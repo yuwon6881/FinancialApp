@@ -21,16 +21,15 @@ interface StabilityRecoveryExceptionCardProps {
 }
 
 /**
- * Today speaks up only while the emergency fund is below the highest point it has ever reached,
- * and only while this cycle's share of putting it back is still owed. Those are two separate
- * gates on purpose: the fund can still be short overall after this cycle's share is already back,
- * which is a perfectly healthy state that deserves no card.
+ * Today speaks up only while an explicitly marked emergency-fund obligation remains and this
+ * cycle's share of putting it back is still owed. Those are two separate gates on purpose: the
+ * fund can still be short overall after this cycle's share is already back, which is a perfectly
+ * healthy state that deserves no card.
  *
- * The card still carries no action that *changes* anything — putting money back happens by ticking
- * the top-up offer on a salary, so the "Add income" button it once had opened a blank transaction
- * form that could not do the thing the card was asking for. What it does carry is the arithmetic
- * and a way to see it: a figure derived from balances across several cycles is otherwise a number
- * the app asserts and the user cannot check.
+ * The card still carries no action that *changes* anything — the transaction form and ledger edit
+ * own the answer. What it does carry is the marked/repaid arithmetic and a way to see it: an
+ * obligation derived from several ledger rows is otherwise a number the app asserts and the user
+ * cannot check.
  */
 export function StabilityRecoveryExceptionCard({
   recovery,
@@ -42,8 +41,8 @@ export function StabilityRecoveryExceptionCard({
   if (!recovery || !recovery.isActive) return null
   if (recovery.outstandingShortfall <= 0 || recovery.outstandingThisCycle <= 0) return null
 
-  const percentReached = recovery.recoverableCeiling > 0
-    ? Math.round((recovery.currentBalance / recovery.recoverableCeiling) * 100)
+  const percentRepaid = recovery.markedTotal > 0
+    ? Math.round(Math.min(1, Math.max(0, recovery.repaidTotal / recovery.markedTotal)) * 100)
     : 0
   // Overdue is checked first: past the window cyclesRemaining sits at 1 forever, so treating that
   // as "the final cycle" announced the last cycle of the plan every cycle from then on.
@@ -71,7 +70,7 @@ export function StabilityRecoveryExceptionCard({
               Your emergency fund is below where it was
               <InfoHint
                 label="How putting money back is worked out"
-                text="Refills use your highest past emergency-fund balance. First-time building has no refill."
+                text="Only money you mark as needing to go back creates this reminder. Your normal salary share does not count as putting it back; reaching your target clears it."
               />
             </h3>
           </div>
@@ -87,21 +86,20 @@ export function StabilityRecoveryExceptionCard({
 
           <div className="space-y-1.5 pt-1">
             <div className="grid gap-0.5 text-xs sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-2 sm:gap-y-1">
-              <span className="font-semibold text-muted-foreground">Emergency fund progress</span>
+              <span className="font-semibold text-muted-foreground">Putting it back progress</span>
               <span className="font-semibold text-foreground tabular-nums sm:text-right">
-                <span className="font-extrabold text-amber-600 dark:text-amber-400">{percentReached}%</span> of {formatSensitive(recovery.recoverableCeiling)} to restore
+                <span className="font-extrabold text-amber-600 dark:text-amber-400">{percentRepaid}%</span> of {formatSensitive(recovery.markedTotal)} put back
               </span>
             </div>
             <div className="h-2 w-full rounded-full bg-amber-500/20 overflow-hidden">
               <div
                 className="h-full rounded-full bg-amber-500 transition-all duration-300"
-                style={{ width: `${Math.min(100, Math.max(0, percentReached))}%` }}
+                style={{ width: `${Math.min(100, Math.max(0, percentRepaid))}%` }}
               />
             </div>
           </div>
 
-          {/* The whole figure is one subtraction between two balances, and stating it is the
-              difference between a number the app asserts and one the user can check. Behind a
+          {/* The breakdown names the ledger obligation and its repayments. Keep it behind a
               disclosure because a healthy reader never needs it, and this panel already competes
               with two other exception cards for the top of the page. */}
           <details className="group pt-1">
@@ -112,15 +110,19 @@ export function StabilityRecoveryExceptionCard({
             <div className="mt-2 space-y-2 rounded-xl border border-amber-500/20 bg-card/60 p-3">
               <dl className="space-y-1.5 text-[11px] sm:text-xs">
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
-                  <dt className="min-w-0 leading-snug text-muted-foreground">Highest your fund has reached</dt>
-                  <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.recoverableCeiling)}</dd>
+                  <dt className="min-w-0 leading-snug text-muted-foreground">You marked as needing to go back</dt>
+                  <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.markedTotal)}</dd>
+                </div>
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
+                  <dt className="min-w-0 leading-snug text-muted-foreground">Put back so far</dt>
+                  <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.repaidTotal)}</dd>
                 </div>
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2">
                   <dt className="min-w-0 leading-snug text-muted-foreground">In it now</dt>
                   <dd className="text-right font-semibold tabular-nums text-foreground">{formatSensitive(recovery.currentBalance)}</dd>
                 </div>
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2 border-t border-border/40 pt-1.5">
-                  <dt className="font-semibold text-foreground">Short by</dt>
+                  <dt className="font-semibold text-foreground">Still short</dt>
                   <dd className="text-right font-extrabold tabular-nums text-amber-600 dark:text-amber-400">
                     {formatSensitive(recovery.outstandingShortfall)}
                   </dd>

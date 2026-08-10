@@ -85,6 +85,8 @@ export function buildIncomeSplitRows(
   const remaining = totalCents - cents.reduce((sum, value) => sum + value, 0)
   for (let i = 0; i < remaining; i += 1) cents[byRemainder[i % 4]] += 1
 
+  // Deliberately do not copy stabilityReloadIntent: generated children are positive credits, never
+  // drawdowns, and the replay groups the Stability child with its income parent.
   return BUCKETS.flatMap((bucket, index) => cents[index] <= 0 ? [] : [{
     id: `${transaction.id}-split-${bucket}`,
     date: transaction.date,

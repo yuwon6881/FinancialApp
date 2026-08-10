@@ -3,7 +3,7 @@ import { RangeInput } from './ui/RangeInput'
 import React from 'react'
 import { Save, Settings, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap, Moon, Sun, Eye, EyeOff, HardDrive, ArrowDownLeft, ArrowUpRight, ArrowLeftRight } from 'lucide-react'
 import { m } from 'framer-motion'
-import type { DashboardData, TransactionCategory, CategoryFlowType } from '../types'
+import type { DashboardData, PushChannel, TransactionCategory, CategoryFlowType } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { CurrencySelect } from './ui/CurrencySelect'
 import { RowSyncStatus } from './ui/RowSyncBadge'
@@ -62,15 +62,17 @@ interface SettingsViewProps {
   onToast?: (message: string, title?: string, tone?: ToastTone) => void
   onNavigateToLedger?: (options: any) => void
   onClearLocalFinancialData?: () => void
-  pushEnabled?: boolean
   pushSupported?: boolean
   pushLoading?: boolean
-  /** Which push control is mid-flight, so only that row shows a busy state. */
+  /** Which push switch is mid-flight, so only that row shows a busy state. */
   pushBusyAction?: PushBusyAction
   pushGuidance?: string | null
-  onTogglePushEnabled?: (checked: boolean) => void
+  /** This device's own opt-in, per kind. Never an account-wide flag — see NotificationsCard. */
+  billRemindersEnabled?: boolean
   categoryAlertsEnabled?: boolean
-  onToggleCategoryAlerts?: (checked: boolean) => void
+  otherDevicesBillReminders?: boolean
+  otherDevicesCategoryAlerts?: boolean
+  onToggleChannel?: (channel: PushChannel, checked: boolean) => void
 }
 
 const getDayWithSuffix = (day: number) => {
@@ -429,22 +431,22 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
           </div>
 
           {/* Notifications live in their own panel rather than among the display preferences:
-              the three switches here have three different scopes (this device, this device,
-              every device), which is unreadable when they are stacked as peers with settings
-              that are all device-local. */}
+              every switch here is about what a browser is allowed to show, which is a different
+              question from how figures are displayed, and stacking them as peers read as one
+              undifferentiated list. */}
           <div>
             <NotificationsCard
               notifyOnLoginEnabled={props.notifyOnLoginEnabled || false}
               onToggleNotifyOnLogin={checked => props.onToggleNotifyOnLogin?.(checked)}
-              pushEnabled={props.pushEnabled || false}
               pushSupported={props.pushSupported !== false}
               pushLoading={props.pushLoading || false}
-              deviceBusy={props.pushBusyAction === 'device'}
-              categoryAlertsBusy={props.pushBusyAction === 'categoryAlerts'}
+              pushBusyChannel={props.pushBusyAction ?? null}
               pushGuidance={props.pushGuidance}
-              onTogglePushEnabled={checked => props.onTogglePushEnabled?.(checked)}
+              billRemindersEnabled={props.billRemindersEnabled || false}
               categoryAlertsEnabled={props.categoryAlertsEnabled || false}
-              onToggleCategoryAlerts={checked => props.onToggleCategoryAlerts?.(checked)}
+              otherDevicesBillReminders={props.otherDevicesBillReminders || false}
+              otherDevicesCategoryAlerts={props.otherDevicesCategoryAlerts || false}
+              onToggleChannel={(channel, checked) => props.onToggleChannel?.(channel, checked)}
               hasSpendingGuides={hasSpendingGuides}
               onNavigateToCategoryLimits={() => setActiveTab('categories-preferences')}
             />
@@ -665,7 +667,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                     one before this was toggling every badge back by hand. */}
                 {changedFlowTypeCategories.length > 0 && (
                   <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 animate-in fade-in duration-150">
-                    <span className="truncate text-[11px] font-bold text-primary">
+                    <span className="truncate text-[11px] font-bold text-accent-ink">
                       {changedFlowTypeCategories.length} category flow type{changedFlowTypeCategories.length > 1 ? 's' : ''} modified
                     </span>
                     <div className="flex shrink-0 items-center justify-end gap-1.5">

@@ -133,6 +133,9 @@ function App() {
   const push = usePushNotifications(
     !!session.token && !session.isLocked,
     dialogs.showToast,
+    // Scopes this browser's opt-in record, so a shared machine cannot re-register one account
+    // against the notification kinds another account chose.
+    session.username,
   )
 
   // 4. Cycle Navigation
@@ -493,11 +496,11 @@ function App() {
       <LaunchReady>
         <div
           data-testid="app-loading-skeleton"
-          className="app-shell min-h-screen text-foreground"
+          className="app-shell min-h-screen min-h-dvh text-foreground"
           aria-busy="true"
           aria-label="Loading your financial data securely"
         >
-          <div className="mx-auto w-full max-w-[1440px] px-4 py-6 space-y-6 sm:px-6 lg:px-8">
+          <div className="safe-screen-inset mx-auto w-full max-w-[1440px] space-y-6 [--safe-screen-block:1.5rem] sm:[--safe-screen-inline:1.5rem] lg:[--safe-screen-inline:2rem]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <AppLogo className="size-10 rounded-xl" pulse />

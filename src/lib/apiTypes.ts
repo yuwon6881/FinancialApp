@@ -145,27 +145,25 @@ type WireTodayPlanInsights = Omit<
 
 type WireStabilityRecovery = Omit<
   StabilityRecovery,
-  | 'highWaterMark'
   | 'target'
-  | 'recoverableCeiling'
   | 'currentBalance'
   | 'outstandingShortfall'
   | 'requiredThisCycle'
   | 'toppedUpThisCycle'
   | 'outstandingThisCycle'
-  | 'lastDrawdownAmount'
+  | 'markedTotal'
+  | 'repaidTotal'
   | 'essentialsCommitted'
   | 'rewardsCommitted'
 > & {
-  highWaterMark: WireAmount
   target: WireAmount
-  recoverableCeiling: WireAmount
   currentBalance: WireAmount
   outstandingShortfall: WireAmount
   requiredThisCycle: WireAmount
   toppedUpThisCycle: WireAmount
   outstandingThisCycle: WireAmount
-  lastDrawdownAmount: WireAmount
+  markedTotal: WireAmount
+  repaidTotal: WireAmount
   essentialsCommitted: WireAmount
   rewardsCommitted: WireAmount
 }

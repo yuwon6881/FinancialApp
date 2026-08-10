@@ -78,13 +78,13 @@ export function ActiveDevicesSection() {
 
   return (
     <section className="app-panel rounded-2xl border border-border/60 bg-card/92 shadow-sm overflow-hidden">
-      <Button variant="unstyled" type="button" onClick={() => setOpen(value => !value)} aria-expanded={open} className="w-full flex items-center gap-3 p-5 text-left cursor-pointer">
-        <div className="p-2 bg-blue-500/10 rounded-xl"><MonitorSmartphone className="size-4 text-blue-500" /></div>
-        <div className="flex-1"><h3 className="text-sm font-bold">Active Devices</h3><p className="text-[11px] text-muted-foreground">Manage devices currently logged into your account.</p></div>
-        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-muted-foreground">
+      <Button variant="unstyled" type="button" onClick={() => setOpen(value => !value)} aria-expanded={open} className="flex w-full min-w-0 items-center gap-3 p-5 text-left cursor-pointer">
+        <div className="shrink-0 rounded-xl bg-blue-500/10 p-2"><MonitorSmartphone className="size-4 text-blue-500" /></div>
+        <div className="min-w-0 flex-1"><h3 className="truncate text-sm font-bold">Active Devices</h3><p className="truncate text-[11px] text-muted-foreground">Manage devices currently logged into your account.</p></div>
+        <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-bold text-muted-foreground">
           {loading ? <><Loader2 className="size-3 animate-spin" /> Checking…</> : sessions.length}
         </span>
-        {open ? <ChevronUp className="size-4 text-muted-foreground" /> : <ChevronDown className="size-4 text-muted-foreground" />}
+        {open ? <ChevronUp className="size-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="size-4 shrink-0 text-muted-foreground" />}
       </Button>
       <CollapsibleBody open={open}>
         <div className="px-5 pb-5 border-t border-border/40 pt-4 space-y-4">
@@ -94,9 +94,9 @@ export function ActiveDevicesSection() {
               return (
                 <div key={session.id} className="flex items-center justify-between gap-2 bg-muted/20 border border-border/40 px-3 py-2.5 rounded-xl text-xs" aria-busy={isRevoking}>
                   <div className="flex flex-col gap-0.5 min-w-0">
-                    <span className="flex items-center gap-2 font-semibold"><MonitorSmartphone className="size-3.5 text-blue-500" />{session.deviceName || 'Unknown Device'}{session.isCurrent && <small className="text-blue-500">Current</small>}<RowSyncStatus isDeleting={isRevoking} entityLabel="device session" /></span>
+                    <span className="flex min-w-0 flex-wrap items-center gap-2 font-semibold"><MonitorSmartphone className="size-3.5 shrink-0 text-blue-500" />{session.deviceName || 'Unknown Device'}{session.isCurrent && <small className="shrink-0 text-blue-500">Current</small>}<RowSyncStatus isDeleting={isRevoking} entityLabel="device session" /></span>
                     <span className="text-[10px] text-muted-foreground"><CalendarDays className="inline size-3" /> Logged in: {new Date(session.createdAt).toLocaleDateString()} · Last active: {relativeTime(session.lastActiveAt)}</span>
-                    {session.ipAddress && <span className="text-[10px] text-muted-foreground/75">IP: {session.ipAddress}</span>}
+                    {session.ipAddress && <span className="text-[10px] text-muted-foreground">IP: {session.ipAddress}</span>}
                   </div>
                   {!session.isCurrent && <Button variant="unstyled" type="button" onClick={() => void revoke(session.id)} disabled={hideSensitive || anyRevokeInProgress} aria-busy={revokingSessionId === session.id} aria-label={`Revoke ${session.deviceName || 'device session'}`} className="p-1.5 text-muted-foreground hover:text-red-500 disabled:opacity-40">{revokingSessionId === session.id ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <Trash2 className="size-3.5" aria-hidden="true" />}</Button>}
                 </div>

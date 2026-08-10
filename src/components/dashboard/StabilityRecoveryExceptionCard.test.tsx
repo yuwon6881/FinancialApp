@@ -5,9 +5,8 @@ import { StabilityRecoveryExceptionCard } from './StabilityRecoveryExceptionCard
 
 const recovery = (overrides: Partial<StabilityRecovery> = {}): StabilityRecovery => ({
   isActive: true,
-  highWaterMark: 10000,
+  markedTotal: 3000,
   target: 10000,
-  recoverableCeiling: 10000,
   currentBalance: 7000,
   outstandingShortfall: 3000,
   cyclesRemaining: 3,
@@ -16,7 +15,7 @@ const recovery = (overrides: Partial<StabilityRecovery> = {}): StabilityRecovery
   outstandingThisCycle: 1000,
   isOverdue: false,
   lastDrawdownCycleKey: '2026-06',
-  lastDrawdownAmount: 3000,
+  repaidTotal: 0,
   essentialsCommitted: 0,
   rewardsCommitted: 0,
   suggestedDraws: [],
@@ -57,8 +56,8 @@ describe('StabilityRecoveryExceptionCard', () => {
     expect(screen.getByText('Your emergency fund is below where it was')).toBeTruthy()
     expect(screen.getByText(/Put back \$1000\.00 more this cycle/)).toBeTruthy()
     expect(screen.getByText(/\$3000\.00 remains overall across 3 cycles/)).toBeTruthy()
-    expect(screen.getByText('Emergency fund progress')).toBeTruthy()
-    expect(screen.getByText(/70%/)).toBeTruthy()
+    expect(screen.getByText('Putting it back progress')).toBeTruthy()
+    expect(screen.getByText(/0%/)).toBeTruthy()
   })
 
   it('says so plainly on the last cycle of the plan', () => {
@@ -101,9 +100,10 @@ describe('StabilityRecoveryExceptionCard', () => {
   it('shows the subtraction the figure comes from', () => {
     render(<StabilityRecoveryExceptionCard recovery={recovery()} formatSensitive={format} />)
 
-    expect(screen.getByText('Highest your fund has reached')).toBeTruthy()
+    expect(screen.getByText('You marked as needing to go back')).toBeTruthy()
+    expect(screen.getByText('Put back so far')).toBeTruthy()
     expect(screen.getByText('In it now')).toBeTruthy()
-    expect(screen.getByText('Short by')).toBeTruthy()
+    expect(screen.getByText('Still short')).toBeTruthy()
   })
 
   it('opens the ledger on the window the shortfall accumulated over', () => {
@@ -138,5 +138,27 @@ describe('StabilityRecoveryExceptionCard', () => {
 
     expect(screen.queryByRole('button', { name: /every movement since then/i })).toBeNull()
     expect(screen.getByText(/no window of movements to list/)).toBeTruthy()
+  })
+
+  it('does not go silent when ordinary salary reaches an old high point below target', () => {
+    render(
+      <StabilityRecoveryExceptionCard
+        recovery={recovery({ currentBalance: 6300, outstandingShortfall: 3000 })}
+        formatSensitive={format}
+      />
+    )
+
+    expect(screen.getByText(/remains overall/)).toBeTruthy()
+  })
+
+  it('stays hidden once the target clears the marked obligation', () => {
+    const { container } = render(
+      <StabilityRecoveryExceptionCard
+        recovery={recovery({ isActive: false, outstandingShortfall: 0, outstandingThisCycle: 0, currentBalance: 10000 })}
+        formatSensitive={format}
+      />
+    )
+
+    expect(container.innerHTML).toBe('')
   })
 })

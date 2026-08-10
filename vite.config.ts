@@ -101,7 +101,7 @@ export default defineConfig(({ mode }) => {
         // Android uses this fixed value behind its generated install splash.
         background_color: '#0b0e14',
         // The document updates this pre-paint for the user's saved app theme.
-        theme_color: '#f6f8fc',
+        theme_color: '#fcfcfc',
         orientation: 'portrait-primary',
         icons: [
           {

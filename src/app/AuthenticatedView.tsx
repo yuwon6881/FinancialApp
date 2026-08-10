@@ -270,39 +270,30 @@ export function AuthenticatedView({
                           },
                         })
                       }}
-                      pushEnabled={push.enabled}
                       pushSupported={push.supported}
                       pushLoading={push.loading}
                       pushBusyAction={push.busyAction}
                       pushGuidance={push.guidance}
-                      onTogglePushEnabled={(checked) => {
-                        void (async () => {
-                          const succeeded = checked ? await push.enable() : (await push.disable(), true)
-                          if (!succeeded) return
-                          const copy = buildMutationSuccessToast({
-                            entity: 'Notifications',
-                            action: checked ? 'Turned on' : 'Turned off',
-                            message: checked
-                              ? 'This device will now show bill reminders and spending alerts.'
-                              : 'This device will no longer show notifications. Your other devices are unchanged.',
-                          })
-                          dialogs.showToast(copy.message, copy.title, copy.tone)
-                        })()
-                      }}
+                      billRemindersEnabled={push.billRemindersEnabled}
                       categoryAlertsEnabled={push.categoryAlertsEnabled}
-                      onToggleCategoryAlerts={(checked) => {
-                        // Deliberately does NOT enable this device first. It used to, which meant
-                        // an account-wide switch raised a browser permission prompt without ever
-                        // mentioning devices or permission; the card disables it with a reason
-                        // instead. The server refuses the consent with no device either way.
+                      otherDevicesBillReminders={push.otherDevicesBillReminders}
+                      otherDevicesCategoryAlerts={push.otherDevicesCategoryAlerts}
+                      onToggleChannel={(channel, checked) => {
+                        // Each kind is its own standing choice for this device: turning one on
+                        // asks the browser for permission and registers this device for that kind
+                        // only. Every toast says "this device", because that is the whole scope of
+                        // what just changed -- other devices are never touched from here.
                         void (async () => {
-                          if (!await push.setCategoryAlertsEnabled(checked)) return
+                          if (!await push.setChannelEnabled(channel, checked)) return
+                          const isBills = channel === 'billReminders'
                           const copy = buildMutationSuccessToast({
-                            entity: 'Spending alerts',
+                            entity: isBills ? 'Bill reminders' : 'Spending alerts',
                             action: checked ? 'Turned on' : 'Turned off',
                             message: checked
-                              ? 'Every device you have set up will be told when a category gets close to its planned amount.'
-                              : 'No device will be told when a category gets close to its planned amount.',
+                              ? isBills
+                                ? 'This device will now be reminded before each bill is due.'
+                                : 'This device will now be told when a category gets close to its planned amount.'
+                              : 'This device will no longer show these. Your other devices are unchanged.',
                           })
                           dialogs.showToast(copy.message, copy.title, copy.tone)
                         })()
@@ -347,8 +338,8 @@ export function AuthenticatedView({
                       isSwitchingCycle={nav.isSwitchingCycle}
                       highlightedRecurringId={nav.highlightedRecurringId}
                       onClearHighlightedRecurring={nav.clearHighlightedRecurring}
-                      globalPushEnabled={push.accountEnabled}
-                      thisDevicePushEnabled={push.enabled}
+                      globalPushEnabled={push.billRemindersEnabled || push.otherDevicesBillReminders}
+                      thisDevicePushEnabled={push.billRemindersEnabled}
                       onUpdateReminder={financial.handleUpdateReminder}
                       onRequestPayEarly={financial.requestPayEarly}
                       aiDraft={aiRouter.state.aiRecurringDraft}
@@ -378,8 +369,8 @@ export function AuthenticatedView({
                       incomingEndDate={nav.ledgerIncomingEndDate}
                       incomingMinAmount={nav.ledgerIncomingMinAmount}
                       incomingMaxAmount={nav.ledgerIncomingMaxAmount}
-                      incomingRecurringOnly={nav.ledgerIncomingRecurringOnly}
-                      incomingWishlistOnly={nav.ledgerIncomingWishlistOnly}
+                      incomingRecurringFilter={nav.ledgerIncomingRecurringFilter}
+                      incomingWishlistFilter={nav.ledgerIncomingWishlistFilter}
                       incomingTxType={nav.ledgerIncomingTxType}
                       highlightedTxId={nav.highlightedTxId}
                       onClearIncomingFilters={nav.clearIncomingFilters}

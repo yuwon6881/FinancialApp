@@ -80,7 +80,7 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
             options={['High', 'Medium', 'Low'].map(value => ({ value, label: value }))}
             className="w-full"
           />
-          <p className="text-[10px] text-muted-foreground/80 font-medium mt-1">Funded first when money is short.</p>
+          <p className="text-[10px] text-muted-foreground font-medium mt-1">Funded first when money is short.</p>
         </FormField>
       </div>
 
@@ -129,13 +129,13 @@ export function SavingsGoalForm(props: SavingsGoalFormProps) {
               className="font-medium [appearance:textfield]"
             />
             {!props.errors.recurrence && (
-                <p className="text-[10px] text-muted-foreground/80 font-medium mt-1">
+                <p className="text-[10px] text-muted-foreground font-medium mt-1">
                   Marking it done moves the deadline forward and restarts saving.
                 </p>
             )}
           </FormField>
         ) : (
-          <p className="text-[10px] text-muted-foreground/80 font-medium">
+          <p className="text-[10px] text-muted-foreground font-medium">
             For things like a quarterly car service or annual insurance.
           </p>
         )}

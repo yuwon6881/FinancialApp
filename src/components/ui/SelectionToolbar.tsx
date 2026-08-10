@@ -69,7 +69,7 @@ export function SelectionToolbar({
             <span className="hidden h-5 w-px shrink-0 bg-border sm:block" aria-hidden="true" />
           </>
         )}
-        <p className={`truncate text-[10px] font-semibold sm:text-xs ${exceedsLimit ? 'text-destructive' : hasSelection ? 'text-primary' : 'text-muted-foreground'}`} aria-live="polite">
+        <p className={`truncate text-[10px] font-semibold sm:text-xs ${exceedsLimit ? 'text-destructive' : hasSelection ? 'text-accent-ink' : 'text-muted-foreground'}`} aria-live="polite">
           {hasSelection ? `${selectedCount} ${selectedLabel}${exceedsLimit ? ` · max ${selectionLimit}` : ''}` : `${itemCount} on this page`}
         </p>
       </div>

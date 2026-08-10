@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import * as api from '../lib/api'
 import { getCachedDashboardPeriod, getCachedCycleSnapshot } from '../lib/cache'
 import type { AppTab } from '../types'
+import type { TransactionLinkFilter } from '../lib/transactionFilters'
 import {
   ledgerRouteSearch,
   readAppLocation,
@@ -43,8 +44,8 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
   const [ledgerIncomingEndDate, setLedgerIncomingEndDate] = useState<string>(initialLocation.ledger.endDate)
   const [ledgerIncomingMinAmount, setLedgerIncomingMinAmount] = useState<string>(initialLocation.ledger.minAmount)
   const [ledgerIncomingMaxAmount, setLedgerIncomingMaxAmount] = useState<string>(initialLocation.ledger.maxAmount)
-  const [ledgerIncomingRecurringOnly, setLedgerIncomingRecurringOnly] = useState(initialLocation.ledger.recurringOnly)
-  const [ledgerIncomingWishlistOnly, setLedgerIncomingWishlistOnly] = useState(initialLocation.ledger.wishlistOnly)
+  const [ledgerIncomingRecurringFilter, setLedgerIncomingRecurringFilter] = useState<TransactionLinkFilter>(initialLocation.ledger.recurringFilter)
+  const [ledgerIncomingWishlistFilter, setLedgerIncomingWishlistFilter] = useState<TransactionLinkFilter>(initialLocation.ledger.wishlistFilter)
   const [ledgerIncomingTxType, setLedgerIncomingTxType] = useState<'inflow' | 'outflow' | 'transfer' | null>(initialLocation.ledger.txType)
   const [ledgerShowAllCycles, setLedgerShowAllCycles] = useState(initialLocation.ledger.showAllCycles)
   const [autoOpenLedgerAdd, setAutoOpenLedgerAdd] = useState(false)
@@ -113,6 +114,9 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     endDate?: string | null
     minAmount?: string | null
     maxAmount?: string | null
+    recurringFilter?: TransactionLinkFilter
+    wishlistFilter?: TransactionLinkFilter
+    /** Legacy navigation aliases; true maps to the new `only` mode. */
     recurringOnly?: boolean
     wishlistOnly?: boolean
     txType?: 'inflow' | 'outflow' | 'transfer' | null
@@ -138,16 +142,16 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     const endDate = navOptions.endDate || navOptions.date || ''
     const minAmount = navOptions.minAmount || ''
     const maxAmount = navOptions.maxAmount || ''
-    const recurringOnly = navOptions.recurringOnly === true
-    const wishlistOnly = navOptions.wishlistOnly === true
+    const recurringFilter: TransactionLinkFilter = navOptions.recurringFilter ?? (navOptions.recurringOnly === true ? 'only' : 'all')
+    const wishlistFilter: TransactionLinkFilter = navOptions.wishlistFilter ?? (navOptions.wishlistOnly === true ? 'only' : 'all')
     setLedgerIncomingFilters(filters)
     setLedgerIncomingSearch(search)
     setLedgerIncomingStartDate(startDate)
     setLedgerIncomingEndDate(endDate)
     setLedgerIncomingMinAmount(minAmount)
     setLedgerIncomingMaxAmount(maxAmount)
-    setLedgerIncomingRecurringOnly(recurringOnly)
-    setLedgerIncomingWishlistOnly(wishlistOnly)
+    setLedgerIncomingRecurringFilter(recurringFilter)
+    setLedgerIncomingWishlistFilter(wishlistFilter)
     setLedgerIncomingTxType(navOptions.txType || null)
     const range = navOptions.range || 'monthly'
     setLedgerCyclesRange(range)
@@ -162,8 +166,8 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
         endDate,
         minAmount,
         maxAmount,
-        recurringOnly,
-        wishlistOnly,
+        recurringFilter,
+        wishlistFilter,
         txType: navOptions.txType || null,
         showAllCycles: showAll,
         range,
@@ -226,8 +230,8 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     setLedgerIncomingEndDate('')
     setLedgerIncomingMinAmount('')
     setLedgerIncomingMaxAmount('')
-    setLedgerIncomingRecurringOnly(false)
-    setLedgerIncomingWishlistOnly(false)
+    setLedgerIncomingRecurringFilter('all')
+    setLedgerIncomingWishlistFilter('all')
     setLedgerIncomingTxType(null)
     setHighlightedTxId(null)
   }, [])
@@ -245,8 +249,8 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
       setLedgerIncomingEndDate(location.ledger.endDate)
       setLedgerIncomingMinAmount(location.ledger.minAmount)
       setLedgerIncomingMaxAmount(location.ledger.maxAmount)
-      setLedgerIncomingRecurringOnly(location.ledger.recurringOnly)
-      setLedgerIncomingWishlistOnly(location.ledger.wishlistOnly)
+      setLedgerIncomingRecurringFilter(location.ledger.recurringFilter)
+      setLedgerIncomingWishlistFilter(location.ledger.wishlistFilter)
       setLedgerIncomingTxType(location.ledger.txType)
       setLedgerShowAllCycles(location.ledger.showAllCycles)
       setLedgerCyclesRange(location.ledger.range)
@@ -281,10 +285,10 @@ export function useCycleNavigation(options: UseCycleNavigationOptions) {
     setLedgerIncomingMinAmount,
     ledgerIncomingMaxAmount,
     setLedgerIncomingMaxAmount,
-    ledgerIncomingRecurringOnly,
-    setLedgerIncomingRecurringOnly,
-    ledgerIncomingWishlistOnly,
-    setLedgerIncomingWishlistOnly,
+    ledgerIncomingRecurringFilter,
+    setLedgerIncomingRecurringFilter,
+    ledgerIncomingWishlistFilter,
+    setLedgerIncomingWishlistFilter,
     ledgerIncomingTxType,
     setLedgerIncomingTxType,
     ledgerShowAllCycles,

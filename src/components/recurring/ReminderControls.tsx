@@ -9,7 +9,11 @@ import { ToggleButton } from '../ui/ToggleButton'
 
 interface ReminderControlsProps {
   payment: Pick<RecurringPayment, 'id' | 'name' | 'reminderEnabled' | 'reminderMode' | 'reminderLeadDays'>
-  /** True when any device on the account is set up to receive notifications. */
+  /**
+   * True when any device on the account is opted into **bill reminders** specifically. A device
+   * that only asked for spending alerts is registered but would never deliver this schedule, so
+   * counting it here would be exactly the false reassurance these two props exist to prevent.
+   */
   globalPushEnabled: boolean
   /** True when the device being looked at right now is one of them. */
   thisDevicePushEnabled?: boolean

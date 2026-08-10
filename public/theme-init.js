@@ -1,6 +1,12 @@
 (function () {
   try {
-    var stored = localStorage.getItem('dark_mode')
+    // Theme preferences are account-scoped. The last signed-in username is
+    // available before React starts, so use the same key the app will resolve
+    // after session bootstrap and avoid a light/dark flash in an installed PWA.
+    // The unscoped key is retained only as a migration fallback for older builds.
+    var owner = localStorage.getItem('auth_username')
+    var scoped = owner ? localStorage.getItem('dark_mode:' + owner) : null
+    var stored = scoped === null ? localStorage.getItem('dark_mode') : scoped
     var isDark = stored === 'true'
       ? true
       : stored === 'false'

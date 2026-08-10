@@ -68,7 +68,7 @@ export function DocumentFilterBar({
               type="button"
               onClick={() => onClearReliefCategory(category.id)}
               aria-label={`Clear ${category.name} relief filter`}
-              className="inline-flex min-h-9 w-full shrink-0 cursor-pointer items-center justify-between gap-2 rounded-xl border border-primary/35 bg-primary/10 px-3 py-2 text-left text-xs font-semibold text-primary transition hover:border-primary/60 hover:bg-primary/15 sm:w-auto sm:max-w-64"
+              className="inline-flex min-h-9 w-full shrink-0 cursor-pointer items-center justify-between gap-2 rounded-xl border border-primary/35 bg-primary/10 px-3 py-2 text-left text-xs font-semibold text-accent-ink transition hover:border-primary/60 hover:bg-primary/15 sm:w-auto sm:max-w-64"
             >
               <span className="flex min-w-0 items-center gap-1.5 truncate"><Filter className="size-3.5 shrink-0" /> {category.name}</span>
               <X className="size-3.5 shrink-0" />

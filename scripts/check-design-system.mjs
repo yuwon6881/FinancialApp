@@ -151,11 +151,18 @@ for (const file of allSourceFiles(SRC)) {
   for (const exception of THEME_EXCEPTIONS.get(fileName) ?? []) {
     themeText = themeText.replace(exception, '')
   }
-  const literalThemePattern = /\b(?:bg|text|border)-(?:black|white)(?:\/\d+)?\b|#[\da-fA-F]{6}(?:[\da-fA-F]{2})?\b|rgba?\s*\(/g
+  const literalThemePattern = /\b(?:bg|text|border|shadow|ring|outline|fill|stroke)-(?:black|white)(?:\/\d+)?\b|#[\da-fA-F]{6}(?:[\da-fA-F]{2})?\b|rgba?\s*\(/g
   for (const match of themeText.matchAll(literalThemePattern)) {
     const prefix = themeText.slice(0, match.index)
     const line = prefix.split(/\r?\n/).length
     errors.push(`${fileName}:${line} Unapproved literal theme color "${match[0]}"; use a semantic token.`)
+  }
+
+  const unreadablePrimaryTextPattern = /\btext-primary(?!-)\b/g
+  for (const match of sourceText.matchAll(unreadablePrimaryTextPattern)) {
+    const prefix = sourceText.slice(0, match.index)
+    const line = prefix.split(/\r?\n/).length
+    errors.push(`${fileName}:${line} Unreadable accent utility "${match[0]}"; use text-accent-ink for text and icons.`)
   }
 
   const malformedOpacityPattern = /\b(?:bg|text|border|ring|outline|fill|stroke|from|via|to|shadow)-[^\s'"`]+\/\d+\/\d+\b/g

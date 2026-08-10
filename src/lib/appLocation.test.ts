@@ -25,8 +25,8 @@ describe('app URL state', () => {
         endDate: '2026-07-31',
         minAmount: '5',
         maxAmount: '50',
-        recurringOnly: true,
-        wishlistOnly: true,
+        recurringFilter: 'only',
+        wishlistFilter: 'only',
         txType: 'outflow',
         showAllCycles: true,
         range: '3month',
@@ -53,5 +53,26 @@ describe('app URL state', () => {
     expect(window.location.pathname).toBe('/dashboard')
     expect(new URLSearchParams(window.location.search).get('q')).toBe('rent')
     expect(new URLSearchParams(window.location.search).get('recurring')).toBe('1')
+  })
+
+  it('preserves exclusion modes in the ledger URL', () => {
+    window.history.replaceState({}, '', '/ledger?recurring=exclude&wishlist=only')
+
+    expect(readAppLocation().ledger.recurringFilter).toBe('exclude')
+    expect(readAppLocation().ledger.wishlistFilter).toBe('only')
+    expect(ledgerRouteSearch({ recurringFilter: 'exclude', wishlistFilter: 'only' })).toEqual({
+      filters: null,
+      q: null,
+      from: null,
+      to: null,
+      min: null,
+      max: null,
+      recurring: 'exclude',
+      wishlist: 'only',
+      type: null,
+      all: null,
+      range: null,
+      tx: null,
+    })
   })
 })

@@ -1,4 +1,5 @@
 import { APP_TABS, type AppTab } from '../types'
+import type { TransactionLinkFilter } from './transactionFilters'
 
 export type LedgerRouteRange = 'monthly' | '3month' | '6month' | 'yearly'
 type LedgerRouteTxType = 'inflow' | 'outflow' | 'transfer' | null
@@ -10,8 +11,8 @@ export interface LedgerRouteState {
   endDate: string
   minAmount: string
   maxAmount: string
-  recurringOnly: boolean
-  wishlistOnly: boolean
+  recurringFilter: TransactionLinkFilter
+  wishlistFilter: TransactionLinkFilter
   txType: LedgerRouteTxType
   showAllCycles: boolean
   range: LedgerRouteRange
@@ -65,6 +66,13 @@ const MONTHS = new Set(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 
 const RANGES = new Set<LedgerRouteRange>(['monthly', '3month', '6month', 'yearly'])
 const TX_TYPES = new Set<Exclude<LedgerRouteTxType, null>>(['inflow', 'outflow', 'transfer'])
 
+const parseLinkFilter = (value: string | null): TransactionLinkFilter => {
+  if (value === 'exclude') return 'exclude'
+  // `1` is the URL format used before this became a three-state filter.
+  if (value === 'only' || value === '1') return 'only'
+  return 'all'
+}
+
 const emptyLedgerRouteState = (): LedgerRouteState => ({
   filters: [],
   search: '',
@@ -72,8 +80,8 @@ const emptyLedgerRouteState = (): LedgerRouteState => ({
   endDate: '',
   minAmount: '',
   maxAmount: '',
-  recurringOnly: false,
-  wishlistOnly: false,
+  recurringFilter: 'all',
+  wishlistFilter: 'all',
   txType: null,
   showAllCycles: false,
   range: 'monthly',
@@ -110,8 +118,8 @@ export const readAppLocation = (): AppLocationState => {
       endDate: params.get('to') || '',
       minAmount: params.get('min') || '',
       maxAmount: params.get('max') || '',
-      recurringOnly: params.get('recurring') === '1',
-      wishlistOnly: params.get('wishlist') === '1',
+      recurringFilter: parseLinkFilter(params.get('recurring')),
+      wishlistFilter: parseLinkFilter(params.get('wishlist')),
       txType: txType && TX_TYPES.has(txType) ? txType : null,
       showAllCycles: params.get('all') === '1',
       range: range && RANGES.has(range) ? range : 'monthly',
@@ -175,8 +183,8 @@ export const ledgerRouteSearch = (state: Partial<LedgerRouteState>) => ({
   to: state.endDate || null,
   min: state.minAmount || null,
   max: state.maxAmount || null,
-  recurring: state.recurringOnly || null,
-  wishlist: state.wishlistOnly || null,
+  recurring: state.recurringFilter && state.recurringFilter !== 'all' ? state.recurringFilter : null,
+  wishlist: state.wishlistFilter && state.wishlistFilter !== 'all' ? state.wishlistFilter : null,
   type: state.txType || null,
   all: state.showAllCycles || null,
   range: state.range && state.range !== 'monthly' ? state.range : null,

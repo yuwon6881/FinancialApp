@@ -86,7 +86,10 @@ export function useDialog({ isOpen, onClose, ref, initialFocusRef, canClose, aut
       // is still settling. The viewport resize this triggers races the CSS
       // transition, producing a brief flash where the backdrop/panel disappear.
       // Buttons don't open a keyboard, so they're safe to auto-focus everywhere.
-      if (isMobileLayout() && isTextEntryElement(target)) return
+      if (isMobileLayout() && isTextEntryElement(target)) {
+        panel.focus({ preventScroll: true })
+        return
+      }
       target.focus()
     }, 40)
 

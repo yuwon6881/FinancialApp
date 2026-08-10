@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { NotificationsCard, type NotificationsCardProps } from './NotificationsCard'
-import { CATEGORY_ALERTS_NEED_DEVICE } from '../../lib/push/messages'
+import { otherDevicesHaveItOn } from '../../lib/push/messages'
 
 vi.mock('./PushDevicesList', () => ({
   PushDevicesList: () => <div data-testid="push-devices" />,
@@ -11,15 +11,15 @@ const renderCard = (overrides: Partial<NotificationsCardProps> = {}) => {
   const props: NotificationsCardProps = {
     notifyOnLoginEnabled: true,
     onToggleNotifyOnLogin: vi.fn(),
-    pushEnabled: true,
     pushSupported: true,
     pushLoading: false,
-    deviceBusy: false,
-    categoryAlertsBusy: false,
+    pushBusyChannel: null,
     pushGuidance: null,
-    onTogglePushEnabled: vi.fn(),
+    billRemindersEnabled: false,
     categoryAlertsEnabled: false,
-    onToggleCategoryAlerts: vi.fn(),
+    otherDevicesBillReminders: false,
+    otherDevicesCategoryAlerts: false,
+    onToggleChannel: vi.fn(),
     hasSpendingGuides: true,
     ...overrides,
   }
@@ -27,26 +27,40 @@ const renderCard = (overrides: Partial<NotificationsCardProps> = {}) => {
   return props
 }
 
-const deviceToggle = () => screen.getByRole('switch', { name: /notifications on this device/i }) as HTMLButtonElement
+const billsToggle = () => screen.getByRole('switch', { name: /^bill reminders$/i }) as HTMLButtonElement
 const alertsToggle = () => screen.getByRole('switch', { name: /category spending alerts/i }) as HTMLButtonElement
 
 describe('NotificationsCard', () => {
-  it('states the scope of every switch, because they are not all the same', () => {
-    renderCard()
-    expect(screen.getAllByText('This device').length).toBeGreaterThan(0)
-    expect(screen.getByText('All devices')).toBeTruthy()
+  it('offers each kind as its own switch, neither gated behind the other', () => {
+    const props = renderCard()
+
+    expect(billsToggle().disabled).toBe(false)
+    expect(alertsToggle().disabled).toBe(false)
+
+    fireEvent.click(alertsToggle())
+    expect(props.onToggleChannel).toHaveBeenCalledWith('categoryAlerts', true)
+    fireEvent.click(billsToggle())
+    expect(props.onToggleChannel).toHaveBeenCalledWith('billReminders', true)
   })
 
-  it('blocks category alerts with a reason instead of silently enabling this device', () => {
-    const props = renderCard({ pushEnabled: false, categoryAlertsEnabled: false })
+  it('scopes every switch to this device, because that is all any of them changes', () => {
+    renderCard()
+    // "All devices" was the old account-wide spending-alert scope, and it was the claim a desktop
+    // could not honour.
+    expect(screen.getAllByText('This device').length).toBe(3)
+    expect(screen.queryByText('All devices')).toBeNull()
+  })
 
-    expect(alertsToggle().disabled).toBe(true)
-    expect(screen.getByText(CATEGORY_ALERTS_NEED_DEVICE)).toBeTruthy()
-    fireEvent.click(alertsToggle())
-    expect(props.onToggleCategoryAlerts).not.toHaveBeenCalled()
-    // It used to enable this device first, raising a browser permission prompt from a switch
-    // that never mentioned devices or permission.
-    expect(props.onTogglePushEnabled).not.toHaveBeenCalled()
+  it('reports another device opt-in as a sentence, never as this switch being on', () => {
+    renderCard({ categoryAlertsEnabled: false, otherDevicesCategoryAlerts: true })
+
+    expect(alertsToggle().getAttribute('aria-checked')).toBe('false')
+    expect(screen.getByText(otherDevicesHaveItOn('Spending alerts'))).toBeTruthy()
+  })
+
+  it('says nothing about other devices once this one is on', () => {
+    renderCard({ categoryAlertsEnabled: true, otherDevicesCategoryAlerts: true })
+    expect(screen.queryByText(otherDevicesHaveItOn('Spending alerts'))).toBeNull()
   })
 
   it('says when there is nothing for a spending alert to watch', () => {
@@ -54,19 +68,17 @@ describe('NotificationsCard', () => {
     expect(screen.getByText(/not set a planned amount for any category/i)).toBeTruthy()
   })
 
-  it('shows the busy state against the row that is saving, not against both', () => {
-    renderCard({ categoryAlertsBusy: true })
+  it('shows the busy state against the switch that is saving, not against both', () => {
+    renderCard({ pushBusyChannel: 'categoryAlerts' })
     // RowSyncStatus names the entity it reports on, so only one row can claim to be busy.
     expect(screen.getByTitle(/spending alerts/i)).toBeTruthy()
-    expect(screen.queryByTitle(/device notifications/i)).toBeNull()
+    expect(screen.queryByTitle(/bill reminders/i)).toBeNull()
     expect(alertsToggle().disabled).toBe(true)
   })
 
   it('disables both switches when the browser cannot support push at all', () => {
     renderCard({ pushSupported: false })
-    expect(deviceToggle().disabled).toBe(true)
+    expect(billsToggle().disabled).toBe(true)
     expect(alertsToggle().disabled).toBe(true)
-    // The "turn the device on first" nudge would be a dead end here: it cannot be turned on.
-    expect(screen.queryByText(CATEGORY_ALERTS_NEED_DEVICE)).toBeNull()
   })
 })

@@ -100,4 +100,31 @@ describe('LedgerTransactionList layout selection', () => {
 
     expect(document.querySelector('tbody')).toBe(body)
   })
+
+  it('removes duplicate bucket movement when it matches Net Position', () => {
+    setViewport(1024)
+    renderList({
+      pageTotals: { inflow: 0, outflow: 12.5, transfer: 0, bucket: 'Essentials', bucketNet: -12.5 },
+    })
+
+    expect(screen.queryByText('Essentials movement on this page')).toBeNull()
+    expect(screen.getByText('Net Position')).not.toBeNull()
+  })
+
+  it('shows bucket movement when it differs from Net Position', () => {
+    setViewport(1024)
+    renderList({
+      pageTotals: { inflow: 100, outflow: 0, transfer: 0, bucket: 'Essentials', bucketNet: 25 },
+    })
+
+    expect(screen.getByText('Essentials movement on this page')).not.toBeNull()
+    expect(screen.queryByText('Net Position')).toBeNull()
+  })
+
+  it('keeps Net Position for an unfiltered page on mobile', () => {
+    setViewport(390)
+    renderList()
+
+    expect(screen.getByText('Net Position')).not.toBeNull()
+  })
 })

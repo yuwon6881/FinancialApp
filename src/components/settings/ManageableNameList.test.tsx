@@ -81,4 +81,24 @@ describe('ManageableNameList', () => {
     expect(screen.getByText('Category name')).toBeTruthy()
     expect(screen.getByRole('textbox', { name: 'New category name' })).toBeTruthy()
   })
+
+  it('keeps the search, filter, and Add actions in one compact toolbar', () => {
+    render(
+      <ManageableNameList
+        items={items}
+        itemLabel="Category"
+        addPlaceholder="New Category Name"
+        filterSlot={<div data-testid="flow-filter" />}
+        onAdd={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    )
+
+    const search = screen.getByRole('searchbox')
+    const toolbar = search.parentElement?.parentElement
+    expect(toolbar?.className).toContain('flex-nowrap')
+    expect(toolbar?.className).not.toContain('flex-wrap')
+    expect(screen.getByTestId('flow-filter')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Add' }).className).toContain('whitespace-nowrap')
+  })
 })

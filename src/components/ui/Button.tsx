@@ -35,7 +35,7 @@ const SIZE_CLASSES: Record<ButtonSize, string> = {
   // Matches the header "New Subscription"/"Post Transaction"-style CTA buttons;
   // callers add rounded-xl + shadow-lg via className since only those CTAs want it.
   lg: 'px-4 py-2.5 text-sm gap-2',
-  icon: 'size-10 p-0',
+  icon: 'size-11 p-0',
 }
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -54,6 +54,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         type={type}
         className={cn(
+          'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
           variant !== 'unstyled'
             && 'inline-flex items-center justify-center rounded-lg font-bold cursor-pointer transition duration-150 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none',
           VARIANT_CLASSES[variant],

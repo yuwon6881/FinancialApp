@@ -14,7 +14,8 @@ import type {
   VaultDocument,
 } from '../../../types'
 import type { StabilityRecovery } from '../../../types'
-import { drawsFor, proposeTopUp } from '../../../lib/stabilityRecovery'
+import { drawsFor, projectStabilityRecovery, proposeTopUp } from '../../../lib/stabilityRecovery'
+import { bucketAmount } from '../../../lib/bucketAttribution'
 import type { TransactionPrefillDraft } from '../TransactionFormSheet'
 import type { TransactionDocumentsFieldRef } from './TransactionDocumentsField'
 import { focusFirstInvalidField } from '../../ui/formValidation'
@@ -163,41 +164,30 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     const original = state.editingId
       ? transactions.find(transaction => String(transaction.id) === String(state.editingId))
       : undefined
-    if (recoveryForOffer && original && (original.stabilityRecoveryTopUpAmount ?? 0) > 0) {
+    const originalIsIncome = Boolean(original && original.amount > 0 && (
+      original.ledgerCategory.toLowerCase() === 'income' ||
+      original.ledgerCategory.toLowerCase().startsWith('incomesplit:')
+    ))
+    if (recoveryForOffer && original && originalIsIncome) {
       bucketsForOffer = topUpBuckets.map(bucket => {
         const child = transactions.find(transaction =>
           transaction.id === `${original.id}-split-${bucket.bucket}`)
         return child ? { ...bucket, balance: bucket.balance - child.amount } : bucket
       })
-      const stabilityChild = transactions.find(transaction =>
-        transaction.id === `${original.id}-split-Stability`)
-      const oldStabilityContribution = stabilityChild?.amount
-        ?? Math.max(0, original.amount * stabilityAlloc + (original.stabilityRecoveryTopUpAmount ?? 0))
-      const currentBalance = recoveryForOffer.currentBalance - oldStabilityContribution
-      const outstandingShortfall = Math.max(
-        0,
-        recoveryForOffer.recoverableCeiling - currentBalance,
-      )
-      const toppedUpThisCycle = Math.max(
-        0,
-        recoveryForOffer.toppedUpThisCycle - (original.stabilityRecoveryTopUpAmount ?? 0),
-      )
-      const paceAnchor = outstandingShortfall + toppedUpThisCycle
-      const requiredThisCycle = recoveryForOffer.cyclesRemaining <= 1
-        ? paceAnchor
-        : Math.ceil((paceAnchor / recoveryForOffer.cyclesRemaining) * 100) / 100
-      recoveryForOffer = {
-        ...recoveryForOffer,
-        isActive: outstandingShortfall > 0,
-        currentBalance,
-        outstandingShortfall,
-        toppedUpThisCycle,
-        requiredThisCycle,
-        outstandingThisCycle: Math.max(
-          0,
-          Math.min(requiredThisCycle - toppedUpThisCycle, outstandingShortfall),
-        ),
-      }
+      const originalStabilityContribution = transactions
+        .filter(transaction => String(transaction.id) === String(original.id) ||
+          String(transaction.id).startsWith(`${original.id}-split-`))
+        .reduce((sum, transaction) => sum + bucketAmount(transaction, 'Stability'), 0)
+      const withoutOriginal = transactions.filter(transaction =>
+        String(transaction.id) !== String(original.id) &&
+        !String(transaction.id).startsWith(`${original.id}-split-`))
+      recoveryForOffer = projectStabilityRecovery({
+        recovery: recoveryForOffer,
+        baseTransactions: transactions,
+        projectedTransactions: withoutOriginal,
+        stabilityAlloc,
+        projectedBalance: recoveryForOffer.currentBalance - originalStabilityContribution,
+      })
     }
 
     const liveOffer = proposeTopUp(recoveryForOffer, Math.abs(amount), bucketsForOffer, stabilityAlloc)
@@ -373,6 +363,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
         transferSource: t.ledgerCategory.startsWith('Transfer:') ? (t.ledgerCategory.substring(9).split('->')[0].trim() as TransferBucket) : undefined,
         transferTarget: t.ledgerCategory.startsWith('Transfer:') ? (t.ledgerCategory.substring(9).split('->')[1].trim() as TransferBucket) : undefined,
         stabilityRecoveryTopUpAmount: t.stabilityRecoveryTopUpAmount,
+        stabilityReloadIntent: t.stabilityReloadIntent,
       }
     })
     descriptionRef.current = t.description
@@ -517,8 +508,10 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       amount: state.amount,
       date: state.date,
       transactionType: state.transactionType,
+      ledgerCategory: state.ledgerCategory,
       transferSource: state.transferSource,
       transferTarget: state.transferTarget,
+      stabilityReloadIntent: state.stabilityReloadIntent,
     })
 
     if (Object.keys(validationErrors).length > 0) {

@@ -93,7 +93,7 @@ export const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({
       <div className="min-w-0">
         <div className="flex items-center gap-1.5">
           <span className={`size-1.5 rounded-full shrink-0 ${style.dot}`} aria-hidden />
-          <h4 className="text-sm font-bold text-foreground truncate">{goal.name}</h4>
+          <h4 className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">{goal.name}</h4>
           {goal.isRecurring && (
             <Repeat
               className="size-3 text-muted-foreground shrink-0"

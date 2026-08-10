@@ -1,4 +1,5 @@
 import { computeIncomeLedgerCategory } from '../../../lib/incomeSplit'
+import { isStabilityReloadFormDrawdown } from '../../../lib/stabilityRecovery'
 import type { TransactionFormState } from './transactionFormReducer'
 
 export const getTodayDateString = () => {
@@ -59,5 +60,8 @@ export function mapFormToTransaction(
     ledgerCategory: finalLedgerCategory,
     date: state.date,
     stabilityRecoveryTopUpAmount: isIncome ? Math.max(0, options.recoveryTopUp ?? 0) : undefined,
+    stabilityReloadIntent: isStabilityReloadFormDrawdown(state)
+      ? state.stabilityReloadIntent
+      : undefined,
   }
 }

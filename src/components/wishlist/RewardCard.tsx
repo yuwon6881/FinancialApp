@@ -64,7 +64,7 @@ export const RewardCard: React.FC<RewardCardProps> = ({
           {isFocused && (
             <span className="size-1.5 shrink-0 rounded-full bg-pink-500" aria-label="Focused reward" />
           )}
-          <h4 className="text-sm font-bold text-foreground truncate">{item.name}</h4>
+          <h4 className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">{item.name}</h4>
           <RowSyncStatus isDeleting={isDeleting} isSyncing={isSyncing} isPending={item.isPendingSync} entityLabel="item" />
         </div>
         <p className="mt-0.5 text-[10px] font-semibold text-muted-foreground">

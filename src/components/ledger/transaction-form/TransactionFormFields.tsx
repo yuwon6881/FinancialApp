@@ -10,9 +10,11 @@ import { maskCurrencyInput } from '../../../lib/utils'
 import type { TransactionFormState, TransferBucket, SelectableLedgerCategory } from './transactionFormReducer'
 import { FormField } from '../../ui/FormField'
 import { Button } from '../../ui/Button'
+import { InfoHint } from '../../ui/InfoHint'
 import { HorizontalRail } from '../../ui/HorizontalRail'
 import { StabilityTopUpOffer } from './StabilityTopUpOffer'
 import type { RecoveryBucketState, RecoveryOffer } from '../../../lib/stabilityRecovery'
+import { isStabilityReloadFormDrawdown } from '../../../lib/stabilityRecovery'
 import { isSelectableTransactionCategory } from '../../../lib/categoryFlow'
 
 interface TransactionFormFieldsProps {
@@ -449,6 +451,43 @@ export function TransactionFormFields({
             error={errors.stabilityTopUpAmount}
           />
         </>
+      )}
+
+      {isStabilityReloadFormDrawdown(state) && (
+        <fieldset className="space-y-2 rounded-xl border border-amber-500/25 bg-amber-500/5 p-3.5 sm:col-span-2">
+          <legend className="px-1 text-sm font-semibold text-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              Money out of your emergency fund
+              <InfoHint
+                label="Emergency-fund putting-back choice"
+                text="Only I'll put this back keeps the Today reminder alive. Choose spent for good when this money will not return to the fund."
+              />
+            </span>
+          </legend>
+          <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-describedby={errors.stabilityReloadIntent ? 'stability-reload-intent-error' : undefined}>
+            {([
+              ['Required', "I'll put this back"],
+              ['NotRequired', "This one's spent for good"],
+            ] as const).map(([value, label]) => (
+              <label key={value} className="flex cursor-pointer items-center gap-2 rounded-lg border border-border/60 bg-card/60 px-3 py-2.5 text-xs font-semibold text-foreground transition hover:bg-muted/40">
+                <Input
+                  type="radio"
+                  name="stabilityReloadIntent"
+                  value={value}
+                  checked={state.stabilityReloadIntent === value}
+                  onChange={() => onSetField('stabilityReloadIntent', value)}
+                  className="size-4 w-auto shrink-0 rounded-full p-0 shadow-none"
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+          {errors.stabilityReloadIntent && (
+            <p id="stability-reload-intent-error" className="text-xs text-destructive">
+              {errors.stabilityReloadIntent}
+            </p>
+          )}
+        </fieldset>
       )}
     </>
   )

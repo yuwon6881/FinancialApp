@@ -5,6 +5,7 @@ import type { IncomeAllocations } from './incomeSplitProjection'
 import { netBucketAmount } from './bucketAttribution'
 import { buildCycleSummaryInsights, buildReportBreakdown } from './reportCalculations'
 import { isReportableInflow, isReportableOutflow } from './transactionReportSemantics'
+import { projectStabilityRecovery } from './stabilityRecovery'
 
 export interface OptimisticDashboardInputs {
   activeOps: QueuedOp[]
@@ -18,19 +19,6 @@ const isIncomeTransaction = (transaction: Pick<Transaction, 'amount' | 'ledgerCa
   transaction.amount > 0 && (
     transaction.ledgerCategory.toLowerCase() === 'income' ||
     transaction.ledgerCategory.toLowerCase().startsWith('incomesplit:'))
-
-const recoveryTopUp = (transaction: Partial<Transaction>, baseline: number) => {
-  if (transaction.stabilityRecoveryTopUpAmount != null) {
-    return Math.max(0, transaction.stabilityRecoveryTopUpAmount)
-  }
-  const ledgerCategory = transaction.ledgerCategory ?? ''
-  const amount = transaction.amount ?? 0
-  if (amount <= 0 || !ledgerCategory.toLowerCase().startsWith('incomesplit:')) return 0
-  const stabilityPercent = Number(ledgerCategory.slice('IncomeSplit:'.length).split(',')[2])
-  return Number.isFinite(stabilityPercent)
-    ? Math.max(0, amount * (stabilityPercent / 100 - baseline))
-    : 0
-}
 
 export function computeOptimisticDashboard(
   dashboardData: DashboardData | null,
@@ -233,26 +221,13 @@ export function computeOptimisticDashboard(
 
   const stabilityDelta = bucketDeltas.get('Stability') || 0
   if (data.stabilityRecovery) {
-    const topUpDelta = projectedCycleTransactions.reduce(
-      (sum, transaction) => sum + recoveryTopUp(transaction, data.setting.stabilityAlloc), 0) -
-      baseCycleTransactions.reduce(
-        (sum, transaction) => sum + recoveryTopUp(transaction, data.setting.stabilityAlloc), 0)
-    const currentBalance = data.stabilityRecovery.currentBalance + stabilityDelta
-    const outstandingShortfall = Math.max(0, data.stabilityRecovery.recoverableCeiling - currentBalance)
-    const toppedUpThisCycle = Math.max(0, data.stabilityRecovery.toppedUpThisCycle + topUpDelta)
-    const paceAnchor = outstandingShortfall + toppedUpThisCycle
-    const requiredThisCycle = data.stabilityRecovery.cyclesRemaining <= 1
-      ? paceAnchor
-      : Math.ceil((paceAnchor / data.stabilityRecovery.cyclesRemaining) * 100) / 100
-    data.stabilityRecovery = {
-      ...data.stabilityRecovery,
-      currentBalance,
-      outstandingShortfall,
-      toppedUpThisCycle,
-      requiredThisCycle,
-      outstandingThisCycle: Math.max(0, Math.min(requiredThisCycle - toppedUpThisCycle, outstandingShortfall)),
-      isActive: outstandingShortfall > 0,
-    }
+    data.stabilityRecovery = projectStabilityRecovery({
+      recovery: data.stabilityRecovery,
+      baseTransactions: baseCycleTransactions,
+      projectedTransactions: projectedCycleTransactions,
+      stabilityAlloc: data.setting.stabilityAlloc,
+      projectedBalance: data.stabilityRecovery.currentBalance + stabilityDelta,
+    })
   }
   const stability = data.categories.find(category => category.name.toLowerCase() === 'stability')
   data.stats.stabilityPercentReached = stability && data.setting.targetStabilityFund > 0

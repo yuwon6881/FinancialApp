@@ -49,3 +49,8 @@ export function calculateLedgerTotals(transactions: LedgerTotalTransaction[], bu
     bucketNet: bucket ? netBucketAmount(transactions, bucket) : 0,
   }
 }
+
+/** Whether the bucket-specific movement rounds to a different amount than page net position. */
+export function hasDistinctBucketMovement(bucketNet: number, net: number): boolean {
+  return Math.round(bucketNet * 100) !== Math.round(net * 100)
+}

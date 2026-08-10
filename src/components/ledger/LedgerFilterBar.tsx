@@ -9,10 +9,9 @@ import { BottomSheet } from '../ui/BottomSheet'
 import { AnchoredPopover } from '../ui/AnchoredPopover'
 import { CustomSelect } from '../ui/CustomSelect'
 import { DatePicker } from '../ui/DatePicker'
-import { PillSwitch } from '../ui/PillSwitch'
 import { FormField } from '../ui/FormField'
 import { getCategoryDotClass, getCategoryFilterClass } from '../../lib/categoryColors'
-import { LEDGER_BUCKETS as LEDGER_BUCKET_VALUES } from '../../lib/transactionFilters'
+import { LEDGER_BUCKETS as LEDGER_BUCKET_VALUES, type TransactionLinkFilter } from '../../lib/transactionFilters'
 import type { TransactionSort } from '../../lib/transactionOrdering'
 
 const LEDGER_BUCKETS: readonly string[] = LEDGER_BUCKET_VALUES
@@ -51,10 +50,10 @@ interface LedgerFilterBarProps {
   onMinAmountChange: (value: string) => void
   maxAmount: string
   onMaxAmountChange: (value: string) => void
-  recurringOnly: boolean
-  onRecurringOnlyChange: (value: boolean) => void
-  wishlistOnly: boolean
-  onWishlistOnlyChange: (value: boolean) => void
+  recurringFilter: TransactionLinkFilter
+  onRecurringFilterChange: (value: TransactionLinkFilter) => void
+  wishlistFilter: TransactionLinkFilter
+  onWishlistFilterChange: (value: TransactionLinkFilter) => void
   txType: 'inflow' | 'outflow' | 'transfer' | null
   onTxTypeChange: (value: 'inflow' | 'outflow' | 'transfer' | null) => void
   activeAdvancedFilterCount: number
@@ -91,10 +90,10 @@ export function LedgerFilterBar({
   onMinAmountChange,
   maxAmount,
   onMaxAmountChange,
-  recurringOnly,
-  onRecurringOnlyChange,
-  wishlistOnly,
-  onWishlistOnlyChange,
+  recurringFilter,
+  onRecurringFilterChange,
+  wishlistFilter,
+  onWishlistFilterChange,
   txType,
   onTxTypeChange,
   activeAdvancedFilterCount,
@@ -111,8 +110,8 @@ export function LedgerFilterBar({
   const draftAdvancedFilterCount =
     (startDate || endDate ? 1 : 0) +
     (minAmount || maxAmount ? 1 : 0) +
-    (recurringOnly ? 1 : 0) +
-    (wishlistOnly ? 1 : 0) +
+    (recurringFilter !== 'all' ? 1 : 0) +
+    (wishlistFilter !== 'all' ? 1 : 0) +
     (txType ? 1 : 0)
   const draftFilterCount = checkboxFilters.length + draftAdvancedFilterCount
   const parsedMin = minAmount === '' ? undefined : Number(minAmount)
@@ -230,12 +229,43 @@ export function LedgerFilterBar({
       </div>
 
       {([
-        ['Recurring transactions only', recurringOnly, onRecurringOnlyChange],
-        ['Wishlist purchases only', wishlistOnly, onWishlistOnlyChange],
-      ] as const).map(([label, checked, onChange]) => (
+        {
+          label: 'Recurring transactions',
+          value: recurringFilter,
+          onChange: onRecurringFilterChange,
+          options: [
+            { value: 'all', label: 'Include all' },
+            { value: 'exclude', label: 'Exclude recurring' },
+            { value: 'only', label: 'Recurring only' },
+          ],
+        },
+        {
+          label: 'Wishlist purchases',
+          value: wishlistFilter,
+          onChange: onWishlistFilterChange,
+          options: [
+            { value: 'all', label: 'Include all' },
+            { value: 'exclude', label: 'Exclude wishlist purchases' },
+            { value: 'only', label: 'Wishlist purchases only' },
+          ],
+        },
+      ] satisfies Array<{
+        label: string
+        value: TransactionLinkFilter
+        onChange: (value: TransactionLinkFilter) => void
+        options: Array<{ value: TransactionLinkFilter; label: string }>
+      }>).map(({ label, value, onChange, options }) => (
         <div key={label} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2.5">
-          <span className="text-xs font-semibold text-foreground">{label}</span>
-          <PillSwitch checked={checked} onChange={onChange} ariaLabel={label} />
+          <span className="min-w-0 text-xs font-semibold text-foreground">{label}</span>
+          <CustomSelect
+            ariaLabel={`${label} filter`}
+            value={value}
+            onChange={onChange}
+            options={options}
+            align="right"
+            controlSize="sm"
+            className="w-44 shrink-0"
+          />
         </div>
       ))}
     </div>

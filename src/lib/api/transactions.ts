@@ -1,5 +1,6 @@
 import type { AutocompleteSuggestion, Transaction } from '../../types'
 import type { TransactionSort } from '../transactionOrdering'
+import type { TransactionLinkFilter } from '../transactionFilters'
 import type { WirePagedTransactionResult, WireTransaction } from '../apiTypes'
 import { deobfuscateTransaction, obfuscateAmount } from './amounts'
 import { API_BASE_URL, apiFetch, cachedGet, invalidateCache, jsonBody, request, requestVoid } from './client'
@@ -61,6 +62,9 @@ export interface TransactionQuery {
   endDate?: string
   minAmount?: number
   maxAmount?: number
+  recurringFilter?: TransactionLinkFilter
+  wishlistFilter?: TransactionLinkFilter
+  /** Legacy wire-contract aliases; new callers should use the three-state filters. */
   recurringOnly?: boolean
   wishlistOnly?: boolean
   sort?: TransactionSort
@@ -75,8 +79,16 @@ function appendTransactionQuery(params: URLSearchParams, query: TransactionQuery
   if (query.endDate) params.append('endDate', query.endDate)
   if (query.minAmount !== undefined) params.append('minAmount', query.minAmount.toString())
   if (query.maxAmount !== undefined) params.append('maxAmount', query.maxAmount.toString())
-  if (query.recurringOnly) params.append('recurringOnly', 'true')
-  if (query.wishlistOnly) params.append('wishlistOnly', 'true')
+  if (query.recurringFilter && query.recurringFilter !== 'all') {
+    params.append('recurringFilter', query.recurringFilter)
+  } else if (query.recurringOnly) {
+    params.append('recurringOnly', 'true')
+  }
+  if (query.wishlistFilter && query.wishlistFilter !== 'all') {
+    params.append('wishlistFilter', query.wishlistFilter)
+  } else if (query.wishlistOnly) {
+    params.append('wishlistOnly', 'true')
+  }
   if (query.sort) params.append('sort', query.sort)
 }
 

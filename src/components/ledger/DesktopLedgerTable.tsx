@@ -2,6 +2,7 @@ import { ArrowRightLeft } from 'lucide-react'
 import { DataTable, DataTableBody, DataTableHeader, DataTableHeaderCell } from '../ui/DataTable'
 import { DesktopLedgerRow } from './LedgerRows'
 import type { LedgerListProps } from './ledgerListShared'
+import { hasDistinctBucketMovement } from '../../lib/ledgerTotals'
 
 // Desktop (>= md) ledger table, including the page-total summary rows and the
 // empty/loading state. Mounted only when useIsMobile() is false, so a phone never
@@ -88,8 +89,7 @@ export function DesktopLedgerTable({
                 <td className="p-4"></td>
               </tr>
             )}
-            {/* Secondary totals row: the transfer figure as a clearly labelled chip
-                (rather than a stray sentence), plus the page Net Position. */}
+            {/* Secondary totals row: transfer volume plus one context-appropriate movement figure. */}
             {hasRows && (
               <tr className="bg-muted/25 border-t border-border/40 text-xs select-none">
                 <td className="px-4 py-3" colSpan={isSelecting ? 8 : 7}>
@@ -99,29 +99,27 @@ export function DesktopLedgerTable({
                         <ArrowRightLeft className="size-3.5 shrink-0" />
                         <span className="font-semibold">Transferred / Allocated</span>
                         <span className="font-extrabold">{formatSensitive(pageTotals.transfer)}</span>
-                        <span className="text-[10px] font-medium text-blue-500/70">internal — excluded from debit &amp; credit</span>
+                        <span className="text-[10px] font-medium text-blue-500">internal — excluded from debit &amp; credit</span>
                       </span>
                     ) : <span />}
                     <span className="inline-flex flex-wrap items-center gap-x-4 gap-y-2">
-                      {/* Filtering to one bucket makes debit/credit useless — a Stability-only view
-                          is nearly all transfers, so both read zero while the fund has visibly
-                          moved. This is the figure that answers "how much left this bucket". */}
-                      {pageTotals.bucket && (
+                      {pageTotals.bucket && hasDistinctBucketMovement(pageTotals.bucketNet, net) ? (
                         <span className="inline-flex items-center gap-2">
                           <span className="uppercase tracking-wider text-muted-foreground font-bold text-[11px]">
-                            {pageTotals.bucket} on this page
+                            {pageTotals.bucket} movement on this page
                           </span>
                           <span className={`font-extrabold text-sm ${pageTotals.bucketNet >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
                             {pageTotals.bucketNet >= 0 ? '+' : '-'}{formatSensitive(Math.abs(pageTotals.bucketNet))}
                           </span>
                         </span>
-                      )}
-                      <span className="inline-flex items-center gap-2">
-                        <span className="uppercase tracking-wider text-muted-foreground font-bold text-[11px]">Net Position</span>
-                        <span className={`font-extrabold text-sm ${net >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
-                          {net >= 0 ? '+' : '-'}{formatSensitive(Math.abs(net))}
+                      ) : (
+                        <span className="inline-flex items-center gap-2">
+                          <span className="uppercase tracking-wider text-muted-foreground font-bold text-[11px]">Net Position</span>
+                          <span className={`font-extrabold text-sm ${net >= 0 ? 'text-emerald-500' : 'text-orange-500'}`}>
+                            {net >= 0 ? '+' : '-'}{formatSensitive(Math.abs(net))}
+                          </span>
                         </span>
-                      </span>
+                      )}
                     </span>
                   </div>
                 </td>

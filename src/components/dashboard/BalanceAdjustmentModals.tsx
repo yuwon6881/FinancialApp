@@ -144,7 +144,7 @@ export const BalanceAdjustmentModals: React.FC<BalanceAdjustmentModalsProps> = (
                 </span>
               </div>
             </div>
-            <p className="text-[10px] text-muted-foreground/80">
+            <p className="text-[10px] text-muted-foreground">
               This will be pushed to the server immediately and will not be added to the ledger draft queue.
             </p>
           </div>

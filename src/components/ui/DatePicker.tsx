@@ -303,7 +303,7 @@ export function DatePicker({
                 key={label}
                 role="columnheader"
                 aria-label={label}
-                className="flex h-7 items-center justify-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 select-none"
+                className="flex h-7 items-center justify-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground select-none"
               >
                 {label}
               </span>

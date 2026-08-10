@@ -38,8 +38,8 @@ export function SleeveCard({
       className={`group/sleeve self-start rounded-xl border p-4 shadow-sm transition-[border-color,box-shadow] duration-300 hover:border-current/30 hover:shadow-md ${toneClass}`}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-bold">{sleeve.label}</span>
-        <span className="rounded-full bg-background/60 px-2 py-0.5 text-[10px] font-bold transition-transform duration-300 group-hover/sleeve:scale-105">
+        <span className="min-w-0 flex-1 truncate text-xs font-bold">{sleeve.label}</span>
+        <span className="shrink-0 rounded-full bg-background/60 px-2 py-0.5 text-[10px] font-bold transition-transform duration-300 group-hover/sleeve:scale-105">
           {allocationStatusLabel(sleeve.status)}
         </span>
       </div>
@@ -76,8 +76,8 @@ export function SleeveCard({
       {constituents.length > 0 && (
         <details className="group/holdings mt-3 rounded-lg border border-current/15 bg-background/20">
           <summary className="flex cursor-pointer select-none items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-[10px] font-bold text-muted-foreground outline-none transition-colors hover:bg-background/30 focus-visible:ring-2 focus-visible:ring-ring/50">
-            <span>See the {constituents.length} fund{constituents.length === 1 ? '' : 's'} in this basket</span>
-            <ChevronDown className="size-3.5 transition-transform duration-200 group-open/holdings:rotate-180" />
+            <span className="min-w-0 break-words">See the {constituents.length} fund{constituents.length === 1 ? '' : 's'} in this basket</span>
+            <ChevronDown className="size-3.5 shrink-0 transition-transform duration-200 group-open/holdings:rotate-180" />
           </summary>
           <ul className="space-y-2 border-t border-current/15 px-3 py-2.5">
             {constituents.map(holding => (

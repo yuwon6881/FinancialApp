@@ -19,6 +19,7 @@ import type { LedgerListProps } from './ledger/ledgerListShared'
 import { TransactionFormSheet, type TransactionFormSheetRef } from './ledger/TransactionFormSheet'
 import type { ReceiptSplitDraft, ReceiptSplitFailure } from '../lib/useReceiptSplitPolling'
 import { calculateLedgerTotals } from '../lib/ledgerTotals'
+import type { TransactionLinkFilter } from '../lib/transactionFilters'
 import { useIsMobile } from '../lib/useIsMobile'
 import { formatCurrencyVal } from '../lib/utils'
 import { X } from 'lucide-react'
@@ -60,6 +61,9 @@ interface LedgerViewProps {
   incomingEndDate?: string | null
   incomingMinAmount?: string | null
   incomingMaxAmount?: string | null
+  incomingRecurringFilter?: TransactionLinkFilter
+  incomingWishlistFilter?: TransactionLinkFilter
+  /** Legacy navigation aliases; true maps to the new `only` mode. */
   incomingRecurringOnly?: boolean
   incomingWishlistOnly?: boolean
   incomingTxType?: 'inflow' | 'outflow' | 'transfer' | null
@@ -180,8 +184,8 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
     props.showAllCycles ? ledger.appliedEndDate : ledger.selectedEndDate,
     props.showAllCycles ? ledger.appliedMinAmount : ledger.selectedMinAmount,
     props.showAllCycles ? ledger.appliedMaxAmount : ledger.selectedMaxAmount,
-    props.showAllCycles ? ledger.appliedRecurringOnly : ledger.selectedRecurringOnly,
-    props.showAllCycles ? ledger.appliedWishlistOnly : ledger.selectedWishlistOnly,
+    props.showAllCycles ? ledger.appliedRecurringFilter : ledger.selectedRecurringFilter,
+    props.showAllCycles ? ledger.appliedWishlistFilter : ledger.selectedWishlistFilter,
     props.showAllCycles ? ledger.appliedTxTypeFilter : ledger.selectedTxTypeFilter,
     props.showAllCycles ? ledger.pendingSearchTerm : ledger.searchTerm,
     props.showAllCycles ? ledger.pendingFilters : ledger.selectedFilters,
@@ -189,8 +193,8 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
     props.showAllCycles ? ledger.pendingEndDate : ledger.selectedEndDate,
     props.showAllCycles ? ledger.pendingMinAmount : ledger.selectedMinAmount,
     props.showAllCycles ? ledger.pendingMaxAmount : ledger.selectedMaxAmount,
-    props.showAllCycles ? ledger.pendingRecurringOnly : ledger.selectedRecurringOnly,
-    props.showAllCycles ? ledger.pendingWishlistOnly : ledger.selectedWishlistOnly,
+    props.showAllCycles ? ledger.pendingRecurringFilter : ledger.selectedRecurringFilter,
+    props.showAllCycles ? ledger.pendingWishlistFilter : ledger.selectedWishlistFilter,
     props.showAllCycles ? ledger.pendingTxTypeFilter : ledger.selectedTxTypeFilter,
     hideSensitive,
   ])
@@ -219,13 +223,13 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
   const activeEndDate = props.showAllCycles ? ledger.appliedEndDate : ledger.selectedEndDate
   const activeMinAmount = props.showAllCycles ? ledger.appliedMinAmount : ledger.selectedMinAmount
   const activeMaxAmount = props.showAllCycles ? ledger.appliedMaxAmount : ledger.selectedMaxAmount
-  const activeRecurringOnly = props.showAllCycles ? ledger.appliedRecurringOnly : ledger.selectedRecurringOnly
-  const activeWishlistOnly = props.showAllCycles ? ledger.appliedWishlistOnly : ledger.selectedWishlistOnly
+  const activeRecurringFilter = props.showAllCycles ? ledger.appliedRecurringFilter : ledger.selectedRecurringFilter
+  const activeWishlistFilter = props.showAllCycles ? ledger.appliedWishlistFilter : ledger.selectedWishlistFilter
   const activeAdvancedFilterCount =
     (activeStartDate || activeEndDate ? 1 : 0) +
     (activeMinAmount || activeMaxAmount ? 1 : 0) +
-    (activeRecurringOnly ? 1 : 0) +
-    (activeWishlistOnly ? 1 : 0) +
+    (activeRecurringFilter !== 'all' ? 1 : 0) +
+    (activeWishlistFilter !== 'all' ? 1 : 0) +
     ((props.showAllCycles ? ledger.appliedTxTypeFilter : ledger.selectedTxTypeFilter) ? 1 : 0)
 
   const listProps: LedgerListProps = {
@@ -309,8 +313,10 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         if (activeTxType) {
           filterDetails.push(activeTxType === 'inflow' ? "inflows only" : activeTxType === 'outflow' ? "outflows only" : "transfers only")
         }
-        if (activeRecurringOnly) filterDetails.push('recurring transactions only')
-        if (activeWishlistOnly) filterDetails.push('wishlist purchases only')
+        if (activeRecurringFilter === 'only') filterDetails.push('recurring transactions only')
+        else if (activeRecurringFilter === 'exclude') filterDetails.push('excluding recurring transactions')
+        if (activeWishlistFilter === 'only') filterDetails.push('wishlist purchases only')
+        else if (activeWishlistFilter === 'exclude') filterDetails.push('excluding wishlist purchases')
         if (activeSearch) {
           filterDetails.push(`search "${activeSearch}"`)
         }
@@ -327,7 +333,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
             </div>
             <Button variant="unstyled"
               onClick={ledger.handleResetFilters}
-              className="flex shrink-0 items-center gap-1 whitespace-nowrap text-blue-500/70 hover:text-blue-500 text-[10px] font-semibold transition cursor-pointer cursor-pointer"
+              className="flex shrink-0 items-center gap-1 whitespace-nowrap text-blue-500 hover:text-blue-500 text-[10px] font-semibold transition cursor-pointer cursor-pointer"
             >
               <X className="size-3" /> Clear filter
             </Button>
@@ -411,10 +417,10 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         onMinAmountChange={props.showAllCycles ? ledger.setPendingMinAmount : ledger.setSelectedMinAmount}
         maxAmount={props.showAllCycles ? ledger.pendingMaxAmount : ledger.selectedMaxAmount}
         onMaxAmountChange={props.showAllCycles ? ledger.setPendingMaxAmount : ledger.setSelectedMaxAmount}
-        recurringOnly={props.showAllCycles ? ledger.pendingRecurringOnly : ledger.selectedRecurringOnly}
-        onRecurringOnlyChange={props.showAllCycles ? ledger.setPendingRecurringOnly : ledger.setSelectedRecurringOnly}
-        wishlistOnly={props.showAllCycles ? ledger.pendingWishlistOnly : ledger.selectedWishlistOnly}
-        onWishlistOnlyChange={props.showAllCycles ? ledger.setPendingWishlistOnly : ledger.setSelectedWishlistOnly}
+        recurringFilter={props.showAllCycles ? ledger.pendingRecurringFilter : ledger.selectedRecurringFilter}
+        onRecurringFilterChange={props.showAllCycles ? ledger.setPendingRecurringFilter : ledger.setSelectedRecurringFilter}
+        wishlistFilter={props.showAllCycles ? ledger.pendingWishlistFilter : ledger.selectedWishlistFilter}
+        onWishlistFilterChange={props.showAllCycles ? ledger.setPendingWishlistFilter : ledger.setSelectedWishlistFilter}
         txType={props.showAllCycles ? ledger.pendingTxTypeFilter : ledger.selectedTxTypeFilter}
         onTxTypeChange={props.showAllCycles ? ledger.setPendingTxTypeFilter : ledger.setSelectedTxTypeFilter}
         activeAdvancedFilterCount={activeAdvancedFilterCount}

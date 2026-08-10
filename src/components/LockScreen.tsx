@@ -102,7 +102,7 @@ export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScre
   // lock screen always covers any open modal — and any toast — without having to close
   // it first. See lib/zLayers for the full ordering.
   return createPortal(
-    <div className={`fixed inset-0 ${Z_LAYERS.lockScreen} flex items-center justify-center bg-background/95 p-4 backdrop-blur-md animate-in fade-in duration-300`}>
+    <div className={`safe-screen-inset fixed inset-0 ${Z_LAYERS.lockScreen} flex items-start justify-center overflow-y-auto bg-background/95 backdrop-blur-md animate-in fade-in duration-300`}>
       <div
         ref={panelRef}
         role="dialog"
@@ -110,7 +110,7 @@ export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScre
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         tabIndex={-1}
-        className="view-enter flex w-full max-w-sm flex-col items-center gap-6 outline-none"
+        className="view-enter my-auto flex w-full max-w-sm flex-col items-center gap-6 outline-none"
       >
         <AppLogo className="size-16 rounded-2xl shadow-xl shadow-primary/20" />
         <div className="text-center">
@@ -182,7 +182,6 @@ export function LockScreen({ isOpen, username, onUnlocked, onSignOut }: LockScre
                 setLockPassword(e.target.value)
                 if (passwordError) setPasswordError(null)
               }}
-              autoFocus={!fingerprintAvailable}
               controlSize="lg"
               className="bg-card"
             />

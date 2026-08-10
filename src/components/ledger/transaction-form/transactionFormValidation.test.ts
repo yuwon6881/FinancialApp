@@ -20,4 +20,34 @@ describe('validateTransactionForm', () => {
       transferTarget: 'Choose a different target category.',
     })
   })
+
+  it('requires an answer when an outflow takes money from Stability', () => {
+    expect(validateTransactionForm({
+      description: 'Emergency fund spend',
+      amount: '25.00',
+      date: '2026-07-13',
+      transactionType: 'outflow',
+      ledgerCategory: 'Stability',
+      transferSource: 'Essentials',
+      transferTarget: 'Rewards',
+      stabilityReloadIntent: 'Unanswered',
+    })).toMatchObject({
+      stabilityReloadIntent: 'Choose whether you will put this money back.',
+    })
+  })
+
+  it('accepts either explicit answer and ignores the field for other categories', () => {
+    const base = {
+      description: 'Emergency fund spend',
+      amount: '25.00',
+      date: '2026-07-13',
+      transactionType: 'transfer',
+      ledgerCategory: 'Essentials',
+      transferSource: 'Stability',
+      transferTarget: 'Rewards',
+    }
+    expect(validateTransactionForm({ ...base, stabilityReloadIntent: 'Required' })).toEqual({})
+    expect(validateTransactionForm({ ...base, stabilityReloadIntent: 'NotRequired' })).toEqual({})
+    expect(validateTransactionForm({ ...base, transferSource: 'Essentials' })).toEqual({})
+  })
 })

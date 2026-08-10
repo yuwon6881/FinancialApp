@@ -33,7 +33,7 @@ export function InsightCard({ title, value, detail, tone, trendUp, tooltipHint }
           <span className={`max-w-[10rem] truncate text-right text-xs font-bold ${toneClass}`}>{value}</span>
         </div>
       </div>
-      <p className="mt-1.5 text-[10px] leading-relaxed text-foreground/70">{detail}</p>
+      <p className="mt-1.5 text-[10px] leading-relaxed text-foreground">{detail}</p>
     </div>
   )
 }

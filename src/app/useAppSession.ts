@@ -175,15 +175,12 @@ export function useAppSession(options: UseAppSessionOptions): AppSession {
   async function handleLogout() {
     const currentOwner = usernameRef.current
     onPreferenceOwnerChange(null)
-    const { getExistingDeviceId } = await import('../lib/push/deviceId')
-    const pushDeviceId = getExistingDeviceId()
-    if (pushDeviceId) {
-      try {
-        await api.deletePushSubscription(pushDeviceId)
-      } catch (error) {
-        console.error('Could not unregister push notifications for this device; continuing sign-out.', error)
-      }
-    }
+    // Signing out deliberately leaves this device's push enrolment alone. Unregistering here made
+    // notifications look like a per-session setting: the switches came back off after every
+    // sign-out, the devices roster came back empty, and nothing in the UI said why. The enrolment
+    // is per (account, device) and is the user's standing choice, so it outlives the session --
+    // exactly like the device-unlock marker beside it. Turning notifications off is a deliberate
+    // act on the switch, and revoking another browser is a deliberate act on the roster.
     try {
       await onLogoutBackupAndCleanup(currentOwner)
     } catch (error) {

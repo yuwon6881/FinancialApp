@@ -112,7 +112,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         className={
           inline
             ? 'app-panel rounded-2xl border border-border/60 bg-card/92 p-8 text-center'
-            : 'app-shell min-h-screen flex items-center justify-center p-6 text-foreground'
+            : 'safe-screen-inset app-shell min-h-screen min-h-dvh flex items-center justify-center text-foreground [--safe-screen-block:1.5rem] [--safe-screen-inline:1.5rem]'
         }
       >
         <div className="mx-auto flex max-w-sm flex-col items-center gap-4">

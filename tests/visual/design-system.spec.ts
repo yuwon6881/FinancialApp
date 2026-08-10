@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
-import type { VaultDocument, WishlistItem } from '../../src/types'
+import type { InvestmentActivity, TaxReliefCategoryDefinition, VaultDocument, WishlistItem } from '../../src/types'
 
 const transaction = {
   id: 'tx-visual-1',
@@ -165,7 +165,7 @@ async function fulfill(route: Route, body: unknown, status = 200) {
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
 }
 
-async function mockApi(page: Page, options: { registered?: boolean; failStatus?: boolean; wishlist?: WishlistItem[]; documents?: VaultDocument[] } = {}) {
+async function mockApi(page: Page, options: { registered?: boolean; failStatus?: boolean; wishlist?: WishlistItem[]; documents?: VaultDocument[]; reliefCategories?: TaxReliefCategoryDefinition[]; investmentTransactions?: InvestmentActivity[] } = {}) {
   const darkMode = test.info().project.name.endsWith('-dark')
   const themedBootstrap = {
     ...bootstrap,
@@ -199,7 +199,7 @@ async function mockApi(page: Page, options: { registered?: boolean; failStatus?:
     // Must stay an object: the generic `GET -> []` fallthrough below would leave `taxYears`
     // undefined, so the Vault and Dashboard would crash rather than render an empty notice.
     if (pathname.endsWith('/documents/retention')) return fulfill(route, { taxYears: [], noticeWindowDays: 180, keepYears: 7 })
-    if (pathname.includes('/documents/relief-categories')) return fulfill(route, [])
+    if (pathname.includes('/documents/relief-categories')) return fulfill(route, options.reliefCategories ?? [])
     if (pathname.includes('/documents/summary/')) {
       return fulfill(route, {
         taxYear: 2026,
@@ -213,13 +213,18 @@ async function mockApi(page: Page, options: { registered?: boolean; failStatus?:
       return fulfill(route, { items: documents, totalCount: documents.length })
     }
     if (pathname.endsWith('/wishlist')) return fulfill(route, options.wishlist ?? [])
+    if (pathname.endsWith('/investments/transactions')) {
+      const items = options.investmentTransactions ?? []
+      return fulfill(route, { items, total: items.length, page: 1, pageSize: Number(url.searchParams.get('pageSize') || 10) })
+    }
     if (pathname.endsWith('/transactions')) {
       return fulfill(route, url.searchParams.has('page')
         ? { items: [transaction], total: 1, page: 1, pageSize: Number(url.searchParams.get('pageSize') || 25) }
         : [transaction])
     }
-    if (pathname.endsWith('/investments/portfolio')) return fulfill(route, emptyInvestmentPortfolio)
-    if (pathname.endsWith('/investments/transactions')) return fulfill(route, { items: [], total: 0, page: 1, pageSize: 10 })
+    if (pathname.endsWith('/investments/portfolio')) {
+      return fulfill(route, { ...emptyInvestmentPortfolio, activityCount: (options.investmentTransactions ?? []).length })
+    }
     if (pathname.endsWith('/investments/cash-flows')) return fulfill(route, { items: [], total: 0, page: 1, pageSize: 10 })
     if (pathname.endsWith('/investments/allocation')) {
       return fulfill(route, emptyInvestmentAllocation)
@@ -408,6 +413,118 @@ test('vault controls stay beside the results and selection actions do not shift 
   expect(after.resultsTop - after.toolbarTop).toBeCloseTo(before.resultsTop - before.toolbarTop, 0)
   await expect(filterBar).toBeVisible()
   await expect(results).toBeVisible()
+})
+
+test('mobile document cards keep amount editing and tax relief controls separated', async ({ page }) => {
+  test.skip(!test.info().project.name.startsWith('mobile'), 'The card layout is mobile-only.')
+
+  const document: VaultDocument = {
+    ...vaultDocuments[0],
+    id: 3,
+    originalFileName: 'INV-049837.pdf',
+    amount: 56,
+    reliefCategory: 'sports-lifestyle',
+  }
+  const reliefCategories: TaxReliefCategoryDefinition[] = [{
+    id: 'sports-lifestyle',
+    name: 'Sports Lifestyle',
+    limit: 1_000,
+  }]
+
+  await establishSession(page)
+  await mockApi(page, { documents: [document], reliefCategories })
+  await page.goto('/vault', { waitUntil: 'domcontentloaded' })
+
+  const card = page.getByTestId('document-card-3')
+  await expect(card).toBeVisible()
+  await card.getByRole('button', { name: /56\.00/ }).click()
+
+  const amountInput = card.getByRole('textbox', { name: 'Amount for INV-049837.pdf' })
+  const reliefButton = card.getByRole('button', { name: 'Change tax relief category for INV-049837.pdf' })
+  await expect(amountInput).toBeVisible()
+  await expect(reliefButton).toBeVisible()
+
+  const amountControls = await amountInput.evaluate(element => {
+    const row = element.parentElement
+    const bounds = row?.getBoundingClientRect()
+    return bounds ? { bottom: bounds.bottom } : null
+  })
+  const reliefBounds = await reliefButton.evaluate(element => {
+    const bounds = element.getBoundingClientRect()
+    return { top: bounds.top, left: bounds.left, right: bounds.right }
+  })
+  const cardBounds = await card.evaluate(element => {
+    const bounds = element.getBoundingClientRect()
+    return { left: bounds.left, right: bounds.right }
+  })
+
+  expect(amountControls).not.toBeNull()
+  expect(reliefBounds.top).toBeGreaterThan(amountControls!.bottom)
+  expect(reliefBounds.left).toBeGreaterThanOrEqual(cardBounds.left)
+  expect(reliefBounds.right).toBeLessThanOrEqual(cardBounds.right)
+})
+
+test('mobile category toolbar keeps the filter and Add action on one row', async ({ page }) => {
+  test.skip(!test.info().project.name.startsWith('mobile'), 'The compact toolbar is mobile-only.')
+
+  await page.setViewportSize({ width: 320, height: 844 })
+  await establishSession(page)
+  await mockApi(page)
+  await page.goto('/settings', { waitUntil: 'domcontentloaded' })
+  await page.getByRole('tab', { name: 'Categories & Limits' }).click()
+
+  const search = page.getByRole('searchbox', { name: 'Search categories' })
+  const filter = page.getByRole('combobox', { name: 'Filter transaction categories by flow' })
+  const toolbar = search.locator('..').locator('..')
+  const add = toolbar.getByRole('button', { name: 'Add', exact: true })
+  await expect(search).toBeVisible()
+  await expect(filter).toBeVisible()
+  await expect(add).toBeVisible()
+
+  const [toolbarBounds, filterBounds, addBounds] = await Promise.all([
+    toolbar.evaluate(element => {
+      const bounds = element.getBoundingClientRect()
+      return { top: bounds.top, bottom: bounds.bottom }
+    }),
+    filter.evaluate(element => {
+      const bounds = element.getBoundingClientRect()
+      return { top: bounds.top, bottom: bounds.bottom }
+    }),
+    add.evaluate(element => {
+      const bounds = element.getBoundingClientRect()
+      return { top: bounds.top, bottom: bounds.bottom }
+    }),
+  ])
+
+  expect(filterBounds.top).toBeGreaterThanOrEqual(toolbarBounds.top)
+  expect(addBounds.top).toBeGreaterThanOrEqual(toolbarBounds.top)
+  expect(filterBounds.bottom).toBeLessThanOrEqual(toolbarBounds.bottom)
+  expect(addBounds.bottom).toBeLessThanOrEqual(toolbarBounds.bottom)
+})
+
+test('investment activity table explains fees and taxes beside the gross amount', async ({ page }) => {
+  test.skip(!test.info().project.name.startsWith('desktop'), 'The activity table is desktop-only.')
+
+  const activity: InvestmentActivity = {
+    id: 'activity-with-charges',
+    accountId: 'account-1',
+    instrumentId: 'instrument-1',
+    type: 'Dividend',
+    tradeDate: '2026-07-01',
+    units: 0,
+    cashAmount: 0.7,
+    fees: 0.02,
+    taxes: 0.21,
+    createdAt: '2026-07-01T00:00:00Z',
+  }
+
+  await establishSession(page)
+  await mockApi(page, { investmentTransactions: [activity] })
+  await page.goto('/investments', { waitUntil: 'domcontentloaded' })
+
+  await expect(page.getByText('Gross amount')).toBeVisible()
+  await expect(page.getByText(/Fees.*0\.02.*Taxes.*0\.21/).last()).toBeVisible()
+  await expect(page.getByText(/After charges/).last()).toBeVisible()
 })
 
 test('rewards rail responds to a desktop mouse wheel and releases page scrolling at its edge', async ({ page }) => {

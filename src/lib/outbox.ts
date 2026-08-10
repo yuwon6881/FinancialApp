@@ -20,6 +20,7 @@ export interface OutboxPayload {
   ledgerCategory?: string
   amount?: number
   stabilityRecoveryTopUpAmount?: number | null
+  stabilityReloadIntent?: 'Unanswered' | 'Required' | 'NotRequired'
   price?: number
   active?: boolean
   darkMode?: boolean

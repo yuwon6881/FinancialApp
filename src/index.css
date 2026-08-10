@@ -508,6 +508,19 @@
     padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px));
 }
 
+/* Full-screen states render under installed-PWA system chrome because the
+   document opts into viewport-fit=cover. Keep their authored breathing room
+   and add the device safe area instead of making each screen repeat four
+   environment-variable calculations. Callers may override the two variables. */
+.safe-screen-inset {
+    --safe-screen-block: 1rem;
+    --safe-screen-inline: 1rem;
+    padding-top: calc(var(--safe-screen-block) + env(safe-area-inset-top, 0px));
+    padding-right: calc(var(--safe-screen-inline) + env(safe-area-inset-right, 0px));
+    padding-bottom: calc(var(--safe-screen-block) + env(safe-area-inset-bottom, 0px));
+    padding-left: calc(var(--safe-screen-inline) + env(safe-area-inset-left, 0px));
+}
+
 @media (min-width: 1024px) {
     .pb-fab-safe {
         padding-bottom: 2rem;
@@ -698,6 +711,15 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+
     .interactive-card,
     .metric-card::after,
     .view-enter,
@@ -800,7 +822,7 @@ html {
     .sheet-panel {
         width: 100%;
         max-width: none;
-        max-height: calc(var(--app-vvh, 100dvh) - 0.5rem);
+        max-height: calc(var(--app-vvh, 100dvh) - env(safe-area-inset-top, 0px) - 0.5rem);
         border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
         padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
         overscroll-behavior: contain;

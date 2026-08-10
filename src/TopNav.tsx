@@ -158,12 +158,18 @@ const TopNav: React.FC<TopNavProps> = ({
             max-content floor here would push the whole header past a phone
             viewport and make the page scroll sideways. */}
         <div className="flex min-w-0 flex-1 items-center justify-start overflow-hidden z-10">
-          <div className="flex shrink-0 items-center gap-2 cursor-pointer select-none" onClick={() => onTabChange('dashboard')}>
+          <Button
+            variant="unstyled"
+            type="button"
+            aria-label="Go to Today"
+            onClick={() => onTabChange('dashboard')}
+            className="flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-xl cursor-pointer select-none active:scale-95"
+          >
             <AppLogo className="size-9 rounded-xl transition-transform duration-200 hover:scale-105" />
             <span className="hidden sm:inline md:hidden lg:inline text-base lg:text-lg font-extrabold tracking-tight bg-linear-to-r from-foreground via-foreground to-blue-500 bg-clip-text text-transparent truncate">
               FinancialApp
             </span>
-          </div>
+          </Button>
           {isOffline ? (
             <div
               className="ml-2.5 flex items-center gap-1.5 px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-md text-[10px] font-bold text-amber-500 select-none shrink-0"
@@ -243,11 +249,12 @@ const TopNav: React.FC<TopNavProps> = ({
 
           <Button variant="unstyled"
             type="button"
+            size="icon"
             onClick={() => onTabChange('wishlist')}
             aria-label="Wishlist"
             aria-current={activeTab === 'wishlist' ? 'page' : undefined}
             title="Wishlist"
-            className={`flex items-center justify-center rounded-xl border p-1.5 transition duration-150 cursor-pointer ${
+            className={`flex items-center justify-center rounded-xl border transition duration-150 cursor-pointer active:scale-95 ${
               activeTab === 'wishlist'
                 ? 'border-pink-500/30 bg-pink-500/12 text-pink-600 dark:text-pink-400'
                 : 'border-pink-500/10 bg-pink-500/5 text-pink-500/80 hover:border-pink-500/20 hover:bg-pink-500/10 hover:text-pink-500'
@@ -260,8 +267,9 @@ const TopNav: React.FC<TopNavProps> = ({
           <div className="relative">
             <Button variant="unstyled"
               type="button"
+              size="icon"
               onClick={onOpenNotifications}
-              className="p-1.5 bg-amber-500/5 border border-amber-500/10 hover:bg-amber-500/10 hover:border-amber-500/20 text-amber-500/80 hover:text-amber-500 rounded-xl cursor-pointer transition duration-150 flex items-center justify-center relative cursor-pointer"
+              className="relative flex items-center justify-center rounded-xl border border-amber-500/10 bg-amber-500/5 text-amber-500 hover:border-amber-500/20 hover:bg-amber-500/10 cursor-pointer transition duration-150 active:scale-95"
               title={hasAlerts ? `${pendingNotifications.length} bills need review` : 'No bills need review'}
               aria-label={hasAlerts ? `Review ${pendingNotifications.length} pending bills` : 'Bills: all caught up'}
             >
@@ -309,11 +317,15 @@ const TopNav: React.FC<TopNavProps> = ({
           </div>
 
           {/* Profile/Account menu */}
-          <div className="border border-border/60 rounded-xl bg-background shrink-0">
-            <Menubar className="border-0 h-9 px-1 bg-transparent">
+          <div className="shrink-0 rounded-xl border border-border/60 bg-background">
+            <Menubar className="h-11 border-0 bg-transparent p-0">
               <MenubarMenu>
-                <MenubarTrigger className="p-1 rounded-full cursor-pointer hover:bg-muted/50">
-                  <div className="size-7 rounded-full bg-linear-to-tr from-blue-500 to-sky-400 text-primary-foreground font-extrabold flex items-center justify-center text-xs border border-blue-500/20">
+                <MenubarTrigger
+                  aria-label="Account menu"
+                  title="Account menu"
+                  className="size-11 rounded-xl p-2 cursor-pointer hover:bg-muted/50 active:scale-95"
+                >
+                  <div className="flex size-7 items-center justify-center rounded-full border border-blue-500/20 bg-linear-to-tr from-blue-500 to-sky-400 text-xs font-extrabold text-on-vivid">
                     {getInitials(username)}
                   </div>
                 </MenubarTrigger>

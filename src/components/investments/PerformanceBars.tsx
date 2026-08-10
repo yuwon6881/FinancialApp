@@ -71,7 +71,7 @@ export function PerformanceBars({ portfolio, masked, onSelectHolding }: {
               <Button
                 variant="unstyled"
                 onClick={() => onSelectHolding(holding)}
-                className="min-w-0 cursor-pointer truncate text-left font-bold text-foreground underline decoration-dotted underline-offset-4 hover:text-primary"
+                className="min-w-0 cursor-pointer truncate text-left font-bold text-foreground underline decoration-dotted underline-offset-4 hover:text-accent-ink"
               >
                 {holding.symbol}
               </Button>

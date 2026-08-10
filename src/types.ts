@@ -256,6 +256,7 @@ export interface Transaction {
   amount: number // Positive for inflow, negative for outflow
   /** Null is legacy unknown intent; zero is ordinary income; positive is applied reimbursement. */
   stabilityRecoveryTopUpAmount?: number | null
+  stabilityReloadIntent?: StabilityReloadIntent
   isPendingSync?: boolean
   /** Internal optimistic projection marker for a queue op that changes this row indirectly. */
   pendingSyncOperationId?: string
@@ -312,16 +313,30 @@ export interface RecurringPayment {
   reminderLeadDays?: number
 }
 
-// Account-wide availability plus the registration state of this specific device.
+/** The two notification kinds. Each is opted into separately, and per device. */
+export type PushChannel = 'billReminders' | 'categoryAlerts'
+
+/**
+ * What this device receives, plus whether any other device receives it.
+ *
+ * `billRemindersEnabled`/`categoryAlertsEnabled` are **this device's** state and are what the two
+ * switches render from. `otherDevices*` is informational only: rendering an account-wide flag as a
+ * switch state told a desktop it was receiving spending alerts a phone had turned on.
+ */
 export interface PushStatus {
   enabled: boolean
   deviceRegistered: boolean
+  billRemindersEnabled: boolean
   categoryAlertsEnabled: boolean
+  otherDevicesBillReminders: boolean
+  otherDevicesCategoryAlerts: boolean
 }
 
 export interface PushDevice {
   id: string
   isCurrent: boolean
+  billRemindersEnabled: boolean
+  categoryAlertsEnabled: boolean
   enrolledAt: string
   lastUpdatedAt: string
 }
@@ -458,17 +473,16 @@ export interface StabilityRecoveryDraw {
   share: number
 }
 
+export type StabilityReloadIntent = 'Unanswered' | 'Required' | 'NotRequired'
+
 /**
- * How far the emergency fund has fallen from the highest point it ever reached, and how much of
- * that to ask back this cycle. Measured against the fund's own high-water mark rather than the
- * target, so it only ever asks for money that was really in there — someone still building the
- * fund for the first time is never asked to "put back" anything.
+ * The explicit ledger obligation created by marked emergency-fund drawdowns, and the part that
+ * has already been put back. Ordinary salary allocation does not repay a marked drawdown.
  */
 export interface StabilityRecovery {
   isActive: boolean
-  highWaterMark: number
+  markedTotal: number
   target: number
-  recoverableCeiling: number
   currentBalance: number
   outstandingShortfall: number
   cyclesRemaining: number
@@ -478,12 +492,8 @@ export interface StabilityRecovery {
   /** The three-cycle window has passed and money is still owed. Distinct from the final cycle. */
   isOverdue: boolean
   lastDrawdownCycleKey?: string
-  lastDrawdownAmount: number
-  /**
-   * First day of the window the shortfall accumulated over — the start of the cycle after the fund
-   * was last at its recoverable ceiling, as `yyyy-MM-dd`. Absent on a payload written before this
-   * shipped, and on an account with no ceiling to have fallen from.
-   */
+  repaidTotal: number
+  /** Exact date of the oldest marked drawdown that is still outstanding, as `yyyy-MM-dd`. */
   recoveryFromDate?: string
   /** Bills this cycle still owes, which the proposed draw must stay above. */
   essentialsCommitted: number

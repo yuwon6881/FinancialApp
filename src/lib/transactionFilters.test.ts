@@ -115,9 +115,29 @@ describe('matchesTransactionFilters', () => {
     expect(matchesTransactionFilters(tx({ recurringPaymentId: null }), { recurringOnly: true })).toBe(false)
   })
 
+  it('supports all three recurring relationship modes', () => {
+    const recurring = tx({ recurringPaymentId: 'rent' })
+    const ordinary = tx({ recurringPaymentId: null })
+    expect(matchesTransactionFilters(recurring, { recurringFilter: 'all' })).toBe(true)
+    expect(matchesTransactionFilters(ordinary, { recurringFilter: 'all' })).toBe(true)
+    expect(matchesTransactionFilters(recurring, { recurringFilter: 'exclude' })).toBe(false)
+    expect(matchesTransactionFilters(ordinary, { recurringFilter: 'exclude' })).toBe(true)
+    expect(matchesTransactionFilters(recurring, { recurringFilter: 'only' })).toBe(true)
+    expect(matchesTransactionFilters(ordinary, { recurringFilter: 'only' })).toBe(false)
+  })
+
   it('filters wishlist purchases by their wishlist item link', () => {
     expect(matchesTransactionFilters(tx({ wishlistItemId: 7 }), { wishlistOnly: true })).toBe(true)
     expect(matchesTransactionFilters(tx({ wishlistItemId: null }), { wishlistOnly: true })).toBe(false)
+  })
+
+  it('supports all three wishlist relationship modes', () => {
+    const purchase = tx({ wishlistItemId: 7 })
+    const ordinary = tx({ wishlistItemId: null })
+    expect(matchesTransactionFilters(purchase, { wishlistFilter: 'exclude' })).toBe(false)
+    expect(matchesTransactionFilters(ordinary, { wishlistFilter: 'exclude' })).toBe(true)
+    expect(matchesTransactionFilters(purchase, { wishlistFilter: 'only' })).toBe(true)
+    expect(matchesTransactionFilters(ordinary, { wishlistFilter: 'only' })).toBe(false)
   })
 
   it('requires all provided criteria to pass', () => {

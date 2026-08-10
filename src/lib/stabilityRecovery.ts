@@ -6,7 +6,257 @@
 // module owns only the part that has to answer while the user types an amount, and the server
 // re-derives the split authoritatively on save.
 
-import type { StabilityRecovery } from '@/types'
+import type { StabilityRecovery, StabilityReloadIntent, Transaction } from '@/types'
+import { bucketAmount } from './bucketAttribution'
+
+export interface StabilityReloadMovement {
+  date: string
+  change: number
+  repayment: number
+  marked: boolean
+}
+
+export interface StabilityReloadSummary {
+  markedAmount: number
+  repaidAmount: number
+}
+
+export interface StabilityReloadReplay {
+  outstanding: number
+  oldestOutstandingDate?: string
+  markedThisRun: number
+  repaidThisRun: number
+}
+
+const normalizeReloadIntent = (intent: string | null | undefined): StabilityReloadIntent =>
+  intent === 'Required' || intent === 'NotRequired' ? intent : 'Unanswered'
+
+const isIncomeLedgerCategory = (ledgerCategory: string | null | undefined) => {
+  const normalized = (ledgerCategory ?? '').toLowerCase()
+  return normalized === 'income' || normalized.startsWith('incomesplit:')
+}
+
+/** Whether an actual ledger row reduced Stability and therefore carries the tri-state answer. */
+export function isStabilityReloadDrawdown(transaction: Pick<Transaction, 'amount' | 'ledgerCategory'>) {
+  return bucketAmount(transaction, 'Stability') < 0
+}
+
+/** Whether the form's current shape is a Stability drawdown that still needs an answer. */
+export function isStabilityReloadFormDrawdown(input: {
+  transactionType: string
+  ledgerCategory: string
+  transferSource: string
+}) {
+  return (input.transactionType === 'outflow' && input.ledgerCategory.toLowerCase() === 'stability') ||
+    (input.transactionType === 'transfer' && input.transferSource.toLowerCase() === 'stability')
+}
+
+export function stabilityReloadIntentLabel(intent: string | null | undefined) {
+  return normalizeReloadIntent(intent) === 'NotRequired' ? 'Spent for good' : 'Put back'
+}
+
+function describeReloadMovement(
+  transaction: Transaction,
+  stabilityAlloc: number,
+  change = bucketAmount(transaction, 'Stability'),
+): StabilityReloadMovement | null {
+  if (change === 0) return null
+  const normalSalaryShare = isIncomeLedgerCategory(transaction.ledgerCategory) && transaction.amount > 0
+    ? Math.max(0, transaction.amount * stabilityAlloc)
+    : 0
+  return {
+    date: transaction.date,
+    change,
+    repayment: change > 0
+      ? isIncomeLedgerCategory(transaction.ledgerCategory) && transaction.stabilityRecoveryTopUpAmount != null
+        ? Math.max(0, transaction.stabilityRecoveryTopUpAmount)
+        : Math.max(0, change - normalSalaryShare)
+      : 0,
+    marked: change < 0 && normalizeReloadIntent(transaction.stabilityReloadIntent) !== 'NotRequired',
+  }
+}
+
+/**
+ * Describes logical Stability movements in the same order as the server replay. Generated salary
+ * children are grouped with their parent so ordinary salary allocation is not counted as a reload.
+ */
+export function describeStabilityReloadMovements(
+  transactions: Transaction[],
+  stabilityAlloc: number,
+): StabilityReloadMovement[] {
+  const ordered = [...transactions].sort((left, right) =>
+    left.date.localeCompare(right.date) ||
+    (left.postedAt ?? '').localeCompare(right.postedAt ?? '') ||
+    String(left.id).localeCompare(String(right.id)))
+  const stabilityChildren = new Map(
+    ordered
+      .filter(transaction => String(transaction.id).endsWith('-split-Stability'))
+      .map(transaction => [String(transaction.id).slice(0, -'-split-Stability'.length), transaction]),
+  )
+  const movements: StabilityReloadMovement[] = []
+  for (const transaction of ordered) {
+    if (String(transaction.id).includes('-split-')) continue
+    const child = isIncomeLedgerCategory(transaction.ledgerCategory)
+      ? stabilityChildren.get(String(transaction.id))
+      : undefined
+    const movement = child
+      ? describeReloadMovement(transaction, stabilityAlloc, bucketAmount(child, 'Stability'))
+      : describeReloadMovement(transaction, stabilityAlloc)
+    if (movement) movements.push(movement)
+  }
+  return movements
+}
+
+export function summarizeStabilityReload(
+  transactions: Transaction[],
+  stabilityAlloc: number,
+): StabilityReloadSummary {
+  return describeStabilityReloadMovements(transactions, stabilityAlloc).reduce(
+    (summary, movement) => ({
+      markedAmount: summary.markedAmount + (movement.marked ? Math.max(0, -movement.change) : 0),
+      repaidAmount: summary.repaidAmount + movement.repayment,
+    }),
+    { markedAmount: 0, repaidAmount: 0 },
+  )
+}
+
+/** The ordered FIFO replay shared by the optimistic projection and the API ledger replay. */
+export function replayStabilityReload(
+  opening: { outstanding: number; oldestOutstandingDate?: string },
+  openingBalance: number,
+  target: number,
+  movements: StabilityReloadMovement[],
+): StabilityReloadReplay {
+  const queue: { date: string; amount: number }[] = []
+  let outstanding = Math.max(0, opening.outstanding)
+  if (outstanding > 0 && opening.oldestOutstandingDate) {
+    queue.push({ date: opening.oldestOutstandingDate, amount: outstanding })
+  }
+
+  let running = openingBalance
+  let markedThisRun = 0
+  let repaidThisRun = 0
+
+  const clearAtTarget = () => {
+    queue.length = 0
+    outstanding = 0
+    // Attainment starts a clean pace window. A later same-cycle drawdown must not inherit the
+    // repayment that helped reach the target.
+    repaidThisRun = 0
+  }
+
+  if (target > 0 && running >= target) {
+    clearAtTarget()
+  }
+
+  for (const movement of movements) {
+    running += movement.change
+
+    if (movement.marked && movement.change < 0) {
+      const marked = -movement.change
+      markedThisRun += marked
+      outstanding += marked
+      queue.push({ date: movement.date, amount: marked })
+    }
+
+    const repayment = Math.min(outstanding, Math.max(0, movement.repayment))
+    if (repayment > 0) {
+      let remaining = repayment
+      while (remaining > 0 && queue.length > 0) {
+        const oldest = queue.shift()!
+        const discharged = Math.min(oldest.amount, remaining)
+        remaining -= discharged
+        const left = oldest.amount - discharged
+        if (left > 0) queue.unshift({ date: oldest.date, amount: left })
+      }
+      outstanding -= repayment
+      repaidThisRun += repayment
+    }
+
+    if (target > 0 && running >= target) {
+      clearAtTarget()
+    }
+  }
+
+  return {
+    outstanding: Math.max(0, outstanding),
+    oldestOutstandingDate: queue[0]?.date,
+    markedThisRun,
+    repaidThisRun,
+  }
+}
+
+/**
+ * Replays the projected cycle against the same inferred opening state as the server. The API only
+ * returns the end-of-cycle obligation, so the opening total is recovered from the base cycle's
+ * marked and repayment amounts; replaying both lists preserves repayment clamping and mid-cycle
+ * attainment instead of subtracting raw deltas.
+ */
+export function projectStabilityRecovery(input: {
+  recovery: StabilityRecovery
+  baseTransactions: Transaction[]
+  projectedTransactions: Transaction[]
+  stabilityAlloc: number
+  projectedBalance: number
+}): StabilityRecovery {
+  const baseMovements = describeStabilityReloadMovements(input.baseTransactions, input.stabilityAlloc)
+  const projectedMovements = describeStabilityReloadMovements(input.projectedTransactions, input.stabilityAlloc)
+  const baseMarked = baseMovements.reduce(
+    (sum, movement) => sum + (movement.marked ? Math.max(0, -movement.change) : 0), 0)
+  const baseRepaid = baseMovements.reduce((sum, movement) => sum + movement.repayment, 0)
+  const openingOutstanding = Math.max(
+    0,
+    input.recovery.outstandingShortfall + baseRepaid - baseMarked,
+  )
+  const openingDate = input.recovery.recoveryFromDate ??
+    baseMovements[0]?.date ?? projectedMovements[0]?.date
+  const opening = { outstanding: openingOutstanding, oldestOutstandingDate: openingDate }
+  const baseNetChange = baseMovements.reduce((sum, movement) => sum + movement.change, 0)
+  const projectedNetChange = projectedMovements.reduce((sum, movement) => sum + movement.change, 0)
+  const baseReplay = replayStabilityReload(
+    opening,
+    input.recovery.currentBalance - baseNetChange,
+    input.recovery.target,
+    baseMovements,
+  )
+  const projectedReplay = replayStabilityReload(
+    opening,
+    input.projectedBalance - projectedNetChange,
+    input.recovery.target,
+    projectedMovements,
+  )
+  const markedDelta = projectedReplay.markedThisRun - baseReplay.markedThisRun
+  const outstandingShortfall = projectedReplay.outstanding
+  const markedTotal = outstandingShortfall > 0
+    ? Math.max(0, input.recovery.markedTotal + markedDelta)
+    : 0
+  const repaidTotal = outstandingShortfall > 0
+    ? Math.max(0, markedTotal - outstandingShortfall)
+    : 0
+  const toppedUpThisCycle = Math.max(
+    0,
+    input.recovery.toppedUpThisCycle + projectedReplay.repaidThisRun - baseReplay.repaidThisRun,
+  )
+  const paceAnchor = outstandingShortfall + toppedUpThisCycle
+  const requiredThisCycle = input.recovery.cyclesRemaining <= 1
+    ? paceAnchor
+    : Math.ceil((paceAnchor / input.recovery.cyclesRemaining) * 100) / 100
+
+  return {
+    ...input.recovery,
+    markedTotal,
+    repaidTotal,
+    currentBalance: input.projectedBalance,
+    outstandingShortfall,
+    toppedUpThisCycle,
+    requiredThisCycle,
+    outstandingThisCycle: Math.max(
+      0,
+      Math.min(requiredThisCycle - toppedUpThisCycle, outstandingShortfall),
+    ),
+    isActive: outstandingShortfall > 0,
+  }
+}
 
 export interface RecoveryBucketState {
   bucket: string

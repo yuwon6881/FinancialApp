@@ -112,9 +112,9 @@ export function DocumentCard({
   }
 
   return (
-    <div aria-busy={isBusy}>
+    <div data-testid={`document-card-${document.id}`} aria-busy={isBusy}>
       <SwipeableRow
-        className="rounded-2xl border border-border/60 shadow-sm shadow-black/5"
+        className="rounded-2xl border border-border/60 shadow-[var(--app-shadow-soft)]"
         contentClassName="p-3"
         disabled={isBusy || hideSensitive}
         actionsWidth={128}
@@ -178,8 +178,8 @@ export function DocumentCard({
             <PreviewDocumentButton document={document} onPreview={onPreview} disabled={isBusy} />
           </div>
 
-          <div className="mt-3 flex items-end justify-between gap-3">
-            <div className="min-w-0">
+          <div className="mt-3 flex flex-col items-stretch gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
+            <div className="min-w-0 max-w-full">
               <AmountReview document={document} updateDocument={updateDocument} currency={currency} disabled={isBusy} />
               <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{amountCaption}</p>
             </div>
@@ -190,7 +190,7 @@ export function DocumentCard({
                 disabled={hideSensitive || isBusy}
                 onClick={() => setEditingRelief(true)}
                 aria-label={`Change tax relief category for ${document.originalFileName}`}
-                className={`inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1 text-[10px] font-bold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 ${
+                className={`inline-flex min-h-8 max-w-full shrink-0 self-end items-center gap-1.5 rounded-lg border px-2 py-1 text-[10px] font-bold text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 sm:self-auto ${
                   isReliefDraftChanged
                     ? 'border-blue-500/40 bg-blue-500/10 ring-2 ring-blue-500/50'
                     : 'border-border/60 bg-muted/40'

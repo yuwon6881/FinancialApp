@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronsLeft } from 'lucide-react'
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { m, useMotionValue, useAnimation, type PanInfo } from 'framer-motion'
 import { cn } from '../../lib/utils'
 import { useIsMobile } from '../../lib/useIsMobile'
 import { triggerHaptic } from '../../lib/haptics'
 import { setSwipeLocked } from '../../lib/swipeLock'
+import { Button } from './Button'
 
 // Module-level registry so only a single row is ever open at a time.
 let closeActiveRow: (() => void) | null = null
@@ -37,11 +38,45 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   const x = useMotionValue(0)
   const controls = useAnimation()
   const suppressNextClick = useRef(false)
+  const disclosureRef = useRef<HTMLButtonElement>(null)
+  const actionDrawerRef = useRef<HTMLDivElement>(null)
+  const focusActionsOnOpenRef = useRef(false)
+  const generatedActionsId = useId().replace(/:/g, '')
+  const actionsId = id ? `${id}-actions` : `swipe-row-actions-${generatedActionsId}`
 
   const close = useCallback(() => {
     setOpen(false)
     controls.start({ x: 0, transition: { type: 'spring', stiffness: 750, damping: 42 } })
   }, [controls])
+
+  const openActions = useCallback((focusActions: boolean) => {
+    if (disabled) return
+    focusActionsOnOpenRef.current = focusActions
+    if (!open) triggerHaptic(10)
+    setOpen(true)
+    controls.start({ x: -actionsWidth, transition: { type: 'spring', stiffness: 750, damping: 42 } })
+  }, [actionsWidth, controls, disabled, open])
+
+  useEffect(() => {
+    if (!open || !focusActionsOnOpenRef.current) return
+    focusActionsOnOpenRef.current = false
+    const firstAction = actionDrawerRef.current?.querySelector<HTMLElement>(
+      'button:not([disabled]), a[href], [role="button"]:not([aria-disabled="true"]), [tabindex]:not([tabindex="-1"])',
+    )
+    firstAction?.focus({ preventScroll: true })
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      close()
+      window.requestAnimationFrame(() => disclosureRef.current?.focus({ preventScroll: true }))
+    }
+    document.addEventListener('keydown', closeOnEscape)
+    return () => document.removeEventListener('keydown', closeOnEscape)
+  }, [close, open])
 
   const closeForAction = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement | null
@@ -112,12 +147,9 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
     const shouldOpen = currentX < -actionsWidth / 2 || info.velocity.x < -200
 
     if (shouldOpen) {
-      if (!open) triggerHaptic(10)
-      setOpen(true)
-      controls.start({ x: -actionsWidth, transition: { type: 'spring', stiffness: 750, damping: 42 } })
+      openActions(false)
     } else {
-      setOpen(false)
-      controls.start({ x: 0, transition: { type: 'spring', stiffness: 750, damping: 42 } })
+      close()
     }
   }
 
@@ -137,6 +169,10 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
     <div id={id} className={cn('relative overflow-hidden', className)}>
       {/* Action drawer sitting behind the content */}
       <div
+        ref={actionDrawerRef}
+        id={actionsId}
+        role="group"
+        aria-label="Row actions"
         className="absolute inset-y-0 right-0 flex items-stretch [&_button]:min-w-[44px] [&_button]:min-h-[44px] [&_a]:min-w-[44px] [&_a]:min-h-[44px]"
         style={{ width: actionsWidth }}
         inert={!open}
@@ -170,12 +206,32 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
       >
         {children}
 
-        {/* Subtle swipe affordance shown only when closed */}
-        {hint && !open && (
-          <div className="pointer-events-none absolute bottom-1 right-1 text-muted-foreground/30 swipe-hint">
-            <ChevronsLeft className="size-3.5" />
-          </div>
-        )}
+        {/* The first visible hint keeps the established swipe affordance. Every row
+            still exposes the same control to keyboard and assistive technology. */}
+        <Button
+          ref={disclosureRef}
+          variant="unstyled"
+          type="button"
+          disabled={disabled}
+          aria-expanded={open}
+          aria-controls={actionsId}
+          aria-label={open ? 'Hide row actions' : 'Show row actions'}
+          onClick={event => {
+            event.stopPropagation()
+            if (open) close()
+            else openActions(true)
+          }}
+          className={cn(
+            'absolute bottom-0 right-0 z-10 inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground/45 transition-opacity focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring',
+            hint || open
+              ? 'opacity-100'
+              : 'pointer-events-none opacity-0 focus-visible:pointer-events-auto focus-visible:opacity-100',
+          )}
+        >
+          {open
+            ? <ChevronsRight className="size-3.5" aria-hidden="true" />
+            : <ChevronsLeft className={cn('size-3.5', hint && 'swipe-hint')} aria-hidden="true" />}
+        </Button>
       </m.div>
     </div>
   )

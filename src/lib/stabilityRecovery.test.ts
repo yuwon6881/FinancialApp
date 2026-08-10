@@ -1,15 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { isRecoveryActive, proposeTopUp, type RecoveryBucketState } from './stabilityRecovery'
-import type { StabilityRecovery } from '@/types'
+import {
+  isRecoveryActive,
+  projectStabilityRecovery,
+  replayStabilityReload,
+  proposeTopUp,
+  summarizeStabilityReload,
+  type RecoveryBucketState,
+} from './stabilityRecovery'
+import type { StabilityRecovery, Transaction } from '@/types'
 
 // Mirrors StabilityRecoveryPlannerTests.cs case for case, so drift between the two
 // implementations shows up as a failing pair rather than a quiet disagreement.
 
 const recovery = (overrides: Partial<StabilityRecovery> = {}): StabilityRecovery => ({
   isActive: true,
-  highWaterMark: 10000,
+  markedTotal: 3000,
   target: 10000,
-  recoverableCeiling: 10000,
   currentBalance: 7000,
   outstandingShortfall: 3000,
   cyclesRemaining: 3,
@@ -18,7 +24,7 @@ const recovery = (overrides: Partial<StabilityRecovery> = {}): StabilityRecovery
   outstandingThisCycle: 1000,
   isOverdue: false,
   lastDrawdownCycleKey: '2026-06',
-  lastDrawdownAmount: 3000,
+  repaidTotal: 0,
   essentialsCommitted: 0,
   rewardsCommitted: 0,
   suggestedDraws: [
@@ -37,6 +43,16 @@ const buckets = (overrides: Partial<Record<string, Partial<RecoveryBucketState>>
 
 const drawFor = (draws: { bucket: string; amount: number }[], bucket: string) =>
   draws.find(draw => draw.bucket === bucket)!.amount
+
+const transaction = (overrides: Partial<Transaction>): Transaction => ({
+  id: 'tx-1',
+  date: '2026-06-04',
+  description: 'Movement',
+  category: 'Other',
+  ledgerCategory: 'Stability',
+  amount: 0,
+  ...overrides,
+})
 
 describe('isRecoveryActive', () => {
   it('is false when there is nothing to put back', () => {
@@ -191,5 +207,143 @@ describe('proposeTopUp', () => {
     expect(proposeTopUp(recovery({ isActive: false }), 1000, buckets())).toBeNull()
     expect(proposeTopUp(recovery(), 0, buckets())).toBeNull()
     expect(proposeTopUp(recovery({ outstandingThisCycle: 0 }), 1000, buckets())).toBeNull()
+  })
+})
+
+describe('stability reload projection', () => {
+  it('clears an inherited obligation when a lowered target already contains the fund', () => {
+    const projected = projectStabilityRecovery({
+      recovery: recovery({
+        target: 5000,
+        currentBalance: 9500,
+        outstandingShortfall: 500,
+        recoveryFromDate: '2026-06-01',
+      }),
+      baseTransactions: [],
+      projectedTransactions: [],
+      stabilityAlloc: 0.15,
+      projectedBalance: 9500,
+    })
+
+    expect(projected.outstandingShortfall).toBe(0)
+    expect(projected.isActive).toBe(false)
+  })
+
+  it('clamps an earlier repayment before applying a later marked drawdown', () => {
+    const transfer = transaction({
+      id: 'transfer',
+      date: '2026-06-01',
+      amount: 900,
+      ledgerCategory: 'Transfer:Growth->Stability',
+    })
+    const drawdown = transaction({
+      id: 'drawdown',
+      date: '2026-06-02',
+      amount: -300,
+      ledgerCategory: 'Stability',
+      stabilityReloadIntent: 'Required',
+    })
+    const projected = projectStabilityRecovery({
+      recovery: recovery({
+        isActive: false,
+        markedTotal: 0,
+        currentBalance: 900,
+        outstandingShortfall: 0,
+        toppedUpThisCycle: 0,
+      }),
+      baseTransactions: [transfer],
+      projectedTransactions: [transfer, drawdown],
+      stabilityAlloc: 0.15,
+      projectedBalance: 600,
+    })
+
+    expect(projected.outstandingShortfall).toBe(300)
+    expect(projected.markedTotal).toBe(300)
+    expect(projected.isActive).toBe(true)
+  })
+
+  it('resets the per-cycle repayment count when attainment is followed by a drawdown', () => {
+    const result = replayStabilityReload(
+      { outstanding: 0 },
+      9000,
+      10000,
+      [
+        { date: '2026-07-01', change: -500, repayment: 0, marked: true },
+        { date: '2026-07-02', change: 1500, repayment: 500, marked: false },
+        { date: '2026-07-03', change: -200, repayment: 0, marked: true },
+      ],
+    )
+
+    expect(result.outstanding).toBe(200)
+    expect(result.repaidThisRun).toBe(0)
+  })
+
+  it('treats an unanswered drawdown as required and a spent-for-good row as unmarked', () => {
+    const rows = [
+      transaction({ id: 'required', amount: -500, stabilityReloadIntent: 'Unanswered' }),
+      transaction({ id: 'spent', amount: -200, stabilityReloadIntent: 'NotRequired' }),
+    ]
+    expect(summarizeStabilityReload(rows, 0.15)).toEqual({ markedAmount: 500, repaidAmount: 0 })
+  })
+
+  it('does not count ordinary salary allocation as putting a marked amount back', () => {
+    const salary = transaction({
+      id: 'salary',
+      amount: 4000,
+      ledgerCategory: 'Income',
+    })
+    const child = transaction({
+      id: 'salary-split-Stability',
+      amount: 600,
+      ledgerCategory: 'Transfer:Income->Stability',
+    })
+    expect(summarizeStabilityReload([salary, child], 0.15).repaidAmount).toBe(0)
+  })
+
+  it('counts explicit extra salary money, transfers in, and positive adjustments as repayment', () => {
+    const salary = transaction({ id: 'salary', amount: 4000, ledgerCategory: 'Income' })
+    const child = transaction({ id: 'salary-split-Stability', amount: 1100, ledgerCategory: 'Transfer:Income->Stability' })
+    const transfer = transaction({ id: 'transfer', amount: 100, ledgerCategory: 'Transfer:Growth->Stability' })
+    const adjustment = transaction({ id: 'adjustment', amount: 50, ledgerCategory: 'Stability' })
+    expect(summarizeStabilityReload([salary, child, transfer, adjustment], 0.15).repaidAmount).toBe(650)
+  })
+
+  it('uses a saved salary reimbursement when the plan allocation later changes', () => {
+    const salary = transaction({
+      id: 'salary', amount: 4000, ledgerCategory: 'Income', stabilityRecoveryTopUpAmount: 30,
+    })
+    const child = transaction({ id: 'salary-split-Stability', amount: 600, ledgerCategory: 'Transfer:Income->Stability' })
+
+    expect(summarizeStabilityReload([salary, child], 0.10).repaidAmount).toBe(30)
+  })
+
+  it('keeps the marked obligation after ordinary salary reaches an old high point below target', () => {
+    const currentRecovery = recovery({ markedTotal: 500, currentBalance: 5500, outstandingShortfall: 500 })
+    const salary = transaction({ id: 'salary', amount: 5333.33, ledgerCategory: 'Income' })
+    const child = transaction({ id: 'salary-split-Stability', amount: 600, ledgerCategory: 'Transfer:Income->Stability' })
+    const projected = projectStabilityRecovery({
+      recovery: currentRecovery,
+      baseTransactions: [],
+      projectedTransactions: [salary, child],
+      stabilityAlloc: 0.15,
+      projectedBalance: 6100,
+    })
+    expect(projected.outstandingShortfall).toBe(500)
+    expect(projected.repaidTotal).toBe(0)
+  })
+
+  it('clears the marked obligation when the target is reached', () => {
+    const currentRecovery = recovery({ markedTotal: 500, currentBalance: 9500, outstandingShortfall: 500 })
+    const salary = transaction({ id: 'salary', amount: 2000, ledgerCategory: 'Income' })
+    const child = transaction({ id: 'salary-split-Stability', amount: 500, ledgerCategory: 'Transfer:Income->Stability' })
+    const projected = projectStabilityRecovery({
+      recovery: currentRecovery,
+      baseTransactions: [],
+      projectedTransactions: [salary, child],
+      stabilityAlloc: 0.25,
+      projectedBalance: 10000,
+    })
+    expect(projected.outstandingShortfall).toBe(0)
+    expect(projected.isActive).toBe(false)
   })
 })

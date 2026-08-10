@@ -74,10 +74,10 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
             }`}
           >
             <div>
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-base font-bold text-foreground flex items-center gap-1.5 flex-wrap">
-                    {rp.name}
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <h3 className="flex min-w-0 flex-wrap items-center gap-1.5 text-base font-bold text-foreground">
+                    <span className="min-w-0 break-words">{rp.name}</span>
                     {!rp.active && (
                       <span className="text-[9px] font-semibold bg-muted px-1.5 py-0.5 rounded text-muted-foreground">Paused</span>
                     )}
@@ -103,47 +103,47 @@ export const RecurringPaymentCards: React.FC<RecurringPaymentCardsProps> = ({
               </div>
 
               <div className="mt-6 space-y-2 border-t border-border/30 pt-4 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                  <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
                     <Calendar className="size-3.5" /> Billing Starts
                   </span>
-                  <span className="text-foreground font-medium">
+                  <span className="min-w-0 max-w-full break-words text-right font-medium text-foreground">
                     {rp.startDate}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                  <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
                     <Repeat className="size-3.5" /> Recurs
                   </span>
-                  <span className="text-foreground font-medium">
+                  <span className="min-w-0 max-w-full break-words text-right font-medium text-foreground">
                     {getRecurrenceDescription(normalizeRecurringFrequency(rp.frequency), rp.startDate, rp.dueDate)}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                  <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
                     <CreditCard className="size-3.5" /> Ledger Category
                   </span>
-                  <span className={`inline-block px-1.5 py-0.5 rounded-md border font-semibold ${getCategoryBadgeClass(rp.ledgerCategory)}`}>
+                  <span className={`inline-block max-w-full break-words px-1.5 py-0.5 text-right rounded-md border font-semibold ${getCategoryBadgeClass(rp.ledgerCategory)}`}>
                     {rp.ledgerCategory}
                   </span>
                 </div>
                 {/* Stated on every card because it is the reason Pay Early is or isn't offered
                     below -- without it, an auto-deducted bill just looks like a card missing a
                     button. */}
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                  <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
                     <Wallet className="size-3.5" /> How it&rsquo;s paid
                   </span>
-                  <span className="text-foreground font-medium">
+                  <span className="min-w-0 max-w-full break-words text-right font-medium text-foreground">
                     {RECURRING_PAYMENT_MODE_LABELS[rp.paymentMode]}
                   </span>
                 </div>
                 {rp.endDate && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground flex items-center gap-1.5">
+                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                    <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
                       <Calendar className="size-3.5" /> End Date
                     </span>
-                    <span className="text-foreground font-medium">{rp.endDate}</span>
+                    <span className="min-w-0 max-w-full break-words text-right font-medium text-foreground">{rp.endDate}</span>
                   </div>
                 )}
               </div>

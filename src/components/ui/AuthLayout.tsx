@@ -5,7 +5,7 @@ export function AuthShell({ children, className }: { children: ReactNode; classN
   return (
     <main
       className={cn(
-        'app-shell flex min-h-screen items-center justify-center p-4 text-foreground',
+        'safe-screen-inset app-shell flex min-h-screen min-h-dvh items-center justify-center text-foreground',
         className,
       )}
     >

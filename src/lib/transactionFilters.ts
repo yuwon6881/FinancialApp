@@ -9,6 +9,9 @@ import { isReportTransfer, isReportableInflow, isReportableOutflow } from './tra
 /** The ledger "bucket" pseudo-categories, distinct from user sub-categories. */
 export const LEDGER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income'] as const
 
+/** How a transaction relationship should affect the Ledger list. */
+export type TransactionLinkFilter = 'all' | 'exclude' | 'only'
+
 type TxTypeFilter = '' | 'inflow' | 'outflow' | 'transfer' | null | undefined
 
 export interface TransactionFilterCriteria {
@@ -26,9 +29,13 @@ export interface TransactionFilterCriteria {
   /** Inclusive absolute amount bounds, so they work with either inflows or outflows. */
   minAmount?: number
   maxAmount?: number
-  /** Only transactions generated from a recurring payment. */
+  /** Whether recurring-linked transactions are included, excluded, or shown alone. */
+  recurringFilter?: TransactionLinkFilter
+  /** Whether wishlist-linked transactions are included, excluded, or shown alone. */
+  wishlistFilter?: TransactionLinkFilter
+  /** Legacy alias for callers that only know the positive filter. */
   recurringOnly?: boolean
-  /** Only transactions created by purchasing a wishlist item. */
+  /** Legacy alias for callers that only know the positive filter. */
   wishlistOnly?: boolean
 }
 
@@ -49,6 +56,16 @@ export function isIncomeLedgerCategory(ledgerCategory: string | null | undefined
   return ledgerCategory === 'Income' || (ledgerCategory || '').startsWith('IncomeSplit:')
 }
 
+function resolveLinkFilter(filter: TransactionLinkFilter | undefined, only: boolean | undefined): TransactionLinkFilter {
+  return filter ?? (only ? 'only' : 'all')
+}
+
+function matchesLinkFilter(hasLink: boolean, filter: TransactionLinkFilter): boolean {
+  if (filter === 'only') return hasLink
+  if (filter === 'exclude') return !hasLink
+  return true
+}
+
 /**
  * Core transaction matcher shared by LedgerView's list memos. Excludes
  * Discarded rows, then applies all active ledger filters.
@@ -56,7 +73,20 @@ export function isIncomeLedgerCategory(ledgerCategory: string | null | undefined
 export function matchesTransactionFilters(t: Transaction, criteria: TransactionFilterCriteria): boolean {
   if (t.ledgerCategory === 'Discarded') return false
 
-  const { search, buckets, categories, txType, startDate, endDate, minAmount, maxAmount, recurringOnly, wishlistOnly } = criteria
+  const {
+    search,
+    buckets,
+    categories,
+    txType,
+    startDate,
+    endDate,
+    minAmount,
+    maxAmount,
+    recurringFilter,
+    wishlistFilter,
+    recurringOnly,
+    wishlistOnly,
+  } = criteria
 
   if (startDate && t.date < startDate) return false
   if (endDate && t.date > endDate) return false
@@ -65,8 +95,8 @@ export function matchesTransactionFilters(t: Transaction, criteria: TransactionF
   if (minAmount !== undefined && absoluteAmount < minAmount) return false
   if (maxAmount !== undefined && absoluteAmount > maxAmount) return false
 
-  if (recurringOnly && !t.recurringPaymentId) return false
-  if (wishlistOnly && t.wishlistItemId == null) return false
+  if (!matchesLinkFilter(Boolean(t.recurringPaymentId), resolveLinkFilter(recurringFilter, recurringOnly))) return false
+  if (!matchesLinkFilter(t.wishlistItemId != null, resolveLinkFilter(wishlistFilter, wishlistOnly))) return false
 
   if (search) {
     const q = search.toLowerCase()

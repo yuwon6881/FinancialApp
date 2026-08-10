@@ -101,9 +101,7 @@ export function mapDashboardCore(data: WireDashboardData, month?: string, year?:
       stabilityRecovery: data.stabilityRecovery
         ? {
           isActive: Boolean(data.stabilityRecovery.isActive),
-          highWaterMark: deobfuscateAmount(data.stabilityRecovery.highWaterMark),
           target: deobfuscateAmount(data.stabilityRecovery.target),
-          recoverableCeiling: deobfuscateAmount(data.stabilityRecovery.recoverableCeiling),
           currentBalance: deobfuscateAmount(data.stabilityRecovery.currentBalance),
           outstandingShortfall: deobfuscateAmount(data.stabilityRecovery.outstandingShortfall),
           cyclesRemaining: data.stabilityRecovery.cyclesRemaining || 0,
@@ -113,7 +111,8 @@ export function mapDashboardCore(data: WireDashboardData, month?: string, year?:
           isOverdue: Boolean(data.stabilityRecovery.isOverdue),
           lastDrawdownCycleKey: data.stabilityRecovery.lastDrawdownCycleKey,
           recoveryFromDate: data.stabilityRecovery.recoveryFromDate ?? undefined,
-          lastDrawdownAmount: deobfuscateAmount(data.stabilityRecovery.lastDrawdownAmount),
+          markedTotal: deobfuscateAmount(data.stabilityRecovery.markedTotal),
+          repaidTotal: deobfuscateAmount(data.stabilityRecovery.repaidTotal),
           essentialsCommitted: deobfuscateAmount(data.stabilityRecovery.essentialsCommitted),
           rewardsCommitted: deobfuscateAmount(data.stabilityRecovery.rewardsCommitted),
           suggestedDraws: data.stabilityRecovery.suggestedDraws || [],

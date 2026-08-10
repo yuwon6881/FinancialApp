@@ -1,29 +1,35 @@
 import { useCallback, useEffect, useState } from 'react'
 import * as api from '../lib/api'
 import { getErrorMessage } from '../lib/errors'
-import type { PushStatus } from '../types'
+import type { PushChannel, PushStatus } from '../types'
 
-// Which control is mid-flight. The device switch and the account-wide alert switch used to share
-// one `busy` flag, so acting on either greyed out both and neither could report its own state.
-export type PushBusyAction = 'device' | 'categoryAlerts' | null
+// Which control is mid-flight. The two switches used to share one `busy` flag, so acting on either
+// greyed out both and neither could report its own state.
+export type PushBusyAction = PushChannel | null
 
 export interface UsePushNotificationsResult {
   supported: boolean
   loading: boolean
   busy: boolean
   busyAction: PushBusyAction
-  // Visually "enabled" only once the global setting is on AND this specific device is
-  // registered -- an in-flight enable (or a global toggle flipped on from another device)
-  // must never flash this device's control into the "on" state.
-  enabled: boolean
-  accountEnabled: boolean
-  deviceRegistered: boolean
+  /** What THIS device receives. Both switches render from these two, and nothing else. */
+  billRemindersEnabled: boolean
   categoryAlertsEnabled: boolean
+  /** Whether some *other* device receives it. Informational copy only — never a switch state. */
+  otherDevicesBillReminders: boolean
+  otherDevicesCategoryAlerts: boolean
   guidance: string | null
-  enable: () => Promise<boolean>
-  disable: () => Promise<void>
-  setCategoryAlertsEnabled: (enabled: boolean) => Promise<boolean>
+  setChannelEnabled: (channel: PushChannel, enabled: boolean) => Promise<boolean>
   refresh: () => Promise<PushStatus | null>
+}
+
+const EMPTY_STATUS: PushStatus = {
+  enabled: false,
+  deviceRegistered: false,
+  billRemindersEnabled: false,
+  categoryAlertsEnabled: false,
+  otherDevicesBillReminders: false,
+  otherDevicesCategoryAlerts: false,
 }
 
 let pushModulePromise: Promise<typeof import('../lib/push')> | null = null
@@ -34,9 +40,15 @@ function loadPushModule() {
   return pushModulePromise
 }
 
+function channelOf(status: PushStatus, channel: PushChannel): boolean {
+  return channel === 'billReminders' ? status.billRemindersEnabled : status.categoryAlertsEnabled
+}
+
 export function usePushNotifications(
   active = true,
   onForegroundNotification?: (message: string, title?: string) => void,
+  /** The signed-in account, so this browser's opt-in record cannot be read across accounts. */
+  account?: string | null,
 ): UsePushNotificationsResult {
   const [supported, setSupported] = useState(true)
   const [deviceId, setDeviceId] = useState<string | null>(null)
@@ -53,7 +65,6 @@ export function usePushNotifications(
     try {
       const next = await api.fetchPushStatus(devId)
       setStatus(next)
-      setGuidance(next.enabled && !next.deviceRegistered ? pushModule.PUSH_ENABLED_ELSEWHERE_MESSAGE : null)
       return next
     } catch (err) {
       console.error('Could not fetch push notification status.', err)
@@ -94,17 +105,38 @@ export function usePushNotifications(
       const devId = push.getOrCreateDeviceId()
       setDeviceId(devId)
       const next = await refreshInternal(push, devId)
-      if (cancelled) return
-      if (!next?.deviceRegistered) return
+      if (cancelled || !next) return
+
+      const intent = push.readPushChannelIntent(account)
+      if (next.deviceRegistered) {
+        // Keep the repair record equal to what the server just said. Without this, an install that
+        // enrolled before this record existed would have nothing to repair from the first time it
+        // needed to.
+        push.writePushChannelIntent(account, {
+          billReminders: next.billRemindersEnabled,
+          categoryAlerts: next.categoryAlertsEnabled,
+        })
+      } else if (!push.hasPushChannelIntent(intent)) {
+        // Not registered and never opted in here: nothing to refresh and nothing to repair.
+        return
+      }
 
       // The server records the enrolment, but only the browser knows whether it is still allowed
       // to show a notification. Revoking permission from browser settings leaves the row enabled,
-      // so the switch read "on" while nothing could arrive, the account looked opted in to every
-      // other surface, and the dispatcher kept sending to a device that would never display them.
-      // Drop the enrolment and say why, rather than showing a switch that lies.
+      // so the switch read "on" while nothing could arrive, and the dispatcher kept sending to a
+      // device that would never display them. Drop the enrolment and say why, rather than showing
+      // a switch that lies.
       if (Notification.permission !== 'granted') {
+        if (!next.deviceRegistered) {
+          // Nothing to release; the local record is stale and would otherwise keep asking to
+          // re-enrol on every launch of a browser that has since blocked notifications.
+          push.writePushChannelIntent(account, { billReminders: false, categoryAlerts: false })
+          if (!cancelled) setGuidance(push.PUSH_PERMISSION_REVOKED_GUIDANCE)
+          return
+        }
         try {
           await api.deletePushSubscription(devId)
+          push.writePushChannelIntent(account, { billReminders: false, categoryAlerts: false })
           if (cancelled) return
           await refreshInternal(push, devId)
         } catch (err) {
@@ -117,7 +149,16 @@ export function usePushNotifications(
       try {
         const registration = await navigator.serviceWorker.ready
         const token = await push.getFcmToken(registration)
-        if (token && devId) await api.upsertPushSubscription(devId, token)
+        if (!token) return
+        // Two jobs in one call. For a device the server still lists, this refreshes a token that
+        // may have rotated. For a device it does not — an install whose row was disabled by the
+        // old sign-out behaviour — this is the repair: re-register the kinds this browser recorded
+        // for this account, rather than making the user re-tap a switch they never turned off.
+        const channels = next.deviceRegistered
+          ? undefined
+          : { billReminders: intent.billReminders, categoryAlerts: intent.categoryAlerts }
+        await api.upsertPushSubscription(devId, token, channels)
+        if (!next.deviceRegistered && !cancelled) await refreshInternal(push, devId)
       } catch (err) {
         console.warn('Could not refresh this device push token.', err)
       }
@@ -125,7 +166,7 @@ export function usePushNotifications(
     return () => {
       cancelled = true
     }
-  }, [active, refreshInternal])
+  }, [active, account, refreshInternal])
 
   useEffect(() => {
     if (!active || !onForegroundNotification || !status?.deviceRegistered || Notification.permission !== 'granted') return
@@ -150,19 +191,45 @@ export function usePushNotifications(
     }
   }, [active, onForegroundNotification, status?.deviceRegistered])
 
-  const enable = useCallback(async (): Promise<boolean> => {
+  /**
+   * Turns one kind on or off for this device.
+   *
+   * Enabling runs the strict order permission -> service worker ready -> FCM token -> backend
+   * upsert, and any step failing or being denied stops without flipping the visual state. Only
+   * this channel is sent, so the other one is left exactly as the user left it.
+   */
+  const setChannelEnabled = useCallback(async (channel: PushChannel, enabled: boolean): Promise<boolean> => {
     const push = await loadPushModule()
     if (!push.isPushSupported() || !deviceId) {
       setGuidance(push.PUSH_UNSUPPORTED_GUIDANCE)
       return false
     }
     const previousStatus = status
-    setBusyAction('device')
+    setBusyAction(channel)
     setGuidance(null)
+
+    const rememberIntent = (value: boolean) => {
+      push.writePushChannelIntent(
+        account,
+        push.withChannel(push.readPushChannelIntent(account), channel, value),
+      )
+    }
+
     try {
-      // Strict order: permission -> service worker ready -> FCM token/backend upsert ->
-      // global backend enable. Any step failing/denying stops here without flipping the
-      // visual state, matching "not enabled until every step succeeds".
+      if (!enabled) {
+        setStatus(current => (current
+          ? {
+            ...current,
+            billRemindersEnabled: channel === 'billReminders' ? false : current.billRemindersEnabled,
+            categoryAlertsEnabled: channel === 'categoryAlerts' ? false : current.categoryAlertsEnabled,
+          }
+          : current))
+        rememberIntent(false)
+        await api.disablePushChannel(deviceId, channel)
+        await refreshInternal(push, deviceId)
+        return true
+      }
+
       const permission = await Notification.requestPermission()
       if (permission !== 'granted') {
         setGuidance(push.PUSH_DENIED_GUIDANCE)
@@ -178,93 +245,43 @@ export function usePushNotifications(
 
       // Permission/token acquisition can require browser UI, but once those succeed the switch
       // should react immediately. Reconcile with the server afterward and roll back on failure.
-      setStatus({
+      setStatus(current => ({
+        ...(current ?? EMPTY_STATUS),
         enabled: true,
         deviceRegistered: true,
-        categoryAlertsEnabled: previousStatus?.categoryAlertsEnabled ?? false,
-      })
-      await api.upsertPushSubscription(deviceId, token)
+        billRemindersEnabled: channel === 'billReminders' ? true : !!current?.billRemindersEnabled,
+        categoryAlertsEnabled: channel === 'categoryAlerts' ? true : !!current?.categoryAlertsEnabled,
+      }))
+      await api.upsertPushSubscription(deviceId, token, { [channel]: true })
+      rememberIntent(true)
       await refreshInternal(push, deviceId)
       return true
     } catch (err) {
-      console.error('Could not enable push notifications.', err)
+      console.error('Could not update notifications for this device.', err)
       setStatus(previousStatus)
-      setGuidance(push.PUSH_UNSUPPORTED_GUIDANCE)
+      // Put the local record back to whatever the server last told us, so a failed write cannot
+      // leave this browser trying to re-register something it never managed to turn on.
+      rememberIntent(!!previousStatus && channelOf(previousStatus, channel))
+      setGuidance(getErrorMessage(err, enabled
+        ? push.PUSH_UNSUPPORTED_GUIDANCE
+        : 'These notifications could not be turned off. Please try again.'))
       return false
     } finally {
       setBusyAction(null)
     }
-  }, [deviceId, refreshInternal, status])
-
-  const disable = useCallback(async () => {
-    const push = await loadPushModule()
-    if (!push.isPushSupported() || !deviceId) return
-    const previousStatus = status
-    setBusyAction('device')
-    // We know this device is turning off immediately, but we do not yet know whether it is the
-    // account's last device. Preserve the account state until the server returns the authoritative
-    // multi-device result so recurring-payment cards never flash a false "Paused" state.
-    setStatus({
-      enabled: previousStatus?.enabled ?? false,
-      deviceRegistered: false,
-      categoryAlertsEnabled: previousStatus?.categoryAlertsEnabled ?? false,
-    })
-    setGuidance(null)
-    try {
-      // Push opt-in is per device. Removing this subscription leaves every other device alone;
-      // the server clears the account-wide category-alert consent only when this was the last one.
-      await api.deletePushSubscription(deviceId)
-      await refreshInternal(push, deviceId)
-    } catch (err) {
-      console.error('Could not disable push notifications.', err)
-      setStatus(previousStatus)
-      setGuidance(previousStatus?.enabled && !previousStatus.deviceRegistered
-        ? push.PUSH_ENABLED_ELSEWHERE_MESSAGE
-        : null)
-    } finally {
-      setBusyAction(null)
-    }
-  }, [deviceId, refreshInternal, status])
-
-  const setCategoryAlertsEnabled = useCallback(async (enabled: boolean): Promise<boolean> => {
-    const push = await loadPushModule()
-    if (!push.isPushSupported()) {
-      setGuidance(push.PUSH_UNSUPPORTED_GUIDANCE)
-      return false
-    }
-    const previousStatus = status
-    setBusyAction('categoryAlerts')
-    setGuidance(null)
-    setStatus(current => current ? { ...current, categoryAlertsEnabled: enabled } : current)
-    try {
-      await api.updateCategoryLimitAlerts(enabled)
-      if (deviceId) await refreshInternal(push, deviceId)
-      return true
-    } catch (err) {
-      console.error('Could not update category spending alerts.', err)
-      setStatus(previousStatus)
-      // The server refuses this with a specific reason (no enabled device); replacing it with a
-      // generic retry message hid the one thing that would have told the user what to do.
-      setGuidance(getErrorMessage(err, 'Category spending alerts could not be updated. Please try again.'))
-      return false
-    } finally {
-      setBusyAction(null)
-    }
-  }, [deviceId, refreshInternal, status])
+  }, [account, deviceId, refreshInternal, status])
 
   return {
     supported,
     loading,
     busy: busyAction !== null,
     busyAction,
-    enabled: !!status?.enabled && !!status?.deviceRegistered,
-    accountEnabled: !!status?.enabled,
-    deviceRegistered: !!status?.deviceRegistered,
+    billRemindersEnabled: !!status?.billRemindersEnabled,
     categoryAlertsEnabled: !!status?.categoryAlertsEnabled,
+    otherDevicesBillReminders: !!status?.otherDevicesBillReminders,
+    otherDevicesCategoryAlerts: !!status?.otherDevicesCategoryAlerts,
     guidance,
-    enable,
-    disable,
-    setCategoryAlertsEnabled,
+    setChannelEnabled,
     refresh,
   }
 }

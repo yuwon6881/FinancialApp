@@ -181,7 +181,7 @@ export const TransactionDocumentsField = React.forwardRef<
           ?? document.reliefCategory
           ?? 'Choose tax relief category'
         return (
-          <div key={document.id} className="flex min-w-0 items-center gap-2.5 rounded-xl border border-border/60 bg-muted/30 p-2.5 shadow-sm shadow-black/5">
+          <div key={document.id} className="flex min-w-0 items-center gap-2.5 rounded-xl border border-border/60 bg-muted/30 p-2.5 shadow-[var(--app-shadow-soft)]">
             <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent text-accent-ink ring-1 ring-accent/30">
               <FileText className="size-4" aria-hidden="true" />
             </span>

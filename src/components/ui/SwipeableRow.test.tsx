@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, beforeEach } from 'vitest'
 import { SwipeableRow } from './SwipeableRow'
 
@@ -42,5 +42,31 @@ describe('SwipeableRow closed-state opacity', () => {
     renderRow()
     const drawer = screen.getByText('Delete').closest('[inert]')
     expect(drawer).not.toBeNull()
+  })
+
+  it('opens through an accessible disclosure and moves focus into the actions', async () => {
+    renderRow()
+    const disclosure = screen.getByRole('button', { name: 'Show row actions' })
+    const actionsId = disclosure.getAttribute('aria-controls')
+
+    expect(disclosure.getAttribute('aria-expanded')).toBe('false')
+    expect(actionsId).toBeTruthy()
+    fireEvent.click(disclosure)
+
+    const drawer = document.getElementById(actionsId as string)
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Delete' })))
+    expect(disclosure.getAttribute('aria-expanded')).toBe('true')
+    expect(drawer?.hasAttribute('inert')).toBe(false)
+  })
+
+  it('closes on Escape and restores focus to the disclosure', async () => {
+    renderRow()
+    fireEvent.click(screen.getByRole('button', { name: 'Show row actions' }))
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Delete' })))
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Show row actions' })))
+    expect(screen.getByText('Delete').closest('[inert]')).not.toBeNull()
   })
 })

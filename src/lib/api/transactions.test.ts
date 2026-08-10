@@ -23,4 +23,27 @@ describe('fetchPagedTransactions', () => {
     expect(url.searchParams.get('sort')).toBe('amount-desc')
     expect(url.searchParams.get('all')).toBe('true')
   })
+
+  it('sends exclusion modes without adding a second filter parameter', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({ items: [], total: 0, page: 1, pageSize: 10 }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await fetchPagedTransactions({
+      page: 1,
+      pageSize: 10,
+      recurringFilter: 'exclude',
+      wishlistFilter: 'only',
+    })
+
+    const url = new URL(String(fetchMock.mock.calls[0][0]))
+    expect(url.searchParams.get('recurringFilter')).toBe('exclude')
+    expect(url.searchParams.get('wishlistFilter')).toBe('only')
+    expect(url.searchParams.get('recurringOnly')).toBeNull()
+    expect(url.searchParams.get('wishlistOnly')).toBeNull()
+  })
 })

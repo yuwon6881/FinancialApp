@@ -1,13 +1,15 @@
 import React from 'react'
 import { AlertCircle, Bell, BellRing, ChevronRight, Gauge } from 'lucide-react'
 import {
-  CATEGORY_ALERTS_NEED_DEVICE,
+  BILL_REMINDER_PUSH_DESCRIPTION,
+  BILL_REMINDER_PUSH_TITLE,
   CATEGORY_LIMIT_PUSH_DESCRIPTION,
+  CATEGORY_LIMIT_PUSH_TITLE,
   NOTIFY_ON_LOGIN_DESCRIPTION,
-  PUSH_DESCRIPTION,
-  SCOPE_ALL_DEVICES,
+  otherDevicesHaveItOn,
   SCOPE_THIS_DEVICE,
 } from '../../lib/push/messages'
+import type { PushChannel } from '../../types'
 import { Button } from '../ui/Button'
 import { InfoHint } from '../ui/InfoHint'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
@@ -26,10 +28,10 @@ const ScopeChip: React.FC<{ scope: string }> = ({ scope }) => (
  * One switch and everything that describes it, in a fixed shape: icon, name, scope, busy badge,
  * a single line of explanation, control on the right.
  *
- * The three rows here used to be written out longhand, and each drifted into carrying a different
- * amount of prose — the panel read as three unrelated settings stacked rather than one list. A
- * shared row also caps the explanation at one line by construction, which is the actual fix for a
- * panel that had grown too wordy to scan.
+ * The rows here used to be written out longhand, and each drifted into carrying a different amount
+ * of prose — the panel read as unrelated settings stacked rather than one list. A shared row also
+ * caps the explanation at one line by construction, which is the actual fix for a panel that had
+ * grown too wordy to scan.
  */
 const NotificationRow: React.FC<{
   icon: React.ReactNode
@@ -62,35 +64,26 @@ const NotificationRow: React.FC<{
 export interface NotificationsCardProps {
   notifyOnLoginEnabled: boolean
   onToggleNotifyOnLogin: (checked: boolean) => void
-  pushEnabled: boolean
   pushSupported: boolean
   pushLoading: boolean
-  deviceBusy: boolean
-  categoryAlertsBusy: boolean
+  /** Which of the two switches is mid-flight, or null. They must not share one busy flag. */
+  pushBusyChannel: PushChannel | null
   pushGuidance?: string | null
-  onTogglePushEnabled: (checked: boolean) => void
+  /** This device's own state, per kind. Never an account-wide flag. */
+  billRemindersEnabled: boolean
   categoryAlertsEnabled: boolean
-  onToggleCategoryAlerts: (checked: boolean) => void
+  /** Whether some other device has that kind on. Rendered as a sentence, never as a switch. */
+  otherDevicesBillReminders: boolean
+  otherDevicesCategoryAlerts: boolean
+  onToggleChannel: (channel: PushChannel, checked: boolean) => void
   /** False when no category has a spending guide to alert on yet. */
   hasSpendingGuides: boolean
   onNavigateToCategoryLimits?: () => void
 }
 
 export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
-  const anyBusy = props.deviceBusy || props.categoryAlertsBusy || props.pushLoading
+  const anyBusy = props.pushBusyChannel !== null || props.pushLoading
   const deviceUnavailable = !props.pushSupported
-  // Category alerts are account-wide but undeliverable without a device, and the server refuses
-  // to store the consent without one. The switch used to quietly enable this device first --
-  // a browser permission prompt raised by a control that never mentioned devices or permission.
-  const categoryAlertsBlocked = deviceUnavailable || !props.pushEnabled
-  // At most one line of explanation under the alerts row. Both conditions can hold at once, and
-  // rendering both stacked two caveats under a switch that is already disabled -- only the reason
-  // it cannot be turned on right now is worth the line.
-  const alertsNote = categoryAlertsBlocked && props.pushSupported
-    ? CATEGORY_ALERTS_NEED_DEVICE
-    : !props.hasSpendingGuides
-      ? 'You have not set a planned amount for any category yet, so there is nothing to alert on.'
-      : null
 
   return (
     <section
@@ -100,32 +93,82 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
       <div className="border-b border-border/40 pb-2.5 sm:pb-3">
         <h3 id="settings-notifications-heading" className="text-sm font-bold text-foreground">Notifications</h3>
         <p className="mt-0.5 text-[11px] text-muted-foreground">
-          Choose what you are told about, and on which devices.
+          Each of these is set up on the device you are using now.
         </p>
       </div>
 
       <div className="space-y-2.5 sm:space-y-3">
+        {/* The two kinds are independent settings on equal footing. They used to sit behind one
+            "notifications on this device" master switch, which meant the thing people came here to
+            turn on was two taps away and disabled until the first one landed. Turning either on is
+            what asks the browser for permission. */}
         <NotificationRow
           icon={<BellRing className="size-4" />}
-          title="Notifications on this device"
+          title={BILL_REMINDER_PUSH_TITLE}
           scope={SCOPE_THIS_DEVICE}
-          description={PUSH_DESCRIPTION}
-          status={<RowSyncStatus isSyncing={props.deviceBusy} entityLabel="device notifications" />}
+          description={BILL_REMINDER_PUSH_DESCRIPTION}
+          status={<RowSyncStatus isSyncing={props.pushBusyChannel === 'billReminders'} entityLabel="bill reminders" />}
           hint={
             <InfoHint
               label="How notifications are turned on"
-              text="Each device is set up separately, even on the same account. A phone only shows notifications once you turn this on while using that phone, and your browser has to allow them."
+              text="Each device is set up separately, even on the same account. A phone only shows notifications once you turn them on while using that phone, and your browser has to allow them."
             />
           }
           control={
             <ToggleButton
-              active={props.pushEnabled}
-              onClick={() => props.onTogglePushEnabled(!props.pushEnabled)}
-              label="Notifications on this device"
+              active={props.billRemindersEnabled}
+              onClick={() => props.onToggleChannel('billReminders', !props.billRemindersEnabled)}
+              label={BILL_REMINDER_PUSH_TITLE}
               disabled={anyBusy || deviceUnavailable}
             />
           }
         />
+
+        <OtherDevicesNote
+          show={!props.billRemindersEnabled && props.otherDevicesBillReminders}
+          kind="Bill reminders"
+        />
+
+        <NotificationRow
+          icon={<Gauge className="size-4" />}
+          title={CATEGORY_LIMIT_PUSH_TITLE}
+          scope={SCOPE_THIS_DEVICE}
+          description={CATEGORY_LIMIT_PUSH_DESCRIPTION}
+          status={<RowSyncStatus isSyncing={props.pushBusyChannel === 'categoryAlerts'} entityLabel="spending alerts" />}
+          control={
+            <ToggleButton
+              active={props.categoryAlertsEnabled}
+              onClick={() => props.onToggleChannel('categoryAlerts', !props.categoryAlertsEnabled)}
+              label={CATEGORY_LIMIT_PUSH_TITLE}
+              disabled={anyBusy || deviceUnavailable}
+            />
+          }
+        />
+
+        <OtherDevicesNote
+          show={!props.categoryAlertsEnabled && props.otherDevicesCategoryAlerts}
+          kind="Spending alerts"
+        />
+
+        {/* Offered only when there is nothing to watch, which is the one state where it is the fix
+            rather than a permanent extra link under a working switch. */}
+        {!props.hasSpendingGuides && (
+          <div className="ml-6 space-y-1">
+            <p className="text-[10px] font-medium leading-snug text-muted-foreground">
+              You have not set a planned amount for any category yet, so there is nothing to alert on.
+            </p>
+            {props.onNavigateToCategoryLimits && (
+              <Button
+                variant="unstyled"
+                type="button"
+                onClick={props.onNavigateToCategoryLimits}
+                className="inline-flex items-center gap-1 text-[10px] font-bold text-accent-ink hover:underline"
+              >
+                Set planned amounts per category <ChevronRight className="size-3" aria-hidden="true" />
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* amber-500 is aliased to --ledger-pending-500 in index.css, so this is the theme's own
             "needs attention" gold rather than a raw Tailwind palette colour. */}
@@ -138,40 +181,6 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
             <p className="flex-1 text-[11px] font-medium leading-snug sm:text-xs">{props.pushGuidance}</p>
           </div>
         )}
-
-        {/* Everything here depends on the switch above, and the left rule is what says so. */}
-        <div className="ml-1 space-y-2 border-l border-border/50 pl-2 sm:ml-2 sm:pl-3">
-          <NotificationRow
-            icon={<Gauge className="size-4" />}
-            title="Category spending alerts"
-            scope={SCOPE_ALL_DEVICES}
-            description={CATEGORY_LIMIT_PUSH_DESCRIPTION}
-            status={<RowSyncStatus isSyncing={props.categoryAlertsBusy} entityLabel="spending alerts" />}
-            control={
-              <ToggleButton
-                active={props.categoryAlertsEnabled}
-                onClick={() => props.onToggleCategoryAlerts(!props.categoryAlertsEnabled)}
-                label="Category spending alerts"
-                disabled={anyBusy || categoryAlertsBlocked}
-              />
-            }
-          />
-
-          {alertsNote && <p className="text-[10px] font-medium leading-snug text-muted-foreground">{alertsNote}</p>}
-
-          {/* Only offered when there is nothing to watch, which is the one state where it is the
-              fix rather than a permanent extra link under a working switch. */}
-          {!props.hasSpendingGuides && props.onNavigateToCategoryLimits && (
-            <Button
-              variant="unstyled"
-              type="button"
-              onClick={props.onNavigateToCategoryLimits}
-              className="inline-flex items-center gap-1 text-[10px] font-bold text-accent-ink hover:underline"
-            >
-              Set planned amounts per category <ChevronRight className="size-3" aria-hidden="true" />
-            </Button>
-          )}
-        </div>
 
         <NotificationRow
           icon={<Bell className="size-4" />}
@@ -196,10 +205,28 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
             Devices set up
           </summary>
           <div className="pt-2">
-            <PushDevicesList refreshKey={props.pushEnabled ? 1 : 0} />
+            {/* Re-reads whenever this device's own enrolment changes in either kind, so the roster
+                never shows a browser that was just switched on or off. */}
+            <PushDevicesList
+              refreshKey={`${props.billRemindersEnabled}-${props.categoryAlertsEnabled}`}
+            />
           </div>
         </details>
       </div>
     </section>
+  )
+}
+
+/**
+ * "Another device has this on" — a statement about the other device, deliberately separate from
+ * the switch, which stays off. The account-wide reading of this used to *be* the switch state, so
+ * a desktop that had never asked for spending alerts showed them as on.
+ */
+const OtherDevicesNote: React.FC<{ show: boolean; kind: string }> = ({ show, kind }) => {
+  if (!show) return null
+  return (
+    <p className="ml-6 text-[10px] font-medium leading-snug text-muted-foreground">
+      {otherDevicesHaveItOn(kind)}
+    </p>
   )
 }
