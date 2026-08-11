@@ -27,7 +27,7 @@ import { Button } from './ui/Button'
 import { RowSyncStatus } from './ui/RowSyncBadge'
 import { FormField } from './ui/FormField'
 import { BottomSheet } from './ui/BottomSheet'
-import { CycleSkeleton } from './ui/Skeleton'
+import { CycleSkeleton } from './ui/CycleSkeleton'
 import { InfoHint } from './ui/InfoHint'
 import { useInvestmentPortfolio } from './investments/useInvestmentPortfolio'
 import { applyOpsToList } from '../lib/outbox'
@@ -718,8 +718,11 @@ const AccountsAndInstruments = ({
               {portfolio.accounts.filter(value => matches(`${value.name} ${value.baseCurrency}`)).map(value => (
                 <div key={value.id} className="flex items-center justify-between gap-2 rounded-xl bg-muted/25 p-3">
                   <span className="min-w-0">
-                    <strong className="flex items-center gap-2 truncate text-xs text-foreground">
-                      {value.name}
+                    {/* The name is its own truncating span: `truncate` on the flex row itself only clips
+                        (text-overflow does not reach an anonymous flex item) and the badges beside
+                        it are what got clipped away first. */}
+                    <strong className="flex min-w-0 items-center gap-2 text-xs text-foreground">
+                      <span className="truncate">{value.name}</span>
                       <RowSyncStatus
                         isDeleting={Boolean(value.isPendingDelete)}
                         isSyncing={activeSyncIds.includes(value.id)}
@@ -727,7 +730,7 @@ const AccountsAndInstruments = ({
                         entityLabel="account"
                       />
                       {!value.canDelete && !value.canArchive && !value.isArchived && (
-                        <span title="Close all positions and set cash to zero before archiving." className="flex cursor-help items-center gap-1.5 rounded-md px-1.5 py-0.5 text-amber-500 hover:bg-amber-500/10">
+                        <span title="Close all positions and set cash to zero before archiving." className="flex shrink-0 cursor-help items-center gap-1.5 rounded-md px-1.5 py-0.5 text-amber-500 hover:bg-amber-500/10">
                           <Info className="size-3.5" />
                           <span className="text-[10px] font-medium">Cannot archive</span>
                         </span>
@@ -768,8 +771,8 @@ const AccountsAndInstruments = ({
               {portfolio.instruments.filter(value => matches(`${value.symbol} ${value.name} ${value.currency}`)).map(value => (
                 <div key={value.id} className="flex items-center justify-between gap-2 rounded-xl bg-muted/25 p-3" aria-busy={value.isPendingSync || value.isPendingDelete || activeSyncIds.includes(value.id)}>
                   <span className="min-w-0">
-                    <strong className="flex items-center gap-2 truncate text-xs text-foreground">
-                      {value.symbol} · {value.name}
+                    <strong className="flex min-w-0 items-center gap-2 text-xs text-foreground">
+                      <span className="truncate">{value.symbol} · {value.name}</span>
                       <RowSyncStatus
                         isDeleting={Boolean(value.isPendingDelete)}
                         isSyncing={activeSyncIds.includes(value.id)}
@@ -777,7 +780,7 @@ const AccountsAndInstruments = ({
                         entityLabel="investment"
                       />
                       {!value.canDelete && !value.canArchive && !value.isArchived && (
-                        <span title={value.archiveUnavailableReason} className="flex cursor-help items-center gap-1.5 rounded-md px-1.5 py-0.5 text-amber-500 hover:bg-amber-500/10">
+                        <span title={value.archiveUnavailableReason} className="flex shrink-0 cursor-help items-center gap-1.5 rounded-md px-1.5 py-0.5 text-amber-500 hover:bg-amber-500/10">
                           <Info className="size-3.5" />
                           <span className="text-[10px] font-medium">Cannot archive</span>
                         </span>

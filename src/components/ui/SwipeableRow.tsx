@@ -3,6 +3,7 @@ import { ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { m, useMotionValue, useAnimation, type PanInfo } from 'framer-motion'
 import { cn } from '../../lib/utils'
 import { useIsMobile } from '../../lib/useIsMobile'
+import { prefersReducedMotion } from '../../lib/motionPreference'
 import { triggerHaptic } from '../../lib/haptics'
 import { setSwipeLocked } from '../../lib/swipeLock'
 import { Button } from './Button'
@@ -34,6 +35,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   id,
 }) => {
   const isMobile = useIsMobile()
+  const reduceMotion = prefersReducedMotion()
   const [open, setOpen] = useState(false)
   const x = useMotionValue(0)
   const controls = useAnimation()
@@ -44,18 +46,22 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   const generatedActionsId = useId().replace(/:/g, '')
   const actionsId = id ? `${id}-actions` : `swipe-row-actions-${generatedActionsId}`
 
+  const transition = reduceMotion ? { duration: 0 } : { type: 'spring' as const, stiffness: 750, damping: 42 }
+
   const close = useCallback(() => {
     setOpen(false)
-    controls.start({ x: 0, transition: { type: 'spring', stiffness: 750, damping: 42 } })
-  }, [controls])
+    x.set(0)
+    controls.start({ x: 0, transition })
+  }, [controls, transition, x])
 
   const openActions = useCallback((focusActions: boolean) => {
     if (disabled) return
     focusActionsOnOpenRef.current = focusActions
     if (!open) triggerHaptic(10)
     setOpen(true)
-    controls.start({ x: -actionsWidth, transition: { type: 'spring', stiffness: 750, damping: 42 } })
-  }, [actionsWidth, controls, disabled, open])
+    x.set(-actionsWidth)
+    controls.start({ x: -actionsWidth, transition })
+  }, [actionsWidth, controls, disabled, open, transition, x])
 
   useEffect(() => {
     if (!open || !focusActionsOnOpenRef.current) return
@@ -197,12 +203,11 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         animate={controls}
-        style={{ x, touchAction: 'manipulation' }}
+        style={{ touchAction: 'manipulation', x }}
         onClick={() => {
           if (suppressNextClick.current) return
           if (open) close()
         }}
-        
       >
         {children}
 

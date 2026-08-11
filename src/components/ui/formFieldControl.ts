@@ -1,5 +1,6 @@
 import {
   createContext,
+  useId,
   useContext,
   type AriaAttributes,
 } from 'react'
@@ -25,8 +26,9 @@ export interface FormControlAccessibilityProps {
 export function useFormFieldControlProps<T extends FormControlAccessibilityProps>(
   props: T,
 ): T & FormControlAccessibilityProps {
+  const generatedId = `control-${useId().replace(/:/g, '')}`
   const field = useContext(FormFieldContext)
-  if (!field) return props
+  if (!field) return { ...props, id: props.id ?? generatedId }
 
   const describedBy = [props['aria-describedby'], field.describedBy]
     .filter(Boolean)

@@ -4,7 +4,10 @@ import { describe, expect, it, vi } from 'vitest'
 import { Button } from './Button'
 import { FormField } from './FormField'
 import { focusFirstInvalidField } from './formValidation'
+import { Checkbox } from './Checkbox'
 import { Input } from './Input'
+import { RangeInput } from './RangeInput'
+import { Textarea } from './Textarea'
 
 function RequiredForm({ onValid }: { onValid: () => void }) {
   const [first, setFirst] = useState('')
@@ -50,6 +53,26 @@ function RequiredForm({ onValid }: { onValid: () => void }) {
 }
 
 describe('canonical form controls', () => {
+  it('gives standalone controls an id for browser autofill', () => {
+    render(
+      <>
+        <Input aria-label="Standalone input" />
+        <Textarea aria-label="Standalone textarea" />
+        <RangeInput aria-label="Standalone range" />
+        <Checkbox aria-label="Standalone checkbox" />
+      </>,
+    )
+
+    for (const control of [
+      screen.getByRole('textbox', { name: 'Standalone input' }),
+      screen.getByRole('textbox', { name: 'Standalone textarea' }),
+      screen.getByRole('slider', { name: 'Standalone range' }),
+      screen.getByRole('checkbox', { name: 'Standalone checkbox' }),
+    ]) {
+      expect(control.getAttribute('id')).toMatch(/^control-/)
+    }
+  })
+
   it('associates labels, hints, required state, and field errors', async () => {
     render(<RequiredForm onValid={vi.fn()} />)
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))

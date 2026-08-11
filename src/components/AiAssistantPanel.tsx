@@ -198,7 +198,11 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
         </>
       }
     >
-      <div className="flex h-[55vh] sm:h-[480px] flex-col gap-3">
+      {/* `vh` does not shrink for the on-screen keyboard but the sheet's own max-height does
+          (`.sheet-panel` measures `--app-vvh`), so a fixed 55vh made the conversation taller than
+          the sheet holding it the moment the input was focused. Taking the smaller of the two keeps
+          the same height with no keyboard and shrinks to what is actually visible with one. */}
+      <div className="flex h-[min(55vh,calc(var(--app-vvh,100dvh)-13rem))] min-h-[220px] flex-col gap-3 sm:h-[480px]">
         {hasPendingLocalChanges && (
           <p className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
             Ask AI uses saved server data and does not include changes still syncing.
@@ -220,7 +224,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
             <Button
               variant="outline"
               size="sm"
-              className="shrink-0"
+              className="min-h-11 shrink-0 sm:min-h-0"
               disabled={isSending || isOffline || isHydrating || isResetting}
               onClick={recoverStoppedTurn}
             >
@@ -250,7 +254,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
             <Button
               variant="outline"
               size="sm"
-              className="shrink-0"
+              className="min-h-11 shrink-0 sm:min-h-0"
               disabled={isSending || isOffline || isHydrating || isResetting}
               onClick={() => void resumeActionBatch(pendingActionBatches[0])}
             >

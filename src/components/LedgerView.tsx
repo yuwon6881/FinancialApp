@@ -9,7 +9,7 @@ import type {
   CategorySummary,
 } from '../types'
 import type { PagedTransactionResult, ReceiptScanResult } from '../lib/api'
-import { CycleSkeleton } from './ui/Skeleton'
+import { CycleSkeleton } from './ui/CycleSkeleton'
 import { useAppContext } from '../contexts/AppContext'
 import { DeleteTransactionModal, EditDisabledModal } from './ledger/LedgerDeleteModals'
 import { LedgerPagination } from './ledger/LedgerPagination'

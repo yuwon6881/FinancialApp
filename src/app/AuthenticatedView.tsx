@@ -3,7 +3,8 @@ import type { AppTab, DashboardData } from '../types'
 import { clearLocalFinancialData } from '../lib/cache'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { PullToRefresh } from '../components/ui/PullToRefresh'
-import { CycleSkeleton, type PageSkeletonVariant } from '../components/ui/Skeleton'
+import { Skeleton } from '../components/ui/Skeleton'
+import type { PageSkeletonVariant } from '../components/ui/CycleSkeleton'
 import { LaunchReady } from './LaunchReady'
 import type { useAiActionRouter } from './useAiActionRouter'
 import type { useAppDialogs } from './useAppDialogs'
@@ -29,12 +30,15 @@ const SettingsView = lazy(() => import('../components/SettingsView').then(module
 const DraftStagingView = lazy(() => import('../components/DraftStagingView').then(module => ({ default: module.DraftStagingView })))
 const InvestmentsView = lazy(() => import('../components/InvestmentsView').then(module => ({ default: module.InvestmentsView })))
 const DocumentsView = lazy(() => import('../components/DocumentsView').then(module => ({ default: module.DocumentsView })))
+const CycleSkeleton = lazy(() => import('../components/ui/CycleSkeleton').then(module => ({ default: module.CycleSkeleton })))
 
 const getPageSkeletonVariant = (tab: AppTab): PageSkeletonVariant => tab
 
 const ContentViewFallback = ({ tab }: { tab: AppTab }) => (
   <div className="w-full pt-2 view-enter">
-    <CycleSkeleton variant={getPageSkeletonVariant(tab)} fullPage />
+    <Suspense fallback={<div className="space-y-6" aria-hidden="true"><Skeleton className="h-40 w-full rounded-2xl" /><Skeleton className="h-64 w-full rounded-2xl" /></div>}>
+      <CycleSkeleton variant={getPageSkeletonVariant(tab)} fullPage />
+    </Suspense>
   </div>
 )
 

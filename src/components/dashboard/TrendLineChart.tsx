@@ -21,6 +21,13 @@ const trendLabel = (point: TrendPoint) => {
   return year ? `${point.month} ${year}` : point.month
 }
 
+// The x-axis rail divides its width evenly between the points, so a twelve-cycle year leaves each
+// label about 21px at 320px -- "Jan 2026" clipped to "Ja". Those points all sit inside the one year
+// the footer already names, so the axis drops the year and the month alone fits. Short ranges keep
+// it: they can straddle a year boundary and have the room.
+const axisLabel = (point: TrendPoint, pointCount: number) =>
+  pointCount > 6 ? point.month : trendLabel(point)
+
 export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData: DashboardData | null; growthBalance: number }) {
   const reduceMotion = useReducedMotion()
   const { hideSensitive, currency, formatSensitive } = useAppPrefs()
@@ -153,7 +160,7 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
             </>
           ) : <div className="text-xs text-muted-foreground pb-12 text-center">Calculating trend points...</div>}
         </div>
-        <div aria-hidden="true" className="flex px-[3%] mt-1">{points.map((point, index) => <span key={point.cycleKey || `${point.month}-${index}`} className="flex-1 min-w-0 text-center truncate text-[9px] text-muted-foreground font-bold">{trendLabel(point)}</span>)}</div>
+        <div aria-hidden="true" className="flex px-[3%] mt-1">{points.map((point, index) => <span key={point.cycleKey || `${point.month}-${index}`} className="flex-1 min-w-0 text-center truncate text-[9px] text-muted-foreground font-bold">{axisLabel(point, points.length)}</span>)}</div>
       </div>
       <div className="border-t border-border/50 pt-3 mt-3 flex justify-between text-[10px] text-muted-foreground">
         <span>{range === '3month' ? 'Last 3 cycles' : range === '6month' ? 'Last 6 cycles' : `${dashboardData?.setting.selectedYear || new Date().getFullYear()} full year`}</span>

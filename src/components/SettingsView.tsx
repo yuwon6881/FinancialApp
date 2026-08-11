@@ -602,12 +602,12 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                                     type="button"
                                     onClick={() => props.onNavigateToLedger?.({ category: suggestion.categories[0], showAllCycles: true })}
                                     title="View entries in ledger"
-                                    className="press-scale inline-flex h-8 min-w-0 items-center px-2.5 rounded-full border border-orange-500/20 bg-orange-500/10 text-[9px] font-bold uppercase text-orange-600 dark:text-orange-400 hover:bg-orange-500/20 transition cursor-pointer select-none"
+                                    className="press-scale inline-flex min-h-11 min-w-0 items-center px-2.5 rounded-full border sm:h-8 sm:min-h-0 border-orange-500/20 bg-orange-500/10 text-[9px] font-bold uppercase text-orange-600 dark:text-orange-400 hover:bg-orange-500/20 transition cursor-pointer select-none"
                                   >
                                     <span className="truncate">{suggestion.affectedTransactionCount} ledger {suggestion.affectedTransactionCount === 1 ? 'entry' : 'entries'} need validation</span>
                                   </Button>
                                 ) : (
-                                  <span className="inline-flex h-8 min-w-0 items-center px-2.5 rounded-full border border-border bg-muted/30 text-[9px] font-bold uppercase text-muted-foreground select-none">
+                                  <span className="inline-flex min-h-11 min-w-0 items-center px-2.5 rounded-full border sm:h-8 sm:min-h-0 border-border bg-muted/30 text-[9px] font-bold uppercase text-muted-foreground select-none">
                                     {suggestion.affectedTransactionCount > 0
                                       ? `${suggestion.affectedTransactionCount} ledger entr${suggestion.affectedTransactionCount === 1 ? 'y' : 'ies'} need validation`
                                       : 'No ledger entries affected'}
@@ -618,7 +618,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                                   onClick={() => void view.handleApplyCleanupSuggestion(suggestion)}
                                   disabled={!props.onApplyCategoryCleanupSuggestion || view.applyingCleanupId !== null || isConsolidateDisabled}
                                   title={!props.onApplyCategoryCleanupSuggestion ? 'Category cleanup is unavailable' : isConsolidateDisabled ? 'Choose a category first' : 'Accept'}
-                                  className="inline-flex h-8 w-20 shrink-0 items-center justify-center rounded-lg border border-blue-500/30 bg-blue-500/5 px-3 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="inline-flex min-h-11 w-20 shrink-0 items-center justify-center rounded-lg border sm:h-8 sm:min-h-0 border-blue-500/30 bg-blue-500/5 px-3 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   {isApplyingThis ? <Loader2 className="size-3 animate-spin" /> : 'Accept'}
                                 </Button>

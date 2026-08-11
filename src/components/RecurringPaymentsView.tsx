@@ -1,6 +1,6 @@
 import React from 'react'
 import type { RecurringPayment, RecurringReminderSettings, TransactionCategory, ActiveRecurringPayment, Transaction } from '../types'
-import { CycleSkeleton } from './ui/Skeleton'
+import { CycleSkeleton } from './ui/CycleSkeleton'
 import { useIsMobile } from '../lib/useIsMobile'
 import { useAppContext } from '../contexts/AppContext'
 import { RecurringPaymentsHeader } from './recurring/RecurringPaymentsHeader'

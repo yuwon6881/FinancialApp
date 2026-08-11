@@ -6,7 +6,7 @@ import { useAppPrefs } from '../contexts/AppContext'
 import { getCycleLabelForDropdown } from '../lib/cycleLabels'
 import { getCycleProgress } from '../lib/cycle'
 import { CustomSelect } from './ui/CustomSelect'
-import { CycleSkeleton } from './ui/Skeleton'
+import { CycleSkeleton } from './ui/CycleSkeleton'
 import { useDashboardView } from './dashboard/useDashboardView'
 import { CarryoverLedgerTable } from './dashboard/CarryoverLedgerTable'
 import { FinancialPlanMetrics } from './dashboard/FinancialPlanMetrics'
@@ -96,7 +96,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               <p className="mt-1 text-xs text-muted-foreground">Trends, plan performance, and activity for {view.cycleLabel}.</p>
             </div>
           </div>
-          <div className="flex w-full flex-wrap items-center gap-1.5 sm:gap-2 lg:w-auto">
+          <div className="flex w-full min-w-0 flex-nowrap items-center gap-1.5 sm:gap-2 lg:w-auto">
             <CustomSelect
               ariaLabel="Report cycle"
               value={view.activeSettings.selectedMonth}
@@ -105,7 +105,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 value: month,
                 label: getCycleLabelForDropdown(month, view.activeSettings.selectedYear, view.activeSettings.cycleDay),
               }))}
-              className="w-0 min-w-[8.25rem] flex-1 sm:w-52 sm:flex-initial"
+              className="w-0 min-w-0 flex-1 sm:w-52 sm:flex-initial"
             />
             <CustomSelect
               ariaLabel="Report year"

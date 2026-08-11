@@ -212,9 +212,9 @@ export function ManageableNameList<T extends ManageableNameItem>({
                   }
                 }}
                 aria-label={`Delete ${item.name}`}
-                className="cursor-pointer text-muted-foreground transition hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-grid size-11 shrink-0 cursor-pointer place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50 sm:size-8"
               >
-                {busyId === item.id ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3" />}
+                {busyId === item.id ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
               </Button>
             </div>
           </div>

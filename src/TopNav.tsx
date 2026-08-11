@@ -339,7 +339,7 @@ const TopNav: React.FC<TopNavProps> = ({
                   
                   <MenubarItem
                     onClick={() => onTabChange('settings')}
-                    className="flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground"
+                    className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
                   >
                     <Settings className="size-3.5 text-blue-500" />
                     <span>Settings</span>
@@ -348,7 +348,7 @@ const TopNav: React.FC<TopNavProps> = ({
                   <MenubarItem
                     onClick={sensitivePreferenceStatus === 'resolved' ? onToggleHideSensitive : undefined}
                     disabled={sensitivePreferenceStatus !== 'resolved'}
-                    className="flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground disabled:cursor-not-allowed"
+                    className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground disabled:cursor-not-allowed sm:min-h-0"
                   >
                     {sensitivePreferenceStatus === 'pending'
                       ? <Loader2 className="size-3.5 animate-spin text-blue-500" />
@@ -366,7 +366,7 @@ const TopNav: React.FC<TopNavProps> = ({
 
                   <MenubarItem 
                     onClick={onToggleDarkMode}
-                    className="flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground"
+                    className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg hover:bg-muted outline-hidden cursor-pointer text-foreground sm:min-h-0"
                   >
                     {darkMode ? <Sun className="size-3.5 text-blue-500" /> : <Moon className="size-3.5 text-blue-500" />}
                     <span>{darkMode ? 'Light Theme' : 'Dark Theme'}</span>
@@ -378,7 +378,7 @@ const TopNav: React.FC<TopNavProps> = ({
                   
                   <MenubarItem 
                     onClick={onLogout}
-                    className="flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg text-orange-500 hover:bg-orange-500/10 outline-hidden cursor-pointer"
+                    className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg text-orange-500 hover:bg-orange-500/10 outline-hidden cursor-pointer sm:min-h-0"
                   >
                     <LogOut className="size-3.5" /> Logout
                   </MenubarItem>

@@ -145,10 +145,10 @@ export function DraftStagingView({
               contentClassName="p-4"
               actionsWidth={128}
               actions={<>
-                <Button variant="unstyled" onClick={() => openDraft(draft)} disabled={hideSensitive} className="flex flex-1 flex-col items-center justify-center gap-1 bg-primary text-primary-foreground text-[11px] font-bold">
+                <Button variant="unstyled" onClick={() => openDraft(draft)} disabled={hideSensitive} aria-label={`Edit ${draft.description}`} className="flex flex-1 flex-col items-center justify-center gap-1 bg-primary text-primary-foreground text-[11px] font-bold">
                   <Edit2 className="size-4" />Edit
                 </Button>
-                <Button variant="unstyled" onClick={() => onDeleteDraftTransaction(draft.id)} disabled={hideSensitive} className="flex flex-1 flex-col items-center justify-center gap-1 bg-destructive text-destructive-foreground text-[11px] font-bold">
+                <Button variant="unstyled" onClick={() => onDeleteDraftTransaction(draft.id)} disabled={hideSensitive} aria-label={`Delete ${draft.description}`} className="flex flex-1 flex-col items-center justify-center gap-1 bg-destructive text-destructive-foreground text-[11px] font-bold">
                   <Trash2 className="size-4" />Delete
                 </Button>
               </>}
@@ -161,7 +161,7 @@ export function DraftStagingView({
                 </Button>
               </>}
             >
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center justify-between gap-3 cursor-pointer" onClick={() => openDraft(draft)}>
                 <div className="min-w-0 flex-1">
                   <div className="flex min-w-0 items-center gap-2">
                     <p className="truncate text-sm font-bold text-foreground">{draft.description}</p>

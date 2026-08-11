@@ -9,7 +9,8 @@ import { Loader2 } from 'lucide-react'
 // chunk loads on demand behind an instant blank-shell fallback (no flash).
 const LoginView = lazy(() => import('./components/LoginView').then(m => ({ default: m.LoginView })))
 import { ToastViewport } from './components/ui/ToastViewport'
-import { CycleSkeleton, Skeleton, type PageSkeletonVariant } from './components/ui/Skeleton'
+import { Skeleton } from './components/ui/Skeleton'
+import type { PageSkeletonVariant } from './components/ui/CycleSkeleton'
 import { useVisualViewportVars } from './lib/useVisualViewportVars'
 import { useReceiptScanPolling } from './lib/useReceiptScanPolling'
 import { useReceiptSplitPolling } from './lib/useReceiptSplitPolling'
@@ -17,6 +18,7 @@ import { useInvestmentScanPolling } from './lib/useInvestmentScanPolling'
 import { useNativeAppLifecycle } from './lib/useNativeAppLifecycle'
 const LockScreen = lazy(() => import('./components/LockScreen').then(m => ({ default: m.LockScreen })))
 const AiAssistantPanel = lazy(() => import('./components/AiAssistantPanel').then(m => ({ default: m.AiAssistantPanel })))
+const CycleSkeleton = lazy(() => import('./components/ui/CycleSkeleton').then(m => ({ default: m.CycleSkeleton })))
 import { AppLogo } from './components/ui/AppLogo'
 import { syncStatusBarTheme } from './lib/nativeUi'
 import type { AppContextValue } from './contexts/AppContext'
@@ -47,6 +49,12 @@ import { calculateFreeRewardsBalance, pendingRewardsAmount } from './lib/freeRew
 
 // Instant, flash-free placeholder while a lazily-loaded chunk is fetched at the root level.
 const ViewFallback = () => <div className="app-shell min-h-screen" />
+const CycleSkeletonFallback = () => (
+  <div className="space-y-6" aria-hidden="true">
+    <Skeleton className="h-40 w-full rounded-2xl" />
+    <Skeleton className="h-64 w-full rounded-2xl" />
+  </div>
+)
 const AppOverlays = lazy(() => import('./app/AppOverlays').then(module => ({ default: module.AppOverlays })))
 
 const AppOverlaysFallback = ({
@@ -499,7 +507,9 @@ function App() {
                 <span className="hidden sm:inline">Loading your financial data securely…</span>
               </div>
             </div>
-            <CycleSkeleton variant={getPageSkeletonVariant(prefs.activeTab)} fullPage />
+            <Suspense fallback={<CycleSkeletonFallback />}>
+              <CycleSkeleton variant={getPageSkeletonVariant(prefs.activeTab)} fullPage />
+            </Suspense>
           </div>
         </div>
       </LaunchReady>

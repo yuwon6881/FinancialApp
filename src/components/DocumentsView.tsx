@@ -16,7 +16,7 @@ import * as documentsApi from '../lib/api/documents'
 import { getErrorMessage } from '../lib/errors'
 import { buildMutationSuccessToast } from '../lib/mutationToast'
 import { Button } from './ui/Button'
-import { CycleSkeleton } from './ui/Skeleton'
+import { CycleSkeleton } from './ui/CycleSkeleton'
 import { createFinalId } from '../lib/outbox'
 import { useOptimisticList } from '../lib/useOptimisticList'
 

@@ -1,6 +1,6 @@
 import React from 'react'
 import type { DashboardData, SavingsGoal, WishlistItem, AppTab, InvestmentAllocationOverview } from '../types'
-import { CycleSkeleton } from './ui/Skeleton'
+import { CycleSkeleton } from './ui/CycleSkeleton'
 import { useAppPrefs } from '../contexts/AppContext'
 import { DashboardHeader } from './dashboard/DashboardHeader'
 import { TodayFocusCards } from './dashboard/TodayFocusCards'

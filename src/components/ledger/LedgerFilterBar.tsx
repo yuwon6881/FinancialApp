@@ -317,8 +317,11 @@ export function LedgerFilterBar({
           </Button>
         </div>
       ) : (
-        /* Client mode: live-filtering search input with a clear affordance. */
-        <div className="group relative flex-1 lg:w-72 lg:flex-initial">
+        /* Client mode: live-filtering search input with a clear affordance. min-w-0 is
+           load-bearing: without it the input's intrinsic width becomes this flex item's automatic
+           minimum, so at 320px the sort and filter actions beside it are pushed out of the bar
+           instead of the field shrinking. */
+        <div className="group relative min-w-0 flex-1 lg:w-72 lg:flex-initial">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-blue-500" />
           <Input
             type="text"
@@ -530,7 +533,7 @@ export function LedgerFilterBar({
                     return (
                       <label
                         key={bucket}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs cursor-pointer select-none transition ${getCategoryFilterClass(bucket, isChecked)}`}
+                        className={`flex min-h-11 items-center gap-2 px-3 py-2 rounded-xl border text-xs cursor-pointer select-none transition sm:min-h-0 ${getCategoryFilterClass(bucket, isChecked)}`}
                       >
                         <Checkbox
                           checked={isChecked}
@@ -554,7 +557,7 @@ export function LedgerFilterBar({
                     return (
                       <label
                         key={c.id}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs cursor-pointer select-none transition ${getCategoryFilterClass(c.name, isChecked)}`}
+                        className={`flex min-h-11 items-center gap-2 px-3 py-2 rounded-xl border text-xs cursor-pointer select-none transition sm:min-h-0 ${getCategoryFilterClass(c.name, isChecked)}`}
                       >
                         <Checkbox
                           checked={isChecked}

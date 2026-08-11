@@ -135,6 +135,7 @@ describe('ReportsView', () => {
     const askAi = screen.getByRole('button', { name: 'Explain this cycle with Ask AI' })
     expect(askAi.className).toContain('size-11')
     expect(askAi.className).toContain('sm:size-auto')
-    expect(askAi.parentElement?.className).toContain('flex-wrap')
+    expect(askAi.parentElement?.className).toContain('flex-nowrap')
+    expect(screen.getByRole('combobox', { name: 'Report cycle' }).parentElement?.className).toContain('min-w-0')
   })
 })

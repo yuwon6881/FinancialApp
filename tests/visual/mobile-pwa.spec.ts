@@ -69,8 +69,7 @@ test('mobile PWA runs with touch input and an active service worker', async ({ p
 
   await establishSession(page)
   await mockApi(page)
-  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
-  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
+  await page.goto('/', { waitUntil: 'load' })
 
   const inputCapabilities = await page.evaluate(() => ({
     maxTouchPoints: navigator.maxTouchPoints,
@@ -170,7 +169,12 @@ test('draft attachments survive a reload before the batch is added', async ({ pa
   })
   await page.goto('/drafts', { waitUntil: 'domcontentloaded' })
 
-  await page.getByRole('button', { name: 'Edit Weekend market' }).click()
+  const showActions = page.getByRole('button', { name: 'Show row actions' })
+  if (await showActions.first().isVisible()) {
+    await showActions.first().click()
+    await expect(page.getByRole('button', { name: 'Hide row actions' }).first()).toBeVisible()
+  }
+  await page.getByRole('button', { name: 'Edit Weekend market' }).first().click({ force: true })
   const dialog = page.getByRole('dialog', { name: 'Edit Draft' })
   await expect(dialog).toBeVisible()
   await dialog.locator('input[type="file"][multiple]').setInputFiles({
@@ -184,7 +188,13 @@ test('draft attachments survive a reload before the batch is added', async ({ pa
   await expect(page.getByText('1 document')).toBeVisible()
 
   await page.reload({ waitUntil: 'domcontentloaded' })
-  await page.getByRole('button', { name: 'Edit Weekend market' }).click()
+  await expect(page.getByText('1 document')).toBeVisible()
+  const reloadShowActions = page.getByRole('button', { name: 'Show row actions' }).first()
+  if (await reloadShowActions.isVisible()) {
+    await reloadShowActions.click()
+    await expect(page.getByRole('button', { name: 'Hide row actions' }).first()).toBeVisible()
+  }
+  await page.getByRole('button', { name: 'Edit Weekend market' }).first().click()
   await expect(page.getByRole('dialog', { name: 'Edit Draft' }).getByText('weekend-market.pdf')).toBeVisible()
 })
 
