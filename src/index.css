@@ -1097,11 +1097,10 @@ button {
 .ledger-transaction-highlight:not(tr) {
     position: relative;
     z-index: 10;
-    animation: ledger-highlight-mobile-shell 3.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .ledger-transaction-highlight:not(tr) > [data-swipe-content] {
-    animation: none;
+    animation: ledger-highlight-mobile-shell 3.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 tr.ledger-transaction-highlight {
@@ -1131,12 +1130,12 @@ tr.ledger-transaction-highlight > td:last-child {
 @media (prefers-reduced-motion: reduce) {
     .ledger-transaction-highlight:not(tr) {
         animation: none;
-        border-color: color-mix(in srgb, var(--app-highlight) 55%, transparent);
-        box-shadow: 0 6px 18px color-mix(in srgb, var(--app-highlight) 12%, transparent);
     }
 
     .ledger-transaction-highlight:not(tr) > [data-swipe-content] {
         animation: none;
+        border-color: color-mix(in srgb, var(--app-highlight) 55%, transparent);
+        box-shadow: 0 6px 18px color-mix(in srgb, var(--app-highlight) 12%, transparent);
     }
 
     tr.ledger-transaction-highlight > td {

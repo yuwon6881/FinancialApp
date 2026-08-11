@@ -50,18 +50,22 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
 
   const close = useCallback(() => {
     setOpen(false)
-    x.set(0)
+    // A drag release or a previous row can still have a settle animation in
+    // flight. Stop it before starting from the live position; setting x first
+    // makes the controller and the drag value disagree and can leave a row
+    // visually parked between open and closed.
+    controls.stop()
     controls.start({ x: 0, transition })
-  }, [controls, transition, x])
+  }, [controls, transition])
 
   const openActions = useCallback((focusActions: boolean) => {
     if (disabled) return
     focusActionsOnOpenRef.current = focusActions
     if (!open) triggerHaptic(10)
     setOpen(true)
-    x.set(-actionsWidth)
+    controls.stop()
     controls.start({ x: -actionsWidth, transition })
-  }, [actionsWidth, controls, disabled, open, transition, x])
+  }, [actionsWidth, controls, disabled, open, transition])
 
   useEffect(() => {
     if (!open || !focusActionsOnOpenRef.current) return
@@ -172,7 +176,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   }
 
   return (
-    <div id={id} className={cn('relative overflow-hidden', className)}>
+    <div id={id} className="relative overflow-hidden">
       {/* Action drawer sitting behind the content */}
       <div
         ref={actionDrawerRef}
@@ -189,16 +193,20 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         {actions}
       </div>
 
-      {/* Sliding content surface. This must stay opaque: it is what hides the action
-          drawer sitting behind it, so a transparent surface leaves every row looking
-          permanently swiped open. `relative` keeps it above the drawer in paint order
-          even when a consumer's own background is see-through. */}
+      {/* The card surface moves as one piece. The outer element is only the stationary
+          clipping viewport for the drawer, so the card border, shadow and contents
+          cannot visibly separate during the drag or its settle bounce. This must stay
+          opaque: it is what hides the drawer while the row is closed. */}
       <m.div
         data-swipe-content
-        className={cn('relative bg-card', contentClassName)}
+        className={cn('relative bg-card', className, contentClassName)}
         drag={disabled ? false : 'x'}
         dragConstraints={{ left: -actionsWidth, right: 0 }}
         dragElastic={0.1}
+        // The explicit open/close spring is the only settle animation. Letting
+        // Framer's default momentum continue after release can race that spring
+        // on medium-width mouse layouts and strand the card between positions.
+        dragMomentum={false}
         dragDirectionLock
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}

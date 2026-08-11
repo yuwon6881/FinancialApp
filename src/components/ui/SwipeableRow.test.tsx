@@ -15,8 +15,12 @@ describe('SwipeableRow closed-state opacity', () => {
     window.innerWidth = 500
   })
 
-  const renderRow = () => render(
-    <SwipeableRow actions={<button type="button">Delete</button>} contentClassName="p-4">
+  const renderRow = (className?: string) => render(
+    <SwipeableRow
+      actions={<button type="button">Delete</button>}
+      className={className}
+      contentClassName="p-4"
+    >
       <p>Row body</p>
     </SwipeableRow>,
   )
@@ -36,6 +40,17 @@ describe('SwipeableRow closed-state opacity', () => {
   it('applies contentClassName on mobile, not just on the desktop branch', () => {
     renderRow()
     expect(document.querySelector('[data-swipe-content]')?.className).toContain('p-4')
+  })
+
+  it('moves the complete card surface instead of leaving its border on the viewport', () => {
+    renderRow('rounded-2xl border border-border shadow-xs')
+    const surface = document.querySelector('[data-swipe-content]')
+    const viewport = surface?.parentElement
+
+    expect(surface?.className).toContain('rounded-2xl')
+    expect(surface?.className).toContain('border-border')
+    expect(surface?.className).toContain('shadow-xs')
+    expect(viewport?.className).not.toContain('border-border')
   })
 
   it('marks the drawer inert while the row is closed so its actions are unreachable', () => {
