@@ -420,6 +420,7 @@ function App() {
 
   const appContextValue = useMemo<AppContextValue>(() => buildAppContextValue({
     hideSensitive: prefs.hideSensitive,
+    sensitivePreferenceStatus: prefs.sensitivePreferenceStatus,
     currency: financial.optimisticDashboardData?.setting?.currency || 'USD',
     darkMode: prefs.darkMode,
     activeSyncId: financial.activeSyncId,
@@ -439,6 +440,7 @@ function App() {
     },
   }), [
     prefs.hideSensitive,
+    prefs.sensitivePreferenceStatus,
     financial.optimisticDashboardData?.setting?.currency,
     prefs.darkMode,
     financial.activeSyncId,

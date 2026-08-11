@@ -28,6 +28,7 @@ import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../lib/utils'
 import { buildUndoSuccessToast } from '../lib/mutationToast'
 import { computeNextOccurrenceDate, computeOccurrenceOnOrAfter } from '../lib/recurringPayments'
 import { financialDate } from '../lib/financialDate'
+import { buildStabilityPlanPoints, projectStabilityReloadStatuses } from '../lib/stabilityRecovery'
 import type { ToastAction, ToastTone } from '../components/ui/ToastViewport'
 import type { ConfirmModalData } from './useAppDialogs'
 import { fetchBootstrapPayload } from './financialData/bootstrap'
@@ -823,6 +824,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     dashboardData?.setting?.stabilityAlloc,
     dashboardData?.setting?.rewardsAlloc,
   ])
+  const optimisticDashboardData = useOptimisticDashboard(dashboardData, activeOps, transactions)
   const queuedTransactions = useOptimisticList(transactions, activeOps, 'transaction', incomeSplitOptions)
   const allTransactions = useMemo(() => {
     // Direct server actions can create a ledger row before the next bootstrap response arrives.
@@ -830,15 +832,37 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     // after the click cannot hide the in-flight transaction.
     const queuedIds = new Set(queuedTransactions.map(transaction => String(transaction.id)))
     const directTransactions = pendingLedgerTransactions.filter(transaction => !queuedIds.has(String(transaction.id)))
-    return [...directTransactions, ...queuedTransactions]
-  }, [pendingLedgerTransactions, queuedTransactions])
+    const projected = [...directTransactions, ...queuedTransactions]
+    const recovery = optimisticDashboardData?.stabilityRecovery
+    if (!recovery || !dashboardData?.setting) return projected
+    const planPoints = buildStabilityPlanPoints(
+      dashboardData.stabilityRecovery?.target ?? dashboardData.setting.targetStabilityFund,
+      dashboardData.setting.stabilityAlloc,
+      activeOps
+        .filter(operation => operation.entity === 'settings' && operation.type === 'update')
+        .map(operation => ({ createdAt: operation.createdAt, payload: operation.payload as Record<string, unknown> | undefined })),
+    )
+    return projectStabilityReloadStatuses({
+      recovery,
+      baseTransactions: transactions,
+      projectedTransactions: projected,
+      stabilityAlloc: dashboardData.setting.stabilityAlloc,
+      projectedBalance: recovery.currentBalance,
+      planPoints,
+    })
+  }, [
+    activeOps,
+    dashboardData,
+    optimisticDashboardData,
+    pendingLedgerTransactions,
+    queuedTransactions,
+    transactions,
+  ])
   const queuedRecurringPayments = useOptimisticList(recurringPayments, activeOps, 'recurringPayment')
   const allRecurringPayments = queuedRecurringPayments
   const allWishlist = useOptimisticList(wishlist, activeOps, 'wishlistItem')
   const allSavingsGoals = useOptimisticList(savingsGoals, activeOps, 'savingsGoal')
   const allCategories = useOptimisticList(categoriesList, activeOps, 'category')
-
-  const optimisticDashboardData = useOptimisticDashboard(dashboardData, activeOps, transactions)
 
   const formatSensitive = useCallback((val: number) => {
     const formatted = formatCurrencyVal(val, optimisticDashboardData?.setting?.currency || 'USD')

@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
   isRecoveryActive,
+  buildStabilityPlanPoints,
   projectStabilityRecovery,
+  projectStabilityReloadStatuses,
   replayStabilityReload,
   proposeTopUp,
   summarizeStabilityReload,
+  stabilityReloadStatusLabel,
   type RecoveryBucketState,
 } from './stabilityRecovery'
 import type { StabilityRecovery, Transaction } from '@/types'
@@ -408,5 +411,62 @@ describe('stability reload projection', () => {
     })
     expect(projected.outstandingShortfall).toBe(0)
     expect(projected.isActive).toBe(false)
+  })
+
+  it('derives outstanding, partial, complete, and spent-for-good row labels', () => {
+    const rows = [
+      transaction({ id: 'first', amount: -100, stabilityReloadIntent: 'Required' }),
+      transaction({ id: 'second', amount: -80, stabilityReloadIntent: 'Required', date: '2026-06-05' }),
+      transaction({ id: 'spent', amount: -20, stabilityReloadIntent: 'NotRequired', date: '2026-06-06' }),
+      transaction({ id: 'pay', amount: 50, ledgerCategory: 'Transfer:Growth->Stability', date: '2026-06-07' }),
+    ]
+    const projected = projectStabilityReloadStatuses({
+      recovery: recovery({
+        currentBalance: 0,
+        openingOutstanding: 0,
+        outstandingShortfall: 180,
+      }),
+      baseTransactions: [],
+      projectedTransactions: rows,
+      stabilityAlloc: 0.15,
+      projectedBalance: -150,
+    })
+
+    expect(projected.find(row => row.id === 'first')?.stabilityReloadStatus).toBe('PartlyRepaid')
+    expect(projected.find(row => row.id === 'second')?.stabilityReloadStatus).toBe('Outstanding')
+    expect(projected.find(row => row.id === 'spent')?.stabilityReloadStatus).toBe('NotRequired')
+    expect(stabilityReloadStatusLabel('Complete', 'Required')).toBe('Put back complete')
+    expect(stabilityReloadStatusLabel('PartlyRepaid', 'Required')).toBe('Partly put back')
+    expect(stabilityReloadStatusLabel('Outstanding', 'Unanswered')).toBe('Put back')
+    expect(stabilityReloadStatusLabel('NotRequired', 'NotRequired')).toBe('Spent for good')
+  })
+
+  it('does not resurrect a completed row when a pending target increase is replayed', () => {
+    const points = buildStabilityPlanPoints(1000, 0.15, [{
+      createdAt: Date.parse('2026-06-04T12:00:00.000Z'),
+      payload: { targetStabilityFund: 2000 },
+    }])
+    const row = transaction({
+      id: 'old-drawdown',
+      date: '2026-06-01',
+      postedAt: '2026-06-01T08:00:00.000Z',
+      amount: -100,
+      stabilityReloadIntent: 'Required',
+    })
+    const complete = projectStabilityReloadStatuses({
+      recovery: recovery({ target: 1000, currentBalance: 900, outstandingShortfall: 100, openingOutstanding: 0 }),
+      baseTransactions: [],
+      projectedTransactions: [row, transaction({
+        id: 'refill',
+        date: '2026-06-02',
+        postedAt: '2026-06-02T08:00:00.000Z',
+        amount: 200,
+        ledgerCategory: 'Transfer:Growth->Stability',
+      })],
+      stabilityAlloc: 0.15,
+      projectedBalance: 1000,
+      planPoints: points,
+    })
+    expect(complete.find(item => item.id === 'old-drawdown')?.stabilityReloadStatus).toBe('Complete')
   })
 })

@@ -12,11 +12,8 @@ const budgets = [
   // 62.0: the compiler's memo caches plus the single-request boot decoder and the
   // If-None-Match revalidation layer. The eager-critical-path budget below is the one that
   // reflects cold-launch cost; this per-chunk limit exists to catch unexpected growth.
-  // 68.25: raised from 66.5 for the recurring-occurrence lifecycle. Occurrence status reaches
-  // the eager path through the dashboard payload, the outbox's recurringOccurrence:settle
-  // projection and the shared occurrence types, none of which can be deferred past a hook that
-  // runs on every render. Measured 68.05.
-  { name: 'index-*.js (main application)', pattern: /^index-.*\.js$/, limitKb: 68.25 },
+  // 71.5: raised from 68.25 for stability recovery projection enhancements, draft transaction validation/document handling, and cycle navigation updates. Measured 70.99.
+  { name: 'index-*.js (main application)', pattern: /^index-.*\.js$/, limitKb: 71.5 },
   { name: 'vendor-react-*.js', pattern: /^vendor-react-.*\.js$/, limitKb: 58.0 },
   // No vendor-motion budget: framer-motion is no longer pinned to one chunk, because
   // that collapsed LazyMotion's split point (see vite.config.ts). Its cost is covered by
@@ -87,7 +84,8 @@ if (!fs.existsSync(distAssetsPath)) {
 // for the per-device reconciliation, which has to run at mount because a device the server still
 // lists as registered but whose browser permission was revoked must be unsubscribed before any
 // switch is drawn from it.
-const CRITICAL_PATH_LIMIT_KB = 191.75
+// 195.5: raised from 191.75 (measured 194.68) for stability recovery projections and cycle navigation state.
+const CRITICAL_PATH_LIMIT_KB = 195.5
 
 function criticalPathChunks(files) {
   const entry = files.find(f => /^index-.*\.js$/.test(f))

@@ -5,7 +5,7 @@ import type { IncomeAllocations } from './incomeSplitProjection'
 import { netBucketAmount } from './bucketAttribution'
 import { buildCycleSummaryInsights, buildReportBreakdown } from './reportCalculations'
 import { isReportableInflow, isReportableOutflow } from './transactionReportSemantics'
-import { projectStabilityRecovery } from './stabilityRecovery'
+import { buildStabilityPlanPoints, projectStabilityRecovery } from './stabilityRecovery'
 
 export interface OptimisticDashboardInputs {
   activeOps: QueuedOp[]
@@ -221,12 +221,22 @@ export function computeOptimisticDashboard(
 
   const stabilityDelta = bucketDeltas.get('Stability') || 0
   if (data.stabilityRecovery) {
+    const selectedCycleKey = `${data.setting.selectedYear}-${String(selectedMonth).padStart(2, '0')}`
+    const stabilityPlanPoints = buildStabilityPlanPoints(
+      dashboardData.stabilityRecovery?.target ?? data.setting.targetStabilityFund,
+      dashboardData.setting.stabilityAlloc,
+      activeOps
+        .filter(operation => operation.entity === 'settings' && operation.type === 'update')
+        .map(operation => ({ createdAt: operation.createdAt, payload: operation.payload as Record<string, unknown> | undefined })),
+    )
     data.stabilityRecovery = projectStabilityRecovery({
       recovery: data.stabilityRecovery,
       baseTransactions: baseCycleTransactions,
       projectedTransactions: projectedCycleTransactions,
-      stabilityAlloc: data.setting.stabilityAlloc,
+      stabilityAlloc: dashboardData.setting.stabilityAlloc,
       projectedBalance: data.stabilityRecovery.currentBalance + stabilityDelta,
+      planPoints: stabilityPlanPoints,
+      currentCycleKey: selectedCycleKey,
     })
   }
   const stability = data.categories.find(category => category.name.toLowerCase() === 'stability')

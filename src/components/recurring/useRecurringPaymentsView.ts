@@ -7,6 +7,7 @@ import { computeOccurrenceOnOrAfter, hasBillingEnded, normalizeRecurringFrequenc
 import { financialDate } from '../../lib/financialDate'
 import { formatSensitiveAmount, formatCurrencyAmount } from './formatters'
 import { focusFirstInvalidField } from '../ui/formValidation'
+import type { SensitivePreferenceStatus } from '../../app/useAppPreferences'
 
 const RECURRING_LEDGER_CATEGORIES = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const
 export type RecurringLedgerCategory = typeof RECURRING_LEDGER_CATEGORIES[number]
@@ -34,6 +35,7 @@ export interface UseRecurringPaymentsViewOptions {
   payments: RecurringPayment[]
   categories: TransactionCategory[]
   hideSensitive: boolean
+  sensitivePreferenceStatus?: SensitivePreferenceStatus
   currency: string
   activeSyncId: string | null
   activeSyncIds?: ReadonlyArray<string>
@@ -53,6 +55,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     payments,
     categories,
     hideSensitive,
+    sensitivePreferenceStatus,
     currency,
     activeSyncId,
     activeSyncIds,
@@ -143,7 +146,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
   }, [aiDraft?.nonce, hideSensitive, onAiDraftConsumed])
 
   React.useEffect(() => {
-    if (!hideSensitive) return
+    if (!hideSensitive || sensitivePreferenceStatus === 'pending') return
     setShowAddForm(false)
     setEditingPayment(null)
     setName('')
@@ -155,7 +158,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
     setEndDateInput('')
     setPaymentMode('')
     setErrors({})
-  }, [hideSensitive, categories])
+  }, [hideSensitive, sensitivePreferenceStatus, categories])
 
   React.useEffect(() => {
     if (!aiEditDraft) return
@@ -240,7 +243,7 @@ export function useRecurringPaymentsView(options: UseRecurringPaymentsViewOption
   // tab-switch/mount frame (which made the slide occasionally skip). See
   // lib/useAutoOpenModal.
   useAutoOpenModal(autoOpenAddForm, () => {
-    if (!hideSensitive) setShowAddForm(true)
+    if (!hideSensitive || sensitivePreferenceStatus === 'pending') setShowAddForm(true)
   }, onResetAutoOpen)
 
 

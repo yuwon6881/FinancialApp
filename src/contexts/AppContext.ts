@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import type { ToastAction, ToastTone } from '../components/ui/ToastViewport'
 import type { EntityKind, OpType, OutboxPayload, QueuedOp } from '../lib/outbox'
+import type { SensitivePreferenceStatus } from '../app/useAppPreferences'
 
 interface ConfirmRequest {
   title: string
@@ -26,6 +27,8 @@ interface ConfirmRequest {
  */
 export interface AppPrefsValue {
   hideSensitive: boolean
+  /** Privacy is safe-by-default while the server-backed preference is still resolving. */
+  sensitivePreferenceStatus?: SensitivePreferenceStatus
   currency: string
   darkMode: boolean
   formatSensitive: (value: number) => ReactNode
@@ -53,6 +56,7 @@ export interface AppContextValue extends AppPrefsValue, AppUiValue, AppSyncValue
 
 const defaultPrefs: AppPrefsValue = {
   hideSensitive: false,
+  sensitivePreferenceStatus: 'resolved',
   currency: 'USD',
   darkMode: false,
   formatSensitive: value => value.toString(),

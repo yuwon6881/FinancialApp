@@ -18,10 +18,11 @@ import {
 export function AppProvider({ value, children }: { value: AppContextValue; children: ReactNode }) {
   const prefs = useMemo(() => ({
     hideSensitive: value.hideSensitive,
+    sensitivePreferenceStatus: value.sensitivePreferenceStatus,
     currency: value.currency,
     darkMode: value.darkMode,
     formatSensitive: value.formatSensitive,
-  }), [value.hideSensitive, value.currency, value.darkMode, value.formatSensitive])
+  }), [value.hideSensitive, value.sensitivePreferenceStatus, value.currency, value.darkMode, value.formatSensitive])
 
   const ui = useMemo(() => ({
     showToast: value.showToast,

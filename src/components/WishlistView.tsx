@@ -171,6 +171,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   } = useWishlistForm({
     wishlist,
     hideSensitive,
+    sensitivePreferenceStatus: app.sensitivePreferenceStatus,
     autoOpenAddModal,
     onResetAutoOpen,
     onAddItem,

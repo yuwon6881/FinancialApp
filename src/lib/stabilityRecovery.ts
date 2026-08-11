@@ -6,14 +6,28 @@
 // module owns only the part that has to answer while the user types an amount, and the server
 // re-derives the split authoritatively on save.
 
-import type { StabilityRecovery, StabilityReloadIntent, Transaction } from '@/types'
+import type { StabilityRecovery, StabilityReloadIntent, StabilityReloadStatus, Transaction } from '@/types'
 import { bucketAmount } from './bucketAttribution'
 
 export interface StabilityReloadMovement {
+  id?: string
   date: string
+  postedAt?: string
   change: number
   repayment: number
   marked: boolean
+}
+
+export interface StabilityReloadPlanPoint {
+  effectiveAt: string
+  target: number
+  stabilityAlloc?: number
+}
+
+export interface StabilityReloadObligation {
+  transactionId: string
+  originalAmount: number
+  remainingAmount: number
 }
 
 export interface StabilityReloadSummary {
@@ -26,6 +40,8 @@ export interface StabilityReloadReplay {
   oldestOutstandingDate?: string
   markedThisRun: number
   repaidThisRun: number
+  oldestMarkedThisRunDate?: string
+  obligations: StabilityReloadObligation[]
 }
 
 const normalizeReloadIntent = (intent: string | null | undefined): StabilityReloadIntent =>
@@ -55,6 +71,24 @@ export function stabilityReloadIntentLabel(intent: string | null | undefined) {
   return normalizeReloadIntent(intent) === 'NotRequired' ? 'Spent for good' : 'Put back'
 }
 
+export function stabilityReloadStatusLabel(
+  status: StabilityReloadStatus | null | undefined,
+  intent: StabilityReloadIntent | null | undefined,
+) {
+  switch (status) {
+    case 'PartlyRepaid':
+      return 'Partly put back'
+    case 'Complete':
+      return 'Put back complete'
+    case 'NotRequired':
+      return 'Spent for good'
+    case 'Outstanding':
+      return 'Put back'
+    default:
+      return stabilityReloadIntentLabel(intent)
+  }
+}
+
 function describeReloadMovement(
   transaction: Transaction,
   stabilityAlloc: number,
@@ -65,7 +99,9 @@ function describeReloadMovement(
     ? Math.max(0, transaction.amount * stabilityAlloc)
     : 0
   return {
+    id: String(transaction.id),
     date: transaction.date,
+    postedAt: transaction.postedAt,
     change,
     repayment: change > 0
       ? isIncomeLedgerCategory(transaction.ledgerCategory) && transaction.stabilityRecoveryTopUpAmount != null
@@ -82,7 +118,7 @@ function describeReloadMovement(
  */
 export function describeStabilityReloadMovements(
   transactions: Transaction[],
-  stabilityAlloc: number,
+  stabilityAlloc: number | ((transaction: Transaction) => number),
 ): StabilityReloadMovement[] {
   const ordered = [...transactions].sort((left, right) =>
     left.date.localeCompare(right.date) ||
@@ -99,9 +135,12 @@ export function describeStabilityReloadMovements(
     const child = isIncomeLedgerCategory(transaction.ledgerCategory)
       ? stabilityChildren.get(String(transaction.id))
       : undefined
+    const allocation = typeof stabilityAlloc === 'function'
+      ? stabilityAlloc(transaction)
+      : stabilityAlloc
     const movement = child
-      ? describeReloadMovement(transaction, stabilityAlloc, bucketAmount(child, 'Stability'))
-      : describeReloadMovement(transaction, stabilityAlloc)
+      ? describeReloadMovement(transaction, allocation, bucketAmount(child, 'Stability'))
+      : describeReloadMovement(transaction, allocation)
     if (movement) movements.push(movement)
   }
   return movements
@@ -122,17 +161,32 @@ export function summarizeStabilityReload(
 
 /** The ordered FIFO replay shared by the optimistic projection and the API ledger replay. */
 export function replayStabilityReload(
-  opening: { outstanding: number; oldestOutstandingDate?: string },
+  opening: {
+    outstanding: number
+    oldestOutstandingDate?: string
+    obligations?: StabilityReloadObligation[]
+  },
   openingBalance: number,
   target: number,
   movements: StabilityReloadMovement[],
+  planPoints: StabilityReloadPlanPoint[] = [{
+    effectiveAt: '1970-01-01T00:00:00.000Z',
+    target,
+  }],
 ): StabilityReloadReplay {
   // The obligation is the queue and nothing else -- see the matching comment in
   // StabilityReloadLedger.Replay. Tracking a separate running total let a carried obligation with
   // no carried date leave the queue empty while the total stayed positive, and every repayment
   // after that debited one and not the other.
-  const queue: { date?: string; amount: number }[] = []
-  if (opening.outstanding > 0) {
+  const queue: { id?: string; date?: string; amount: number }[] = []
+  const obligations = new Map<string, StabilityReloadObligation>()
+  if (opening.obligations?.length) {
+    for (const obligation of opening.obligations) {
+      if (obligation.remainingAmount <= 0) continue
+      queue.push({ id: obligation.transactionId, amount: obligation.remainingAmount })
+      obligations.set(obligation.transactionId, { ...obligation })
+    }
+  } else if (opening.outstanding > 0) {
     queue.push({ date: opening.oldestOutstandingDate, amount: opening.outstanding })
   }
 
@@ -141,25 +195,63 @@ export function replayStabilityReload(
   let running = openingBalance
   let markedThisRun = 0
   let repaidThisRun = 0
+  let oldestMarkedThisRunDate: string | undefined
+
+  const points = [...planPoints].sort((left, right) =>
+    Date.parse(left.effectiveAt) - Date.parse(right.effectiveAt))
+  let pointIndex = 0
+  let activeTarget = points[0]?.target ?? target
+
+  const timestampOf = (movement: StabilityReloadMovement) => {
+    const parsed = Date.parse(movement.postedAt || `${movement.date}T00:00:00.000Z`)
+    return Number.isFinite(parsed) ? parsed : 0
+  }
 
   const clearAtTarget = () => {
+    for (const entry of queue) {
+      if (!entry.id) continue
+      const obligation = obligations.get(entry.id)
+      if (obligation) obligations.set(entry.id, { ...obligation, remainingAmount: 0 })
+    }
     queue.length = 0
     // Attainment starts a clean pace window. A later same-cycle drawdown must not inherit the
     // repayment that helped reach the target.
     repaidThisRun = 0
+    oldestMarkedThisRunDate = undefined
   }
 
-  if (target > 0 && running >= target) {
-    clearAtTarget()
+  const applyPlanPoint = (point: StabilityReloadPlanPoint) => {
+    activeTarget = point.target
+    if (activeTarget > 0 && running >= activeTarget) clearAtTarget()
+  }
+
+  const applyPlanPointsThrough = (timestamp: number) => {
+    while (pointIndex < points.length) {
+      const pointTimestamp = Date.parse(points[pointIndex].effectiveAt)
+      if (Number.isFinite(pointTimestamp) && pointTimestamp > timestamp) break
+      applyPlanPoint(points[pointIndex])
+      pointIndex += 1
+    }
   }
 
   for (const movement of movements) {
+    applyPlanPointsThrough(timestampOf(movement))
     running += movement.change
 
     if (movement.marked && movement.change < 0) {
       const marked = -movement.change
       markedThisRun += marked
-      queue.push({ date: movement.date, amount: marked })
+      queue.push({ id: movement.id, date: movement.date, amount: marked })
+      if (movement.id) {
+        obligations.set(movement.id, {
+          transactionId: movement.id,
+          originalAmount: marked,
+          remainingAmount: marked,
+        })
+      }
+      if (!oldestMarkedThisRunDate || movement.date < oldestMarkedThisRunDate) {
+        oldestMarkedThisRunDate = movement.date
+      }
     }
 
     const repayment = Math.min(outstandingNow(), Math.max(0, movement.repayment))
@@ -170,14 +262,26 @@ export function replayStabilityReload(
         const discharged = Math.min(oldest.amount, remaining)
         remaining -= discharged
         const left = oldest.amount - discharged
-        if (left > 0) queue.unshift({ date: oldest.date, amount: left })
+        if (oldest.id) {
+          const obligation = obligations.get(oldest.id)
+          if (obligation) obligations.set(oldest.id, {
+            ...obligation,
+            remainingAmount: Math.max(0, obligation.remainingAmount - discharged),
+          })
+        }
+        if (left > 0) queue.unshift({ ...oldest, amount: left })
       }
       repaidThisRun += repayment
     }
 
-    if (target > 0 && running >= target) {
+    if (activeTarget > 0 && running >= activeTarget) {
       clearAtTarget()
     }
+  }
+
+  while (pointIndex < points.length) {
+    applyPlanPoint(points[pointIndex])
+    pointIndex += 1
   }
 
   return {
@@ -185,7 +289,137 @@ export function replayStabilityReload(
     oldestOutstandingDate: queue[0]?.date,
     markedThisRun,
     repaidThisRun,
+    oldestMarkedThisRunDate,
+    obligations: [...obligations.values()].sort((left, right) =>
+      left.transactionId.localeCompare(right.transactionId)),
   }
+}
+
+export function buildStabilityPlanPoints(
+  baseTarget: number,
+  baseStabilityAlloc: number,
+  operations: Array<{
+    createdAt: number
+    payload?: {
+      targetStabilityFund?: unknown
+      stabilityAlloc?: unknown
+    }
+  }>,
+): StabilityReloadPlanPoint[] {
+  const points: StabilityReloadPlanPoint[] = [{
+    effectiveAt: '1970-01-01T00:00:00.000Z',
+    target: baseTarget,
+    stabilityAlloc: baseStabilityAlloc,
+  }]
+  let target = baseTarget
+  let stabilityAlloc = baseStabilityAlloc
+  for (const operation of [...operations].sort((left, right) => left.createdAt - right.createdAt)) {
+    const nextTarget = typeof operation.payload?.targetStabilityFund === 'number'
+      ? operation.payload.targetStabilityFund
+      : target
+    const nextAlloc = typeof operation.payload?.stabilityAlloc === 'number'
+      ? operation.payload.stabilityAlloc
+      : stabilityAlloc
+    if (nextTarget === target && nextAlloc === stabilityAlloc) continue
+    target = nextTarget
+    stabilityAlloc = nextAlloc
+    points.push({
+      effectiveAt: new Date(operation.createdAt).toISOString(),
+      target,
+      stabilityAlloc,
+    })
+  }
+  return points
+}
+
+function allocationFromPlanPoints(
+  points: StabilityReloadPlanPoint[] | undefined,
+  fallback: number,
+  transaction: Transaction,
+) {
+  if (!points?.some(point => point.stabilityAlloc !== undefined)) return fallback
+  const timestamp = Date.parse(transaction.postedAt || `${transaction.date}T00:00:00.000Z`)
+  let selected = fallback
+  for (const point of [...points].sort((left, right) =>
+    Date.parse(left.effectiveAt) - Date.parse(right.effectiveAt))) {
+    const pointTimestamp = Date.parse(point.effectiveAt)
+    if (Number.isFinite(pointTimestamp) && pointTimestamp > timestamp) break
+    if (point.stabilityAlloc !== undefined) selected = point.stabilityAlloc
+  }
+  return selected
+}
+
+function recoveryWindowStart(replay: StabilityReloadReplay) {
+  if (!replay.oldestMarkedThisRunDate) return replay.oldestOutstandingDate
+  if (!replay.oldestOutstandingDate) return replay.oldestMarkedThisRunDate
+  return replay.oldestMarkedThisRunDate < replay.oldestOutstandingDate
+    ? replay.oldestMarkedThisRunDate
+    : replay.oldestOutstandingDate
+}
+
+function cyclesFromAnchor(anchor: string | undefined, currentCycleKey: string | undefined, horizon: number) {
+  if (!anchor || !currentCycleKey) return horizon
+  const from = anchor.split('-').map(Number)
+  const to = currentCycleKey.split('-').map(Number)
+  if (from.length !== 2 || to.length !== 2 || from.some(value => !Number.isFinite(value)) || to.some(value => !Number.isFinite(value))) {
+    return horizon
+  }
+  const elapsed = (to[0] - from[0]) * 12 + to[1] - from[1]
+  return horizon - Math.max(0, elapsed)
+}
+
+/** Applies a projected FIFO replay to each visible drawdown row. */
+export function projectStabilityReloadStatuses(input: {
+  recovery: StabilityRecovery
+  baseTransactions: Transaction[]
+  projectedTransactions: Transaction[]
+  stabilityAlloc: number
+  projectedBalance: number
+  planPoints?: StabilityReloadPlanPoint[]
+}): Transaction[] {
+  const allocation = (transaction: Transaction) => allocationFromPlanPoints(
+    input.planPoints,
+    input.stabilityAlloc,
+    transaction,
+  )
+  const baseMovements = describeStabilityReloadMovements(input.baseTransactions, allocation)
+  const projectedMovements = describeStabilityReloadMovements(input.projectedTransactions, allocation)
+  const projectedNetChange = projectedMovements.reduce((sum, movement) => sum + movement.change, 0)
+  const openingOutstanding = input.recovery.openingOutstanding ?? Math.max(
+    0,
+    input.recovery.outstandingShortfall +
+      baseMovements.reduce((sum, movement) => sum + movement.repayment, 0) -
+      baseMovements.reduce((sum, movement) => sum + (movement.marked ? Math.max(0, -movement.change) : 0), 0),
+  )
+  const openingDate = input.recovery.openingOldestDate ?? input.recovery.recoveryFromDate
+  const replay = replayStabilityReload(
+    { outstanding: openingOutstanding, oldestOutstandingDate: openingDate },
+    input.projectedBalance - projectedNetChange,
+    input.recovery.target,
+    projectedMovements,
+    input.planPoints,
+  )
+  const obligations = new Map(replay.obligations.map(obligation => [obligation.transactionId, obligation]))
+  return input.projectedTransactions.map(transaction => {
+    if (!isStabilityReloadDrawdown(transaction)) {
+      return { ...transaction, stabilityReloadStatus: undefined }
+    }
+    if (normalizeReloadIntent(transaction.stabilityReloadIntent) === 'NotRequired') {
+      return { ...transaction, stabilityReloadStatus: 'NotRequired' }
+    }
+    const obligation = obligations.get(String(transaction.id))
+    if (!obligation) return { ...transaction, stabilityReloadStatus: transaction.stabilityReloadStatus ?? 'Outstanding' }
+    const original = Math.max(0, obligation.originalAmount)
+    const remaining = Math.max(0, Math.min(original, obligation.remainingAmount))
+    return {
+      ...transaction,
+      stabilityReloadStatus: remaining <= 0
+        ? 'Complete'
+        : remaining < original
+          ? 'PartlyRepaid'
+          : 'Outstanding',
+    }
+  })
 }
 
 /**
@@ -200,9 +434,16 @@ export function projectStabilityRecovery(input: {
   projectedTransactions: Transaction[]
   stabilityAlloc: number
   projectedBalance: number
+  planPoints?: StabilityReloadPlanPoint[]
+  currentCycleKey?: string
 }): StabilityRecovery {
-  const baseMovements = describeStabilityReloadMovements(input.baseTransactions, input.stabilityAlloc)
-  const projectedMovements = describeStabilityReloadMovements(input.projectedTransactions, input.stabilityAlloc)
+  const allocation = (transaction: Transaction) => allocationFromPlanPoints(
+    input.planPoints,
+    input.stabilityAlloc,
+    transaction,
+  )
+  const baseMovements = describeStabilityReloadMovements(input.baseTransactions, allocation)
+  const projectedMovements = describeStabilityReloadMovements(input.projectedTransactions, allocation)
   const baseMarked = baseMovements.reduce(
     (sum, movement) => sum + (movement.marked ? Math.max(0, -movement.change) : 0), 0)
   const baseRepaid = baseMovements.reduce((sum, movement) => sum + movement.repayment, 0)
@@ -223,18 +464,27 @@ export function projectStabilityRecovery(input: {
     input.recovery.currentBalance - baseNetChange,
     input.recovery.target,
     baseMovements,
+    input.planPoints,
   )
   const projectedReplay = replayStabilityReload(
     opening,
     input.projectedBalance - projectedNetChange,
     input.recovery.target,
     projectedMovements,
+    input.planPoints,
   )
   const markedDelta = projectedReplay.markedThisRun - baseReplay.markedThisRun
   const outstandingShortfall = projectedReplay.outstanding
-  const markedTotal = outstandingShortfall > 0
-    ? Math.max(0, input.recovery.markedTotal + markedDelta)
+  const markedSinceFreshAttainment = projectedReplay.oldestMarkedThisRunDate
+    ? projectedMovements
+      .filter(movement => movement.marked && movement.date >= projectedReplay.oldestMarkedThisRunDate!)
+      .reduce((sum, movement) => sum + Math.max(0, -movement.change), 0)
     : 0
+  const markedTotal = outstandingShortfall <= 0
+    ? 0
+    : baseReplay.outstanding <= 0 && markedSinceFreshAttainment > 0
+      ? markedSinceFreshAttainment
+      : Math.max(0, input.recovery.markedTotal + markedDelta)
   const repaidTotal = outstandingShortfall > 0
     ? Math.max(0, markedTotal - outstandingShortfall)
     : 0
@@ -243,9 +493,17 @@ export function projectStabilityRecovery(input: {
     input.recovery.toppedUpThisCycle + projectedReplay.repaidThisRun - baseReplay.repaidThisRun,
   )
   const paceAnchor = outstandingShortfall + toppedUpThisCycle
-  const requiredThisCycle = input.recovery.cyclesRemaining <= 1
+  const lastDrawdownCycleKey = projectedReplay.markedThisRun > 0 && input.currentCycleKey
+    ? input.currentCycleKey
+    : input.recovery.lastDrawdownCycleKey
+  const cyclesRemaining = cyclesFromAnchor(
+    lastDrawdownCycleKey,
+    input.currentCycleKey,
+    3,
+  )
+  const requiredThisCycle = cyclesRemaining <= 1
     ? paceAnchor
-    : Math.ceil((paceAnchor / input.recovery.cyclesRemaining) * 100) / 100
+    : Math.ceil((paceAnchor / cyclesRemaining) * 100) / 100
 
   return {
     ...input.recovery,
@@ -253,6 +511,9 @@ export function projectStabilityRecovery(input: {
     repaidTotal,
     currentBalance: input.projectedBalance,
     outstandingShortfall,
+    lastDrawdownCycleKey,
+    cyclesRemaining,
+    isOverdue: cyclesRemaining <= 0 && outstandingShortfall > 0,
     toppedUpThisCycle,
     requiredThisCycle,
     outstandingThisCycle: Math.max(
@@ -260,6 +521,7 @@ export function projectStabilityRecovery(input: {
       Math.min(requiredThisCycle - toppedUpThisCycle, outstandingShortfall),
     ),
     isActive: outstandingShortfall > 0,
+    recoveryFromDate: outstandingShortfall > 0 ? recoveryWindowStart(projectedReplay) : undefined,
   }
 }
 

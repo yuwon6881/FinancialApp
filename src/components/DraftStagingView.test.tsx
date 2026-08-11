@@ -59,7 +59,7 @@ describe('DraftStagingView', () => {
 
     expect(await screen.findByRole('heading', { name: 'Edit Draft' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Save Draft' })).toBeTruthy()
-    expect((screen.getByRole('button', { name: 'Outflow' }) as HTMLButtonElement).disabled).toBe(false)
+    expect((screen.getByRole('radio', { name: /outflow/i }) as HTMLButtonElement).disabled).toBe(false)
   })
 
   it('routes an incomplete Stability drawdown to review instead of syncing', async () => {

@@ -150,6 +150,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
     activeSyncId,
     activeSyncIds,
     deletingTxId,
+    sensitivePreferenceStatus: app.sensitivePreferenceStatus,
     formRef,
   })
 
@@ -350,6 +351,7 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         categories={props.categories}
         currency={currency}
         hideSensitive={hideSensitive}
+        sensitivePreferenceStatus={app.sensitivePreferenceStatus}
         autocompleteSuggestions={props.autocompleteSuggestions || []}
         transactions={props.transactions}
         essentialsAlloc={props.essentialsAlloc ?? 0.5}

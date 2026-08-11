@@ -4,10 +4,12 @@ import { maskCurrencyInput } from '../../lib/utils'
 import { useAutoOpenModal } from '../../lib/useAutoOpenModal'
 import { useFormDraft } from '../../lib/useFormDraft'
 import { focusFirstInvalidField } from '../ui/formValidation'
+import type { SensitivePreferenceStatus } from '../../app/useAppPreferences'
 
 interface UseWishlistFormOptions {
   wishlist: WishlistItem[]
   hideSensitive: boolean
+  sensitivePreferenceStatus?: SensitivePreferenceStatus
   autoOpenAddModal?: boolean
   onResetAutoOpen?: () => void
   onAddItem: (item: Partial<WishlistItem>) => Promise<void> | void
@@ -29,6 +31,7 @@ export function useWishlistForm(options: UseWishlistFormOptions) {
   const [isActiveInput, setIsActiveInput] = useState(false)
   const showAddModal = mode === 'add'
   const showEditModal = mode === 'edit'
+  const canOpenWhilePrivacyPending = options.sensitivePreferenceStatus === 'pending'
 
   const applyAiFields = useCallback((fields: Record<string, unknown>) => {
     const text = (key: string) => typeof fields[key] === 'string' && (fields[key] as string).trim()
@@ -57,12 +60,12 @@ export function useWishlistForm(options: UseWishlistFormOptions) {
   }, [])
 
   const openAdd = useCallback(() => {
-    if (options.hideSensitive) return
+    if (options.hideSensitive && !canOpenWhilePrivacyPending) return
     resetFields()
     setEditingItem(null)
     setIsActiveInput(options.wishlist.every(item => item.isPurchased))
     setMode('add')
-  }, [options.hideSensitive, options.wishlist, resetFields])
+  }, [options.hideSensitive, canOpenWhilePrivacyPending, options.wishlist, resetFields])
 
   const openEdit = useCallback((item: WishlistItem) => {
     if (options.hideSensitive) return
@@ -122,10 +125,10 @@ export function useWishlistForm(options: UseWishlistFormOptions) {
   }, [clearEditDraft, close])
 
   useEffect(() => {
-    if (!options.hideSensitive) return
+    if (!options.hideSensitive || canOpenWhilePrivacyPending) return
     if (mode === 'add') closeAdd()
     if (mode === 'edit') closeEdit()
-  }, [options.hideSensitive, mode, closeAdd, closeEdit])
+  }, [options.hideSensitive, canOpenWhilePrivacyPending, mode, closeAdd, closeEdit])
 
   const validate = () => {
     const nextErrors: Record<string, string> = {}

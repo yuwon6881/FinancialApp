@@ -257,6 +257,8 @@ export interface Transaction {
   /** Null is legacy unknown intent; zero is ordinary income; positive is applied reimbursement. */
   stabilityRecoveryTopUpAmount?: number | null
   stabilityReloadIntent?: StabilityReloadIntent
+  /** Server-derived FIFO status for a Stability drawdown. */
+  stabilityReloadStatus?: StabilityReloadStatus
   isPendingSync?: boolean
   /** Internal optimistic projection marker for a queue op that changes this row indirectly. */
   pendingSyncOperationId?: string
@@ -474,6 +476,8 @@ export interface StabilityRecoveryDraw {
 }
 
 export type StabilityReloadIntent = 'Unanswered' | 'Required' | 'NotRequired'
+
+export type StabilityReloadStatus = 'Outstanding' | 'PartlyRepaid' | 'Complete' | 'NotRequired'
 
 /**
  * The explicit ledger obligation created by marked emergency-fund drawdowns, and the part that

@@ -83,4 +83,18 @@ describe('useTransactionForm receipt cleanup', () => {
     expect(result.current.state.ledgerCategory).toBe('Essentials')
     expect(result.current.state.transactionType).toBe('outflow')
   })
+
+  it('opens the blank editor while the server privacy preference is pending', () => {
+    const { result } = renderHook(() => useTransactionForm(createOptions({
+      hideSensitive: true,
+      sensitivePreferenceStatus: 'pending',
+    })))
+
+    act(() => {
+      result.current.openFresh('outflow')
+    })
+
+    expect(result.current.state.showAddForm).toBe(true)
+    expect(result.current.state.transactionType).toBe('outflow')
+  })
 })

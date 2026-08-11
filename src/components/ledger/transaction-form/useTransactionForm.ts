@@ -54,6 +54,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     autocompleteSuggestions,
     transactions,
     hideSensitive,
+    sensitivePreferenceStatus,
   } = options
 
   const defaultCategory = categories.length > 0 ? categories[0].name : ''
@@ -361,7 +362,10 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   }, [categories, state.category, defaultCategory])
 
   const openFresh = useCallback((initialTxType?: 'inflow' | 'outflow' | 'transfer') => {
-    if (hideSensitive) return
+    // The app is safe-by-default while the server preference is still resolving. Allow the
+    // blank FAB editor to mount during that short window, but leave every save path behind
+    // the existing sensitive-mode guard until the preference is known.
+    if (hideSensitive && sensitivePreferenceStatus !== 'pending') return
     setExistingDocuments([])
     setInitialDocumentChanges({ pending: [], unlinkIds: [] })
     setDocumentFieldRevision(revision => revision + 1)
@@ -375,7 +379,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     autocompletedDescriptionRef.current = null
     suggestions.clearSuggestions()
     openTransactionForm()
-  }, [hideSensitive, defaultCategory, todayDate, autoOpenTxType, suggestions, openTransactionForm])
+  }, [hideSensitive, sensitivePreferenceStatus, defaultCategory, todayDate, autoOpenTxType, suggestions, openTransactionForm])
 
   useAutoOpenModal(autoOpenAddForm, () => openFresh(autoOpenTxType || undefined), onResetAutoOpen)
 

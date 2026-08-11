@@ -1,9 +1,11 @@
 import type { AppContextValue } from '../contexts/AppContext'
 import type { ToastAction, ToastTone } from '../components/ui/ToastViewport'
 import type { EntityKind, OpType, OutboxPayload, QueuedOp } from '../lib/outbox'
+import type { SensitivePreferenceStatus } from './useAppPreferences'
 
 export function buildAppContextValue(params: {
   hideSensitive: boolean
+  sensitivePreferenceStatus?: SensitivePreferenceStatus
   currency: string
   darkMode: boolean
   activeSyncId: string | null
@@ -20,6 +22,7 @@ export function buildAppContextValue(params: {
 }): AppContextValue {
   return {
     hideSensitive: params.hideSensitive,
+    sensitivePreferenceStatus: params.sensitivePreferenceStatus,
     currency: params.currency,
     darkMode: params.darkMode,
     activeSyncId: params.activeSyncId,

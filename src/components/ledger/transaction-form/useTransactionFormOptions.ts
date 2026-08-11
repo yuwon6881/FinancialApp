@@ -1,10 +1,12 @@
 import type { AutocompleteSuggestion, StabilityRecovery, Transaction, TransactionCategory, TransactionDocumentChanges } from '../../../types'
 import type { ReceiptScanResult } from '../../../lib/api'
+import type { SensitivePreferenceStatus } from '../../../app/useAppPreferences'
 
 export interface UseTransactionFormOptions {
   categories: TransactionCategory[]
   currency: string
   hideSensitive: boolean
+  sensitivePreferenceStatus?: SensitivePreferenceStatus
   autocompleteSuggestions: AutocompleteSuggestion[]
   transactions: Transaction[]
   essentialsAlloc: number

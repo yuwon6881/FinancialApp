@@ -18,6 +18,7 @@ import type {
 } from '../../types'
 import type { ReceiptSplitDraft, ReceiptSplitFailure } from '../../lib/useReceiptSplitPolling'
 import type { ReceiptScanResult } from '../../lib/api'
+import type { SensitivePreferenceStatus } from '../../app/useAppPreferences'
 import { Button } from '../ui/Button'
 import { ModalActions } from '../ui/ModalActions'
 
@@ -28,6 +29,7 @@ export interface TransactionFormSheetProps {
   categories: TransactionCategory[]
   currency: string
   hideSensitive: boolean
+  sensitivePreferenceStatus?: SensitivePreferenceStatus
   autocompleteSuggestions: AutocompleteSuggestion[]
   transactions: Transaction[]
   essentialsAlloc: number

@@ -344,7 +344,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
               {isMobile && <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto mb-2 shrink-0" />}
               <div className="flex min-h-9 items-center justify-between gap-3 border-b border-border/40 pb-3">
                 <div className="min-w-0">
-                  <div id={titleId} className="text-base font-bold text-foreground">{title}</div>
+                  <h2 id={titleId} className="text-base font-bold text-foreground">{title}</h2>
                   {description && (
                     <div id={descriptionId} className="mt-1 text-xs font-normal leading-relaxed text-muted-foreground">
                       {description}

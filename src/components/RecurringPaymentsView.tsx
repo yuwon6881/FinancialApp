@@ -88,6 +88,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
     payments,
     categories,
     hideSensitive,
+    sensitivePreferenceStatus: app.sensitivePreferenceStatus,
     currency,
     activeSyncId,
     activeSyncIds,

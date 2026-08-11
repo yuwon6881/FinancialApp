@@ -1,7 +1,8 @@
 import React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { RecurringPaymentsView } from './RecurringPaymentsView'
+import { AppPrefsContext } from '../contexts/AppContext'
 
 vi.mock('./BillTimeline', () => ({ BillTimeline: () => null }))
 vi.mock('./ui/BottomSheet', () => ({
@@ -57,5 +58,38 @@ describe('RecurringPaymentsView form', () => {
       dueDate: 20,
       startDate: '2026-07-20',
     }))
+  })
+
+  it('opens a FAB-requested form while the server privacy preference is pending', async () => {
+    const renderView = (status: 'pending' | 'resolved') => (
+      <AppPrefsContext.Provider value={{
+        hideSensitive: true,
+        sensitivePreferenceStatus: status,
+        currency: 'USD',
+        darkMode: false,
+        formatSensitive: () => '•••',
+      }}>
+        <RecurringPaymentsView
+          payments={[]}
+          activeRecurringPayments={[]}
+          selectedMonth="Jul"
+          selectedYear={2026}
+          cycleDay={1}
+          onAddPayment={vi.fn()}
+          onToggleActive={vi.fn()}
+          onDeletePayment={vi.fn()}
+          onUpdatePayment={vi.fn()}
+          categories={[{ id: 'bills', name: 'Bills' }]}
+          hideSensitive
+          autoOpenAddForm
+        />
+      </AppPrefsContext.Provider>
+    )
+
+    const { rerender } = render(renderView('pending'))
+    await waitFor(() => expect(screen.getByPlaceholderText('e.g. Netflix, Spotify')).toBeTruthy())
+
+    rerender(renderView('resolved'))
+    await waitFor(() => expect(screen.queryByPlaceholderText('e.g. Netflix, Spotify')).toBeNull())
   })
 })

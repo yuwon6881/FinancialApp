@@ -9,6 +9,7 @@ import { compareTransactions, mergeTransactions, type TransactionSort } from '..
 import { ledgerRouteSearch, updateAppSearch, type LedgerRouteRange } from '../../../lib/appLocation'
 import { getLedgerTransactionRowElement, scrollLedgerTransactionRowIntoView } from '../../../lib/ledgerTransactionTarget'
 import { createLedgerSyncStatus } from './ledgerSyncStatus'
+import type { SensitivePreferenceStatus } from '../../../app/useAppPreferences'
 
 export interface UseLedgerViewOptions {
   transactions: Transaction[]
@@ -65,6 +66,7 @@ export interface UseLedgerViewOptions {
   onAiExportRequestConsumed?: () => void
   aiExportRequest?: any
   hideSensitive: boolean
+  sensitivePreferenceStatus?: SensitivePreferenceStatus
   formRef: React.RefObject<any>
 }
 
@@ -127,6 +129,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     onAiExportRequestConsumed,
     aiExportRequest,
     hideSensitive,
+    sensitivePreferenceStatus,
     formRef,
   } = options
 
@@ -245,8 +248,8 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     setAreAttachedDocumentsLoading(false)
     setShowEditDisabledModal(false)
     setEditBlockedTransaction(null)
-    formRef.current?.handleCloseForm()
-  }, [hideSensitive, formRef])
+    if (sensitivePreferenceStatus !== 'pending') formRef.current?.handleCloseForm()
+  }, [hideSensitive, sensitivePreferenceStatus, formRef])
 
   // Synchronize AI export requests
   useEffect(() => {
