@@ -70,9 +70,10 @@ const createLocalId = (prefix: string, separator = '_') => {
   return `${prefix}${separator}${Date.now()}${separator}${Math.random().toString(36).substring(2, 9)}`
 }
 
-export function useFinancialData(options: Omit<UseFinancialDataOptions, 'username' | 'usernameRef' | 'setIsSwitchingCycle'>) {
+export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernameRef' | 'setIsSwitchingCycle'>) {
   const {
     token,
+    username,
     lastUnlockedTimeRef,
     isLocked,
     markSessionLocked,
@@ -1041,14 +1042,22 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     }))
   }
 
-  const handleAddTransaction = (
+  const handleAddTransaction = async (
     newTx: Omit<Transaction, 'id'>,
     setActiveTab: (tab: AppTab) => void,
     documentChanges?: TransactionDocumentChanges,
   ) => {
     const drafts = handleStageDraftTransactions([newTx])
     if (drafts.length === 0) return undefined
-    if (documentChanges) stageTransactionDocumentChanges(drafts[0].id, documentChanges)
+    if (documentChanges && (documentChanges.pending.length > 0 || documentChanges.unlinkIds.length > 0)) {
+      try {
+        const { saveDraftTransactionDocumentChanges } = await import('../lib/draftTransactionDocuments')
+        await saveDraftTransactionDocumentChanges(username, drafts[0].id, documentChanges)
+      } catch (error) {
+        setDraftTransactions(previous => previous.filter(draft => draft.id !== drafts[0].id))
+        throw error
+      }
+    }
     setActiveTab('drafts')
     return drafts[0].id
   }
@@ -1073,15 +1082,30 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     mutateQueue(prev => enqueue(prev, 'transaction', 'add', finalId, { ...newTx, id: finalId }))
   }
 
-  const handleUpdateDraftTransaction = (id: string, updated: Transaction) => {
+  const handleUpdateDraftTransaction = async (
+    id: string,
+    updated: Omit<Transaction, 'id'>,
+    documentChanges: TransactionDocumentChanges = { pending: [], unlinkIds: [] },
+  ) => {
     if (!guardSensitive()) return
-    setDraftTransactions(prev => prev.map(t => t.id === id ? updated : t))
+    const { saveDraftTransactionDocumentChanges } = await import('../lib/draftTransactionDocuments')
+    await saveDraftTransactionDocumentChanges(username, id, documentChanges)
+    setDraftTransactions(prev => prev.map(t => t.id === id ? { ...updated, id, isPendingSync: true } : t))
     void triggerHaptic(15)
+  }
+
+  const loadDraftTransactionDocumentChanges = async (id: string) => {
+    const { loadDraftTransactionDocumentChanges } = await import('../lib/draftTransactionDocuments')
+    return loadDraftTransactionDocumentChanges(username, id)
   }
 
   const handleDeleteDraftTransaction = (id: string) => {
     if (!guardSensitive()) return
     pendingTransactionDocumentsRef.current.delete(id)
+    void import('../lib/draftTransactionDocuments').then(({ deleteDraftTransactionDocumentChanges }) =>
+      deleteDraftTransactionDocumentChanges(username, id)).catch(() => {
+        showToast('The draft was removed, but its obsolete local file copy could not be cleared.', 'Draft cleanup incomplete', 'warning')
+      })
     setDraftTransactions(prev => prev.filter(t => t.id !== id))
     void triggerHaptic(30)
   }
@@ -1097,19 +1121,38 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     })
   }
 
-  const handleSyncDraftBatch = () => {
+  const handleSyncDraftBatch = async () => {
     if (!guardSensitive()) return
     if (draftTransactions.length === 0) return
     const drafts = draftTransactions
-    setDraftTransactions([])
+    const { getDraftTransactionIssues } = await import('../lib/draftTransactionValidation')
+    const invalidDraft = drafts.find(draft => getDraftTransactionIssues(draft, allCategories).length > 0)
+    if (invalidDraft) {
+      showToast(
+        `Review “${invalidDraft.description || 'transaction'}” before adding this batch to the Ledger.`,
+        'Draft needs review',
+        'warning',
+      )
+      return
+    }
+    let documentChangesByDraft: Map<string, TransactionDocumentChanges>
+    try {
+      const { loadDraftTransactionDocumentChanges } = await import('../lib/draftTransactionDocuments')
+      documentChangesByDraft = new Map(await Promise.all(drafts.map(async draft => [
+        draft.id,
+        await loadDraftTransactionDocumentChanges(username, draft.id),
+      ] as const)))
+    } catch (error) {
+      showToast(getErrorMessage(error, 'Draft attachments could not be restored. Try again before adding these transactions.'), 'Draft files unavailable', 'error')
+      return
+    }
     void triggerHaptic([25, 45, 25])
     mutateQueue(prev => {
       let nextQueue = prev
       drafts.forEach(d => {
         const finalId = createFinalId('transaction')
-        const documentChanges = pendingTransactionDocumentsRef.current.get(d.id)
-        if (documentChanges) {
-          pendingTransactionDocumentsRef.current.delete(d.id)
+        const documentChanges = documentChangesByDraft.get(d.id)
+        if (documentChanges && (documentChanges.pending.length > 0 || documentChanges.unlinkIds.length > 0)) {
           pendingTransactionDocumentsRef.current.set(finalId, documentChanges)
         }
         const payload = { ...d, id: finalId }
@@ -1118,6 +1161,13 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
       })
       return nextQueue
     })
+    setDraftTransactions([])
+    try {
+      const { deleteDraftTransactionDocumentChanges } = await import('../lib/draftTransactionDocuments')
+      await Promise.all(drafts.map(draft => deleteDraftTransactionDocumentChanges(username, draft.id)))
+    } catch {
+      showToast('The transactions were queued, but obsolete local draft files could not be cleared.', 'Draft cleanup incomplete', 'warning')
+    }
   }
 
   const handleDeleteTransaction = (
@@ -1468,6 +1518,7 @@ export function useFinancialData(options: Omit<UseFinancialDataOptions, 'usernam
     handleStageDraftTransactions,
     handleAddBalanceAdjustment,
     handleUpdateDraftTransaction,
+    loadDraftTransactionDocumentChanges,
     handleDeleteDraftTransaction,
     requestDeleteDraftTransaction,
     handleSyncDraftBatch,

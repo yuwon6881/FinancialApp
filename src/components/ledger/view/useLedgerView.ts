@@ -6,7 +6,7 @@ import { getCycleLabelForDropdown } from '../../../lib/cycleLabels'
 import { matchesTransactionFilters, splitFilterSelections, LEDGER_BUCKETS as LEDGER_BUCKET_VALUES, type TransactionLinkFilter } from '../../../lib/transactionFilters'
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../../../lib/csvExport'
 import { compareTransactions, mergeTransactions, type TransactionSort } from '../../../lib/transactionOrdering'
-import { ledgerRouteSearch, updateAppSearch } from '../../../lib/appLocation'
+import { ledgerRouteSearch, updateAppSearch, type LedgerRouteRange } from '../../../lib/appLocation'
 import { getLedgerTransactionRowElement, scrollLedgerTransactionRowIntoView } from '../../../lib/ledgerTransactionTarget'
 import { createLedgerSyncStatus } from './ledgerSyncStatus'
 
@@ -42,6 +42,19 @@ export interface UseLedgerViewOptions {
   showAllCycles: boolean
   onClearAllCycles: () => void
   cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly'
+  onRouteStateChange?: (state: {
+    filters: string[]
+    search: string
+    startDate: string
+    endDate: string
+    minAmount: string
+    maxAmount: string
+    recurringFilter: TransactionLinkFilter
+    wishlistFilter: TransactionLinkFilter
+    txType: LedgerTxType
+    showAllCycles: boolean
+    range: LedgerRouteRange
+  }) => void
   onFetchPagedTransactions?: (params: any) => Promise<PagedTransactionResult>
   onExportTransactions?: (params: any) => Promise<{ blob: Blob; filename: string }>
   onShowAlert?: (message: string, title?: string) => void
@@ -103,6 +116,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
     showAllCycles,
     onClearAllCycles,
     cyclesRange,
+    onRouteStateChange,
     onFetchPagedTransactions,
     onExportTransactions,
     onShowAlert,
@@ -522,7 +536,12 @@ export function useLedgerView(options: UseLedgerViewOptions) {
       range: cyclesRange || 'monthly',
       highlightedTxId: highlightedTxId || null,
     }))
-  }, [showAllCycles, cyclesRange, highlightedTxId, searchTerm, selectedFilters, selectedStartDate, selectedEndDate, selectedMinAmount, selectedMaxAmount, selectedRecurringFilter, selectedWishlistFilter, selectedTxTypeFilter, appliedSearch, appliedFilters, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringFilter, appliedWishlistFilter, appliedTxTypeFilter])
+    onRouteStateChange?.({
+      ...routeState,
+      showAllCycles,
+      range: cyclesRange || 'monthly',
+    })
+  }, [showAllCycles, cyclesRange, highlightedTxId, searchTerm, selectedFilters, selectedStartDate, selectedEndDate, selectedMinAmount, selectedMaxAmount, selectedRecurringFilter, selectedWishlistFilter, selectedTxTypeFilter, appliedSearch, appliedFilters, appliedStartDate, appliedEndDate, appliedMinAmount, appliedMaxAmount, appliedRecurringFilter, appliedWishlistFilter, appliedTxTypeFilter, onRouteStateChange])
 
   // Toggle filter on or off
   const handleToggleFilter = (filterName: string) => {

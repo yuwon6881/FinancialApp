@@ -8,62 +8,17 @@ import { useFormDraft } from '../../../lib/useFormDraft'
 import { useAutoOpenModal } from '../../../lib/useAutoOpenModal'
 import type {
   Transaction,
-  TransactionCategory,
-  AutocompleteSuggestion,
   TransactionDocumentChanges,
   VaultDocument,
 } from '../../../types'
-import type { StabilityRecovery } from '../../../types'
-import { drawsFor, projectStabilityRecovery, proposeTopUp } from '../../../lib/stabilityRecovery'
-import { bucketAmount } from '../../../lib/bucketAttribution'
+import { useStabilityTopUpOffer } from './useStabilityTopUpOffer'
 import type { TransactionPrefillDraft } from '../TransactionFormSheet'
 import type { TransactionDocumentsFieldRef } from './TransactionDocumentsField'
 import { focusFirstInvalidField } from '../../ui/formValidation'
 import type { ReceiptScanResult } from '../../../lib/api'
-export interface UseTransactionFormOptions {
-  categories: TransactionCategory[]
-  currency: string
-  hideSensitive: boolean
-  autocompleteSuggestions: AutocompleteSuggestion[]
-  transactions: Transaction[]
-  essentialsAlloc: number
-  growthAlloc: number
-  stabilityAlloc: number
-  rewardsAlloc: number
-  stabilityBalance: number
-  stabilityTarget: number
-  stabilityOverflowRedirect: string
-  /** Absent when the selected cycle is not the current one — a backdated salary gets no offer. */
-  stabilityRecovery?: StabilityRecovery
-  essentialsBalance?: number
-  growthBalance?: number
-  rewardsBalance?: number
-  onAddTransaction: (
-    transaction: Omit<Transaction, 'id'>,
-    documentChanges?: TransactionDocumentChanges,
-  ) => Promise<string | void> | string | void
-  onUpdateTransaction?: (
-    id: string,
-    transaction: Omit<Transaction, 'id'>,
-    documentChanges?: TransactionDocumentChanges,
-  ) => Promise<void> | void
-  onStartEditPending?: (id: string | null) => void
-  onAddFormOpenChange?: (open: boolean) => void
-  autoOpenAddForm?: boolean
-  autoOpenTxType?: 'inflow' | 'outflow' | 'transfer' | null
-  onResetAutoOpen?: () => void
-  receiptScanDraft?: { jobId: string; result: ReceiptScanResult } | null
-  onReceiptScanStarted?: (scanId: string) => void
-  onReceiptScanCleared?: (scanId: string) => void | Promise<void>
-  activeScanJobIds?: string[]
-  failedScanJob?: { jobId: string; errorMessage: string } | null
-
-  aiEditDraft?: any
-  onAiEditDraftConsumed?: () => void
-  onFetchTransactionById?: (id: string) => Promise<Transaction>
-  onShowAlert?: (message: string, title?: string) => void
-}
-
+import { getErrorMessage } from '../../../lib/errors'
+import type { UseTransactionFormOptions } from './useTransactionFormOptions'
+export type { UseTransactionFormOptions } from './useTransactionFormOptions'
 export function useTransactionForm(options: UseTransactionFormOptions) {
   const {
     categories,
@@ -80,6 +35,8 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     rewardsBalance = 0,
     onAddTransaction,
     onUpdateTransaction,
+    onUpdateDraftTransaction,
+    onLoadDraftDocumentChanges,
     onStartEditPending,
     onAddFormOpenChange,
     autoOpenAddForm,
@@ -109,6 +66,8 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   const autocompletedDescriptionRef = useRef<string | null>(null)
   const documentsFieldRef = useRef<TransactionDocumentsFieldRef>(null)
   const [existingDocuments, setExistingDocuments] = useState<VaultDocument[]>([])
+  const [initialDocumentChanges, setInitialDocumentChanges] = useState<TransactionDocumentChanges>({ pending: [], unlinkIds: [] })
+  const [documentFieldRevision, setDocumentFieldRevision] = useState(0)
 
   useEffect(() => {
     descriptionRef.current = state.description
@@ -135,101 +94,24 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
    * whatever is typed is clamped to what this pay packet can move — the field can hold an
    * over-max value while being edited, and that must never reach the ledger.
    */
-  const resolveAcceptedTopUp = () => {
-    if (!state.stabilityTopUpAccepted || !topUpOffer) return 0
-    const typed = parseFloat(state.stabilityTopUpAmount)
-    const chosen = state.stabilityTopUpAmount.trim() === ''
-      ? topUpOffer.proposedTopUp
-      : typed
-    return chosen
-  }
-
-  // Growth carries no committed money: unlike bills and savings goals it has no hard per-cycle
-  // obligation, so nothing there needs protecting from the draw.
-  const topUpBuckets = useMemo(() => [
-    { bucket: 'Essentials', alloc: essentialsAlloc, balance: essentialsBalance, committed: stabilityRecovery?.essentialsCommitted ?? 0 },
-    { bucket: 'Growth', alloc: growthAlloc, balance: growthBalance, committed: 0 },
-    { bucket: 'Rewards', alloc: rewardsAlloc, balance: rewardsBalance, committed: stabilityRecovery?.rewardsCommitted ?? 0 },
-  ], [essentialsAlloc, growthAlloc, rewardsAlloc, essentialsBalance, growthBalance, rewardsBalance, stabilityRecovery])
-
-  // Only income can carry a top-up: it is the one entry that divides money four ways. All the
-  // arithmetic lives in lib/stabilityRecovery so it stays testable without rendering.
-  const topUpOffer = useMemo(() => {
-    if (state.transactionType !== 'inflow' || state.ledgerCategory !== 'Income') return null
-    const amount = parseFloat(state.amount)
-    if (!Number.isFinite(amount) || amount <= 0) return null
-
-    let recoveryForOffer = stabilityRecovery
-    let bucketsForOffer = topUpBuckets
-    const original = state.editingId
-      ? transactions.find(transaction => String(transaction.id) === String(state.editingId))
-      : undefined
-    const originalIsIncome = Boolean(original && original.amount > 0 && (
-      original.ledgerCategory.toLowerCase() === 'income' ||
-      original.ledgerCategory.toLowerCase().startsWith('incomesplit:')
-    ))
-    if (recoveryForOffer && original && originalIsIncome) {
-      bucketsForOffer = topUpBuckets.map(bucket => {
-        const child = transactions.find(transaction =>
-          transaction.id === `${original.id}-split-${bucket.bucket}`)
-        return child ? { ...bucket, balance: bucket.balance - child.amount } : bucket
-      })
-      const originalStabilityContribution = transactions
-        .filter(transaction => String(transaction.id) === String(original.id) ||
-          String(transaction.id).startsWith(`${original.id}-split-`))
-        .reduce((sum, transaction) => sum + bucketAmount(transaction, 'Stability'), 0)
-      const withoutOriginal = transactions.filter(transaction =>
-        String(transaction.id) !== String(original.id) &&
-        !String(transaction.id).startsWith(`${original.id}-split-`))
-      recoveryForOffer = projectStabilityRecovery({
-        recovery: recoveryForOffer,
-        baseTransactions: transactions,
-        projectedTransactions: withoutOriginal,
-        stabilityAlloc,
-        projectedBalance: recoveryForOffer.currentBalance - originalStabilityContribution,
-      })
-    }
-
-    const liveOffer = proposeTopUp(recoveryForOffer, Math.abs(amount), bucketsForOffer, stabilityAlloc)
-    if (liveOffer) return liveOffer
-
-    // A saved reimbursement can have closed the live ask already. Keep it visible on edit so
-    // ordinary edits preserve intent and removal remains an explicit untick.
-    const saved = state.mode === 'edit' && state.stabilityTopUpAccepted
-      ? Number(state.stabilityTopUpAmount)
-      : 0
-    if (!Number.isFinite(saved) || saved <= 0) return null
-    return {
-      requestedTopUp: saved,
-      proposedTopUp: saved,
-      maxTopUp: saved,
-      safeCap: saved,
-      isReduced: false,
-      draws: drawsFor(saved, bucketsForOffer),
-    }
-  }, [
-    stabilityAlloc,
-    state.transactionType,
-    state.ledgerCategory,
-    state.amount,
-    state.mode,
-    state.stabilityTopUpAccepted,
-    state.stabilityTopUpAmount,
-    stabilityRecovery,
-    topUpBuckets,
+  const { resolveAcceptedTopUp, topUpBuckets, topUpOffer } = useStabilityTopUpOffer({
+    state,
     transactions,
+    stabilityRecovery,
     essentialsAlloc,
     growthAlloc,
+    stabilityAlloc,
     rewardsAlloc,
     essentialsBalance,
     growthBalance,
     rewardsBalance,
-  ])
+  })
 
   const { clearDraft: clearFormDraft } = useFormDraft(
     'ledger-tx-form',
     state.showAddForm,
     {
+      editorMode: state.mode,
       editingTxId: state.editingId,
       description: state.description,
       amount: state.amount,
@@ -242,7 +124,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     },
     (draft) => {
       dispatch({
-        type: 'OPEN_EDIT',
+        type: draft.editorMode === 'draft' ? 'OPEN_DRAFT' : 'OPEN_EDIT',
         payload: {
           id: draft.editingTxId || '',
           description: draft.description,
@@ -257,6 +139,12 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       })
       if (draft.editingTxId && onStartEditPending) {
         onStartEditPending(draft.editingTxId)
+      }
+      if (draft.editorMode === 'draft' && draft.editingTxId && onLoadDraftDocumentChanges) {
+        void onLoadDraftDocumentChanges(draft.editingTxId).then(changes => {
+          setInitialDocumentChanges(changes)
+          setDocumentFieldRevision(revision => revision + 1)
+        })
       }
       openTransactionForm()
     }
@@ -350,6 +238,8 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
 
   const handleStartEdit = useCallback((t: Transaction) => {
     if (hideSensitive) return
+    setInitialDocumentChanges({ pending: [], unlinkIds: [] })
+    setDocumentFieldRevision(revision => revision + 1)
     dispatch({
       type: 'OPEN_EDIT',
       payload: {
@@ -379,6 +269,37 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       .catch(() => onShowAlert?.('Attached documents could not be loaded.', 'Document Vault'))
     openTransactionForm()
   }, [hideSensitive, suggestions, onStartEditPending, onShowAlert, openTransactionForm])
+
+  const handleStartDraft = useCallback(async (draft: Transaction) => {
+    if (hideSensitive) return
+    let changes: TransactionDocumentChanges = { pending: [], unlinkIds: [] }
+    if (onLoadDraftDocumentChanges) {
+      changes = await onLoadDraftDocumentChanges(draft.id)
+    }
+    setExistingDocuments([])
+    setInitialDocumentChanges(changes)
+    setDocumentFieldRevision(revision => revision + 1)
+    dispatch({
+      type: 'OPEN_DRAFT',
+      payload: {
+        id: draft.id,
+        description: draft.description,
+        amount: Math.abs(draft.amount).toFixed(2),
+        date: draft.date,
+        category: draft.category,
+        ledgerCategory: draft.ledgerCategory.startsWith('Transfer:') ? 'Essentials' : draft.ledgerCategory,
+        txType: draft.ledgerCategory.startsWith('Transfer:') ? 'transfer' : (draft.amount < 0 ? 'outflow' : 'inflow'),
+        transferSource: draft.ledgerCategory.startsWith('Transfer:') ? (draft.ledgerCategory.substring(9).split('->')[0].trim() as TransferBucket) : undefined,
+        transferTarget: draft.ledgerCategory.startsWith('Transfer:') ? (draft.ledgerCategory.substring(9).split('->')[1].trim() as TransferBucket) : undefined,
+        stabilityRecoveryTopUpAmount: draft.stabilityRecoveryTopUpAmount,
+        stabilityReloadIntent: draft.stabilityReloadIntent,
+      },
+    })
+    descriptionRef.current = draft.description
+    autocompletedDescriptionRef.current = null
+    suggestions.clearSuggestions()
+    openTransactionForm()
+  }, [hideSensitive, onLoadDraftDocumentChanges, openTransactionForm, suggestions])
 
   useEffect(() => {
     if (!aiEditDraft) return
@@ -442,6 +363,8 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   const openFresh = useCallback((initialTxType?: 'inflow' | 'outflow' | 'transfer') => {
     if (hideSensitive) return
     setExistingDocuments([])
+    setInitialDocumentChanges({ pending: [], unlinkIds: [] })
+    setDocumentFieldRevision(revision => revision + 1)
     documentsFieldRef.current?.reset()
     dispatch({ type: 'OPEN_CREATE', payload: { defaultCategory, todayDate } })
     const targetTxType = initialTxType || autoOpenTxType
@@ -459,6 +382,8 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   const openWithDraft = (draft: TransactionPrefillDraft) => {
     if (hideSensitive) return
     setExistingDocuments([])
+    setInitialDocumentChanges({ pending: [], unlinkIds: [] })
+    setDocumentFieldRevision(revision => revision + 1)
     documentsFieldRef.current?.reset()
     dispatch({ type: 'OPEN_CREATE', payload: { defaultCategory, todayDate } })
     dispatch({
@@ -481,10 +406,36 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     openTransactionForm()
   }
 
+  const applyPrefill = (draft: TransactionPrefillDraft) => {
+    if (state.mode !== 'draft') {
+      openWithDraft(draft)
+      return
+    }
+    dispatch({
+      type: 'APPLY_RECEIPT',
+      payload: {
+        description: draft.description,
+        amount: Math.abs(draft.amount).toFixed(2),
+        date: draft.date ?? todayDate,
+        category: draft.category || defaultCategory,
+        ledgerCategory: draft.ledgerCategory && ['Essentials', 'Growth', 'Stability', 'Rewards'].includes(draft.ledgerCategory)
+          ? draft.ledgerCategory as SelectableLedgerCategory
+          : undefined,
+        txType: draft.txType,
+      },
+      todayDate,
+    })
+  }
+
   const changeTransactionType = (type: 'inflow' | 'outflow' | 'transfer') => {
     if (state.mode === 'create') {
       dispatch({ type: 'RESET', todayDate, defaultCategory })
       dispatch({ type: 'SET_FIELD', field: 'showAddForm', value: true })
+    }
+    if (state.mode === 'draft') {
+      documentsFieldRef.current?.reset()
+      setInitialDocumentChanges({ pending: [], unlinkIds: [] })
+      setDocumentFieldRevision(revision => revision + 1)
     }
     dispatch({ type: 'SET_FIELD', field: 'transactionType', value: type })
   }
@@ -492,6 +443,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   const handleCloseForm = () => {
     documentsFieldRef.current?.reset()
     setExistingDocuments([])
+    setInitialDocumentChanges({ pending: [], unlinkIds: [] })
     dispatch({ type: 'CLOSE' })
     clearFormDraft()
     suggestions.clearSuggestions()
@@ -554,19 +506,25 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       recoveryTopUp: resolveAcceptedTopUp(),
     })
 
-    const documentChanges = documentsFieldRef.current?.getChanges()
+    const documentChanges = documentsFieldRef.current?.getChanges() ?? { pending: [], unlinkIds: [] }
 
-    if (state.mode === 'edit' && state.editingId) {
-      const targetId = state.editingId
+    try {
+      if (state.mode === 'edit' && state.editingId) {
+        await onUpdateTransaction?.(state.editingId, mapped, documentChanges)
+      } else if (state.mode === 'draft' && state.editingId) {
+        await onUpdateDraftTransaction?.(state.editingId, mapped, documentChanges)
+      } else {
+        await onAddTransaction(mapped, documentChanges)
+      }
       dispatch({ type: 'RESET', todayDate, defaultCategory })
       clearFormDraft()
       scanner.clearScan()
-      await onUpdateTransaction?.(targetId, mapped, documentChanges)
-    } else {
-      await onAddTransaction(mapped, documentChanges)
-      dispatch({ type: 'RESET', todayDate, defaultCategory })
-      clearFormDraft()
-      scanner.clearScan()
+    } catch (error) {
+      dispatch({
+        type: 'SET_ERRORS',
+        errors: { submit: getErrorMessage(error, 'This transaction could not be saved. Please try again.') },
+      })
+      return
     }
 
     documentsFieldRef.current?.reset()
@@ -580,8 +538,10 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     autocompletedDescriptionRef,
     openFresh,
     openWithDraft,
+    applyPrefill,
     handleCloseForm,
     handleStartEdit,
+    handleStartDraft,
     handleSubmit,
     changeTransactionType,
     scanner,
@@ -590,6 +550,8 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     quickSuggestionEntries,
     handleSelectSuggestion,
     documentsFieldRef,
+    initialDocumentChanges,
+    documentFieldRevision,
     existingDocuments,
     topUpOffer,
     topUpBuckets,

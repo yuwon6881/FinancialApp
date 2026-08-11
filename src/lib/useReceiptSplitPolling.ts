@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 
 import * as api from './api'
 import type { ReceiptSplitScanResult } from './api'
 import type { AppTab } from '../types'
-import type { ToastTone } from '../components/ui/ToastViewport'
+import type { ToastAction, ToastTone } from '../components/ui/ToastViewport'
 import { errorMessageIncludes, errorMessageIncludesLower } from './errors'
-import { buildMutationSuccessToast } from './mutationToast'
+import { scanReviewAction } from './scanReviewAction'
 
 const JOB_IDS_KEY = 'receipt_split_scan_job_ids'
 
@@ -37,20 +37,16 @@ export interface ReceiptSplitFailure {
 
 interface Options {
   token: string | null
-  activeTabRef: MutableRefObject<AppTab>
   isReceiptSplitOpenRef: MutableRefObject<boolean>
-  isMountedRef: MutableRefObject<boolean>
   setActiveTab: (tab: AppTab) => void
   setAutoOpenReceiptSplit: (open: boolean) => void
-  showToast: (message: string, title?: string, tone?: ToastTone) => void
+  showToast: (message: string, title?: string, tone?: ToastTone, action?: ToastAction) => void
 }
 
 export function useReceiptSplitPolling(options: Options) {
   const {
     token,
-    activeTabRef,
     isReceiptSplitOpenRef,
-    isMountedRef,
     setActiveTab,
     setAutoOpenReceiptSplit,
     showToast,
@@ -116,17 +112,7 @@ export function useReceiptSplitPolling(options: Options) {
             if (job.status === 'completed' && job.result) {
               setActiveDraft({ jobId: scanId, result: job.result })
               if (!isReceiptSplitOpenRef.current) {
-                const copy = buildMutationSuccessToast({
-                  entity: 'Receipt Split',
-                  action: 'Completed',
-                  message: 'Receipt items were prepared for review.',
-                })
-                showToast(copy.message, copy.title, copy.tone)
-                window.setTimeout(() => {
-                  if (!isMountedRef.current) return
-                  setActiveTab('ledger')
-                  setAutoOpenReceiptSplit(true)
-                }, 500)
+                showToast('Receipt items were prepared for review.', 'Receipt Split Completed', 'success', scanReviewAction(setActiveTab, setAutoOpenReceiptSplit, 'ledger'))
               }
             }
           } catch (error: unknown) {
@@ -150,9 +136,7 @@ export function useReceiptSplitPolling(options: Options) {
     token,
     jobIds,
     activeDraft,
-    activeTabRef,
     isReceiptSplitOpenRef,
-    isMountedRef,
     setActiveTab,
     setAutoOpenReceiptSplit,
     showToast,

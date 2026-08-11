@@ -376,8 +376,13 @@ export function AuthenticatedView({
                       onClearIncomingFilters={nav.clearIncomingFilters}
                       onClearHighlightedTx={nav.clearHighlightedTx}
                       showAllCycles={nav.ledgerShowAllCycles}
-                      onClearAllCycles={() => { nav.setLedgerShowAllCycles(false) }}
+                      onClearAllCycles={() => {
+                        nav.setLedgerShowAllCycles(false)
+                        prefs.setLedgerCyclesRange('monthly')
+                      }}
                       cyclesRange={prefs.ledgerCyclesRange}
+                      onRouteStateChange={nav.syncLedgerRouteState}
+                      ledgerSummaries={financial.optimisticDashboardData?.categories}
                       autoOpenAddForm={nav.autoOpenLedgerAdd}
                       autoOpenTxType={nav.autoOpenLedgerTxType}
                       onResetAutoOpen={() => {
@@ -407,12 +412,14 @@ export function AuthenticatedView({
                       receiptScanDraft={activeReceiptScanDraft}
                       onReceiptScanStarted={handleReceiptScanStarted}
                       onReceiptScanCleared={clearReceiptScanJob}
+                      onReviewReceiptScan={() => nav.setAutoOpenLedgerAdd(true)}
                       onAddFormOpenChange={setIsLedgerAddOpen}
                       activeScanJobIds={receiptScanJobIds}
                       failedScanJob={failedScanJob}
                       autoOpenReceiptSplit={nav.autoOpenReceiptSplit}
                       onResetAutoOpenReceiptSplit={() => nav.setAutoOpenReceiptSplit(false)}
                       receiptSplitDraft={activeReceiptSplitDraft}
+                      onReviewReceiptSplit={() => nav.setAutoOpenReceiptSplit(true)}
                       failedReceiptSplitJob={failedReceiptSplitJob}
                       onReceiptSplitStarted={handleReceiptSplitStarted}
                       onReceiptSplitCleared={clearReceiptSplitJob}
@@ -477,13 +484,42 @@ export function AuthenticatedView({
                       draftTransactions={financial.draftTransactions}
                       categories={financial.allCategories}
                       onUpdateDraftTransaction={financial.handleUpdateDraftTransaction}
+                      onLoadDraftDocumentChanges={financial.loadDraftTransactionDocumentChanges}
                       onDeleteDraftTransaction={financial.requestDeleteDraftTransaction}
+                      onSyncDraftBatch={financial.handleSyncDraftBatch}
                       hideSensitive={prefs.hideSensitive}
                       currency={financial.optimisticDashboardData?.setting?.currency || 'USD'}
                       onCancel={() => prefs.setActiveTab('ledger')}
                       onAddAnother={() => {
                         prefs.setActiveTab('ledger')
                         nav.setAutoOpenLedgerAdd(true)
+                      }}
+                      editorProps={{
+                        autocompleteSuggestions: financial.autocompleteSuggestions,
+                        transactions: financial.allTransactions,
+                        essentialsAlloc: financial.optimisticDashboardData?.setting?.essentialsAlloc ?? 0.5,
+                        growthAlloc: financial.optimisticDashboardData?.setting?.growthAlloc ?? 0.25,
+                        stabilityAlloc: financial.optimisticDashboardData?.setting?.stabilityAlloc ?? 0.15,
+                        rewardsAlloc: financial.optimisticDashboardData?.setting?.rewardsAlloc ?? 0.1,
+                        stabilityBalance: financial.optimisticDashboardData?.categories?.find(c => c.name === 'Stability')?.remaining ?? 0,
+                        stabilityTarget: financial.optimisticDashboardData?.setting?.targetStabilityFund ?? 10000,
+                        stabilityOverflowRedirect: financial.optimisticDashboardData?.setting?.stabilityOverflowRedirect || '',
+                        stabilityRecovery: isSelectedCycleCurrent ? financial.optimisticDashboardData?.stabilityRecovery : undefined,
+                        essentialsBalance: financial.optimisticDashboardData?.categories?.find(c => c.name === 'Essentials')?.remaining ?? 0,
+                        growthBalance: financial.optimisticDashboardData?.categories?.find(c => c.name === 'Growth')?.remaining ?? 0,
+                        rewardsBalance: financial.optimisticDashboardData?.categories?.find(c => c.name === 'Rewards')?.remaining ?? 0,
+                        onAddFormOpenChange: setIsLedgerAddOpen,
+                        receiptScanDraft: activeReceiptScanDraft,
+                        onReceiptScanStarted: handleReceiptScanStarted,
+                        onReceiptScanCleared: clearReceiptScanJob,
+                        activeScanJobIds: receiptScanJobIds,
+                        failedScanJob,
+                        onShowAlert: alert,
+                        receiptSplitDraft: activeReceiptSplitDraft,
+                        failedReceiptSplitJob,
+                        onReceiptSplitStarted: handleReceiptSplitStarted,
+                        onReceiptSplitCleared: clearReceiptSplitJob,
+                        onReceiptSplitOpenChange: setIsReceiptSplitOpen,
                       }}
                     />
                   )}

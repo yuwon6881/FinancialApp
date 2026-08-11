@@ -160,6 +160,34 @@ test('mobile transaction sheet remains contained at keyboard height', async ({ p
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1)
 })
 
+test('draft attachments survive a reload before the batch is added', async ({ page }) => {
+  test.skip(test.info().project.name !== 'mobile-light', 'One browser project proves IndexedDB draft persistence.')
+
+  await establishSession(page)
+  await seedDraftTransaction(page)
+  await mockApi(page, {
+    reliefCategories: [{ id: 'medical', name: 'Medical', limit: 10_000 }],
+  })
+  await page.goto('/drafts', { waitUntil: 'domcontentloaded' })
+
+  await page.getByRole('button', { name: 'Edit Weekend market' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Edit Draft' })
+  await expect(dialog).toBeVisible()
+  await dialog.locator('input[type="file"][multiple]').setInputFiles({
+    name: 'weekend-market.pdf',
+    mimeType: 'application/pdf',
+    buffer: Buffer.from('%PDF-1.4 draft receipt'),
+  })
+  await dialog.getByRole('combobox', { name: 'Tax relief category for weekend-market.pdf' }).click()
+  await page.getByRole('option', { name: /Medical/ }).click()
+  await dialog.getByRole('button', { name: 'Save Draft' }).click()
+  await expect(page.getByText('1 document')).toBeVisible()
+
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.getByRole('button', { name: 'Edit Weekend market' }).click()
+  await expect(page.getByRole('dialog', { name: 'Edit Draft' }).getByText('weekend-market.pdf')).toBeVisible()
+})
+
 const mobilePwaRoutes = [
   { path: '/reports', slug: 'reports', readyText: 'Carryover Rolling Ledgers' },
   { path: '/recurring', slug: 'recurring', readyText: 'Recurring Bills & Subscriptions' },

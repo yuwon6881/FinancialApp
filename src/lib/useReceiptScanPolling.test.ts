@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useReceiptScanPolling } from './useReceiptScanPolling'
+import type { AppTab } from '../types'
 
 const apiMocks = vi.hoisted(() => ({
   fetchReceiptScanJob: vi.fn(),
@@ -15,9 +16,8 @@ vi.mock('./api', () => ({
 function createOptions(isLedgerAddOpen: boolean) {
   return {
     token: 'token',
-    activeTabRef: { current: 'ledger' as const },
+    activeTabRef: { current: 'ledger' as AppTab },
     isLedgerAddOpenRef: { current: isLedgerAddOpen },
-    isMountedRef: { current: true },
     setActiveTab: vi.fn(),
     setAutoOpenLedgerAdd: vi.fn(),
     showToast: vi.fn(),
@@ -102,6 +102,33 @@ describe('useReceiptScanPolling', () => {
     expect(result.current.receiptScanJobIds).toEqual([])
     expect(apiMocks.deleteReceiptScanJob).toHaveBeenCalledTimes(1)
     expect(options.showToast).not.toHaveBeenCalled()
+    unmount()
+  })
+
+  it('keeps the current page until a completed scan is explicitly reviewed', async () => {
+    localStorage.setItem('receipt_scan_job_ids', JSON.stringify(['scan-review']))
+    apiMocks.fetchReceiptScanJob.mockResolvedValue({
+      scanId: 'scan-review',
+      status: 'completed',
+      result: { description: 'Lunch', amount: 12.5, date: '2026-07-16', category: 'Food', ledgerCategory: 'Essentials', txType: 'outflow' },
+      createdAt: '2026-07-16T00:00:00Z',
+      updatedAt: '2026-07-16T00:00:01Z',
+    })
+    const options = createOptions(false)
+    options.activeTabRef.current = 'settings'
+    const { result, unmount } = renderHook(() => useReceiptScanPolling(options))
+
+    await waitFor(() => expect(result.current.activeReceiptScanDraft?.jobId).toBe('scan-review'))
+    expect(options.showToast).toHaveBeenCalledWith(
+      'Receipt was scanned successfully.',
+      'Receipt Scan Completed',
+      'success',
+      expect.objectContaining({ label: 'Review' }),
+    )
+    expect(options.setActiveTab).not.toHaveBeenCalled()
+    act(() => options.showToast.mock.calls[0]?.[3]?.onAction())
+    expect(options.setActiveTab).toHaveBeenCalledWith('ledger')
+    expect(options.setAutoOpenLedgerAdd).toHaveBeenCalledWith(true)
     unmount()
   })
 

@@ -64,6 +64,24 @@ describe('transactionFormReducer stabilityTopUpAccepted', () => {
     expect(next.stabilityReloadIntent).toBe('NotRequired')
   })
 
+  it('opens a local draft without treating it as a persisted edit', () => {
+    const next = transactionFormReducer(getInitialState('2026-07-09', 'Other'), {
+      type: 'OPEN_DRAFT',
+      payload: {
+        id: 'draft-1', description: 'Emergency fund spend', amount: '250', date: '2026-07-09',
+        category: 'Other', ledgerCategory: 'Stability', txType: 'outflow',
+        stabilityReloadIntent: 'Required',
+      },
+    })
+
+    expect(next).toMatchObject({
+      mode: 'draft',
+      editingId: 'draft-1',
+      stabilityReloadIntent: 'Required',
+      showAddForm: true,
+    })
+  })
+
   it('does not carry the answer through a new entry or an unrelated edit', () => {
     const answered = transactionFormReducer(getInitialState('2026-07-09', 'Other'), {
       type: 'SET_FIELD', field: 'stabilityReloadIntent', value: 'Required',

@@ -89,14 +89,6 @@ const getPageSkeletonVariant = (tab: AppTab): PageSkeletonVariant => tab
 
 function App() {
   const loadAllAbortRef = useRef<AbortController | null>(null)
-  const isMountedRef = useRef(true)
-
-  useEffect(() => {
-    isMountedRef.current = true
-    return () => {
-      isMountedRef.current = false
-    }
-  }, [])
 
   useNativeAppLifecycle(hideNativeSplashAfterPaint)
 
@@ -155,6 +147,7 @@ function App() {
   // 5. Financial Data
   const financial = useFinancialData({
     token: session.token,
+    username: session.username,
     lastUnlockedTimeRef: session.lastUnlockedTimeRef,
     isLocked: session.isLocked,
     markSessionLocked: session.markSessionLocked,
@@ -208,25 +201,19 @@ function App() {
   }, [isInvestmentAddOpen])
 
   const activeTabRef = useRef(prefs.activeTab)
-  useEffect(() => {
-    activeTabRef.current = prefs.activeTab
-  }, [prefs.activeTab])
 
   // 6. Receipt scanning
   const receiptScan = useReceiptScanPolling({
     token: session.token,
     activeTabRef,
     isLedgerAddOpenRef,
-    isMountedRef,
     setActiveTab: prefs.setActiveTab,
     setAutoOpenLedgerAdd: nav.setAutoOpenLedgerAdd,
     showToast: dialogs.showToast,
   })
   const receiptSplit = useReceiptSplitPolling({
     token: session.token,
-    activeTabRef,
     isReceiptSplitOpenRef,
-    isMountedRef,
     setActiveTab: prefs.setActiveTab,
     setAutoOpenReceiptSplit: nav.setAutoOpenReceiptSplit,
     showToast: dialogs.showToast,
@@ -235,7 +222,6 @@ function App() {
     token: session.token,
     activeTabRef,
     isInvestmentAddOpenRef,
-    isMountedRef,
     setActiveTab: prefs.setActiveTab,
     setAutoOpenInvestmentAdd,
     showToast: dialogs.showToast,
@@ -326,19 +312,16 @@ function App() {
     }
   }, [prefs.activeTab, financial.draftTransactions, prefs.setActiveTab])
 
-  // Depend only on the stable identities (activeTab + the memoized/setter fns),
-  // NOT the whole `nav`/`prefs` objects — those are re-created every render, so
-  // including them made this effect run on every render. Because
-  // `clearIncomingFilters` now resets `ledgerIncomingFilters` to a fresh `[]`
-  // (a new reference that never bails out of a re-render), that turned into an
-  // infinite setState→render→effect loop (React error #185) whenever the active
-  // tab was not the ledger.
+  // Ledger filter state is durable for the session; its modal-opening intents
+  // are not. A lazy Ledger route may be left before consuming a one-shot request.
   useEffect(() => {
+    activeTabRef.current = prefs.activeTab
     if (prefs.activeTab !== 'ledger') {
-      nav.clearIncomingFilters()
-      prefs.setLedgerCyclesRange('monthly')
+      nav.setAutoOpenLedgerAdd(false)
+      nav.setAutoOpenLedgerTxType(null)
+      nav.setAutoOpenReceiptSplit(false)
     }
-  }, [prefs.activeTab, nav.clearIncomingFilters, prefs.setLedgerCyclesRange])
+  }, [prefs.activeTab, nav.setAutoOpenLedgerAdd, nav.setAutoOpenLedgerTxType, nav.setAutoOpenReceiptSplit])
 
   // Drop the subscription highlight (state + `?subscription=` param) whenever we
   // leave the Recurring tab. Without this, navigating away mid-highlight — before

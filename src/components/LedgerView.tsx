@@ -1,11 +1,12 @@
 import { Button } from './ui/Button'
-import React, { useState, useCallback, useEffect, useRef } from 'react'
+import React, { useState, useCallback, useRef } from 'react'
 import type {
   Transaction,
   TransactionCategory,
   AutocompleteSuggestion,
   TransactionDocumentChanges,
   StabilityRecovery,
+  CategorySummary,
 } from '../types'
 import type { PagedTransactionResult, ReceiptScanResult } from '../lib/api'
 import { CycleSkeleton } from './ui/Skeleton'
@@ -19,6 +20,7 @@ import { TransactionFormSheet, type TransactionFormSheetRef } from './ledger/Tra
 import type { ReceiptSplitDraft, ReceiptSplitFailure } from '../lib/useReceiptSplitPolling'
 import { calculateLedgerTotals } from '../lib/ledgerTotals'
 import type { TransactionLinkFilter } from '../lib/transactionFilters'
+import type { LedgerRouteState } from '../lib/appLocation'
 import { useIsMobile } from '../lib/useIsMobile'
 import { formatCurrencyVal } from '../lib/utils'
 import { X } from 'lucide-react'
@@ -27,10 +29,11 @@ import { SensitiveMask } from './ui/SensitiveAmount'
 // Hooks and sub-components
 import { useLedgerView } from './ledger/view/useLedgerView'
 import { LedgerToolbar } from './ledger/view/LedgerToolbar'
+import { LedgerPendingReviews } from './ledger/LedgerPendingReviews'
+import { LedgerBalanceReconciliation } from './ledger/LedgerBalanceReconciliation'
+import { getCycleLabelForDropdown } from '../lib/cycleLabels'
 
 const LEDGER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
-const ReceiptSplitSheet = React.lazy(() =>
-  import('./ledger/ReceiptSplitSheet').then(module => ({ default: module.ReceiptSplitSheet })))
 const LedgerExportModal = React.lazy(() =>
   import('./ledger/LedgerExportModal').then(module => ({ default: module.LedgerExportModal })))
 
@@ -74,6 +77,8 @@ interface LedgerViewProps {
   showAllCycles: boolean
   onClearAllCycles: () => void
   cyclesRange?: 'monthly' | '3month' | '6month' | 'yearly'
+  onRouteStateChange?: (state: Omit<LedgerRouteState, 'highlightedTxId'>) => void
+  ledgerSummaries?: CategorySummary[]
   currency?: string
   autoOpenAddForm?: boolean
   autoOpenTxType?: 'inflow' | 'outflow' | 'transfer' | null
@@ -102,6 +107,7 @@ interface LedgerViewProps {
   receiptScanDraft?: { jobId: string; result: ReceiptScanResult } | null
   onReceiptScanStarted?: (scanId: string) => void
   onReceiptScanCleared?: (scanId: string) => void | Promise<void>
+  onReviewReceiptScan?: () => void
   onAddFormOpenChange?: (open: boolean) => void
   activeScanJobIds?: string[]
   failedScanJob?: { jobId: string; errorMessage: string } | null
@@ -112,6 +118,7 @@ interface LedgerViewProps {
   autoOpenReceiptSplit?: boolean
   onResetAutoOpenReceiptSplit?: () => void
   receiptSplitDraft?: ReceiptSplitDraft | null
+  onReviewReceiptSplit?: () => void
   failedReceiptSplitJob?: ReceiptSplitFailure | null
   onReceiptSplitStarted?: (scanId: string) => void
   onReceiptSplitCleared?: (scanId: string) => void | Promise<void>
@@ -132,37 +139,10 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
 
   const formRef = useRef<TransactionFormSheetRef>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [isReceiptSplitOpen, setIsReceiptSplitOpen] = useState(false)
   const handleAddFormOpenChange = useCallback((open: boolean) => {
     setIsFormOpen(open)
     props.onAddFormOpenChange?.(open)
   }, [props.onAddFormOpenChange])
-  const setReceiptSplitOpen = useCallback((open: boolean) => {
-    setIsReceiptSplitOpen(open)
-    props.onReceiptSplitOpenChange?.(open)
-  }, [props.onReceiptSplitOpenChange])
-
-  // The split editor is opened by a finished scan, not by a menu entry: the scan
-  // itself is started from the transaction form's picker, and the form stays open
-  // underneath so "Use This Amount" lands straight back in it.
-  useEffect(() => {
-    if (!props.receiptSplitDraft) return
-    if (hideSensitive) return
-    setReceiptSplitOpen(true)
-  }, [props.receiptSplitDraft, hideSensitive, setReceiptSplitOpen])
-
-  // Same open, requested by the poller when a scan finished while the app was
-  // elsewhere (the toast's follow-up).
-  useEffect(() => {
-    if (!props.autoOpenReceiptSplit) return
-    if (!hideSensitive) setReceiptSplitOpen(true)
-    props.onResetAutoOpenReceiptSplit?.()
-  }, [props.autoOpenReceiptSplit, hideSensitive, setReceiptSplitOpen, props.onResetAutoOpenReceiptSplit])
-
-  useEffect(() => {
-    if (hideSensitive) setReceiptSplitOpen(false)
-  }, [hideSensitive, setReceiptSplitOpen])
-
   const ledger = useLedgerView({
     ...props,
     isMobile,
@@ -226,12 +206,20 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
   const activeMaxAmount = props.showAllCycles ? ledger.appliedMaxAmount : ledger.selectedMaxAmount
   const activeRecurringFilter = props.showAllCycles ? ledger.appliedRecurringFilter : ledger.selectedRecurringFilter
   const activeWishlistFilter = props.showAllCycles ? ledger.appliedWishlistFilter : ledger.selectedWishlistFilter
+  const activeSearch = props.showAllCycles ? ledger.appliedSearch : ledger.searchTerm
+  const activeTxType = props.showAllCycles ? ledger.appliedTxTypeFilter : ledger.selectedTxTypeFilter
+  const activeFilters = props.showAllCycles ? ledger.appliedFilters : ledger.selectedFilters
   const activeAdvancedFilterCount =
     (activeStartDate || activeEndDate ? 1 : 0) +
     (activeMinAmount || activeMaxAmount ? 1 : 0) +
     (activeRecurringFilter !== 'all' ? 1 : 0) +
     (activeWishlistFilter !== 'all' ? 1 : 0) +
-    ((props.showAllCycles ? ledger.appliedTxTypeFilter : ledger.selectedTxTypeFilter) ? 1 : 0)
+    (activeTxType ? 1 : 0)
+  const balanceSummary = React.useMemo(() => {
+    if (props.showAllCycles || !activeBucketFilter || activeBucketFilter === 'Income') return null
+    if (activeFilters.length !== 1 || activeSearch || activeAdvancedFilterCount > 0) return null
+    return props.ledgerSummaries?.find(summary => summary.name === activeBucketFilter) ?? null
+  }, [props.showAllCycles, props.ledgerSummaries, activeBucketFilter, activeFilters.length, activeSearch, activeAdvancedFilterCount])
 
   const listProps: LedgerListProps = {
     transactions: ledger.displayTransactions,
@@ -270,6 +258,13 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
           }
         }}
         onOpenExport={() => ledger.setShowExportModal(true)}
+      />
+
+      <LedgerPendingReviews
+        receiptReady={!hideSensitive && Boolean(props.receiptScanDraft) && !isFormOpen}
+        receiptSplitReady={!hideSensitive && Boolean(props.receiptSplitDraft)}
+        onReviewReceipt={props.onReviewReceiptScan}
+        onReviewReceiptSplit={props.onReviewReceiptSplit}
       />
 
       {(() => {
@@ -342,6 +337,14 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         )
       })()}
 
+      {balanceSummary && (
+        <LedgerBalanceReconciliation
+          category={balanceSummary}
+          cycleLabel={getCycleLabelForDropdown(props.selectedMonth, props.selectedYear, props.cycleDay)}
+          formatSensitive={formatSensitive}
+        />
+      )}
+
       <TransactionFormSheet
         ref={formRef}
         categories={props.categories}
@@ -379,20 +382,11 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         receiptSplitDraft={props.receiptSplitDraft}
         failedReceiptSplitJob={props.failedReceiptSplitJob}
         onReceiptSplitStarted={props.onReceiptSplitStarted}
+        onReceiptSplitCleared={props.onReceiptSplitCleared}
+        autoOpenReceiptSplit={props.autoOpenReceiptSplit}
+        onResetAutoOpenReceiptSplit={props.onResetAutoOpenReceiptSplit}
+        onReceiptSplitOpenChange={props.onReceiptSplitOpenChange}
       />
-
-      {isReceiptSplitOpen && props.receiptSplitDraft && (
-        <React.Suspense fallback={null}>
-          <ReceiptSplitSheet
-            isOpen
-            currency={currency}
-            draft={props.receiptSplitDraft}
-            onClear={scanId => props.onReceiptSplitCleared?.(scanId)}
-            onClose={() => setReceiptSplitOpen(false)}
-            onUseResult={draft => formRef.current?.openWithDraft(draft)}
-          />
-        </React.Suspense>
-      )}
 
       <LedgerFilterBar
         showAllCycles={props.showAllCycles}

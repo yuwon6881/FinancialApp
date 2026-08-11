@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 
 import * as api from './api'
 import type { InvestmentActivityScanResult } from './api'
 import type { AppTab } from '../types'
-import type { ToastTone } from '../components/ui/ToastViewport'
+import type { ToastAction, ToastTone } from '../components/ui/ToastViewport'
 import { errorMessageIncludes, errorMessageIncludesLower } from './errors'
-import { buildMutationSuccessToast } from './mutationToast'
+import { scanReviewAction } from './scanReviewAction'
 
 const JOB_IDS_KEY = 'investment_scan_job_ids'
 const NOTIFIED_IDS_KEY = 'investment_scan_notified_ids'
@@ -40,10 +40,9 @@ interface Options {
   token: string | null
   activeTabRef: MutableRefObject<AppTab>
   isInvestmentAddOpenRef: MutableRefObject<boolean>
-  isMountedRef: MutableRefObject<boolean>
   setActiveTab: (tab: AppTab) => void
   setAutoOpenInvestmentAdd: (open: boolean) => void
-  showToast: (message: string, title?: string, tone?: ToastTone) => void
+  showToast: (message: string, title?: string, tone?: ToastTone, action?: ToastAction) => void
 }
 
 export function useInvestmentScanPolling(options: Options) {
@@ -51,7 +50,6 @@ export function useInvestmentScanPolling(options: Options) {
     token,
     activeTabRef,
     isInvestmentAddOpenRef,
-    isMountedRef,
     setActiveTab,
     setAutoOpenInvestmentAdd,
     showToast,
@@ -129,18 +127,8 @@ export function useInvestmentScanPolling(options: Options) {
               if (!isInModal) {
                 if (!notifiedIds.includes(jobId)) {
                   setNotifiedIds(current => current.includes(jobId) ? current : [...current, jobId])
-                  const copy = buildMutationSuccessToast({
-                    entity: 'Investment Scan',
-                    action: 'Completed',
-                    message: 'Investment record was scanned successfully.',
-                  })
-                  showToast(copy.message, copy.title, copy.tone)
+                  showToast('Investment record was scanned successfully.', 'Investment Scan Completed', 'success', scanReviewAction(setActiveTab, setAutoOpenInvestmentAdd, 'investments'))
                 }
-                window.setTimeout(() => {
-                  if (!isMountedRef.current) return
-                  setActiveTab('investments')
-                  setAutoOpenInvestmentAdd(true)
-                }, 1000)
               }
             }
           } catch (error: unknown) {
@@ -160,7 +148,7 @@ export function useInvestmentScanPolling(options: Options) {
       cancelled = true
       window.clearInterval(interval)
     }
-  }, [token, jobIds, notifiedIds, draft, activeTabRef, isInvestmentAddOpenRef, isMountedRef,
+  }, [token, jobIds, notifiedIds, draft, activeTabRef, isInvestmentAddOpenRef,
     deleteOnce, setActiveTab, setAutoOpenInvestmentAdd, showToast, updateJobIds])
 
   return {

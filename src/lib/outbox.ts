@@ -219,7 +219,7 @@ const SUCCESS_TOAST_OVERRIDES: Partial<Record<string, (op: QueuedOp) => ToastCop
       })
     }
     // Acknowledging an end-of-cycle summary is a silent bookkeeping write — no toast.
-    if (op.targetId === 'summarySeen') return null
+    if (op.targetId === 'summarySeen' || op.targetId === 'selectedPeriod') return null
     return defaultSyncSuccessToast(op)
   },
   'recurringPayment:reminder': (op) => buildMutationSuccessToast({

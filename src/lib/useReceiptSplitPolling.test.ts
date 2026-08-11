@@ -45,9 +45,7 @@ describe('useReceiptSplitPolling', () => {
     })
     const options = {
       token: 'token',
-      activeTabRef: { current: 'dashboard' as const },
       isReceiptSplitOpenRef: { current: false },
-      isMountedRef: { current: true },
       setActiveTab: vi.fn(),
       setAutoOpenReceiptSplit: vi.fn(),
       showToast: vi.fn(),
@@ -61,7 +59,13 @@ describe('useReceiptSplitPolling', () => {
       'Receipt items were prepared for review.',
       'Receipt Split Completed',
       'success',
+      expect.objectContaining({ label: 'Review' }),
     )
+    expect(options.setActiveTab).not.toHaveBeenCalled()
+    expect(options.setAutoOpenReceiptSplit).not.toHaveBeenCalled()
+    act(() => options.showToast.mock.calls[0]?.[3]?.onAction())
+    expect(options.setActiveTab).toHaveBeenCalledWith('ledger')
+    expect(options.setAutoOpenReceiptSplit).toHaveBeenCalledWith(true)
 
     await act(async () => {
       await result.current.clearReceiptSplitJob('split-complete')

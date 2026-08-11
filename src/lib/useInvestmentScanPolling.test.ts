@@ -17,7 +17,6 @@ const options = (isOpen: boolean) => ({
   token: 'token',
   activeTabRef: { current: 'dashboard' as AppTab },
   isInvestmentAddOpenRef: { current: isOpen },
-  isMountedRef: { current: true },
   setActiveTab: vi.fn(),
   setAutoOpenInvestmentAdd: vi.fn(),
   showToast: vi.fn(),
@@ -72,7 +71,7 @@ describe('useInvestmentScanPolling', () => {
     unmount()
   })
 
-  it('toasts, navigates, and requests the add modal after a background scan completes', async () => {
+  it('stays on the current page until Review is selected', async () => {
     localStorage.setItem('investment_scan_job_ids', JSON.stringify(['investment-1']))
     apiMocks.fetchInvestmentScanJob.mockResolvedValue(completedJob)
     const scanOptions = options(false)
@@ -83,12 +82,14 @@ describe('useInvestmentScanPolling', () => {
       'Investment record was scanned successfully.',
       'Investment Scan Completed',
       'success',
+      expect.objectContaining({ label: 'Review' }),
     )
-
-    await waitFor(() => {
-      expect(scanOptions.setActiveTab).toHaveBeenCalledWith('investments')
-      expect(scanOptions.setAutoOpenInvestmentAdd).toHaveBeenCalledWith(true)
-    }, { timeout: 2000 })
+    expect(scanOptions.setActiveTab).not.toHaveBeenCalled()
+    expect(scanOptions.setAutoOpenInvestmentAdd).not.toHaveBeenCalled()
+    const action = scanOptions.showToast.mock.calls[0]?.[3]
+    act(() => action?.onAction())
+    expect(scanOptions.setActiveTab).toHaveBeenCalledWith('investments')
+    expect(scanOptions.setAutoOpenInvestmentAdd).toHaveBeenCalledWith(true)
     unmount()
   })
 })

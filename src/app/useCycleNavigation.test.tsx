@@ -114,4 +114,37 @@ describe('useCycleNavigation', () => {
     expect(persistPeriod).toHaveBeenCalledWith('Sep', 2026)
     expect(api.selectPeriod).not.toHaveBeenCalled()
   })
+
+  it('retains the applied Ledger route state for a later remount', () => {
+    const setLedgerCyclesRange = vi.fn()
+    const { result } = renderHook(() => useCycleNavigation({
+      loadAll: vi.fn(),
+      handleLogout: vi.fn(),
+      markSessionLocked: vi.fn(),
+      setDashboardData: vi.fn(),
+      setTransactions: vi.fn(),
+      setActiveTab: vi.fn(),
+      setLedgerCyclesRange,
+    }))
+
+    act(() => result.current.syncLedgerRouteState({
+      filters: ['Stability'],
+      search: '',
+      startDate: '2026-08-09',
+      endDate: '2026-08-11',
+      minAmount: '',
+      maxAmount: '',
+      recurringFilter: 'all',
+      wishlistFilter: 'all',
+      txType: null,
+      showAllCycles: true,
+      range: 'yearly',
+    }))
+
+    expect(result.current.ledgerIncomingFilters).toEqual(['Stability'])
+    expect(result.current.ledgerIncomingStartDate).toBe('2026-08-09')
+    expect(result.current.ledgerIncomingEndDate).toBe('2026-08-11')
+    expect(result.current.ledgerShowAllCycles).toBe(true)
+    expect(setLedgerCyclesRange).toHaveBeenLastCalledWith('yearly')
+  })
 })

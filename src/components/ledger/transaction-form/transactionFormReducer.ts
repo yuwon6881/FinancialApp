@@ -6,7 +6,7 @@ export type SelectableLedgerCategory = 'Income' | TransferBucket
 
 export interface TransactionFormState {
   showAddForm: boolean
-  mode: 'create' | 'edit'
+  mode: 'create' | 'edit' | 'draft'
   editingId: string | null
   description: string
   amount: string
@@ -37,6 +37,7 @@ export interface TransactionFormState {
 export type TransactionFormAction =
   | { type: 'OPEN_CREATE'; payload?: { defaultCategory: string; todayDate: string } }
   | { type: 'OPEN_EDIT'; payload: { id: string; description: string; amount: string; date: string; category: string; ledgerCategory: string; txType: TransactionType; transferSource?: TransferBucket; transferTarget?: TransferBucket; stabilityRecoveryTopUpAmount?: number | null; stabilityReloadIntent?: StabilityReloadIntent } }
+  | { type: 'OPEN_DRAFT'; payload: { id: string; description: string; amount: string; date: string; category: string; ledgerCategory: string; txType: TransactionType; transferSource?: TransferBucket; transferTarget?: TransferBucket; stabilityRecoveryTopUpAmount?: number | null; stabilityReloadIntent?: StabilityReloadIntent } }
   | { type: 'SET_FIELD'; field: keyof TransactionFormState; value: any }
   | { type: 'APPLY_RECEIPT'; payload: { description?: string; amount?: string | number | null; date?: string | null; txType?: TransactionType; ledgerCategory?: SelectableLedgerCategory; category?: string }; todayDate: string }
   | { type: 'APPLY_AI_DRAFT'; payload: Record<string, any>; todayDate: string }
@@ -87,10 +88,11 @@ export function transactionFormReducer(state: TransactionFormState, action: Tran
         errors: {},
       }
     case 'OPEN_EDIT':
+    case 'OPEN_DRAFT':
       return {
         ...state,
         showAddForm: true,
-        mode: 'edit',
+        mode: action.type === 'OPEN_DRAFT' ? 'draft' : 'edit',
         editingId: action.payload.id,
         description: action.payload.description,
         amount: action.payload.amount,

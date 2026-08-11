@@ -201,6 +201,15 @@ describe('DISPATCH idempotency wiring', () => {
 })
 
 describe('sync success toast copy', () => {
+  it('keeps selected-cycle navigation silent', () => {
+    expect(getSyncSuccessToast(makeOp({
+      entity: 'settings',
+      type: 'update',
+      targetId: 'selectedPeriod',
+      payload: { selectedMonth: 'Jul', selectedYear: 2026 },
+    }))).toBeNull()
+  })
+
   it('uses one count-based toast for a bulk delete', () => {
     expect(getSyncSuccessToast(makeOp({
       entity: 'transaction',

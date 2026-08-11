@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 
 import * as api from './api'
 import type { ReceiptScanResult } from './api'
 import type { AppTab } from '../types'
-import type { ToastTone } from '../components/ui/ToastViewport'
+import type { ToastAction, ToastTone } from '../components/ui/ToastViewport'
 import { errorMessageIncludes, errorMessageIncludesLower } from './errors'
-import { buildMutationSuccessToast } from './mutationToast'
+import { scanReviewAction } from './scanReviewAction'
 
 const RECEIPT_SCAN_JOB_IDS_KEY = 'receipt_scan_job_ids'
 const RECEIPT_SCAN_NOTIFIED_IDS_KEY = 'receipt_scan_notified_ids'
@@ -44,11 +44,9 @@ export interface UseReceiptScanPollingOptions {
   activeTabRef: MutableRefObject<AppTab>
   /** Ref to whether the Ledger add-transaction modal is open. */
   isLedgerAddOpenRef: MutableRefObject<boolean>
-  /** Ref guarding against setState after unmount. */
-  isMountedRef: MutableRefObject<boolean>
   setActiveTab: (tab: AppTab) => void
   setAutoOpenLedgerAdd: (open: boolean) => void
-  showToast: (message: string, title?: string, tone?: ToastTone) => void
+  showToast: (message: string, title?: string, tone?: ToastTone, action?: ToastAction) => void
 }
 
 export interface UseReceiptScanPollingResult {
@@ -66,7 +64,7 @@ export interface UseReceiptScanPollingResult {
  * of App.tsx; cross-cutting tab/modal refs and the toast fn are injected.
  */
 export function useReceiptScanPolling(options: UseReceiptScanPollingOptions): UseReceiptScanPollingResult {
-  const { token, activeTabRef, isLedgerAddOpenRef, isMountedRef, setActiveTab, setAutoOpenLedgerAdd, showToast } = options
+  const { token, activeTabRef, isLedgerAddOpenRef, setActiveTab, setAutoOpenLedgerAdd, showToast } = options
 
   const [receiptScanJobIds, setReceiptScanJobIds] = useState<string[]>(() => readStoredIds(RECEIPT_SCAN_JOB_IDS_KEY))
   const receiptScanJobIdsRef = useRef(receiptScanJobIds)
@@ -175,19 +173,8 @@ export function useReceiptScanPolling(options: UseReceiptScanPollingOptions): Us
               if (!isInModal) {
                 if (!notifiedReceiptScanJobIds.includes(scanId)) {
                   setNotifiedReceiptScanJobIds(prev => prev.includes(scanId) ? prev : [...prev, scanId])
-                  const copy = buildMutationSuccessToast({
-                    entity: 'Receipt Scan',
-                    action: 'Completed',
-                    message: 'Receipt was scanned successfully.',
-                  })
-                  showToast(copy.message, copy.title, copy.tone)
+                  showToast('Receipt was scanned successfully.', 'Receipt Scan Completed', 'success', scanReviewAction(setActiveTab, setAutoOpenLedgerAdd, 'ledger'))
                 }
-
-                window.setTimeout(() => {
-                  if (!isMountedRef.current) return
-                  setActiveTab('ledger')
-                  setAutoOpenLedgerAdd(true)
-                }, 1000)
               }
             }
           } catch (err: unknown) {
@@ -211,7 +198,7 @@ export function useReceiptScanPolling(options: UseReceiptScanPollingOptions): Us
       cancelled = true
       window.clearInterval(interval)
     }
-  }, [token, receiptScanJobIds, notifiedReceiptScanJobIds, activeReceiptScanDraft, deleteReceiptScanJobOnce, removeReceiptScanJobState, activeTabRef, isLedgerAddOpenRef, isMountedRef, setActiveTab, setAutoOpenLedgerAdd, showToast])
+  }, [token, receiptScanJobIds, notifiedReceiptScanJobIds, activeReceiptScanDraft, deleteReceiptScanJobOnce, removeReceiptScanJobState, activeTabRef, isLedgerAddOpenRef, setActiveTab, setAutoOpenLedgerAdd, showToast])
 
   return {
     activeReceiptScanDraft,

@@ -180,6 +180,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
   useAutoOpenModal(autoOpenAddForm, () => openPanel('activity'), onResetAutoOpen)
   useEffect(() => {
     if (!investmentScanDraft || !['Deposit', 'Withdrawal', 'Conversion'].includes(investmentScanDraft.result.type ?? '')) return
+    if (panel === null) return
     if (panel === 'cash' && !editingCashFlow) return
     setEditingActivity(null)
     setEditingCashFlow(null)
@@ -237,6 +238,25 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
           </Button>
         )}
       </header>
+
+      {investmentScanDraft && panel === null && (
+        <section aria-labelledby="investment-scan-ready-title" className="app-panel rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 id="investment-scan-ready-title" className="text-sm font-bold text-foreground">Investment scan ready for review</h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">Nothing opens until you choose to review the scanned record.</p>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => ['Deposit', 'Withdrawal', 'Conversion'].includes(investmentScanDraft.result.type ?? '') ? openCashPanel() : openPanel('activity')}
+            >
+              Review scan
+            </Button>
+          </div>
+        </section>
+      )}
 
       {(isOffline || loadError) && (
         <div role="status" className="flex items-center gap-2 rounded-xl border border-amber-500/25 bg-amber-500/8 px-4 py-3 text-xs text-amber-700 dark:text-amber-300">

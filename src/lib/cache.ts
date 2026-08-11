@@ -225,6 +225,8 @@ export function clearCachedInvestmentPages(): void {
 }
 
 export function clearLocalFinancialData(): void {
+  void import('./draftTransactionDocuments').then(({ clearDraftTransactionDocuments }) =>
+    clearDraftTransactionDocuments())
   for (const key of [...Object.values(CACHE_KEYS), CYCLE_SNAPSHOTS_KEY]) {
     try {
       removeCachedKey(key)

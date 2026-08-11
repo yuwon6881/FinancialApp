@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle } from 'react'
+import { forwardRef, lazy, Suspense, useCallback, useEffect, useImperativeHandle, useState } from 'react'
 import { useAppContext } from '../../contexts/AppContext'
 import { BottomSheet } from '../ui/BottomSheet'
 import { ReceiptScanPicker } from './transaction-form/ReceiptScanPicker'
@@ -20,6 +20,9 @@ import type { ReceiptSplitDraft, ReceiptSplitFailure } from '../../lib/useReceip
 import type { ReceiptScanResult } from '../../lib/api'
 import { Button } from '../ui/Button'
 import { ModalActions } from '../ui/ModalActions'
+
+const ReceiptSplitSheet = lazy(() =>
+  import('./ReceiptSplitSheet').then(module => ({ default: module.ReceiptSplitSheet })))
 
 export interface TransactionFormSheetProps {
   categories: TransactionCategory[]
@@ -48,6 +51,12 @@ export interface TransactionFormSheetProps {
     transaction: Omit<Transaction, 'id'>,
     documentChanges?: TransactionDocumentChanges,
   ) => Promise<void> | void
+  onUpdateDraftTransaction?: (
+    id: string,
+    transaction: Omit<Transaction, 'id'>,
+    documentChanges: TransactionDocumentChanges,
+  ) => Promise<void> | void
+  onLoadDraftDocumentChanges?: (id: string) => Promise<TransactionDocumentChanges>
   onStartEditPending?: (id: string | null) => void
   onAddFormOpenChange?: (open: boolean) => void
   autoOpenAddForm?: boolean
@@ -58,13 +67,17 @@ export interface TransactionFormSheetProps {
   onReceiptScanCleared?: (scanId: string) => void | Promise<void>
   activeScanJobIds?: string[]
   failedScanJob?: { jobId: string; errorMessage: string } | null
-  aiEditDraft?: any
+  aiEditDraft?: { nonce: number; id: string; changes: Record<string, unknown> } | null
   onAiEditDraftConsumed?: () => void
   onFetchTransactionById?: (id: string) => Promise<Transaction>
   onShowAlert?: (message: string, title?: string) => void
   receiptSplitDraft?: ReceiptSplitDraft | null
   failedReceiptSplitJob?: ReceiptSplitFailure | null
   onReceiptSplitStarted?: (scanId: string) => void
+  onReceiptSplitCleared?: (scanId: string) => void | Promise<void>
+  autoOpenReceiptSplit?: boolean
+  onResetAutoOpenReceiptSplit?: () => void
+  onReceiptSplitOpenChange?: (open: boolean) => void
 }
 
 export interface TransactionPrefillDraft {
@@ -80,12 +93,18 @@ export interface TransactionFormSheetRef {
   openFresh: () => void
   openWithDraft: (draft: TransactionPrefillDraft) => void
   handleStartEdit: (t: Transaction) => void
+  handleStartDraft: (t: Transaction) => Promise<void>
   handleCloseForm: () => void
 }
 
 export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, TransactionFormSheetProps>((props, ref) => {
   const app = useAppContext()
   const form = useTransactionForm(props)
+  const [isReceiptSplitOpen, setIsReceiptSplitOpen] = useState(false)
+  const setReceiptSplitOpen = useCallback((open: boolean) => {
+    setIsReceiptSplitOpen(open)
+    props.onReceiptSplitOpenChange?.(open)
+  }, [props.onReceiptSplitOpenChange])
   const splitScan = useReceiptSplitScan({
     receiptSplitDraft: props.receiptSplitDraft,
     failedReceiptSplitJob: props.failedReceiptSplitJob,
@@ -97,12 +116,26 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
     openFresh: form.openFresh,
     openWithDraft: form.openWithDraft,
     handleStartEdit: form.handleStartEdit,
+    handleStartDraft: form.handleStartDraft,
     handleCloseForm: form.handleCloseForm,
   }))
 
-  const title = form.state.mode === 'edit' ? 'Edit Transaction' : 'Add Transaction'
+  useEffect(() => {
+    if (!props.autoOpenReceiptSplit) return
+    if (!props.hideSensitive) setReceiptSplitOpen(true)
+    props.onResetAutoOpenReceiptSplit?.()
+  }, [props.autoOpenReceiptSplit, props.hideSensitive, props.onResetAutoOpenReceiptSplit, setReceiptSplitOpen])
+
+  useEffect(() => {
+    if (props.hideSensitive) setReceiptSplitOpen(false)
+  }, [props.hideSensitive, setReceiptSplitOpen])
+
+  const title = form.state.mode === 'edit'
+    ? 'Edit Transaction'
+    : form.state.mode === 'draft' ? 'Edit Draft' : 'Add Transaction'
 
   return (
+    <>
     <BottomSheet
       isOpen={form.state.showAddForm}
       onClose={form.handleCloseForm}
@@ -168,8 +201,10 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
           {form.state.transactionType === 'outflow' && (
             <div className="sm:col-span-2">
               <TransactionDocumentsField
+                key={form.documentFieldRevision}
                 ref={form.documentsFieldRef}
                 existingDocuments={form.existingDocuments}
+                initialChanges={form.initialDocumentChanges}
                 defaultTaxYear={Number(form.state.date.slice(0, 4)) || new Date().getFullYear()}
                 transactionAmount={form.state.amount}
                 currency={props.currency}
@@ -180,6 +215,9 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
         </div>
 
         <ModalActions className="pt-2">
+          {form.state.errors.submit && (
+            <p className="basis-full text-sm text-destructive" role="alert">{form.state.errors.submit}</p>
+          )}
           <Button
             variant="outline"
             type="button"
@@ -192,11 +230,24 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
             type="submit"
             className="rounded-xl py-2.5 shadow-lg shadow-primary/10"
           >
-            {form.state.mode === 'edit' ? 'Save Changes' : 'Add Transaction'}
+            {form.state.mode === 'edit' ? 'Save Changes' : form.state.mode === 'draft' ? 'Save Draft' : 'Add Transaction'}
           </Button>
         </ModalActions>
       </form>
     </BottomSheet>
+    {isReceiptSplitOpen && props.receiptSplitDraft && (
+      <Suspense fallback={null}>
+        <ReceiptSplitSheet
+          isOpen
+          currency={props.currency}
+          draft={props.receiptSplitDraft}
+          onClear={scanId => props.onReceiptSplitCleared?.(scanId)}
+          onClose={() => setReceiptSplitOpen(false)}
+          onUseResult={form.applyPrefill}
+        />
+      </Suspense>
+    )}
+    </>
   )
 })
 

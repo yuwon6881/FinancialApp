@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, type Dispatch, type SetStateAction } from 'react'
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion'
-import { CreditCard, PiggyBank, Sparkles, Upload, Wallet, X, Zap } from 'lucide-react'
+import { CreditCard, PiggyBank, Sparkles, Wallet, X, Zap } from 'lucide-react'
 import type { DashboardData, PendingNotification } from '../types'
 import { MONTH_NAMES } from '../lib/cycle'
 import type { useAppDialogs } from './useAppDialogs'
@@ -142,8 +142,12 @@ export function AppOverlays({
             const month = MONTH_NAMES[cycleSummary.target!.monthIndex - 1]
             const year = cycleSummary.target!.year
             cycleSummary.onClose()
-            void nav.handleSelectPeriod(month, year)
-            prefs.setActiveTab('ledger')
+            nav.handleNavigateToLedger({
+              targetMonth: month,
+              targetYear: year,
+              range: 'monthly',
+              showAllCycles: false,
+            })
           }}
         />
       )}
@@ -281,39 +285,26 @@ export function AppOverlays({
               </m.div>
             )}
           </AnimatePresence>
-          <m.button
+          {prefs.activeTab !== 'drafts' && <m.button
             ref={fabTriggerRef}
             type="button"
             whileTap={reduceMotion ? undefined : { scale: 0.92 }}
-            disabled={prefs.activeTab === 'drafts' && prefs.hideSensitive}
-            onClick={() => {
-              if (prefs.activeTab === 'drafts') {
-                financial.handleSyncDraftBatch()
-              } else {
-                fabMenu.toggle()
-              }
-            }}
-            className={`fixed right-6 flex items-center justify-center size-14 rounded-full shadow-xl cursor-pointer ${
-              prefs.activeTab === 'drafts'
-                ? 'bg-emerald-600 text-on-vivid shadow-emerald-600/25 z-40'
-                : 'bg-primary text-primary-foreground shadow-primary/25 z-40 lg:hidden'
-            }`}
+            onClick={fabMenu.toggle}
+            className="fixed right-6 z-40 flex size-14 cursor-pointer items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/25 lg:hidden"
             style={{
               bottom: 'calc(96px + env(safe-area-inset-bottom, 0px))'
             }}
-            title={prefs.activeTab === 'drafts' && prefs.hideSensitive ? 'Reveal sensitive data to sync drafts' : prefs.activeTab === 'drafts' ? 'Sync Batch to Server' : fabMenu.isOpen ? 'Close Menu' : 'Open Menu'}
-            aria-label={prefs.activeTab === 'drafts' ? 'Sync Batch to Server' : fabMenu.isOpen ? 'Close Menu' : 'Open Menu'}
-            aria-expanded={prefs.activeTab === 'drafts' ? undefined : fabMenu.isOpen}
-            aria-controls={prefs.activeTab === 'drafts' ? undefined : 'mobile-fab-actions'}
+            title={fabMenu.isOpen ? 'Close Menu' : 'Open Menu'}
+            aria-label={fabMenu.isOpen ? 'Close Menu' : 'Open Menu'}
+            aria-expanded={fabMenu.isOpen}
+            aria-controls="mobile-fab-actions"
           >
-            {prefs.activeTab === 'drafts' ? (
-              <Upload className="size-6" />
-            ) : fabMenu.isOpen ? (
+            {fabMenu.isOpen ? (
               <X className="size-6" />
             ) : (
               <Zap className="size-6" />
             )}
-          </m.button>
+          </m.button>}
         </>
       )}
     </>

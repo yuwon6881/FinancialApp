@@ -23,6 +23,7 @@ export interface TransactionDocumentsFieldRef {
 
 interface TransactionDocumentsFieldProps {
   existingDocuments?: VaultDocument[]
+  initialChanges?: TransactionDocumentChanges
   disabled?: boolean
   defaultTaxYear: number
   transactionAmount: string
@@ -40,9 +41,13 @@ const parseTransactionAmount = (value: string): number | undefined => {
 export const TransactionDocumentsField = React.forwardRef<
   TransactionDocumentsFieldRef,
   TransactionDocumentsFieldProps
->(({ existingDocuments = [], disabled = false, defaultTaxYear, transactionAmount, currency }, ref) => {
-  const [pendingDocs, setPendingDocs] = useState<PendingDocument[]>([])
-  const [unlinkIds, setUnlinkIds] = useState<number[]>([])
+>(({ existingDocuments = [], initialChanges, disabled = false, defaultTaxYear, transactionAmount, currency }, ref) => {
+  const [pendingDocs, setPendingDocs] = useState<PendingDocument[]>(() =>
+    (initialChanges?.pending ?? []).map(document => ({
+      ...document,
+      previewUrl: document.file.type.startsWith('image/') ? URL.createObjectURL(document.file) : null,
+    })))
+  const [unlinkIds, setUnlinkIds] = useState<number[]>(() => [...(initialChanges?.unlinkIds ?? [])])
   const [reliefCategories, setReliefCategories] = useState<TaxReliefCategoryDefinition[]>([])
   const [categoriesLoaded, setCategoriesLoaded] = useState(false)
   const [categoryLoadFailed, setCategoryLoadFailed] = useState(false)
