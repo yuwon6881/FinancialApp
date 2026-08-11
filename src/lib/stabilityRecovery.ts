@@ -127,11 +127,16 @@ export function replayStabilityReload(
   target: number,
   movements: StabilityReloadMovement[],
 ): StabilityReloadReplay {
-  const queue: { date: string; amount: number }[] = []
-  let outstanding = Math.max(0, opening.outstanding)
-  if (outstanding > 0 && opening.oldestOutstandingDate) {
-    queue.push({ date: opening.oldestOutstandingDate, amount: outstanding })
+  // The obligation is the queue and nothing else -- see the matching comment in
+  // StabilityReloadLedger.Replay. Tracking a separate running total let a carried obligation with
+  // no carried date leave the queue empty while the total stayed positive, and every repayment
+  // after that debited one and not the other.
+  const queue: { date?: string; amount: number }[] = []
+  if (opening.outstanding > 0) {
+    queue.push({ date: opening.oldestOutstandingDate, amount: opening.outstanding })
   }
+
+  const outstandingNow = () => queue.reduce((sum, entry) => sum + entry.amount, 0)
 
   let running = openingBalance
   let markedThisRun = 0
@@ -139,7 +144,6 @@ export function replayStabilityReload(
 
   const clearAtTarget = () => {
     queue.length = 0
-    outstanding = 0
     // Attainment starts a clean pace window. A later same-cycle drawdown must not inherit the
     // repayment that helped reach the target.
     repaidThisRun = 0
@@ -155,11 +159,10 @@ export function replayStabilityReload(
     if (movement.marked && movement.change < 0) {
       const marked = -movement.change
       markedThisRun += marked
-      outstanding += marked
       queue.push({ date: movement.date, amount: marked })
     }
 
-    const repayment = Math.min(outstanding, Math.max(0, movement.repayment))
+    const repayment = Math.min(outstandingNow(), Math.max(0, movement.repayment))
     if (repayment > 0) {
       let remaining = repayment
       while (remaining > 0 && queue.length > 0) {
@@ -169,7 +172,6 @@ export function replayStabilityReload(
         const left = oldest.amount - discharged
         if (left > 0) queue.unshift({ date: oldest.date, amount: left })
       }
-      outstanding -= repayment
       repaidThisRun += repayment
     }
 
@@ -179,7 +181,7 @@ export function replayStabilityReload(
   }
 
   return {
-    outstanding: Math.max(0, outstanding),
+    outstanding: outstandingNow(),
     oldestOutstandingDate: queue[0]?.date,
     markedThisRun,
     repaidThisRun,

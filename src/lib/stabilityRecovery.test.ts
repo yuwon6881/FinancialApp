@@ -278,6 +278,31 @@ describe('stability reload projection', () => {
     expect(result.repaidThisRun).toBe(0)
   })
 
+  // Mirrors StabilityReloadLedgerTests.Replay_DischargesACarriedObligationThatHasNoCarriedDate.
+  // The queue used to be seeded only when a carried date came with the carried amount, so the
+  // amount lived on in a separate running total that repayments debited while the queue had
+  // nothing to discharge. Both replays must agree or the optimistic projection drifts from the
+  // server the moment anything is queued.
+  it('discharges a carried obligation that arrived without a date', () => {
+    const movements = [
+      { date: '2026-07-28', change: 148, repayment: 148, marked: false },
+      { date: '2026-07-28', change: 900, repayment: 900, marked: false },
+      { date: '2026-08-06', change: -70, repayment: 0, marked: true },
+      { date: '2026-08-09', change: -125, repayment: 0, marked: true },
+      { date: '2026-08-09', change: -676.77, repayment: 0, marked: true },
+      { date: '2026-08-09', change: 520, repayment: 520, marked: false },
+    ]
+
+    const carried = replayStabilityReload({ outstanding: 1600.52 }, 5000, 10000, movements)
+    expect(carried.outstanding).toBeCloseTo(904.29, 2)
+    expect(carried.repaidThisRun).toBe(1568)
+    expect(carried.oldestOutstandingDate).toBeUndefined()
+
+    const fresh = replayStabilityReload({ outstanding: 0 }, 5000, 10000, movements)
+    expect(fresh.outstanding).toBeCloseTo(351.77, 2)
+    expect(fresh.repaidThisRun).toBe(520)
+  })
+
   it('treats an unanswered drawdown as required and a spent-for-good row as unmarked', () => {
     const rows = [
       transaction({ id: 'required', amount: -500, stabilityReloadIntent: 'Unanswered' }),
