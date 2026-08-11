@@ -104,6 +104,10 @@ export function mapDashboardCore(data: WireDashboardData, month?: string, year?:
           target: deobfuscateAmount(data.stabilityRecovery.target),
           currentBalance: deobfuscateAmount(data.stabilityRecovery.currentBalance),
           outstandingShortfall: deobfuscateAmount(data.stabilityRecovery.outstandingShortfall),
+          openingOutstanding: data.stabilityRecovery.openingOutstanding == null
+            ? undefined
+            : deobfuscateAmount(data.stabilityRecovery.openingOutstanding),
+          openingOldestDate: data.stabilityRecovery.openingOldestDate ?? undefined,
           cyclesRemaining: data.stabilityRecovery.cyclesRemaining || 0,
           requiredThisCycle: deobfuscateAmount(data.stabilityRecovery.requiredThisCycle),
           toppedUpThisCycle: deobfuscateAmount(data.stabilityRecovery.toppedUpThisCycle),

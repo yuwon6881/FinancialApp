@@ -67,19 +67,22 @@ describe('isRecoveryActive', () => {
 })
 
 describe('proposeTopUp', () => {
-  it('hides the offer when the normal Stability share restores the shortfall', () => {
-    expect(proposeTopUp(
+  it('keeps the full reload offer when the normal share stays below the target', () => {
+    const offer = proposeTopUp(
       recovery({ outstandingShortfall: 100, outstandingThisCycle: 100 }), 1000, buckets(), 0.15
-    )).toBeNull()
+    )!
+
+    expect(offer.maxTopUp).toBe(100)
+    expect(offer.proposedTopUp).toBe(100)
   })
 
-  it('limits extra reimbursement to the shortfall left after the normal share', () => {
+  it('does not let the normal share reduce the explicit reload obligation', () => {
     const offer = proposeTopUp(
       recovery({ outstandingShortfall: 200, outstandingThisCycle: 200 }), 1000, buckets(), 0.15
     )!
 
-    expect(offer.maxTopUp).toBe(50)
-    expect(offer.proposedTopUp).toBe(50)
+    expect(offer.maxTopUp).toBe(200)
+    expect(offer.proposedTopUp).toBe(200)
   })
 
   it('splits the draw across the three buckets in proportion', () => {
@@ -94,9 +97,20 @@ describe('proposeTopUp', () => {
     expect(drawFor(offer.draws, 'Rewards')).toBe(20)
   })
 
-  it('does not offer an extra when the normal share covers a small dip', () => {
-    expect(proposeTopUp(
+  it('offers the whole small reload when the normal share does not reach the target', () => {
+    const offer = proposeTopUp(
       recovery({ outstandingShortfall: 70, outstandingThisCycle: 23.34 }), 1000, buckets(), 0.15
+    )!
+
+    expect(offer.proposedTopUp).toBe(70)
+  })
+
+  it('hides the offer when the normal share actually reaches the target', () => {
+    expect(proposeTopUp(
+      recovery({ currentBalance: 9900, outstandingShortfall: 100, outstandingThisCycle: 100 }),
+      1000,
+      buckets(),
+      0.15,
     )).toBeNull()
   })
 
@@ -107,7 +121,7 @@ describe('proposeTopUp', () => {
       recovery({ outstandingShortfall: 3000, outstandingThisCycle: 1000 }), 10000, buckets(), 0.15
     )!
 
-    expect(offer.proposedTopUp).toBe(1500)
+    expect(offer.proposedTopUp).toBe(1000)
     expect(offer.maxTopUp).toBe(1500)
   })
 
@@ -211,6 +225,30 @@ describe('proposeTopUp', () => {
 })
 
 describe('stability reload projection', () => {
+  it('uses the authoritative opening queue when deleting an inflow that preceded the drawdown', () => {
+    const transfer = transaction({
+      id: 'transfer', date: '2026-06-01', amount: 900,
+      ledgerCategory: 'Transfer:Growth->Stability',
+    })
+    const drawdown = transaction({
+      id: 'drawdown', date: '2026-06-02', amount: -300,
+      ledgerCategory: 'Stability', stabilityReloadIntent: 'Required',
+    })
+    const projected = projectStabilityRecovery({
+      recovery: recovery({
+        currentBalance: 600,
+        outstandingShortfall: 300,
+        openingOutstanding: 0,
+      }),
+      baseTransactions: [transfer, drawdown],
+      projectedTransactions: [drawdown],
+      stabilityAlloc: 0.15,
+      projectedBalance: -300,
+    })
+
+    expect(projected.outstandingShortfall).toBe(300)
+  })
+
   it('clears an inherited obligation when a lowered target already contains the fund', () => {
     const projected = projectStabilityRecovery({
       recovery: recovery({

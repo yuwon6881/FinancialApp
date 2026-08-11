@@ -485,6 +485,10 @@ export interface StabilityRecovery {
   target: number
   currentBalance: number
   outstandingShortfall: number
+  /** Authoritative obligation carried into the selected cycle; used for exact optimistic replay. */
+  openingOutstanding?: number
+  /** Oldest carried obligation date, when the server has one. */
+  openingOldestDate?: string
   cyclesRemaining: number
   requiredThisCycle: number
   toppedUpThisCycle: number

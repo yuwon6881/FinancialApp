@@ -206,11 +206,14 @@ export function projectStabilityRecovery(input: {
   const baseMarked = baseMovements.reduce(
     (sum, movement) => sum + (movement.marked ? Math.max(0, -movement.change) : 0), 0)
   const baseRepaid = baseMovements.reduce((sum, movement) => sum + movement.repayment, 0)
-  const openingOutstanding = Math.max(
+  // New payloads carry the authoritative opening queue. The arithmetic fallback keeps cached
+  // payloads from before that contract readable, but cannot invert a repayment that happened
+  // before the first marked drawdown; only the server's opening state makes that case exact.
+  const openingOutstanding = input.recovery.openingOutstanding ?? Math.max(
     0,
     input.recovery.outstandingShortfall + baseRepaid - baseMarked,
   )
-  const openingDate = input.recovery.recoveryFromDate ??
+  const openingDate = input.recovery.openingOldestDate ?? input.recovery.recoveryFromDate ??
     baseMovements[0]?.date ?? projectedMovements[0]?.date
   const opening = { outstanding: openingOutstanding, oldestOutstandingDate: openingDate }
   const baseNetChange = baseMovements.reduce((sum, movement) => sum + movement.change, 0)
@@ -358,12 +361,15 @@ export function proposeTopUp(
   // Nothing can come out of money the three buckets never receive, whatever the user asks for.
   const affordable = incomeAmount * allocTotal
   const normalStabilityContribution = incomeAmount * Math.max(0, stabilityAlloc)
-  const remainingAfterNormal = Math.max(
-    0,
-    recovery.outstandingShortfall - normalStabilityContribution
-  )
-  if (remainingAfterNormal <= 0) return null
-  const requestedTopUp = Math.min(recovery.outstandingThisCycle, remainingAfterNormal, affordable)
+  const roomAfterNormal = recovery.target > 0
+    ? Math.max(0, recovery.target - recovery.currentBalance - normalStabilityContribution)
+    : Number.POSITIVE_INFINITY
+  // Ordinary salary clears the queue only through actual target attainment. Below the target it
+  // does not reduce the explicit obligation or the amount the opted-in extra may repay.
+  if (recovery.target > 0 && roomAfterNormal <= 0) return null
+  const reloadCapacity = Math.min(recovery.outstandingShortfall, affordable, roomAfterNormal)
+  if (reloadCapacity <= 0) return null
+  const requestedTopUp = Math.min(recovery.outstandingThisCycle, reloadCapacity)
 
   // The largest amount that still leaves every bucket its committed money.
   let safeCap = affordable
@@ -379,8 +385,8 @@ export function proposeTopUp(
 
   // Floored, not rounded up: these are ceilings on how much may be moved, and rounding a ceiling
   // up breaks the invariant it exists to protect.
-  safeCap = Math.max(0, floorToCent(Math.min(safeCap, remainingAfterNormal)))
-  const maxTopUp = Math.max(0, floorToCent(Math.min(remainingAfterNormal, affordable)))
+  safeCap = Math.max(0, floorToCent(Math.min(safeCap, reloadCapacity)))
+  const maxTopUp = Math.max(0, floorToCent(reloadCapacity))
 
   // Clear the whole thing in one go when it is small enough that spreading it is busywork: no
   // bigger than the share this pay packet was sending the fund anyway, and still inside the safe
@@ -389,9 +395,10 @@ export function proposeTopUp(
   // being cleared at once. The spread exists for exactly that case; a 70 dip does not need it.
   const trivialRemainder = incomeAmount * stabilityAlloc
   const wholeShortfallFits =
-    remainingAfterNormal <= safeCap && remainingAfterNormal <= trivialRemainder
+    reloadCapacity === recovery.outstandingShortfall &&
+    reloadCapacity <= safeCap && reloadCapacity <= trivialRemainder
   const proposedTopUp = wholeShortfallFits
-    ? Math.max(0, floorToCent(remainingAfterNormal))
+    ? Math.max(0, floorToCent(reloadCapacity))
     : Math.min(safeCap, Math.max(0, floorToCent(requestedTopUp)))
 
   const isReduced = !wholeShortfallFits && proposedTopUp < requestedTopUp
