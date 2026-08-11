@@ -7,6 +7,7 @@ import { PerimeterBeam } from './ui/PerimeterBeam'
 import type { AiUiAction } from '../lib/api/ai'
 import type { AppTab } from '../types'
 import { useAiConversation, type AiInvocationRequest } from './useAiConversation'
+import { motionSafeScrollBehavior } from '../lib/motionPreference'
 
 interface AiAssistantPanelProps {
   isOpen: boolean
@@ -129,7 +130,7 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      messagesEndRef.current?.scrollIntoView({ behavior: motionSafeScrollBehavior() })
     }
   }, [messages, isOpen])
 
@@ -173,27 +174,27 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
       headerActions={
         <>
           {hasConversation && (
-            <button
+            <Button variant="unstyled"
               type="button"
               onClick={() => void handleNewChat()}
               disabled={isResetting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer sm:min-h-9"
               title="Start a new chat (clears history)"
               aria-label="Start a new chat"
             >
               <SquarePen className="size-3.5" />
               <span>{isResetting ? 'Clearing…' : 'New chat'}</span>
-            </button>
+            </Button>
           )}
-          <button
+          <Button variant="unstyled" size="icon"
             type="button"
             onClick={handleClose}
-            className="inline-flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
+            className="inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer sm:size-9"
             title="Close"
             aria-label="Close Ask AI"
           >
             <X className="size-4" />
-          </button>
+          </Button>
         </>
       }
     >
@@ -228,8 +229,8 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
             </Button>
             <Button
               variant="ghost"
-              size="xs"
-              className="size-7 shrink-0 p-0"
+              size="icon"
+              className="size-11 shrink-0 p-0 sm:size-7"
               onClick={dismissStoppedTurn}
               title="Dismiss"
               aria-label="Dismiss the stopped question"
@@ -257,8 +258,8 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
             </Button>
             <Button
               variant="ghost"
-              size="xs"
-              className="size-7 shrink-0 p-0"
+              size="icon"
+              className="size-11 shrink-0 p-0 sm:size-7"
               disabled={isSending || isOffline}
               onClick={() => void dismissActionBatch(pendingActionBatches[0].batchId)}
               title="Dismiss prepared review"
@@ -294,15 +295,15 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
               {isOffline && <p className="mt-2 text-[11px] font-medium text-orange-500">Ask AI requires an internet connection.</p>}
               <div role="group" aria-label="Suggested questions" className="mt-4 flex w-full max-w-md flex-col items-center gap-2">
                 {suggestedPrompts.map(prompt => (
-                  <button
+                  <Button variant="unstyled"
                     key={prompt}
                     type="button"
                     disabled={isOffline}
                     onClick={() => setInput(prompt)}
-                    className="w-auto max-w-full rounded-full border border-border/60 bg-background px-4 py-2 text-center text-[11px] leading-4 text-muted-foreground transition hover:border-primary/50 hover:text-foreground cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
+                    className="min-h-11 w-auto max-w-full rounded-full border border-border/60 bg-background px-4 py-2 text-center text-[11px] leading-4 text-muted-foreground transition hover:border-primary/50 hover:text-foreground cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
                   >
                     {prompt}
-                  </button>
+                  </Button>
                 ))}
               </div>
               <p className="mt-4 max-w-md text-[10px] leading-relaxed text-muted-foreground">
@@ -327,15 +328,15 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
                     {message.role === 'assistant' ? <AiMessageContent content={message.content} /> : message.content}
                   </div>
                   {message.role === 'assistant' && index === messages.length - 1 && lastFailedTurn && (
-                    <button
+                    <Button variant="unstyled"
                       type="button"
                       aria-label="Retry the last question"
                       onClick={() => void sendMessage(lastFailedTurn)}
-                      className="flex items-center gap-1.5 px-2 py-1 mt-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                      className="mt-1 flex min-h-11 items-center gap-1.5 px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer sm:min-h-8"
                     >
                       <RotateCcw className="size-3" />
                       Retry
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
@@ -364,16 +365,18 @@ export const AiAssistantPanel: React.FC<AiAssistantPanelProps> = ({
           />
           {/* While a turn is in flight the primary control becomes Stop, so a slow
               answer is never a dead end with a disabled button. */}
-          <button
+          <Button
+            variant="primary"
+            size="icon"
             type={isSending ? 'button' : 'submit'}
             onClick={isSending ? () => cancelInFlight({ recoverable: true }) : undefined}
             disabled={isSending ? false : (!input.trim() || isOffline || isHydrating || isResetting)}
-            className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs transition hover:bg-primary/95 disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer"
+            className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl shadow-xs"
             title={isSending ? 'Stop' : 'Send'}
             aria-label={isSending ? 'Stop generating' : 'Send message'}
           >
             {isSending ? <Square className="size-3.5 fill-current" /> : <Send className="size-4" />}
-          </button>
+          </Button>
         </form>
       </div>
     </BottomSheet>

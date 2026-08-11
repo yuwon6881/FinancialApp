@@ -4,6 +4,7 @@ import { SensitiveAmount } from '../ui/SensitiveAmount'
 import { getCategoryDotClass } from '../../lib/categoryColors'
 import { SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
 import { useIsMobile } from '../../lib/useIsMobile'
+import { Button } from '../ui/Button'
 
 interface CarryoverLedgerTableProps {
   categories: CategorySummary[]
@@ -28,16 +29,16 @@ export function CarryoverLedgerTable({
   const amount = (value: number) => amountsMasked ? SENSITIVE_AMOUNT_MASK : formatCurrency(value)
 
   const adjustButton = (category: CategorySummary) => (
-    <button
+    <Button variant="unstyled" size="icon"
       type="button"
       onClick={() => onAdjust(category)}
       disabled={hideSensitive}
-      className="inline-flex size-6 shrink-0 items-center justify-center rounded-lg text-muted-foreground/65 hover:bg-muted hover:text-foreground cursor-pointer transition select-none disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+      className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer transition select-none disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent sm:size-8"
       title={hideSensitive ? 'Unhide balances to edit' : 'Adjust balance'}
       aria-label={`Adjust ${category.name} balance`}
     >
       <Edit2 className="size-3" />
-    </button>
+    </Button>
   )
 
   return (

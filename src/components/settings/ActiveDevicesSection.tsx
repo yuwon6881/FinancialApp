@@ -98,7 +98,7 @@ export function ActiveDevicesSection() {
                     <span className="text-[10px] text-muted-foreground"><CalendarDays className="inline size-3" /> Logged in: {new Date(session.createdAt).toLocaleDateString()} · Last active: {relativeTime(session.lastActiveAt)}</span>
                     {session.ipAddress && <span className="text-[10px] text-muted-foreground">IP: {session.ipAddress}</span>}
                   </div>
-                  {!session.isCurrent && <Button variant="unstyled" type="button" onClick={() => void revoke(session.id)} disabled={hideSensitive || anyRevokeInProgress} aria-busy={revokingSessionId === session.id} aria-label={`Revoke ${session.deviceName || 'device session'}`} className="p-1.5 text-muted-foreground hover:text-red-500 disabled:opacity-40">{revokingSessionId === session.id ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <Trash2 className="size-3.5" aria-hidden="true" />}</Button>}
+                  {!session.isCurrent && <Button variant="unstyled" size="icon" type="button" onClick={() => void revoke(session.id)} disabled={hideSensitive || anyRevokeInProgress} aria-busy={revokingSessionId === session.id} aria-label={`Revoke ${session.deviceName || 'device session'}`} className="size-11 shrink-0 rounded-lg text-muted-foreground hover:bg-muted hover:text-red-500 disabled:opacity-40 sm:size-8">{revokingSessionId === session.id ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <Trash2 className="size-3.5" aria-hidden="true" />}</Button>}
                 </div>
               )
             })}

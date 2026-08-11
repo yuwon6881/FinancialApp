@@ -7,7 +7,7 @@ import { matchesTransactionFilters, splitFilterSelections, LEDGER_BUCKETS as LED
 import { downloadCsvBlob, downloadCsvRows, toFilename } from '../../../lib/csvExport'
 import { compareTransactions, mergeTransactions, type TransactionSort } from '../../../lib/transactionOrdering'
 import { ledgerRouteSearch, updateAppSearch } from '../../../lib/appLocation'
-import { getLedgerTransactionRowElement } from '../../../lib/ledgerTransactionTarget'
+import { getLedgerTransactionRowElement, scrollLedgerTransactionRowIntoView } from '../../../lib/ledgerTransactionTarget'
 import { createLedgerSyncStatus } from './ledgerSyncStatus'
 
 export interface UseLedgerViewOptions {
@@ -774,7 +774,7 @@ export function useLedgerView(options: UseLedgerViewOptions) {
         const timer = setTimeout(() => {
           const rowEl = getLedgerTransactionRowElement(highlightedTxId, isMobile)
           if (rowEl) {
-            rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            scrollLedgerTransactionRowIntoView(rowEl)
             rowEl.classList.add('ledger-transaction-highlight')
             clearTimer = setTimeout(() => {
               rowEl.classList.remove('ledger-transaction-highlight')

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ToastMessage } from './ToastViewport'
 import { ToastViewport } from './ToastViewport'
@@ -28,6 +28,26 @@ describe('ToastViewport dismissal timers', () => {
     )
     vi.advanceTimersByTime(1000)
 
+    expect(onDismiss).toHaveBeenCalledWith('toast-1')
+  })
+
+  it('pauses auto-dismiss while a toast is being read or operated', () => {
+    const onDismiss = vi.fn()
+    render(
+      <ToastViewport
+        toasts={[{ id: 'toast-1', message: 'Review this change.', tone: 'info' }]}
+        onDismiss={onDismiss}
+      />,
+    )
+    const toast = screen.getByRole('status')
+
+    vi.advanceTimersByTime(3000)
+    fireEvent.pointerEnter(toast)
+    vi.advanceTimersByTime(5000)
+    expect(onDismiss).not.toHaveBeenCalled()
+
+    fireEvent.pointerLeave(toast)
+    vi.advanceTimersByTime(4000)
     expect(onDismiss).toHaveBeenCalledWith('toast-1')
   })
 })

@@ -1,9 +1,10 @@
-import { m } from 'framer-motion'
+import { m, useReducedMotion } from 'framer-motion'
 import { TrendingUp } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import type { DashboardData, TrendPoint } from '../../types'
 import { formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
 import { useAppPrefs } from '../../contexts/AppContext'
+import { Button } from '../ui/Button'
 
 type TrendRange = '3month' | '6month' | 'yearly'
 
@@ -21,6 +22,7 @@ const trendLabel = (point: TrendPoint) => {
 }
 
 export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData: DashboardData | null; growthBalance: number }) {
+  const reduceMotion = useReducedMotion()
   const { hideSensitive, currency, formatSensitive } = useAppPrefs()
   const [range, setRange] = useState<TrendRange>('yearly')
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
@@ -59,12 +61,14 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
         </div>
         <div role="group" aria-label="Trend range" className="flex items-center bg-muted/40 rounded-lg p-0.5 border border-border/40 text-[9px] mb-3 w-fit">
           {(['3month', '6month', 'yearly'] as const).map(value => (
-            <button key={value} type="button" onClick={() => setRange(value)} aria-pressed={range === value} aria-label={value === '3month' ? 'Last 3 months' : value === '6month' ? 'Last 6 months' : 'Full year'} className={`px-2 py-0.5 rounded-md font-bold transition cursor-pointer ${range === value ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}>
+            <Button variant="unstyled" key={value} type="button" onClick={() => setRange(value)} aria-pressed={range === value} aria-label={value === '3month' ? 'Last 3 months' : value === '6month' ? 'Last 6 months' : 'Full year'} className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2 py-0.5 font-bold transition cursor-pointer sm:min-h-8 sm:min-w-8 ${range === value ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}>
               {value === '3month' ? '3M' : value === '6month' ? '6M' : 'Year'}
-            </button>
+            </Button>
           ))}
         </div>
+        {hideSensitive && <p className="sr-only">Growth balance trend values are hidden.</p>}
         <div
+          aria-hidden={hideSensitive || undefined}
           onMouseMove={event => selectNearest(event.clientX)}
           onMouseLeave={() => setHoveredIndex(null)}
           onTouchStart={event => selectNearest(event.touches[0].clientX)}
@@ -87,9 +91,9 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
                   key={`fill-${range}`}
                   d={`M 15,105 L ${polyline} L 485,105 Z`}
                   fill="url(#growthGradient)"
-                  initial={{ opacity: 0 }}
+                  initial={reduceMotion ? false : { opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ duration: 0.4, ease: 'easeInOut' }}
+                  transition={{ duration: reduceMotion ? 0 : 0.4, ease: 'easeInOut' }}
                 />}
                 {points.length > 1 && <m.polyline
                   key={`line-${range}`}
@@ -99,9 +103,9 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
                   strokeWidth="2.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  initial={{ opacity: 0 }}
+                  initial={reduceMotion ? false : { opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ duration: 0.4, ease: 'easeInOut' }}
+                  transition={{ duration: reduceMotion ? 0 : 0.4, ease: 'easeInOut' }}
                 />}
               </svg>
               {points.map((point, index) => {
@@ -114,9 +118,9 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
                     // easing only scale/opacity gives a smooth staggered fade-in with no
                     // position morph, so the dots land cleanly with the redrawn line.
                     key={`${range}-${point.cycleKey || point.month}-${index}`}
-                    initial={{ scale: 0, opacity: 0 }}
+                    initial={reduceMotion ? false : { scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    transition={{ duration: 0.3, ease: 'easeOut', delay: index * 0.03 }}
+                    transition={{ duration: reduceMotion ? 0 : 0.3, ease: 'easeOut', delay: reduceMotion ? 0 : index * 0.03 }}
                     aria-hidden="true"
                     className="absolute size-1.5 rounded-full bg-blue-500/80 shadow-xs"
                     style={{ left: `calc(${position.left}% - 3px)`, top: `calc(${position.top}% - 3px)` }}
@@ -130,7 +134,7 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
               })()}
               {/* Screen-reader-only data table: the SVG scrubber is pointer-only, so expose the
                   underlying points as a real table for assistive tech and keyboard users. */}
-              <div className="sr-only">
+              {!hideSensitive && <div className="sr-only">
                 <table>
                   <caption>{chartSummary}</caption>
                   <thead>
@@ -145,7 +149,7 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </div>}
             </>
           ) : <div className="text-xs text-muted-foreground pb-12 text-center">Calculating trend points...</div>}
         </div>

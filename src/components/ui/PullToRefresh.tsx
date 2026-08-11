@@ -137,6 +137,11 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
     <>
       {isMobile && (
         <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          aria-hidden={!visible}
+          aria-label={refreshing ? 'Refreshing data' : progress >= 1 ? 'Release to refresh' : 'Pull down to refresh'}
           className="fixed left-0 right-0 z-[55] flex justify-center pointer-events-none"
           style={{
             // Sit just below the sticky header so the spinner is always visible.
@@ -148,10 +153,11 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, disable
         >
           <div className="flex items-center gap-2 rounded-full bg-card border border-border shadow-lg text-blue-500 px-3 py-2">
             <Loader2
+              aria-hidden="true"
               className={`size-4 ${refreshing ? 'animate-spin' : ''}`}
               style={refreshing ? undefined : { transform: `rotate(${progress * 270}deg)`, opacity: 0.4 + progress * 0.6 }}
             />
-            <span className="text-[10px] font-bold text-foreground">{label}</span>
+            <span aria-hidden="true" className="text-[10px] font-bold text-foreground">{label}</span>
           </div>
         </div>
       )}

@@ -1,6 +1,7 @@
 import React, { useEffect, useId, useRef, useState } from 'react'
 import { HelpCircle } from 'lucide-react'
 import { AnchoredPopover } from './AnchoredPopover'
+import { Button } from './Button'
 
 interface InfoHintProps {
   /** Plain-language explanation. Keep it to one or two short sentences. */
@@ -43,7 +44,9 @@ export const InfoHint: React.FC<InfoHintProps> = ({ text, label, align = 'right'
 
   return (
     <>
-      <button
+      <Button
+        variant="unstyled"
+        size="icon"
         ref={anchorRef}
         type="button"
         aria-label={`What is ${label}?`}
@@ -54,10 +57,10 @@ export const InfoHint: React.FC<InfoHintProps> = ({ text, label, align = 'right'
         onMouseLeave={() => { if (!pinned) setOpen(false) }}
         onFocus={() => setOpen(true)}
         onBlur={() => { if (!pinned) setOpen(false) }}
-        className={`inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${className}`}
+        className={`inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring sm:size-7 ${className}`}
       >
-        <HelpCircle className="size-3.5" />
-      </button>
+        <HelpCircle className="size-3.5" aria-hidden="true" />
+      </Button>
       <AnchoredPopover
         open={open}
         anchorRef={anchorRef}

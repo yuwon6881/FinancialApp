@@ -1,3 +1,5 @@
+import { motionSafeScrollBehavior } from './motionPreference'
+
 export type LedgerRowLayout = 'desktop' | 'mobile'
 
 export function ledgerTransactionRowId(transactionId: string, layout: LedgerRowLayout): string {
@@ -10,4 +12,8 @@ export function getLedgerTransactionRowElement(
   documentRoot: Pick<Document, 'getElementById'> = document,
 ): HTMLElement | null {
   return documentRoot.getElementById(ledgerTransactionRowId(transactionId, isMobile ? 'mobile' : 'desktop'))
+}
+
+export function scrollLedgerTransactionRowIntoView(element: HTMLElement): void {
+  element.scrollIntoView({ behavior: motionSafeScrollBehavior(), block: 'center' })
 }

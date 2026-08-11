@@ -92,6 +92,20 @@ describe('DocumentsView', () => {
     expect(screen.queryByText(/Nothing is ever deleted for you/)).toBeNull()
   })
 
+  it('shows an honest retry state instead of a false empty Vault after a load failure', async () => {
+    api.listDocuments.mockRejectedValue(new Error('Vault service is unavailable.'))
+    render(<DocumentsView />)
+
+    expect((await screen.findByRole('alert')).textContent).toContain('Documents unavailable')
+    expect(screen.getByText('Vault service is unavailable.')).toBeTruthy()
+    expect(screen.queryByText(/No documents/i)).toBeNull()
+
+    api.listDocuments.mockResolvedValue({ items: [document], totalCount: 1 })
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    await waitFor(() => expect(screen.getAllByText('tax.pdf').length).toBeGreaterThan(0))
+    expect(screen.queryByText('Documents unavailable')).toBeNull()
+  })
+
   it('warns before the keep-until date and keeps the manual-only promise', async () => {
     api.getDocumentRetentionReview.mockResolvedValue({
       taxYears: [

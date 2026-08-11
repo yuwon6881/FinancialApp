@@ -3,6 +3,7 @@ import type { VaultDocument, DocumentVaultUsage, TaxYearReliefSummary, DocumentR
 import * as api from '../../../lib/api/documents'
 import { EMPTY_RETENTION_REVIEW } from '../../../lib/documentRetention'
 import type { DocumentSort } from '../../../lib/documentOrdering'
+import { getErrorMessage } from '../../../lib/errors'
 
 function clampDocumentPage(totalCount: number, page: number, pageSize: number): number {
   if (totalCount <= 0) return 1
@@ -24,6 +25,7 @@ export function useDocumentsView() {
   const [sortOrder, setSortOrder] = useState<DocumentSort>('uploaded-desc')
   
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [isTaxInsightsLoading, setIsTaxInsightsLoading] = useState(true)
   const [hasLoadedYears, setHasLoadedYears] = useState(false)
   const [hasLoadedDocuments, setHasLoadedDocuments] = useState(false)
@@ -37,6 +39,7 @@ export function useDocumentsView() {
     const requestId = ++requestIdRef.current
     try {
       setIsLoading(true)
+      setLoadError(null)
       const currentPage = isRefresh ? 1 : page
       const skip = (currentPage - 1) * pageSize
       const res = await api.listDocuments(taxYear, undefined, skip, pageSize, selectedReliefCategories, sortOrder)
@@ -47,6 +50,9 @@ export function useDocumentsView() {
       if (isRefresh) setPage(1)
     } catch (err) {
       console.error('Failed to load documents:', err)
+      if (requestId === requestIdRef.current) {
+        setLoadError(getErrorMessage(err, 'Your documents could not be loaded. Check your connection and try again.'))
+      }
     } finally {
       if (requestId === requestIdRef.current) {
         setIsLoading(false)
@@ -219,6 +225,7 @@ export function useDocumentsView() {
     reliefCategories,
     reliefCategoriesByTaxYear,
     isLoading,
+    loadError,
     isTaxInsightsLoading,
     isInitialLoading: !hasLoadedYears || !hasLoadedDocuments,
     page,

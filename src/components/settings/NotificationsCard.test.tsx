@@ -20,6 +20,7 @@ const renderCard = (overrides: Partial<NotificationsCardProps> = {}) => {
     otherDevicesBillReminders: false,
     otherDevicesCategoryAlerts: false,
     onToggleChannel: vi.fn(),
+    enrolmentRevision: 0,
     hasSpendingGuides: true,
     ...overrides,
   }

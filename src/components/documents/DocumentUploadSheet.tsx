@@ -213,7 +213,7 @@ export function DocumentUploadSheet({ isOpen, onClose, onSuccess, initialTaxYear
                 <FileText className="size-4 shrink-0 text-muted-foreground" /><div className="min-w-0 flex-1">
                   <p className="truncate text-[11px] font-bold">{file.name}</p><p className={`text-[10px] ${tooLarge ? 'text-destructive' : 'text-muted-foreground'}`}>
                     {formatMb(file.size)}{tooLarge ? ` · exceeds ${formatMb(constraints.maxDocumentBytes)}` : ''}</p></div>
-                <Button variant="unstyled" type="button" aria-label={`Remove ${file.name}`} onClick={() => setFiles(current => current.filter((_, itemIndex) => itemIndex !== index))} className="cursor-pointer hover:bg-muted/50 p-1.5 rounded-lg transition-colors"><X className="size-4" /></Button>
+                <Button variant="unstyled" size="icon" type="button" aria-label={`Remove ${file.name}`} onClick={() => setFiles(current => current.filter((_, itemIndex) => itemIndex !== index))} className="size-11 cursor-pointer rounded-lg transition-colors hover:bg-muted/50 sm:size-8"><X className="size-4" /></Button>
               </div>
             })}
           </div>}

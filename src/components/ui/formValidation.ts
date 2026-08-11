@@ -1,3 +1,5 @@
+import { motionSafeScrollBehavior } from '../../lib/motionPreference'
+
 const INVALID_SELECTOR = '[aria-invalid="true"]'
 const ERROR_TEXT_SELECTOR = '[role="alert"]'
 
@@ -6,7 +8,7 @@ function reveal(element: HTMLElement | null | undefined, focus: boolean) {
   // A tall sheet on mobile scrolls its own body, so an inline error can land
   // below the fold — which reproduces the very problem inline validation was
   // meant to solve. Bring it into view before focusing.
-  element.scrollIntoView?.({ block: 'center', behavior: 'smooth' })
+  element.scrollIntoView?.({ block: 'center', behavior: motionSafeScrollBehavior() })
   if (focus) element.focus?.()
 }
 

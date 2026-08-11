@@ -297,6 +297,39 @@ describe('usePushNotifications', () => {
     expect(result.current.billRemindersEnabled).toBe(true)
   })
 
+  it('signals the devices roster only after the write is acknowledged, once per change', async () => {
+    // The roster reads GET /push/devices off this counter. It used to be derived from the switch
+    // booleans, which flip optimistically -- so turning on bill reminders and then spending alerts
+    // read the roster while the PUT was still in flight, and the roster kept saying "Bill
+    // reminders" until a reload.
+    let releaseWrite: (() => void) | undefined
+    vi.spyOn(api, 'upsertPushSubscription').mockImplementation(
+      () => new Promise<void>(resolve => { releaseWrite = () => resolve() }))
+    vi.spyOn(api, 'fetchPushStatus')
+      .mockResolvedValueOnce(status())
+      .mockResolvedValue(bothOn)
+
+    const { result } = renderHook(() => usePushNotifications(true, undefined, ACCOUNT))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    const before = result.current.enrolmentRevision
+
+    let pending: Promise<boolean> | undefined
+    await act(async () => {
+      pending = result.current.setChannelEnabled('categoryAlerts', true)
+      await Promise.resolve()
+    })
+
+    // The switch has already flipped, but nothing has been acknowledged yet.
+    expect(result.current.categoryAlertsEnabled).toBe(true)
+    expect(result.current.enrolmentRevision).toBe(before)
+
+    await act(async () => {
+      releaseWrite?.()
+      await pending
+    })
+    expect(result.current.enrolmentRevision).toBe(before + 1)
+  })
+
   it('reports which switch is busy so the other one is not greyed out with it', async () => {
     vi.spyOn(api, 'fetchPushStatus').mockResolvedValue(status({
       enabled: true, deviceRegistered: true, billRemindersEnabled: true,

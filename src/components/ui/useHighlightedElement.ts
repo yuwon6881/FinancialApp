@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { motionSafeScrollBehavior } from '../../lib/motionPreference'
 
 const HIGHLIGHT_CLASSES = ['ring-2', 'ring-blue-500/60', 'ring-offset-2', 'ring-offset-background', 'bg-blue-500/[0.06]', 'shadow-lg']
 
@@ -18,7 +19,7 @@ export function useHighlightedElement(elementId: string | null, onClear?: () => 
     const timer = setTimeout(() => {
       const el = document.getElementById(elementId)
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        el.scrollIntoView({ behavior: motionSafeScrollBehavior(), block: 'center' })
         el.classList.add(...HIGHLIGHT_CLASSES)
         clearTimer = setTimeout(() => {
           el.classList.remove(...HIGHLIGHT_CLASSES)

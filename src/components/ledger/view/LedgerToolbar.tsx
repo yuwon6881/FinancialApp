@@ -52,7 +52,7 @@ export function LedgerToolbar({
                 value: y,
                 label: y.toString(),
               }))}
-              className="w-20 sm:w-28 shrink-0"
+              className="w-28 shrink-0"
               align="right"
             />
           </div>

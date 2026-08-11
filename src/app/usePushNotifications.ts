@@ -18,6 +18,17 @@ export interface UsePushNotificationsResult {
   /** Whether some *other* device receives it. Informational copy only — never a switch state. */
   otherDevicesBillReminders: boolean
   otherDevicesCategoryAlerts: boolean
+  /**
+   * Rises once every time an enrolment write has been **confirmed by the server**, and is what the
+   * devices roster re-reads on.
+   *
+   * It must not be derived from the switch booleans. Those flip optimistically, so a roster keyed
+   * on them fired its `GET /push/devices` while the `PUT` was still in flight — the read returned
+   * the pre-write roster, and because the key had already reached its final value nothing ever
+   * re-read it. Turning on bill reminders and then spending alerts left the roster saying "Bill
+   * reminders" until a reload.
+   */
+  enrolmentRevision: number
   guidance: string | null
   setChannelEnabled: (channel: PushChannel, enabled: boolean) => Promise<boolean>
   refresh: () => Promise<PushStatus | null>
@@ -56,6 +67,10 @@ export function usePushNotifications(
   const [loading, setLoading] = useState(true)
   const [busyAction, setBusyAction] = useState<PushBusyAction>(null)
   const [guidance, setGuidance] = useState<string | null>(null)
+  const [enrolmentRevision, setEnrolmentRevision] = useState(0)
+
+  // Called only once the server has answered a write, never beside the optimistic flip.
+  const markEnrolmentChanged = useCallback(() => setEnrolmentRevision(current => current + 1), [])
 
   const refreshInternal = useCallback(async (pushModule: typeof import('../lib/push'), devId: string | null) => {
     if (!active || !pushModule.isPushSupported() || !devId) {
@@ -139,6 +154,7 @@ export function usePushNotifications(
           push.writePushChannelIntent(account, { billReminders: false, categoryAlerts: false })
           if (cancelled) return
           await refreshInternal(push, devId)
+          markEnrolmentChanged()
         } catch (err) {
           console.warn('Could not release this device after notification permission was revoked.', err)
         }
@@ -158,7 +174,11 @@ export function usePushNotifications(
           ? undefined
           : { billReminders: intent.billReminders, categoryAlerts: intent.categoryAlerts }
         await api.upsertPushSubscription(devId, token, channels)
-        if (!next.deviceRegistered && !cancelled) await refreshInternal(push, devId)
+        if (!next.deviceRegistered && !cancelled) {
+          // A repair changed the roster; a plain token refresh did not.
+          await refreshInternal(push, devId)
+          markEnrolmentChanged()
+        }
       } catch (err) {
         console.warn('Could not refresh this device push token.', err)
       }
@@ -166,7 +186,7 @@ export function usePushNotifications(
     return () => {
       cancelled = true
     }
-  }, [active, account, refreshInternal])
+  }, [active, account, markEnrolmentChanged, refreshInternal])
 
   useEffect(() => {
     if (!active || !onForegroundNotification || !status?.deviceRegistered || Notification.permission !== 'granted') return
@@ -227,6 +247,7 @@ export function usePushNotifications(
         rememberIntent(false)
         await api.disablePushChannel(deviceId, channel)
         await refreshInternal(push, deviceId)
+        markEnrolmentChanged()
         return true
       }
 
@@ -255,6 +276,9 @@ export function usePushNotifications(
       await api.upsertPushSubscription(deviceId, token, { [channel]: true })
       rememberIntent(true)
       await refreshInternal(push, deviceId)
+      // Only now, with the write acknowledged: the roster reads from the server, so signalling it
+      // beside the optimistic flip above raced the PUT and returned the pre-write list.
+      markEnrolmentChanged()
       return true
     } catch (err) {
       console.error('Could not update notifications for this device.', err)
@@ -269,7 +293,7 @@ export function usePushNotifications(
     } finally {
       setBusyAction(null)
     }
-  }, [account, deviceId, refreshInternal, status])
+  }, [account, deviceId, markEnrolmentChanged, refreshInternal, status])
 
   return {
     supported,
@@ -280,6 +304,7 @@ export function usePushNotifications(
     categoryAlertsEnabled: !!status?.categoryAlertsEnabled,
     otherDevicesBillReminders: !!status?.otherDevicesBillReminders,
     otherDevicesCategoryAlerts: !!status?.otherDevicesCategoryAlerts,
+    enrolmentRevision,
     guidance,
     setChannelEnabled,
     refresh,

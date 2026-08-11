@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { m, AnimatePresence, useDragControls, type PanInfo } from 'framer-motion'
+import { m, AnimatePresence, useDragControls, useReducedMotion, type PanInfo } from 'framer-motion'
 import { useDialog } from '../../lib/useDialog'
 import { useIsMobile } from '../../lib/useIsMobile'
 import { lockBodyScroll, unlockBodyScroll } from '../../lib/scrollLock'
@@ -48,6 +48,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   const titleId = useId()
   const descriptionId = useId()
   const isMobile = useIsMobile()
+  const reduceMotion = useReducedMotion()
 
   // Pace the slide by measured height so a tall sheet and a short sheet travel
   // at roughly the same perceived *speed*. A fixed duration makes a near-
@@ -261,10 +262,10 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       {isOpen && (
         <m.div
           key="backdrop"
-          initial={{ opacity: 0 }}
+          initial={reduceMotion ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          exit={reduceMotion ? undefined : { opacity: 0 }}
+          transition={{ duration: reduceMotion ? 0 : 0.2 }}
           onMouseDown={(e: React.MouseEvent) => {
             backdropMouseDownRef.current = e.target === e.currentTarget
           }}
@@ -286,10 +287,10 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
               rest at a height-paced duration, deterministically, on every open. */}
           <m.div
             key="sheet-enter"
-            initial={isMobile ? { y: "100%" } : { y: "100%", scale: 0.95, opacity: 0 }}
+            initial={reduceMotion ? false : isMobile ? { y: "100%" } : { y: "100%", scale: 0.95, opacity: 0 }}
             animate={isMobile ? { y: 0 } : { y: 0, scale: 1, opacity: 1 }}
-            exit={isMobile ? { y: "100%" } : { y: "100%", scale: 0.95, opacity: 0 }}
-            transition={{ type: "tween", ease: [0.22, 1, 0.36, 1], duration: slideDuration }}
+            exit={reduceMotion ? undefined : isMobile ? { y: "100%" } : { y: "100%", scale: 0.95, opacity: 0 }}
+            transition={{ type: "tween", ease: [0.22, 1, 0.36, 1], duration: reduceMotion ? 0 : slideDuration }}
             className={`sheet-enter w-full ${maxWidthClassName}`}
           >
           <m.div

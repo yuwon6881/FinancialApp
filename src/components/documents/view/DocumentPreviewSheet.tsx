@@ -206,7 +206,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
             <Button
               variant="ghost"
               size="icon"
-              className="size-7 rounded-full text-muted-foreground hover:text-foreground disabled:opacity-40"
+              className="size-11 rounded-full text-muted-foreground hover:text-foreground disabled:opacity-40 sm:size-8"
               onClick={handleZoomOut}
               disabled={zoomScale <= MIN_ZOOM}
               aria-label="Zoom out preview"
@@ -218,7 +218,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
               variant="ghost"
               size="sm"
               onClick={handleResetZoom}
-              className="h-7 px-2 text-xs font-bold text-foreground hover:bg-muted/50 transition min-w-12 text-center"
+              className="h-11 min-w-14 px-2 text-xs font-bold text-foreground hover:bg-muted/50 transition sm:h-8 sm:min-w-12"
               title="Reset zoom to fit screen"
             >
               {Math.round(zoomScale * 100)}%
@@ -227,7 +227,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
             <Button
               variant="ghost"
               size="icon"
-              className="size-7 rounded-full text-muted-foreground hover:text-foreground disabled:opacity-40"
+              className="size-11 rounded-full text-muted-foreground hover:text-foreground disabled:opacity-40 sm:size-8"
               onClick={handleZoomIn}
               disabled={zoomScale >= MAX_ZOOM}
               aria-label="Zoom in preview"
@@ -240,7 +240,7 @@ export function DocumentPreviewSheet({ document, onClose }: DocumentPreviewSheet
             <Button
               variant="ghost"
               size="icon"
-              className="size-7 rounded-full text-muted-foreground hover:text-foreground"
+              className="size-11 rounded-full text-muted-foreground hover:text-foreground sm:size-8"
               onClick={handleResetZoom}
               aria-label="Fit document to screen"
               title="Fit to screen"

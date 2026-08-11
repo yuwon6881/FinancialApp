@@ -2,7 +2,6 @@ import { Input } from './ui/Input'
 import { RangeInput } from './ui/RangeInput'
 import React from 'react'
 import { Save, Settings, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Lock, Unlock, Sparkles, Loader2, DatabaseZap, Moon, Sun, Eye, EyeOff, HardDrive, ArrowDownLeft, ArrowUpRight, ArrowLeftRight } from 'lucide-react'
-import { m } from 'framer-motion'
 import type { DashboardData, PushChannel, TransactionCategory, CategoryFlowType } from '../types'
 import { CustomSelect } from './ui/CustomSelect'
 import { CurrencySelect } from './ui/CurrencySelect'
@@ -30,6 +29,7 @@ import type { SensitivePreferenceStatus } from '../app/useAppPreferences'
 import { FormField } from './ui/FormField'
 import { Button } from './ui/Button'
 import { SensitiveMask } from './ui/SensitiveAmount'
+import { SettingsTabs, type SettingsTabId } from './settings/SettingsTabs'
 
 interface SettingsViewProps {
   dashboardData: DashboardData | null
@@ -73,6 +73,8 @@ interface SettingsViewProps {
   otherDevicesBillReminders?: boolean
   otherDevicesCategoryAlerts?: boolean
   onToggleChannel?: (channel: PushChannel, checked: boolean) => void
+  /** Rises per server-confirmed enrolment change; the devices roster re-reads on it. */
+  pushEnrolmentRevision?: number
 }
 
 const getDayWithSuffix = (day: number) => {
@@ -143,7 +145,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
       typeof category.cycleLimit === 'number' && category.cycleLimit > 0),
     [props.categoriesList])
 
-  const [activeTab, setActiveTab] = React.useState<'financial-model' | 'investment-plan' | 'categories-preferences' | 'security'>(() => {
+  const [activeTab, setActiveTab] = React.useState<SettingsTabId>(() => {
     if (typeof window !== 'undefined') {
       const search = window.location.search
       const hash = window.location.hash
@@ -154,7 +156,6 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
     }
     return 'financial-model'
   })
-
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const search = window.location.search
@@ -197,39 +198,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
         </p>
       </div>
 
-      {/* Tabs Control */}
-      <div role="tablist" aria-label="Settings sections" className="grid grid-cols-2 gap-x-3 gap-y-3.5 pb-1 border-b border-border/30 select-none sm:flex sm:flex-wrap sm:gap-x-6 sm:gap-y-3">
-        {([
-          ['financial-model', 'Plan & Preferences'],
-          ['investment-plan', 'Investment Plan'],
-          ['categories-preferences', 'Categories & Limits'],
-          ['security', 'Security & Devices']
-        ] as const).map(([id, label]) => (
-          <Button variant="unstyled"
-            key={id}
-            id={`settings-tab-${id}`}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === id}
-            aria-controls={`settings-panel-${id}`}
-            onClick={() => setActiveTab(id)}
-            className={`relative min-w-0 px-1.5 pb-3 text-left text-xs font-bold transition cursor-pointer sm:shrink-0 sm:px-1 sm:text-center ${
-              activeTab === id
-                ? 'text-accent-ink font-extrabold'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {label}
-            {activeTab === id && (
-              <m.div
-                layoutId="activeSettingsTabLine"
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full"
-                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-              />
-            )}
-          </Button>
-        ))}
-      </div>
+      <SettingsTabs activeTab={activeTab} onChange={setActiveTab} />
 
       {activeTab === 'financial-model' && (
         <div id="settings-panel-financial-model" role="tabpanel" aria-labelledby="settings-tab-financial-model" className="w-full grid grid-cols-1 lg:grid-cols-3 lg:items-start lg:gap-6 space-y-6 lg:space-y-0 animate-in fade-in duration-200">
@@ -326,7 +295,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   type="button"
                   onClick={() => view.setGlobalAllocLock(!view.globalAllocLock)}
                   disabled={hideSensitive}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/60 bg-secondary/60 text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer"
+                  className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/60 px-2.5 py-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer sm:min-h-8"
                 >
                   {view.globalAllocLock ? <Lock className="size-3" /> : <Unlock className="size-3" />}
                   {view.globalAllocLock ? 'Locked' : 'Unlocked'}
@@ -342,7 +311,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                 ] as const).map(([label, value, key, accentClass]) => (
                   <label key={label} className="space-y-2 block">
                     <div className="flex justify-between items-center text-[11px] font-bold">
-                      <span className="text-muted-foreground flex items-center gap-1.5"><span className="uppercase tracking-wider">{label}</span><Button variant="ghost" size="icon" type="button" onClick={() => view.toggleLock(key)} disabled={hideSensitive} className="size-6 text-muted-foreground hover:text-foreground hover:bg-muted" title={view.lockedAllocations.includes(key) ? 'Unlock' : 'Lock'}>{view.lockedAllocations.includes(key) ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</Button></span>
+                      <span className="text-muted-foreground flex items-center gap-1.5"><span className="uppercase tracking-wider">{label}</span><Button variant="ghost" size="icon" type="button" onClick={() => view.toggleLock(key)} disabled={hideSensitive} className="size-11 text-muted-foreground hover:text-foreground hover:bg-muted sm:size-8" title={view.lockedAllocations.includes(key) ? 'Unlock' : 'Lock'}>{view.lockedAllocations.includes(key) ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</Button></span>
                       <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md">{Number(value).toFixed(0)}%</span>
                     </div>
                     <RangeInput  min="0" max="100" step="5" disabled={hideSensitive || view.globalAllocLock || view.lockedAllocations.includes(key)} value={value} onChange={e => view.handleAllocationChange(key, parseFloat(e.target.value))} className={`w-full h-2 rounded-full cursor-pointer ${accentClass} bg-border disabled:opacity-50 disabled:cursor-not-allowed`} />
@@ -422,7 +391,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                 <Button variant="unstyled"
                   type="button"
                   onClick={props.onClearLocalFinancialData}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-xs font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer cursor-pointer"
+                  className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition cursor-pointer sm:min-h-8"
                 >
                   <DatabaseZap className="size-3.5 text-muted-foreground" /> Clear
                 </Button>
@@ -447,6 +416,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
               otherDevicesBillReminders={props.otherDevicesBillReminders || false}
               otherDevicesCategoryAlerts={props.otherDevicesCategoryAlerts || false}
               onToggleChannel={(channel, checked) => props.onToggleChannel?.(channel, checked)}
+              enrolmentRevision={props.pushEnrolmentRevision ?? 0}
               hasSpendingGuides={hasSpendingGuides}
               onNavigateToCategoryLimits={() => setActiveTab('categories-preferences')}
             />
@@ -515,7 +485,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                   onClick={e => { e.stopPropagation(); void view.handleAiCleanupReview() }}
                   disabled={hideSensitive || view.isReviewingCleanup || view.visibleCategories.length === 0}
                   title={hideSensitive ? 'Unhide balances to review' : 'AI category review'}
-                  className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition cursor-pointer ${
+                  className={`inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition cursor-pointer sm:min-h-8 ${
                     view.isReviewingCleanup
                       ? 'border-blue-500/35 bg-blue-500/5 text-blue-600 dark:text-blue-400'
                       : 'text-blue-600 dark:text-blue-400 bg-blue-500/5 border-blue-500/30 hover:bg-blue-500/10 disabled:opacity-45 disabled:cursor-not-allowed'
@@ -541,7 +511,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                       <Button variant="unstyled"
                         type="button"
                         onClick={() => { view.setCleanupReviewOpen(false) }}
-                        className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-background transition cursor-pointer"
+                        className="inline-flex size-11 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-background transition cursor-pointer sm:size-8"
                         aria-label="Close AI category review"
                       >
                         <ChevronUp className="size-3.5" />
@@ -731,7 +701,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                         <span className={`inline-flex shrink-0 items-center rounded border px-2 py-0.5 font-semibold ${getCategoryBadgeClass(item.name)}`}>
                           {item.name}
                         </span>
-                        <button
+                        <Button variant="unstyled"
                           type="button"
                           disabled={hideSensitive}
                           onClick={() => {
@@ -739,8 +709,9 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                             const next: CategoryFlowType = current === 'both' ? 'inflow' : current === 'inflow' ? 'outflow' : 'both'
                             setFlowTypeDrafts(prev => ({ ...prev, [item.id]: next }))
                           }}
+                          aria-label={`Change ${item.name} flow. Currently ${activeType === 'inflow' ? 'money in' : activeType === 'outflow' ? 'money out' : 'money in and out'}.`}
                           title="Click to toggle flow restriction (Both → Inflow → Outflow)"
-                          className={`inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold transition hover:scale-105 active:scale-95 disabled:opacity-50 ${
+                          className={`inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold transition hover:scale-105 active:scale-95 disabled:opacity-50 sm:min-h-8 ${
                             activeType === 'inflow'
                               ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                               : activeType === 'outflow'
@@ -753,7 +724,7 @@ export const SettingsView: React.FC<SettingsViewProps> = (props) => {
                           {activeType === 'both' && <ArrowLeftRight className="size-2.5" />}
                           <span className="capitalize">{activeType}</span>
                           {isDraftChanged && <span className="size-1.5 rounded-full bg-blue-500 inline-block" title="Unsaved change" />}
-                        </button>
+                        </Button>
                       </div>
                     )
                   }}

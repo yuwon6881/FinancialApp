@@ -1,8 +1,9 @@
 import React from 'react'
-import { m, type Variants } from 'framer-motion'
+import { m, useReducedMotion, type Variants } from 'framer-motion'
 import { Calendar, ChevronRight, CheckCircle2, Clock, Minus } from 'lucide-react'
 import type { ActiveRecurringPayment } from '../../types'
 import { getCategoryBadgeClass } from '../../lib/categoryColors'
+import { Button } from '../ui/Button'
 
 interface SubscriptionsTimelineCardProps {
   activeRecurring: ActiveRecurringPayment[]
@@ -37,6 +38,7 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
   onNavigateToRecurring,
   cycleKey,
 }) => {
+  const reduceMotion = useReducedMotion()
   const containerKey = cycleKey || activeRecurring.map(r => r.id).join(',')
 
   return (
@@ -52,17 +54,18 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
 
         <m.div
           key={containerKey}
-          initial="hidden"
+          initial={reduceMotion ? false : 'hidden'}
           animate="show"
           variants={listContainerVariants}
           className="-mx-1 mt-3 flex-1 min-h-0 space-y-1.5 overflow-x-hidden overflow-y-auto p-1 no-scrollbar"
         >
           {activeRecurring.map((rp: ActiveRecurringPayment) => (
-            <m.div
+            <m.button
               key={rp.id}
+              type="button"
               variants={subItemVariants}
               onClick={() => (onNavigateToRecurring ? onNavigateToRecurring(rp.recurringPaymentId) : onNavigate('recurring'))}
-              className={`group relative flex items-center justify-between gap-2 text-xs py-2 pl-3 pr-2 rounded-xl border border-transparent cursor-pointer transition-colors duration-150 hover:bg-blue-500/[0.06] hover:border-blue-500/25 hover:shadow-xs ${rp.isDiscarded ? 'opacity-50' : ''}`}
+              className={`group relative flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-transparent py-2 pl-3 pr-2 text-left text-xs cursor-pointer transition-colors duration-150 hover:bg-blue-500/[0.06] hover:border-blue-500/25 hover:shadow-xs ${rp.isDiscarded ? 'opacity-50' : ''}`}
             >
               {/* Accent bar that grows on hover to signal the row is clickable */}
               <span className="pointer-events-none absolute left-0 top-1/2 h-0 w-[3px] -translate-y-1/2 rounded-full bg-blue-500 transition-all duration-200 group-hover:h-7" />
@@ -102,8 +105,8 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
                 <span className="text-muted-foreground text-[9px]">Due {rp.dueDate}</span>
               </div>
               {/* Chevron affordance: fades and slides in on hover */}
-              <ChevronRight className="size-4 shrink-0 text-blue-500 opacity-0 -translate-x-1 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0" />
-            </m.div>
+              <ChevronRight className="size-4 shrink-0 text-blue-500 opacity-70 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0 sm:-translate-x-1 sm:opacity-0" aria-hidden="true" />
+            </m.button>
           ))}
           {activeRecurring.length === 0 && (
             <div className="text-xs text-muted-foreground py-10 text-center">No subscriptions for this cycle.</div>
@@ -111,12 +114,13 @@ export const SubscriptionsTimelineCard: React.FC<SubscriptionsTimelineCardProps>
         </m.div>
       </div>
 
-      <button
+      <Button
+        variant="unstyled"
         onClick={() => onNavigate('recurring')}
-        className="w-full py-2 mt-4 text-center text-xs font-semibold text-blue-500 hover:text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/20 rounded-xl transition duration-200 cursor-pointer shrink-0"
+        className="mt-4 min-h-11 w-full shrink-0 rounded-xl border border-blue-500/10 bg-blue-500/5 py-2 text-center text-xs font-semibold text-blue-500 transition duration-200 cursor-pointer hover:border-blue-500/20 hover:bg-blue-500/10 hover:text-blue-600"
       >
         Manage Subscriptions
-      </button>
+      </Button>
     </div>
   )
 }

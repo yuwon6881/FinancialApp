@@ -30,6 +30,9 @@ function ClassificationRow({
   value,
   classify,
   onReorderFinished,
+  onMove,
+  position,
+  count,
   isSyncing,
   isPending,
   orderBusy,
@@ -38,6 +41,9 @@ function ClassificationRow({
   value: InvestmentAllocationOverview['assignments'][number]
   classify: (instrumentId: string, sleeve?: InvestmentAllocationSleeve) => void
   onReorderFinished: () => void
+  onMove: (direction: -1 | 1) => void
+  position: number
+  count: number
   isSyncing: boolean
   isPending: boolean
   orderBusy: boolean
@@ -60,10 +66,16 @@ function ClassificationRow({
     >
       <Button variant="unstyled"
         type="button"
-        aria-label={`Reorder ${value.symbol}`}
+        aria-label={`Reorder ${value.symbol}. Position ${position} of ${count}. Use Up or Down arrow keys.`}
+        aria-keyshortcuts="ArrowUp ArrowDown"
         onPointerDown={event => controls.start(event)}
+        onKeyDown={event => {
+          if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
+          event.preventDefault()
+          onMove(event.key === 'ArrowUp' ? -1 : 1)
+        }}
         disabled={isBusy}
-        className="row-start-1 inline-flex size-8 touch-none cursor-grab items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground active:cursor-grabbing sm:row-auto"
+        className="row-start-1 inline-flex size-11 touch-none cursor-grab items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground active:cursor-grabbing sm:row-auto sm:size-8"
       >
         <GripVertical className="size-4" />
       </Button>
@@ -267,9 +279,9 @@ export function InvestmentPlanSection() {
       assignments: assignments.map((value, order) => ({ ...value, order })),
     } : previous)
   }
-  const saveAssignmentOrder = () => {
+  const queueAssignmentOrder = (assignments: InvestmentAllocationOverview['assignments']) => {
     if (hideSensitive) return
-    const instrumentIds = [...(overview?.assignments ?? [])]
+    const instrumentIds = [...assignments]
       .sort((left, right) => left.order - right.order)
       .map(value => value.instrumentId)
     const queuedOrder = [...investmentOps].reverse().find(operation =>
@@ -279,10 +291,26 @@ export function InvestmentPlanSection() {
       : [...(cachedOverview()?.assignments ?? [])]
           .sort((left, right) => left.order - right.order)
           .map(value => value.instrumentId)
-    queueMutation('investmentAllocationOrder', 'update', 'classification', {
+    return queueMutation('investmentAllocationOrder', 'update', 'classification', {
       instrumentIds,
       undoSnapshot: { instrumentIds: previousInstrumentIds },
     })
+  }
+  const saveAssignmentOrder = () => {
+    queueAssignmentOrder(orderedAssignments)
+  }
+  const moveAssignment = (instrumentId: string, direction: -1 | 1) => {
+    if (hideSensitive || orderSyncing || orderPending) return
+    const sourceIndex = orderedAssignments.findIndex(value => value.instrumentId === instrumentId)
+    const targetIndex = sourceIndex + direction
+    if (sourceIndex < 0 || targetIndex < 0 || targetIndex >= orderedAssignments.length) return
+    const next = [...orderedAssignments]
+    const [moved] = next.splice(sourceIndex, 1)
+    if (!moved) return
+    next.splice(targetIndex, 0, moved)
+    const normalized = next.map((value, order) => ({ ...value, order }))
+    if (!queueAssignmentOrder(normalized)) return
+    setOverview(previous => previous ? { ...previous, assignments: normalized } : previous)
   }
 
   useEffect(() => {
@@ -313,7 +341,7 @@ export function InvestmentPlanSection() {
             type="button"
             onClick={() => setGlobalTargetLock(!globalTargetLock)}
             disabled={hideSensitive}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/60 bg-secondary/60 text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer shrink-0 mt-1"
+            className="mt-1 inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/60 px-2.5 py-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer sm:min-h-8"
           >
             {globalTargetLock ? <Lock className="size-3" /> : <Unlock className="size-3" />}
             {globalTargetLock ? 'Locked' : 'Unlocked'}
@@ -327,7 +355,7 @@ export function InvestmentPlanSection() {
           ] as const).map(([label, key, accentClass]) => (
             <label key={key} className="space-y-2 block">
               <div className="flex justify-between items-center text-[11px] font-bold">
-                <span className="text-muted-foreground flex items-center gap-1.5"><span className="uppercase tracking-wider">{label}</span><Button variant="unstyled" type="button" aria-label={`${lockedSleeve === key ? 'Unlock' : 'Lock'} ${label} target`} onClick={(e) => { e.preventDefault(); toggleSleeveLock(key) }} className="p-1 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-40" disabled={hideSensitive || (lockedSleeve !== null && lockedSleeve !== key)} title={lockedSleeve === key ? "Unlock target" : lockedSleeve ? "Unlock the current target before locking another" : "Lock target"}>{lockedSleeve === key ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</Button></span>
+                <span className="text-muted-foreground flex items-center gap-1.5"><span className="uppercase tracking-wider">{label}</span><Button variant="unstyled" size="icon" type="button" aria-label={`${lockedSleeve === key ? 'Unlock' : 'Lock'} ${label} target`} onClick={(e) => { e.preventDefault(); toggleSleeveLock(key) }} className="inline-flex size-11 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 sm:size-8" disabled={hideSensitive || (lockedSleeve !== null && lockedSleeve !== key)} title={lockedSleeve === key ? "Unlock target" : lockedSleeve ? "Unlock the current target before locking another" : "Lock target"}>{lockedSleeve === key ? <Lock className="size-3.5 text-blue-500" /> : <Unlock className="size-3.5" />}</Button></span>
                 <span className="text-foreground bg-secondary px-2 py-0.5 rounded-md">{plan[key]}%</span>
               </div>
               <RangeInput
@@ -382,19 +410,22 @@ export function InvestmentPlanSection() {
 
       <section className="rounded-2xl border border-border/60 bg-card p-5 sm:p-6">
         <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">Investment classification <RowSyncStatus isSyncing={orderSyncing} isPending={orderPending} entityLabel="classification order" /></h3>
-        <p className="mt-1 text-[11px] text-muted-foreground">Every open holding needs a basket. Multiple funds may share one basket.</p>
+        <p className="mt-1 text-[11px] text-muted-foreground">Every open holding needs a basket. Drag a grip, or focus it and press Up or Down, to change the order.</p>
         <Reorder.Group
           axis="y"
           values={orderedAssignments}
           onReorder={reorderAssignments}
           className="mt-4 space-y-3 max-h-[300px] overflow-y-auto pr-2"
         >
-          {orderedAssignments.map(value => (
+          {orderedAssignments.map((value, index) => (
             <ClassificationRow
               key={value.instrumentId}
               value={value}
               classify={classify}
               onReorderFinished={saveAssignmentOrder}
+              onMove={direction => moveAssignment(value.instrumentId, direction)}
+              position={index + 1}
+              count={orderedAssignments.length}
               isSyncing={isActive(value.instrumentId)}
               orderBusy={orderSyncing || orderPending}
               mutationsDisabled={hideSensitive}

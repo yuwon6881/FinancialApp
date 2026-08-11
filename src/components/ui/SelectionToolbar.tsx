@@ -55,7 +55,7 @@ export function SelectionToolbar({
       <div className="flex min-w-0 items-center gap-1.5 sm:gap-2.5">
         {isSelecting && (
           <>
-            <label className={`-mx-1.5 inline-flex min-h-9 min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 transition ${itemCount > 0 ? 'cursor-pointer hover:bg-muted' : 'opacity-60'}`}>
+            <label className={`-mx-1.5 inline-flex min-h-11 min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 transition sm:min-h-9 ${itemCount > 0 ? 'cursor-pointer hover:bg-muted' : 'opacity-60'}`}>
               <Checkbox
                 ref={checkboxRef}
                 checked={allVisibleSelected}
@@ -76,13 +76,13 @@ export function SelectionToolbar({
 
       <div data-testid={actionsTestId ?? `${testId}-actions`} className="flex shrink-0 items-center justify-end gap-1.5">
         {!isSelecting ? (
-          <Button variant="outline" size="sm" type="button" disabled={disabled || itemCount === 0} onClick={onStartSelection} className="bg-card">
+          <Button variant="outline" size="sm" type="button" disabled={disabled || itemCount === 0} onClick={onStartSelection} className="min-h-11 bg-card sm:min-h-0">
             Select
           </Button>
         ) : (
           <>
             {actions}
-            <Button variant="outline" size="sm" type="button" onClick={onLeaveSelection} aria-label="Leave selection mode" className="shrink-0 bg-card">
+            <Button variant="outline" size="sm" type="button" onClick={onLeaveSelection} aria-label="Leave selection mode" className="min-h-11 shrink-0 bg-card sm:min-h-0">
               Done
             </Button>
           </>

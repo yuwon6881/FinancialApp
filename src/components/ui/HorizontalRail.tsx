@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { Button } from './Button'
+import { motionSafeScrollBehavior } from '../../lib/motionPreference'
 
 interface HorizontalRailProps {
   children: ReactNode
@@ -102,7 +103,7 @@ export function HorizontalRail({ children, className, label, showControls = fals
     if (!rail) return
     rail.scrollBy({
       left: direction * Math.max(240, rail.clientWidth * 0.8),
-      behavior: 'smooth',
+      behavior: motionSafeScrollBehavior(),
     })
   }, [])
 

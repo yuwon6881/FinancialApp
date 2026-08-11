@@ -98,7 +98,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
             onClick={onDownloadSelected}
             aria-label={isDownloadingSelected ? 'Preparing selected document download' : 'Download selected documents'}
             title="Download selected"
-            className="size-9 shrink-0 bg-card p-0 sm:size-auto sm:px-3"
+            className="size-11 shrink-0 bg-card p-0 sm:size-auto sm:px-3"
           >
             <Download className={`size-3.5 ${isDownloadingSelected ? 'animate-pulse' : ''}`} aria-hidden="true" />
             <span className="hidden sm:inline">{isDownloadingSelected ? 'Preparing…' : 'Download'}</span>
@@ -112,7 +112,7 @@ export function DocumentList({ documents, isLoading, setDocToDelete, selectedIds
             aria-busy={isDeletingSelected}
             aria-label="Delete selected documents"
             title="Delete selected"
-            className="size-9 shrink-0 p-0 sm:size-auto sm:px-3"
+            className="size-11 shrink-0 p-0 sm:size-auto sm:px-3"
           >
             <Trash2 className="size-3.5" aria-hidden="true" />
             <span className="hidden sm:inline">{isDeletingSelected ? 'Deleting…' : 'Delete'}</span>

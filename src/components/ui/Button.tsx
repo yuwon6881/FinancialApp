@@ -31,11 +31,12 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 const SIZE_CLASSES: Record<ButtonSize, string> = {
   xs: 'px-2 py-1 text-[10px] gap-1',
   sm: 'px-2.5 py-1.5 text-[10px] gap-1',
-  md: 'px-3 py-2 text-xs gap-1.5',
+  md: 'min-h-11 px-3 py-2 text-xs gap-1.5 sm:min-h-0',
   // Matches the header "New Subscription"/"Post Transaction"-style CTA buttons;
   // callers add rounded-xl + shadow-lg via className since only those CTAs want it.
-  lg: 'px-4 py-2.5 text-sm gap-2',
-  icon: 'size-11 p-0',
+  lg: 'min-h-11 px-4 py-2.5 text-sm gap-2',
+  // Phones keep the 44px touch target; pointer-first layouts use the compact 36px control.
+  icon: 'size-11 p-0 sm:size-9',
 }
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

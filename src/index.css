@@ -728,11 +728,22 @@
     .trend-draw,
     .area-fade,
     .press-scale,
+    .animate-in,
+    .animate-pulse,
+    .swipe-hint,
     .list-container-enter,
     .list-row-enter,
     .list-card-enter {
         animation: none !important;
         transition-duration: 0.01ms !important;
+    }
+
+    /* Framer normally applies this preference through MotionConfig, but the sheet's
+       initial inline translate can exist for its first committed frame. Keep even that
+       frame inside the visual viewport for reduced-motion users and screenshot tests. */
+    .sheet-enter {
+        transform: none !important;
+        transition: none !important;
     }
 
     .interactive-card:hover {

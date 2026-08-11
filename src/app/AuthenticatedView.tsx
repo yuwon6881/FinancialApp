@@ -20,7 +20,6 @@ import type { useReceiptSplitPolling } from '../lib/useReceiptSplitPolling'
 import { getCycleYearAndMonthForDate, MONTH_NAMES } from '../lib/cycle'
 import { buildMutationSuccessToast, buildUndoSuccessToast } from '../lib/mutationToast'
 import type { AiInvocationContext } from '../lib/api/ai'
-
 const DashboardView = lazy(() => import('../components/DashboardView').then(module => ({ default: module.DashboardView })))
 const ReportsView = lazy(() => import('../components/ReportsView').then(module => ({ default: module.ReportsView })))
 const RecurringPaymentsView = lazy(() => import('../components/RecurringPaymentsView').then(module => ({ default: module.RecurringPaymentsView })))
@@ -278,6 +277,7 @@ export function AuthenticatedView({
                       categoryAlertsEnabled={push.categoryAlertsEnabled}
                       otherDevicesBillReminders={push.otherDevicesBillReminders}
                       otherDevicesCategoryAlerts={push.otherDevicesCategoryAlerts}
+                      pushEnrolmentRevision={push.enrolmentRevision}
                       onToggleChannel={(channel, checked) => {
                         // Each kind is its own standing choice for this device: turning one on
                         // asks the browser for permission and registers this device for that kind

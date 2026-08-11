@@ -3,6 +3,7 @@ import type { DashboardData } from '../../types'
 import { useAppPrefs } from '../../contexts/AppContext'
 import { getCategoryChartColor } from '../../lib/categoryColors'
 import { InteractiveDoughnutChart } from '../ui/InteractiveDoughnutChart'
+import { Button } from '../ui/Button'
 
 type ChartRange = 'monthly' | '3month' | '6month' | 'yearly'
 
@@ -52,25 +53,25 @@ export function DoughnutChart({ dashboardData, selectedYear, onNavigateToLedger 
   return (
     <div className="app-panel p-6 rounded-2xl bg-card/92 border border-border/60 flex flex-col justify-between">
       <div>
-        <div className="flex items-center justify-between mb-4 gap-2">
+        <div className="mb-4 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-2">
           <div>
             <h3 className="text-base font-semibold text-foreground">Outflow Categories</h3>
             <p className="text-[10px] text-muted-foreground">Expense breakdown by category</p>
           </div>
-          <div role="group" aria-label="Breakdown range" className="flex items-center bg-muted/40 rounded-lg p-0.5 border border-border/40 text-[9px] shrink-0">
+          <div role="group" aria-label="Breakdown range" className="grid w-full grid-cols-4 items-center rounded-lg border border-border/40 bg-muted/40 p-0.5 text-[9px] sm:flex sm:w-auto sm:shrink-0">
             {(['monthly', '3month', '6month', 'yearly'] as const).map(view => (
-              <button
+              <Button variant="unstyled"
                 key={view}
                 type="button"
                 onClick={() => setChartView(view)}
                 aria-pressed={chartView === view}
                 aria-label={view === 'monthly' ? 'Selected cycle' : view === '3month' ? 'Last 3 months' : view === '6month' ? 'Last 6 months' : 'Full year'}
-                className={`px-2 py-0.5 rounded-md font-bold transition cursor-pointer ${
+                className={`inline-flex min-h-11 min-w-0 items-center justify-center rounded-md px-2 py-0.5 font-bold transition cursor-pointer sm:min-h-8 ${
                   chartView === view ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {view === 'monthly' ? '1M' : view === '3month' ? '3M' : view === '6month' ? '6M' : 'Year'}
-              </button>
+              </Button>
             ))}
           </div>
         </div>

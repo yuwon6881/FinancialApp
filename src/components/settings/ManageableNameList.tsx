@@ -116,7 +116,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
               type="button"
               onClick={() => setSearch('')}
               aria-label={`Clear ${lowerItemLabel} search`}
-              className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                  className="absolute right-0 top-1/2 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground sm:right-1 sm:size-8"
             >
               <X className="size-3.5" />
             </Button>
@@ -170,7 +170,7 @@ export function ManageableNameList<T extends ManageableNameItem>({
                   onClick={() => void add()}
                   disabled={!trimmedName || duplicate || Boolean(validationError) || disabled || busyId !== null}
                   aria-label={`Add ${itemLabel}`}
-                  className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-primary text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+                  className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-primary text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground sm:size-9"
                 >
                   {busyId === 'new' ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
                 </Button>

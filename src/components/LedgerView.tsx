@@ -10,7 +10,6 @@ import type {
 import type { PagedTransactionResult, ReceiptScanResult } from '../lib/api'
 import { CycleSkeleton } from './ui/Skeleton'
 import { useAppContext } from '../contexts/AppContext'
-import { LedgerExportModal } from './ledger/LedgerExportModal'
 import { DeleteTransactionModal, EditDisabledModal } from './ledger/LedgerDeleteModals'
 import { LedgerPagination } from './ledger/LedgerPagination'
 import { LedgerFilterBar } from './ledger/LedgerFilterBar'
@@ -32,6 +31,8 @@ import { LedgerToolbar } from './ledger/view/LedgerToolbar'
 const LEDGER_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards', 'Income']
 const ReceiptSplitSheet = React.lazy(() =>
   import('./ledger/ReceiptSplitSheet').then(module => ({ default: module.ReceiptSplitSheet })))
+const LedgerExportModal = React.lazy(() =>
+  import('./ledger/LedgerExportModal').then(module => ({ default: module.LedgerExportModal })))
 
 interface LedgerViewProps {
   transactions: Transaction[]
@@ -327,9 +328,9 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
 
         return (
           <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-blue-500/8 border border-blue-500/20 text-xs animate-in fade-in duration-200">
-            <div className="flex min-w-0 items-center gap-2 text-blue-500 font-medium leading-relaxed">
+            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-blue-500 font-medium leading-relaxed">
               <span className="size-1.5 rounded-full bg-blue-500 shrink-0 animate-pulse" />
-              {label}
+              <span className="min-w-0 break-words">{label}</span>
             </div>
             <Button variant="unstyled"
               onClick={ledger.handleResetFilters}
@@ -452,13 +453,17 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
         }}
       />
 
-      <LedgerExportModal
-        isOpen={ledger.showExportModal}
-        exportIsFetching={ledger.exportIsFetching}
-        onClose={() => ledger.setShowExportModal(false)}
-        onExportPage={ledger.handleExportPage}
-        onExportAll={ledger.handleExportAll}
-      />
+      {ledger.showExportModal && (
+        <React.Suspense fallback={null}>
+          <LedgerExportModal
+            isOpen
+            exportIsFetching={ledger.exportIsFetching}
+            onClose={() => ledger.setShowExportModal(false)}
+            onExportPage={ledger.handleExportPage}
+            onExportAll={ledger.handleExportAll}
+          />
+        </React.Suspense>
+      )}
 
       <DeleteTransactionModal
         isOpen={ledger.showDeleteModal}

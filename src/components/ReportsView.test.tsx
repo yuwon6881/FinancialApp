@@ -120,7 +120,7 @@ describe('ReportsView', () => {
     expect(onViewCycleSummary).toHaveBeenCalledWith(6, 2026)
   })
 
-  it('keeps the ended-cycle controls in one compact row on narrow screens', () => {
+  it('keeps the ended-cycle controls touch-friendly without forcing a narrow-screen overflow', () => {
     render(
       <ReportsView
         dashboardData={null}
@@ -133,7 +133,8 @@ describe('ReportsView', () => {
     )
 
     const askAi = screen.getByRole('button', { name: 'Explain this cycle with Ask AI' })
-    expect(askAi.className).toContain('w-9')
-    expect(askAi.parentElement?.className).toContain('flex-nowrap')
+    expect(askAi.className).toContain('size-11')
+    expect(askAi.className).toContain('sm:size-auto')
+    expect(askAi.parentElement?.className).toContain('flex-wrap')
   })
 })

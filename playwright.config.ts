@@ -40,6 +40,12 @@ export default defineConfig({
     use: {
       viewport: project.viewport,
       colorScheme: project.colorScheme,
+      reducedMotion: 'reduce' as const,
+      ...(project.name.startsWith('mobile') ? {
+        hasTouch: true,
+        isMobile: true,
+        serviceWorkers: 'allow' as const,
+      } : {}),
     },
   })),
   webServer: {

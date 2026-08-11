@@ -69,7 +69,7 @@ describe('BillTimeline', () => {
     )
 
     // Expand accordion
-    fireEvent.click(screen.getByText('Subscriptions Billing Timeline'))
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Subscriptions Billing Timeline' }))
 
     // Open the bill details by clicking the node or badge
     const badgeButton = screen.getAllByText('ChatGPT Plus')[0]
@@ -96,7 +96,7 @@ describe('BillTimeline', () => {
     )
 
     // Expand accordion
-    fireEvent.click(screen.getByText('Subscriptions Billing Timeline'))
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Subscriptions Billing Timeline' }))
 
     const badgeButton = screen.getAllByText('ChatGPT Plus')[0]
     fireEvent.click(badgeButton)
@@ -118,7 +118,7 @@ describe('BillTimeline', () => {
       />
     )
 
-    fireEvent.click(screen.getByText('Subscriptions Billing Timeline'))
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Subscriptions Billing Timeline' }))
     fireEvent.click(screen.getAllByText('ChatGPT Plus')[0])
 
     expect(screen.queryByText('Paid')).toBeNull()
@@ -138,7 +138,7 @@ describe('BillTimeline', () => {
       />
     )
 
-    fireEvent.click(screen.getByText('Subscriptions Billing Timeline'))
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Subscriptions Billing Timeline' }))
     fireEvent.click(screen.getAllByText('ChatGPT Plus')[0])
 
     expect(screen.getAllByText('Paid').length).toBeGreaterThan(0)
@@ -160,7 +160,7 @@ describe('BillTimeline', () => {
       />
     )
 
-    fireEvent.click(screen.getByText('Subscriptions Billing Timeline'))
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Subscriptions Billing Timeline' }))
     fireEvent.click(screen.getAllByText('ChatGPT Plus')[0])
 
     expect(screen.getAllByText('Paid').length).toBeGreaterThan(0)

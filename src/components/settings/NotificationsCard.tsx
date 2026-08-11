@@ -76,6 +76,11 @@ export interface NotificationsCardProps {
   otherDevicesBillReminders: boolean
   otherDevicesCategoryAlerts: boolean
   onToggleChannel: (channel: PushChannel, checked: boolean) => void
+  /**
+   * Rises once per **server-confirmed** enrolment change, and is the only thing the roster re-reads
+   * on. Deriving it from the switch booleans read the roster while the write was still in flight.
+   */
+  enrolmentRevision: number
   /** False when no category has a spending guide to alert on yet. */
   hasSpendingGuides: boolean
   onNavigateToCategoryLimits?: () => void
@@ -205,11 +210,10 @@ export const NotificationsCard: React.FC<NotificationsCardProps> = (props) => {
             Devices set up
           </summary>
           <div className="pt-2">
-            {/* Re-reads whenever this device's own enrolment changes in either kind, so the roster
-                never shows a browser that was just switched on or off. */}
-            <PushDevicesList
-              refreshKey={`${props.billRemindersEnabled}-${props.categoryAlertsEnabled}`}
-            />
+            {/* Re-reads once each enrolment change is acknowledged by the server, so the roster
+                never shows a browser that was just switched on or off — and never reads back the
+                state from before the write it is reacting to. */}
+            <PushDevicesList refreshKey={props.enrolmentRevision} />
           </div>
         </details>
       </div>

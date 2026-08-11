@@ -8,6 +8,7 @@ import { BottomSheet } from './ui/BottomSheet'
 import { Card } from './ui/Card'
 import { SensitiveMask } from './ui/SensitiveAmount'
 import { getCycleRangeDates } from '../lib/cycle'
+import { Button } from './ui/Button'
 
 interface BillTimelineProps {
   activeRecurringPayments: ActiveRecurringPayment[]
@@ -327,9 +328,18 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
   if (!isExpanded) {
     return (
       <Card
-        onClick={() => setIsExpanded(true)}
-        className="p-4 flex items-center justify-between cursor-pointer hover:bg-muted/30 transition duration-200 select-none flex-wrap gap-2"
+        className="relative p-4 flex items-center justify-between hover:bg-muted/30 transition duration-200 select-none flex-wrap gap-2"
       >
+        <Button
+          variant="unstyled"
+          type="button"
+          aria-label={`Expand ${displayTitle}`}
+          aria-expanded="false"
+          onClick={() => setIsExpanded(true)}
+          className="absolute inset-0 z-10 rounded-2xl cursor-pointer focus-visible:outline-offset-2"
+        >
+          <span className="sr-only">Expand {displayTitle}</span>
+        </Button>
         <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-foreground flex-wrap">
           <Calendar className="size-4 text-blue-500 shrink-0" />
           <span>{displayTitle}</span>
@@ -351,9 +361,18 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
   return (
     <Card className="space-y-6 animate-in fade-in zoom-in-98 duration-150">
       <div
-        onClick={() => setIsExpanded(false)}
-        className="flex items-center justify-between border-b border-border/30 pb-3 gap-2 cursor-pointer hover:bg-muted/20 -mx-3 -mt-2 p-3 rounded-xl transition duration-150 select-none"
+        className="relative flex items-center justify-between border-b border-border/30 pb-3 gap-2 hover:bg-muted/20 -mx-3 -mt-2 p-3 rounded-xl transition duration-150 select-none"
       >
+        <Button
+          variant="unstyled"
+          type="button"
+          aria-label={`Collapse ${displayTitle}`}
+          aria-expanded="true"
+          onClick={() => setIsExpanded(false)}
+          className="absolute inset-0 z-10 rounded-xl cursor-pointer"
+        >
+          <span className="sr-only">Collapse {displayTitle}</span>
+        </Button>
         <div>
           <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
             <Calendar className="size-5 text-blue-500" />
@@ -405,8 +424,9 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                 : 'text-amber-500 bg-amber-500/10'
 
             return (
-              <button
+              <Button variant="unstyled"
                 key={node.dueDate}
+                type="button"
                 onClick={() => handleNodeClick(node)}
                 className="w-full flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-card hover:bg-muted/30 active:scale-[0.99] transition text-left cursor-pointer"
               >
@@ -423,7 +443,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                   <div className="text-xs font-extrabold text-foreground">{formatSensitive(total)}</div>
                   <span className={`inline-block mt-0.5 text-[8px] font-bold px-1.5 py-0.5 rounded ${statusStyle}`}>{statusLabel}</span>
                 </div>
-              </button>
+              </Button>
             )
           })}
         </div>
@@ -493,9 +513,11 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                   className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 group z-10 hover:z-50 focus-within:z-50"
                 >
                   {/* Node trigger dot — small visual, large touch target via padding/negative margin */}
-                  <button
+                  <Button variant="unstyled"
+                    type="button"
                     onClick={() => handleNodeClick(node)}
-                    className="flex items-center justify-center p-2.5 -m-2.5 cursor-pointer group/dot focus:outline-none"
+                    aria-label={`${node.bills.length} item${node.bills.length === 1 ? '' : 's'} due on ${node.dueDate}`}
+                    className="-m-3.5 flex size-11 items-center justify-center cursor-pointer group/dot"
                     title={`${node.bills.length} item(s) due: ${node.dueDate}`}
                   >
                     <span className={`size-4 rounded-full border-2 border-card ${dotColor} group-hover/dot:scale-125 group-focus/dot:scale-125 group-active/dot:scale-95 transition duration-150 shadow-md flex items-center justify-center`}>
@@ -505,7 +527,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                         <span className="text-[8px] text-on-vivid font-extrabold leading-none">{node.bills.length}</span>
                       )}
                     </span>
-                  </button>
+                  </Button>
 
                   {/* Alternating & Staggered Labels */}
                   <div 
@@ -524,15 +546,16 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                     />
                     
                     {/* Info Badge - clickable directly */}
-                    <button
+                    <Button variant="unstyled"
+                      type="button"
                       onClick={() => handleNodeClick(node)}
-                      className={`px-2 py-0.75 rounded-md text-[9px] font-bold text-foreground border border-border bg-card whitespace-nowrap shadow-xs flex items-center gap-1 hover:bg-muted/80 cursor-pointer pointer-events-auto transition ${
+                      className={`min-h-8 px-2 py-0.75 rounded-md text-[9px] font-bold text-foreground border border-border bg-card whitespace-nowrap shadow-xs flex items-center gap-1 hover:bg-muted/80 cursor-pointer pointer-events-auto transition ${
                         allDiscarded ? 'line-through opacity-60 text-muted-foreground' : ''
                       }`}
                     >
                       <span className="truncate max-w-[120px]">{labelText}</span>
                       <span className="text-muted-foreground font-semibold">({formattedDueDay})</span>
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )
@@ -570,8 +593,9 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
               if (isDiscarded) statusStyle = 'text-slate-400 bg-slate-500/10 line-through'
 
               return (
-                <button
+                <Button variant="unstyled"
                   key={bill.id}
+                  type="button"
                   onClick={() => {
                     setSelectedBill(bill)
                     setSelectedNode(null)
@@ -595,7 +619,7 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
                     <span className="text-xs font-extrabold text-foreground">{bill.amount == null ? 'Unavailable' : formatSensitive(Math.abs(bill.amount))}</span>
                     <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${statusStyle}`}>{bill.status}</span>
                   </div>
-                </button>
+                </Button>
               )
             })}
           </div>
@@ -678,12 +702,12 @@ export const BillTimeline: React.FC<BillTimelineProps> = ({
             )}
 
             <div className="pt-2">
-              <button
+              <Button variant="secondary"
                 onClick={() => setSelectedBill(null)}
-                className="w-full py-2 bg-muted hover:bg-muted/80 text-foreground font-bold rounded-xl transition text-xs cursor-pointer border border-border"
+                className="min-h-11 w-full rounded-xl"
               >
                 Close
-              </button>
+              </Button>
             </div>
           </div>
         </BottomSheet>

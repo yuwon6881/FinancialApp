@@ -1,5 +1,5 @@
-import { lazy, Suspense, useEffect, type Dispatch, type SetStateAction } from 'react'
-import { AnimatePresence, m } from 'framer-motion'
+import { lazy, Suspense, useEffect, useRef, type Dispatch, type SetStateAction } from 'react'
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion'
 import { CreditCard, PiggyBank, Sparkles, Upload, Wallet, X, Zap } from 'lucide-react'
 import type { DashboardData, PendingNotification } from '../types'
 import { MONTH_NAMES } from '../lib/cycle'
@@ -67,9 +67,40 @@ export function AppOverlays({
   currentPendingNotifications,
   setIsAiOpen,
 }: AppOverlaysProps) {
+  const reduceMotion = useReducedMotion()
+  const fabActionsRef = useRef<HTMLDivElement>(null)
+  const fabTriggerRef = useRef<HTMLButtonElement>(null)
+
   useEffect(() => {
     if (prefs.hideSensitive) fabMenu.close()
   }, [prefs.hideSensitive, fabMenu.close])
+
+  useEffect(() => {
+    if (!fabMenu.isOpen || prefs.activeTab === 'drafts') return
+    const frame = window.requestAnimationFrame(() => {
+      fabActionsRef.current
+        ?.querySelector<HTMLButtonElement>('[data-fab-action]:not(:disabled)')
+        ?.focus({ preventScroll: true })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [fabMenu.isOpen, prefs.activeTab])
+
+  useEffect(() => {
+    if (!fabMenu.isOpen || prefs.activeTab === 'drafts') return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      fabMenu.close()
+      window.requestAnimationFrame(() => fabTriggerRef.current?.focus({ preventScroll: true }))
+    }
+    document.addEventListener('keydown', closeOnEscape)
+    return () => document.removeEventListener('keydown', closeOnEscape)
+  }, [fabMenu.close, fabMenu.isOpen, prefs.activeTab])
+
+  const closeFabAndRestoreFocus = () => {
+    fabMenu.close()
+    window.requestAnimationFrame(() => fabTriggerRef.current?.focus({ preventScroll: true }))
+  }
 
   return (
     <>
@@ -190,12 +221,12 @@ export function AppOverlays({
           <AnimatePresence>
             {fabMenu.isOpen && prefs.activeTab !== 'drafts' && (
               <m.div
-                initial={{ opacity: 0 }}
+                initial={reduceMotion ? false : { opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.25 }}
+                transition={{ duration: reduceMotion ? 0 : 0.25 }}
                 className="lg:hidden fixed inset-0 z-30 bg-background/45 backdrop-blur-sm cursor-pointer"
-                onClick={fabMenu.close}
+                onClick={closeFabAndRestoreFocus}
                 aria-hidden="true"
               />
             )}
@@ -204,8 +235,12 @@ export function AppOverlays({
           <AnimatePresence>
             {fabMenu.isOpen && prefs.activeTab !== 'drafts' && (
               <m.div
+                ref={fabActionsRef}
+                id="mobile-fab-actions"
+                role="menu"
+                aria-label="Quick actions"
                 variants={fabMenuVariants}
-                initial="hidden"
+                initial={reduceMotion ? false : 'hidden'}
                 animate="visible"
                 exit="hidden"
                 className="lg:hidden fixed right-8 z-40 flex flex-col gap-3.5 items-end pointer-events-auto"
@@ -220,8 +255,10 @@ export function AppOverlays({
                   <m.button
                     key={key}
                     type="button"
+                    role="menuitem"
+                    data-fab-action
                     variants={fabActionVariants}
-                    whileTap={{ scale: 0.92 }}
+                    whileTap={reduceMotion ? undefined : { scale: 0.92 }}
                     disabled={prefs.hideSensitive && key !== 'ai'}
                     title={prefs.hideSensitive && key !== 'ai' ? 'Reveal sensitive data to make financial changes' : label}
                     onClick={() => {
@@ -245,7 +282,9 @@ export function AppOverlays({
             )}
           </AnimatePresence>
           <m.button
-            whileTap={{ scale: 0.92 }}
+            ref={fabTriggerRef}
+            type="button"
+            whileTap={reduceMotion ? undefined : { scale: 0.92 }}
             disabled={prefs.activeTab === 'drafts' && prefs.hideSensitive}
             onClick={() => {
               if (prefs.activeTab === 'drafts') {
@@ -265,6 +304,7 @@ export function AppOverlays({
             title={prefs.activeTab === 'drafts' && prefs.hideSensitive ? 'Reveal sensitive data to sync drafts' : prefs.activeTab === 'drafts' ? 'Sync Batch to Server' : fabMenu.isOpen ? 'Close Menu' : 'Open Menu'}
             aria-label={prefs.activeTab === 'drafts' ? 'Sync Batch to Server' : fabMenu.isOpen ? 'Close Menu' : 'Open Menu'}
             aria-expanded={prefs.activeTab === 'drafts' ? undefined : fabMenu.isOpen}
+            aria-controls={prefs.activeTab === 'drafts' ? undefined : 'mobile-fab-actions'}
           >
             {prefs.activeTab === 'drafts' ? (
               <Upload className="size-6" />

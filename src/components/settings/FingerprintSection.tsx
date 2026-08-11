@@ -207,7 +207,7 @@ export function FingerprintSection() {
                         size="icon"
                         disabled={busy || removingCredentialId !== null || hideSensitive}
                         onClick={() => remove(c.id)}
-                        className="size-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        className="size-11 text-muted-foreground hover:text-destructive hover:bg-destructive/10 sm:size-8"
                         title={`Remove ${c.deviceLabel || 'credential'}`}
                         aria-label={`Remove ${c.deviceLabel || 'credential'}`}
                       >

@@ -72,4 +72,34 @@ describe('InvestmentPlanSection sliders', () => {
     expect(screen.getByRole('slider', { name: 'International ex-US target' }).className).toContain('accent-amber-500')
     expect(screen.getByRole('slider', { name: 'Bonds target' }).className).toContain('accent-emerald-500')
   })
+
+  it('lets a keyboard user reorder classifications with the grip arrow keys', async () => {
+    const withAssignments: InvestmentAllocationOverview = {
+      ...allocation,
+      assignments: [
+        { instrumentId: 'fund-a', symbol: 'AAA', name: 'Fund A', sleeve: 'USEquity', order: 0 },
+        { instrumentId: 'fund-b', symbol: 'BBB', name: 'Fund B', sleeve: 'Bonds', order: 1 },
+      ],
+    }
+    const queueMutation = vi.fn(() => true)
+    vi.mocked(api.readCachedInvestmentPortfolio).mockReturnValue({ allocation: withAssignments } as never)
+    vi.mocked(api.fetchInvestmentAllocation).mockResolvedValue(withAssignments)
+
+    render(
+      <AppProvider value={{ ...context, queueMutation }}>
+        <InvestmentPlanSection />
+      </AppProvider>,
+    )
+
+    const firstGrip = screen.getByRole('button', { name: /Reorder AAA\. Position 1 of 2/i })
+    fireEvent.keyDown(firstGrip, { key: 'ArrowDown' })
+
+    expect(queueMutation).toHaveBeenCalledWith(
+      'investmentAllocationOrder',
+      'update',
+      'classification',
+      expect.objectContaining({ instrumentIds: ['fund-b', 'fund-a'] }),
+    )
+    expect(screen.getByRole('button', { name: /Reorder BBB\. Position 1 of 2/i })).toBeTruthy()
+  })
 })

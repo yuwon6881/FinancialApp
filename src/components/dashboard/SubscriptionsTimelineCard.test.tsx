@@ -20,6 +20,18 @@ const payment = (overrides: Partial<ActiveRecurringPayment> = {}): ActiveRecurri
 const formatSensitive = (value: number) => formatSensitiveAmount(value, false, 'USD')
 
 describe('SubscriptionsTimelineCard', () => {
+  it('renders each subscription as a native keyboard action', () => {
+    render(
+      <SubscriptionsTimelineCard
+        activeRecurring={[payment()]}
+        formatSensitive={formatSensitive}
+        onNavigate={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: /Streaming/ })).toBeTruthy()
+  })
+
   // The amount was built with a template literal, and interpolating an element into a string
   // yields "[object Object]" — which is what every bill on the Reports subscriptions card showed.
   it('renders the amount rather than stringifying the formatter node', () => {

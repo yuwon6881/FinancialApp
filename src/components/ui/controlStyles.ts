@@ -4,7 +4,7 @@ export type ControlSize = 'sm' | 'md' | 'lg'
 
 const CONTROL_SIZES: Record<ControlSize, string> = {
   sm: 'h-9 rounded-lg px-3 text-xs',
-  md: 'h-10 rounded-xl px-3.5 text-sm',
+  md: 'h-11 rounded-xl px-3.5 text-sm sm:h-10',
   lg: 'h-12 rounded-xl px-4 text-sm',
 }
 

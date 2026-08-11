@@ -19,9 +19,11 @@ const receivesLabel = (device: PushDevice): string => {
 }
 
 interface PushDevicesListProps {
-  // Changes whenever this device's own enrolment changes in either kind, so the list re-reads
-  // instead of showing a browser that was just switched on or off.
-  refreshKey: string
+  // Rises once per server-confirmed enrolment change, so the list re-reads instead of showing a
+  // browser that was just switched on or off. It is deliberately a revision counter and not the
+  // switch state: that state flips optimistically, so keying on it read the roster while the write
+  // was still in flight and then had no reason to read again.
+  refreshKey: number
 }
 
 // Push opt-in is per device, and until this list existed the only evidence that another browser
@@ -146,11 +148,12 @@ export const PushDevicesList: React.FC<PushDevicesListProps> = ({ refreshKey }) 
             {!device.isCurrent && (
               <Button
                 variant="unstyled"
+                size="icon"
                 type="button"
                 onClick={() => void revoke(device)}
                 disabled={revokingId !== null}
                 aria-label="Stop notifications for this other device"
-                className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition hover:text-destructive disabled:opacity-40"
+                className="size-11 shrink-0 rounded-lg text-muted-foreground transition hover:bg-muted hover:text-destructive disabled:opacity-40 sm:size-8"
               >
                 {isRevoking
                   ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />

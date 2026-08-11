@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import type { Dispatch, SetStateAction } from 'react'
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { Download, Loader2, ShieldCheck, UploadCloud } from 'lucide-react'
 import { DocumentUploadSheet } from './documents/DocumentUploadSheet'
 import { VaultRetentionNotice } from './documents/VaultRetentionNotice'
@@ -8,6 +7,8 @@ import { CustomConfirmModal } from './ui/CustomConfirmModal'
 import { DocumentFilterBar } from './documents/view/DocumentFilterBar'
 import { StorageUsageMeter } from './documents/view/StorageUsageMeter'
 import { DocumentList } from './documents/view/DocumentList'
+import { DocumentPagination } from './documents/view/DocumentPagination'
+import { DocumentsLoadError } from './documents/view/DocumentsLoadError'
 import { useStagedReliefCategories } from './documents/view/useStagedReliefCategories'
 import { useAppPrefs, useAppSync, useAppUi } from '../contexts/AppContext'
 import { TaxReliefOverview } from './documents/view/TaxReliefOverview'
@@ -15,7 +16,6 @@ import * as documentsApi from '../lib/api/documents'
 import { getErrorMessage } from '../lib/errors'
 import { buildMutationSuccessToast } from '../lib/mutationToast'
 import { Button } from './ui/Button'
-import { DataTableFooter, DataTablePagination } from './ui/DataTable'
 import { CycleSkeleton } from './ui/Skeleton'
 import { createFinalId } from '../lib/outbox'
 import { useOptimisticList } from '../lib/useOptimisticList'
@@ -34,6 +34,7 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
     reliefCategories,
     reliefCategoriesByTaxYear,
     isLoading,
+    loadError,
     isTaxInsightsLoading,
     isInitialLoading,
     taxYear,
@@ -280,6 +281,8 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
           onClearAllReliefCategories={clearAllReliefCategories}
         />
 
+        {loadError && <DocumentsLoadError message={loadError} isLoading={isLoading} onRetry={() => void loadDocuments()} />}
+
         {stagedCategories.staged.size > 0 && (
           <div className="mb-3 flex flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 p-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -320,7 +323,8 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
             </div>
           )}
           <div className={isLoading && documents.length > 0 ? 'pointer-events-none opacity-55 blur-[1px] transition-all duration-200' : 'transition-all duration-200'}>
-            <DocumentList
+            {(!loadError || documents.length > 0) && <>
+              <DocumentList
               documents={documents}
               isLoading={isLoading}
               setDocToDelete={setDocToDelete}
@@ -383,21 +387,17 @@ export function DocumentsView({ onNavigateToTransaction }: DocumentsViewProps) {
               }}
               reliefCategoriesByTaxYear={reliefCategoriesByTaxYear}
               onNavigateToTransaction={onNavigateToTransaction}
-            />
+              />
 
-            {totalCount > 0 && (
-              <DataTableFooter className="mt-4">
-                <DataTablePagination
-                  currentPage={page}
-                  pageSize={pageSize}
-                  totalItems={totalCount}
-                  totalPages={totalPages}
-                  pageSizeOptions={[10, 25, 50]}
-                  onPageChange={setPage}
-                  onPageSizeChange={value => setPageSize(value as 10 | 25 | 50)}
-                />
-              </DataTableFooter>
-            )}
+              <DocumentPagination
+                page={page}
+                pageSize={pageSize}
+                totalCount={totalCount}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+              />
+            </>}
           </div>
         </div>
       </section>

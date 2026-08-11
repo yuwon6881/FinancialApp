@@ -79,6 +79,23 @@ describe('useDocumentsView', () => {
     await waitFor(() => expect(result.current.usage).toEqual({ totalBytes: 0, documentCount: 0 }))
   })
 
+  it('surfaces a failed document read and clears the error after a successful retry', async () => {
+    api.listDocuments.mockRejectedValue(new Error('Vault service is unavailable.'))
+    const { result } = renderHook(() => useDocumentsView())
+
+    await waitFor(() => expect(result.current.loadError).toBe('Vault service is unavailable.'))
+    expect(result.current.documents).toEqual([])
+    expect(result.current.isInitialLoading).toBe(false)
+
+    api.listDocuments.mockResolvedValue({ items: [document], totalCount: 1 })
+    await act(async () => {
+      await result.current.loadDocuments()
+    })
+
+    expect(result.current.loadError).toBeNull()
+    expect(result.current.documents).toEqual([document])
+  })
+
   it('refreshes the tax insights after deleting a single document', async () => {
     const { result } = renderHook(() => useDocumentsView())
     await waitFor(() => expect(result.current.documents).toEqual([document]))

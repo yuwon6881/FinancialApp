@@ -1,5 +1,5 @@
 import React from 'react'
-import { m, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Loader2, Clock } from 'lucide-react'
 import { mutationBusyLabel, resolveRowSyncState, type RowSyncFlags, type RowSyncState } from './rowSyncState'
 
@@ -33,20 +33,25 @@ const STATE_STYLE: Record<RowSyncState, string> = {
  * states read identically everywhere instead of six near-duplicate blocks.
  */
 const RowSyncBadge: React.FC<{ state: RowSyncState; entityLabel: string }> = ({ state, entityLabel }) => {
-  const title = state === 'pending' ? 'Pending sync (offline)' : `${state === 'deleting' ? 'Deleting' : 'Updating'} ${entityLabel}...`
+  const reduceMotion = useReducedMotion()
+  const title = state === 'pending' ? 'Pending sync (offline)' : `${state === 'deleting' ? 'Deleting' : 'Updating'} ${entityLabel}…`
   const Icon = state === 'pending' ? Clock : Loader2
 
   return (
     <m.span
-      initial={{ opacity: 0, scale: 0.85, y: -2 }}
+      initial={reduceMotion ? false : { opacity: 0, scale: 0.85, y: -2 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.85, y: 2 }}
-      transition={{ duration: 0.18, ease: 'easeOut' }}
+      exit={reduceMotion ? undefined : { opacity: 0, scale: 0.85, y: 2 }}
+      transition={{ duration: reduceMotion ? 0 : 0.18, ease: 'easeOut' }}
       title={title}
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      aria-label={title}
       className={`inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-md border shrink-0 select-none ${STATE_STYLE[state]}`}
     >
-      <Icon className={`size-2.5 shrink-0 mr-1 ${state === 'pending' ? '' : 'animate-spin'}`} />
-      {mutationBusyLabel(state)}
+      <Icon aria-hidden="true" className={`size-2.5 shrink-0 mr-1 ${state === 'pending' ? '' : 'animate-spin'}`} />
+      <span aria-hidden="true">{mutationBusyLabel(state)}</span>
     </m.span>
   )
 }
