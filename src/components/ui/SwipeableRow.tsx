@@ -176,7 +176,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   }
 
   return (
-    <div id={id} className="relative overflow-hidden">
+    <div id={id} className="relative w-full overflow-hidden rounded-2xl bg-card">
       {/* Action drawer sitting behind the content */}
       <div
         ref={actionDrawerRef}
@@ -199,7 +199,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
           opaque: it is what hides the drawer while the row is closed. */}
       <m.div
         data-swipe-content
-        className={cn('relative bg-card', className, contentClassName)}
+        className={cn('relative w-full overflow-hidden bg-card', className, contentClassName)}
         drag={disabled ? false : 'x'}
         dragConstraints={{ left: -actionsWidth, right: 0 }}
         dragElastic={0.1}
