@@ -116,7 +116,7 @@ for (const file of allSourceFiles(SRC)) {
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
       const tag = jsxTagName(node)
 
-      if (tag === 'select') report(file, sourceFile, node, 'Use CustomSelect or SearchableSelect instead of native <select>.')
+      if (tag === 'select') report(file, sourceFile, node, 'Use CustomSelect instead of native <select>.')
       if ((tag === 'input' || tag === 'textarea') && !CONTROL_IMPLEMENTATIONS.has(fileName)) {
         report(file, sourceFile, node, `Use the shared ${tag === 'textarea' ? 'Textarea' : 'Input'} primitive.`)
       }
