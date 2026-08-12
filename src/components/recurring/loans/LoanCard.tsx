@@ -142,7 +142,9 @@ export function LoanCard({
       </div>
 
       <details className="mt-4 rounded-xl border border-border/50 bg-background/40 p-3" onToggle={event => setIsScheduleOpen(event.currentTarget.open)}>
-        <summary className="cursor-pointer text-xs font-bold text-foreground">Show payment history and planned schedule</summary>
+        <summary className="cursor-pointer select-none text-xs font-bold text-foreground hover:text-accent-ink transition-colors">
+          Payment history and planned schedule ({actualRows.length + scheduleRows.length})
+        </summary>
         {scheduleLoadingKey === scheduleKey && (
           <p className="mt-3 text-xs text-muted-foreground">Loading the full planned schedule…</p>
         )}
@@ -152,28 +154,36 @@ export function LoanCard({
             <Button variant="ghost" size="sm" onClick={() => void loadSchedule()} disabled={scheduleLoadingKey === scheduleKey}>Retry</Button>
           </div>
         )}
-        <div className="mt-3 overflow-x-auto">
+        <div className="mt-3 max-h-72 overflow-x-auto overflow-y-auto rounded-lg border border-border/40 bg-card/60">
           <table className="w-full min-w-[620px] text-left text-xs">
             <caption className="sr-only">Payment history and planned schedule for {loan.name}</caption>
-            <thead className="text-muted-foreground">
+            <thead className="sticky top-0 z-10 bg-card border-b border-border/40 text-muted-foreground shadow-2xs">
               <tr>
-                <th className="px-2 py-2 font-semibold">Date</th>
-                <th className="px-2 py-2 font-semibold">Status</th>
-                <th className="px-2 py-2 text-right font-semibold">Payment</th>
-                <th className="px-2 py-2 text-right font-semibold">Interest</th>
-                <th className="px-2 py-2 text-right font-semibold">Clears debt</th>
-                <th className="px-2 py-2 text-right font-semibold">Still owed</th>
+                <th className="px-2.5 py-2 font-semibold">Date</th>
+                <th className="px-2.5 py-2 font-semibold">Status</th>
+                <th className="px-2.5 py-2 text-right font-semibold">Payment</th>
+                <th className="px-2.5 py-2 text-right font-semibold">Interest</th>
+                <th className="px-2.5 py-2 text-right font-semibold">Clears debt</th>
+                <th className="px-2.5 py-2 text-right font-semibold">Still owed</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/40">
+            <tbody className="divide-y divide-border/30">
               {[...actualRows, ...scheduleRows].map((row, index) => (
-                <tr key={`${row.occurrenceDate}-${row.kind}-${index}`}>
-                  <td className="px-2 py-2 text-foreground">{formatDate(row.occurrenceDate)}</td>
-                  <td className="px-2 py-2 text-muted-foreground">{row.kind === 'Paid' ? 'Recorded' : 'Planned'}</td>
-                  <td className="px-2 py-2 text-right text-foreground">{formatSensitive(row.payment)}</td>
-                  <td className="px-2 py-2 text-right text-foreground">{formatSensitive(row.interest)}</td>
-                  <td className="px-2 py-2 text-right text-foreground">{formatSensitive(row.principal)}</td>
-                  <td className="px-2 py-2 text-right text-foreground">{formatSensitive(row.balanceAfter)}</td>
+                <tr key={`${row.occurrenceDate}-${row.kind}-${index}`} className="hover:bg-muted/30 transition-colors">
+                  <td className="px-2.5 py-2 font-medium text-foreground">{formatDate(row.occurrenceDate)}</td>
+                  <td className="px-2.5 py-2">
+                    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${
+                      row.kind === 'Paid'
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-muted text-muted-foreground'
+                    }`}>
+                      {row.kind === 'Paid' ? 'Recorded' : 'Planned'}
+                    </span>
+                  </td>
+                  <td className="px-2.5 py-2 text-right font-semibold text-foreground">{formatSensitive(row.payment)}</td>
+                  <td className="px-2.5 py-2 text-right text-muted-foreground">{formatSensitive(row.interest)}</td>
+                  <td className="px-2.5 py-2 text-right text-foreground">{formatSensitive(row.principal)}</td>
+                  <td className="px-2.5 py-2 text-right font-semibold text-foreground">{formatSensitive(row.balanceAfter)}</td>
                 </tr>
               ))}
             </tbody>

@@ -105,26 +105,45 @@ export function LoanFormSheet({ isOpen, editingLoan, payments, linkedPaymentIds,
         {error && <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="Loan name" required>
-            <Input value={name} onChange={event => setName(event.target.value)} placeholder="Car loan" autoComplete="off" />
+            <Input value={name} onChange={event => setName(event.target.value)} placeholder="Car loan" autoComplete="off" className="w-full" />
           </FormField>
           <FormField label="Linked recurring bill" required hint="The bill's occurrence date controls the payment order.">
-            <CustomSelect value={recurringPaymentId} onChange={setRecurringPaymentId} options={paymentOptions} ariaLabel="Linked recurring bill" />
+            <CustomSelect
+              value={recurringPaymentId}
+              onChange={setRecurringPaymentId}
+              options={paymentOptions}
+              placeholder="Select a recurring bill"
+              ariaLabel="Linked recurring bill"
+              className="w-full"
+            />
           </FormField>
           <FormField label="Opening amount" required hint="The amount still owed when tracking starts.">
-            <SmartAmountInput value={openingPrincipal} onChange={event => setOpeningPrincipal(event.target.value)} placeholder="0.00" />
+            <SmartAmountInput value={openingPrincipal} onChange={event => setOpeningPrincipal(event.target.value)} placeholder="0.00" className="w-full" />
           </FormField>
           <FormField label="Tracking starts" required hint="Payments before this date are not included.">
             <DatePicker value={trackingStartDate} onChange={setTrackingStartDate} className="w-full" required />
           </FormField>
           <FormField label="Annual interest rate" required hint="Enter 5.5 for 5.5%, not 0.055.">
-            <div className="flex items-center gap-2"><Input type="number" min="0" max="100" step="0.01" value={annualRatePercent} onChange={event => setAnnualRatePercent(event.target.value)} placeholder="5.50" /><span className="text-sm text-muted-foreground">%</span></div>
+            <div className="relative w-full">
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={annualRatePercent}
+                onChange={event => setAnnualRatePercent(event.target.value)}
+                placeholder="5.50"
+                className="w-full pr-8"
+              />
+              <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground/80">%</span>
+            </div>
           </FormField>
           <FormField label="Number of payments" required hint="Monthly bills count months; annual bills count years.">
-            <Input type="number" min="1" max="360" step="1" value={termPeriods} onChange={event => setTermPeriods(event.target.value)} placeholder="60" />
+            <Input type="number" min="1" max="360" step="1" value={termPeriods} onChange={event => setTermPeriods(event.target.value)} placeholder="60" className="w-full" />
           </FormField>
         </div>
-          <FormField label={<span className="inline-flex items-center gap-1.5">Interest method <InfoHint label="interest method" text="Interest on what's left falls as the amount owed falls. Interest on the original amount keeps the interest base unchanged." /></span>} required>
-          <CustomSelect value={interestMethod} onChange={setInterestMethod} options={interestOptions} ariaLabel="Interest method" />
+        <FormField label={<span className="inline-flex items-center gap-1.5">Interest method <InfoHint label="interest method" text="Interest on what's left falls as the amount owed falls. Interest on the original amount keeps the interest base unchanged." /></span>} required>
+          <CustomSelect value={interestMethod} onChange={setInterestMethod} options={interestOptions} ariaLabel="Interest method" className="w-full" />
         </FormField>
         {preview !== null && (
           <p className="rounded-xl border border-border/60 bg-muted/20 p-3 text-xs text-muted-foreground">

@@ -16,6 +16,7 @@ export interface CustomSelectProps<T extends string | number = string | number> 
   value: T
   onChange: (value: T) => void
   options: SelectOption<T>[]
+  placeholder?: string
   className?: string
   align?: 'left' | 'right'
   direction?: 'up' | 'down'
@@ -33,6 +34,7 @@ export function CustomSelect<T extends string | number>({
   value,
   onChange,
   options,
+  placeholder,
   className = '',
   align = 'left',
   direction = 'down',
@@ -64,6 +66,8 @@ export function CustomSelect<T extends string | number>({
 
   const selectedOption = options.find(option => option.value === value)
   const selectedIndex = options.findIndex(option => option.value === value)
+  const isPlaceholderDisplayed = !selectedOption && Boolean(placeholder) && (value === '' || value === undefined || value === null)
+  const displayLabel = selectedOption?.label || (value !== '' && value !== undefined && value !== null ? String(value) : (placeholder ?? ''))
 
   const openWithIndex = (index = selectedIndex >= 0 ? selectedIndex : 0) => {
     if (disabled || options.length === 0) return
@@ -193,7 +197,7 @@ export function CustomSelect<T extends string | number>({
           className: 'cursor-pointer disabled:cursor-not-allowed',
         })}
       >
-        <span className="min-w-0 flex-1 truncate">{selectedOption?.label || value}</span>
+        <span className={`min-w-0 flex-1 truncate ${isPlaceholderDisplayed ? 'text-muted-foreground/70 font-normal' : ''}`}>{displayLabel}</span>
         <ChevronDown className={`size-3.5 text-muted-foreground/80 transition duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </Button>
 

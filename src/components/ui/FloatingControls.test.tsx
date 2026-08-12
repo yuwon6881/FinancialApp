@@ -30,6 +30,23 @@ describe('floating form controls', () => {
     expect(onChange).toHaveBeenCalledWith('two')
   })
 
+  it('displays placeholder text in muted style when no value is selected', () => {
+    render(
+      <CustomSelect
+        value=""
+        onChange={vi.fn()}
+        options={[
+          { value: 'one', label: 'One' },
+          { value: 'two', label: 'Two' },
+        ]}
+        placeholder="Select a recurring bill"
+      />,
+    )
+
+    const select = screen.getByRole('combobox', { name: 'Select an option' })
+    expect(select.textContent).toContain('Select a recurring bill')
+  })
+
   it('supports standard select-only keyboard interaction', () => {
     const onChange = vi.fn()
     render(

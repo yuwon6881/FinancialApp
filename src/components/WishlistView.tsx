@@ -19,6 +19,7 @@ import { RewardCard } from './wishlist/RewardCard'
 import { RewardsPoolBar } from './wishlist/RewardsPoolBar'
 import { SavingsGoalContributeSheet, type ContributeMode } from './wishlist/SavingsGoalContributeSheet'
 import { InfoHint } from './ui/InfoHint'
+import { WishlistSectionToggle, type WishlistSectionId } from './wishlist/WishlistSectionToggle'
 import { previewRequiredPerCycle, summarizePool } from '../lib/savingsGoals'
 import {
   Plus,
@@ -74,9 +75,9 @@ interface WishlistViewProps {
   onStartEditPending?: (id: string | null) => void
   aiDraft?: { nonce: number; fields: Record<string, unknown> } | null
   aiEditDraft?: { nonce: number; id: number; changes: Record<string, unknown> } | null
+  onExplainWithAi?: () => void
   onAiDraftConsumed?: () => void
   onAiEditDraftConsumed?: () => void
-  onExplainWithAi?: () => void
   aiSavingsGoalDraft?: { nonce: number; fields: Record<string, unknown> } | null
   aiSavingsGoalEditDraft?: { nonce: number; id: number; changes: Record<string, unknown> } | null
   onAiSavingsGoalDraftConsumed?: () => void
@@ -140,6 +141,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
 
   const [purchasingItem, setPurchasingItem] = React.useState<WishlistItem | null>(null)
   const [purchaseDateInput, setPurchaseDateInput] = React.useState<string>(new Date().toLocaleDateString('en-CA'))
+  const [activeSection, setActiveSection] = React.useState<WishlistSectionId>('all')
 
   const handleOpenClaimModal = (item: WishlistItem) => {
     if (hideSensitive) return
@@ -385,77 +387,90 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
         </>
       )}
 
-      {/* Two rows over one pool. Each grows sideways rather than pushing the page down, so however
-          many items exist the whole picture stays on one screen. */}
-      <CommitmentsSection
-        pool={commitmentsPool}
-        completedGoals={completedGoals}
-        formatSensitive={formatSensitive}
-        hideSensitive={hideSensitive}
-        isGoalSyncing={isGoalSyncing}
-        isGoalDeleting={isGoalDeleting}
-        onAddGoal={goalForm.handleOpenAddModal}
-        onEditGoal={goalForm.handleOpenEditModal}
-        onDeleteGoal={onDeleteGoal}
-        onCompleteGoal={onCompleteGoal}
-        onTopUp={target => setContributeTarget({ goal: target, mode: 'topUp' })}
-        onRelease={target => setContributeTarget({ goal: target, mode: 'release' })}
-      />
+      {/* Section Filter Switcher */}
+      <div className="flex items-center justify-between gap-3 pt-1 pb-1">
+        <WishlistSectionToggle
+          activeSection={activeSection}
+          onChange={setActiveSection}
+          commitmentsCount={commitmentsPool.activeGoals.length}
+          rewardsCount={rewardItems.length}
+        />
+      </div>
+
+      {/* Two rows over one pool. Filterable via activeSection. */}
+      {(activeSection === 'all' || activeSection === 'commitments') && (
+        <CommitmentsSection
+          pool={commitmentsPool}
+          completedGoals={completedGoals}
+          formatSensitive={formatSensitive}
+          hideSensitive={hideSensitive}
+          isGoalSyncing={isGoalSyncing}
+          isGoalDeleting={isGoalDeleting}
+          onAddGoal={goalForm.handleOpenAddModal}
+          onEditGoal={goalForm.handleOpenEditModal}
+          onDeleteGoal={onDeleteGoal}
+          onCompleteGoal={onCompleteGoal}
+          onTopUp={target => setContributeTarget({ goal: target, mode: 'topUp' })}
+          onRelease={target => setContributeTarget({ goal: target, mode: 'release' })}
+        />
+      )}
 
       {/* Same panel shell as Commitments above, for the same reason. */}
-      <section
-        aria-labelledby="wishlist-rewards-heading"
-        className="app-panel space-y-3 rounded-2xl border border-border/60 bg-card/92 p-4 sm:p-5"
-      >
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h3 id="wishlist-rewards-heading" className="text-sm font-bold text-foreground flex items-center gap-1.5">
-              <Trophy className="size-4 text-pink-500" />
-              Rewards
-              {affordableCount > 0 && (
-                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
-                  {affordableCount} claimable
-                </span>
-              )}
-            </h3>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">
-              From your {formatSensitive(claimableBalance)} free rewards
-              {!activeItem || claimableBalance >= activeItem.price ? null : (
-                <> · {activeItem.name} in {getTimelineString(activeItem.price, freeInflowPerCycle)}</>
-              )}
-            </p>
+      {(activeSection === 'all' || activeSection === 'rewards') && (
+        <section
+          aria-labelledby="wishlist-rewards-heading"
+          className="app-panel space-y-3 rounded-2xl border border-border/60 bg-card/92 p-4 sm:p-5"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h3 id="wishlist-rewards-heading" className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                <Trophy className="size-4 text-pink-500" />
+                Rewards
+                {affordableCount > 0 && (
+                  <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-500">
+                    {affordableCount} claimable
+                  </span>
+                )}
+              </h3>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                From your {formatSensitive(claimableBalance)} free rewards
+                {!activeItem || claimableBalance >= activeItem.price ? null : (
+                  <> · {activeItem.name} in {getTimelineString(activeItem.price, freeInflowPerCycle)}</>
+                )}
+              </p>
+            </div>
+            <Button variant="secondary" size="sm" className="shrink-0" onClick={handleOpenAddModal} disabled={hideSensitive} title={hideSensitive ? 'Unhide balances to add a reward' : undefined}>
+              <Plus className="size-3" /> Add reward
+            </Button>
           </div>
-          <Button variant="secondary" size="sm" className="shrink-0" onClick={handleOpenAddModal} disabled={hideSensitive} title={hideSensitive ? 'Unhide balances to add a reward' : undefined}>
-            <Plus className="size-3" /> Add reward
-          </Button>
-        </div>
 
-        {rewardItems.length > 0 ? (
-          <HorizontalRail label="Rewards" showControls>
-            {rewardItems.map(item => (
-              <RewardCard
-                key={item.id}
-                item={item}
-                isFocused={activeItem?.id === item.id}
-                claimableBalance={claimableBalance}
-                freeAfterGoalPace={freeAfterGoalPace}
-                formatSensitive={formatSensitive}
-                hideSensitive={hideSensitive}
-                isSyncing={isItemSyncing(item.id)}
-                isDeleting={isItemDeleting(item.id)}
-                onClaim={handleOpenClaimModal}
-                onFocus={target => { void handleToggleActive(target) }}
-                onEdit={handleOpenEditModal}
-                onDelete={onDeleteItem}
-              />
-            ))}
-          </HorizontalRail>
-        ) : (
-          <Card className="p-5 border-dashed text-center">
-            <p className="text-xs text-muted-foreground">No rewards yet. Add one to save toward.</p>
-          </Card>
-        )}
-      </section>
+          {rewardItems.length > 0 ? (
+            <HorizontalRail label="Rewards" showControls>
+              {rewardItems.map(item => (
+                <RewardCard
+                  key={item.id}
+                  item={item}
+                  isFocused={activeItem?.id === item.id}
+                  claimableBalance={claimableBalance}
+                  freeAfterGoalPace={freeAfterGoalPace}
+                  formatSensitive={formatSensitive}
+                  hideSensitive={hideSensitive}
+                  isSyncing={isItemSyncing(item.id)}
+                  isDeleting={isItemDeleting(item.id)}
+                  onClaim={handleOpenClaimModal}
+                  onFocus={target => { void handleToggleActive(target) }}
+                  onEdit={handleOpenEditModal}
+                  onDelete={onDeleteItem}
+                />
+              ))}
+            </HorizontalRail>
+          ) : (
+            <Card className="p-5 border-dashed text-center">
+              <p className="text-xs text-muted-foreground">No rewards yet. Add one to save toward.</p>
+            </Card>
+          )}
+        </section>
+      )}
 
       {/* Claim Reward Modal */}
       {purchasingItem && (
